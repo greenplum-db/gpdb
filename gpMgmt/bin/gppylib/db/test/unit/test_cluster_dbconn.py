@@ -63,20 +63,20 @@ class ConnectTestCase(unittest.TestCase):
 
     def test_secure_search_path_set(self):
 
-        with dbconn.connect(self.url) as conn:
+        with closing(dbconn.connect(self.url)) as conn:
             result = dbconn.querySingleton(conn, "SELECT setting FROM pg_settings WHERE name='search_path'")
 
         self.assertEqual(result, '')
 
     def test_secure_search_path_not_set(self):
 
-        with dbconn.connect(self.url, unsetSearchPath=False) as conn:
+        with closing(dbconn.connect(self.url, unsetSearchPath=False)) as conn:
             result = dbconn.querySingleton(conn, "SELECT setting FROM pg_settings WHERE name='search_path'")
 
         self.assertEqual(result, '"$user", public')
 
     def test_search_path_cve_2018_1058(self):
-        with dbconn.connect(self.url) as conn:
+        with closing(dbconn.connect(self.url)) as conn:
             dbconn.execSQL(conn, "CREATE TABLE public.Names (name VARCHAR(255))")
             dbconn.execSQL(conn, "INSERT INTO public.Names VALUES ('AAA')")
 

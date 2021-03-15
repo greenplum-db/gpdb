@@ -3,6 +3,7 @@ import tempfile
 
 from behave import given, then
 
+from contextlib import closing
 
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
@@ -57,14 +58,13 @@ class Tablespace:
         distributed.
         """
         url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
-        with dbconn.connect(url, unsetSearchPath=False) as conn:
+        with closing(dbconn.connect(url, unsetSearchPath=False)) as conn:
             data = dbconn.query(conn, "SELECT gp_segment_id, i FROM tbl").fetchall()
 
             # verify that we can still write to the tablespace
             self.table_counter += 1
             dbconn.execSQL(conn, "CREATE TABLE tbl_%s (i int) DISTRIBUTED RANDOMLY" % self.table_counter)
             dbconn.execSQL(conn, "INSERT INTO tbl_%s VALUES (GENERATE_SERIES(0, 25))" % self.table_counter)
-        conn.close()
 
         if sorted(data) != sorted(self.initial_data):
             raise Exception("Tablespace data is not identically distributed. Expected:\n%r\n but found:\n%r" % (
@@ -77,14 +77,13 @@ class Tablespace:
           2. the table's numsegments is enlarged to the new cluster size
         """
         url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
-        with dbconn.connect(url, unsetSearchPath=False) as conn:
+        with closing(dbconn.connect(url, unsetSearchPath=False)) as conn:
             data = dbconn.query(conn, "SELECT gp_segment_id, i FROM tbl").fetchall()
             tbl_numsegments = dbconn.querySingleton(conn,
                                                          "SELECT numsegments FROM gp_distribution_policy "
                                                          "WHERE localoid = 'tbl'::regclass::oid")
             num_segments = dbconn.querySingleton(conn,
                                                      "SELECT COUNT(DISTINCT(content)) - 1 FROM gp_segment_configuration")
-        conn.close()
         if tbl_numsegments != num_segments:
             raise Exception("After gpexpand the numsegments for tablespace table 'tbl' %d does not match "
                             "the number of segments in the cluster %d." % (tbl_numsegments, num_segments))

@@ -9,6 +9,7 @@ import os
 import sys
 import signal
 from optparse import OptionGroup
+from contextlib import closing
 
 # import GPDB modules
 try:
@@ -194,7 +195,7 @@ def getTablespaceDirs():
     gettblspclocs_sql = "select c.hostname, t.tblspc_loc from gp_tablespace_location(%s) t, gp_segment_configuration c where t.gp_segment_id = c.content group by c.hostname, t.tblspc_loc"
 
     # Get the tablespace oids
-    with dbconn.connect(dbconn.DbURL()) as conn:
+    with closing(dbconn.connect(dbconn.DbURL())) as conn:
         tblspcoids = dbconn.query(conn, gettblspcoids_sql).fetchall()
 
         # Use the tablespace oids to get the tablespace locations
@@ -206,7 +207,6 @@ def getTablespaceDirs():
                    tblspclocs[query_result[0]].append(query_result[1])
                 else:
                    tblspclocs[query_result[0]] = [query_result[1]]
-    conn.close()
 
     return tblspclocs
 
