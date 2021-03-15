@@ -1509,6 +1509,7 @@ PGresAttValue
 PGresParamDesc
 PGresult
 PGresult_data
+PgArchData
 PHANDLE
 PLAINTREE
 PLTemplate
