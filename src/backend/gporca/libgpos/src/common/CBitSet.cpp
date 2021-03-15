@@ -24,6 +24,7 @@
 
 using namespace gpos;
 
+FORCE_GENERATE_DBGSTR(CBitSet);
 
 //---------------------------------------------------------------------------
 //	@function:

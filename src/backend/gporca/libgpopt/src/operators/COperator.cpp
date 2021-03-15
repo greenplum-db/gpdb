@@ -20,6 +20,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(COperator);
+
 // generate unique operator ids
 ULONG COperator::m_aulOpIdCounter(0);
 

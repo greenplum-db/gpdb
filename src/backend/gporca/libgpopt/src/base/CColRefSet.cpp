@@ -19,6 +19,7 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CColRefSet);
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -48,7 +48,7 @@ typedef CHashMap<INT, CColRef, gpos::HashValue<INT>, gpos::Equals<INT>,
 //		member functions inaccessible
 //
 //---------------------------------------------------------------------------
-class CColRefSet : public CBitSet
+class CColRefSet : public CBitSet, public DbgPrintMixin<CColRefSet>
 {
 	// bitset iter needs to access internals
 	friend class CColRefSetIter;

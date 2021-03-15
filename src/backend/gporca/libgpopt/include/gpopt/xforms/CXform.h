@@ -44,7 +44,7 @@ using namespace gpos;
 //		base class for all transformations
 //
 //---------------------------------------------------------------------------
-class CXform : public CRefCount
+class CXform : public CRefCount, public DbgPrintMixin<CXform>
 {
 private:
 	// pattern

@@ -17,6 +17,7 @@
 
 #include "gpos/assert.h"
 #include "gpos/common/CSyncHashtable.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/types.h"
 
@@ -34,7 +35,7 @@ namespace gpos
 //		Corresponds to individual message as defined in config file
 //
 //---------------------------------------------------------------------------
-class CMessage
+class CMessage : public DbgPrintMixin<CMessage>
 {
 private:
 	// severity
@@ -91,7 +92,7 @@ public:
 
 #ifdef GPOS_DEBUG
 	// debug print function
-	IOstream &OsPrint(IOstream &);
+	IOstream &OsPrint(IOstream &) const;
 #endif	// GPOS_DEBUG
 
 };	// class CMessage

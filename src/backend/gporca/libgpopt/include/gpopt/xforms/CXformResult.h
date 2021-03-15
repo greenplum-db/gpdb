@@ -27,7 +27,7 @@ using namespace gpos;
 //		result container
 //
 //---------------------------------------------------------------------------
-class CXformResult : public CRefCount
+class CXformResult : public CRefCount, public DbgPrintMixin<CXformResult>
 {
 private:
 	// set of alternatives

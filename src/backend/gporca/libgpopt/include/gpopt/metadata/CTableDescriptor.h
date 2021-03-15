@@ -41,7 +41,8 @@ typedef CDynamicPtrArray<CBitSet, CleanupRelease> CBitSetArray;
 //		metadata abstraction for tables
 //
 //---------------------------------------------------------------------------
-class CTableDescriptor : public CRefCount
+class CTableDescriptor : public CRefCount,
+						 public DbgPrintMixin<CTableDescriptor>
 {
 private:
 	// memory pool

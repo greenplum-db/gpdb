@@ -19,6 +19,8 @@
 #include "gpopt/base/COptCtxt.h"
 #endif	// GPOS_DEBUG
 
+FORCE_GENERATE_DBGSTR(gpopt::CEnfdProp);
+
 namespace gpopt
 {
 IOstream &

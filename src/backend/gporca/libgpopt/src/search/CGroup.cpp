@@ -37,6 +37,8 @@
 using namespace gpnaucrates;
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CGroup);
+
 #define GPOPT_OPTCTXT_HT_BUCKETS 100
 
 

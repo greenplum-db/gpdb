@@ -64,6 +64,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CEngine);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CEngine::CEngine

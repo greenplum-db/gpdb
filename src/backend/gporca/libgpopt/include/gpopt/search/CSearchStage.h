@@ -38,7 +38,7 @@ typedef CDynamicPtrArray<CSearchStage, CleanupDelete> CSearchStageArray;
 //		Search stage
 //
 //---------------------------------------------------------------------------
-class CSearchStage
+class CSearchStage : public DbgPrintMixin<CSearchStage>
 {
 private:
 	// set of xforms to be applied during stage

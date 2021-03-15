@@ -48,7 +48,7 @@ using namespace gpos;
 //
 //
 //---------------------------------------------------------------------------
-class CQueryContext
+class CQueryContext : public DbgPrintMixin<CQueryContext>
 {
 private:
 	// required plan properties in optimizer's produced plan

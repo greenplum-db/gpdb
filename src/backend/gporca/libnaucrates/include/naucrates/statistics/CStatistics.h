@@ -56,7 +56,7 @@ typedef CHashMapIter<ULONG, ULongPtrArray, gpos::HashValue<ULONG>,
 //	@doc:
 //		Abstract statistics API
 //---------------------------------------------------------------------------
-class CStatistics : public IStatistics
+class CStatistics : public IStatistics, public DbgPrintMixin<CStatistics>
 {
 public:
 	// method used to compute for columns of each source it corresponding

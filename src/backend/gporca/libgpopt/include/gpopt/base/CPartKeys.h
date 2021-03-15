@@ -34,7 +34,7 @@ typedef CDynamicPtrArray<CPartKeys, CleanupRelease> CPartKeysArray;
 //		A collection of partitioning keys for a partitioned table
 //
 //---------------------------------------------------------------------------
-class CPartKeys : public CRefCount
+class CPartKeys : public CRefCount, public DbgPrintMixin<CPartKeys>
 {
 private:
 	// partitioning keys

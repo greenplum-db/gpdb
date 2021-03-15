@@ -16,6 +16,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CCostModelParamsGPDB);
+
 // sequential i/o bandwidth
 const CDouble CCostModelParamsGPDB::DSeqIOBandwidthVal = 1024.0;
 

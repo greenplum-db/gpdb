@@ -32,7 +32,7 @@ using namespace gpos;
 //		Helper class for creating compact join orders
 //
 //---------------------------------------------------------------------------
-class CJoinOrder
+class CJoinOrder : public DbgPrintMixin<CJoinOrder>
 {
 public:
 	enum EPosition
@@ -51,7 +51,7 @@ public:
 	//		Struct to capture edge
 	//
 	//---------------------------------------------------------------------------
-	struct SEdge : public CRefCount
+	struct SEdge : public CRefCount, public DbgPrintMixin<SEdge>
 	{
 		// cover of edge
 		CBitSet *m_pbs;
@@ -88,7 +88,7 @@ public:
 	//		Struct to capture component
 	//
 	//---------------------------------------------------------------------------
-	struct SComponent : public CRefCount
+	struct SComponent : public CRefCount, public DbgPrintMixin<SComponent>
 	{
 		// cover
 		CBitSet *m_pbs;

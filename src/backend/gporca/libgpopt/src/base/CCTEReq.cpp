@@ -17,6 +17,9 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CCTEReq);
+FORCE_GENERATE_DBGSTR(CCTEReq::CCTEReqEntry);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CCTEReq::CCTEReqEntry::CCTEReqEntry

@@ -51,7 +51,7 @@ typedef const CCostContext *CONST_COSTCTXT_PTR;
 //		Cost context
 //
 //---------------------------------------------------------------------------
-class CCostContext : public CRefCount
+class CCostContext : public CRefCount, public DbgPrintMixin<CCostContext>
 {
 public:
 	// states of cost context

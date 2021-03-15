@@ -34,7 +34,8 @@ using namespace gpos;
 //		Expression representation inside Memo structure
 //
 //---------------------------------------------------------------------------
-class CGroupExpression : public CRefCount
+class CGroupExpression : public CRefCount,
+						 public DbgPrintMixin<CGroupExpression>
 {
 public:
 #ifdef GPOS_DEBUG

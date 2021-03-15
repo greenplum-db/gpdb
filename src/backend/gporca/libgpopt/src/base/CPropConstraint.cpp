@@ -20,6 +20,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CPropConstraint);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPropConstraint::CPropConstraint

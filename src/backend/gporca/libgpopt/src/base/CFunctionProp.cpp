@@ -15,6 +15,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CFunctionProp);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CFunctionProp::CFunctionProp

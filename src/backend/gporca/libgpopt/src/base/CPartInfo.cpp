@@ -19,6 +19,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CPartInfo);
+FORCE_GENERATE_DBGSTR(CPartInfo::CPartInfoEntry);
 
 //---------------------------------------------------------------------------
 //	@function:
