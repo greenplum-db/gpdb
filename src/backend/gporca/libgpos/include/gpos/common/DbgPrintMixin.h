@@ -7,26 +7,30 @@
 
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamStdString.h"
-#include "gpos/task/CTask.h"
 
 namespace gpos
 {
-/// A Mixin class that adds debug printing to a type.
-///
-/// To use it to add DbgStr() and friends to a type U, simply add this as a
-/// public base:
-/// \code
-/// namespace ns {
-/// class U : public gpos::DbgPrintMixin<U> { ... };
-/// }
-/// \endcode
-///
-/// Also drop this snippet into the U.cpp file at the top level:
-///
-/// \code FORCE_GENERATE_DBGSTR(ns::U); \endcode
-///
-/// The FORCE_GENERATE_DBGSTR macro ensures code generation for the unused
-/// functions so that we can call them in a debugger
+// A Mixin class that adds debug printing to a type.
+//
+// To use it to add DbgStr() and friends to a type U, simply add this as a
+// public base:
+// namespace ns {
+// class U : public gpos::DbgPrintMixin<U> { ... };
+// }
+//
+// Also drop this snippet into the U.cpp file at the top level:
+//
+// FORCE_GENERATE_DBGSTR(ns::U);
+//
+// The FORCE_GENERATE_DBGSTR macro ensures code generation for the unused
+// functions so that we can call them in a debugger
+//
+// Use the following printing multi-line messages in your favorite debugger:
+//
+// (lldb) setting set escape-non-printables false
+// (lldb) p x->DbgStr()
+//
+// (gdb) printf x->DbgStr()
 template <class T>
 struct DbgPrintMixin
 {
@@ -35,7 +39,9 @@ struct DbgPrintMixin
 	void
 	DbgPrint() const
 	{
-		CAutoTrace at(CTask::Self()->Pmp());
+		CMemoryPool *mp =
+			CMemoryPoolManager::GetMemoryPoolMgr()->GetGlobalMemoryPool();
+		CAutoTrace at(mp);
 		static_cast<const T *>(this)->OsPrint(at.Os());
 	}
 

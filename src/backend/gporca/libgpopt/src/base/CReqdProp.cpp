@@ -23,6 +23,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CReqdProp);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CReqdProp::CReqdProp

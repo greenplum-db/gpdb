@@ -35,6 +35,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CConstraint);
+
 // initialize constant true
 BOOL CConstraint::m_fTrue(true);
 

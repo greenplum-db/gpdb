@@ -27,6 +27,7 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(COptimizationContext);
 
 // invalid optimization context
 const COptimizationContext COptimizationContext::m_ocInvalid;

@@ -18,6 +18,7 @@
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CHashSet.h"
 #include "gpos/common/CHashSetIter.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/string/CWStringConst.h"
 
 #include "naucrates/dxl/gpdb_types.h"
@@ -48,7 +49,7 @@ static const INT default_type_modifier = -1;
 //		Abstract class for representing metadata objects ids
 //
 //---------------------------------------------------------------------------
-class IMDId : public CRefCount
+class IMDId : public CRefCount, public DbgPrintMixin<IMDId>
 {
 private:
 	// number of deletion locks -- each MDAccessor adds a new deletion lock if it uses
@@ -177,7 +178,7 @@ typedef CHashSetIter<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
 	MdidHashSetIter;
 }  // namespace gpmd
 
-
+FORCE_GENERATE_DBGSTR(gpmd::IMDId);
 
 #endif	// !GPMD_IMDId_H
 

@@ -19,6 +19,7 @@
 using namespace gpopt;
 using namespace gpos;
 
+FORCE_GENERATE_DBGSTR(CJob);
 
 //---------------------------------------------------------------------------
 //	@function:

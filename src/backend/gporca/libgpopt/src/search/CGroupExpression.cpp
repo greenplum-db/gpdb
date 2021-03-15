@@ -29,6 +29,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CGroupExpression);
+
 #define GPOPT_COSTCTXT_HT_BUCKETS 100
 
 // invalid group expression

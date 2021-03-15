@@ -42,7 +42,7 @@ class CEnumeratorConfig;
 //		Optimization engine; owns entire optimization workflow
 //
 //---------------------------------------------------------------------------
-class CEngine
+class CEngine : public DbgPrintMixin<CEngine>
 {
 private:
 	// memory pool

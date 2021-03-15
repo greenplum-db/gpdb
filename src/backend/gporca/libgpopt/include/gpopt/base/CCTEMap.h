@@ -50,7 +50,7 @@ class CCTEReq;
 //		CTE map that is derived as part of plan properties
 //
 //---------------------------------------------------------------------------
-class CCTEMap : public CRefCount
+class CCTEMap : public CRefCount, public DbgPrintMixin<CCTEMap>
 {
 public:
 	// CTE types
@@ -73,7 +73,7 @@ private:
 	//		the plan rooted by producer node.
 	//
 	//---------------------------------------------------------------------------
-	class CCTEMapEntry : public CRefCount
+	class CCTEMapEntry : public CRefCount, public DbgPrintMixin<CCTEMapEntry>
 	{
 	private:
 		// cte id

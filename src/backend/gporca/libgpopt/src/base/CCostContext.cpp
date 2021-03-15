@@ -35,6 +35,8 @@
 using namespace gpopt;
 using namespace gpnaucrates;
 
+FORCE_GENERATE_DBGSTR(CCostContext);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CCostContext::CCostContext

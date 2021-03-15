@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CRefCount.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 
 namespace gpopt
@@ -62,7 +63,7 @@ typedef CDynamicPtrArray<CDrvdProp, CleanupRelease> CDrvdPropArray;
 //		CExpressionHandle::DeriveProps().
 //
 //---------------------------------------------------------------------------
-class CDrvdProp : public CRefCount
+class CDrvdProp : public CRefCount, public DbgPrintMixin<CDrvdProp>
 {
 public:
 	// types of derived properties

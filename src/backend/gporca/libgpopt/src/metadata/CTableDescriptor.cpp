@@ -24,6 +24,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CTableDescriptor);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTableDescriptor::CTableDescriptor

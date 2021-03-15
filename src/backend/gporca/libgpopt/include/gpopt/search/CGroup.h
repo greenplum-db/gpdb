@@ -70,7 +70,7 @@ enum EOptimizationLevel
 //		Group of equivalent expressions in the Memo structure
 //
 //---------------------------------------------------------------------------
-class CGroup : public CRefCount
+class CGroup : public CRefCount, public DbgPrintMixin<CGroup>
 {
 	friend class CGroupProxy;
 

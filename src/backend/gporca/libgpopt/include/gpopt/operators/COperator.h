@@ -46,7 +46,7 @@ typedef CHashMap<CColRef, CColRef, CColRef::HashValue, CColRef::Equals,
 //		base class for all operators
 //
 //---------------------------------------------------------------------------
-class COperator : public CRefCount
+class COperator : public CRefCount, public DbgPrintMixin<COperator>
 {
 private:
 	// private copy ctor
