@@ -12,6 +12,7 @@
 #include "gpopt/base/CDistributionSpecSingleton.h"
 
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
 #include "naucrates/traceflags/traceflags.h"
 

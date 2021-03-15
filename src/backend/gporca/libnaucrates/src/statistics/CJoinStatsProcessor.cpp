@@ -11,6 +11,7 @@
 
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CLogicalIndexApply.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"

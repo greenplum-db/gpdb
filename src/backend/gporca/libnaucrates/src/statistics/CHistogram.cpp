@@ -17,6 +17,7 @@
 #include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/base/CColRef.h"
+#include "gpopt/base/COptCtxt.h"
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLScalarConstValue.h"
 #include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"

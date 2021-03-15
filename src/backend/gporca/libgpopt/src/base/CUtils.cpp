@@ -24,6 +24,7 @@
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CExpressionPreprocessor.h"

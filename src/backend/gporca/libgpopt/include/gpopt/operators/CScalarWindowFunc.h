@@ -20,7 +20,6 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CScalarFunc.h"
 #include "naucrates/md/IMDId.h"
 

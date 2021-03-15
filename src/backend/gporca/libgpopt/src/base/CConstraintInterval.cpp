@@ -19,6 +19,7 @@
 #include "gpopt/base/CConstraintDisjunction.h"
 #include "gpopt/base/CDatumSortedSet.h"
 #include "gpopt/base/CDefaultComparator.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArray.h"

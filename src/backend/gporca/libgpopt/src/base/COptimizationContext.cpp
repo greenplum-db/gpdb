@@ -15,6 +15,7 @@
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CEnfdOrder.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/operators/CPhysicalAgg.h"
 #include "gpopt/operators/CPhysicalCTEProducer.h"

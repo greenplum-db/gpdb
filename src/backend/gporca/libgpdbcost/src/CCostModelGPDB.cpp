@@ -14,6 +14,7 @@
 #include <limits>
 
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/engine/CHint.h"
