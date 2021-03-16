@@ -21,8 +21,6 @@ addons:
             - libuv1-dev
             - python3
             - python3-dev
-            - python-dev
-            - python-yaml
             - libapr1-dev
             - libzstd1
             - libzstd1-dev
@@ -35,10 +33,10 @@ matrix:
     fast_finish: true
     include:
         # OS and Compiler variations
-        # 
-        # NOTE: Some of the docker containers set LC_ALL and LC_CTYPE to 
-        # values that are not specified on the system's locale as found 
-        # via "locale -a". This causes gpinitsystem and possibly initdb 
+        #
+        # NOTE: Some of the docker containers set LC_ALL and LC_CTYPE to
+        # values that are not specified on the system's locale as found
+        # via "locale -a". This causes gpinitsystem and possibly initdb
         # to fail. Set these environment variables to the system's locale.
         # ----------------------------------------------------------------
         #
@@ -142,10 +140,6 @@ stages:
 ## Build tools
 ## ----------------------------------------------------------------------
 
-python:
-    - "2.7"
-    - "3.6"
-
 # For linux, to prevent a possible crash in gpstop, disable RemoveIPC. See:
 # https://www.postgresql.org/docs/current/kernel-resources.html#SYSTEMD-REMOVEIPC
 
@@ -178,14 +172,6 @@ before_install:
         sudo systemctl daemon-reload
         sudo systemctl restart systemd-logind
       fi
-
-## ----------------------------------------------------------------------
-## Install supporting Python modules
-## ----------------------------------------------------------------------
-
-install:
-    - python -m pip install --user --upgrade pip
-    - python -m pip install --user setuptools
 
 ## ----------------------------------------------------------------------
 ## Perform build:
