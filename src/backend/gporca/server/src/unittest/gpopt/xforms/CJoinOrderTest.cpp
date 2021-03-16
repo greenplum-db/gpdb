@@ -17,8 +17,8 @@
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/xforms/CJoinOrder.h"
 #include "gpopt/xforms/CJoinOrderMinCard.h"
 

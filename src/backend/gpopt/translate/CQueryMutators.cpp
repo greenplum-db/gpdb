@@ -28,6 +28,7 @@ extern "C" {
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/translate/CQueryMutators.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
+#include "naucrates/exception.h"
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDTypeBool.h"

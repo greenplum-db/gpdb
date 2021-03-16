@@ -24,7 +24,6 @@
 #include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;

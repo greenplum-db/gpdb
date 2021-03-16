@@ -26,7 +26,9 @@
 #include "gpopt/translate/CGPDBAttInfo.h"
 #include "gpopt/translate/CGPDBAttOptCol.h"
 #include "naucrates/dxl/CIdGenerator.h"
-#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLTableDescr.h"
+#include "naucrates/md/IMDIndex.h"
 
 //fwd decl
 struct Var;
@@ -121,12 +123,12 @@ public:
 
 	// load up mapping information from an index
 	void LoadIndexColumns(ULONG query_level, ULONG RTE_index,
-						  const IMDIndex *index,
-						  const CDXLTableDescr *table_descr);
+						  const gpmd::IMDIndex *index,
+						  const gpdxl::CDXLTableDescr *table_descr);
 
 	// load up mapping information from table descriptor
 	void LoadTblColumns(ULONG query_level, ULONG RTE_index,
-						const CDXLTableDescr *table_descr);
+						const gpdxl::CDXLTableDescr *table_descr);
 
 	// load up column id mapping information from the array of column descriptors
 	void LoadColumns(ULONG query_level, ULONG RTE_index,
@@ -134,7 +136,7 @@ public:
 
 	// load up mapping information from derived table columns
 	void LoadDerivedTblColumns(ULONG query_level, ULONG RTE_index,
-							   const CDXLNodeArray *derived_columns_dxl,
+							   const gpdxl::CDXLNodeArray *derived_columns_dxl,
 							   List *target_list);
 
 	// load information from CTE columns

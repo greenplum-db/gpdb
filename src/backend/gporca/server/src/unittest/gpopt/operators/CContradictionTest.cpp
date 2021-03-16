@@ -14,7 +14,14 @@
 #include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerApply.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiApply.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
+#include "gpopt/operators/CLogicalLeftOuterApply.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+#include "gpopt/operators/CLogicalLeftSemiApply.h"
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
 #include "naucrates/md/IMDScalarOp.h"
 
 #include "unittest/base.h"

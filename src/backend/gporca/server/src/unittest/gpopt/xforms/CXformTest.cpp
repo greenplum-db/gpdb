@@ -15,7 +15,10 @@
 
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/operators/CLogicalCTEProducer.h"
+#include "gpopt/operators/CLogicalFullOuterJoin.h"
 #include "gpopt/xforms/CXform.h"
 #include "gpopt/xforms/xforms.h"
 

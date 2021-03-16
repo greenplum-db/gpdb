@@ -16,8 +16,13 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/operators/CScalarSubqueryAll.h"
+#include "gpopt/operators/CScalarSubqueryAny.h"
+#include "gpopt/operators/CScalarSubqueryExists.h"
+#include "gpopt/operators/CScalarSubqueryNotExists.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDTypeBool.h"
 
@@ -1044,7 +1049,7 @@ CSubqueryTestUtils::PexprSubqueryQuantified(
 			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("="));
 		return GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
+			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
 				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
 			pexprSelect, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
@@ -1251,7 +1256,7 @@ CSubqueryTestUtils::PexprSubqueryExistential(
 	if (COperator::EopScalarSubqueryExists == op_id)
 	{
 		return GPOS_NEW(mp) CExpression(
-			mp, GPOS_NEW(mp) CScalarSubqueryExists(mp), pexprSelect);
+			mp, GPOS_NEW(mp) gpopt::CScalarSubqueryExists(mp), pexprSelect);
 	}
 
 	return GPOS_NEW(mp)
@@ -1503,7 +1508,7 @@ CSubqueryTestUtils::PexprSelectWithQuantifiedAggSubquery(
 			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("="));
 		pexprSubqueryQuantified = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
+			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
 				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
 			pexprGb, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
@@ -1622,8 +1627,8 @@ CSubqueryTestUtils::PexprSelectWithTrimmableExistentialSubquery(
 	CExpression *pexprSubqueryExistential = nullptr;
 	if (COperator::EopScalarSubqueryExists == op_id)
 	{
-		pexprSubqueryExistential = GPOS_NEW(mp)
-			CExpression(mp, GPOS_NEW(mp) CScalarSubqueryExists(mp), pexprGbAgg);
+		pexprSubqueryExistential = GPOS_NEW(mp) CExpression(
+			mp, GPOS_NEW(mp) gpopt::CScalarSubqueryExists(mp), pexprGbAgg);
 	}
 	else
 	{
@@ -1732,7 +1737,7 @@ CSubqueryTestUtils::PexprSubqueryWithConstTableGet(CMemoryPool *mp,
 		// construct ANY subquery expression
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
+			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
 				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
@@ -1791,7 +1796,7 @@ CSubqueryTestUtils::PexprSubqueryWithDisjunction(CMemoryPool *mp)
 
 		CExpression *pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
+			GPOS_NEW(mp) gpopt::CScalarSubqueryAny(
 				mp, GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP), str, pcrInner),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 		pdrgpexpr->Append(pexprSubquery);

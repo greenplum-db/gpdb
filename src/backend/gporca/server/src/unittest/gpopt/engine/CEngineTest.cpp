@@ -18,7 +18,7 @@
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CMDCache.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupProxy.h"
 

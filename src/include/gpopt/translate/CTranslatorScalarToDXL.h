@@ -28,6 +28,9 @@ extern "C" {
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CMappingVarColId.h"
 #include "naucrates/base/IDatum.h"
+#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
+#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
+#include "naucrates/dxl/operators/CDXLWindowFrame.h"
 #include "naucrates/md/IMDType.h"
 
 // fwd declarations
@@ -225,7 +228,7 @@ private:
 	// add an indexlist to the given DXL arrayref node
 	void AddArrayIndexList(
 		CDXLNode *dxlnode, List *list,
-		CDXLScalarArrayRefIndexList::EIndexListBound index_list_bound,
+		gpdxl::CDXLScalarArrayRefIndexList::EIndexListBound index_list_bound,
 		const CMappingVarColId *var_colid_mapping);
 
 	// get the operator name
