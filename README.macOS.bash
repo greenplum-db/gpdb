@@ -24,11 +24,8 @@ brew install pkg-config
 brew link --force apr
 brew link --force apr-util
 
-# Installing python libraries
 brew install python3
-pip3 install --user -r python-dependencies.txt
 
-#echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
 echo 127.0.0.1$'\t'$HOSTNAME | sudo tee -a /etc/hosts
 
 # OS settings
@@ -64,12 +61,22 @@ net.inet.tcp.recvspace=262144
 kern.ipc.maxsockbuf=8388608
 EOF
 
-# Step: Create GPDB destination directory
+# Create GPDB destination directory
 sudo mkdir /usr/local/gpdb
 sudo chown $USER:admin /usr/local/gpdb
 
-# Step: Configure
+# Configure
 cat >> ~/.bashrc << EOF
 ulimit -n 65536 65536  # Increases the number of open files
 export PGHOST="$(hostname)"
+EOF
+
+cat << EOF
+
+================
+
+Please source greenplum_path.sh after compiling database, then
+
+pip3 install --user -r python-dependencies.txt
+
 EOF
