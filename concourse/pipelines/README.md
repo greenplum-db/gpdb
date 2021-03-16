@@ -39,7 +39,7 @@ You can install the most recent Jinja2 version using easy_install or pip:
 
 ```
 easy_install Jinja2
-pip install Jinja2
+pip3 install Jinja2
 ```
 
 For in-depth information, please refer to it's documentation.
