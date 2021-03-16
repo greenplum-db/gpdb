@@ -813,12 +813,14 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 * able to use index only scans on AO/AOCO relations. However it is
 		 * suboptimal to have to expose the relation's access method here. There
 		 * are no straight forward solutions though.
+		 *
+		 * Enable index only scan here, but the index scan is still disabled.
 		 */
 		if (index->amhasgettuple &&
-				(rel->amhandler != AO_ROW_TABLE_AM_HANDLER_OID &&
-				 rel->amhandler != AO_COLUMN_TABLE_AM_HANDLER_OID))
+				((rel->amhandler != AO_ROW_TABLE_AM_HANDLER_OID &&
+				 rel->amhandler != AO_COLUMN_TABLE_AM_HANDLER_OID) ||
+				 ipath->path.pathtype == T_IndexOnlyScan))
 			add_path(rel, (Path *) ipath);
-
 		if (index->amhasgetbitmap &&
 			/* GPDB: Give a chance of bitmap index path if seqscan is disabled.
 			 * GPDB_92_MERGE_FIXME: Maybe we should remove this check to follow

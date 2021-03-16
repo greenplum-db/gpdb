@@ -30,6 +30,7 @@
 #include "access/tableam.h"
 #include "access/tsmapi.h"
 #include "access/tuptoaster.h"
+#include "access/visibilitymap.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/index.h"
@@ -88,6 +89,7 @@ heapam_index_fetch_begin(Relation rel)
 
 	hscan->xs_base.rel = rel;
 	hscan->xs_cbuf = InvalidBuffer;
+	hscan->xs_vbuf = InvalidBuffer;
 
 	return &hscan->xs_base;
 }
@@ -101,6 +103,11 @@ heapam_index_fetch_reset(IndexFetchTableData *scan)
 	{
 		ReleaseBuffer(hscan->xs_cbuf);
 		hscan->xs_cbuf = InvalidBuffer;
+	}
+	if (BufferIsValid(hscan->xs_vbuf))
+	{
+		ReleaseBuffer(hscan->xs_vbuf);
+		hscan->xs_vbuf = InvalidBuffer;
 	}
 }
 
@@ -174,6 +181,18 @@ heapam_index_fetch_tuple(struct IndexFetchTableData *scan,
 	}
 
 	return got_heap_tuple;
+}
+
+static bool
+heapam_tid_visible(struct IndexFetchTableData *scan,
+				   ItemPointer tid,
+				   Snapshot snapshot)
+{
+	IndexFetchHeapData *hscan = (IndexFetchHeapData *) scan;
+
+	return VM_ALL_VISIBLE(hscan->xs_base.rel,
+						  ItemPointerGetBlockNumber(tid),
+						  &hscan->xs_vbuf);
 }
 
 
@@ -2637,6 +2656,7 @@ static const TableAmRoutine heapam_methods = {
 	.index_fetch_reset = heapam_index_fetch_reset,
 	.index_fetch_end = heapam_index_fetch_end,
 	.index_fetch_tuple = heapam_index_fetch_tuple,
+	.tid_visible = heapam_tid_visible,
 
 	.tuple_insert = heapam_tuple_insert,
 	.tuple_insert_speculative = heapam_tuple_insert_speculative,

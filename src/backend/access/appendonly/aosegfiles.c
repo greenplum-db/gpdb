@@ -374,6 +374,46 @@ GetAllFileSegInfo(Relation parentrel,
 	return result;
 }
 
+FileSegInfo **
+GetAllFileSegInfoArray(Relation parentrel,
+					   Snapshot appendOnlyMetaDataSnapshot)
+{
+	FileSegInfo	  **segArray;
+	FileSegInfo	  **segs;
+	int 			totalsegs;
+	segArray = palloc0(AOTupleId_MultiplierSegmentFileNum * sizeof(FileSegInfo *));
+	segs = GetAllFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, &totalsegs);
+
+	for (int i = 0; i < totalsegs; ++i)
+	{
+		FileSegInfo *seg;
+		seg = segs[i];
+		segArray[seg->segno] = seg;
+	}
+	pfree(segs);
+
+	return segArray;
+}
+FileSegInfo **
+AllFileSegInfoToArray(FileSegInfo **allSegInfo, int totalsegs)
+{
+	FileSegInfo	  **segArray;
+
+	if (allSegInfo == NULL)
+		return NULL;
+
+	segArray = palloc0(AOTupleId_MultiplierSegmentFileNum * sizeof(FileSegInfo *));
+	for (int i = 0; i < totalsegs; ++i)
+	{
+		FileSegInfo *seg;
+		seg = allSegInfo[i];
+		segArray[seg->segno] = seg;
+	}
+	pfree(allSegInfo);
+
+	return segArray;
+}
+
 
 /*
  * The comparison routine that sorts an array of FileSegInfos
@@ -1660,6 +1700,21 @@ FreeAllSegFileInfo(FileSegInfo **allSegInfo, int totalSegFiles)
 		Assert(allSegInfo[file_no] != NULL);
 
 		pfree(allSegInfo[file_no]);
+	}
+}
+
+void
+FreeAllSegFileInfoArray(FileSegInfo **allSegInfoArray)
+{
+	FileSegInfo *segInfo;
+
+	Assert(allSegInfoArray);
+
+	for (int i = 0; i < AOTupleId_MultiplierSegmentFileNum; ++i)
+	{
+		segInfo = allSegInfoArray[i];
+		if (segInfo)
+			pfree(segInfo);
 	}
 }
 

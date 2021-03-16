@@ -90,11 +90,11 @@ IndexOnlyNext(IndexOnlyScanState *node)
 		 * serially executing an index only scan that was planned to be
 		 * parallel.
 		 */
-		scandesc = index_beginscan(node->ss.ss_currentRelation,
-								   node->ioss_RelationDesc,
-								   estate->es_snapshot,
-								   node->ioss_NumScanKeys,
-								   node->ioss_NumOrderByKeys);
+		scandesc = indexonly_beginscan(node->ss.ss_currentRelation,
+									   node->ioss_RelationDesc,
+									   estate->es_snapshot,
+									   node->ioss_NumScanKeys,
+									   node->ioss_NumOrderByKeys);
 
 		node->ioss_ScanDesc = scandesc;
 
@@ -158,9 +158,8 @@ IndexOnlyNext(IndexOnlyScanState *node)
 		 * It's worth going through this complexity to avoid needing to lock
 		 * the VM buffer, which could cause significant contention.
 		 */
-		if (!VM_ALL_VISIBLE(scandesc->heapRelation,
-							ItemPointerGetBlockNumber(tid),
-							&node->ioss_VMBuffer))
+		if (!scandesc->xs_heapfetch->rel->rd_tableam->tid_visible(
+				scandesc->xs_heapfetch, tid, scandesc->xs_snapshot))
 		{
 			/*
 			 * Rats, we have to visit the heap to check visibility.

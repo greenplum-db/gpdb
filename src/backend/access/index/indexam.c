@@ -216,6 +216,19 @@ index_beginscan(Relation heapRelation,
 	return scan;
 }
 
+IndexScanDesc
+indexonly_beginscan(Relation heapRelation,
+					Relation indexRelation,
+					Snapshot snapshot,
+					int nkeys, int norderbys)
+{
+	IndexScanDesc scan;
+
+	scan = index_beginscan(heapRelation, indexRelation, snapshot, nkeys, norderbys);
+
+	return scan;
+}
+
 /*
  * index_beginscan_bitmap - start a scan of an index with amgetbitmap
  *

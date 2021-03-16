@@ -30,7 +30,7 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1528.77 rows=6 width=8)
    ->  Hash Join  (cost=1.02..1528.77 rows=2 width=8)
          Hash Cond: (f.id = b.id)
-         ->  Seq Scan on foo f  (cost=0.00..1527.50 rows=17 width=8)
+         ->  Index Only Scan using foo_id_idx on foo f  (cost=0.14..400.56 rows=17 width=8)
          ->  Hash  (cost=1.01..1.01 rows=1 width=8)
                ->  Seq Scan on bar b  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
@@ -52,12 +52,10 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 3:1  (slice1; segments: 3)  (cost=200.15..301.18 rows=6 width=8)
    ->  Nested Loop  (cost=200.15..301.18 rows=2 width=8)
          ->  Seq Scan on bar b  (cost=0.00..1.01 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo f  (cost=200.15..300.16 rows=1 width=8)
-               Recheck Cond: (id = b.id)
-               ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..200.15 rows=1 width=0)
-                     Index Cond: (id = b.id)
+         ->  Index Only Scan using foo_id_idx on foo f  (cost=0.14..8.16 rows=1 width=8)
+               Index Cond: (id = b.id)
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
  id 
@@ -76,12 +74,10 @@ explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f wh
  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000200.15..10000000301.18 rows=6 width=8)
    ->  Nested Loop  (cost=10000000200.15..10000000301.18 rows=2 width=8)
          ->  Seq Scan on bar b  (cost=10000000000.00..10000000001.01 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo f  (cost=200.15..300.16 rows=1 width=8)
-               Recheck Cond: (id = b.id)
-               ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..200.15 rows=1 width=0)
-                     Index Cond: (id = b.id)
+         ->  Index Only Scan using foo_id_idx on foo f  (cost=0.14..8.16 rows=1 width=8)
+               Index Cond: (id = b.id)
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
  id 
@@ -109,16 +105,15 @@ set enable_hashagg=off;
 explain select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000048.90..10000000054.01 rows=4 width=8)
-   ->  Nested Loop Semi Join  (cost=10000000048.90..10000000053.95 rows=2 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.14..10000000049.99 rows=3 width=8)
+   ->  Nested Loop Semi Join  (cost=10000000000.14..10000000049.95 rows=1 width=8)
+         Join Filter: (b.id = f.id)
          ->  Seq Scan on bar b  (cost=10000000000.00..10000000001.02 rows=1 width=8)
                Filter: (id = ANY ('{1,2,3,4,5,6}'::bigint[]))
-         ->  Bitmap Heap Scan on foo f  (cost=48.90..52.92 rows=1 width=8)
-               Recheck Cond: ((id = b.id) AND (id = ANY ('{1,2,3,4,5,6}'::bigint[])))
-               ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..48.90 rows=1 width=0)
-                     Index Cond: ((id = b.id) AND (id = ANY ('{1,2,3,4,5,6}'::bigint[])))
+         ->  Index Only Scan using foo_id_idx on foo f  (cost=0.14..48.91 rows=2 width=8)
+               Index Cond: (id = ANY ('{1,2,3,4,5,6}'::bigint[]))
  Optimizer: Postgres query optimizer
-(9 rows)
+(8 rows)
 
 select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
  id 
@@ -132,22 +127,17 @@ select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_ne
 reset enable_sort;
 reset enable_hashagg;
 explain select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
-                                                    QUERY PLAN                                                    
-------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000054.02..10000000054.10 rows=4 width=8)
-   ->  HashAggregate  (cost=10000000054.02..10000000054.03 rows=2 width=8)
-         Group Key: (RowIdExpr)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=10000000048.90..10000000054.01 rows=2 width=8)
-               Hash Key: (RowIdExpr)
-               ->  Nested Loop  (cost=10000000048.90..10000000053.95 rows=2 width=8)
-                     ->  Seq Scan on bar b  (cost=10000000000.00..10000000001.02 rows=1 width=8)
-                           Filter: (id = ANY ('{1,2,3,4,5,6}'::bigint[]))
-                     ->  Bitmap Heap Scan on foo f  (cost=48.90..52.92 rows=1 width=8)
-                           Recheck Cond: ((id = b.id) AND (id = ANY ('{1,2,3,4,5,6}'::bigint[])))
-                           ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..48.90 rows=1 width=0)
-                                 Index Cond: ((id = b.id) AND (id = ANY ('{1,2,3,4,5,6}'::bigint[])))
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.14..10000000049.99 rows=3 width=8)
+   ->  Nested Loop Semi Join  (cost=10000000000.14..10000000049.95 rows=1 width=8)
+         Join Filter: (b.id = f.id)
+         ->  Seq Scan on bar b  (cost=10000000000.00..10000000001.02 rows=1 width=8)
+               Filter: (id = ANY ('{1,2,3,4,5,6}'::bigint[]))
+         ->  Index Only Scan using foo_id_idx on foo f  (cost=0.14..48.91 rows=2 width=8)
+               Index Cond: (id = ANY ('{1,2,3,4,5,6}'::bigint[]))
  Optimizer: Postgres query optimizer
-(13 rows)
+(8 rows)
 
 select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
  id 

@@ -142,6 +142,10 @@ extern IndexScanDesc index_beginscan(Relation heapRelation,
 									 Relation indexRelation,
 									 Snapshot snapshot,
 									 int nkeys, int norderbys);
+extern IndexScanDesc indexonly_beginscan(Relation heapRelation,
+										 Relation indexRelation,
+										 Snapshot snapshot,
+										 int nkeys, int norderbys);
 extern IndexScanDesc index_beginscan_bitmap(Relation indexRelation,
 											Snapshot snapshot,
 											int nkeys);

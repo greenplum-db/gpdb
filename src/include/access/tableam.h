@@ -324,6 +324,9 @@ typedef struct TableAmRoutine
 									  TupleTableSlot *slot,
 									  bool *call_again, bool *all_dead);
 
+	bool		(*tid_visible) (struct IndexFetchTableData *scan,
+								ItemPointer tid,
+								Snapshot snapshot);
 
 	/* ------------------------------------------------------------------------
 	 * Callbacks for non-modifying operations on individual tuples

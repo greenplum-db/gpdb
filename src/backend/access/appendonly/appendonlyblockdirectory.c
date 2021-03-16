@@ -171,7 +171,6 @@ AppendOnlyBlockDirectory_Init_forSearch(
 										AppendOnlyBlockDirectory *blockDirectory,
 										Snapshot appendOnlyMetaDataSnapshot,
 										FileSegInfo **segmentFileInfo,
-										int totalSegfiles,
 										Relation aoRel,
 										int numColumnGroups,
 										bool isAOCol,
@@ -194,12 +193,11 @@ AppendOnlyBlockDirectory_Init_forSearch(
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,
 			  (errmsg("Append-only block directory init for search: "
-					  "(totalSegfiles, numColumnGroups, isAOCol)="
-					  "(%d, %d, %d)",
-					  totalSegfiles, numColumnGroups, isAOCol)));
+					  "(numColumnGroups, isAOCol)="
+					  "(%d, %d)",
+					  numColumnGroups, isAOCol)));
 
 	blockDirectory->segmentFileInfo = segmentFileInfo;
-	blockDirectory->totalSegfiles = totalSegfiles;
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 	blockDirectory->numColumnGroups = numColumnGroups;
@@ -259,7 +257,6 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	}
 
 	blockDirectory->segmentFileInfo = NULL;
-	blockDirectory->totalSegfiles = -1;
 	blockDirectory->currentSegmentFileInfo = segmentFileInfo;
 
 	blockDirectory->currentSegmentFileNum = segno;
@@ -328,7 +325,6 @@ AppendOnlyBlockDirectory_Init_addCol(
 	}
 
 	blockDirectory->segmentFileInfo = NULL;
-	blockDirectory->totalSegfiles = -1;
 	blockDirectory->currentSegmentFileInfo = segmentFileInfo;
 
 	blockDirectory->currentSegmentFileNum = segno;
@@ -473,7 +469,6 @@ AppendOnlyBlockDirectory_GetEntry(
 {
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
 	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
-	int			i;
 	Relation	blkdirRel = blockDirectory->blkdirRel;
 	Relation	blkdirIdx = blockDirectory->blkdirIdx;
 	int			numScanKeys = blockDirectory->numScanKeys;
@@ -556,16 +551,7 @@ AppendOnlyBlockDirectory_GetEntry(
 		}
 	}
 
-	for (i = 0; i < blockDirectory->totalSegfiles; i++)
-	{
-		fsInfo = blockDirectory->segmentFileInfo[i];
-
-		if (!blockDirectory->isAOCol && segmentFileNum == fsInfo->segno)
-			break;
-		else if (blockDirectory->isAOCol && segmentFileNum ==
-				 ((AOCSFileSegInfo *) fsInfo)->segno)
-			break;
-	}
+	fsInfo = blockDirectory->segmentFileInfo[segmentFileNum];
 
 	Assert(fsInfo != NULL);
 
@@ -1296,9 +1282,8 @@ AppendOnlyBlockDirectory_End_forSearch(
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,
 			  (errmsg("Append-only block directory end for search: "
-					  "(totalSegfiles, numColumnGroups, isAOCol)="
-					  "(%d, %d, %d)",
-					  blockDirectory->totalSegfiles,
+					  "(numColumnGroups, isAOCol)="
+					  "(%d, %d)",
 					  blockDirectory->numColumnGroups,
 					  blockDirectory->isAOCol)));
 
