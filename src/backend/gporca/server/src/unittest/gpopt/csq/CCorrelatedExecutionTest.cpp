@@ -21,10 +21,6 @@
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/exception.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/ops.h"
-#include "gpopt/translate/CTranslatorDXLToExpr.h"
-#include "gpopt/translate/CTranslatorExprToDXL.h"
-#include "naucrates/dxl/CDXLUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"

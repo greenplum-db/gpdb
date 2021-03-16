@@ -28,10 +28,6 @@ extern "C" {
 #include "utils/rel.h"
 }
 
-#define GPDB_NEXTVAL 1574
-#define GPDB_CURRVAL 1575
-#define GPDB_SETVAL 1576
-
 #include "gpos/attributes.h"
 #include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
@@ -54,8 +50,14 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLDatumInt8.h"
 #include "naucrates/dxl/operators/CDXLDatumOid.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLPhysicalRandomMotion.h"
+#include "naucrates/dxl/operators/CDXLPhysicalRedistributeMotion.h"
+#include "naucrates/dxl/operators/CDXLScalarAssertConstraint.h"
+#include "naucrates/dxl/operators/CDXLScalarIdent.h"
+#include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLSpoolInfo.h"
 #include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/exception.h"
 #include "naucrates/md/CMDIdColStats.h"
 #include "naucrates/md/CMDIdRelStats.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
@@ -76,6 +78,10 @@ using namespace gpopt;
 
 extern bool optimizer_enable_master_only_queries;
 extern bool optimizer_multilevel_partitioning;
+
+#define GPDB_NEXTVAL 1574
+#define GPDB_CURRVAL 1575
+#define GPDB_SETVAL 1576
 
 //---------------------------------------------------------------------------
 //	@function:

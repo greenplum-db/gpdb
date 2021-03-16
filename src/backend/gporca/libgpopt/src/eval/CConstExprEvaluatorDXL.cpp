@@ -22,6 +22,7 @@
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpdxl;
 using namespace gpmd;

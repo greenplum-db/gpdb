@@ -23,7 +23,9 @@
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLWindowSpec.h"
 
 // fwd declarations
 namespace gpopt

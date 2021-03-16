@@ -24,9 +24,7 @@
 #include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 #include "naucrates/dxl/CDXLUtils.h"
 
