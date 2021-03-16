@@ -38,9 +38,9 @@ After installation, open MSYS2 command line, run ```pacman -S flex bison```. Add
 
 [Download](https://www.activestate.com/activeperl/downloads) 64-bit and install.
 
-6. Python 2.7
+6. Python 3
 
-[Download](https://www.python.org/downloads/release/python-2715/) Windows x86-64 MSI installer and install.
+[Download](https://www.python.org/downloads/) Windows x86-64 MSI installer and install.
 
 ## Required dependencies of gpfdist
 
