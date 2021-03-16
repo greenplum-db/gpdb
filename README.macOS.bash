@@ -27,7 +27,6 @@ brew link --force apr-util
 # Installing python libraries
 brew install python3
 pip3 install --user -r python-dependencies.txt
-pip3 install --user -r python-developer-dependencies.txt
 
 #echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
 echo 127.0.0.1$'\t'$HOSTNAME | sudo tee -a /etc/hosts
