@@ -1259,7 +1259,7 @@ cdbexplain_formatExtraText(StringInfo str,
 	/* Could be more than one line... */
 	while (cp < ep)
 	{
-		const char *nlp = strchr(cp, '\n');
+		const char *nlp = memchr(cp, '\n', ep - cp);
 		const char *dp = nlp ? nlp : ep;
 
 		/* Strip trailing whitespace. */

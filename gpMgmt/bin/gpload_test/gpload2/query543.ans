@@ -1,0 +1,44 @@
+2021-02-03 15:31:33|INFO|gpload session started 2021-02-03 15:31:33
+2021-02-03 15:31:33|INFO|setting schema 'public' for table 'texttable'
+2021-02-03 15:31:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-02-03 15:31:33|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d6deca40_65f1_11eb_bde2_00505698707d
+2021-02-03 15:31:33|INFO|running time: 0.09 seconds
+2021-02-03 15:31:33|INFO|rows Inserted          = 16
+2021-02-03 15:31:33|INFO|rows Updated           = 0
+2021-02-03 15:31:33|INFO|data formatting errors = 0
+2021-02-03 15:31:33|INFO|gpload succeeded
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-02-03 15:31:33|INFO|gpload session started 2021-02-03 15:31:33
+2021-02-03 15:31:33|INFO|setting schema 'public' for table 'texttable'
+2021-02-03 15:31:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_543.txt" -t 30
+2021-02-03 15:31:33|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2021-02-03 15:31:33|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d70f31b2_65f1_11eb_8b0f_00505698707d
+2021-02-03 15:31:33|INFO|running time: 0.12 seconds
+2021-02-03 15:31:33|INFO|rows Inserted          = 3
+2021-02-03 15:31:33|INFO|rows Updated           = 15
+2021-02-03 15:31:33|INFO|data formatting errors = 0
+2021-02-03 15:31:33|INFO|gpload succeeded
+  s1  |  s2  |   s3   |         dt          | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+------+------+--------+---------------------+----+-----+--------+-------+---------+---------+------------
+ aaa  | qwer | shjhjg | 2012-06-01 15:30:30 |  1 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb  | twob | shpits | 2011-06-01 12:30:30 |  2 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 987.654321
+ ccc  | twoc | shpits | 2011-06-01 12:30:30 |  7 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456111
+ ddd  | twod | shpits | 2011-06-01 12:30:30 |  9 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.423658
+ eee  | twoe | shpits | 2011-06-01 12:30:30 |  4 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 145.456789
+ fff  | twof | shpits | 2011-06-01 12:30:30 |  3 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 654.321987
+ ggg  | twog | shpits | 2011-06-01 12:30:30 |  5 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.222289
+ hhh  | twoh | shpits | 2011-06-01 12:30:30 |  8 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456222
+ hhhx | ttgt | shpits | 2011-06-01 12:30:30 | 16 | 732 | 834567 | 45.67 | 789.123 | 7.12345 |        120
+ hhx  | ttgt | shpits | 2011-06-01 12:30:30 | 16 | 452 | 834567 | 45.67 | 789.123 | 7.12345 |        456
+ hxx  | ttgt | shpits | 2011-06-01 12:30:30 | 16 | 732 | 834567 | 45.67 | 789.123 | 7.12345 |        457
+ iii  | twoi | shpits | 2011-06-01 12:30:30 |  6 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 122.444789
+ lll  | tloj | shpits | 2011-06-01 12:30:30 | 10 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 323.454539
+ qqq  | qwoj | shpits | 2011-06-01 12:30:30 | 12 | 732 | 834567 | 45.67 | 789.123 | 7.12345 |  867.45678
+ ttt  | ttgt | shpits | 2011-06-01 12:30:30 | 16 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 156.456178
+ uuu  | twuj | shpits | 2011-06-01 12:30:30 | 11 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 456.454658
+ www  | twww | shpits | 2011-06-01 12:30:30 | 13 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 733.456788
+ xxx  | txxx | shpits | 2011-06-01 12:30:30 | 15 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 523.456754
+ zzz  | zwoj | shpits | 2011-06-01 12:30:30 | 14 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 723.456776
+(19 rows)
+

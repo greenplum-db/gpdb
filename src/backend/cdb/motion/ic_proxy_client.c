@@ -33,12 +33,13 @@
  *
  * Sometimes a backend receives slower than the sender, so more and more
  * packets are put in the writing queue.  To prevent it consuming too many
- * memory we have a simple flow control.  The receiver client sends a PAUSE
- * request to the sender, the sender pauses reading from its backend, so the
- * data flow is paused.  Once the receiver consumes some packets and the
- * writing queue is empty enough the receiver sends a RESUME request to the
- * sender, the sender resumes reading from its backend, so the data flow is
- * resumed.
+ * memory we introduce an active flow control mechanism. The sender increases
+ * the number of unack packets when it sends a packet to remote peer. The
+ * sender will PAUSE itself when the number of unack packets exceeds the
+ * threshold. The receiver will send a ACK message back to sender, when it
+ * receives a batch of packets. After get ACK message, the sender will decrease
+ * the number of unack packets. When the number of unack packets is below the
+ * resume threshold, the sender continues to read data from the backend.
  *
  * Packets are routed in 2 directions, c2p and p2c:
  * - c2p packets are routed from a client to a peer;
@@ -65,7 +66,6 @@
 #include "utils/hsearch.h"
 
 #include <uv.h>
-
 
 typedef struct ICProxyClientEntry ICProxyClientEntry;
 
@@ -99,14 +99,14 @@ struct ICProxyClient
 #define IC_PROXY_CLIENT_STATE_P2C_SHUTTED     0x00000080
 #define IC_PROXY_CLIENT_STATE_CLOSING         0x00000100
 #define IC_PROXY_CLIENT_STATE_CLOSED          0x00000200
-#define IC_PROXY_CLIENT_STATE_PAUSING         0x00000400
 #define IC_PROXY_CLIENT_STATE_PAUSED          0x00000800
-#define IC_PROXY_CLIENT_STATE_REMOTE_PAUSE    0x00001000
 
 	int			unconsumed;		/* count of the packets that are unconsumed by
 								 * the backend */
 	int			sending;		/* count of the packets being sent, both c2p &
 								 * p2c, both data & message */
+	int			unackSendPkt;	/* count of the unack packets from sender */
+	int			unackRecvPkt;	/* count of the unack packets from receiver */
 
 	ICProxyOBuf	obuf;			/* obuf merges small outgoing packets into
 								 * large ones to reduce network overhead */
@@ -149,9 +149,8 @@ static void ic_proxy_client_cache_p2c_pkts(ICProxyClient *client, List *pkts);
 static void ic_proxy_client_drop_p2c_cache(ICProxyClient *client);
 static void ic_proxy_client_handle_p2c_cache(ICProxyClient *client);
 static void ic_proxy_client_maybe_start_read_data(ICProxyClient *client);
-static void ic_proxy_client_maybe_request_pause(ICProxyClient *client);
-static void ic_proxy_client_maybe_request_resume(ICProxyClient *client);
 static void ic_proxy_client_maybe_pause(ICProxyClient *client);
+static void ic_proxy_client_maybe_send_ack_message(ICProxyClient *client);
 static void ic_proxy_client_maybe_resume(ICProxyClient *client);
 
 
@@ -472,6 +471,12 @@ ic_proxy_client_on_c2p_data_pkt(void *opaque, const void *data, uint16 size)
 	ic_proxy_log(LOG, "%s: received B2C PKT [%d bytes] from the backend",
 				 ic_proxy_client_get_name(client), size);
 
+	/* increase the number of unack packets */
+	client->unackSendPkt++;
+
+	/* check whether pause threshold is reached */
+	ic_proxy_client_maybe_pause(client);
+
 	/*
 	 * Send it out, but maybe not immediately.  The obuf helps to merge small
 	 * packets into large ones, which reduces the network overhead
@@ -555,9 +560,6 @@ ic_proxy_client_on_c2p_data(uv_stream_t *stream,
 	ic_proxy_ibuf_push(&client->ibuf, buf->base, nread,
 					   ic_proxy_client_on_c2p_data_pkt, client);
 	ic_proxy_pkt_cache_free(buf->base);
-
-	/* Handle pending PAUSE request */
-	ic_proxy_client_maybe_pause(client);
 }
 
 /*
@@ -821,6 +823,8 @@ ic_proxy_client_new(uv_loop_t *loop, bool placeholder)
 	client->state = 0;
 	client->unconsumed = 0;
 	client->sending = 0;
+	client->unackSendPkt = 0;
+	client->unackRecvPkt = 0;
 	client->successor = NULL;
 	client->name = NULL;
 
@@ -1073,29 +1077,6 @@ ic_proxy_client_on_sent_c2p_resume(void *opaque,
 }
 
 /*
- * Sent c2p PAUSE message.
- */
-static void
-ic_proxy_client_on_sent_c2p_pause(void *opaque,
-								  const ICProxyPkt *pkt, int status)
-{
-	ICProxyClient *client = opaque;
-
-	if (status < 0)
-	{
-		/*
-		 * TODO: Fail to send the PAUSE, should we retry instead of shutting
-		 * down?
-		 */
-		ic_proxy_client_shutdown_p2c(client);
-	}
-
-	client->sending--;
-
-	ic_proxy_client_maybe_close(client);
-}
-
-/*
  * Routed p2c DATA to the backend.
  */
 static void
@@ -1110,8 +1091,9 @@ ic_proxy_client_on_sent_p2c_data(void *opaque,
 
 	client->unconsumed--;
 	client->sending--;
+	client->unackRecvPkt++;
 
-	ic_proxy_client_maybe_request_resume(client);
+	ic_proxy_client_maybe_send_ack_message(client);
 }
 
 /*
@@ -1133,29 +1115,22 @@ ic_proxy_client_on_p2c_message(ICProxyClient *client, const ICProxyPkt *pkt,
 
 		ic_proxy_client_shutdown_p2c(client);
 	}
-	else if (ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_PAUSE))
+	else if (ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_DATA_ACK))
 	{
-		ic_proxy_log(LOG, "%s: received %s",
+		ic_proxy_log(LOG, "%s: received %s, with %d existing unack packets",
 					 ic_proxy_client_get_name(client),
-					 ic_proxy_pkt_to_str(pkt));
+					 ic_proxy_pkt_to_str(pkt),
+					 client->unackSendPkt);
 
-		/*
-		 * the PAUSE message should only be handled when the b2c ibuf
-		 * is empty, so we mark the PAUSING flag, on next c2p data we will
-		 * actuall stop reading if the b2c ibuf is empty.
-		 */
-		client->state |= IC_PROXY_CLIENT_STATE_PAUSING;
+		client->unackSendPkt -= IC_PROXY_ACK_INTERVAL;
 
-		/*
-		 * if the b2c ibuf is already empty, we can stop reading immediately
-		 */
-		ic_proxy_client_maybe_pause(client);
-	}
-	else if (ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_RESUME))
-	{
-		ic_proxy_log(LOG, "%s: received %s",
-					 ic_proxy_client_get_name(client),
-					 ic_proxy_pkt_to_str(pkt));
+#if 0
+		/* for debug purpose */
+		if (client->unackSendPkt < 0)
+			ic_proxy_log(WARNING, "%s: unexpected number of unack packets: %d",
+						 ic_proxy_client_get_name(client),
+						 client->unackSendPkt);
+#endif
 
 		ic_proxy_client_maybe_resume(client);
 	}
@@ -1234,8 +1209,6 @@ ic_proxy_client_on_p2c_data(ICProxyClient *client, ICProxyPkt *pkt,
 		ic_proxy_router_write((uv_stream_t *) &client->pipe,
 							  pkt, sizeof(*pkt),
 							  ic_proxy_client_on_sent_p2c_data, client);
-
-		ic_proxy_client_maybe_request_pause(client);
 	}
 	else
 	{
@@ -1356,57 +1329,24 @@ ic_proxy_client_handle_p2c_cache(ICProxyClient *client)
 }
 
 /*
- * Request the sender side to PAUSE if the writing queue is too full.
+ * Receiver sends ack message to the sender
  */
 static void
-ic_proxy_client_maybe_request_pause(ICProxyClient *client)
+ic_proxy_client_maybe_send_ack_message(ICProxyClient *client)
 {
 	ic_proxy_log(LOG, "%s: %d unconsumed packets to the backend",
 				 ic_proxy_client_get_name(client), client->unconsumed);
 
-	if (client->unconsumed >= IC_PROXY_TRESHOLD_PAUSE &&
-		!(client->state & IC_PROXY_CLIENT_STATE_REMOTE_PAUSE))
+	/*
+	 * Send ack message when the unackRecvPkt exceeds the threshold
+	 */
+	if (client->unackRecvPkt >= IC_PROXY_ACK_INTERVAL)
 	{
-		ICProxyPkt *pkt = ic_proxy_message_new(IC_PROXY_MESSAGE_PAUSE,
+		ICProxyPkt *pkt = ic_proxy_message_new(IC_PROXY_MESSAGE_DATA_ACK,
 											   &client->key);
 
-		/*
-		 * We could also clear this flag in the write callback, however
-		 * that might cause us to resend the message if the sender sends
-		 * fast enough.
-		 */
-		client->state |= IC_PROXY_CLIENT_STATE_REMOTE_PAUSE;
-
 		client->sending++;
-
-		ic_proxy_router_route(client->pipe.loop, pkt,
-							  ic_proxy_client_on_sent_c2p_pause, client);
-	}
-}
-
-/*
- * Request the sender side to RESUME if the writing queue is empty enough.
- */
-static void
-ic_proxy_client_maybe_request_resume(ICProxyClient *client)
-{
-	ic_proxy_log(LOG, "%s: %d unconsumed packets to the backend",
-				 ic_proxy_client_get_name(client), client->unconsumed);
-
-	if (client->unconsumed <= IC_PROXY_TRESHOLD_RESUME &&
-		(client->state & IC_PROXY_CLIENT_STATE_REMOTE_PAUSE))
-	{
-		ICProxyPkt *pkt = ic_proxy_message_new(IC_PROXY_MESSAGE_RESUME,
-											   &client->key);
-
-		/*
-		 * We could also clear this flag in the write callback, however that
-		 * might cause us to resend the message if the backend receives fast
-		 * enough.
-		 */
-		client->state &= ~IC_PROXY_CLIENT_STATE_REMOTE_PAUSE;
-
-		client->sending++;
+		client->unackRecvPkt -= IC_PROXY_ACK_INTERVAL;
 
 		ic_proxy_router_route(client->pipe.loop, pkt,
 							  ic_proxy_client_on_sent_c2p_resume, client);
@@ -1414,42 +1354,41 @@ ic_proxy_client_maybe_request_resume(ICProxyClient *client)
 }
 
 /*
- * PAUSE if being requested.
+ * PAUSE if the number of unack-packets execeeds the pause threshold
  */
 static void
 ic_proxy_client_maybe_pause(ICProxyClient *client)
 {
-	/* Handle pending PAUSE request */
-	if (((client->state & (IC_PROXY_CLIENT_STATE_PAUSING |
-						   IC_PROXY_CLIENT_STATE_PAUSED)) ==
-		 IC_PROXY_CLIENT_STATE_PAUSING) &&
-		ic_proxy_ibuf_empty(&client->ibuf))
+	/*
+	 * If the number of unack-packets execeeds the pause threshold, the
+	 * ic_proxy sender should stop reading from backend.
+	 *
+	 * The ic_proxy receiver will send ack message back to the sender, when
+	 * the number of unack-packets is below the resume threshold, the sender
+	 * continues to read from the backend again.
+	 */
+	if (client->unackSendPkt >= IC_PROXY_TRESHOLD_UNACK_PACKET_PAUSE
+		&& !(client->state & IC_PROXY_CLIENT_STATE_PAUSED))
 	{
 		client->state |= IC_PROXY_CLIENT_STATE_PAUSED;
-
 		uv_read_stop((uv_stream_t *) &client->pipe);
-
-		/* flush unsent data */
-		ic_proxy_obuf_push(&client->obuf, NULL, 0,
-						   ic_proxy_client_route_c2p_data, client);
 
 		ic_proxy_log(LOG, "%s: paused", ic_proxy_client_get_name(client));
 	}
 }
 
 /*
- * RESUME if being requested.
+ * RESUME if the number of unack packets is below the resume threshold
  */
 static void
 ic_proxy_client_maybe_resume(ICProxyClient *client)
 {
-	if (client->state & IC_PROXY_CLIENT_STATE_PAUSING)
+	if (client->unackSendPkt <= IC_PROXY_TRESHOLD_UNACK_PACKET_RESUME
+		&& (client->state & IC_PROXY_CLIENT_STATE_PAUSED))
 	{
-		if (client->state & IC_PROXY_CLIENT_STATE_PAUSED)
-			ic_proxy_client_read_data(client);
+		ic_proxy_client_read_data(client);
 
-		client->state &= ~(IC_PROXY_CLIENT_STATE_PAUSING |
-						   IC_PROXY_CLIENT_STATE_PAUSED);
+		client->state &= ~IC_PROXY_CLIENT_STATE_PAUSED;
 
 		ic_proxy_log(LOG, "%s: resumed", ic_proxy_client_get_name(client));
 	}

@@ -1220,9 +1220,16 @@ class _GpExpandStatus(object):
             SELECT status FROM gpexpand.status ORDER BY updated DESC LIMIT 1
         '''
 
+        status_table_exists_sql = """
+            SELECT CASE WHEN to_regclass('gpexpand.status') IS NOT NULL THEN 1 ELSE 0 END
+        """
+
         try:
             dburl = dbconn.DbURL(dbname=self.dbname)
             with dbconn.connect(dburl, encoding='UTF8') as conn:
+                if not dbconn.querySingleton(conn, status_table_exists_sql):
+                    conn.close()
+                    return False
                 status = dbconn.querySingleton(conn, sql)
             conn.close()
         except Exception:

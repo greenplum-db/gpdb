@@ -402,8 +402,6 @@ CEngineTest::BuildMemoRecursive(CMemoryPool *mp, CExpression *pexprInput,
 	CExpression *pexprPlan = eng.PexprExtractPlan();
 	GPOS_ASSERT(nullptr != pexprPlan);
 
-	(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
-
 	os << std::endl << std::endl;
 	os << "OUTPUT PLAN:" << std::endl;
 	(void) pexprPlan->OsPrint(os);

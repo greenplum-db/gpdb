@@ -34,7 +34,6 @@ gDatabaseDirectories = [
     "pg_multixact",
     "pg_distributedxidmap",
     "pg_distributedlog",
-    "pg_utilitymodedtmredo",
     "base",
     "pg_tblspc",
     "pg_stat_tmp"

@@ -1776,3 +1776,8 @@ $$
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
+
+CREATE OR REPLACE VIEW gp_stat_archiver AS
+    SELECT -1 AS gp_segment_id, * FROM pg_stat_archiver
+    UNION
+    SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');

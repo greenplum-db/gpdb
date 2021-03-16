@@ -242,13 +242,14 @@ CExpression::CExpression(CMemoryPool *mp, COperator *pop,
 //---------------------------------------------------------------------------
 CExpression::CExpression(CMemoryPool *mp, COperator *pop,
 						 CGroupExpression *pgexpr, CExpressionArray *pdrgpexpr,
-						 IStatistics *input_stats, CCost cost)
+						 CReqdPropPlan *prpp, IStatistics *input_stats,
+						 CCost cost)
 	: m_mp(mp),
 	  m_pop(pop),
 	  m_pdrgpexpr(pdrgpexpr),
 	  m_pdprel(nullptr),
 	  m_pstats(nullptr),
-	  m_prpp(nullptr),
+	  m_prpp(prpp),
 	  m_pdpplan(nullptr),
 	  m_pdpscalar(nullptr),
 	  m_pgexpr(pgexpr),
@@ -729,84 +730,6 @@ CExpression::HasOuterRefs()
 {
 	return (0 < DeriveOuterReferences()->Size());
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CExpression::PrppCompute
-//
-//	@doc:
-//		Compute required plan properties of all nodes in expression tree
-//
-//
-//---------------------------------------------------------------------------
-CReqdPropPlan *
-CExpression::PrppCompute(CMemoryPool *mp, CReqdPropPlan *prppInput)
-{
-	// derive plan properties
-	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
-	(void) PdpDerive(pdpctxtplan);
-	pdpctxtplan->Release();
-
-	// decorate nodes with required properties
-	return PrppDecorate(mp, prppInput);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CExpression::PrppDecorate
-//
-//	@doc:
-//		Decorate all expression nodes with required properties
-//
-//
-//---------------------------------------------------------------------------
-CReqdPropPlan *
-CExpression::PrppDecorate(CMemoryPool *mp, CReqdPropPlan *prppInput)
-{
-	// if operator is physical, trigger property computation
-	if (Pop()->FPhysical())
-	{
-		GPOS_CHECK_STACK_SIZE;
-		GPOS_ASSERT(nullptr != mp);
-		GPOS_ASSERT(nullptr != prppInput);
-
-		CRefCount::SafeRelease(m_prpp);
-
-		CExpressionHandle exprhdl(mp);
-		exprhdl.Attach(this);
-
-		// init required properties of expression
-		exprhdl.InitReqdProps(prppInput);
-
-		// create array of child derived properties
-		CDrvdPropArray *pdrgpdp = GPOS_NEW(m_mp) CDrvdPropArray(m_mp);
-
-		const ULONG arity = Arity();
-		for (ULONG ul = 0; ul < arity; ul++)
-		{
-			// compute required columns of the n-th child
-			exprhdl.ComputeChildReqdCols(ul, pdrgpdp);
-
-			CExpression *pexprChild = (*this)[ul];
-			(void) pexprChild->PrppCompute(mp, exprhdl.Prpp(ul));
-
-			// add plan props of current child to derived props array
-			CDrvdProp *pdp = pexprChild->PdpDerive();
-			pdp->AddRef();
-			pdrgpdp->Append(pdp);
-		}
-
-		// cache handle's required properties on expression
-		m_prpp = CReqdPropPlan::Prpp(exprhdl.Prp());
-		m_prpp->AddRef();
-
-		pdrgpdp->Release();
-	}
-
-	return m_prpp;
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1305,8 +1228,10 @@ CExpression::PexprRehydrate(CMemoryPool *mp, CCostContext *pcc,
 		cost = pcc->CostCompute(mp, pdrgpcost);
 		pdrgpcost->Release();
 	}
-	CExpression *pexpr = GPOS_NEW(mp)
-		CExpression(mp, pop, pgexpr, pdrgpexpr, pcc->Pstats(), CCost(cost));
+	pcc->Poc()->Prpp()->AddRef();
+	CExpression *pexpr =
+		GPOS_NEW(mp) CExpression(mp, pop, pgexpr, pdrgpexpr, pcc->Poc()->Prpp(),
+								 pcc->Pstats(), CCost(cost));
 
 	if (pop->FPhysical() && !pexpr->FValidPlan(pcc->Poc()->Prpp(), pdpctxtplan))
 	{

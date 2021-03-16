@@ -351,7 +351,7 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:NestedLoopJoin JoinType="LeftAntiSemiJoinNotIn" IndexNestedLoopJoin="false">
+        <dxl:NestedLoopJoin JoinType="LeftAntiSemiJoinNotIn" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="2155.000479" Rows="1.000000" Width="4"/>
           </dxl:Properties>
@@ -400,17 +400,20 @@
               <dxl:ProjList/>
               <dxl:Filter/>
               <dxl:SortingColumnList/>
-              <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false">
+              <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="1293.000409" Rows="1.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:Filter/>
                 <dxl:JoinFilter>
-                  <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
-                    <dxl:Ident ColId="16" ColName="a" TypeMdid="0.23.1.0"/>
-                    <dxl:Ident ColId="8" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:Comparison>
+                  <dxl:IsDistinctFrom OperatorMdid="0.91.1.0">
+                    <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
+                      <dxl:Ident ColId="16" ColName="a" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="8" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:Comparison>
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
+                  </dxl:IsDistinctFrom>
                 </dxl:JoinFilter>
                 <dxl:Assert ErrorCode="P0003">
                   <dxl:Properties>

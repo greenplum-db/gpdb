@@ -164,6 +164,7 @@
             <topicref href="guc-list.xml#gp_workfile_limit_files_per_query"/>
             <topicref href="guc-list.xml#gp_workfile_limit_per_query"/>
             <topicref href="guc-list.xml#gp_workfile_limit_per_segment"/>
+            <topicref href="guc-list.xml#gpfdist_retry_timeout"/>
             <topicref href="guc-list.xml#ignore_checksum_failure"/>
             <topicref href="guc-list.xml#integer_datetimes"/>
             <topicref href="guc-list.xml#IntervalStyle"/>
@@ -218,6 +219,7 @@
             <topicref href="guc-list.xml#optimizer_control"/>
             <topicref href="guc-list.xml#optimizer_cost_model"/>
             <topicref href="guc-list.xml#optimizer_cte_inlining_bound"/>
+            <topicref href="guc-list.xml#optimizer_dpe_stats"/>
             <topicref href="guc-list.xml#optimizer_enable_associativity"/>
             <topicref href="guc-list.xml#optimizer_enable_dml"/>
             <topicref href="guc-list.xml#optimizer_enable_indexonlyscan"/>
@@ -298,7 +300,6 @@
             <topicref href="guc-list.xml#wal_keep_segments"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>
-            <topicref href="guc-list.xml#gpfdist_retry_timeout"/>
             <topicref href="guc-list.xml#xid_stop_limit"/>
             <topicref href="guc-list.xml#xid_warn_limit"/>
         </topicref>

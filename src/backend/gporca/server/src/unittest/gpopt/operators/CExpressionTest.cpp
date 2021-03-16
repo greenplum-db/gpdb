@@ -1169,7 +1169,6 @@ CExpressionTest::EresComputeReqdCols(const CHAR *szFilePath)
 
 		// extract plan and decorate it with required columns
 		CExpression *pexprPlan = eng.PexprExtractPlan();
-		(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 
 		// attempt computing required columns again --
 		// we make sure that we reuse cached required columns at each operator

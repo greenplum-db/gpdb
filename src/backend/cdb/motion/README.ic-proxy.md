@@ -151,16 +151,16 @@ proxy-proxy connection is tcp based, when we see a packet we already received
 it, no chance to drop.
 
 In ic-proxy mode we do flow control like this:
-- when too many DATA are pending in the write queue, the receiver sends a PAUSE
-  message to the sender; when the write queue is empty enough, the receiver
-  sends a RESUME to the sender;
-- when the sender receives a PAUSE from the sender, it stops receiving from its
-  backend; accordiningly, on a RESUME it continues receiving.
-
-This is a simple and naive and unstrict flow control, when a PAUSE is sent out
-the receiver could still receive more DATA until the receiver actually paused
-and the socket buffer is drained.  In practice it is good enough in both
-performance and memory usage.
+- when sender sends a packet, it increases the value of unackSendPkt. When the
+number of unackSendPkt exceeds the pause threshold, the sender pause itself.
+- when receiver receives a packet, it will duplicate the packet and wait for
+the backend to consume the packet. After backend comsumed the packet, the
+receiver increases the value of unackRecvPkt. When the number of unackRecvPkt
+exceed the theshold: IC_PROXY_ACK_INTERVAL, the receiver will send a ACK message
+to the sender.
+- when the sender receives the ACK message, it decreases the value of
+unackSendPkt. When unackSendPkt is below the resume threshold, the sender can
+continue to read data from the backend.
 
 Note that we could not pause at any time.  In ic-proxy mode the backend sends
 DATA as ic-tcp packets, it will retry infinitely until a complete packet is

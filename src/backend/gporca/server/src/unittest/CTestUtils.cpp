@@ -2812,7 +2812,6 @@ CTestUtils::EresTranslate(CMemoryPool *mp, const CHAR *szQueryFileName,
 	gpopt::CExpression *pexprPlan = eng.PexprExtractPlan();
 	GPOS_ASSERT(nullptr != pexprPlan);
 
-	(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 	pexprPlan->OsPrint(oss);
 
 	// translate plan back to DXL

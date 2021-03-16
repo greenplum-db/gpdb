@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Retrieves rows from a table or view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] <varname>with_query</varname> [, ...] ]
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
 SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   * | <varname>expression </varname>[[AS] <varname>output_name</varname>] [, ...]
   [FROM <varname>from_item</varname> [, ...]]
@@ -59,8 +59,6 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
   <varname>value</varname> FOLLOWING
   UNBOUNDED FOLLOWING
 </codeblock></p>
-      <p><b>Note:</b>
-        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</p>
       <p>
         <sup>2</sup>When a locking clause is specified (the <codeph>FOR</codeph> clause), the Global
         Deadlock Detector affects how table rows are locked. See item <xref href="#topic1/eg138885"

@@ -2163,3 +2163,21 @@ explain select count(distinct a) filter (where a > 3),count( distinct b) filter 
  Optimizer: Postgres query optimizer
 (11 rows)
 
+-- single DQA with agg
+-- the following SQL should use two stage agg
+explain select count(distinct a), sum(b), sum(c) from dqa_f1;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=0.00..431.00 rows=1 width=24)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+         ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=24)
+               ->  Seq Scan on dqa_f1  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select count(distinct a), sum(b), sum(c) from dqa_f1;
+ count | sum  | sum  
+-------+------+------
+    17 | 2000 | 1000
+(1 row)
+

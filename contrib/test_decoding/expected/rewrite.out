@@ -161,8 +161,4 @@ SELECT pg_drop_replication_slot('regression_slot');
 DROP TABLE IF EXISTS replication_example;
 DROP FUNCTION iamalongfunction();
 DROP FUNCTION exec(text);
-<<<<<<< HEAD
-DROP ROLE justforcomments;
-=======
 DROP ROLE regress_justforcomments;
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196

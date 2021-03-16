@@ -129,7 +129,6 @@
               <codeph>VARCHAR()</codeph> column. For example, <codeph>VARCHAR(15
               CHARACTERS)</codeph> or <codeph>VARCHAR(15 OCTETS)</codeph> or <codeph>VARCHAR(15
               BYTES)</codeph>.</li>
-          <li id="ik265020"><codeph>CURRENT_SCHEMA</codeph> function.</li>
           <li id="ik265021"><codeph>CREATE DISTINCT TYPE </codeph>statement. <codeph>CREATE
               DOMAIN</codeph> can be used as a work-around in Greenplum.</li>
           <li id="ik265210">The <i>explicit table</i> construct.</li>
@@ -159,10 +158,6 @@
             as a work-around to get random samples from tables.</li>
           <li id="ik265712">The <i>partitioned join tables</i> construct (<codeph>PARTITION
               BY</codeph> in a join).</li>
-          <li id="ik265714">For <codeph>CREATE TABLE x (LIKE(y))</codeph> statements, Greenplum does
-            not support the
-              <codeph>[INCLUDING|EXCLUDING]</codeph><codeph>[DEFAULTS|CONSTRAINTS|INDEXES]</codeph>
-            clauses.</li>
           <li id="ik265715">Greenplum array data types are almost SQL standard compliant with some
             exceptions. Generally customers should not encounter any problems using them.</li>
         </ol>
@@ -176,18 +171,12 @@
           <li id="ik265320"><codeph>BINARY</codeph> and <codeph>VARBINARY</codeph> data types.
               <codeph>BYTEA</codeph> can be used in place of <codeph>VARBINARY</codeph> in Greenplum
             Database.</li>
-          <li id="ik265321"><codeph>FETCH FIRST</codeph> or <codeph>FETCH NEXT</codeph> clause for
-              <codeph>SELECT</codeph>, for
-              example:<codeblock>SELECT id, name FROM tab1 ORDER BY id OFFSET 20 ROWS FETCH 
-NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
-              has <codeph>LIMIT</codeph> and <codeph>LIMIT OFFSET</codeph> clauses instead.</p></li>
           <li id="ik265322">The <codeph>ORDER BY</codeph> clause is ignored in views and subqueries
             unless a <codeph>LIMIT</codeph> clause is also used. This is intentional, as the
             Greenplum optimizer cannot determine when it is safe to avoid the sort, causing an
             unexpected performance impact for such <codeph>ORDER BY</codeph> clauses. To work
             around, you can specify a really large <codeph>LIMIT</codeph>. For example:
-              <codeph>SELECT * FROM </codeph><codeph>mytable</codeph><codeph> ORDER BY 1 LIMIT
-              9999999999</codeph></li>
+            <codeblock>SELECT * FROM mytable ORDER BY 1 LIMIT 9999999999</codeblock></li>
           <li id="ik265583">The <i>row subquery</i> construct is not supported.</li>
           <li id="ik265586"><codeph>TRUNCATE TABLE</codeph> does not accept the <codeph>CONTINUE
               IDENTITY</codeph> and <codeph>RESTART IDENTITY</codeph> clauses.</li>
@@ -894,9 +883,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"><b>Limitations:</b><p>Limited use of <codeph>VOLATILE</codeph>
                   and <codeph>STABLE</codeph> functions in <codeph>FROM</codeph> or
                     <codeph>WHERE</codeph> clauses</p><p>Text search (<codeph>Tsearch2</codeph>) is
-                  not supported</p><p><codeph>FETCH FIRST</codeph> or <codeph>FETCH NEXT</codeph>
-                  clauses not supported </p><p><b>Greenplum Database Clauses
-                    (OLAP):</b></p><p><codeph>[GROUP BY </codeph><i>grouping_element</i><codeph> [,
+                  not supported</p><p><b>Greenplum Database Clauses (OLAP):</b></p><p><codeph>[GROUP
+                    BY </codeph><i>grouping_element</i><codeph> [,
                     ...]]</codeph></p><p><codeph>[WINDOW </codeph><i>window_name</i><codeph> AS
                     (</codeph><i>window_specification</i><codeph>)]</codeph></p><p><codeph>[FILTER
                     (WHERE </codeph><i>condition</i><codeph>)]</codeph> applied to an aggregate

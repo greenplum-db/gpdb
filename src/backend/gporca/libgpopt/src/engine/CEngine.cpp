@@ -1830,6 +1830,11 @@ CEngine::PexprExtractPlan()
 		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound);
 	}
 
+	// derive plan properties
+	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(m_mp) CDrvdPropCtxtPlan(m_mp);
+	pexpr->PdpDerive(pdpctxtplan);
+	pdpctxtplan->Release();
+
 	return pexpr;
 }
 

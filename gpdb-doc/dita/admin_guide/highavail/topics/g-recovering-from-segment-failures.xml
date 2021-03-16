@@ -38,10 +38,7 @@
             <i>Resynchronizing</i> mode and begins copying the changed files. This process runs in
           the background while the system is online and accepting database requests.</li>
         <li id="ki158504">When the resynchronization process completes, the system state is
-            <i>Synchronized</i>. Run the <codeph><xref
-              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"
-              >gpstate</xref></codeph> utility to verify the status of the resynchronization
-          process:<codeblock>$ gpstate -m</codeblock></li>
+            <i>Synchronized</i>. </li>
       </ol>
       <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
         instance data is not corrupted, contact VMware Support. </note>
@@ -53,15 +50,13 @@
         remains the primary and the failed segment becomes the mirror. The segment instances are not
         returned to the preferred role that they were given at system initialization time. This
         means that the system could be in a potentially unbalanced state if segment hosts have more
-        active segments than is optimal for top system performance. To check for unbalanced segments
-        and rebalance the system, run:</p>
-      <codeblock>$ gpstate -e</codeblock>
+        active segments than is optimal for top system performance. </p>
       <p>All segments must be online and fully synchronized to rebalance the system. Database
         sessions remain connected during rebalancing, but queries in progress are canceled and
         rolled back. </p>
       <ol>
-        <li id="ki165540">Run <codeph>gpstate -m</codeph> to ensure all mirrors are
-            <i>Synchronized</i>. <codeblock>$ gpstate -m</codeblock>
+        <li id="ki165540">Run <codeph>gpstate -e</codeph> to check for unbalanced segments.
+          <codeblock>$ gpstate -e</codeblock>
         </li>
         <li id="ki165577">If any mirrors are in <i>Resynchronizing</i> mode, wait for them to
           complete.</li>

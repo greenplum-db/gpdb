@@ -24,7 +24,7 @@
 
 void
 StoreGpPartitionTemplate(Oid relid, int32 level,
-						 GpPartitionDefinition *gpPartDef, bool replace)
+						 GpPartitionDefinition *gpPartDef)
 {
 	Relation	gp_template;
 	ScanKeyData key[2];
@@ -54,18 +54,15 @@ StoreGpPartitionTemplate(Oid relid, int32 level,
 	tuple = systable_getnext(scan);
 	if (HeapTupleIsValid(tuple))
 	{
-		if (replace)
-		{
-			/* update */
-			bool doreplace[Natts_gp_partition_template];
-			memset(doreplace, false, sizeof(replace));
+		/* update */
+		bool doreplace[Natts_gp_partition_template];
+		memset(doreplace, false, sizeof(doreplace));
 
-			doreplace[Anum_gp_partition_template_template - 1] = true;
-			tuple = heap_modify_tuple(tuple, RelationGetDescr(gp_template),
-									  values, nulls, doreplace);
-			CatalogTupleUpdate(gp_template, &tuple->t_self, tuple);
-			heap_freetuple(tuple);
-		}
+		doreplace[Anum_gp_partition_template_template - 1] = true;
+		tuple = heap_modify_tuple(tuple, RelationGetDescr(gp_template),
+									values, nulls, doreplace);
+		CatalogTupleUpdate(gp_template, &tuple->t_self, tuple);
+		heap_freetuple(tuple);
 	}
 	else
 	{
@@ -114,6 +111,7 @@ GetGpPartitionTemplate(Oid relid, int32 level)
 		{
 			char *defStr = TextDatumGetCString(datum);
 			def = stringToNode(defStr);
+			def->fromCatalog = true;
 			pfree(defStr);
 		}
 	}

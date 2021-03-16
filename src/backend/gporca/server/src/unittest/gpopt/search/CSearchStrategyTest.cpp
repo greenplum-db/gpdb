@@ -270,8 +270,6 @@ CSearchStrategyTest::BuildMemo(CMemoryPool *mp, CExpression *pexprInput,
 
 	CExpression *pexprPlan = eng.PexprExtractPlan();
 
-	(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
-
 	oss << std::endl << "OUTPUT PLAN:" << std::endl;
 	(void) pexprPlan->OsPrint(oss);
 	oss << std::endl << std::endl;

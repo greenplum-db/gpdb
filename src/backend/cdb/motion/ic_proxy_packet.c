@@ -50,10 +50,8 @@ ic_proxy_message_type_to_str(ICProxyMessageType type)
 			return "HELLO ACK";
 		case IC_PROXY_MESSAGE_BYE:
 			return "BYE";
-		case IC_PROXY_MESSAGE_PAUSE:
-			return "PAUSE";
-		case IC_PROXY_MESSAGE_RESUME:
-			return "RESUME";
+		case IC_PROXY_MESSAGE_DATA_ACK:
+			return "DATA ACK";
 		default:
 			return "UNKNOWN";
 	}
