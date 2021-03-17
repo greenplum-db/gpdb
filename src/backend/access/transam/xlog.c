@@ -8056,7 +8056,6 @@ StartupXLOG(void)
 
 	SpinLockAcquire(&XLogCtl->info_lck);
 	XLogCtl->SharedRecoveryInProgress = false;
-	XLogCtl->SharedHotStandbyActive = false;
 	SpinLockRelease(&XLogCtl->info_lck);
 
 	UpdateControlFile();
