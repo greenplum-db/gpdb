@@ -13,19 +13,18 @@
 //
 //---------------------------------------------------------------------------
 #include "postgres.h"
+
 #include "gpopt/translate/CMappingVarColId.h"
-#include "gpopt/translate/CTranslatorUtils.h"
-
-#include "nodes/primnodes.h"
-#include "nodes/value.h"
-
-
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/md/IMDIndex.h"
 
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/gpdbwrappers.h"
+#include "gpopt/translate/CTranslatorUtils.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/IMDIndex.h"
+
+#include "nodes/primnodes.h"
+#include "nodes/value.h"
 
 using namespace gpdxl;
 using namespace gpmd;

@@ -687,6 +687,31 @@ DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
 -- start_ignore
 -- end_ignore
 --
+-- Test transform
+--
+CREATE EXTERNAL TABLE ext_transform (a text)
+location('gpfdist://localhost:7070/*#transform=catfile', 'gpfdist://localhost:7080/*#transform=catfile') format 'text';
+CREATE EXTERNAL WEB TABLE gpfdist1_transform_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data/transform -c @abs_srcdir@/data/catfile.yml </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL WEB TABLE gpfdist2_transform_start (x text)
+execute E'((@bindir@/gpfdist -p 7080 -d @abs_srcdir@/data/transform -c @abs_srcdir@/data/catfile.yml </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+-- start_ignore
+-- end_ignore
+select count(*) from ext_transform;
+ count 
+-------
+    14
+(1 row)
+
+-- start_ignore
+-- end_ignore
+-- drop tables
+DROP EXTERNAL TABLE ext_transform;
+--
 -- get an error for missing gpfdist
 --
 select count(*) from ext_whois;

@@ -441,3 +441,22 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
 
+reset all;
+---
+-- DPE: Ensure that a plan with a PartitionSelector in a rescannable position
+-- is never generated.
+---
+create table dpe_foo(a int);
+create table dpe_bar(c int);
+insert into dpe_bar values (3), (3);
+insert into dpe_foo select 1 from generate_series(1, 9);
+create table dpe_part(i int) partition by range (i) (partition dpe_part1 start (0) inclusive end (100) exclusive);
+insert into dpe_part select generate_series(1, 81);
+analyze dpe_foo;
+analyze dpe_bar;
+analyze dpe_part;
+set optimizer_nestloop_factor=1;
+
+explain select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i + a < c;
+
+select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i + a < c;

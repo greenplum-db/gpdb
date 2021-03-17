@@ -17,14 +17,12 @@
 #ifndef GPDXL_CWalkerUtils_H
 #define GPDXL_CWalkerUtils_H
 
+#include "gpos/base.h"
+
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
-#include "gpos/base.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDType.h"
 
 // fwd declarations
@@ -156,6 +154,9 @@ private:
 	// check if the cte levels up needs to be corrected
 	static BOOL NeedsLevelsUpCorrection(SContextIncLevelsupMutator *context,
 										Index cte_levels_up);
+
+	// check one query scope for nested window functions
+	static BOOL HasNestedWindowFunctions(const Query *query);
 
 public:
 	// fall back during since the target list refers to a attribute which algebrizer at this point cannot resolve

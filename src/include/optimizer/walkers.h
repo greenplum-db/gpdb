@@ -74,6 +74,7 @@ extern List *extract_nodes(PlannerGlobal *glob, Node *node, int nodeTag);
 extern List *extract_nodes_plan(Plan *pl, int nodeTag, bool descendIntoSubqueries);
 extern List *extract_nodes_expression(Node *node, int nodeTag, bool descendIntoSubqueries);
 extern int find_nodes(Node *node, List *nodeTags);
+extern bool find_nested_nodes(Node *node, NodeTag nodeTag);
 
 #ifdef __cplusplus
 }

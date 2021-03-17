@@ -16,10 +16,16 @@
 #define GPDB_gpdbwrappers_H
 
 #include "postgres.h"
+
+extern "C" {
 #include "access/attnum.h"
-#include "utils/faultinjector.h"
 #include "parser/parse_coerce.h"
+#include "utils/array.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
+}
+
+#include "gpos/types.h"
 
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
@@ -180,9 +186,9 @@ Oid GetAggregate(const char *agg, Oid type_oid);
 Oid GetArrayType(Oid typid);
 
 // deconstruct array
-void DeconstructArray(struct ArrayType *array, Oid elmtype, int elmlen,
-					  bool elmbyval, char elmalign, Datum **elemsp,
-					  bool **nullsp, int *nelemsp);
+void DeconstructArray(ArrayType *array, Oid elmtype, int elmlen, bool elmbyval,
+					  char elmalign, Datum **elemsp, bool **nullsp,
+					  int *nelemsp);
 
 // attribute stats slot
 bool GetAttrStatsSlot(AttStatsSlot *sslot, HeapTuple statstuple, int reqkind,
@@ -605,6 +611,9 @@ void AppendStringInfo(StringInfo str, const char *str1, const char *str2);
 // look for the given node tags in the given tree and return the index of
 // the first one found, or -1 if there are none
 int FindNodes(Node *node, List *nodeTags);
+
+// look for a given node tag nested within the same tag (don't descend into subqueries)
+bool FindNestedNodes(Node *node, NodeTag nodeTag);
 
 Node *CoerceToCommonType(ParseState *pstate, Node *node, Oid target_type,
 						 const char *context);

@@ -2071,6 +2071,14 @@ select * from tcorr1 where b = (select tcorr1.b from tcorr2 where b=33);
 -- expect 1 row, subquery returns nothing, so a < 22 is true
 select * from tcorr1 where a < coalesce((select tcorr1.a from tcorr2 where a = 11), 22);
 
+-- make sure nested window functions give a reasonable error
+select max(count(*) over (order by a)) over (partition by a) from tcorr1;
+select 1+max(count(*) over (order by a)) over (partition by a) from tcorr1;
+select * from tcorr1 where a > (select 1+max(count(*) over (order by a)) over (partition by a) from tcorr1);
+
+-- this one should work, no nesting
+select max(a) over(order by a) + min(a) over(order by a) from tcorr1;
+
 reset optimizer_trace_fallback;
 
 -- start_ignore

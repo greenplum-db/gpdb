@@ -20,15 +20,14 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/utils/gpdbdefs.h"
+#include "gpopt/gpdbwrappers.h"
 
 #include "gpos/base.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CAutoExceptionStack.h"
+#include "gpos/error/CException.h"
 
+#include "gpopt/utils/gpdbdefs.h"
 #include "naucrates/exception.h"
-
-#include "gpopt/gpdbwrappers.h"
 extern "C" {
 #include "utils/memutils.h"
 }
@@ -2130,6 +2129,17 @@ gpdb::FindNodes(Node *node, List *nodeTags)
 	}
 	GP_WRAP_END;
 	return -1;
+}
+
+bool
+gpdb::FindNestedNodes(Node *node, NodeTag nodeTag)
+{
+	GP_WRAP_START;
+	{
+		return find_nested_nodes(node, nodeTag);
+	}
+	GP_WRAP_END;
+	return false;
 }
 
 Node *

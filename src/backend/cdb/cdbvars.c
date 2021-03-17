@@ -74,7 +74,7 @@ bool		Debug_print_prelim_plan;	/* Shall we log argument of
 
 bool		Debug_print_slice_table;	/* Shall we log the slice table? */
 
-bool		Debug_resource_group;	/* Shall we log the resource group? */
+bool		Debug_resource_group = false;	/* Shall we log the resource group? */
 
 bool		gp_backup_directIO = false; /* disable\enable direct I/O dump */
 

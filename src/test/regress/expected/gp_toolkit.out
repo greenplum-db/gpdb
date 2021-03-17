@@ -671,10 +671,10 @@ update test set b = -a;
 update test set b = -a;
 update test set b = -a;
 analyze test;
-select bdinspname, bdirelname, bdirelpages, bdiexppages, bdidiag from gp_toolkit.gp_bloat_diag;
- bdinspname | bdirelname | bdirelpages | bdiexppages |              bdidiag               
-------------+------------+-------------+-------------+------------------------------------
- public     | test       |          31 |           6 | moderate amount of bloat suspected
+select bdinspname, bdirelname, bdidiag from gp_toolkit.gp_bloat_diag;
+ bdinspname | bdirelname |              bdidiag               
+------------+------------+------------------------------------
+ public     | test       | moderate amount of bloat suspected
 (1 row)
 
 \c regression

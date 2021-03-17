@@ -15,22 +15,21 @@
 
 #include "postgres.h"
 
-#include "nodes/plannodes.h"
-#include "nodes/parsenodes.h"
-#include "nodes/makefuncs.h"
-#include "optimizer/walkers.h"
+#include "gpopt/translate/CQueryMutators.h"
 
 #include "gpopt/base/CUtils.h"
+#include "gpopt/gpdbwrappers.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-#include "gpopt/translate/CQueryMutators.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
-
-#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDTypeBool.h"
 
-#include "gpopt/gpdbwrappers.h"
+#include "nodes/makefuncs.h"
+#include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
+#include "optimizer/walkers.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -448,6 +447,22 @@ CQueryMutators::NeedsLevelsUpCorrection(SContextIncLevelsupMutator *context,
 	// when converting the query to derived table, all references to cte defined at the current level
 	// or above needs to be incremented
 	return cte_levels_up >= context->m_current_query_level;
+}
+
+BOOL
+CQueryMutators::HasNestedWindowFunctions(const Query *query)
+{
+	ListCell *lc = NULL;
+	ForEach(lc, query->targetList)
+	{
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
+
+		if (gpdb::FindNestedNodes((Node *) target_entry->expr, T_WindowRef) > 0)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 //---------------------------------------------------------------------------
@@ -1472,6 +1487,16 @@ CQueryMutators::NeedsProjListWindowNormalization(const Query *query)
 	if (!query->hasWindFuncs)
 	{
 		return false;
+	}
+
+	// The GPDB side does not check for (unsupported) nested window
+	// functions and in 5X the executor will abort with an internal
+	// error if it finds those.
+	// Example: sum(rank(a) over(order by a)) over(order by a)
+	if (HasNestedWindowFunctions(query))
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Nested window functions"));
 	}
 
 	ListCell *lc = NULL;

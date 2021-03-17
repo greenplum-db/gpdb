@@ -120,6 +120,7 @@
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
             <topicref href="guc-list.xml#gp_interconnect_setup_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_snd_queue_depth"/>
+            <topicref href="guc-list.xml#gp_interconnect_transmit_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_type"/>
             <topicref href="guc-list.xml#gp_log_format"/>
             <topicref href="guc-list.xml#gp_log_fts"/>
@@ -133,7 +134,6 @@
             <topicref href="guc-list.xml#gp_max_plan_size"/>
             <topicref href="guc-list.xml#gp_max_slices"/>
             <topicref href="guc-list.xml#gp_max_tablespaces"/>
-            <topicref href="guc-list.xml#memory_spill_ratio"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
             <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
@@ -221,12 +221,14 @@
             <topicref href="guc-list.xml#max_resource_queues"/>
             <topicref href="guc-list.xml#max_stack_depth"/>
             <topicref href="guc-list.xml#max_statement_mem"/>
+            <topicref href="guc-list.xml#memory_spill_ratio"/>
             <topicref href="guc-list.xml#optimizer"/>
             <topicref href="guc-list.xml#optimizer_array_expansion_threshold"/>
             <topicref href="guc-list.xml#optimizer_analyze_root_partition"/>
             <topicref href="guc-list.xml#optimizer_control"/>
             <topicref href="guc-list.xml#optimizer_cost_model"/>
             <topicref href="guc-list.xml#optimizer_cte_inlining_bound"/>
+            <topicref href="guc-list.xml#optimizer_dpe_stats"/>
             <topicref href="guc-list.xml#optimizer_enable_associativity"/>
             <topicref href="guc-list.xml#optimizer_enable_dml"/>
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>

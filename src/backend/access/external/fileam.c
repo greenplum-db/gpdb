@@ -2526,7 +2526,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 				(errcode_for_file_access(),
 				 errmsg("cannot get distributed transaction identifier while %s", uri)));
 
-	sprintf(extvar->GP_CID, "%x", QEDtxContextInfo.curcid);
+	sprintf(extvar->GP_CID, "%x", gp_command_count);
 	sprintf(extvar->GP_SN, "%x", scancounter);
 	sprintf(extvar->GP_SEGMENT_ID, "%d", Gp_segment);
 	sprintf(extvar->GP_SEG_PORT, "%d", PostPortNumber);

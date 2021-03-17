@@ -18,6 +18,7 @@
                                 'filerep_end_to_end_incr_primary'] %}
 {% set MM_1_suites = ['gprecoverseg',
                       'gpcheckcat',
+                      'gpcheckperf',
                       'gpinitstandby',
                       'gpactivatestandby'] %}
 {% set MM_2_suites = ['analyzedb',

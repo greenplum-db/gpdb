@@ -1,0 +1,6 @@
+---
+VERSION: 1.0.0.1
+TRANSFORMATIONS:
+  catfile:
+    TYPE:     input
+    COMMAND:  /usr/bin/env cat  %filename%

@@ -10,6 +10,7 @@
     { LANGUAGE <varname>langname</varname>
     | IMMUTABLE | STABLE | VOLATILE
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
+    | NO SQL | CONTAINS SQL | READS SQL DATA | MODIFIES SQL
     | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | COST <varname>execution_cost</varname>
     | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
@@ -114,7 +115,24 @@ if necessary and respond appropriately. <codeph>RETURNS NULL ON NULL
 INPUT</codeph> or <codeph>STRICT</codeph> indicates that the function
 always returns null whenever any of its arguments are null. If this parameter
 is specified, the function is not executed when there are null arguments;
-instead a null result is assumed automatically.</pd></plentry><plentry><pt>[EXTERNAL] SECURITY INVOKER</pt><pt>[EXTERNAL] SECURITY DEFINER</pt><pd><codeph>SECURITY INVOKER</codeph> (the default) indicates that the
+instead a null result is assumed automatically.</pd></plentry>
+                <plentry>
+                     <pt>NO SQL</pt>
+                     <pt>CONTAINS SQL</pt>
+                     <pt>READS SQL DATA</pt>
+                     <pt>MODIFIES SQL</pt>
+                     <pd>These attributes inform the query optimizer about whether or not the function contains 
+                        SQL statements and whether, if it does, those statements read and/or write data.</pd>
+                     <pd><codeph>NO SQL</codeph> indicates that the function does not contain SQL
+                        statements.</pd>
+                     <pd><codeph>CONTAINS SQL</codeph> indicates that the function contains SQL
+                        statements, none of which either read or write data.</pd>
+                     <pd><codeph>READS SQL DATA</codeph> indicates that the function contains SQL
+                        statements that read data but none that modify data.</pd>
+                     <pd><codeph>MODIFIES SQL</codeph> indicates that the function contains
+                        statements that may write data.</pd>
+                </plentry>
+<plentry><pt>[EXTERNAL] SECURITY INVOKER</pt><pt>[EXTERNAL] SECURITY DEFINER</pt><pd><codeph>SECURITY INVOKER</codeph> (the default) indicates that the
 function is to be executed with the privileges of the user that calls
 it. <codeph>SECURITY DEFINER</codeph> specifies that the function is
 to be executed with the privileges of the user that created it. The key

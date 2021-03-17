@@ -15,15 +15,15 @@
 #ifndef COptServer_H
 #define COptServer_H
 
-#include "naucrates/md/CSystemId.h"
-
 #include "gpos/base.h"
 #include "gpos/common/CSyncHashtable.h"
-#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/CSyncHashtableAccessByIter.h"
+#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/CSyncHashtableIter.h"
 #include "gpos/net/CSocket.h"
 #include "gpos/task/CTask.h"
+
+#include "naucrates/md/CSystemId.h"
 
 // forward declarations
 namespace gpopt

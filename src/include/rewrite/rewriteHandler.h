@@ -19,6 +19,7 @@
 
 extern List *QueryRewrite(Query *parsetree);
 extern void AcquireRewriteLocks(Query *parsetree);
+extern Query *get_view_query(Relation view);
 extern Node *build_column_default(Relation rel, int attrno);
 
 #endif   /* REWRITEHANDLER_H */

@@ -17,12 +17,15 @@
 //---------------------------------------------------------------------------
 
 #include "postgres.h"
-#include "nodes/parsenodes.h"
-#include "nodes/plannodes.h"
 
 #include "gpopt/translate/CContextDXLToPlStmt.h"
-#include "gpopt/gpdbwrappers.h"
+
 #include "gpos/base.h"
+
+#include "gpopt/gpdbwrappers.h"
+
+#include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
 using namespace gpdxl;
 
 //---------------------------------------------------------------------------

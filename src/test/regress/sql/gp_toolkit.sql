@@ -395,7 +395,7 @@ update test set b = -a;
 update test set b = -a;
 update test set b = -a;
 analyze test;
-select bdinspname, bdirelname, bdirelpages, bdiexppages, bdidiag from gp_toolkit.gp_bloat_diag;
+select bdinspname, bdirelname, bdidiag from gp_toolkit.gp_bloat_diag;
 
 \c regression
 drop database gptoolkit

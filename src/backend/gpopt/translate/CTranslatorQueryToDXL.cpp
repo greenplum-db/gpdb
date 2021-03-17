@@ -16,41 +16,37 @@
 
 #include "postgres.h"
 
-#include "access/sysattr.h"
-#include "nodes/plannodes.h"
-#include "nodes/parsenodes.h"
-#include "nodes/makefuncs.h"
-#include "optimizer/walkers.h"
+#include "gpopt/translate/CTranslatorQueryToDXL.h"
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
 
 #include "gpopt/base/CUtils.h"
+#include "gpopt/gpdbwrappers.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/translate/CCTEListEntry.h"
 #include "gpopt/translate/CQueryMutators.h"
-#include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CTranslatorQueryToDXL.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
-
-#include "naucrates/exception.h"
-
+#include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/operators/dxlops.h"
-#include "naucrates/dxl/operators/CDXLScalarBooleanTest.h"
 #include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLScalarBooleanTest.h"
+#include "naucrates/dxl/operators/dxlops.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-
-#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdGPDBCtas.h"
 #include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt8.h"
-#include "naucrates/md/CMDIdGPDBCtas.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
-#include "gpopt/gpdbwrappers.h"
+#include "access/sysattr.h"
+#include "nodes/makefuncs.h"
+#include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
+#include "optimizer/walkers.h"
 
 using namespace gpdxl;
 using namespace gpos;

@@ -1941,3 +1941,68 @@ select * from (select count(*) over (order by a rows between 1 preceding and 1 f
  01-02-2010 |     1 | 1 | 1
 (1 row)
 
+reset all;
+---
+-- DPE: Ensure that a plan with a PartitionSelector in a rescannable position
+-- is never generated.
+---
+create table dpe_foo(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table dpe_bar(c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dpe_bar values (3), (3);
+insert into dpe_foo select 1 from generate_series(1, 9);
+create table dpe_part(i int) partition by range (i) (partition dpe_part1 start (0) inclusive end (100) exclusive);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "dpe_part_1_prt_dpe_part1" for table "dpe_part"
+insert into dpe_part select generate_series(1, 81);
+analyze dpe_foo;
+analyze dpe_bar;
+analyze dpe_part;
+set optimizer_nestloop_factor=1;
+explain select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i + a < c;
+                                                           QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1724.01 rows=3 width=4)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1724.01 rows=8 width=1)
+         ->  Nested Loop  (cost=0.00..1724.01 rows=3 width=1)
+               Join Filter: (dpe_part.i + dpe_foo.a) < dpe_bar.c
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
+                     ->  Table Scan on dpe_bar  (cost=0.00..431.00 rows=1 width=4)
+               ->  Materialize  (cost=0.00..862.01 rows=3 width=8)
+                     ->  Hash Join  (cost=0.00..862.01 rows=3 width=8)
+                           Hash Cond: dpe_part.i = dpe_foo.a
+                           ->  Dynamic Table Scan on dpe_part (dynamic scan id: 1)  (cost=0.00..431.00 rows=27 width=4)
+                           ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                                 ->  Partition Selector for dpe_part (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                       ->  Table Scan on dpe_foo  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on; optimizer_nestloop_factor=1
+ Optimizer status: PQO version 3.114.0
+(15 rows)
+
+select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i + a < c;
+ ?column?
+----------
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+        1
+(18 rows)
+

@@ -48,6 +48,17 @@
 
 #define COMPRESSION_BUFFER_SIZE		(1<<14)
 
+#ifdef WIN32
+#if !defined(S_ISDIR)
+#define S_IFDIR  _S_IFDIR
+#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#endif
+#if !defined(S_ISFIFO)
+#define S_IFIFO _S_IFIFO
+#define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
+#endif
+#define strcasecmp stricmp
+#endif
 
 static int
 nothing_close(gfile_t *fd)
@@ -661,6 +672,22 @@ close_subprocess(gfile_t *fd)
 }
 #endif
 
+static int close_filefd(int fd)
+{
+	int ret = 0;
+
+	do
+	{
+#ifdef FRONTEND
+		ret = close(fd);
+#else
+		ret = CloseTransientFile(fd);
+#endif
+	}
+	while (ret < 0 && errno == EINTR);
+
+	return ret;
+}
 
 /*
  * public interface
@@ -683,41 +710,18 @@ gfile_open_flags(int writing, int usesync)
 int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, const char** response_string, struct gpfxdist_t* transform)
 {
 	const char* s = strrchr(fpath, '.');
-	bool_t is_win_pipe = FALSE;
-#ifndef WIN32
-	struct 		stat sta;
-#endif
-	off_t ssize = 0;
-
-	memset(fd,0,sizeof*fd);
-
 #ifdef WIN32
-#if !defined(S_ISDIR)
-#define S_IFDIR  _S_IFDIR
-#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+	bool_t is_win_pipe = FALSE;
+#else
+	struct 		stat sta;
+	memset(&sta, 0, sizeof(sta));
 #endif
-#if !defined(S_ISFIFO)
-#define S_IFIFO _S_IFIFO
-#define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
-#endif
-#define strcasecmp stricmp
-#endif 
 
+	memset(fd, 0, sizeof(*fd));
 
 	/*
 	 * check for subprocess and/or named pipe
 	 */
-
-#ifdef GPFXDIST
-	fd->transform = transform;
-
-	if (fd->transform)
-	{
-		/* caller wants a subprocess. nothing to do here just yet. */
-		gfile_printf_then_putc_newline("looks like a subprocess");
-	}
-	else 
-#endif
 #ifdef WIN32
 	/* is this a windows named pipe, of the form \\<host>\... */
 	if (strlen(fpath) > 2)
@@ -742,7 +746,6 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		gfile_printf_then_putc_newline("trying to connect to pipe");
 		if (pipe != INVALID_HANDLE_VALUE)
 		{
-			is_win_pipe = TRUE;
 			fd->is_win_pipe = TRUE;
 			fd->fd.pipefd = pipe;
 			gfile_printf_then_putc_newline("connected to pipe");
@@ -771,65 +774,64 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 			return 1;
 		}
 	}
-
-#else
-
-	if (!is_win_pipe && (flags == GFILE_OPEN_FOR_READ))
-	{
-		if (stat(fpath, &sta))
-		{
-			if(errno == EOVERFLOW)
-			{
-				/*
-				 * ENGINF-176
-				 * 
-				 * Some platforms don't support stat'ing of "large files"
-				 * accurately (files over 2GB) - SPARC for example. In these
-				 * cases the storage size of st_size is too small and the
-				 * file size will overflow. Therefore, we look for cases where
-				 * overflow had occurred, and resume operation. At least we
-				 * know that the file does exist and that's the main goal of
-				 * stat'ing here anyway. we set the size to 0, similarly to
-				 * the winpipe path, so that negative sizes won't be used.
-				 * 
-				 * TODO: there may be side effects to setting the size to 0,
-				 * need to double check.
-				 * 
-				 * TODO: this hack could possibly now be removed after enabling
-				 * largefiles via the build process with compiler flags.
-				 */
-				sta.st_size = 0;
-			}
-			else
-			{
-				gfile_printf_then_putc_newline("gfile stat %s failure: %s", fpath, strerror(errno));
-				*response_code = 404;
-				*response_string = "file not found";
-				return 1;				
-			}
-		}
-		if (S_ISDIR(sta.st_mode))
-		{
-			gfile_printf_then_putc_newline("gfile %s is a directory", fpath);
-			*response_code = 403;
-			*response_string = "Reading a directory is forbidden.";
-			return 1;
-		}
-		ssize = sta.st_size;
-	}
-
-#endif
-
-	fd->compressed_size = ssize;
-
+#else	/* not win32 */
 #ifdef GPFXDIST
+	fd->transform = transform;
 	if (fd->transform)
 	{
-		/* CR-2173 nothing to do here if transformation is requested */
+		/* caller wants a subprocess. nothing to do here just yet. */
+		gfile_printf_then_putc_newline("looks like a subprocess");
 	}
 	else
 #endif
-	if (!fd->is_win_pipe)
+	{
+		if (!fd->is_win_pipe && (flags == GFILE_OPEN_FOR_READ))
+		{
+			if (stat(fpath, &sta))
+			{
+				if(errno == EOVERFLOW)
+				{
+					/*
+					* ENGINF-176
+					* 
+					* Some platforms don't support stat'ing of "large files"
+					* accurately (files over 2GB) - SPARC for example. In these
+					* cases the storage size of st_size is too small and the
+					* file size will overflow. Therefore, we look for cases where
+					* overflow had occurred, and resume operation. At least we
+					* know that the file does exist and that's the main goal of
+					* stat'ing here anyway. we set the size to 0, similarly to
+					* the winpipe path, so that negative sizes won't be used.
+					* 
+					* TODO: there may be side effects to setting the size to 0,
+					* need to double check.
+					* 
+					* TODO: this hack could possibly now be removed after enabling
+					* largefiles via the build process with compiler flags.
+					*/
+					sta.st_size = 0;
+				}
+				else
+				{
+					gfile_printf_then_putc_newline("gfile stat %s failure: %s", fpath, strerror(errno));
+					*response_code = 404;
+					*response_string = "file not found";
+					return 1;
+				}
+			}
+			if (S_ISDIR(sta.st_mode))
+			{
+				gfile_printf_then_putc_newline("gfile %s is a directory", fpath);
+				*response_code = 403;
+				*response_string = "Reading a directory is forbidden.";
+				return 1;
+			}
+			fd->compressed_size = sta.st_size;
+		}
+	}
+#endif	/* ifdef win32 */
+
+	if (NULL == fd->transform && !fd->is_win_pipe)
 	{
 		int syncFlag = 0;
 		int openFlags;
@@ -874,27 +876,24 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 #endif
 		}
 		while (fd->fd.filefd < 0 && errno == EINTR);
-	}
 
-	if (!fd->is_win_pipe && -1 == fd->fd.filefd) 
-	{
-		static char buf[256];
-		gfile_printf_then_putc_newline("gfile open (for %s) failed %s: %s",
-									   ((flags == GFILE_OPEN_FOR_READ) ? "read" : 
-										((flags == GFILE_OPEN_FOR_WRITE_SYNC) ? "write (sync)" : "write")),
-					  				  fpath, strerror(errno));
-		*response_code = 404;
-		snprintf(buf, sizeof buf, "file open failure %s: %s", fpath, 
-				strerror(errno));
-		*response_string = buf;
-		return 1;
-	}
+		if (-1 == fd->fd.filefd)
+		{
+			static char buf[256];
+			gfile_printf_then_putc_newline("gfile open (for %s) failed %s: %s",
+										((flags == GFILE_OPEN_FOR_READ) ? "read" :
+											((flags == GFILE_OPEN_FOR_WRITE_SYNC) ? "write (sync)" : "write")),
+										fpath, strerror(errno));
+			*response_code = 404;
+			snprintf(buf, sizeof buf, "file open failure %s: %s", fpath,
+					strerror(errno));
+			*response_string = buf;
+			return 1;
+		}
 
 #if !defined(WIN32) && !defined(_AIX)
-	if (!is_win_pipe && (flags == GFILE_OPEN_FOR_READ))
-	{
 		/* Restrict only one reader session for each PIPE */
-		if (S_ISFIFO(sta.st_mode))
+		if (S_ISFIFO(sta.st_mode) && (flags == GFILE_OPEN_FOR_READ))
 		{
 			if (flock (fd->fd.filefd, LOCK_EX | LOCK_NB) != 0)
 			{
@@ -902,6 +901,8 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 				gfile_printf_then_putc_newline("gfile %s is a pipe", fpath);
 				*response_code = 404;
 				*response_string = "Multiple reader to a pipe is forbidden.";
+				close_filefd(fd->fd.filefd);
+				fd->fd.filefd = -1;
 				return 1;
 			}
 			else
@@ -909,8 +910,8 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 				fd->held_pipe_lock = TRUE;
 			}
 		}
-	}
 #endif
+	}
 
 	/*
 	 * prepare to use the appropriate i/o routines 
@@ -938,7 +939,6 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		fd->close = nothing_close;
 	}
 
-	
 	/*
 	 * delegate remaining setup work to an appropriate open routine
 	 * or return an error if we can't handle the type
@@ -1007,49 +1007,34 @@ gfile_close(gfile_t*fd)
 			fd->close(fd);
 		} 
         else
-		{
 #endif
-
-		/*
-		 * for the compressed data implementation we need to call the "close" callback. Other implementations
-		 * didn't use to call this callback here and it will remain so.
-		 */
-		if (  fd->compression == GZ_COMPRESSION ) 
 		{
-			fd->close(fd);
-		}
-
-		if (fd->is_win_pipe)
-		{
-			fd->close(fd);
-		}
-		else
-		{
-			if(fd->held_pipe_lock)
+			/*
+			* for the compressed data implementation we need to call the "close" callback. Other implementations
+			* didn't use to call this callback here and it will remain so.
+			*/
+			if (fd->compression == GZ_COMPRESSION)
 			{
+				fd->close(fd);
+			}
+
+			if (fd->is_win_pipe)
+			{
+				fd->close(fd);
+			}
+			else
+			{
+				if(fd->held_pipe_lock)
+				{
 #ifndef WIN32
-				flock (fd->fd.filefd, LOCK_UN);
+					flock (fd->fd.filefd, LOCK_UN);
 #endif
+				}
+				ret = close_filefd(fd->fd.filefd);
+				if (ret == -1)
+					ret = 1;
 			}
-			do
-			{
-				//fsync(fd->fd.filefd);
-#ifdef FRONTEND
-				ret = close(fd->fd.filefd);
-#else
-				ret = CloseTransientFile(fd->fd.filefd);
-#endif
-			}
-			while (ret < 0 && errno == EINTR);
-
-			if (ret == -1)
-				ret = 1;
-		}
-
-#ifdef GPFXDIST
 		} 
-#endif
-
 		fd->read = 0;
 		fd->close = 0;
 	}

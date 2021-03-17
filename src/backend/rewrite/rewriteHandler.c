@@ -1662,6 +1662,37 @@ fireRules(Query *parsetree,
 
 
 /*
+ * get_view_query - get the Query from a view's _RETURN rule.
+ *
+ * Caller should have verified that the relation is a view, and therefore
+ * we should find an ON SELECT action.
+ */
+Query *
+get_view_query(Relation view)
+{
+	int			i;
+
+	Assert(view->rd_rel->relkind == RELKIND_VIEW);
+
+	for (i = 0; i < view->rd_rules->numLocks; i++)
+	{
+		RewriteRule *rule = view->rd_rules->rules[i];
+
+		if (rule->event == CMD_SELECT)
+		{
+			/* A _RETURN rule should have only one action */
+			if (list_length(rule->actions) != 1)
+				elog(ERROR, "invalid _RETURN rule action specification");
+
+			return (Query *) linitial(rule->actions);
+		}
+	}
+
+	elog(ERROR, "failed to find _RETURN rule for view");
+	return NULL;				/* keep compiler quiet */
+}
+
+/*
  * RewriteQuery -
  *	  rewrites the query and apply the rules again on the queries rewritten
  *

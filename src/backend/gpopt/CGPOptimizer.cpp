@@ -14,18 +14,20 @@
 //---------------------------------------------------------------------------
 
 #include "gpopt/CGPOptimizer.h"
-#include "gpopt/utils/COptTasks.h"
+
 #include "gpopt/utils/CMemoryPoolPalloc.h"
 #include "gpopt/utils/CMemoryPoolPallocManager.h"
+#include "gpopt/utils/COptTasks.h"
 
 // the following headers are needed to reference optimizer library initializers
-#include "naucrates/init.h"
-#include "gpopt/init.h"
 #include "gpos/_api.h"
-#include "gpopt/gpdbwrappers.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 
+#include "gpopt/gpdbwrappers.h"
+#include "gpopt/init.h"
 #include "naucrates/exception.h"
+#include "naucrates/init.h"
+
 #include "utils/guc.h"
 #include "utils/memutils.h"
 

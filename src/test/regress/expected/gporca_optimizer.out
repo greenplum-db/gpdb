@@ -11965,4 +11965,21 @@ select * from tcorr1 where a < coalesce((select tcorr1.a from tcorr2 where a = 1
  1 | 99
 (1 row)
 
+-- make sure nested window functions give a reasonable error
+select max(count(*) over (order by a)) over (partition by a) from tcorr1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+ERROR:  Window function calls may not be nested.
+select 1+max(count(*) over (order by a)) over (partition by a) from tcorr1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+ERROR:  Window function calls may not be nested.
+select * from tcorr1 where a > (select 1+max(count(*) over (order by a)) over (partition by a) from tcorr1);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+ERROR:  Window function calls may not be nested.
+-- this one should work, no nesting
+select max(a) over(order by a) + min(a) over(order by a) from tcorr1;
+ ?column? 
+----------
+        2
+(1 row)
+
 reset optimizer_trace_fallback;

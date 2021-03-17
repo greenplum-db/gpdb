@@ -1451,6 +1451,61 @@ find_nodes_walker(Node *node, find_nodes_context *context)
 	return expression_tree_walker(node, find_nodes_walker, (void *) context);
 }
 
+typedef struct find_nested_nodes_context
+{
+	NodeTag nodeTag;
+	Node * parentNode;
+	bool foundNestedNode;
+} find_nested_nodes_context;
+
+static bool find_nested_nodes_walker(Node *node, find_nested_nodes_context *context);
+
+bool find_nested_nodes(Node *node, NodeTag nodeTag)
+{
+	find_nested_nodes_context context;
+	Assert(NULL != node);
+	context.nodeTag = nodeTag;
+	context.parentNode = NULL;
+	context.foundNestedNode = false;
+	find_nested_nodes_walker(node, &context);
+
+	return context.foundNestedNode;
+}
+
+static bool
+find_nested_nodes_walker(Node *node, find_nested_nodes_context *context)
+{
+	if (NULL == node)
+	{
+		return false;
+	}
+
+	bool result = false;
+
+	if (nodeTag(node) == context->nodeTag)
+	{
+		if (context->parentNode == NULL)
+		{
+			context->parentNode = node;
+			// found one node, now see whether we see a second one below it
+			result = expression_tree_walker(node, find_nested_nodes_walker, (void *) context);
+			context->parentNode = NULL;
+		}
+		else
+		{
+			// both context->parentNode and node have the same type, this
+			// is the pattern we are looking for
+			context->foundNestedNode = true;
+			result = true;
+		}
+	}
+	else
+	{
+		result = expression_tree_walker(node, find_nested_nodes_walker, (void *) context);
+	}
+	return result;
+}
+
 /*
  * raw_expression_tree_walker --- walk raw parse trees
  *
