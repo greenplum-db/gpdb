@@ -949,6 +949,8 @@ insert into d values (1, 1);
 insert into d values (1, 2);
 insert into d values (1, NULL);
 select * from d_1_prt_abc;
+alter table d split default partition start (21,1) end (30) into (partition c, default partition);
+alter table d split default partition start (21) end (30,1) into (partition c, default partition);
 drop table  d cascade;
 
 -- multicolumn list support

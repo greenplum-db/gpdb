@@ -90,7 +90,7 @@ partition by range (b)
   partition aa start (2007,1) end (2008),
   partition bb start (2008,2) end (2009)
 );
-ERROR:  invalid number of START values
+ERROR:  number of START values should cover all partition key columns
 LINE 5:   partition aa start (2007,1) end (2008),
                        ^
 create table pby_mismatch (a char(1), b numeric, d numeric)
@@ -100,7 +100,7 @@ partition by range (b)
   partition aa start (2007) end (2008,1),
   partition bb start (2008) end (2009,1)
 );
-ERROR:  invalid number of END values
+ERROR:  number of END values should cover all partition key columns
 LINE 5:   partition aa start (2007) end (2008,1),
                                     ^
 -- basic list partition
@@ -1017,6 +1017,8 @@ alter table hhh split partition cc at ('a') into (partition gg, partition hh);
 ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh split partition aa at ('a');
 ERROR:  invalid input syntax for type date: "a"
+LINE 1: alter table hhh split partition aa at ('a');
+                                               ^
 alter table hhh truncate partition cc;
 ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh truncate partition aa;
@@ -1312,6 +1314,14 @@ select * from d_1_prt_abc;
  1 |  
 (1 row)
 
+alter table d split default partition start (21,1) end (30) into (partition c, default partition);
+ERROR:  number of START values should cover all partition key columns
+LINE 1: alter table d split default partition start (21,1) end (30) ...
+                                              ^
+alter table d split default partition start (21) end (30,1) into (partition c, default partition);
+ERROR:  number of END values should cover all partition key columns
+LINE 1: alter table d split default partition start (21) end (30,1) ...
+                                                         ^
 drop table  d cascade;
 -- multicolumn list support
 create type d_partkey as (b int, c int);

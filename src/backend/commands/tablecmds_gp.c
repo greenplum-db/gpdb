@@ -710,6 +710,8 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 		char			*partname1 = NULL;
 		char			*partname2 = NULL;
 
+		pstate->p_sourcetext = cmd->queryString;
+
 		/* Extract the two partition names from the INTO (<part1>, <part2>) clause */
 		if (into)
 		{
@@ -809,7 +811,10 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 					Const *endConst;
 
 					if (list_length(end) != partkey->partnatts)
-						elog(ERROR, "invalid number of end values"); // GPDB_12_MERGE_FIXME: improve message
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+								 errmsg("number of END values should cover all partition key columns"),
+								 parser_errposition(pstate, pc->end->location)));
 
 					endConst = transformPartitionBoundValue(pstate,
 															linitial(end),
@@ -851,7 +856,10 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 					Const *startConst;
 
 					if (list_length(start) != partkey->partnatts)
-						elog(ERROR, "invalid number of start values"); // GPDB_12_MERGE_FIXME: improve message
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+								 errmsg("number of START values should cover all partition key columns"),
+								 parser_errposition(pstate, pc->start->location)));
 
 					startConst = transformPartitionBoundValue(pstate,
 															  linitial(start),
@@ -869,8 +877,6 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 						convert_exclusive_start_inclusive_end(startConst,
 															  part_col_typid, part_col_typmod,
 															  true);
-					if (startConst->constisnull)
-						elog(ERROR, "START EXCLUSIVE is out of range"); /* GPDB_12_MERGE_FIXME: better message */
 
 					boundspec1->lowerdatums =
 						list_make1(makeConst(partkey->parttypid[0],
@@ -1180,7 +1186,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 			} while (1);
 
 			List *cstmts = generatePartitions(RelationGetRelid(rel),
-											  gpPartDef, subpart, NULL,
+											  gpPartDef, subpart, cmd->queryString,
 											  NIL, NULL, NULL, false);
 			foreach(l, cstmts)
 			{
@@ -1308,8 +1314,8 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				 * add partitions, just to validate the subpartition template,
 				 * if anything wrong it will error out.
 				 */
-				generatePartitions(firstchildoid, templateDef, NULL, NULL, NIL,
-								   NULL, NULL, true);
+				generatePartitions(firstchildoid, templateDef, NULL, cmd->queryString,
+								   NIL, NULL, NULL, true);
 				table_close(firstrel, AccessShareLock);
 
 				StoreGpPartitionTemplate(topParentrelid, level, templateDef);

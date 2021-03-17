@@ -4272,6 +4272,8 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 			case AT_PartTruncate:
 			case AT_PartExchange:
 			case AT_PartSetTemplate:
+				/* Try to support parser_errposition() in each cmd's execution time */
+				cmd->queryString = queryString;
 				newcmds = lappend(newcmds, cmd);
 				break;
 

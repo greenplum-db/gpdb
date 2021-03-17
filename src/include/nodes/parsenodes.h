@@ -2033,6 +2033,9 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	 */
 	int	        backendId;     /* backend ID on QD, if a temporary table was created */
 
+	/* Used for for GPDB's partition syntax to support parser_errposition() */
+	const char *queryString;
+
 	GpPolicy   *policy;
 
 } AlterTableCmd;

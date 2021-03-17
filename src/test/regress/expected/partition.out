@@ -1252,6 +1252,8 @@ add partition neuter values ('N')
          every (interval '1 month')
             (subpartition bar values ('AZ')));
 ERROR:  subpartition configuration conflicts with subpartition template
+LINE 3:     (subpartition foo
+             ^
 alter table ataprank2
 add partition neuter values ('N')
     (subpartition foo
@@ -1295,6 +1297,8 @@ add default partition neuter
          every (interval '1 month')
             (subpartition ariz values ('AZ')));
 ERROR:  subpartition configuration conflicts with subpartition template
+LINE 3:     (subpartition foo
+             ^
 alter table ataprank2
 add default partition neuter 
     (subpartition foo
@@ -2250,6 +2254,8 @@ alter table mpp4892 add partition p1 end (11);
 -- complain about existing template
 alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
 ERROR:  subpartition configuration conflicts with subpartition template
+LINE 1: alter table mpp4892 add partition p3 end (13) (subpartition ...
+                                                       ^
 -- remove template
 alter table mpp4892 set	subpartition template ();
 -- should work (because the template is gone)
@@ -2686,8 +2692,12 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ps_pa
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table partsupp split partition p2 at (NULL);
 ERROR:  cannot use NULL with range partition specification
+LINE 1: alter table partsupp split partition p2 at (NULL);
+                                                    ^
 alter table partsupp split default partition start(null) end(200);
 ERROR:  cannot use NULL with range partition specification
+LINE 1: ...table partsupp split default partition start(null) end(200);
+                                                              ^
 drop table partsupp;
 CREATE TABLE partsupp ( ps_partkey integer,
 ps_suppkey integer, ps_availqty integer,
@@ -2700,6 +2710,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ps_pa
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table partsupp add partition foo start(500) end(NULL);
 ERROR:  cannot use NULL with range partition specification
+LINE 1: alter table partsupp add partition foo start(500) end(NULL);
+                                                              ^
 drop table partsupp;
 -- Test for an old bug, where we used to crash on NULLs, because the code
 -- to order the partitions by their start/end boundaries did not anticipate
@@ -5575,6 +5587,8 @@ alter table sales add partition dd start(301) end(300)
 	( subpartition opt1_1 VALUES (1),
 	  subpartition opt1_2 VALUES (2) );
 ERROR:  subpartition specification provided but table doesn't have SUBPARTITION BY clause
+LINE 2:  ( subpartition opt1_1 VALUES (1),
+           ^
 -- root partition (and only root) should have relfrozenxid as 0
 select relname, relkind from pg_class where relkind in ('r', 'p') and relname like 'sales%' and relfrozenxid=0;
  relname | relkind 
@@ -5745,8 +5759,12 @@ create table at_range (a int) partition by range (a) (start(1) end(5));
 create table at_list (i int) partition by list(i) (partition p1 values(1));
 alter table at_list add partition foo2 start(6) end (10);
 ERROR:  invalid boundary specification for LIST partition
+LINE 1: alter table at_list add partition foo2 start(6) end (10);
+                                               ^
 alter table at_range add partition test values(5);
 ERROR:  invalid boundary specification for RANGE partition
+LINE 1: alter table at_range add partition test values(5);
+                                                ^
 -- Ensure array type for the non-partition table is there after partition exchange.
 CREATE TABLE pt_xchg(a int) PARTITION BY RANGE(a) (START(1) END(4) EVERY (2));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

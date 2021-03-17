@@ -2218,6 +2218,8 @@ END (date '2009-03-01') EXCLUSIVE
 SUBPARTITION asia VALUES ('asia'),
 SUBPARTITION europe VALUES ('europe') );
 ERROR:  subpartition configuration conflicts with subpartition template
+LINE 4: ( SUBPARTITION usa VALUES ('usa'),
+          ^
 -- This is the new way
 ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END (date '2009-03-01') EXCLUSIVE;
 CREATE TABLE mpp3250 (

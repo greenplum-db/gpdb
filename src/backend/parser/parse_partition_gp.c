@@ -961,7 +961,7 @@ generateRangePartitions(ParseState *pstate,
 		if (list_length(boundspec->partStart->val) != partkey->partnatts)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("invalid number of START values"),
+					 errmsg("number of START values should cover all partition key columns"),
 					 parser_errposition(pstate, boundspec->partStart->location)));
 		start = linitial(boundspec->partStart->val);
 		startExclusive = (boundspec->partStart->edge == PART_EDGE_EXCLUSIVE) ? true : false;
@@ -974,7 +974,7 @@ generateRangePartitions(ParseState *pstate,
 		if (list_length(boundspec->partEnd->val) != partkey->partnatts)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("invalid number of END values"),
+					 errmsg("number of END values should cover all partition key columns"),
 					 parser_errposition(pstate, boundspec->partEnd->location)));
 		end = linitial(boundspec->partEnd->val);
 		endInclusive = (boundspec->partEnd->edge == PART_EDGE_INCLUSIVE) ? true : false;
@@ -993,7 +993,10 @@ generateRangePartitions(ParseState *pstate,
 	if (partnamecomp->tablename == NULL && boundspec->partEvery)
 	{
 		if (list_length(boundspec->partEvery) != partkey->partnatts)
-			elog(ERROR, "invalid number of every values"); // GPDB_12_MERGE_FIXME: improve message
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("number of EVERY values should cover all partition key columns"),
+					 parser_errposition(pstate, boundspec->location)));
 		every = linitial(boundspec->partEvery);
 	}
 
