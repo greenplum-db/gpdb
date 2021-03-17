@@ -69,6 +69,12 @@
                     <pd>For example: <codeph>gppkg --migrate
                             /usr/local/greenplum-db-&lt;old-version>
                             /usr/local/greenplum-db-&lt;new-version></codeph></pd>
+                    <pd>
+                        <note>In general, it is best to avoid using the <codeph>--migrate</codeph>
+                            option, and packages should be reinstalled, not migrated. See <xref
+                                href="../../install_guide/upgrading.xml#topic17">Upgrading from 6.x
+                                to a Newer 6.x Release</xref>.</note>
+                    </pd>
                     <pd>When migrating packages, these requirements must be met.<ul
                             id="ul_sx3_hwx_41b">
                             <li>At least the coordinator instance of the destination Greenplum Database
