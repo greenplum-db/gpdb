@@ -53,9 +53,6 @@ private:
 	// are allocated
 	CMemoryPool *m_global_memory_pool;
 
-	// are allocations using global new operator allowed?
-	BOOL m_allow_global_new;
-
 	// hash table to maintain created pools
 	CSyncHashtable<CMemoryPool, ULONG_PTR> *m_ht_all_pools;
 
@@ -155,27 +152,6 @@ public:
 	}
 
 	virtual ~CMemoryPoolManager() = default;
-
-	// are allocations using global new operator allowed?
-	BOOL
-	IsGlobalNewAllowed() const
-	{
-		return m_allow_global_new;
-	}
-
-	// disable allocations using global new operator
-	void
-	DisableGlobalNew()
-	{
-		m_allow_global_new = false;
-	}
-
-	// enable allocations using global new operator
-	void
-	EnableGlobalNew()
-	{
-		m_allow_global_new = true;
-	}
 
 	// return total allocated size in bytes
 	ULLONG TotalAllocatedSize();

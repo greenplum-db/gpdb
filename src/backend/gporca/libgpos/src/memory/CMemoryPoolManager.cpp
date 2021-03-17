@@ -35,7 +35,6 @@ CMemoryPoolManager *CMemoryPoolManager::m_memory_pool_mgr = nullptr;
 CMemoryPoolManager::CMemoryPoolManager(CMemoryPool *internal,
 									   EMemoryPoolType memory_pool_type)
 	: m_internal_memory_pool(internal),
-	  m_allow_global_new(true),
 	  m_ht_all_pools(nullptr),
 	  m_memory_pool_type(memory_pool_type)
 {
