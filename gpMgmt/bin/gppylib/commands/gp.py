@@ -1213,7 +1213,7 @@ class _GpExpandStatus(object):
         try:
             dburl = dbconn.DbURL(dbname=self.dbname)
             with dbconn.connect(dburl, encoding='UTF8') as conn:
-                if not dbconn.querySingleton(conn, status_table_exists_sql):
+                if not dbconn.execSQLForSingleton(conn, status_table_exists_sql):
                     conn.close()
                     return False
                 status = dbconn.execSQLForSingleton(conn, sql)
