@@ -118,7 +118,7 @@ Continue only if you are certain that the standby is not acting as the coordinat
                         If a segment instance was shutdown abnormally (due to power failure or
                         killing its <codeph>postgres</codeph> database listener process, for
                         example), it may take longer to start up due to the database recovery and
-                        validation process. If not specified, the default timeout is 60
+                        validation process. If not specified, the default timeout is 600
                         seconds.</pd>
                 </plentry>
                 <plentry>
