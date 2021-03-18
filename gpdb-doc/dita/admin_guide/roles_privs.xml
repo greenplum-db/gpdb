@@ -515,29 +515,6 @@
                 </p>
               </entry>
             </row>
-            <row>
-              <entry colname="col1">Custom Protocols</entry>
-              <entry colname="col2">
-                <p>
-                <codeph>SELECT</codeph>
-                </p>
-                <p>
-                  <codeph>INSERT</codeph>
-                </p>
-                <p>
-                  <codeph>UPDATE</codeph>
-                </p>
-                <p>
-                  <codeph>DELETE</codeph>
-                </p>
-                <p>
-                  <codeph>RULE</codeph>
-                </p>
-                <p>
-                  <codeph>ALL</codeph>
-                </p>
-              </entry>
-            </row>
           </tbody>
         </tgroup>
       </table>
