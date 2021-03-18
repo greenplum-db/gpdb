@@ -50,7 +50,7 @@
       </parml></section>
     <section id="section5">
       <title>Notes</title>
-      <p><codeph>REINDEX</codeph> results in locking of system catalog tables, which could
+      <p><codeph>REINDEX</codeph> causes locking of system catalog tables, which could
         affect currently running queries. To avoid disrupting ongoing business operations, schedule
         the <codeph>REINDEX</codeph> operation during a period of low activity.</p>
       <p><codeph>REINDEX</codeph> is similar to a drop and recreate of the index in that the index
