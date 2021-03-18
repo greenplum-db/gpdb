@@ -297,9 +297,11 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">Tables, Views, Sequences</entry>
+              <entry colname="col1">Tables, Views</entry>
               <entry colname="col2">
+                <p>
                 <codeph>SELECT</codeph>
+                </p>
                 <p>
                   <codeph>INSERT</codeph>
                 </p>
@@ -310,7 +312,13 @@
                   <codeph>DELETE</codeph>
                 </p>
                 <p>
-                  <codeph>RULE</codeph>
+                  <codeph>REFERENCES</codeph>
+                </p>
+                <p>
+                  <codeph>TRIGGER</codeph>
+                </p>
+                <p>
+                  <codeph>TRUNCATE</codeph>
                 </p>
                 <p>
                   <codeph>ALL</codeph>
@@ -318,9 +326,48 @@
               </entry>
             </row>
             <row>
+              <entry colname="col1">Columns</entry>
+              <entry colname="col2">
+                <p>
+                  <codeph>SELECT</codeph>
+                </p>
+                <p>
+                  <codeph>INSERT</codeph>
+                </p>
+                <p>
+                  <codeph>UPDATE</codeph>
+                </p>
+                <p>
+                  <codeph>REFERENCES</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+                <entry colname="col1">Sequences</entry>
+                <entry colname="col2">
+                  <p>
+                    <codeph>USAGE</codeph>
+                  </p>
+                  <p>
+                    <codeph>SELECT</codeph>
+                  </p>
+                  <p>
+                    <codeph>UPDATE</codeph>
+                  </p>
+                  <p>
+                    <codeph>ALL</codeph>
+                  </p>
+                </entry>
+            </row>
+            <row>
               <entry colname="col1">External Tables</entry>
               <entry colname="col2">
-                <codeph>SELECT</codeph>
+                <p>
+                  <codeph>SELECT</codeph>
+                </p>
                 <p>
                   <codeph>RULE</codeph>
                 </p>
@@ -332,12 +379,17 @@
             <row>
               <entry colname="col1">Databases</entry>
               <entry colname="col2">
-                <codeph>CONNECT</codeph>
                 <p>
                   <codeph>CREATE</codeph>
                 </p>
                 <p>
-                  <codeph>TEMPORARY | TEMP</codeph>
+                  <codeph>CONNECT</codeph>
+                </p>
+                <p>
+                  <codeph>TEMPORARY</codeph>
+                </p>
+                <p>
+                  <codeph>TEMP</codeph>
                 </p>
                 <p>
                   <codeph>ALL</codeph>
@@ -345,21 +397,19 @@
               </entry>
             </row>
             <row>
-              <entry colname="col1">Functions</entry>
+              <entry colname="col1">Domains</entry>
               <entry colname="col2">
-                <codeph>EXECUTE</codeph>
-              </entry>
-            </row>
-            <row>
-              <entry colname="col1">Procedural Languages</entry>
-              <entry colname="col2">
+                <p>
                 <codeph>USAGE</codeph>
+                </p>
+                <p>
+                <codeph>ALL</codeph>
+                </p>
               </entry>
             </row>
             <row>
-              <entry colname="col1">Schemas</entry>
+              <entry colname="col1">Foreign Data Wrappers</entry>
               <entry colname="col2">
-                <codeph>CREATE</codeph>
                 <p>
                   <codeph>USAGE</codeph>
                 </p>
@@ -369,9 +419,108 @@
               </entry>
             </row>
             <row>
-              <entry colname="col1">Custom Protocol</entry>
+              <entry colname="col1">Foreign Servers</entry>
               <entry colname="col2">
+                <p>
+                  <codeph>USAGE</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Functions</entry>
+              <entry colname="col2">
+                <p>
+                <codeph>EXECUTE</codeph>
+                </p>
+                <p>
+                <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Procedural Languages</entry>
+              <entry colname="col2">
+                <p>
+                <codeph>USAGE</codeph>
+                </p>
+                <p>
+                <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Large Objects</entry>
+              <entry colname="col2">
+                <p>
+                  <codeph>SELECT</codeph>
+                </p>
+                <p>
+                  <codeph>UPDATE</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Schemas</entry>
+              <entry colname="col2">
+                <p>
+                <codeph>CREATE</codeph>
+                </p>
+                <p>
+                  <codeph>USAGE</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Tablespaces</entry>
+              <entry colname="col2">
+                <p>
+                  <codeph>CREATE</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Types</entry>
+              <entry colname="col2">
+                <p>
+                  <codeph>USAGE</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Protocols</entry>
+              <entry colname="col2">
+                <p>
+                  <codeph>SELECT</codeph>
+                </p>
+                <p>
+                  <codeph>INSERT</codeph>
+                </p>
+                <p>
+                  <codeph>ALL</codeph>
+                </p>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Custom Protocols</entry>
+              <entry colname="col2">
+                <p>
                 <codeph>SELECT</codeph>
+                </p>
                 <p>
                   <codeph>INSERT</codeph>
                 </p>
