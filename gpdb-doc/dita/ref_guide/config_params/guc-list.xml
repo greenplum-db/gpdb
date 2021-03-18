@@ -6269,6 +6269,7 @@
           <codeph>COPY</codeph>, and <codeph>VACUUM</codeph> operations. The limit is only for
         in-progress transactions. Once a transaction ends (either aborted or committed), it is no
         longer counted against this limit.</p>
+      <note>Greenplum Database limits the maximum number of concurrent inserts into an append-only table to 127.</note>
       <p>For operations against a partitioned table, each subpartition (child table) that is an
         append-optimized table and is changed counts as a single table towards the maximum. For
         example, a partitioned table <codeph>p_tbl</codeph> is defined with three subpartitions that
