@@ -1418,7 +1418,7 @@ class GpArray:
                     if segPair.mirrorDB and segPair.mirrorDB.dbid in self.recoveredSegmentDbids:
                         recovered_contents.append((segPair.primaryDB.content, segPair.primaryDB.dbid, segPair.mirrorDB.dbid))
 
-        with dbconn.connect(dbURL, True, allowSystemTableMods = True) as conn:
+        with closing(dbconn.connect(dbURL, True, allowSystemTableMods = True)) as conn:
             for (content_id, primary_dbid, mirror_dbid) in recovered_contents:
                 sql = "UPDATE gp_segment_configuration SET role=preferred_role where content = %d" % content_id
                 dbconn.executeUpdateOrInsert(conn, sql, 2)
@@ -1433,7 +1433,6 @@ class GpArray:
 
                 # We could attempt to update the segments-array.
                 # But the caller will re-read the configuration from the catalog.
-        conn.close()
 
     # --------------------------------------------------------------------
     def addExpansionSeg(self, content, preferred_role, dbid, role,

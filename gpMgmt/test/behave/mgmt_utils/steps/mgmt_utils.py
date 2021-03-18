@@ -18,6 +18,7 @@ import psutil
 from behave import given, when, then
 from datetime import datetime, timedelta
 from os import path
+from contextlib import closing
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
@@ -171,16 +172,15 @@ def impl(context, dbname, cname):
 @given('the user create a writable external table with name "{tabname}"')
 def impl(conetxt, tabname):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         sql = ("create writable external table {tabname}(a int) location "
                "('gpfdist://host.invalid:8000/file') format 'text'").format(tabname=tabname)
         dbconn.execSQL(conn, sql)
-    conn.close()
 
 @given('the user create an external table with name "{tabname}" in partition table t')
 def impl(conetxt, tabname):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         sql = ("create external table {tabname}(i int, j int) location "
                "('gpfdist://host.invalid:8000/file') format 'text'").format(tabname=tabname)
         dbconn.execSQL(conn, sql)
@@ -189,7 +189,6 @@ def impl(conetxt, tabname):
         sql = ("alter table t exchange partition for (2018) with table {tabname} without validation").format(tabname=tabname)
         dbconn.execSQL(conn, sql)
         conn.commit()
-    conn.close()
 
 
 @given('the user executes "{sql}" with named connection "{cname}"')
@@ -769,17 +768,15 @@ def impl(context, coordinator, standby):
 @given('the user runs gpinitstandby with options "{options}"')
 def impl(context, options):
     dbname = 'postgres'
-    with dbconn.connect(dbconn.DbURL(port=os.environ.get("PGPORT"), dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(port=os.environ.get("PGPORT"), dbname=dbname), unsetSearchPath=False)) as conn:
         query = """select distinct content, hostname from gp_segment_configuration order by content limit 2;"""
         cursor = dbconn.query(conn, query)
 
-    try:
-        _, coordinator_hostname = cursor.fetchone()
-        _, segment_hostname = cursor.fetchone()
-    except:
-        raise Exception("Did not get two rows from query: %s" % query)
-    finally:
-        conn.close()
+        try:
+            _, coordinator_hostname = cursor.fetchone()
+            _, segment_hostname = cursor.fetchone()
+        except:
+            raise Exception("Did not get two rows from query: %s" % query)
 
     # if we have two hosts, assume we're testing on a multinode cluster
     init_standby(context, coordinator_hostname, options, segment_hostname)
@@ -960,20 +957,18 @@ def impl(context, sql, dbname):
 def impl(context, dbname):
     context.stored_rows = []
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         curs = dbconn.query(conn, context.text)
         context.stored_rows = curs.fetchall()
-    conn.close()
 
 
 @when('execute sql "{sql}" in db "{dbname}" and store result in the context')
 def impl(context, sql, dbname):
     context.stored_rows = []
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         curs = dbconn.query(conn, sql)
         context.stored_rows = curs.fetchall()
-    conn.close()
 
 
 @then('validate that "{message}" is in the stored rows')
@@ -1257,10 +1252,9 @@ def impl(context):
 def impl(context):
     check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'm'"
     check_stat_replication_query = "SELECT * FROM pg_stat_replication"
-    with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False)) as conn:
         segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
         statrep = dbconn.query(conn, check_stat_replication_query).fetchall()
-    conn.close()
 
     if len(segconfig) != 1:
         raise Exception("gp_segment_configuration did not have standby coordinator")
@@ -1273,9 +1267,8 @@ def impl(context):
 @then('verify the standby coordinator is now acting as coordinator')
 def impl(context):
     check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = %s" % context.standby_dbid
-    with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port), unsetSearchPath=False)) as conn:
         segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
-    conn.close()
     if len(segconfig) != 1:
         raise Exception("gp_segment_configuration did not have standby coordinator acting as new coordinator")
 
@@ -1740,10 +1733,9 @@ def impl(context, dir):
     'the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}"')
 def impl(context, user_table, catalog_table, primary_key, db_name):
     delete_qry = "delete from %s where %s='%s'::regclass::oid;" % (catalog_table, primary_key, user_table)
-    with dbconn.connect(dbconn.DbURL(dbname=db_name), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=db_name), unsetSearchPath=False)) as conn:
         for qry in ["set allow_system_table_mods=true;", "set allow_segment_dml=true;", delete_qry]:
             dbconn.execSQL(conn, qry)
-    conn.close()
 
 @when('the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}" on the first primary segment')
 @given('the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}" on the first primary segment')
@@ -1751,11 +1743,10 @@ def impl(context, user_table, catalog_table, primary_key, db_name):
     host, port = get_primary_segment_host_port()
     delete_qry = "delete from %s where %s='%s'::regclass::oid;" % (catalog_table, primary_key, user_table)
 
-    with dbconn.connect(dbconn.DbURL(dbname=db_name, port=port, hostname=host), utility=True,
-                        allowSystemTableMods=True, unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=db_name, port=port, hostname=host), utility=True,
+                        allowSystemTableMods=True, unsetSearchPath=False)) as conn:
         for qry in [delete_qry]:
             dbconn.execSQL(conn, qry)
-    conn.close()
 
 @given('the timestamps in the repair dir are consistent')
 @when('the timestamps in the repair dir are consistent')
@@ -1815,9 +1806,8 @@ def impl(context, table_name, db_name):
     index_qry = "create table {0}(i int primary key, j varchar); create index test_index on index_table using bitmap(j)".format(
         table_name)
 
-    with dbconn.connect(dbconn.DbURL(dbname=db_name), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=db_name), unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, index_qry)
-    conn.close()
 
 @then('the file with the fake timestamp no longer exists')
 def impl(context):
@@ -2090,9 +2080,8 @@ def _create_cluster(context, coordinator_host, segment_host_list, hba_hostnames=
     os.environ['COORDINATOR_DATA_DIRECTORY'] = coordinator_data_dir
 
     try:
-        conn = dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)
-        count = dbconn.querySingleton(conn, "select count(*) from gp_segment_configuration where role='m';")
-        conn.close()
+        with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
+            count = dbconn.querySingleton(conn, "select count(*) from gp_segment_configuration where role='m';")
         if not with_mirrors and count == 0:
             print("Skipping creating a new cluster since the cluster is primary only already.")
             return
@@ -2272,10 +2261,9 @@ def impl(context):
 @then('the numsegments of table "{tabname}" is {numsegments}')
 def impl(context, tabname, numsegments):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = "select numsegments from gp_distribution_policy where localoid = '{tabname}'::regclass".format(tabname=tabname)
         ns = dbconn.querySingleton(conn, query)
-    conn.close()
     if ns == int(numsegments):
         return
 
@@ -2287,10 +2275,9 @@ def impl(context, tabname, numsegments):
 @then('the number of segments have been saved')
 def impl(context):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
         context.start_data_segments = dbconn.querySingleton(conn, query)
-    conn.close()
 
 @given('the gp_segment_configuration have been saved')
 @when('the gp_segment_configuration have been saved')
@@ -2298,7 +2285,7 @@ def impl(context):
 def impl(context):
     dbname = 'gptest'
     gp_segment_conf_backup = {}
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
         segment_count = int(dbconn.querySingleton(conn, query))
         query = """SELECT * from gp_segment_configuration where -1 < content order by dbid"""
@@ -2316,7 +2303,6 @@ def impl(context):
             gp_segment_conf_backup[dbid]['hostname'] = hostname
             gp_segment_conf_backup[dbid]['address'] = address
             gp_segment_conf_backup[dbid]['datadir'] = datadir
-    conn.close()
     context.gp_segment_conf_backup = gp_segment_conf_backup
 
 @given('verify the gp_segment_configuration has been restored')
@@ -2325,7 +2311,7 @@ def impl(context):
 def impl(context):
     dbname = 'gptest'
     gp_segment_conf_backup = {}
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
         segment_count = int(dbconn.querySingleton(conn, query))
         query = """SELECT * from gp_segment_configuration where -1 < content order by dbid"""
@@ -2343,17 +2329,15 @@ def impl(context):
             gp_segment_conf_backup[dbid]['hostname'] = hostname
             gp_segment_conf_backup[dbid]['address'] = address
             gp_segment_conf_backup[dbid]['datadir'] = datadir
-    conn.close()
     if context.gp_segment_conf_backup != gp_segment_conf_backup:
         raise Exception("gp_segment_configuration has not been restored")
 
 @given('user has created {table_name} table')
 def impl(context, table_name):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = """CREATE TABLE %s(a INT)""" % table_name
         dbconn.execSQL(conn, query)
-    conn.close()
 
 @given('a long-run read-only transaction exists on {table_name}')
 def impl(context, table_name):
@@ -2421,7 +2405,7 @@ def impl(context, table_name):
 @then('verify that the cluster has {num_of_segments} new segments')
 def impl(context, num_of_segments):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = """SELECT dbid, content, role, preferred_role, mode, status, port, hostname, address, datadir from gp_segment_configuration;"""
         rows = dbconn.query(conn, query).fetchall()
         end_data_segments = 0
@@ -2430,7 +2414,6 @@ def impl(context, num_of_segments):
             status = row[5]
             if content > -1 and status == 'u':
                 end_data_segments += 1
-    conn.close()
     if int(num_of_segments) == int(end_data_segments - context.start_data_segments):
         return
 
@@ -2478,13 +2461,12 @@ def impl(context, hostnames):
 @then('user has created expansiontest tables')
 def impl(context):
     dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         for i in range(3):
             query = """drop table if exists expansiontest%s""" % (i)
             dbconn.execSQL(conn, query)
             query = """create table expansiontest%s(a int)""" % (i)
             dbconn.execSQL(conn, query)
-    conn.close()
 
 @then('the tables have finished expanding')
 def impl(context):
@@ -2503,9 +2485,8 @@ def impl(context):
 @given('an FTS probe is triggered')
 @when('an FTS probe is triggered')
 def impl(context):
-    with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False)) as conn:
         dbconn.querySingleton(conn, "SELECT gp_request_fts_probe_scan()")
-    conn.close()
 
 @then('verify that gpstart on original coordinator fails due to lower Timeline ID')
 def step_impl(context):
@@ -2641,11 +2622,10 @@ def impl(context, table, dbname):
         raise Exception("Failed to redistribute table. Expected to have more than %d segments, got %d segments" % (len(pre_distribution_row_count), len(post_distribution_row_count)))
 
     post_distribution_num_segments = 0
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = "SELECT count(DISTINCT content) FROM gp_segment_configuration WHERE content != -1;"
         cursor = dbconn.query(conn, query)
         post_distribution_num_segments = cursor.fetchone()[0]
-    conn.close()
 
     if len(post_distribution_row_count) != post_distribution_num_segments:
         raise Exception("Failed to redistribute table %s. Expected table to have data on %d segments, but found %d segments" % (table, post_distribution_num_segments, len(post_distribution_row_count)))
@@ -2671,11 +2651,10 @@ def impl(context, table1, table2, dbname):
         raise Exception("%s and %s have different distribution. Row count of %s is %s and row count of %s is %s" % (table1, table2, table1, distribution_row_count_tbl1, table2, distribution_row_count_tbl2)) 
 
 def _get_row_count_per_segment(table, dbname):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         query = "SELECT gp_segment_id,COUNT(i) FROM %s GROUP BY gp_segment_id ORDER BY gp_segment_id;" % table
         cursor = dbconn.query(conn, query)
         rows = cursor.fetchall()
-    conn.close()
     return [row[1] for row in rows] # indices are the gp segment id's, so no need to store them explicitly
 
 @given('run rollback')
@@ -2695,7 +2674,7 @@ def impl(context):
     createdb_cmd = "createdb \"%s\"" % escape_dbname
     run_command(context, createdb_cmd)
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         #special char table
         query = 'create table " a b.""\'\\\\"(c1 int);'
         dbconn.execSQL(conn, query)
@@ -2735,7 +2714,6 @@ PARTITION BY RANGE (year)
   DEFAULT PARTITION outlying_years);
 """
         dbconn.execSQL(conn, query)
-    conn.close()
 
 @given('the database "{dbname}" is broken with "{broken}" orphaned toast tables only on segments with content IDs "{contentIDs}"')
 def break_orphaned_toast_tables(context, dbname, broken, contentIDs=None):
@@ -2848,9 +2826,8 @@ UPDATE pg_class SET reltoastrelid = 0 WHERE relname = 'double_orphan_invalid_par
 
     for dbURL in dbURLs:
         utility = True if contentIDs else False
-        with dbconn.connect(dbURL, allowSystemTableMods=True, utility=utility, unsetSearchPath=False) as conn:
+        with closing(dbconn.connect(dbURL, allowSystemTableMods=True, utility=utility, unsetSearchPath=False)) as conn:
             dbconn.execSQL(conn, sql)
-        conn.close()
 
 @given('the database "{dbname}" is broken with "{broken}" orphaned toast tables')
 def impl(context, dbname, broken):
@@ -2870,24 +2847,21 @@ def impl(context, dbname):
     seg0 = dbconn.DbURL(dbname=dbname, hostname=primary0.hostname, port=primary0.port)
     seg1 = dbconn.DbURL(dbname=dbname, hostname=primary1.hostname, port=primary1.port)
 
-    with dbconn.connect(coordinator, allowSystemTableMods=True, unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(coordinator, allowSystemTableMods=True, unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, """
             DROP TABLE IF EXISTS borked;
             CREATE TABLE borked (a text);
         """)
-    conn.close()
 
-    with dbconn.connect(seg0, utility=True, allowSystemTableMods=True, unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(seg0, utility=True, allowSystemTableMods=True, unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, """
             DELETE FROM pg_depend WHERE refobjid = 'borked'::regclass;
         """)
-    conn.close()
 
-    with dbconn.connect(seg1, utility=True, allowSystemTableMods=True, unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(seg1, utility=True, allowSystemTableMods=True, unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, """
             UPDATE pg_class SET reltoastrelid = 0 WHERE oid = 'borked'::regclass;
         """)
-    conn.close()
 
 @then('verify status file and gp_segment_configuration backup file exist on standby')
 def impl(context):
@@ -2968,9 +2942,8 @@ def impl(context, content, desired_state):
         raise Exception("expected desired state to be one of %s", acceptable_states)
 
     role_operator = "=" if desired_state == "balanced" else "<>"
-    with dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False)) as conn:
         rows = dbconn.query(conn, "SELECT role, preferred_role FROM gp_segment_configuration WHERE content = %s and preferred_role %s role" % (content, role_operator)).fetchall()
-    conn.close()
 
     if len(rows) == 0:
         raise Exception("Expected content %s to be %s." % (content, desired_state))
@@ -2987,7 +2960,7 @@ def impl(context):
 
 @then('the database locales are saved')
 def impl(context):
-    with dbconn.connect(dbconn.DbURL()) as conn:
+    with closing(dbconn.connect(dbconn.DbURL())) as conn:
         rows = dbconn.query(conn, "SELECT name, setting FROM pg_settings WHERE name LIKE 'lc_%'").fetchall()
         context.database_locales = {row.name: row.setting for row in rows}
 
