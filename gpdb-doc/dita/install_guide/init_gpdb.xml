@@ -142,8 +142,7 @@ sdw4-2</codeblock></li>
                   href="../install_guide/prep_os.xml#topic3" format="dita"/>.</p><p>Here is an
                 example of the <i>required</i> parameters in the
                   <codeph>gpinitsystem_config</codeph> file:
-              </p><codeblock>ARRAY_NAME="Greenplum Data Platform"
-SEG_PREFIX=gpseg
+              </p><codeblock>SEG_PREFIX=gpseg
 PORT_BASE=6000 
 declare -a DATA_DIRECTORY=(/data1/primary /data1/primary /data1/primary /data2/primary /data2/primary /data2/primary)
 MASTER_HOSTNAME=mdw 

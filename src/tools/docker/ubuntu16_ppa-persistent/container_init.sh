@@ -28,8 +28,7 @@ fi
 
 if [ ! -f "$DATA_DIR/gpdata/gpinitsystem_singlenode" ]; then
 	echo '========================> Make gpinitsystem_singlenode and hostlist_singlenode'
-	echo 'ARRAY_NAME="GPDB SINGLENODE"' > $DATA_DIR/gpdata/gpinitsystem_singlenode
-	echo 'MACHINE_LIST_FILE='$DATA_DIR'/gpdata/hostlist_singlenode' >> $DATA_DIR/gpdata/gpinitsystem_singlenode
+	echo 'MACHINE_LIST_FILE='$DATA_DIR'/gpdata/hostlist_singlenode' > $DATA_DIR/gpdata/gpinitsystem_singlenode
 	echo 'SEG_PREFIX=gpsne' >> $DATA_DIR/gpdata/gpinitsystem_singlenode
 	echo 'PORT_BASE=40000' >> $DATA_DIR/gpdata/gpinitsystem_singlenode
 	echo 'declare -a DATA_DIRECTORY=('$DATA_DIR'/gpdata/gpdata1 '$DATA_DIR'/gpdata/gpdata2)' >> $DATA_DIR/gpdata/gpinitsystem_singlenode

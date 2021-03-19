@@ -332,12 +332,6 @@ CHK_PARAMS () {
 		    declare -a MACHINE_LIST=(`$CAT $MACHINE_LIST_FILE|$SORT`)
 		fi
 		# Now process contents for the configuration file
-		if [ ! "$ARRAY_NAME" ]; then
-			LOG_MSG "[WARN]:-ARRAY_NAME variable not set, will provide default value" 1
-			ARRAY_NAME="Greenplum Instance"
-		fi
-		export ARRAY_NAME
-
 		# Make sure that this script is running on the QD host
 		if [ $COORDINATOR_HOSTNAME != `$HOSTNAME` ]; then
 			LOG_MSG "[WARN]:-Coordinator hostname $COORDINATOR_HOSTNAME does not match hostname output" 1
@@ -1037,7 +1031,6 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:---------------------------------------" 1
 		LOG_MSG "[INFO]:-Coordinator Configuration" 1
 		LOG_MSG "[INFO]:---------------------------------------" 1
-		LOG_MSG "[INFO]:-Coordinator instance name  = $ARRAY_NAME" 1
 		LOG_MSG "[INFO]:-Coordinator hostname       = $GP_HOSTADDRESS" 1
 		LOG_MSG "[INFO]:-Coordinator port           = $COORDINATOR_PORT" 1
 		LOG_MSG "[INFO]:-Coordinator instance dir   = $GP_DIR" 1
@@ -1373,7 +1366,6 @@ CREATE_SEGMENT () {
 			export LOG_FILE
 			export PARALLEL_STATUS_FILE
 			export TOTAL_SEG
-			export ARRAY_NAME
 			export QE_MAX_CONNECT
 			export QE_SHARED_BUFFERS
 			export SEG_PREFIX
@@ -1584,7 +1576,6 @@ SCAN_LOG () {
 }
 
 DUMP_OUTPUT_CONFIG () {
-    $ECHO "ARRAY_NAME=\"$ARRAY_NAME\"" > $OUTPUT_CONFIG
     if [ x"" != x"$TRUSTED_SHELL" ] ; then
 	$ECHO "TRUSTED_SHELL=$TRUSTED_SHELL" >> $OUTPUT_CONFIG
     fi

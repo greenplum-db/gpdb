@@ -1,4 +1,3 @@
-ARRAY_NAME="Expansion Test Base Cluster"
 SEG_PREFIX=gpseg
 PORT_BASE=%PORT_BASE%
 declare -a DATA_DIRECTORY=(%DATA_DIR%)

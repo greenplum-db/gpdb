@@ -268,9 +268,6 @@ rm -f ${CLUSTER_CONFIG_POSTGRES_ADDONS}
 #*****************************************************************************************
 
 cat >> $CLUSTER_CONFIG <<-EOF
-	# Set this to anything you like
-	ARRAY_NAME="Demo $HOSTNAME Cluster"
-	
 	# This file must exist in the same directory that you execute gpinitsystem in
 	MACHINE_LIST_FILE=`pwd`/hostfile
 	

@@ -303,11 +303,6 @@ MIRROR_PORT_BASE = 7000</codeblock>
             </p>
             <parml>
                 <plentry>
-                    <pt>ARRAY_NAME</pt>
-                    <pd><b>Required.</b> A name for the cluster you are configuring. You can use any
-                        name you like. Enclose the name in quotes if the name contains spaces.</pd>
-                </plentry>
-                <plentry>
                     <pt>MACHINE_LIST_FILE</pt>
                     <pd><b>Optional.</b> Can be used in place of the <codeph>-h</codeph> option.
                         This specifies the file that contains the list of the segment host address
@@ -548,8 +543,7 @@ sdw1~sdw1~50001~/gpdata/mirror2/gpseg3~9~3
             <p>The output file uses the <codeph>QD_PRIMARY_ARRAY</codeph> and
                     <codeph>PRIMARY_ARRAY</codeph> parameters to define coordinator and segment
                 hosts:</p>
-            <codeblock>ARRAY_NAME="Greenplum Data Platform"
-TRUSTED_SHELL=ssh
+            <codeblock>TRUSTED_SHELL=ssh
 CHECK_POINT_SEGMENTS=8
 ENCODING=UNICODE
 SEG_PREFIX=gpseg
