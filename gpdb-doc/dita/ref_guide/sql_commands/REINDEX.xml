@@ -50,6 +50,9 @@
       </parml></section>
     <section id="section5">
       <title>Notes</title>
+      <p><codeph>REINDEX</codeph> causes locking of system catalog tables, which could
+        affect currently running queries. To avoid disrupting ongoing business operations, schedule
+        the <codeph>REINDEX</codeph> operation during a period of low activity.</p>
       <p><codeph>REINDEX</codeph> is similar to a drop and recreate of the index in that the index
         contents are rebuilt from scratch. However, the locking considerations are rather different.
           <codeph>REINDEX</codeph> locks out writes but not reads of the index's parent table. It

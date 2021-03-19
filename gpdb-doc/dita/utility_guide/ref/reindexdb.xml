@@ -39,9 +39,14 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
             <pd>Specifies the name of the database to connect to discover what other databases
               should be reindexed. If not specified, the <codeph>postgres</codeph> database will be
               used, and if that does not exist, <codeph>template1</codeph> will be used.</pd>
-          </plentry></parml></sectiondiv></section><section id="section6"><title>Notes</title><p><codeph>reindexdb</codeph> might need to connect several times to the
-coordinator server, asking for a password each time. It is convenient to have
-a <codeph>~/.pgpass</codeph> file in such cases. </p></section><section id="section7"><title>Examples</title><p>To reindex the database <codeph>mydb</codeph>:</p><codeblock>reindexdb mydb</codeblock><p>To reindex the table <codeph>foo</codeph> and the index <codeph>bar</codeph> in a database named
+          </plentry></parml></sectiondiv></section><section id="section6"><title>Notes</title>
+            <p><codeph>reindexdb</codeph> causes locking of system catalog tables, which could
+              affect currently running queries. To avoid disrupting ongoing business operations, schedule
+              the <codeph>reindexb</codeph> operation during a period of low activity.</p>
+            <p><codeph>reindexdb</codeph> might need to 
+                connect several times to the coordinator server, asking for a password each time. It is convenient to have
+              a <codeph>~/.pgpass</codeph> file in such cases.</p>
+          </section><section id="section7"><title>Examples</title><p>To reindex the database <codeph>mydb</codeph>:</p><codeblock>reindexdb mydb</codeblock><p>To reindex the table <codeph>foo</codeph> and the index <codeph>bar</codeph> in a database named
           <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>REINDEX</codeph> in the <i>Greenplum Database Reference
