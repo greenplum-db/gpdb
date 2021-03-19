@@ -388,6 +388,11 @@
               <entry>unreserved</entry>
             </row>
             <row>
+              <entry>CONFLICT</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>CONNECTION</entry>
               <entry>unreserved</entry>
               <entry>unreserved</entry>
@@ -603,6 +608,11 @@
               <entry> </entry>
             </row>
             <row>
+              <entry>DEPENDS</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>DESC</entry>
               <entry>reserved</entry>
               <entry>reserved</entry>
@@ -798,6 +808,11 @@
               <entry> </entry>
             </row>
             <row>
+              <entry>FILESPACE</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>FILL</entry>
               <entry>unreserved</entry>
               <entry> </entry>
@@ -983,6 +998,11 @@
               <entry>unreserved</entry>
             </row>
             <row>
+              <entry>IMPORT</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>IN</entry>
               <entry>reserved</entry>
               <entry>reserved</entry>
@@ -1026,6 +1046,11 @@
               <entry>INITIALLY</entry>
               <entry>reserved</entry>
               <entry>reserved</entry>
+            </row>
+            <row>
+              <entry>INITPLAN</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
             </row>
             <row>
               <entry>INLINE</entry>
@@ -1228,9 +1253,19 @@
               <entry>unreserved</entry>
             </row>
             <row>
+              <entry>LOCKED</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>LOG</entry>
               <entry>reserved (can be function or type name)</entry>
               <entry> </entry>
+            </row>
+            <row>
+              <entry>LOGGED</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
             </row>
             <row>
               <entry>MAPPING</entry>
@@ -1276,6 +1311,11 @@
               <entry>MEMORY_SPILL_RATIO</entry>
               <entry>unreserved</entry>
               <entry> </entry>
+            </row>
+            <row>
+              <entry>METHOD</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
             </row>
             <row>
               <entry>MINUTE</entry>
@@ -1528,6 +1568,11 @@
               <entry>unreserved</entry>
             </row>
             <row>
+              <entry>PARALLEL</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>PARSER</entry>
               <entry>unreserved</entry>
               <entry>unreserved</entry>
@@ -1569,6 +1614,11 @@
             </row>
             <row>
               <entry>PLANS</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
+              <entry>POLICY</entry>
               <entry>unreserved</entry>
               <entry>unreserved</entry>
             </row>
@@ -1943,6 +1993,11 @@
               <entry>unreserved</entry>
             </row>
             <row>
+              <entry>SKIP</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>SMALLINT</entry>
               <entry>unreserved (cannot be function or type name)</entry>
               <entry>unreserved (cannot be function or type name)</entry>
@@ -2114,6 +2169,11 @@
             </row>
             <row>
               <entry>TRANSACTION</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
+              <entry>TRANSFORM</entry>
               <entry>unreserved</entry>
               <entry>unreserved</entry>
             </row>
