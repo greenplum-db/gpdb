@@ -251,31 +251,6 @@
                 size of data that has already been synchronized</entry>
             </row>
             <row>
-              <entry colname="col1">Estimated resync progress with mirror</entry>
-              <entry colname="col2">When in <varname>Resynchronization</varname> mode, the estimated
-                percentage of completion</entry>
-            </row>
-            <row>
-              <entry colname="col1">Estimated resync end time</entry>
-              <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
-                time to complete</entry>
-            </row>
-            <row>
-              <entry colname="col1">File <codeph>postmaster.pid</codeph></entry>
-              <entry colname="col2">status of <codeph>postmaster.pid</codeph> lock file:
-                  <varname>Found</varname> or <varname>Missing</varname></entry>
-            </row>
-            <row>
-              <entry colname="col1">PID from <codeph>postmaster.pid</codeph> file</entry>
-              <entry colname="col2">PID found in the <codeph>postmaster.pid</codeph> file</entry>
-            </row>
-            <row>
-              <entry colname="col1">Lock files in <codeph>/tmp</codeph></entry>
-              <entry colname="col2">a segment port lock file for its <codeph>postgres</codeph>
-                process is created in <codeph>/tmp</codeph> (file is removed when a segment shuts
-                down)</entry>
-            </row>
-            <row>
               <entry colname="col1">Active PID</entry>
               <entry colname="col2">active process ID of a segment</entry>
             </row>
