@@ -75,10 +75,9 @@
         location must exist on all currently configured segment hosts and have enough disk space to
         accommodate the failed segments.</p>
       <p>The recovery process marks the segment as up again in the Greenplum Database system
-        catalog, and then initiates the resynchronization process to bring the transactional state of
-        the segment up-to-date with the latest changes. The system is online and available during
-        resynchronization. To check the status of the resynchronization process run:</p>
-      <codeblock>gpstate -m</codeblock>
+        catalog, and then initiates the resynchronization process to bring the transactional state
+        of the segment up-to-date with the latest changes. The system is online and available during
+        resynchronization. </p>
     </section>
     <section id="section4">
       <title>Options</title>
@@ -174,7 +173,9 @@ newPort|newDataDirectory</codeblock>
             output file lists the currently invalid segments and their default recovery location in
             the format that is required by the <codeph>-i</codeph> option. Use together with the
               <codeph>-p</codeph> option to output a sample file for recovering on a different host.
-            This file can be edited to supply alternate recovery locations if needed.</pd>
+            This file can be edited to supply alternate recovery locations if needed. The following
+            example outputs the default recovery configuration file:
+            <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></pd>
         </plentry>
         <plentry>
           <pt>-p <varname>new_recover_host</varname>[,...]</pt>
@@ -226,18 +227,19 @@ newPort|newDataDirectory</codeblock>
         </plentry>
       </parml>
     </section>
-    <section id="section5">
-      <title>Examples</title>
+    <section id="section5"><title>Examples</title>
+      <p><b>Example 1: Recover Failed Segments in Place</b></p>
       <p>Recover any failed segment instances in place:</p>
       <codeblock>$ gprecoverseg</codeblock>
-      <p>Rebalance your Greenplum Database system after a recovery by resetting all segments to
-        their preferred role. First check that all segments are up and synchronized.</p>
-      <codeblock>$ gpstate -m
-$ gprecoverseg -r</codeblock>
+      <p><b>Example 2: Rebalance Failed Segments If Not in Preferred Roles</b></p>
+      <p>First, verify that all segments are up and running,
+        reysynchronization has completed, and there are segments <b>not</b> in preferred
+        roles:</p>
+      <codeblock>$ gpstate -e</codeblock>
+      <p>Then, if necessary, rebalance the segments:</p><codeblock>$ gprecoverseg -r</codeblock>
+      <p><b>Example 3: Recover Failed Segments to a Separate Host</b></p>
       <p>Recover any failed segment instances to a newly configured spare segment host:</p>
-      <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
-      <p>Output the default recovery configuration file:</p>
-      <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock>
+        <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
     </section>
     <section id="section6">
       <title>See Also</title>
