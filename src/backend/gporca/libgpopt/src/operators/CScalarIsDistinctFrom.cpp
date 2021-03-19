@@ -66,7 +66,7 @@ CScalarIsDistinctFrom::Matches(COperator *pop) const
 }
 
 // get commuted scalar IDF operator
-CScalarIsDistinctFrom *
+CScalarCmp *
 CScalarIsDistinctFrom::PopCommutedOp(CMemoryPool *mp, COperator *pop)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();

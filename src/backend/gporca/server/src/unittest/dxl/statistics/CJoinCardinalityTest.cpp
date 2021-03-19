@@ -274,7 +274,7 @@ CJoinCardinalityTest::EresUnittest_Join()
 		CStatsPredJoinArray *join_preds_stats = pf(mp);
 
 		// calculate the output stats
-		CStatistics *pstatsOutput = nullptr;
+		IStatistics *pstatsOutput = nullptr;
 		if (left_outer_join)
 		{
 			pstatsOutput =
@@ -288,7 +288,7 @@ CJoinCardinalityTest::EresUnittest_Join()
 		GPOS_ASSERT(nullptr != pstatsOutput);
 
 		CStatisticsArray *pdrgpstatOutput = GPOS_NEW(mp) CStatisticsArray(mp);
-		pdrgpstatOutput->Append(pstatsOutput);
+		pdrgpstatOutput->Append(CStatistics::CastStats(pstatsOutput));
 
 		// serialize and compare against expected stats
 		CWStringDynamic *pstrOutput = CDXLUtils::SerializeStatistics(

@@ -239,7 +239,7 @@ CCardinalityTestUtils::PrintHist(CMemoryPool *mp, const char *pcPrefix,
 
 // helper function to print the statistics object
 void
-CCardinalityTestUtils::PrintStats(CMemoryPool *mp, const CStatistics *stats)
+CCardinalityTestUtils::PrintStats(CMemoryPool *mp, const IStatistics *stats)
 {
 	CWStringDynamic str(mp);
 	COstreamString oss(&str);

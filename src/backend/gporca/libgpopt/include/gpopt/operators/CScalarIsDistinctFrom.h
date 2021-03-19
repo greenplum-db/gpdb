@@ -68,8 +68,7 @@ public:
 	static CScalarIsDistinctFrom *PopConvert(COperator *pop);
 
 	// get commuted scalar IDF operator
-	CScalarIsDistinctFrom *PopCommutedOp(CMemoryPool *mp,
-										 COperator *pop) override;
+	CScalarCmp *PopCommutedOp(CMemoryPool *mp, COperator *pop) override;
 
 };	// class CScalarIsDistinctFrom
 

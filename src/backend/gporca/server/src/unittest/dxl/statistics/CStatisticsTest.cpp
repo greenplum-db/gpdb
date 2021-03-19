@@ -485,7 +485,7 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 	CStatsPredJoinArray *join_preds_stats =
 		GPOS_NEW(mp) CStatsPredJoinArray(mp);
 	join_preds_stats->Append(pstatspredjoin);
-	CStatistics *pstats3 =
+	IStatistics *pstats3 =
 		stats->CalcInnerJoinStats(mp, pstats2, join_preds_stats);
 
 	GPOS_TRACE(GPOS_WSZ_LIT("pstats3 = stats JOIN pstats2 on (col2 = col10)"));
@@ -505,7 +505,7 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 	CCardinalityTestUtils::PrintStats(mp, pstats4);
 
 	// LASJ stats
-	CStatistics *pstats5 = stats->CalcLASJoinStats(
+	IStatistics *pstats5 = stats->CalcLASJoinStats(
 		mp, pstats2, join_preds_stats, true /* DoIgnoreLASJHistComputation */);
 
 	GPOS_TRACE(GPOS_WSZ_LIT("pstats5 = stats LASJ pstats2 on (col2 = col10)"));

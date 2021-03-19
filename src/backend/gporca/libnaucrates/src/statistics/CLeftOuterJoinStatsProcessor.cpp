@@ -30,8 +30,9 @@ CLeftOuterJoinStatsProcessor::CalcLOJoinStatsStatic(
 	const CStatistics *result_stats_inner_side =
 		dynamic_cast<const CStatistics *>(inner_side_stats);
 
-	CStatistics *inner_join_stats = result_stats_outer_side->CalcInnerJoinStats(
-		mp, inner_side_stats, join_preds_stats);
+	CStatistics *inner_join_stats =
+		CStatistics::CastStats(result_stats_outer_side->CalcInnerJoinStats(
+			mp, inner_side_stats, join_preds_stats));
 	CDouble num_rows_inner_join = inner_join_stats->Rows();
 	CDouble num_rows_LASJ(1.0);
 
@@ -97,10 +98,11 @@ CLeftOuterJoinStatsProcessor::MakeLOJHistogram(
 	}
 
 	// for the columns in the outer child, compute the buckets that do not contribute to the inner join
-	CStatistics *LASJ_stats = outer_side_stats->CalcLASJoinStats(
-		mp, inner_side_stats, join_preds_stats,
-		false /* DoIgnoreLASJHistComputation */
-	);
+	CStatistics *LASJ_stats =
+		CStatistics::CastStats(outer_side_stats->CalcLASJoinStats(
+			mp, inner_side_stats, join_preds_stats,
+			false /* DoIgnoreLASJHistComputation */
+			));
 	CDouble num_rows_LASJ(0.0);
 	if (!LASJ_stats->IsEmpty())
 	{

@@ -226,17 +226,17 @@ public:
 	}
 
 	// inner join with another stats structure
-	CStatistics *CalcInnerJoinStats(
+	IStatistics *CalcInnerJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
 		CStatsPredJoinArray *join_preds_stats) const override;
 
 	// LOJ with another stats structure
-	CStatistics *CalcLOJoinStats(
+	IStatistics *CalcLOJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
 		CStatsPredJoinArray *join_preds_stats) const override;
 
 	// left anti semi join with another stats structure
-	CStatistics *CalcLASJoinStats(
+	IStatistics *CalcLASJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
 		CStatsPredJoinArray *join_preds_stats,
 		BOOL
@@ -245,7 +245,7 @@ public:
 	) const override;
 
 	// semi join stats computation
-	CStatistics *CalcLSJoinStats(
+	IStatistics *CalcLSJoinStats(
 		CMemoryPool *mp, const IStatistics *inner_side_stats,
 		CStatsPredJoinArray *join_preds_stats) const override;
 

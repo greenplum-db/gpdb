@@ -69,7 +69,7 @@ public:
 	static CPoint *PpointDouble(CMemoryPool *mp, OID oid, CDouble value);
 
 	// helper method to print statistics object
-	static void PrintStats(CMemoryPool *mp, const CStatistics *stats);
+	static void PrintStats(CMemoryPool *mp, const IStatistics *stats);
 
 	// helper method to print histogram object
 	static void PrintHist(CMemoryPool *mp, const char *pcPrefix,

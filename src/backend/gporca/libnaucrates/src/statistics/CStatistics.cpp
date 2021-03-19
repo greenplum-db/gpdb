@@ -395,7 +395,7 @@ CStatistics::IsEmptyJoin(const CStatistics *outer_stats,
 // for deriving the stat objects for the corresponding join operator
 
 //	return statistics object after performing LOJ operation with another statistics structure
-CStatistics *
+IStatistics *
 CStatistics::CalcLOJoinStats(CMemoryPool *mp, const IStatistics *other_stats,
 							 CStatsPredJoinArray *join_preds_stats) const
 {
@@ -406,7 +406,7 @@ CStatistics::CalcLOJoinStats(CMemoryPool *mp, const IStatistics *other_stats,
 
 
 //	return statistics object after performing semi-join with another statistics structure
-CStatistics *
+IStatistics *
 CStatistics::CalcLSJoinStats(CMemoryPool *mp,
 							 const IStatistics *inner_side_stats,
 							 CStatsPredJoinArray *join_preds_stats) const
@@ -418,7 +418,7 @@ CStatistics::CalcLSJoinStats(CMemoryPool *mp,
 
 
 // return statistics object after performing inner join
-CStatistics *
+IStatistics *
 CStatistics::CalcInnerJoinStats(CMemoryPool *mp, const IStatistics *other_stats,
 								CStatsPredJoinArray *join_preds_stats) const
 {
@@ -427,7 +427,7 @@ CStatistics::CalcInnerJoinStats(CMemoryPool *mp, const IStatistics *other_stats,
 }
 
 // return statistics object after performing LASJ
-CStatistics *
+IStatistics *
 CStatistics::CalcLASJoinStats(CMemoryPool *mp, const IStatistics *other_stats,
 							  CStatsPredJoinArray *join_preds_stats,
 							  BOOL DoIgnoreLASJHistComputation) const
