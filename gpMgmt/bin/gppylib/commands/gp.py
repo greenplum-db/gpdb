@@ -14,6 +14,7 @@ import pipes
 import subprocess
 
 import re, socket
+from contextlib import closing
 
 from gppylib.gplog import *
 from gppylib.db import dbconn
@@ -1220,11 +1221,16 @@ class _GpExpandStatus(object):
             SELECT status FROM gpexpand.status ORDER BY updated DESC LIMIT 1
         '''
 
+        status_table_exists_sql = """
+            SELECT CASE WHEN to_regclass('gpexpand.status') IS NOT NULL THEN 1 ELSE 0 END
+        """
+
         try:
             dburl = dbconn.DbURL(dbname=self.dbname)
-            with dbconn.connect(dburl, encoding='UTF8') as conn:
+            with closing(dbconn.connect(dburl, encoding='UTF8')) as conn:
+                if not dbconn.querySingleton(conn, status_table_exists_sql):
+                    return False
                 status = dbconn.querySingleton(conn, sql)
-            conn.close()
         except Exception:
             # schema table not found
             return False
@@ -1249,10 +1255,9 @@ class _GpExpandStatus(object):
 
         try:
             dburl = dbconn.DbURL(dbname=self.dbname)
-            with dbconn.connect(dburl, encoding='UTF8') as conn:
+            with closing(dbconn.connect(dburl, encoding='UTF8')) as conn:
                 cursor = dbconn.query(conn, sql)
                 rows = cursor.fetchall()
-            conn.close()
         except Exception:
             return False
 

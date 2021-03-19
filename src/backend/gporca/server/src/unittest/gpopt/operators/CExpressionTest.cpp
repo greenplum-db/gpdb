@@ -20,8 +20,17 @@
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CAutoMDAccessor.h"
+#include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/operators/CLogicalBitmapTableGet.h"
 #include "gpopt/operators/CLogicalDynamicGetBase.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoinNotIn.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/operators/CLogicalUnion.h"
+#include "gpopt/operators/CScalarBitmapBoolOp.h"
+#include "gpopt/operators/CScalarBitmapIndexProbe.h"
 #include "naucrates/base/CDatumInt8GPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDScalarOp.h"
@@ -1169,7 +1178,6 @@ CExpressionTest::EresComputeReqdCols(const CHAR *szFilePath)
 
 		// extract plan and decorate it with required columns
 		CExpression *pexprPlan = eng.PexprExtractPlan();
-		(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 
 		// attempt computing required columns again --
 		// we make sure that we reuse cached required columns at each operator

@@ -19,6 +19,7 @@
    [ <b>--gen_profile_only</b> ]   
    [ <b>-p</b> <varname>parallel-level</varname> ]
    [ <b>--full</b> ]
+   [ <b>--skip_orca_root_stats</b> ]
    [ <b>-v</b> | <b>--verbose</b> ]
    [ <b>--debug</b> ]
    [ <b>-a</b> ]
@@ -160,6 +161,19 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
           <pt>-p <varname>parallel-level</varname></pt>
           <pd>The number of tables that are analyzed in parallel. <varname>parallel level</varname>
             can be an integer between 1 and 10, inclusive. Default value is 5. </pd>
+        </plentry>
+        <plentry>
+          <pt>--skip_orca_root_stats</pt>
+          <pd>
+            <note>Do not use this option if GPORCA is enabled.</note>
+          </pd>
+          <pd>Use this option if you find that <codeph>ANALYZE ROOTPARTITION</codeph> commands take
+            a very long time to complete.</pd>
+          <pd>
+            <note type="warning">After you run <codeph>analyzedb</codeph> with this option,
+              subsequent <codeph>analyzedb</codeph> executions will not update root partition
+              statistics except when changes have been made to the table.</note>
+          </pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>

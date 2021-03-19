@@ -21,7 +21,7 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CScalarNullTest.h"
 #include "naucrates/md/CMDProviderMemory.h"
 
 #include "unittest/base.h"
@@ -79,7 +79,7 @@ CConstExprEvaluatorDefaultTest::EresUnittest()
 		CExpression *pexprIsNull = CUtils::PexprIsNull(mp, pexprUl);
 #ifdef GPOS_DEBUG
 		CExpression *pexprResult = pceevaldefault->PexprEval(pexprIsNull);
-		CScalarNullTest *pscalarnulltest =
+		gpopt::CScalarNullTest *pscalarnulltest =
 			CScalarNullTest::PopConvert(pexprIsNull->Pop());
 		GPOS_ASSERT(pscalarnulltest->Matches(pexprResult->Pop()));
 		pexprResult->Release();

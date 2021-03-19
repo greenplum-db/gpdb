@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"

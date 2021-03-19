@@ -20,6 +20,7 @@
 #include "gpos/io/CFileDescriptor.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/engine/CEngine.h"
@@ -423,7 +424,6 @@ COptimizer::PexprOptimize(CMemoryPool *mp, CQueryContext *pqc,
 	GPOS_CHECK_ABORT;
 
 	CExpression *pexprPlan = eng.PexprExtractPlan();
-	(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 
 	CheckCTEConsistency(mp, pexprPlan);
 

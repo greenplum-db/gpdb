@@ -28,7 +28,9 @@
   <topic id="topic_pydatascimod">
     <title>Python Data Science Modules</title>
     <body>
-      <p>Modules provided in the Python Data Science package include: <table id="iq1395577">
+      <p>Modules provided in the Python Data Science package are listed below.</p>
+      <p> Packages required for Deep Learning features of MADlib are now included. Note that it is
+        not supported for RHEL 6.<table id="iq1395577">
           <title>Data Science Modules</title>
           <tgroup cols="2">
             <colspec colnum="1" colname="col1" colwidth="1*"/>

@@ -1,4 +1,6 @@
 from os import path
+from contextlib import closing
+
 from gppylib.commands.gp import get_coordinatordatadir
 
 from behave import given, when, then
@@ -87,10 +89,9 @@ def make_data_directory_called(data_directory_name):
 
 
 def _get_mirror_count():
-    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
         sql = """SELECT count(*) FROM gp_segment_configuration WHERE role='m'"""
         count_row = dbconn.query(conn, sql).fetchone()
-    conn.close()
     return count_row[0]
 
 # take the item in search_item_list, search pg_hba if it contains atleast one entry

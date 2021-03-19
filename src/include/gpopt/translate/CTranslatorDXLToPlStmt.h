@@ -28,7 +28,8 @@ extern "C" {
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
 #include "gpopt/translate/CTranslatorDXLToScalar.h"
 #include "naucrates/dxl/CIdGenerator.h"
-#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
+#include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
 #include "naucrates/md/IMDRelationExternal.h"
 
 #include "access/attnum.h"
@@ -185,7 +186,7 @@ private:
 	// translates a DXL index scan node into a IndexScan node
 	Plan *TranslateDXLIndexScan(
 		const CDXLNode *index_scan_dxlnode,
-		CDXLPhysicalIndexScan *dxl_physical_idx_scan_op,
+		gpdxl::CDXLPhysicalIndexScan *dxl_physical_idx_scan_op,
 		CDXLTranslateContext *output_context,
 		CDXLTranslationContextArray *
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
@@ -548,7 +549,8 @@ private:
 
 	// translate CTAS storage options
 	static List *TranslateDXLCtasStorageOptions(
-		CDXLCtasStorageOptions::CDXLCtasOptionArray *ctas_storage_options);
+		gpdxl::CDXLCtasStorageOptions::CDXLCtasOptionArray
+			*ctas_storage_options);
 
 	// compute directed dispatch segment ids
 	List *TranslateDXLDirectDispatchInfo(

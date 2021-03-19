@@ -37,19 +37,6 @@ CREATE ROLE <replaceable class="parameter">name</replaceable> [ [ WITH ] <replac
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
     | BYPASSRLS | NOBYPASSRLS
-<<<<<<< HEAD
-    | CONNECTION LIMIT <replaceable class="PARAMETER">connlimit</replaceable>
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
-    | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>'
-    | IN ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | IN GROUP <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | ADMIN <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | USER <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | SYSID <replaceable class="PARAMETER">uid</replaceable>
-    | RESOURCE QUEUE queue_name
-    | RESOURCE GROUP group_name
-=======
     | CONNECTION LIMIT <replaceable class="parameter">connlimit</replaceable>
     | [ ENCRYPTED ] PASSWORD '<replaceable class="parameter">password</replaceable>' | PASSWORD NULL
     | VALID UNTIL '<replaceable class="parameter">timestamp</replaceable>'
@@ -59,7 +46,8 @@ CREATE ROLE <replaceable class="parameter">name</replaceable> [ [ WITH ] <replac
     | ADMIN <replaceable class="parameter">role_name</replaceable> [, ...]
     | USER <replaceable class="parameter">role_name</replaceable> [, ...]
     | SYSID <replaceable class="parameter">uid</replaceable>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+    | RESOURCE QUEUE queue_name
+    | RESOURCE GROUP group_name
 </synopsis>
  </refsynopsisdiv>
 
@@ -254,18 +242,6 @@ CREATE ROLE <replaceable class="parameter">name</replaceable> [ [ WITH ] <replac
          </para>
        </note>
        <para>
-<<<<<<< HEAD
-        These key words control whether the password is stored
-        encrypted in the system catalogs.  (If neither is specified,
-        the default behavior is determined by the configuration
-        parameter <xref linkend="guc-password-encryption">.)  If the
-        presented password string is already in MD5-encrypted format,
-        then it is stored encrypted as-is, regardless of whether
-        <literal>ENCRYPTED</> or <literal>UNENCRYPTED</> is specified
-        (since the system cannot decrypt the specified encrypted
-        password string).  This allows reloading of encrypted
-        passwords during dump/restore.
-=======
         The password is always stored encrypted in the system catalogs. The
         <literal>ENCRYPTED</literal> keyword has no effect, but is accepted for
         backwards compatibility. The method of encryption is determined
@@ -276,7 +252,6 @@ CREATE ROLE <replaceable class="parameter">name</replaceable> [ [ WITH ] <replac
         the specified encrypted password string, to encrypt it in a
         different format).  This allows reloading of encrypted passwords
         during dump/restore.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
        </para>
       </listitem>
      </varlistentry>

@@ -1013,8 +1013,27 @@ ERROR:  partition "3" of "i" does not exist
 -- the matched table name is i_1_prt_4, but it belongs to i2, raise error
 alter table i drop partition "4";
 ERROR:  partition "4" of "i" does not exist
+-- should raise error since we always make sure the partitioned table at least have one partition;
+alter table i drop partition "1", drop partition "2";
+ERROR:  cannot drop partition "i_1_prt_2" of "i" -- only one remains
+HINT:  Use DROP TABLE "i" to remove the table and the final partition
 drop table i;
 drop table i2;
+drop table i_1_prt_3;
+create table i (i int) partition by range(i) (start(1) end(3) every(1), default partition extra);
+-- should raise error since we always make sure the partitioned table at least have one partition;
+alter table i drop partition "2", drop partition "3", drop default partition;
+ERROR:  cannot drop partition "i_1_prt_extra" of "i" -- only one remains
+HINT:  Use DROP TABLE "i" to remove the table and the final partition
+drop table i;
+create table i (i int, c text) partition by range(i) subpartition by list(c)
+subpartition template (subpartition a values ('a'), subpartition b values ('b'))
+(start (1) end(3) every(1));
+-- should raise error since we always make sure the partitioned table at least have one partition;
+alter table i alter partition "1" drop partition a, alter partition "1" drop partition b;
+ERROR:  cannot drop partition "i_1_prt_1_2_prt_b" of "i_1_prt_1" -- only one remains
+HINT:  Use DROP TABLE "i_1_prt_1" to remove the table and the final partition
+drop table i;
 CREATE TABLE PARTSUPP (
 PS_PARTKEY INTEGER,
 PS_SUPPKEY INTEGER,

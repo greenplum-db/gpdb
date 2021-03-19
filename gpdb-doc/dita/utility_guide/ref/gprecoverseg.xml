@@ -27,8 +27,8 @@
       <p>In a system with mirrors enabled, the <codeph>gprecoverseg</codeph> utility reactivates a
         failed segment instance and identifies the changed database files that require
         resynchronization. Once <codeph>gprecoverseg</codeph> completes this process, the system
-        goes into <i>resyncronizing</i> mode until the recovered segment is brought up to date. The
-        system is online and fully operational during resyncronization.</p>
+        goes into <i>resynchronizing</i> mode until the recovered segment is brought up to date. The
+        system is online and fully operational during resynchronization.</p>
       <p>During an incremental recovery (the <codeph>-F</codeph> option is not specified), if
           <codeph>gprecoverseg</codeph> detects a segment instance with mirroring disabled in a
         system with mirrors enabled, the utility reports that mirroring is disabled for the segment,

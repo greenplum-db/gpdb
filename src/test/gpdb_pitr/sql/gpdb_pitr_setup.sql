@@ -60,9 +60,37 @@ SELECT * FROM gpdb_two_phase_commit_after_acquire_share_lock;
 SELECT * FROM gpdb_one_phase_commit;
 SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
 
+CREATE TEMP TABLE gp_current_wal_lsn AS
+    SELECT -1 AS content_id, pg_current_wal_lsn() AS current_lsn
+    UNION
+    SELECT gp_segment_id AS content_id, pg_current_wal_lsn() FROM gp_dist_random('gp_id');
+
 -- Run gp_switch_wal() so that the WAL segment files with the restore
--- points are archived to the WAL Archive directories.
+-- points are eligible for archival to the WAL Archive directories.
 SELECT true FROM gp_switch_wal();
 
--- Call a checkpoint to flush buffers (including the switch xlog record)
-CHECKPOINT;
+-- Ensure that the last WAL segment file for each GP segment was archived.
+-- This function loops until the archival is complete. It times out after
+-- approximately 10mins.
+CREATE OR REPLACE FUNCTION check_archival() RETURNS BOOLEAN AS $$
+DECLARE archived BOOLEAN; /*in func*/
+DECLARE archived_count INTEGER; /*in func*/
+BEGIN /*in func*/
+    FOR i in 1..3000 LOOP
+        SELECT bool_and(seg_archived), count(*)
+        FROM
+            (SELECT last_archived_wal =
+            pg_walfile_name(current_lsn) AS seg_archived
+            FROM gp_current_wal_lsn l
+            INNER JOIN gp_stat_archiver a
+            ON l.content_id = a.gp_segment_id) s
+        INTO archived, archived_count; /*in func*/
+        IF archived AND archived_count = 4 THEN
+            RETURN archived; /*in func*/
+        END IF; /*in func*/
+        PERFORM pg_sleep(0.2); /*in func*/
+    END LOOP; /*in func*/
+END $$
+LANGUAGE plpgsql;
+
+SELECT check_archival();

@@ -20,7 +20,7 @@ from gppylib.mainUtils import *
 
 from optparse import OptionGroup
 import os, sys, signal, time
-
+from contextlib import closing
 
 from gppylib import gparray, gplog, userinput, utils
 from gppylib.util import gp_utils
@@ -111,11 +111,9 @@ class RemoteQueryCommand(Command):
     def run(self):
         logger.debug('Executing query (%s:%s) for segment (%s:%s) on database (%s)' % (
             self.qname, self.query, self.hostname, self.port, self.dbname))
-        with dbconn.connect(dbconn.DbURL(hostname=self.hostname, port=self.port, dbname=self.dbname),
-                            utility=True) as conn:
+        with closing(dbconn.connect(dbconn.DbURL(hostname=self.hostname, port=self.port, dbname=self.dbname),
+                            utility=True)) as conn:
             self.res = dbconn.query(conn, self.query).fetchall()
-        conn.close()
-
 # -------------------------------------------------------------------------
 
 class GpRecoverSegmentProgram:
@@ -533,10 +531,9 @@ class GpRecoverSegmentProgram:
 
     def _get_dblist(self):
         # template0 does not accept any connections so we exclude it
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with closing(dbconn.connect(dbconn.DbURL())) as conn:
             res = dbconn.query(conn, "SELECT datname FROM PG_DATABASE WHERE datname != 'template0'")
-        conn.close()
-        return res.fetchall()
+            return res.fetchall()
 
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:

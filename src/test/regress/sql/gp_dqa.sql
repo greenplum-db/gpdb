@@ -346,3 +346,9 @@ explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x 
 explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
 
 explain select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
+
+
+-- single DQA with agg
+-- the following SQL should use two stage agg
+explain select count(distinct a), sum(b), sum(c) from dqa_f1;
+select count(distinct a), sum(b), sum(c) from dqa_f1;

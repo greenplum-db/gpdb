@@ -18,6 +18,7 @@
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarIdent.h"

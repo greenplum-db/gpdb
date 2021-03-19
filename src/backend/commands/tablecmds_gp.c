@@ -1205,9 +1205,15 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 
 			partrel = table_open(partrelid, AccessShareLock);
 			partdesc = RelationGetPartitionDesc(rel);
+
 			/*
-			 * GPDB_12_MERGE_FIXME: how to protect if two drop partition cmds
-			 * are specified in same alter table stmt?
+			 * If two drop partition cmds are specified in same alter table stmt,
+			 * the blow check still works to make sure the partitioned table at least
+			 * have one partition table.
+			 * When the first drop get executed, the catalog will have an update which make
+			 * current Relation get invalid and call RelationClearRelation to refresh
+			 * the Relation. After that the next drop cmd will have partdesc->nparts = 1,
+			 * and raise error to abort.
 			 */
 			if (partdesc->nparts == 1)
 			{

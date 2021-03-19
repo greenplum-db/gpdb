@@ -51,15 +51,12 @@ CREATE [ OR REPLACE ] AGGREGATE <replaceable class="parameter">name</replaceable
     [ , SSPACE = <replaceable class="parameter">state_data_size</replaceable> ]
     [ , FINALFUNC = <replaceable class="parameter">ffunc</replaceable> ]
     [ , FINALFUNC_EXTRA ]
-<<<<<<< HEAD
-    [ , COMBINEFUNC = <replaceable class="PARAMETER">combinefunc</replaceable> ]
-    [ , SERIALFUNC = <replaceable class="PARAMETER">serialfunc</replaceable> ]
-    [ , DESERIALFUNC = <replaceable class="PARAMETER">deserialfunc</replaceable> ]
-    [ , INITCOND = <replaceable class="PARAMETER">initial_condition</replaceable> ]
-=======
     [ , FINALFUNC_MODIFY = { READ_ONLY | SHAREABLE | READ_WRITE } ]
     [ , INITCOND = <replaceable class="parameter">initial_condition</replaceable> ]
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+    [ , COMBINEFUNC = <replaceable class="parameter">combinefunc</replaceable> ]
+    [ , SERIALFUNC = <replaceable class="parameter">serialfunc</replaceable> ]
+    [ , DESERIALFUNC = <replaceable class="parameter">deserialfunc</replaceable> ]
+    [ , INITCOND = <replaceable class="parameter">initial_condition</replaceable> ]
     [ , PARALLEL = { SAFE | RESTRICTED | UNSAFE } ]
     [ , HYPOTHETICAL ]
 )
@@ -133,26 +130,16 @@ CREATE [ OR REPLACE ] AGGREGATE <replaceable class="parameter">name</replaceable
    A simple aggregate function is made from one or two ordinary
    functions:
    a state transition function
-<<<<<<< HEAD
-   <replaceable class="PARAMETER">sfunc</replaceable>,
-   an optional final calculation function
-   <replaceable class="PARAMETER">ffunc</replaceable>,
-   and an optional combine function
-   <replaceable class="PARAMETER">combinefunc</replaceable>.
-   These are used as follows:
-<programlisting>
-<replaceable class="PARAMETER">sfunc</replaceable>( internal-state, next-data-values ) ---> next-internal-state
-<replaceable class="PARAMETER">ffunc</replaceable>( internal-state ) ---> aggregate-value
-<replaceable class="PARAMETER">combinefunc</replaceable>( internal-state, internal-state ) ---> next-internal-state
-=======
    <replaceable class="parameter">sfunc</replaceable>,
-   and an optional final calculation function
-   <replaceable class="parameter">ffunc</replaceable>.
+   an optional final calculation function
+   <replaceable class="parameter">ffunc</replaceable>,
+   and an optional combine function
+   <replaceable class="parameter">combinefunc</replaceable>.
    These are used as follows:
 <programlisting>
 <replaceable class="parameter">sfunc</replaceable>( internal-state, next-data-values ) ---> next-internal-state
 <replaceable class="parameter">ffunc</replaceable>( internal-state ) ---> aggregate-value
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+<replaceable class="parameter">combinefunc</replaceable>( internal-state, internal-state ) ---> next-internal-state
 </programlisting>
   </para>
 

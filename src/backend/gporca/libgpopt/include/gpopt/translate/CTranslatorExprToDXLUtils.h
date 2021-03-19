@@ -17,6 +17,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"

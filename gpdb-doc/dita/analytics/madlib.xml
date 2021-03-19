@@ -52,7 +52,8 @@
           scope="external">supported libraries and configuration instructions</xref> on the Apache
         MADlib pages as well as user documentation for <xref
           href="http://madlib.apache.org/docs/latest/group__grp__dl.html" format="html"
-          scope="external">Keras API </xref>using the Tensorflow backend.</p>
+          scope="external">Keras API </xref>using the Tensorflow backend. Note that it is not
+        supported with RHEL 6.</p>
       <p dir="ltr">MADlib supports Keras with a TensorFlow backend, with or without Graphics
         Processing Units (GPUs). GPUs can significantly accelerate the training of deep neural
         networks so they are typically used for enterprise level workloads. For further GPU

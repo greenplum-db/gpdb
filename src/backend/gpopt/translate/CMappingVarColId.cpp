@@ -24,6 +24,9 @@ extern "C" {
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLScalarIdent.h"
+#include "naucrates/dxl/operators/CDXLScalarProjElem.h"
+#include "naucrates/exception.h"
 #include "naucrates/md/IMDIndex.h"
 
 using namespace gpdxl;

@@ -350,7 +350,7 @@ CMemo::PexprExtractPlan(CMemoryPool *mp, CGroup *pgroupRoot,
 	for (ULONG i = 0; i < arity; i++)
 	{
 		CGroup *pgroupChild = (*pgexprBest)[i];
-		CReqdPropPlan *prpp = nullptr;
+		CReqdPropPlan *prppChild = nullptr;
 
 		// If the child group doesn't have scalar expression, we get the optimization
 		// context for that child group as well as the required plan properties.
@@ -359,7 +359,7 @@ CMemo::PexprExtractPlan(CMemoryPool *mp, CGroup *pgroupRoot,
 		// only one best scalar group expression, which does not need optimization,
 		// because CJobGroupExpressionOptimization does not create optimization context
 		// for that group. Besides, the scalar expression doesn't have plan properties.
-		// In this case, the prpp is left to be NULL.
+		// In this case, the prppChild is left to be NULL.
 		if (!pgroupChild->FScalar())
 		{
 			if (pgroupRoot->FScalar())
@@ -382,17 +382,25 @@ CMemo::PexprExtractPlan(CMemoryPool *mp, CGroup *pgroupRoot,
 			COptimizationContext *pocChild = (*poc->PccBest()->Pdrgpoc())[i];
 			GPOS_ASSERT(nullptr != pocChild);
 
-			prpp = pocChild->Prpp();
+			prppChild = pocChild->Prpp();
 		}
 
 		CExpression *pexprChild =
-			PexprExtractPlan(mp, pgroupChild, prpp, ulSearchStages);
+			PexprExtractPlan(mp, pgroupChild, prppChild, ulSearchStages);
 		pdrgpexpr->Append(pexprChild);
 	}
 
 	pgexprBest->Pop()->AddRef();
-	CExpression *pexpr = GPOS_NEW(mp)
-		CExpression(mp, pgexprBest->Pop(), pgexprBest, pdrgpexpr, stats, cost);
+
+	CReqdPropPlan *prpp = nullptr;
+	if (poc != nullptr)
+	{
+		GPOS_ASSERT(!pgroupRoot->FScalar());
+		prpp = poc->Prpp();
+		prpp->AddRef();
+	}
+	CExpression *pexpr = GPOS_NEW(mp) CExpression(
+		mp, pgexprBest->Pop(), pgexprBest, pdrgpexpr, prpp, stats, cost);
 
 	if (pexpr->Pop()->FPhysical() && !poc->PccBest()->IsValid(mp))
 	{

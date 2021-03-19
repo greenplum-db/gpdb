@@ -276,6 +276,9 @@
             <li><xref href="#gp_workfile_limit_files_per_query"/></li>
             <li><xref href="#gp_workfile_limit_per_query"/></li>
             <li><xref href="#gp_workfile_limit_per_segment"/></li>
+            <li><xref href="#gpfdist_retry_timeout" type="section"
+                >gpfdist_retry_timeout</xref>
+            </li>
             <li><xref href="#ignore_checksum_failure" format="dita"/></li>
             <li>
               <xref href="#integer_datetimes"/>
@@ -642,9 +645,6 @@
             </li>
             <li><xref href="#writable_external_table_bufsize" type="section"
                 >writable_external_table_bufsize</xref>
-            </li>
-            <li><xref href="#gpfdist_retry_timeout" type="section"
-                >gpfdist_retry_timeout</xref>
             </li>
             <li>
               <xref href="#xid_stop_limit"/>
@@ -5122,6 +5122,37 @@
               <entry colname="col1">kilobytes</entry>
               <entry colname="col2">0</entry>
               <entry colname="col3">local <p>system </p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gpfdist_retry_timeout">
+    <title>gpfdist_retry_timeout</title>
+    <body>
+      <p>Controls the time (in seconds) that Greenplum Database waits before returning an error when
+        Greenplum Database is attempting to connect or write to a <codeph><xref
+            href="../../utility_guide/ref/gpfdist.xml"/></codeph> server and
+          <codeph>gpfdist</codeph> does not respond. The default value is 300 (5 minutes). A value
+        of 0 disables the timeout.</p>
+      <table id="table_fkm_jqp_dmb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - <codeph>INT_MAX</codeph> (2147483647)</entry>
+              <entry colname="col2">300</entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -9624,37 +9655,6 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">integer 32 - 131072 (32KB - 128MB)</entry>
               <entry colname="col2">64</entry>
-              <entry colname="col3">local<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gpfdist_retry_timeout">
-    <title>gpfdist_retry_timeout</title>
-    <body>
-      <p>Controls the time (in seconds) that Greenplum Database waits before returning an error when
-        Greenplum Database is attempting to connect or write to a <codeph><xref
-            href="../../utility_guide/ref/gpfdist.xml"/></codeph> server and
-          <codeph>gpfdist</codeph> does not respond. The default value is 300 (5 minutes). A value
-        of 0 disables the timeout.</p>
-      <table id="table_fkm_jqp_dmb">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">0 - <codeph>INT_MAX</codeph> (2147483647)</entry>
-              <entry colname="col2">300</entry>
               <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

@@ -11,6 +11,7 @@
 
 #include "naucrates/statistics/CFilterStatsProcessor.h"
 
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"

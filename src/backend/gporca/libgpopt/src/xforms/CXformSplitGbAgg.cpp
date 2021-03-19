@@ -21,7 +21,8 @@
 #include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternMultiTree.h"
-#include "gpopt/translate/CTranslatorDXLToExpr.h"
+#include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDAggregate.h"
 

@@ -156,7 +156,6 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 		eng.Optimize();
 
 		CExpression *pexprPlan = eng.PexprExtractPlan();
-		(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 
 		// translate plan into DXL
 		IntPtrArray *pdrgpiSegments = GPOS_NEW(mp) IntPtrArray(mp);

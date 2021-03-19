@@ -138,14 +138,6 @@ PostgreSQL documentation
       <listitem>
        <para>
         Include large objects in the dump.  This is the default behavior
-<<<<<<< HEAD
-        except when <option>--schema</>, <option>--table</>, or
-        <option>--schema-only</> is specified.  The <option>-b</>
-        switch is therefore only useful to add large objects to dumps
-        where a specific schema or table has been requested.  Note that
-        blobs are considered data and therefore will be included when
-        --data-only is used, but not when --schema-only is.
-=======
         except when <option>--schema</option>, <option>--table</option>, or
         <option>--schema-only</option> is specified.  The <option>-b</option>
         switch is therefore only useful to add large objects to dumps
@@ -169,7 +161,6 @@ PostgreSQL documentation
         When both <option>-b</option> and <option>-B</option> are given, the behavior
         is to output large objects, when data is being dumped, see the
         <option>-b</option> documentation.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
        </para>
       </listitem>
      </varlistentry>
@@ -560,10 +551,6 @@ PostgreSQL documentation
 
        <note>
         <para>
-<<<<<<< HEAD
-         -t cannot be used to specify a child table partition. 
-         To dump a partitioned table, you must specify the parent table name.
-=======
          The behavior of the <option>-t</option> switch is not entirely upward
          compatible with pre-8.2 <productname>PostgreSQL</productname>
          versions.  Formerly, writing <literal>-t tab</literal> would dump all
@@ -572,7 +559,6 @@ PostgreSQL documentation
          you can write <literal>-t '*.tab'</literal>.  Also, you must write something
          like <literal>-t sch.tab</literal> to select a table in a particular schema,
          rather than the old locution of <literal>-n sch -t tab</literal>.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
         </para>
        </note>
       </listitem>
@@ -583,21 +569,11 @@ PostgreSQL documentation
       <term><option>--exclude-table=<replaceable class="parameter">table</replaceable></option></term>
       <listitem>
        <para>
-<<<<<<< HEAD
-       Do not dump any tables matching the table pattern. 
-       The pattern is interpreted according to the same rules as for -t. 
-       -T can be given more than once to exclude tables matching any of 
-       several patterns. When both -t and -T are given, the behavior is 
-       to dump just the tables that match at least one -t switch but 
-       no -T switches. If -T appears without -t, then tables matching -T 
-       are excluded from what is otherwise a normal dump.
-=======
         Do not dump any tables matching the <replaceable
         class="parameter">table</replaceable> pattern.  The pattern is
         interpreted according to the same rules as for <option>-t</option>.
         <option>-T</option> can be given more than once to exclude tables
         matching any of several patterns.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
        </para>
 
        <para>

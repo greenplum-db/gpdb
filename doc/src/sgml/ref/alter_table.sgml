@@ -38,7 +38,6 @@ ALTER TABLE [ IF EXISTS ] <replaceable class="parameter">name</replaceable>
 ALTER TABLE [ IF EXISTS ] <replaceable class="parameter">name</replaceable>
     DETACH PARTITION <replaceable class="parameter">partition_name</replaceable>
 
-<<<<<<< HEAD
 ALTER TABLE [ IF EXISTS ] [ONLY] name SET 
      WITH (REORGANIZE=true|false) 
    | DISTRIBUTED BY (column_name, [ ... ] ) 
@@ -50,43 +49,14 @@ ALTER TABLE name
                      | FOR (value) } partition_action [...] ] 
    partition_action
 
-<phrase>where <replaceable class="PARAMETER">action</replaceable> is one of:</phrase>
-
-    ADD [ COLUMN ] [ IF NOT EXISTS ] <replaceable class="PARAMETER">column_name</replaceable> <replaceable class="PARAMETER">data_type</replaceable> [ COLLATE <replaceable class="PARAMETER">collation</replaceable> ] [ ENCODING ( <replaceable class="PARAMETER">column_reference_storage_directive</replaceable> [,...] ) ] [ <replaceable class="PARAMETER">column_constraint</replaceable> [ ... ] ]
-    DROP [ COLUMN ] [ IF EXISTS ] <replaceable class="PARAMETER">column_name</replaceable> [ RESTRICT | CASCADE ]
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> [ SET DATA ] TYPE <replaceable class="PARAMETER">data_type</replaceable> [ COLLATE <replaceable class="PARAMETER">collation</replaceable> ] [ USING <replaceable class="PARAMETER">expression</replaceable> ]
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> SET DEFAULT <replaceable class="PARAMETER">expression</replaceable>
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> DROP DEFAULT
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> { SET | DROP } NOT NULL
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> SET STATISTICS <replaceable class="PARAMETER">integer</replaceable>
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> SET ( <replaceable class="PARAMETER">attribute_option</replaceable> = <replaceable class="PARAMETER">value</replaceable> [, ... ] )
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> RESET ( <replaceable class="PARAMETER">attribute_option</replaceable> [, ... ] )
-    ALTER [ COLUMN ] <replaceable class="PARAMETER">column_name</replaceable> SET STORAGE { PLAIN | EXTERNAL | EXTENDED | MAIN }
-    ADD <replaceable class="PARAMETER">table_constraint</replaceable> [ NOT VALID ]
-    ADD <replaceable class="PARAMETER">table_constraint_using_index</replaceable>
-    ALTER CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
-    VALIDATE CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable>
-    DROP CONSTRAINT [ IF EXISTS ]  <replaceable class="PARAMETER">constraint_name</replaceable> [ RESTRICT | CASCADE ]
-    DISABLE TRIGGER [ <replaceable class="PARAMETER">trigger_name</replaceable> | ALL | USER ]
-    ENABLE TRIGGER [ <replaceable class="PARAMETER">trigger_name</replaceable> | ALL | USER ]
-    ENABLE REPLICA TRIGGER <replaceable class="PARAMETER">trigger_name</replaceable>
-    ENABLE ALWAYS TRIGGER <replaceable class="PARAMETER">trigger_name</replaceable>
-    DISABLE RULE <replaceable class="PARAMETER">rewrite_rule_name</replaceable>
-    ENABLE RULE <replaceable class="PARAMETER">rewrite_rule_name</replaceable>
-    ENABLE REPLICA RULE <replaceable class="PARAMETER">rewrite_rule_name</replaceable>
-    ENABLE ALWAYS RULE <replaceable class="PARAMETER">rewrite_rule_name</replaceable>
-=======
 <phrase>where <replaceable class="parameter">action</replaceable> is one of:</phrase>
 
-    ADD [ COLUMN ] [ IF NOT EXISTS ] <replaceable class="parameter">column_name</replaceable> <replaceable class="parameter">data_type</replaceable> [ COLLATE <replaceable class="parameter">collation</replaceable> ] [ <replaceable class="parameter">column_constraint</replaceable> [ ... ] ]
+    ADD [ COLUMN ] [ IF NOT EXISTS ] <replaceable class="parameter">column_name</replaceable> <replaceable class="parameter">data_type</replaceable> [ COLLATE <replaceable class="parameter">collation</replaceable> ] [ ENCODING ( <replaceable class="parameter">column_reference_storage_directive</replaceable> [,...] ) ] [ <replaceable class="parameter">column_constraint</replaceable> [ ... ] ]
     DROP [ COLUMN ] [ IF EXISTS ] <replaceable class="parameter">column_name</replaceable> [ RESTRICT | CASCADE ]
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> [ SET DATA ] TYPE <replaceable class="parameter">data_type</replaceable> [ COLLATE <replaceable class="parameter">collation</replaceable> ] [ USING <replaceable class="parameter">expression</replaceable> ]
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> SET DEFAULT <replaceable class="parameter">expression</replaceable>
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> DROP DEFAULT
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> { SET | DROP } NOT NULL
-    ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> ADD GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( <replaceable>sequence_options</replaceable> ) ]
-    ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> { SET GENERATED { ALWAYS | BY DEFAULT } | SET <replaceable>sequence_option</replaceable> | RESTART [ [ WITH ] <replaceable class="parameter">restart</replaceable> ] } [...]
-    ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> DROP IDENTITY [ IF EXISTS ]
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> SET STATISTICS <replaceable class="parameter">integer</replaceable>
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> SET ( <replaceable class="parameter">attribute_option</replaceable> = <replaceable class="parameter">value</replaceable> [, ... ] )
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> RESET ( <replaceable class="parameter">attribute_option</replaceable> [, ... ] )
@@ -104,7 +74,6 @@ ALTER TABLE name
     ENABLE RULE <replaceable class="parameter">rewrite_rule_name</replaceable>
     ENABLE REPLICA RULE <replaceable class="parameter">rewrite_rule_name</replaceable>
     ENABLE ALWAYS RULE <replaceable class="parameter">rewrite_rule_name</replaceable>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
     DISABLE ROW LEVEL SECURITY
     ENABLE ROW LEVEL SECURITY
     FORCE ROW LEVEL SECURITY
@@ -162,7 +131,16 @@ WITH ( MODULUS <replaceable class="parameter">numeric_literal</replaceable>, REM
     { UNIQUE | PRIMARY KEY } USING INDEX <replaceable class="parameter">index_name</replaceable>
     [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
 
-<<<<<<< HEAD
+<phrase><replaceable class="parameter">index_parameters</replaceable> in <literal>UNIQUE</literal>, <literal>PRIMARY KEY</literal>, and <literal>EXCLUDE</literal> constraints are:</phrase>
+
+[ INCLUDE ( <replaceable class="parameter">column_name</replaceable> [, ... ] ) ]
+[ WITH ( <replaceable class="parameter">storage_parameter</replaceable> [= <replaceable class="parameter">value</replaceable>] [, ... ] ) ]
+[ USING INDEX TABLESPACE <replaceable class="parameter">tablespace_name</replaceable> ]
+
+<phrase><replaceable class="parameter">exclude_element</replaceable> in an <literal>EXCLUDE</literal> constraint is:</phrase>
+
+{ <replaceable class="parameter">column_name</replaceable> | ( <replaceable class="parameter">expression</replaceable> ) } [ <replaceable class="parameter">opclass</replaceable> ] [ ASC | DESC ] [ NULLS { FIRST | LAST } ]
+
 where partition_action is one of:
   ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
@@ -221,17 +199,6 @@ Where column_reference_storage_directive is:
    COLUMN column_name ENCODING ( storage_directive [, ... ] ), ... 
  | DEFAULT COLUMN ENCODING ( storage_directive [, ... ] )
 
-=======
-<phrase><replaceable class="parameter">index_parameters</replaceable> in <literal>UNIQUE</literal>, <literal>PRIMARY KEY</literal>, and <literal>EXCLUDE</literal> constraints are:</phrase>
-
-[ INCLUDE ( <replaceable class="parameter">column_name</replaceable> [, ... ] ) ]
-[ WITH ( <replaceable class="parameter">storage_parameter</replaceable> [= <replaceable class="parameter">value</replaceable>] [, ... ] ) ]
-[ USING INDEX TABLESPACE <replaceable class="parameter">tablespace_name</replaceable> ]
-
-<phrase><replaceable class="parameter">exclude_element</replaceable> in an <literal>EXCLUDE</literal> constraint is:</phrase>
-
-{ <replaceable class="parameter">column_name</replaceable> | ( <replaceable class="parameter">expression</replaceable> ) } [ <replaceable class="parameter">opclass</replaceable> ] [ ASC | DESC ] [ NULLS { FIRST | LAST } ]
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 </synopsis>
  </refsynopsisdiv>
 
@@ -1030,7 +997,6 @@ Where column_reference_storage_directive is:
   </para>
 
   <para>
-<<<<<<< HEAD
    Note: If you add a partition to a table that 
    has subpartition encodings, the new partition 
    inherits the storage directives for the subpartitions. 
@@ -1039,10 +1005,7 @@ Where column_reference_storage_directive is:
   </para>
 
   <para>
-   You must own the table to use <command>ALTER TABLE</>.
-=======
    You must own the table to use <command>ALTER TABLE</command>.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    To change the schema or tablespace of a table, you must also have
    <literal>CREATE</literal> privilege on the new schema or tablespace.
    To add the table as a new child of a parent table, you must own the parent

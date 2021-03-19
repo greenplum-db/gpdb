@@ -30,7 +30,12 @@ extern "C" {
 
 #include "gpopt/translate/CMappingVarColId.h"
 #include "naucrates/dxl/CIdGenerator.h"
-#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/dxl/operators/CDXLIndexDescr.h"
+#include "naucrates/dxl/operators/CDXLLogicalSetOp.h"
+#include "naucrates/dxl/operators/CDXLLogicalTVF.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDML.h"
+#include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
+#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/IStatistics.h"
@@ -313,7 +318,8 @@ public:
 						   OID func_oid);
 
 	// is this a motion sensitive to duplicates
-	static BOOL IsDuplicateSensitiveMotion(CDXLPhysicalMotion *dxl_motion);
+	static BOOL IsDuplicateSensitiveMotion(
+		gpdxl::CDXLPhysicalMotion *dxl_motion);
 
 	// construct a project element with a const NULL expression
 	static CDXLNode *CreateDXLProjElemConstNULL(CMemoryPool *mp,
@@ -343,7 +349,7 @@ public:
 
 	// map DXL Subplan type to GPDB SubLinkType
 	static SubLinkType MapDXLSubplanToSublinkType(
-		EdxlSubPlanType dxl_subplan_type);
+		gpdxl::EdxlSubPlanType dxl_subplan_type);
 
 	// map GPDB SubLinkType to DXL Subplan type
 	static EdxlSubPlanType MapSublinkTypeToDXLSubplan(SubLinkType slink);
@@ -352,12 +358,12 @@ public:
 	// the given relation
 	static BOOL RelHasTriggers(CMemoryPool *mp, CMDAccessor *md_accessor,
 							   const IMDRelation *mdrel,
-							   const EdxlDmlType dml_type_dxl);
+							   const gpdxl::EdxlDmlType dml_type_dxl);
 
 	// check whether the given trigger is applicable to the given DML operation
 	static BOOL IsApplicableTrigger(CMDAccessor *md_accessor,
 									IMDId *trigger_mdid,
-									const EdxlDmlType dml_type_dxl);
+									const gpdxl::EdxlDmlType dml_type_dxl);
 
 	// check whether there are NOT NULL or CHECK constraints for the given relation
 	static BOOL RelHasConstraints(const IMDRelation *rel);

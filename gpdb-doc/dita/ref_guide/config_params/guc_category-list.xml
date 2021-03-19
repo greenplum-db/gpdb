@@ -1209,15 +1209,18 @@
                 >gp_reject_percent_threshold</xref>
             </p>
           </stentry>
-          <stentry><p>
+          <stentry>
+            <p><xref href="guc-list.xml#gpfdist_retry_timeout" type="section"
+                >gpfdist_retry_timeout</xref></p>
+            <p>
               <xref href="guc-list.xml#readable_external_table_timeout" type="section"
                 >readable_external_table_timeout</xref>
-            </p><p>
+            </p>
+            <p>
               <xref href="guc-list.xml#writable_external_table_bufsize" type="section"
-                >writable_external_table_bufsize</xref></p><xref
-              href="guc-list.xml#gpfdist_retry_timeout" type="section"
-              >gpfdist_retry_timeout</xref><p><xref href="guc-list.xml#verify_gpfdists_cert"
-                >verify_gpfdists_cert</xref></p></stentry>
+                >writable_external_table_bufsize</xref></p>
+            <p><xref href="guc-list.xml#verify_gpfdists_cert">verify_gpfdists_cert</xref></p>
+          </stentry>
         </strow>
       </simpletable>
     </body>

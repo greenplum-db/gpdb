@@ -42,6 +42,16 @@ setup
  CREATE TABLE another_parttbl1 PARTITION OF another_parttbl FOR VALUES IN (1);
  CREATE TABLE another_parttbl2 PARTITION OF another_parttbl FOR VALUES IN (2);
  INSERT INTO another_parttbl VALUES (1, 1, 1);
+
+ CREATE FUNCTION noisy_oper(p_comment text, p_a anynonarray, p_op text, p_b anynonarray)
+ RETURNS bool LANGUAGE plpgsql AS $$
+ DECLARE
+  r bool;
+  BEGIN
+  EXECUTE format('SELECT $1 %s $2', p_op) INTO r USING p_a, p_b;
+  RAISE WARNING '%: % % % % %: %', p_comment, pg_typeof(p_a), p_a, p_op, pg_typeof(p_b), p_b, r;
+  RETURN r;
+  END;$$;
 }
 
 teardown
@@ -53,14 +63,19 @@ teardown
  DROP TABLE table_a, table_b, jointest;
  DROP TABLE parttbl;
  DROP TABLE another_parttbl;
+ DROP FUNCTION noisy_oper(text, anynonarray, text, anynonarray)
 }
 
 session "s1"
-setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; }
+setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; SET client_min_messages = 'WARNING'; }
 # wx1 then wx2 checks the basic case of re-fetching up-to-date values
 step "wx1"	{ UPDATE accounts SET balance = balance - 200 WHERE accountid = 'checking' RETURNING balance; }
 # wy1 then wy2 checks the case where quals pass then fail
 step "wy1"	{ UPDATE accounts SET balance = balance + 500 WHERE accountid = 'checking' RETURNING balance; }
+
+step "wxext1"	{ UPDATE accounts_ext SET balance = balance - 200 WHERE accountid = 'checking' RETURNING balance; }
+step "tocds1"	{ UPDATE accounts SET accountid = 'cds' WHERE accountid = 'checking'; }
+step "tocdsext1" { UPDATE accounts_ext SET accountid = 'cds' WHERE accountid = 'checking'; }
 
 # d1 then wx1 checks that update can deal with the updated row vanishing
 # wx2 then d1 checks that the delete affects the updated row
@@ -82,14 +97,16 @@ step "upsert1"	{
 # readp1/writep1/readp2 tests a bug where nodeLockRows did the wrong thing
 # when the first updated tuple was in a non-first child table.
 # writep2/returningp1 tests a memory allocation issue
+# writep3a/writep3b tests updates touching more than one table
 
 step "readp1"	{ SELECT tableoid::regclass, ctid, * FROM p WHERE b IN (0, 1) AND c = 0 FOR UPDATE; }
 step "writep1"	{ UPDATE p SET b = -1 WHERE a = 1 AND b = 1 AND c = 0; }
 step "writep2"	{ UPDATE p SET b = -b WHERE a = 1 AND c = 0; }
+step "writep3a"	{ UPDATE p SET b = -b WHERE c = 0; }
 step "c1"	{ COMMIT; }
 step "r1"	{ ROLLBACK; }
 
-# these tests are meant to exercise EvalPlanQualFetchRowMarks,
+# these tests are meant to exercise EvalPlanQualFetchRowMark,
 # ie, handling non-locked tables in an EvalPlanQual recheck
 
 step "partiallock"	{
@@ -98,8 +115,10 @@ step "partiallock"	{
 	  FOR UPDATE OF a1;
 }
 step "lockwithvalues"	{
-	SELECT * FROM accounts a1, (values('checking'),('savings')) v(id)
-	  WHERE a1.accountid = v.id
+	-- Reference rowmark column that differs in type from targetlist at some attno.
+	-- See CAHU7rYZo_C4ULsAx_LAj8az9zqgrD8WDd4hTegDTMM1LMqrBsg@mail.gmail.com
+	SELECT a1.*, v.id FROM accounts a1, (values('checking'::text, 'nan'::text),('savings', 'nan')) v(id, notnumeric)
+	WHERE a1.accountid = v.id AND v.notnumeric != 'einszwei'
 	  FOR UPDATE OF a1;
 }
 step "partiallock_ext"	{
@@ -123,8 +142,6 @@ step "updateforcip"	{
 	UPDATE table_a SET value = NULL WHERE id = 1;
 }
 
-<<<<<<< HEAD
-=======
 # these tests exercise mark/restore during EPQ recheck, cf bug #15032
 
 step "selectjoinforupdate"	{
@@ -167,10 +184,9 @@ step "simplepartupdate_noroute" {
 	update parttbl set b = 2 where c = 1 returning *;
 }
 
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 
 session "s2"
-setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; }
+setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; SET client_min_messages = 'WARNING'; }
 step "wx2"	{ UPDATE accounts SET balance = balance + 450 WHERE accountid = 'checking' RETURNING balance; }
 step "wy2"	{ UPDATE accounts SET balance = balance + 1000 WHERE accountid = 'checking' AND balance < 1000  RETURNING balance; }
 step "d2"	{ DELETE FROM accounts WHERE accountid = 'checking'; }
@@ -189,6 +205,7 @@ step "returningp1" {
 	WITH u AS ( UPDATE p SET b = b WHERE a > 0 RETURNING * )
 	  SELECT * FROM u;
 }
+step "writep3b"	{ UPDATE p SET b = -b WHERE c = 0; }
 step "readforss"	{
 	SELECT ta.id AS ta_id, ta.value AS ta_value,
 		(SELECT ROW(tb.id, tb.value)
@@ -204,8 +221,6 @@ step "updateforcip3"	{
 	UPDATE table_a SET value = COALESCE(value, (SELECT val FROM d)) WHERE id = 1;
 }
 step "wrtwcte"	{ UPDATE table_a SET value = 'tableAValue2' WHERE id = 1; }
-<<<<<<< HEAD
-=======
 step "wrjt"	{ UPDATE jointest SET data = 42 WHERE id = 7; }
 step "complexpartupdate"	{
 	with u as (update parttbl set a = a returning parttbl.*)
@@ -236,17 +251,27 @@ step "updwctefail"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100
 step "delwcte"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100 WHERE accountid = 'checking' RETURNING *) DELETE FROM accounts a USING doup RETURNING *; }
 step "delwctefail"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100 WHERE accountid = 'checking' RETURNING *, update_checking(999)) DELETE FROM accounts a USING doup RETURNING *; }
 
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+# Check that nested EPQ works correctly
+step "wnested2" {
+    UPDATE accounts SET balance = balance - 1200
+    WHERE noisy_oper('upid', accountid, '=', 'checking')
+    AND noisy_oper('up', balance, '>', 200.0)
+    AND EXISTS (
+        SELECT accountid
+        FROM accounts_ext ae
+        WHERE noisy_oper('lock_id', ae.accountid, '=', accounts.accountid)
+            AND noisy_oper('lock_bal', ae.balance, '>', 200.0)
+        FOR UPDATE
+    );
+}
+
 step "c2"	{ COMMIT; }
 step "r2"	{ ROLLBACK; }
 
 session "s3"
-setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; }
+setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; SET client_min_messages = 'WARNING'; }
 step "read"	{ SELECT * FROM accounts ORDER BY accountid; }
-<<<<<<< HEAD
-=======
 step "read_ext"	{ SELECT * FROM accounts_ext ORDER BY accountid; }
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 step "read_a"	{ SELECT * FROM table_a ORDER BY id; }
 
 # this test exercises EvalPlanQual with a CTE, cf bug #14328
@@ -291,6 +316,15 @@ permutation "wx2" "d2" "d1" "r2" "c1" "read"
 permutation "d1" "wx2" "c1" "c2" "read"
 permutation "d1" "wx2" "r1" "c2" "read"
 
+# Check that nested EPQ works correctly
+permutation "wnested2" "c1" "c2" "read"
+permutation "wx1" "wxext1" "wnested2" "c1" "c2" "read"
+permutation "wx1" "wx1" "wxext1" "wnested2" "c1" "c2" "read"
+permutation "wx1" "wx1" "wxext1" "wxext1" "wnested2" "c1" "c2" "read"
+permutation "wx1" "wxext1" "wxext1" "wnested2" "c1" "c2" "read"
+permutation "wx1" "tocds1" "wnested2" "c1" "c2" "read"
+permutation "wx1" "tocdsext1" "wnested2" "c1" "c2" "read"
+
 # test that an update to a self-modified row is ignored when
 # previously updated by the same cid
 permutation "wx1" "updwcte" "c1" "c2" "read"
@@ -307,6 +341,7 @@ permutation "wx1" "delwctefail" "c1" "c2" "read"
 permutation "upsert1" "upsert2" "c1" "c2" "read"
 permutation "readp1" "writep1" "readp2" "c1" "c2"
 permutation "writep2" "returningp1" "c1" "c2"
+permutation "writep3a" "writep3b" "c1" "c2"
 permutation "wx2" "partiallock" "c2" "c1" "read"
 permutation "wx2" "lockwithvalues" "c2" "c1" "read"
 permutation "wx2_ext" "partiallock_ext" "c2" "c1" "read_ext"
@@ -314,9 +349,6 @@ permutation "updateforss" "readforss" "c1" "c2"
 permutation "updateforcip" "updateforcip2" "c1" "c2" "read_a"
 permutation "updateforcip" "updateforcip3" "c1" "c2" "read_a"
 permutation "wrtwcte" "readwcte" "c1" "c2"
-<<<<<<< HEAD
-permutation "wrtwcte" "multireadwcte" "c1" "c2"
-=======
 permutation "wrjt" "selectjoinforupdate" "c2" "c1"
 permutation "wrjt" "selectresultforupdate" "c2" "c1"
 permutation "wrtwcte" "multireadwcte" "c1" "c2"
@@ -325,4 +357,3 @@ permutation "simplepartupdate" "complexpartupdate" "c1" "c2"
 permutation "simplepartupdate_route1to2" "complexpartupdate_route_err1" "c1" "c2"
 permutation "simplepartupdate_noroute" "complexpartupdate_route" "c1" "c2"
 permutation "simplepartupdate_noroute" "complexpartupdate_doesnt_route" "c1" "c2"
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196

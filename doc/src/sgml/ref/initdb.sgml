@@ -349,7 +349,6 @@ PostgreSQL documentation
       </listitem>
      </varlistentry>
 
-<<<<<<< HEAD
     <varlistentry>
      <term><option>--text-search-config=<replaceable>CFG</></option></term>
      <listitem>
@@ -360,7 +359,6 @@ PostgreSQL documentation
      </listitem>
     </varlistentry>
 
-=======
      <varlistentry>
       <term><option>--wal-segsize=<replaceable>size</replaceable></option></term>
       <listitem>
@@ -381,7 +379,6 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
     </variablelist>
    </para>
 

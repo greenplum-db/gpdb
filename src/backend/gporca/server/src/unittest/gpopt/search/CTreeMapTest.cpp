@@ -22,7 +22,7 @@
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/exception.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"

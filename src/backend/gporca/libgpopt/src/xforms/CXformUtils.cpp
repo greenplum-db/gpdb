@@ -2359,10 +2359,10 @@ CXformUtils::LookupJoinKeys(CMemoryPool *mp, CExpression *pexpr,
 
 	GPOS_ASSERT(nullptr != pgroupScalar->PdrgpexprJoinKeysInner());
 
-	*join_opfamilies = pgroupScalar->JoinOpfamilies();
-	if (nullptr != *join_opfamilies)
+	if (IMdIdArray *opfamilies = pgroupScalar->JoinOpfamilies())
 	{
-		(*join_opfamilies)->AddRef();
+		opfamilies->AddRef();
+		*join_opfamilies = opfamilies;
 	}
 
 	// extract used columns by hash join keys

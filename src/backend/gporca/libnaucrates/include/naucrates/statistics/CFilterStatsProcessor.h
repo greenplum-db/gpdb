@@ -14,7 +14,6 @@
 #include "gpos/base.h"
 
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "naucrates/statistics/CFilterStatsProcessor.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 #include "naucrates/statistics/CScaleFactorUtils.h"
 #include "naucrates/statistics/CStatistics.h"

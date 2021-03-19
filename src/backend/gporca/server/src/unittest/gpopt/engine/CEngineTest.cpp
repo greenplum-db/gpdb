@@ -18,7 +18,7 @@
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CMDCache.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupProxy.h"
 
@@ -401,8 +401,6 @@ CEngineTest::BuildMemoRecursive(CMemoryPool *mp, CExpression *pexprInput,
 
 	CExpression *pexprPlan = eng.PexprExtractPlan();
 	GPOS_ASSERT(nullptr != pexprPlan);
-
-	(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 
 	os << std::endl << std::endl;
 	os << "OUTPUT PLAN:" << std::endl;

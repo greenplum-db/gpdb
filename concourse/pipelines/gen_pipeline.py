@@ -70,7 +70,6 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'combine_cli_coverage',
         'compile_gpdb_binary_swap_centos7',
         'compile_gpdb_clients_windows',
-        'concourse_unit_tests',
         'walrep_2',
         'madlib_build_gppkg',
         'MADlib_Test_planner_centos7',

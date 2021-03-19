@@ -13,6 +13,7 @@
 
 #include "gpos/memory/CAutoMemoryPool.h"
 
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"

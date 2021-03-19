@@ -251,10 +251,11 @@ process_target_file(const char *path, file_type_t type, size_t size,
 	 * from the target data folder all paths which have been filtered out from
 	 * the source data folder when processing the source files.
 	 *
-	 * GPDB: GP_INTERNAL_AUTO_CONF_FILE_NAME is in the excluded file list.
-	 * It should not be copied but also should not be removed. In the future,
-	 * if there are more files that should not be copied but also should not be
-	 * removed, then a separate function for those files would be better.
+	 * GPDB: GP_INTERNAL_AUTO_CONF_FILE_NAME and "log" are in the excluded
+	 * file list.  These should not be copied but also should not be
+	 * removed. In the future, if there are more files or directories that
+	 * should not be copied but also should not be removed, then a separate
+	 * function for those would be better.
 	 */
 	{
 		const char *filename = last_dir_separator(path);
@@ -263,6 +264,8 @@ process_target_file(const char *path, file_type_t type, size_t size,
 		else
 			filename++;
 		if (strcmp(filename, GP_INTERNAL_AUTO_CONF_FILE_NAME) == 0)
+			return;
+		if (strstr(path, "log/") == path)
 			return;
 	}
 

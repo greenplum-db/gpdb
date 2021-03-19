@@ -632,7 +632,13 @@ add_first_stage_group_agg_path(PlannerInfo *root,
 
 		dqa_type = recognize_dqa_type(ctx);
 
-		if (dqa_type != SINGLE_DQA)
+		/* For the query:
+		 *     select count(distinct a), sum(b), sum(c) from t;
+		 * If t is distributed by (a), we can also use multi stage
+		 * agg because two same a cannot be in different segments.
+		 * So we should also consider SINGLE_DQA_WITHAGG here.
+		 */
+		if (dqa_type != SINGLE_DQA && dqa_type != SINGLE_DQA_WITHAGG)
 			return;
 
 		fetch_single_dqa_info(root, path, ctx, &info);

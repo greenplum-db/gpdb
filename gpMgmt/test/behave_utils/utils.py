@@ -41,16 +41,14 @@ def query_sql(dbname, sql):
 def execute_sql(dbname, sql):
     result = None
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, sql)
-    conn.close()
 
 def execute_sql_singleton(dbname, sql):
     result = None
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         result = dbconn.querySingleton(conn, sql)
 
-    conn.close()
     if result is None:
         raise Exception("error running query: %s" % sql)
 
