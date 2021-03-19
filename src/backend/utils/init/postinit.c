@@ -1205,6 +1205,16 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 				 errdetail("This database instance is running as a primary segment in a Greenplum cluster and does not permit direct connections."),
 				 errhint("To force a connection anyway (dangerous!), use utility mode.")));
 
+	elog(LOG, "dispatcher ID(%d) & assigned dispatcher ID(%d)",gp_dispatcher_id, gp_assigned_dispatcher_id);
+	if (Gp_role == GP_ROLE_EXECUTE && gp_enable_check_dispatcher &&
+		gp_assigned_dispatcher_id != gp_dispatcher_id)
+		ereport(FATAL,
+				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+				 errmsg("dispatcher ID(%d) doesn't match with the assigned dispatcher ID(%d)",
+					 	gp_dispatcher_id, gp_assigned_dispatcher_id),
+				 errdetail("There may be two active coordinators, the unexpected coordinator wants to dispatcher queries"),
+				 errhint("Please check the assigned dispatcher ID and stop the unexpected server.")));
+
 	/* Process pg_db_role_setting options */
 	process_settings(MyDatabaseId, GetSessionUserId());
 

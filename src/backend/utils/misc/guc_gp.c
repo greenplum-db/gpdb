@@ -416,6 +416,11 @@ bool		gp_external_enable_filter_pushdown = true;
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
 
+/* auto failover */
+bool		gp_enable_check_dispatcher = false;
+int			gp_dispatcher_id = UNINITIALIZED_GP_IDENTITY_VALUE;
+int			gp_assigned_dispatcher_id = UNINITIALIZED_GP_IDENTITY_VALUE;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -1677,6 +1682,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_cte_sharing,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_enable_check_dispatcher", PGC_SIGHUP, GP_WORKER_IDENTITY,
+			gettext_noop("This guc enables the QE to validate the dispatcher ID to avoid "
+						 "2 active coordinator at the same time."),
+			NULL,
+		},
+		&gp_enable_check_dispatcher,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3090,6 +3106,30 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&GpIdentity.segindex,
+		UNINITIALIZED_GP_IDENTITY_VALUE, INT_MIN, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatcher_id", PGC_BACKEND, GP_WORKER_IDENTITY,
+			gettext_noop("The dispatcher_id is to tracker who dispatches the query "
+						 "for this QE. It's only valid for QE if gp_enable_check_dispatcher "
+						 "is true."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
+		},
+		&gp_dispatcher_id,
+		UNINITIALIZED_GP_IDENTITY_VALUE, INT_MIN, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_assigned_dispatcher_id", PGC_SIGHUP, GP_WORKER_IDENTITY,
+			gettext_noop("The gp_assigned_dispatcher_id is to record the ID of the coordinator."
+						 "It's only checked if gp_enable_check_dispatcher is true."),
+			NULL,
+		},
+		&gp_assigned_dispatcher_id,
 		UNINITIALIZED_GP_IDENTITY_VALUE, INT_MIN, INT_MAX,
 		NULL, NULL, NULL
 	},

@@ -366,6 +366,7 @@ makeOptions(void)
 	qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
 	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->config->hostip);
 	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->config->port);
+	appendStringInfo(&string, " -c gp_dispatcher_id=%d", (int)qdinfo->config->dbid);
 
 	for (i = 0; i < ngucs; ++i)
 	{
