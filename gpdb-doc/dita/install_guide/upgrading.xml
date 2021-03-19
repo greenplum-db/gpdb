@@ -124,20 +124,20 @@
 $ ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codeblock></li>
         <li class="- topic/li ">Source the environment file you just edited. For
           example:<codeblock>$ source ~/.bashrc</codeblock></li>
+        <li class="- topic/li ">After all segment hosts have been upgraded, log in as the
+            <codeph>gpadmin</codeph> user and restart your Greenplum Database
+          system:<codeblock># su - gpadmin
+$ gpstart</codeblock></li>
         <li class="- topic/li " otherprops="pivotal">Use the Greenplum Database
             <codeph>gppkg</codeph> utility to re-install Greenplum Database extensions. If you were
           previously using any Greenplum Database extensions such as pgcrypto, PL/R, PL/Java, or
           PostGIS, download the corresponding packages from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-            class="- topic/xref ">VMware Tanzu Network</xref>, and install using this utility. See the
-          extension documentation for details.<p>Also copy any files that are used by the extensions
-            (such as JAR files, shared object files, and libraries) from the previous version
-            installation directory to the new version installation directory on the coordinator and
-            segment host systems. </p></li>
-        <li class="- topic/li ">After all segment hosts have been upgraded, log in as the
-            <codeph>gpadmin</codeph> user and restart your Greenplum Database
-          system:<codeblock># su - gpadmin
-$ gpstart</codeblock></li>
+            class="- topic/xref ">VMware Tanzu Network</xref>, and install using this utility. See
+          the extension documentation for details.<p>Also copy any files that are used by the
+            extensions (such as JAR files, shared object files, and libraries) from the previous
+            version installation directory to the new version installation directory on the
+            coordinator and segment host systems. </p></li>
         <li>If you configured PXF in your previous Greenplum Database installation, you may
           need to install PXF in your new Greenplum installation, and you may be required to
           re-initialize the PXF service after you upgrade Greenplum Database. Refer to the <xref
