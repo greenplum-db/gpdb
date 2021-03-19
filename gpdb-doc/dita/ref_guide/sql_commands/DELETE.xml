@@ -157,13 +157,6 @@ name = 'Hannah';</codeblock>
                 write and faster to execute than a more standard sub-select style, such as:</p>
             <codeblock>DELETE FROM rank WHERE id IN (SELECT id FROM names WHERE name 
 = 'Hannah');</codeblock>
-            <p>When using <codeph>DELETE</codeph> to remove all the rows of a table (for example:
-                    <codeph>DELETE * FROM <varname>table</varname>;</codeph>), Greenplum Database
-                adds an implicit <codeph>TRUNCATE</codeph> command (when user permissions allow).
-                The added <codeph>TRUNCATE</codeph> command frees the disk space occupied by the
-                deleted rows without requiring a <codeph>VACUUM</codeph> of the table. This improves
-                scan performance of subsequent queries, and benefits ELT workloads that frequently
-                insert and delete from temporary tables.</p>
             <p>Execution of <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on
                 a specific partition (child table) of a partitioned table is not supported. Instead,
                 these commands must be executed on the root partitioned table, the table created
