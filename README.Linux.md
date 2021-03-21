@@ -37,13 +37,13 @@ Use dependency script for CentOS.
 ## For Ubuntu:
 
 - Install Dependencies
-  When you run the README.ubuntu.bash script for dependencies, you will be asked to configure realm for kerberos.
+  When you run the README.Ubuntu.bash script for dependencies, you will be asked to configure realm for kerberos.
   You can enter any realm, since this is just for testing, and during testing, it will reconfigure a local server/client.
   If you want to skip this manual configuration, use:
   `export DEBIAN_FRONTEND=noninteractive`
 
   ```bash
-    ./README.ubuntu.bash
+    ./README.Ubuntu.bash
   ```
 
 - Ubuntu 18.04 and newer should have use gcc 7 or newer, but you can also enable gcc-7 on older versions of Ubuntu:
