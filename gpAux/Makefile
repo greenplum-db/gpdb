@@ -737,6 +737,7 @@ else
 	(cd $(INSTLOC)/bin/ && $(TAR) cf - $(LOADERS_FILESET_BIN)) | (cd $(LOADERSINSTLOC_BIN)/ && $(TAR) xpf -)$(check_pipe_for_errors)
 	mkdir -p $(LOADERSINSTLOC_BINEXT)
 	(cd $(GPMGMT)/bin/ext/ && $(TAR) cf - $(LOADERS_FILESET_BINEXT)) | (cd $(LOADERSINSTLOC_BINEXT)/ && $(TAR) xpf -)$(check_pipe_for_errors)
+	(cd $(GPMGMT)/bin/ && $(TAR) cf - gppylib) | (cd $(LOADERSINSTLOC_BINEXT)/ && $(TAR) xpf -)$(check_pipe_for_errors)
 ifeq "$(findstring win,$(BLD_ARCH))" "win"
 	# ---- copy pygresql from ext/win32 ----
 	(cd $(BLD_THIRDPARTY)/win32 && $(TAR) cf - pygresql) | (cd $(LOADERSINSTLOC_BINEXT)/ && $(TAR) xpf -)$(check_pipe_for_errors)
