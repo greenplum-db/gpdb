@@ -539,7 +539,9 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
             <li>The program generates a key that is passphrase-protected; it does not accept a
               passphrase that is less than four characters long. To remove the passphrase (and you
               must if you want automatic start-up of the server), run the following
-              command:<codeblock>openssl rsa -in privkey.pem -out server.key rm privkey.pem</codeblock></li>
+              command:
+              <codeblock>openssl rsa -in privkey.pem -out server.key
+rm privkey.pem</codeblock></li>
             <li>Enter the old passphrase to unlock the existing key. Then run the following
                 command:<codeblock>openssl req -x509 -in server.req -text -key server.key -out server.crt</codeblock><p>This
                 turns the certificate into a self-signed certificate and copies the key and
