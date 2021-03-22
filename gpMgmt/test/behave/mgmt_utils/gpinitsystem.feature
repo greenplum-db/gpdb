@@ -63,7 +63,7 @@ Feature: gpinitsystem tests
     Scenario: after gpinitsystem logs a warning, a re-run should return exit status 0
       Given create demo cluster config
           # log a warning
-        And the user runs command "echo 'ARRAY_NAME=' >> ../gpAux/gpdemo/clusterConfigFile"
+        And the user runs command "sed -i.bak 's/^ENCODING.*//g' ../gpAux/gpdemo/clusterConfigFile"
        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
        Then gpinitsystem should return a return code of 0
       Given create demo cluster config

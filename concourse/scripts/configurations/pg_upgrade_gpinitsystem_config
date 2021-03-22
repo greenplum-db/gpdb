@@ -6,9 +6,6 @@
 #### REQUIRED PARAMETERS
 ################################################
 
-#### Name of this Greenplum system enclosed in quotes.
-ARRAY_NAME="EMC Greenplum DW"
-
 #### Naming convention for utility-generated data directories.
 SEG_PREFIX=gpseg
 

@@ -265,13 +265,6 @@ OPTIONS
 INITIALIZATION CONFIGURATION FILE FORMAT
 *****************************************************
 
-ARRAY_NAME
-
- Required. A name for the array you are configuring. You can use 
- any name you like. Enclose the name in quotes if the name 
- contains spaces.
-
-
 MACHINE_LIST_FILE
 
  Optional. Can be used in place of the -h option. This specifies 

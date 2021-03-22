@@ -9,12 +9,6 @@
 # REQUIRED PARAMETERS
 ################################################
 
-# A name for the array you are configuring. You can use any name you 
-# like. Enclose the name in quotes if the name contains spaces.
-
-ARRAY_NAME="GPDB SINGLENODE"
-
-
 # This specifies the file that contains the list of segment host names 
 # that comprise the Greenplum system. For a single-node system, this
 # file contains the local OS-configured hostname (as output by the 
