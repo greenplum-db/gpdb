@@ -13,8 +13,8 @@
       <note>If your Greenplum Database system is at version 5.28 or later, you can upgrade the
         system directly to Greenplum 6.9 or later using <xref
           href="https://greenplum.docs.pivotal.io/upgrade/" format="html" scope="external"
-          >gpupgrade</xref>. VMware recommends this approach. Currently, you cannot upgrade a
-        Greenplum Database 4.3 system directly to Greenplum 6.</note>
+          >gpupgrade</xref>. Currently, you cannot upgrade a Greenplum Database 4.3 system directly
+        to Greenplum 6.</note>
     </p>
     <p>This topic identifies known issues you may encounter when moving data from Greenplum 4.3 to
       Greenplum 6. You can work around these problems by making needed changes to your Greenplum 4.3
