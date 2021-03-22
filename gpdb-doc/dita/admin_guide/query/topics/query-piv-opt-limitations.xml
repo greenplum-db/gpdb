@@ -45,6 +45,8 @@
               <li><cmdname>FIELDSELECT</cmdname></li>
             </ul></li>
           <li>Aggregate functions that take set operators as input arguments.</li>
+          <li>Multiple Distinct Qualified Aggregates, such as <codeph>SELECT count(DISTINCT a),
+              sum(DISTINCT b) FROM foo</codeph>.</li>
           <li><cmdname>percentile_*</cmdname> window functions (ordered-set aggregate functions).</li>
           <li>Inverse distribution functions.</li>
           <li>Queries that execute functions that are defined with the <codeph>ON MASTER</codeph> or
