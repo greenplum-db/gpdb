@@ -12,8 +12,7 @@
       <li><xref href="#topic_x2w_ltv_yq" format="dita"/></li>
       <li><xref href="#topic_usj_2xl_xq" format="dita"/></li>
     </ul>
-    <note type="important">Upgrading Tanzu Greenplum 4 or 5 to Greenplum 6 is not
-      supported.</note>
+    <note type="important">Upgrading Tanzu Greenplum 4 to Greenplum 6 is not supported.</note>
   </body>
   <topic id="topic_x2w_ltv_yq">
     <title class="- topic/title ">Installing the Tanzu Greenplum 6 Software Binaries on DCA
