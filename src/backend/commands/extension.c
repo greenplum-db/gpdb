@@ -41,6 +41,7 @@
 #include "catalog/pg_extension.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_type.h"
+#include "cdb/cdbgang.h"
 #include "commands/alter.h"
 #include "commands/comment.h"
 #include "commands/extension.h"
@@ -958,20 +959,16 @@ execute_extension_script(Node *stmt,
 			/*
 			 * We must reset QE CurrentExtensionObject to InvalidOid.
 			 *
-			 * Doing heavy operations like this during exception processing
-			 * is not very cool. Let's at least get out of ErrorContext, to
-			 * leave that free for actual error processing. (Besides, the
-			 * error handling in dispatcher will hit an assertion in
-			 * CopyErrorData(), if another error happens while we're already
-			 * in ErrorContext.)
+			 * Previously, we dispatch a statement with end tag to implement
+			 * the logic of reset QE CurrentExtensionObject to InvalidOid. 
+			 * But this method has a big drawback: since current code is in 
+			 * a Catch block, which means some errors must have happened and 
+			 * QEs may have already been in the Abort State and cannot execute 
+			 * any statement dispatched to them.
+			 * 
+			 * So we simply destroy all QEs here to implement the clear logic.
 			 */
-			MemoryContext oldcxt = MemoryContextSwitchTo(CurTransactionContext);
-			set_end_state(stmt);
-			CdbDispatchUtilityStatement(stmt,
-										DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE,
-										GetAssignedOidsForDispatch(),
-										NULL);
-			MemoryContextSwitchTo(oldcxt);
+			DisconnectAndDestroyAllGangs(false);
 		}
 		PG_RE_THROW();
 	}

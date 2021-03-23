@@ -61,6 +61,7 @@
 #include "parser/parse_type.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
@@ -1181,6 +1182,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	char		execLocation;
 	Oid			funcOid;
 
+	SIMPLE_FAULT_INJECTOR("create_function_fail");
 	/* Convert list of names to a name and namespace */
 	namespaceId = QualifiedNameGetCreationNamespace(stmt->funcname,
 													&funcname);
