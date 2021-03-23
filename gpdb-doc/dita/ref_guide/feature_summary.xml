@@ -805,7 +805,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>LISTEN</codeph></entry>
-              <entry colname="col2"><b otherprops="red">NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
@@ -825,7 +825,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>NOTIFY</codeph></entry>
-              <entry colname="col2"><b otherprops="red">NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
@@ -954,7 +954,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>UNLISTEN</codeph></entry>
-              <entry colname="col2"><b otherprops="red">NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
