@@ -14,6 +14,10 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/((0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9])|(0[13-9]|1[0-2])-30|(0[13578]|1[02])-31)-(?!0000)[0-9]{4}/
+-- s/((0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9])|(0[13-9]|1[0-2])-30|(0[13578]|1[02])-31)-(?!0000)[0-9]{4}/xx-xx-xxxx/
+-- m/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/
+-- s/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/xxx xx xx xx:xx:xx xxxx"/
 -- end_matchsubs
 
 create table lp (a char) partition by list (a);
@@ -782,8 +786,10 @@ drop table listp;
 
 --
 -- check that stable query clauses are only used in run-time pruning
+-- because a is the distributed key by default in stable_qual_pruning,
+-- to get consistent results, we make the table distributed randomly.
 --
-create table stable_qual_pruning (a timestamp) partition by range (a);
+create table stable_qual_pruning (a timestamp) distributed randomly partition by range (a);
 create table stable_qual_pruning1 partition of stable_qual_pruning
   for values from ('2000-01-01') to ('2000-02-01');
 create table stable_qual_pruning2 partition of stable_qual_pruning

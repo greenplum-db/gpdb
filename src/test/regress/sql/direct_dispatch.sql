@@ -318,6 +318,22 @@ select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test
 explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 
+-- test direct dispatch via SQLValueFunction and FuncExpr for single row insertion.
+create table t_sql_value_function1 (a int, b date);
+create table t_sql_value_function2 (a date);
+
+explain (costs off) insert into t_sql_value_function1 values(1, current_timestamp);
+insert into t_sql_value_function1 values(1, current_timestamp);
+
+explain (costs off) insert into t_sql_value_function2 values(current_timestamp);
+insert into t_sql_value_function2 values(current_timestamp);
+
+explain (costs off) insert into t_sql_value_function1 values(2, now());
+insert into t_sql_value_function1 values(2, now());
+
+explain (costs off) insert into t_sql_value_function2 values(now());
+insert into t_sql_value_function2 values(now());
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 
@@ -332,4 +348,8 @@ drop table if exists direct_dispatch_bar;
 
 drop table if exists MPP_22019_a;
 drop table if exists MPP_22019_b;
+
+drop table if exists t_sql_value_function1;
+drop table if exists t_sql_value_function2;
+
 commit;

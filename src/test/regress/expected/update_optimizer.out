@@ -179,11 +179,8 @@ UPDATE update_test t
          Output: ($1), ($2), t.c, ((SubPlan 1 (returns $1,$2))), t.ctid, t.gp_segment_id, (DMLAction)
          ->  Split
                Output: ($1), ($2), t.c, ((SubPlan 1 (returns $1,$2))), t.ctid, t.gp_segment_id, DMLAction
-               ->  Result
+               ->  Seq Scan on public.update_test t
                      Output: $1, $2, t.c, (SubPlan 1 (returns $1,$2)), t.ctid, t.gp_segment_id
-                     One-Time Filter: (CURRENT_USER = SESSION_USER)
-                     ->  Seq Scan on public.update_test t
-                           Output: t.c, t.a, t.ctid, t.gp_segment_id
                      SubPlan 1 (returns $1,$2)
                        ->  Result
                              Output: s.b, s.a
