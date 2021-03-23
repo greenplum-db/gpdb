@@ -42,7 +42,6 @@
 #include "utils/pg_locale.h"
 #include "utils/selfuncs.h"
 
-
 #define IsBooleanOpfamily(opfamily) \
 	((opfamily) == BOOL_BTREE_FAM_OID || (opfamily) == BOOL_HASH_FAM_OID)
 
@@ -796,8 +795,7 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 * The appendonlyam.c module will optimize fetches in TID order by keeping
 		 * the last decompressed block between fetch calls.
 		 */
-		if (index->amhasgettuple &&
-			rel->relstorage == RELSTORAGE_HEAP)
+		if (index->amhasgettuple && rel->relstorage == RELSTORAGE_HEAP)
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
