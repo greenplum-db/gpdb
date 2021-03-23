@@ -34,8 +34,6 @@
 #include "utils/snapmgr.h"
 #include "utils/faultinjector.h"
 
-#include "utils/faultinjector.h"
-
 /*
  * The following structure along with BMTIDBuffer are used to buffer
  * words for tids * during index create -- bmbuild().

@@ -28,8 +28,6 @@
 #include "utils/snapmgr.h"
 #include "utils/faultinjector.h"
 
-#include "utils/faultinjector.h"
-
 
 typedef struct ItemPos
 {
