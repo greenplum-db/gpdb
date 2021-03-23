@@ -132,3 +132,4 @@ test: packcore
 test: cancel_plpython
 
 test: distributed_transactions
+test: bitmap_index_concurrent

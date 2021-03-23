@@ -27,6 +27,7 @@
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
+#include "utils/faultinjector.h"
 
 /*
  * The following structure along with BMTIDBuffer are used to buffer
@@ -73,8 +74,6 @@ static void updatesetbit_inpage(Relation rel, uint64 tidnum,
 								bool use_wal);
 static void insertsetbit(Relation rel, BlockNumber lovBlock, OffsetNumber lovOffset,
 			 			 uint64 tidnum, BMTIDBuffer *buf, bool use_wal);
-static uint64 getnumbits(BM_HRL_WORD *contentWords, 
-					     BM_HRL_WORD *headerWords, uint32 nwords);
 static void findbitmappage(Relation rel, BMLOVItem lovitem,
 					   uint64 tidnum,
 					   Buffer *bitmapBufferP, uint64 *firstTidNumberP);
@@ -125,27 +124,6 @@ get_lastbitmappagebuf(Relation rel, BMLOVItem lovitem)
 		lastBuffer = _bitmap_getbuf(rel, lovitem->bm_lov_tail, BM_WRITE);
 
 	return lastBuffer;
-}
-
-/*
- * getnumbits() -- return the number of bits included in the given
- * 	bitmap words.
- */
-uint64
-getnumbits(BM_HRL_WORD *contentWords, BM_HRL_WORD *headerWords, uint32 nwords)
-{
-	uint64	nbits = 0;
-	uint32	i;
-
-	for (i = 0; i < nwords; i++)
-	{
-		if (IS_FILL_WORD(headerWords, i))
-			nbits += FILL_LENGTH(contentWords[i]) * BM_HRL_WORD_SIZE;
-		else
-			nbits += BM_HRL_WORD_SIZE;
-	}
-
-	return nbits;
 }
 
 /*
@@ -965,7 +943,7 @@ updatesetbit_inpage(Relation rel, uint64 tidnum,
 	}
 
 	bitmapOpaque->bm_last_tid_location -=
-		getnumbits(words_left.cwords, words_left.hwords, words_left.curword);
+		GET_NUM_BITS(words_left.cwords, words_left.hwords, words_left.curword);
 
 	if (words_left.curword > 0)
 	{
@@ -993,6 +971,7 @@ updatesetbit_inpage(Relation rel, uint64 tidnum,
 		memcpy(nextBitmap->hwords, words.hwords,
 			   BM_CALC_H_WORDS(nextOpaque->bm_hrl_words_used) * sizeof(BM_HRL_WORD));
 
+		SIMPLE_FAULT_INJECTOR(RearrangeWordToNextBitmapPage);
 		Assert(new_words.curword == 0);
 	}
 

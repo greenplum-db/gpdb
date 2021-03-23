@@ -373,6 +373,10 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault when creating new TOAST tables, to modify the chunk size */
 	_("abort_after_procarray_end"),
 		/* inject fault in AbortTransaction after ProcArrayEndTransaction */
+	_("rearrange_word_to_next_bitmap_page"),
+		/* inject fault in bitmap index after rearrange words */
+	_("after_read_one_bitmap_idx_page"),
+		/* (inject fault in bitmap index after read one bitmap page */
 	_("not recognized"),
 };
 
@@ -1085,6 +1089,7 @@ FaultInjector_NewHashEntry(
 			case ProcessStartupPacketFault:
 			case DynamicIndexScanContextReset:
 			case AbortAfterProcarrayEnd:
+			case RearrangeWordToNextBitmapPage:
 
 				break;
 			default:
