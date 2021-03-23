@@ -65,6 +65,7 @@
 #include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
@@ -1294,6 +1295,7 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	char		execLocation;
 	ObjectAddress objAddr;
 
+	SIMPLE_FAULT_INJECTOR("create_function_fail");
 	/* Convert list of names to a name and namespace */
 	namespaceId = QualifiedNameGetCreationNamespace(stmt->funcname,
 													&funcname);
