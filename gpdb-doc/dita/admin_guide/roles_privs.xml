@@ -297,7 +297,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">Tables, Views</entry>
+              <entry colname="col1">Tables, External Tables, Views</entry>
               <entry colname="col2">
                 <p>
                 <codeph>SELECT</codeph>
@@ -361,20 +361,6 @@
                     <codeph>ALL</codeph>
                   </p>
                 </entry>
-            </row>
-            <row>
-              <entry colname="col1">External Tables</entry>
-              <entry colname="col2">
-                <p>
-                  <codeph>SELECT</codeph>
-                </p>
-                <p>
-                  <codeph>RULE</codeph>
-                </p>
-                <p>
-                  <codeph>ALL</codeph>
-                </p>
-              </entry>
             </row>
             <row>
               <entry colname="col1">Databases</entry>
@@ -448,20 +434,6 @@
                 </p>
                 <p>
                 <codeph>ALL</codeph>
-                </p>
-              </entry>
-            </row>
-            <row>
-              <entry colname="col1">Large Objects</entry>
-              <entry colname="col2">
-                <p>
-                  <codeph>SELECT</codeph>
-                </p>
-                <p>
-                  <codeph>UPDATE</codeph>
-                </p>
-                <p>
-                  <codeph>ALL</codeph>
                 </p>
               </entry>
             </row>
