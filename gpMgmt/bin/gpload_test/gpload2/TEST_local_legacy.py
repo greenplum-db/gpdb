@@ -1,4 +1,5 @@
 from TEST_local_base import *
+# coding=utf-8
 
 # clean the database environment before running lecacy cases
 # in case that pytest run legacy in different order when new files are merged and that may lead case fail

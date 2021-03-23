@@ -96,7 +96,7 @@ def getPortCoordinatorOnly(host = 'localhost',coordinator_value = None,
 
     (ok,out) = run(cmd)
     if not ok:
-        cmd = "python %s/bin/gpconfig -s port"%(gphome)
+        cmd = "python3 %s/bin/gpconfig -s port"%(gphome)
         (ok,out) = run(cmd)
         if not ok:
             raise Exception("Unable to connect to segment server %s as user %s" % (host, user))
