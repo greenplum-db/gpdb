@@ -10,8 +10,10 @@
     <p>
       <note otherprops="oss-only">Open source Greenplum Database is available only for Greenplum
         Database 5 and later. </note>
-      <note>Currently, you cannot upgrade a Greenplum Database 4.3 or 5 system directly to Greenplum
-        Database 6.</note>
+      <note>You can upgrade a Greenplum Database 5.28 system directly to Greenplum 6.9 or later
+        using <xref href="https://greenplum.docs.pivotal.io/upgrade/" format="html" scope="external"
+          >gpupgrade</xref>. You cannot upgrade a Greenplum Database 4.3 system directly to
+        Greenplum 6.</note>
     </p>
     <p>This topic identifies known issues you may encounter when moving data from Greenplum 4.3 to
       Greenplum 6. You can work around these problems by making needed changes to your Greenplum 4.3
