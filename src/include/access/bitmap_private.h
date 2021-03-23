@@ -140,7 +140,7 @@ typedef struct BMBuildHashKey
  */
 typedef struct BMIterateResult
 {
-	uint64	nextTid; /* the first tid for the next iteration */
+	uint64	nextTid; /* the first tid for the next iteration word, should start from 1 */
 	uint32	lastScanPos; /* position in the bitmap word we're looking at */
 	uint32	lastScanWordNo;	/* offset in BWBatchWords */
 	uint64	nextTids[BM_BATCH_TIDS]; /* array of matching TIDs */
@@ -162,14 +162,22 @@ typedef struct BMBatchWords
 {
 	uint32	maxNumOfWords;		/* maximum number of words in this list */
 
-	/* Number of uncompressed words that have been read already */
-	uint64	nwordsread;			
+	/*
+	 * nwordsread and nextread only used for multi bitmap vectors' bitmap union.
+	 * If there are more than one bitmap vector matched, we should generate
+	 * output bitmap that union all vectors' bitmap.
+	 * Since BMBatchWords are under HRL compress format, so each vector's current
+	 * read batch words contain different uncompressed words. We should record
+	 * the uncompressed word info to help us union bitmap across different vectors.
+	 */
+	uint64	nwordsread;			/* Number of uncompressed words that have been read already from the begining */
 	uint64	nextread;			/* next word to read */
-	uint64	firstTid;			/* the TID we're up to */
+
+	uint64	firstTid;			/* the TID we're up to, should always point to a word's first tid */
 	uint32	startNo;			/* position we're at in cwords */
 	uint32	nwords;				/* the number of bitmap words */
 	BM_HRL_WORD *hwords; 		/* the header words */
-	BM_HRL_WORD *cwords;		/* the actual bitmap words */	
+	BM_HRL_WORD *cwords;		/* the actual bitmap words */
 } BMBatchWords;
 
 /*
@@ -299,6 +307,7 @@ extern uint64 _bitmap_findnexttid(BMBatchWords *words,
 								  BMIterateResult *result);
 extern void _bitmap_findnexttids(BMBatchWords *words,
 								 BMIterateResult *result, uint32 maxTids);
+extern void _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result);
 #ifdef NOT_USED /* we might use this later */
 extern void _bitmap_intersect(BMBatchWords **batches, uint32 numBatches,
 						   BMBatchWords *result);
