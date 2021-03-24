@@ -20,7 +20,7 @@ import shutil
 import fnmatch
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from contextlib import closing
 import pipes  # for shell-quoting, pipes.quote()
 import fcntl
@@ -46,6 +46,8 @@ WRITE_LOCK_FILE_NAME = "write_lock_semaphore"
 ANALYZE_GUCS = "set optimizer_analyze_root_partition=off; "
 ANALYZE_SQL = """analyze %s"""
 ANALYZE_ROOT_SQL = """analyze rootpartition %s"""
+REPORTS_ARE_STALE_AFTER_N_DAYS = 8
+NUM_REPORTS_TO_SAVE = 3
 
 GET_ALL_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename
@@ -318,7 +320,7 @@ class AnalyzeDb(Operation):
                 logger.warning("Folder %s does not exist. Exiting...")
 
         if self.clean_last:
-            last_analyze_timestamp = get_lastest_analyze_timestamp(self.coordinator_datadir, self.analyze_dir, self.dbname)
+            last_analyze_timestamp = get_latest_analyze_timestamp(self.coordinator_datadir, self.analyze_dir, self.dbname)
             if last_analyze_timestamp is not None:
                 analyze_folder = os.path.join(self.coordinator_datadir, self.analyze_dir, self.dbname,
                                               last_analyze_timestamp)
@@ -523,7 +525,7 @@ class AnalyzeDb(Operation):
                         (len(self.success_list), total_to_analyze))
 
     def read_last_analyzedb_output(self):
-        last_analyze_timestamp = get_lastest_analyze_timestamp(self.coordinator_datadir, self.analyze_dir, self.dbname)
+        last_analyze_timestamp = get_latest_analyze_timestamp(self.coordinator_datadir, self.analyze_dir, self.dbname)
         prev_ao_state = get_prev_ao_state(last_analyze_timestamp, self.coordinator_datadir, self.analyze_dir, self.dbname)
         prev_col_dict = get_prev_col_state(last_analyze_timestamp, self.coordinator_datadir, self.analyze_dir, self.dbname)
         prev_last_op = get_prev_last_op(last_analyze_timestamp, self.coordinator_datadir, self.analyze_dir, self.dbname)
@@ -756,6 +758,7 @@ class AnalyzeDb(Operation):
             fp.write("\n%d out of %d tables are analyzed.\n" % (len(self.success_list), len(target_list)))
             if len(target_list) == len(self.success_list):
                 fp.write("\nanalyzedb finished successfully.\n")
+            self._clean_stale_directories(current_time)
 
     def _get_dirty_lastop_tables(self, curr_last_op, prev_last_op):
         old_pgstatlastoperation_dict = get_pgstatlastoperation_dict(prev_last_op)
@@ -911,6 +914,28 @@ class AnalyzeDb(Operation):
             finally:
                 fcntl.flock(lock_file, fcntl.LOCK_UN)
 
+    def _clean_stale_directories(self, current_time_str):
+        # extract the date and time from the string of the form yyyymmddhhmmss
+        current_analyze_time = datetime.strptime(current_time_str, '%Y%m%d%H%M%S')
+        num_previous_statefiles = 0
+        # Now walk through the log directories and delete those that are more than
+        # REPORTS_ARE_STALE_AFTER_N_DAYS days older than the current analyze timestamp,
+        # but leave at least NUM_REPORTS_TO_SAVE, even if they are older than the threshold
+        analyze_dirs = get_analyze_dirs(self.coordinator_datadir, self.analyze_dir, self.dbname)
+        for saved_analyze_dir in analyze_dirs:
+            try:
+                time_of_saved_analyze = datetime.strptime(os.path.basename(saved_analyze_dir), '%Y%m%d%H%M%S')
+                time_diff = current_analyze_time - time_of_saved_analyze
+                if num_previous_statefiles >= NUM_REPORTS_TO_SAVE and time_diff > timedelta(days=REPORTS_ARE_STALE_AFTER_N_DAYS):
+                    # this directory more than a week older than the most recent valid analyze directory, remove it
+                    if os.path.exists(saved_analyze_dir):
+                        shutil.rmtree(saved_analyze_dir)
+                        logger.info("Deleted archived log directory %s" % saved_analyze_dir)
+                if time_diff > timedelta(seconds=0):
+                    num_previous_statefiles += 1
+            except:
+                logger.info("Ignoring log directory that does not conform to naming convention: %s" % saved_analyze_dir)
+
 
 # Create a Command object that executes a query using psql.
 def create_psql_command(dbname, query):
@@ -975,7 +1000,7 @@ def get_heap_tables_set(conn, input_tables_set):
     return dirty_tables
 
 
-def get_lastest_analyze_timestamp(coordinator_datadir, statefile_dir, dbname):
+def get_latest_analyze_timestamp(coordinator_datadir, statefile_dir, dbname):
     analyze_dirs = get_analyze_dirs(coordinator_datadir, statefile_dir, dbname)
 
     for analyze_dir in analyze_dirs:
@@ -1294,9 +1319,9 @@ def create_parser():
     parser.add_option('--full', action='store_true', dest='full_analyze', default=False,
                       help="Analyze without using incremental. All tables requested by the user will be analyzed.")
     parser.add_option('--clean_last', action='store_true', dest='clean_last', default=False,
-                      help="Clean the state files generated by last analyzedb run. All other options except -d will be ignored.")
+                      help="Clean the state files generated by last analyzedb run. All other options except -d and -a will be ignored.")
     parser.add_option('--clean_all', action='store_true', dest='clean_all', default=False,
-                      help="Clean all the state files generated by analyzedb. All other options except -d will be ignored.")
+                      help="Clean all the state files generated by analyzedb. All other options except -d and -a will be ignored.")
     parser.add_option('-h', '-?', '--help', action='help',
                       help='Show this help message and exit.')
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Print debug messages.')

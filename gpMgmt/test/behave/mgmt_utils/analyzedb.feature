@@ -164,6 +164,77 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -l -d incr_analyze -t '"my schema"."my ao"'"
         Then analyzedb should print "-"my schema"."my ao" to stdout
 
+    Scenario: Clean all state files
+        Given no state files exist for database "incr_analyze"
+        When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And the user runs "analyzedb -a -d incr_analyze --clean_all"
+        And the user runs "analyzedb -a -d incr_analyze -l"
+        Then analyzedb should return a return code of 0
+        And output should print "-public.t1_ao" to stdout
+        And "public.t1_ao" should not appear in the latest state files
+        And there should be 0 state directories for database "incr_analyze"
+
+    Scenario: Clean latest state files
+        Given no state files exist for database "incr_analyze"
+        When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t3_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
+        And the user runs "analyzedb -a -d incr_analyze --clean_last"
+        And the user runs "analyzedb -a -d incr_analyze -l"
+        Then analyzedb should return a return code of 0
+        And analyzedb should print "-public.t3_ao" to stdout
+        And output should not contain "-public.t1_ao"
+        And "public.t1_ao" should appear in the latest state files
+        And "public.t3_ao" should not appear in the latest state files
+        And there should be 1 state directory for database "incr_analyze"
+
+    Scenario: Preserve state files less than 8 days old
+        Given no state files exist for database "incr_analyze"
+        When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        Then analyzedb should return a return code of 0
+        And there should be 5 state directories for database "incr_analyze"
+
+    Scenario: Automatically clean older state files and leave the current and 3 most recent
+        Given no state files exist for database "incr_analyze"
+        When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the state files for "incr_analyze" are artificially aged by 10 days
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
+        And the user waits 1 second
+        And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
+        Then analyzedb should return a return code of 0
+        And there should be 4 state directories for database "incr_analyze"
+
     Scenario: Incremental analyze, no dirty tables
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
