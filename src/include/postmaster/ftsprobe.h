@@ -93,4 +93,5 @@ typedef struct
 } fts_context;
 
 extern bool FtsWalRepMessageSegments(CdbComponentDatabases *context);
+extern bool found_auto_failover_signal;
 #endif

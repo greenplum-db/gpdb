@@ -19,6 +19,22 @@
 #include "utils/guc.h"
 #include "cdb/cdbutil.h"
 
+/*
+ * signal file for auto-failover
+ *
+ * FTS: When the FTS sees the signal file, it notifies the primary
+ * to force update their coordinator. After it receives all-sucess,
+ * the FTS sets a shared flag `*shmUpdatedCoordinatorID` to true,
+ * consumed by the DTX recovery process.
+ *
+ * DTX: When the DTX recovery sees this file, it will wait until the FTS
+ * has notified it that all primaries have updated their coordinator
+ * ID. It's essential with auto-failover enabled. Because the QE process
+ * will validate the coordinator ID in initialization stage. If
+ * the coordinator is unexpected, the QE will simply-and-brutally terminate
+ * itself to avoid split-brain.
+ */
+#define GP_AUTO_FAILOVER_SIGNAL  "gp_auto_failover.signal"
 
 /* Queries for FTS messages */
 #define	FTS_MSG_PROBE "PROBE"
@@ -36,8 +52,10 @@
 /*
  * If altering the fts message format, consider if FTS_MSG_MAX_LEN is enough
  * to store the modified format.
+ * The fts handler must update the server's gp_assigned_coordinator_id if
+ * `force` is 'T' during the promotion of the standby.
  */
-#define FTS_MSG_FORMAT "%s dbid=%d contid=%d"
+#define FTS_MSG_FORMAT "%s dbid=%d contid=%d coordinatorid=%d force=%c"
 
 #define Natts_fts_message_response 5
 #define Anum_fts_message_response_is_mirror_up 0

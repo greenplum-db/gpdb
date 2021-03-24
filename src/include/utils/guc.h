@@ -807,8 +807,8 @@ extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource sour
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);
 
-extern bool gp_enable_check_dispatcher;
-extern int  gp_assigned_dispatcher_id;
-extern int  gp_dispatcher_id;
+extern bool gp_enable_check_coordinator;
+extern int  gp_assigned_coordinator_id;
+extern int  gp_coordinator_id;
 
 #endif							/* GUC_H */

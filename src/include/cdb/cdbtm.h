@@ -270,6 +270,7 @@ extern DtxContext DistributedTransactionContext;
 /* state variables for how much of the log file has been flushed */
 extern volatile bool *shmDtmStarted;
 extern volatile bool *shmCleanupBackends;
+extern volatile bool *shmUpdatedCoordinatorID;
 extern volatile pid_t *shmDtxRecoveryPid;
 extern volatile DtxRecoveryEvent *shmDtxRecoveryEvents;
 extern uint32 *shmNextSnapshotId;

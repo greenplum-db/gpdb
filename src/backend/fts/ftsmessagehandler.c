@@ -407,16 +407,46 @@ HandleFtsWalRepPromote(void)
 	SendFtsResponse(&response, FTS_MSG_PROMOTE);
 }
 
+static void
+set_int_config(const char *name, int value)
+{
+	A_Const aconst = {.type = T_A_Const, .val = {.type = T_Integer, .val.ival = value}};
+	List *args = list_make1(&aconst);
+	VariableSetStmt setstmt = {.type = T_VariableSetStmt, .kind = VAR_SET_VALUE, .name = pstrdup(name), .args = args};
+	AlterSystemStmt alterSystemStmt = {.type = T_AlterSystemStmt, .setstmt = &setstmt};
+    
+	AlterSystemSetConfigFile(&alterSystemStmt);
+}
+
+static void
+UpdateCoordinatorID(int id)
+{
+	if (gp_assigned_coordinator_id != id)
+	{
+		ereport(LOG, (errmsg("Update gp_assigned_coordinator_id: %d => %d",
+						gp_assigned_coordinator_id, id)));
+		set_int_config("gp_assigned_coordinator_id", id);
+
+		if (kill(PostmasterPid, SIGHUP))
+		{
+			ereport(WARNING,
+				(errmsg("failed to send signal to postmaster: %m")));
+		}
+	}
+}
+
 void
 HandleFtsMessage(const char* query_string)
 {
 	int dbid;
 	int contid;
+	int coordinatorid;
 	char message_type[FTS_MSG_MAX_LEN];
+	char force;
 	int error_level;
 
 	if (sscanf(query_string, FTS_MSG_FORMAT,
-			   message_type, &dbid, &contid) != 3)
+			   message_type, &dbid, &contid, &coordinatorid, &force) != 5)
 	{
 		ereport(ERROR,
 				(errmsg("received invalid FTS query: %s", query_string)));
@@ -438,7 +468,18 @@ HandleFtsMessage(const char* query_string)
 				(errmsg("message type: %s received contentid:%d doesn't match this segments configured contentid:%d",
 						message_type, contid, GpIdentity.segindex)));
 
+	if (coordinatorid < 0)
+		ereport(error_level,
+				(errmsg("message type: %s received with invalid coordinatorid:%d",
+						message_type, coordinatorid)));
+	if (force != 'T' && force != 'F')
+		ereport(error_level,
+				(errmsg("message type: %s received with invalid force", message_type)));
+
 	SIMPLE_FAULT_INJECTOR("fts_handle_message");
+
+	if (force == 'T')
+		UpdateCoordinatorID(coordinatorid);
 
 	if (strncmp(query_string, FTS_MSG_PROBE,
 				strlen(FTS_MSG_PROBE)) == 0)
@@ -448,7 +489,11 @@ HandleFtsMessage(const char* query_string)
 		HandleFtsWalRepSyncRepOff();
 	else if (strncmp(query_string, FTS_MSG_PROMOTE,
 					 strlen(FTS_MSG_PROMOTE)) == 0)
+	{
+		if (force != 'T')
+			UpdateCoordinatorID(coordinatorid);
 		HandleFtsWalRepPromote();
+	}
 	else
 		ereport(ERROR,
 				(errmsg("received unknown FTS query: %s", query_string)));

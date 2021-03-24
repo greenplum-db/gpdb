@@ -34,6 +34,13 @@
 
 static struct pollfd *PollFds;
 
+static char
+ForceUpdateCoordinatorID(void)
+{
+	bool yes = found_auto_failover_signal && !*shmUpdatedCoordinatorID;
+	return yes ? 'T' : 'F';
+}
+
 static CdbComponentDatabaseInfo *
 FtsGetPeerSegment(CdbComponentDatabases *cdbs,
 				  int content, int dbid)
@@ -555,7 +562,8 @@ ftsSend(fts_context *context)
 				snprintf(message, FTS_MSG_MAX_LEN, FTS_MSG_FORMAT,
 						 message_type,
 						 ftsInfo->primary_cdbinfo->config->dbid,
-						 ftsInfo->primary_cdbinfo->config->segindex);
+						 ftsInfo->primary_cdbinfo->config->segindex,
+						 GpIdentity.dbid, ForceUpdateCoordinatorID());
 
 				if (PQsendQuery(ftsInfo->conn, message))
 				{
@@ -949,6 +957,7 @@ static bool
 processResponse(fts_context *context)
 {
 	bool is_updated = false;
+	int num_ok = 0;
 
 	for (int response_index = 0;
 		 response_index < context->num_pairs && FtsIsActive();
@@ -988,6 +997,7 @@ processResponse(fts_context *context)
 		{
 			case FTS_PROBE_SUCCESS:
 				Assert(IsPrimaryAlive);
+				num_ok++;
 				if (ftsInfo->result.isSyncRepEnabled && !IsMirrorAlive)
 				{
 					if (!ftsInfo->result.retryRequested)
@@ -1136,6 +1146,7 @@ processResponse(fts_context *context)
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_PROMOTE_SUCCESS:
+				num_ok++;
 				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 					   "FTS mirror (content=%d, dbid=%d) promotion "
 					   "triggered successfully",
@@ -1143,6 +1154,7 @@ processResponse(fts_context *context)
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_SYNCREP_OFF_SUCCESS:
+				num_ok++;
 				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 					   "FTS primary (content=%d, dbid=%d) notified to turn "
 					   "syncrep off", primary->config->segindex, primary->config->dbid);
@@ -1162,6 +1174,12 @@ processResponse(fts_context *context)
 		ftsInfo->retry_count = 0;
 	}
 
+	if (num_ok == context->num_pairs && found_auto_failover_signal)
+	{
+		// all segments have updated the coordinator id.
+		*shmUpdatedCoordinatorID = true;
+		found_auto_failover_signal = false;
+	}
 	return is_updated;
 }
 
@@ -1202,8 +1220,10 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 															 primary->config->dbid);
 		/*
 		 * If there is no mirror under this primary, no need to probe.
+		 * If there is a signal file for auto failover, force to probe
+		 * the primaries even if the mirror is gone.
 		 */
-		if (!mirror)
+		if (!mirror && !found_auto_failover_signal)
 		{
 			context->num_pairs--;
 			continue;

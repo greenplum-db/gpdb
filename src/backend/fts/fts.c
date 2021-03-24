@@ -54,6 +54,7 @@
 
 bool am_ftsprobe = false;
 bool am_ftshandler = false;
+bool found_auto_failover_signal = false;
 
 /*
  * STATIC VARIABLES
@@ -106,6 +107,20 @@ FtsProbeStartRule(Datum main_arg)
 	return (Gp_role == GP_ROLE_DISPATCH);
 }
 
+static void
+CheckAutoFailoverSignal(void)
+{
+	int rc;
+	rc = access(GP_AUTO_FAILOVER_SIGNAL, R_OK | W_OK);
+	if (rc == -1)
+	{
+		if (errno == ENOENT)
+			return;
+		ereport(FATAL, (errmsg("fts: Failed to access " GP_AUTO_FAILOVER_SIGNAL ":%m")));
+	}
+	found_auto_failover_signal = true;
+}
+
 /*
  * FtsProbeMain
  */
@@ -126,6 +141,8 @@ FtsProbeMain(Datum main_arg)
 
 	/* Connect to our database */
 	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL, 0);
+
+	CheckAutoFailoverSignal();
 
 	/* main loop */
 	FtsLoop();

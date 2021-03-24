@@ -34,6 +34,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbdisp_query.h"
+#include "postmaster/fts.h"
 #include "postmaster/postmaster.h"
 #include "tcop/tcopprot.h"
 #include "libpq-int.h"
@@ -43,6 +44,7 @@ static int frequent_check_times;
 
 volatile bool *shmDtmStarted = NULL;
 volatile bool *shmCleanupBackends = NULL;
+volatile bool *shmUpdatedCoordinatorID = NULL;
 volatile pid_t *shmDtxRecoveryPid = NULL;
 volatile DtxRecoveryEvent *shmDtxRecoveryEvents = NULL;
 slock_t *shmDtxRecoveryEventLock;
@@ -604,6 +606,33 @@ ResetDtxRecoveryEvent(DtxRecoveryEvent event)
 	*shmDtxRecoveryEvents &= ~event;
 }
 
+static void
+CheckAndWaitPromotion()
+{
+	int rc;
+	rc = access(GP_AUTO_FAILOVER_SIGNAL, R_OK | W_OK);
+	if (rc == -1)
+	{
+		if (errno == ENOENT)
+			return; // all right
+		sleep(3);
+		ereport(PANIC, (errmsg("Failed to access " GP_AUTO_FAILOVER_SIGNAL ":%m")));
+	}
+    
+	/* Wait until all segments has updated their coordinator ID */
+	while (!*shmUpdatedCoordinatorID)
+	{
+		pid_t fts_pid = FtsProbePID();
+		if (fts_pid)
+			kill(fts_pid, SIGINT);
+		usleep(500 * 1000);
+	}
+
+	rc = unlink(GP_AUTO_FAILOVER_SIGNAL);
+	if (rc == -1)
+		ereport(WARNING, (errmsg("Can't remove " GP_AUTO_FAILOVER_SIGNAL ":%m")));
+}
+
 /*
  * DtxRecoveryMain
  */
@@ -624,6 +653,7 @@ DtxRecoveryMain(Datum main_arg)
 	/* Connect to postgres */
 	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL, 0);
 
+	CheckAndWaitPromotion();
 	/*
 	 * Do dtx recovery process.  It is possible that *shmDtmStarted is true
 	 * here if we terminate after this code block, e.g. due to error and then

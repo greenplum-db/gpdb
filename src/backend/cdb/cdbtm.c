@@ -62,6 +62,12 @@ typedef struct TmControlBlock
 {
 	bool						DtmStarted;
 	bool						CleanupBackends;
+	/*
+	 * If the dtx recovery found the auto failover signal file,
+	 * it must wait until all the segments have updated their
+	 * gp_assigned_coordinator_id.
+	 */
+	bool						UpdatedCoordinatorID;
 	pid_t						DtxRecoveryPid;
 	DtxRecoveryEvent			DtxRecoveryEvents;
 	slock_t						DtxRecoveryEventLock;
@@ -1091,6 +1097,7 @@ tmShmemInit(void)
 	}
 	shmDtmStarted = &shared->DtmStarted;
 	shmCleanupBackends = &shared->CleanupBackends;
+	shmUpdatedCoordinatorID = &shared->UpdatedCoordinatorID;
 	shmDtxRecoveryPid = &shared->DtxRecoveryPid;
 	shmDtxRecoveryEvents = &shared->DtxRecoveryEvents;
 	shmDtxRecoveryEventLock = &shared->DtxRecoveryEventLock;
@@ -1105,6 +1112,7 @@ tmShmemInit(void)
 		*shmNextSnapshotId = 0;
 		*shmDtmStarted = false;
 		*shmCleanupBackends = false;
+		*shmUpdatedCoordinatorID = false;
 		*shmDtxRecoveryPid = 0;
 		*shmDtxRecoveryEvents = DTX_RECOVERY_EVENT_ABORT_PREPARED;
 		*shmNumCommittedGxacts = 0;

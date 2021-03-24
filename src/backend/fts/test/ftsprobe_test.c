@@ -352,7 +352,8 @@ test_ftsSend_success(void **state)
 	snprintf(message, FTS_MSG_MAX_LEN, FTS_MSG_FORMAT,
 			 FTS_MSG_PROBE,
 			 ftsInfo->primary_cdbinfo->config->dbid,
-			 ftsInfo->primary_cdbinfo->config->segindex);
+			 ftsInfo->primary_cdbinfo->config->segindex,
+			 GpIdentity.dbid, 'F');
 
 	expect_value(PQstatus, conn, ftsInfo->conn);
 	will_return(PQstatus, CONNECTION_OK);
