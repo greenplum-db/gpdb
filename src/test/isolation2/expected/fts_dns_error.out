@@ -213,9 +213,6 @@ DO
 20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-==============================END ANOTHER RECOVER==========================================
 20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
 20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-The rebalance operation has completed successfully.
-20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-There is a resynchronization running in the background to bring all
-20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-segments in sync.
-20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Use gpstate -e to check the resynchronization progress.
 20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
 
 -- end_ignore

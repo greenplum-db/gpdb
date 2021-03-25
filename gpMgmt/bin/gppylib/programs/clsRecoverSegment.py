@@ -649,9 +649,6 @@ class GpRecoverSegmentProgram:
                 else:
                     self.logger.info("The rebalance operation has completed with WARNINGS."
                                      " Please review the output in the gprecoverseg log.")
-                self.logger.info("There is a resynchronization running in the background to bring all")
-                self.logger.info("segments in sync.")
-                self.logger.info("Use gpstate -e to check the resynchronization progress.")
                 self.logger.info("******************************************************************")
 
         elif len(mirrorBuilder.getMirrorsToBuild()) == 0:

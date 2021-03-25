@@ -320,9 +320,6 @@ select wait_until_segment_synchronized(0);
 20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-==============================END ANOTHER RECOVER==========================================
 20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
 20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-The rebalance operation has completed successfully.
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-There is a resynchronization running in the background to bring all
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-segments in sync.
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Use gpstate -e to check the resynchronization progress.
 20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
 
 -- end_ignore
