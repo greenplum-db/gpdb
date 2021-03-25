@@ -5,6 +5,7 @@ import os
 
 from gppylib.commands.base import Command, REMOTE
 from gppylib.operations.gpcheck import get_host_for_command, get_command, get_copy_command
+from gppylib.gpcheckutil import GpMount
 from test.unit.gp_unittest import GpTestCase, run_tests
 
 gpcheck_file = os.path.abspath(os.path.dirname(__file__) + "/../../../../gpcheck")
@@ -18,6 +19,21 @@ class GpCheckTestCase(GpTestCase):
         self.gpcheck = imp.load_source('gpcheck', gpcheck_file)
         self.gpcheck.logger = mock.MagicMock(logging.Logger)
         self.gpcheck.gpcheck_config = self.gpcheck.GpCheckConfig()
+
+        self.mock_host = self.gpcheck.GpCheckHost('hostname')
+        self.mock_host.data = mock.MagicMock()
+        self.mock_host.data.mounts = mock.MagicMock()
+        data_mount = GpMount()
+        data_mount.partition = "/data"
+        data_mount.type = "xfs"
+        data_mount.options = set(["defaults"])
+        tmp_mount = GpMount()
+        tmp_mount.partition = "/tmp"
+        tmp_mount.type = "xfs"
+        tmp_mount.options = set(["rw", "noatime"])
+        self.mock_host.data.mounts.entries = {'/data': data_mount, "/tmp": tmp_mount}
+        self.gpcheck.gpcheck_config = self.gpcheck.GpCheckConfig()
+        self.gpcheck.gpcheck_config.xfs_mount_options = {}
 
     def test_get_host_for_command_uses_supplied_remote_host(self):
         cmd = Command('name', 'hostname', ctxt=REMOTE, remoteHost='foo') 
@@ -82,30 +98,162 @@ class GpCheckTestCase(GpTestCase):
 
     def test_sysctl_prints_error_when_config_values_dont_match(self):
         localhost = mock.MagicMock()
-        localhost.hostname = "localhost"
+        localhost.hostname = "hostname"
         localhost.data.sysctl.variables = {'sysctl.net.ipv4.ip_local_port_range': '10000 65535'}
 
         self.gpcheck.gpcheck_config.expectedSysctlValues = {'sysctl.net.ipv4.ip_local_port_range': '1 60000'}
 
         self.gpcheck.testSysctl(localhost)
         self.assertTrue(self.gpcheck.found_errors)
-        self.gpcheck.logger.error.assert_called_once_with("GPCHECK_ERROR host(%s): %s",
-                                                          "localhost",
-                                                          "/etc/sysctl.conf value for key 'sysctl.net.ipv4.ip_local_port_range' has value '10000 65535' and expects '1 60000'")
+        self.assertEquals(self.gpcheck.logger.error.call_count, 1)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("/etc/sysctl.conf value for key 'sysctl.net.ipv4.ip_local_port_range' has value '10000 65535' and expects '1 60000'")
+        ])
 
     def test_sysctl_prints_error_when_config_is_missing(self):
         localhost = mock.MagicMock()
-        localhost.hostname = "localhost"
+        localhost.hostname = "hostname"
         localhost.data.sysctl.variables = {'sysctl.non.existent.setting': '10000 65535'}
 
         self.gpcheck.gpcheck_config.expectedSysctlValues = {'sysctl.net.ipv4.ip_local_port_range': '1 60000'}
 
         self.gpcheck.testSysctl(localhost)
         self.assertTrue(self.gpcheck.found_errors)
-        self.gpcheck.logger.error.assert_called_once_with("GPCHECK_ERROR host(%s): %s",
-                                                          "localhost",
-                                                          "variable not detected in /etc/sysctl.conf: 'sysctl.net.ipv4.ip_local_port_range'")
+        self.assertEquals(self.gpcheck.logger.error.call_count, 1)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("variable not detected in /etc/sysctl.conf: 'sysctl.net.ipv4.ip_local_port_range'")
+        ])
 
+    def test_default_xfs_mount_options_nonexistent_mount_is_ignored(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data./two/dirs'] = "re"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "defaults"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_default_xfs_mount_options_matching_values(self):
+        self.mock_host.data.mounts.entries['/tmp'].options = set(["defaults"])
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "defaults"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_default_xfs_mount_options_mismatched_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "rw"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.assertEquals(self.gpcheck.logger.error.call_count, 2)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'rw'"),
+            gpcheck_call("XFS filesystem on device /tmp has 2 XFS mount options and 1 are expected"),
+        ])
+
+    def test_one_mount_point_xfs_mount_options_matching_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "defaults"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_one_mount_point_xfs_mount_options_mismatched_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "rw,noatime"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.assertEquals(self.gpcheck.logger.error.call_count, 3)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("XFS filesystem on device /data has 1 XFS mount options and 2 are expected"),
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'rw'"),
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'noatime'"),
+        ])
+
+    def test_multiple_mount_points_xfs_mount_options_matching_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "defaults"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp'] = "rw,noatime"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_multiple_mount_points_xfs_mount_options_mismatched_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "rw"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp'] = "rw"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.assertEquals(self.gpcheck.logger.error.call_count, 2)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'rw'"),
+            gpcheck_call("XFS filesystem on device /tmp has 2 XFS mount options and 1 are expected"),
+        ])
+
+    def test_one_mount_point_xfs_mount_options_with_defaults_matching_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "defaults"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "rw,noatime"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_one_mount_point_xfs_mount_options_with_defaults_mismatched_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "rw"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "rw"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.assertEquals(self.gpcheck.logger.error.call_count, 2)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'rw'"),
+            gpcheck_call("XFS filesystem on device /tmp has 2 XFS mount options and 1 are expected"),
+        ])
+
+    def test_multiple_mount_points_xfs_mount_options_with_defaults_matching_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "defaults"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp'] = "rw,noatime"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "rw"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_multiple_mount_points_xfs_mount_options_with_defaults_mismatched_values(self):
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "rw"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp'] = "rw"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options'] = "defaults"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.assertEquals(self.gpcheck.logger.error.call_count, 2)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'rw'"),
+            gpcheck_call("XFS filesystem on device /tmp has 2 XFS mount options and 1 are expected"),
+        ])
+
+    def test_nested_paths_xfs_mount_options_matching_values(self):
+        above_mount = GpMount()
+        above_mount.partition = "/tmp/gpdata"
+        above_mount.type = "xfs"
+        above_mount.options = set(["noatime"])
+        self.mock_host.data.mounts.entries['/tmp/gpdata'] = above_mount
+        below_mount = GpMount()
+        below_mount.partition = "/gpdata/data"
+        below_mount.type = "xfs"
+        below_mount.options = set(["rw"])
+        self.mock_host.data.mounts.entries['/gpdata/data'] = below_mount
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./gpdata/data'] = "rw"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "defaults"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp/gpdata'] = "noatime"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp'] = "rw,noatime"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.gpcheck.logger.error.assert_not_called()
+
+    def test_nested_paths_xfs_mount_options_mismatched_values(self):
+        above_mount = GpMount()
+        above_mount.partition = "/tmp/gpdata"
+        above_mount.type = "xfs"
+        above_mount.options = set(["noatime"])
+        self.mock_host.data.mounts.entries['/tmp/gpdata'] = above_mount
+        below_mount = GpMount()
+        below_mount.partition = "/gpdata/data"
+        below_mount.type = "xfs"
+        below_mount.options = set(["rw"])
+        self.mock_host.data.mounts.entries['/gpdata/data'] = below_mount
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./gpdata/data'] = "noatime"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./data'] = "rw"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp/gpdata'] = "defaults"
+        self.gpcheck.gpcheck_config.xfs_mount_options['xfs_mount_options./tmp'] = "rw"
+        self.gpcheck.testLinuxMounts(self.mock_host)
+        self.assertEquals(self.gpcheck.logger.error.call_count, 4)
+        self.gpcheck.logger.error.assert_has_calls([
+            gpcheck_call("XFS filesystem on device /gpdata/data is missing the recommended mount option 'noatime'"),
+            gpcheck_call("XFS filesystem on device /data is missing the recommended mount option 'rw'"),
+            gpcheck_call("XFS filesystem on device /tmp has 2 XFS mount options and 1 are expected"),
+            gpcheck_call("XFS filesystem on device /tmp/gpdata is missing the recommended mount option 'defaults'"),
+        ])
+
+def gpcheck_call(msg):
+    return mock.call("GPCHECK_ERROR host(%s): %s", "hostname", msg)
 
 if __name__ == '__main__':
     run_tests()

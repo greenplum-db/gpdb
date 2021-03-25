@@ -472,11 +472,20 @@ def testLinuxMounts(host):
     
     for mnt in xfs_mounts:
 
-        if mnt.type != "xfs":
-            printError(host.hostname, "device %s is not XFS and is expected to be so on a %s host" % (mnt.partition, hosttype))
+        device_key = "xfs_mount_options.%s" % mnt.partition
+        key = ""
+        # This device has its own xfs_mount_options specified, so check for that
+        if device_key in gpcheck_config.xfs_mount_options:
+            key = device_key
+        # There is a default xfs_mount_options provided, so check for that
+        elif "xfs_mount_options" in gpcheck_config.xfs_mount_options:
+            key = "xfs_mount_options"
+        # No specific option provided and no default set, don't check this mount point
+        else:
+            printWarning("No xfs_mount_options provided for device %s and no default provided, skipping check")
             continue
 
-        expectedOptions = set(gpcheck_config.xfs_mount_options.split(","))
+        expectedOptions = set(gpcheck_config.xfs_mount_options[key].split(","))
 
         if len(mnt.options) != len(expectedOptions):
             printError(host.hostname, "XFS filesystem on device %s has %d XFS mount options and %d are expected" % (mnt.partition, len(mnt.options), len(expectedOptions)))
@@ -549,15 +558,24 @@ def populateGpCheckLinuxConfigParams():
         printError(None, "%s does not contain a linux section.  Exiting early" % configfilename)
         return True
 
-    requiredOptions = set(['xfs_mount_options'])
-
-    for option in requiredOptions:
-        if not config.has_option('linux', option):
-            printError(None, "%s does not contain required option %s.  Exiting early" % (configfilename, option))
-            return True
-
     global gpcheck_config
-    gpcheck_config.xfs_mount_options = config.get('linux', 'xfs_mount_options')
+
+    xfs_mount_options_list = [option for option in config.options('linux') if option == 'xfs_mount_options' or option.startswith('xfs_mount_options.')]
+    if len(xfs_mount_options_list) == 0:
+        printError(None, "%s does not contain required option xfs_mount_options.  Exiting early" % (configfilename))
+        return True
+
+    # User can pass multiple values for xfs_mount_options for different mount points, separated by a dot.
+    # If a non-dotted key is passed, it will be used as a default for any mount point without its own key.
+    # Otherwise, only mount points with their own keys will be checked.
+    # For example:
+    #
+    # [linux]
+    # xfs_mount_options./data/gpdata = rw
+    # xfs_mount_options./nfs = rw,noatime
+    # xfs_mount_options = defaults
+    #
+    gpcheck_config.xfs_mount_options = {option: config.get('linux', option) for option in xfs_mount_options_list}
 
     if getSysCtlFromConfig('linux'):
         return True
