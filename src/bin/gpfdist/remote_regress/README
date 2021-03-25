@@ -8,5 +8,7 @@ Need to export REMOTE_HOST, REMOTE_PORT, REMOTE_USER, REMOTE_KEY
 MASTER_DATA_DIRECTORY, PG_PORT before running these test cases.
 
 The scripts of start_gpfdist_remote_win are used to start and stop gpfdist running on windows.
-If you want to test gpfdist on another os, such as aix, you can create a folder named
-start_gpfdist_remote_aix and add some scripts to start and stop gpfdist.
+
+If you want to test gpfdist on another os, such as darwin, you can create a folder named
+start_gpfdist_remote_darwin and add some scripts to start and stop gpfdist.
+Gpfdist does not support Unix os in gpdb version 7.
