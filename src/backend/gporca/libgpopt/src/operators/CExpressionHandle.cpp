@@ -1428,22 +1428,36 @@ CExpressionHandle::PexprScalarRep() const
 // return an exact scalar child at given index or return null if not possible
 // (use this where exactness is required, e.g. for constraint derivation)
 CExpression *
-CExpressionHandle::PexprScalarExactChild(ULONG child_index) const
+CExpressionHandle::PexprScalarExactChild(ULONG child_index,
+										 BOOL error_on_null_return) const
 {
+	CExpression *result_expr = NULL;
 	if (NULL != m_pgexpr && !(*m_pgexpr)[child_index]->FScalarRepIsExact())
 	{
-		return NULL;
+		result_expr = NULL;
 	}
 
-	if (NULL != m_pexpr && NULL != (*m_pexpr)[child_index]->Pgexpr() &&
-		!((*m_pexpr)[child_index]->Pgexpr()->Pgroup()->FScalarRepIsExact()))
+	else if (NULL != m_pexpr && NULL != (*m_pexpr)[child_index]->Pgexpr() &&
+			 !((*m_pexpr)[child_index]
+				   ->Pgexpr()
+				   ->Pgroup()
+				   ->FScalarRepIsExact()))
 	{
 		// the expression does not come from a group, but its child does and
 		// the child group does not have an exact expression
-		return NULL;
+		result_expr = NULL;
 	}
 
-	return PexprScalarRepChild(child_index);
+	else
+	{
+		result_expr = PexprScalarRepChild(child_index);
+	}
+	if (NULL == result_expr && error_on_null_return)
+	{
+		GPOS_RAISE(CException::ExmaInvalid, CException::ExmiInvalid,
+				   GPOS_WSZ_LIT("Generated invalid plan with subquery"));
+	}
+	return result_expr;
 }
 
 // return an exact scalar expression attached to handle or null if not possible

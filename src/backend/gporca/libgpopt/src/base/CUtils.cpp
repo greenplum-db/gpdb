@@ -4743,9 +4743,8 @@ CUtils::MakeJoinWithoutInferredPreds(CMemoryPool *mp, CExpression *join_expr)
 
 	CExpressionHandle expression_handle(mp);
 	expression_handle.Attach(join_expr);
-	CExpression *scalar_expr =
-		expression_handle.PexprScalarExactChild(join_expr->Arity() - 1);
-	GPOS_ASSERT(NULL != scalar_expr);
+	CExpression *scalar_expr = expression_handle.PexprScalarExactChild(
+		join_expr->Arity() - 1, true /*error_on_null_return*/);
 	CExpression *scalar_expr_without_inferred_pred =
 		CPredicateUtils::PexprRemoveImpliedConjuncts(mp, scalar_expr,
 													 expression_handle);

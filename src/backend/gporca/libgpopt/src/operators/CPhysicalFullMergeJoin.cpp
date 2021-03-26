@@ -87,7 +87,8 @@ CPhysicalFullMergeJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	BOOL nulls_collocated = true;
 	if (CPredicateUtils::ExprContainsOnlyStrictComparisons(
-			mp, exprhdl.PexprScalarExactChild(2)))
+			mp,
+			exprhdl.PexprScalarExactChild(2, true /*error_on_null_return*/)))
 	{
 		// There is no need to require NULL rows to be collocated if the merge clauses
 		// only contain STRICT operators. This is because any NULL row will automatically

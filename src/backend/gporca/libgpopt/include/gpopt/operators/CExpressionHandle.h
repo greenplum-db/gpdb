@@ -275,7 +275,8 @@ public:
 	CExpression *PexprScalarRep() const;
 
 	// return an exact scalar child at given index or return null if not possible
-	CExpression *PexprScalarExactChild(ULONG child_index) const;
+	CExpression *PexprScalarExactChild(ULONG child_index,
+									   BOOL error_on_null_return = false) const;
 
 	// return an exact scalar expression attached to handle or null if not possible
 	CExpression *PexprScalarExact() const;

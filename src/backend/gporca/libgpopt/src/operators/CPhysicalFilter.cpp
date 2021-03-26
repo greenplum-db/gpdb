@@ -318,7 +318,8 @@ CPhysicalFilter::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	if (CDistributionSpec::EdtHashed == pdsChild->Edt() &&
 		exprhdl.HasOuterRefs())
 	{
-		CExpression *pexprFilterPred = exprhdl.PexprScalarExactChild(1);
+		CExpression *pexprFilterPred =
+			exprhdl.PexprScalarExactChild(1, true /*error_on_null_return*/);
 
 		CDistributionSpecHashed *pdshashedOriginal =
 			CDistributionSpecHashed::PdsConvert(pdsChild);
