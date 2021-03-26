@@ -42,6 +42,15 @@ CXformDynamicIndexGet2DynamicIndexScan::CXformDynamicIndexGet2DynamicIndexScan(
 {
 }
 
+CXform::EXformPromise
+CXformDynamicIndexGet2DynamicIndexScan::Exfp(CExpressionHandle &exprhdl) const
+{
+	if (exprhdl.DeriveHasSubquery(0))
+	{
+		return CXform::ExfpNone;
+	}
+	return CXform::ExfpHigh;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -69,10 +78,6 @@ CXformDynamicIndexGet2DynamicIndexScan::Transform(CXformContext *pxfctxt,
 
 	// extract components
 	CExpression *pexprIndexCond = (*pexpr)[0];
-	if (pexprIndexCond->DeriveHasSubquery())
-	{
-		return;
-	}
 	pexprIndexCond->AddRef();
 
 	CTableDescriptor *ptabdesc = popIndexGet->Ptabdesc();

@@ -46,6 +46,17 @@ CXformImplementDynamicBitmapTableGet::CXformImplementDynamicBitmapTableGet(
 {
 }
 
+// compute xform promise for a given expression handle
+CXform::EXformPromise
+CXformImplementDynamicBitmapTableGet::Exfp(CExpressionHandle &exprhdl) const
+{
+	if (exprhdl.DeriveHasSubquery(0) || exprhdl.DeriveHasSubquery(1))
+	{
+		return CXform::ExfpNone;
+	}
+	return CXform::ExfpHigh;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CXformImplementDynamicBitmapTableGet::Transform

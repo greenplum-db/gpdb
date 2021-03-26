@@ -56,6 +56,11 @@ CXformIndexGet2IndexScan::Exfp(CExpressionHandle &exprhdl) const
 		return CXform::ExfpNone;
 	}
 
+	if (exprhdl.DeriveHasSubquery(0))
+	{
+		return CXform::ExfpNone;
+	}
+
 	return CXform::ExfpHigh;
 }
 

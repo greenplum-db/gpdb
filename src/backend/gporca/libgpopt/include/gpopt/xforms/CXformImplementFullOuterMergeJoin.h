@@ -13,6 +13,9 @@ namespace gpopt
 {
 using namespace gpos;
 
+// FIXME: This should derive from CXformImplementation, but there is an unrelated bug
+// with ImplementMergeJoin() that causes us to generate an invalid plan in some
+// cases if we change this without fixing the bug.
 class CXformImplementFullOuterMergeJoin : public CXformExploration
 {
 private:

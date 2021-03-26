@@ -62,12 +62,7 @@ public:
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
-	Exfp(CExpressionHandle &  // exprhdl
-	) const
-	{
-		return CXform::ExfpHigh;
-	}
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
 	// actual transform
 	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,

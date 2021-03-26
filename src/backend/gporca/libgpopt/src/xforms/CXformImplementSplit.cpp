@@ -48,9 +48,12 @@ CXformImplementSplit::CXformImplementSplit(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformImplementSplit::Exfp(CExpressionHandle &	// exprhdl
-) const
+CXformImplementSplit::Exfp(CExpressionHandle &exprhdl) const
 {
+	if (exprhdl.DeriveHasSubquery(1))
+	{
+		return CXform::ExfpNone;
+	}
 	return CXform::ExfpHigh;
 }
 

@@ -60,8 +60,12 @@ public:
 
 	// compute xform promise for a given expression handle
 	virtual EXformPromise
-	Exfp(CExpressionHandle &) const
+	Exfp(CExpressionHandle &exprhdl) const
 	{
+		if (exprhdl.DeriveHasSubquery(2))
+		{
+			return CXform::ExfpNone;
+		}
 		return CXform::ExfpHigh;
 	}
 
