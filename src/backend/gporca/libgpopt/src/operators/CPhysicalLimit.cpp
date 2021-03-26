@@ -182,8 +182,8 @@ CPhysicalLimit::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				CEnfdDistribution::EdmSatisfy);
 		}
 
-		CExpression *pexprOffset =
-			exprhdl.PexprScalarExactChild(1 /*child_index*/);
+		CExpression *pexprOffset = exprhdl.PexprScalarExactChild(
+			1 /*child_index*/, true /*error_on_null_return*/);
 		if (!m_fHasCount && CUtils::FScalarConstIntZero(pexprOffset))
 		{
 			// pass through input distribution if it has no count nor offset and is not
