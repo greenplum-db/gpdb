@@ -48,8 +48,7 @@ CMDPartConstraintGPDB::CMDPartConstraintGPDB(
 //---------------------------------------------------------------------------
 CMDPartConstraintGPDB::~CMDPartConstraintGPDB()
 {
-	if (nullptr != m_dxl_node)
-		m_dxl_node->Release();
+	CRefCount::SafeRelease(m_dxl_node);
 	m_level_with_default_part_array->Release();
 }
 
