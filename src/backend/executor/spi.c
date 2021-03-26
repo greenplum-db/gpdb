@@ -1717,18 +1717,6 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 				}
 			}
 			stmt_list = pg_plan_queries(stmt_list, cursor_options, NULL, false);
-			// GDB: Mark query as spi inner query for extension usage
-			{
-				ListCell *lc;
-
-				foreach (lc, stmt_list)
-				{
-					Node *pstmt = lfirst(lc);
-
-					if (IsA(pstmt, PlannedStmt))
-						((PlannedStmt*)pstmt)->metricsQueryType = SPI_INNER_QUERY;
-				}
-			}
 		}
 
 		plansource = (CachedPlanSource *) palloc0(sizeof(CachedPlanSource));
@@ -1834,6 +1822,8 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				if (IsA(stmt, PlannedStmt))
 				{
 					canSetTag = ((PlannedStmt *) stmt)->canSetTag;
+					// Set SPI_INNER_QUERY flag for GPCC to identify inner query
+					((PlannedStmt*)stmt)->metricsQueryType = SPI_INNER_QUERY;
 				}
 				else
 				{
