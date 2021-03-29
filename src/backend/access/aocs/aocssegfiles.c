@@ -577,16 +577,12 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
  * The caller should have checked that the segfile is no longer needed by
  * any running transaction. It is not necessary to hold a lock on the segfile
  * row, though.
- *
- * GPDB_12_MERGE_FIXME: this and ClearFileSegInfo should look similar, which
- * is not currently the case.  On master branch, they do look similar.  Let's
- * make it so before we merge.
  */
 void
 ClearAOCSFileSegInfo(Relation prel, int segno)
 {
 	Relation	segrel;
-    SysScanDesc scan;
+	SysScanDesc	scan;
 	HeapTuple	oldtup = NULL;
 	HeapTuple	newtup;
 	int			tuple_segno = InvalidFileSegNumber;
@@ -597,7 +593,7 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	TupleDesc	tupdesc;
 	int			nvp = RelationGetNumberOfAttributes(prel);
 	int			i;
-	AOCSVPInfo *vpinfo = create_aocs_vpinfo(nvp);
+	AOCSVPInfo	*vpinfo = create_aocs_vpinfo(nvp);
 	Oid			segrelid;
 	Snapshot	appendOnlyMetaDataSnapshot;
 
@@ -608,7 +604,7 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 		   segno,
 		   RelationGetRelationName(prel));
 
-	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));	
+	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	GetAppendOnlyEntryAuxOids(prel->rd_id,
 							  appendOnlyMetaDataSnapshot,
 							  &segrelid, NULL, NULL,
