@@ -536,9 +536,6 @@ ao_truncate_one_rel(Relation rel)
 	 *
 	 * Segfile 0 first, ao_foreach_extent_file() doesn't invoke the
 	 * callback for it.
-	 *
-	 * GPDB_12_MERGE_FIXME: shouldn't we unlink, not truncate, the
-	 * other segfiles?
 	 */
 	truncate_ao_perFile(0, &truncateFiles);
 	ao_foreach_extent_file(truncate_ao_perFile, &truncateFiles);
