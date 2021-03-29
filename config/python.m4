@@ -105,14 +105,6 @@ if test -e "${python_libdir}/${python_ldlibrary}" -a x"${python_ldlibrary}" != x
 then
 	ldlibrary=`echo "${ldlibrary}" | sed "s/^lib//"`
 	found_shlib=1
-
-	# GPDB_12_MERGE_FIXME: Is this still needed?
-	# special for greenplum... python was built in /opt/, but resides in the ext directory
-	#if test ! -d "${python_libdir}"
-	#then
-	#	python_libdir=`echo "${python_configdir}" | sed "s/\/python2.7\/config//"`
-	#fi
-	#python_libspec="-L${python_libdir} -l${ldlibrary}"
 else
 	# Otherwise, guess the base name of the shlib.
 	# LDVERSION was added in Python 3.2, before that use VERSION,
@@ -188,6 +180,5 @@ AC_MSG_RESULT([${python_libspec} ${python_additional_libs}])
 AC_SUBST(python_libdir)[]dnl
 AC_SUBST(python_libspec)[]dnl
 AC_SUBST(python_additional_libs)[]dnl
-AC_SUBST(python_enable_shared)[]dnl
 
 ])# PGAC_CHECK_PYTHON_EMBED_SETUP
