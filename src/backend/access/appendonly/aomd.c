@@ -237,7 +237,7 @@ mdunlink_ao(RelFileNodeBackend rnode, ForkNumber forkNumber, bool isRedo)
 					(errcode_for_file_access(),
 					 errmsg("could not remove file \"%s\": %m", path)));
 	}
-	/* This storage manager is not concerend with forks other than MAIN_FORK */
+	/* This storage manager is not concerned with forks other than MAIN_FORK */
 	else if (forkNumber == MAIN_FORKNUM)
 	{
 		int pathSize = strlen(path);
