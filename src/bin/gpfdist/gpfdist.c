@@ -2374,6 +2374,17 @@ signal_register()
 
 }
 
+static void clear_listen_sock(void)
+{
+	SOCKET sock = -1;
+	while(gcb.listen_sock_count > 0)
+	{
+		sock = gcb.listen_socks[gcb.listen_sock_count-1];
+		closesocket(sock);
+		gcb.listen_socks[gcb.listen_sock_count-1] = -1;
+		gcb.listen_sock_count--;
+	}
+}
 /* Create HTTP port and start to receive request */
 static void
 http_setup(void)
@@ -2388,6 +2399,8 @@ http_setup(void)
 
 	char service[32];
 	const char *hostaddr = NULL;
+	int ipv6only_val = 1;
+	bool create_failed = false;
 
 #ifdef USE_SSL
 	if (opt.ssl)
@@ -2465,7 +2478,8 @@ http_setup(void)
 			if (f == -1)
 			{
 				gwarning(NULL, "Creating the socket failed\n");
-				continue;
+				create_failed = true;
+				break;
 			}
 
 #ifndef WIN32
@@ -2480,9 +2494,10 @@ http_setup(void)
 #endif
 			if (setsockopt(f, SOL_SOCKET, SO_KEEPALIVE, (void*) &on, sizeof(on)) == -1)
 			{
-				closesocket(f);
 				gwarning(NULL, "Setting SO_KEEPALIVE on socket failed");
-				continue;
+				closesocket(f);
+				create_failed = true;
+				break;
 			}
 
 			/*
@@ -2494,18 +2509,30 @@ http_setup(void)
 #ifndef WIN32
 			if (setsockopt(f, SOL_SOCKET, SO_REUSEADDR, (void*) &on, sizeof(on)) == -1)
 			{
-				closesocket(f);
 				gwarning(NULL, "Setting SO_REUSEADDR on socket failed");
-				continue;
+				closesocket(f);
+				create_failed = true;
+				break;
 			}
 #endif
 			linger.l_onoff = 1;
 			linger.l_linger = 5;
 			if (setsockopt(f, SOL_SOCKET, SO_LINGER, (void*) &linger, sizeof(linger)) == -1)
 			{
-				closesocket(f);
 				gwarning(NULL, "Setting SO_LINGER on socket failed");
-				continue;
+				closesocket(f);
+				create_failed = true;
+				break;
+			}
+			if(rp->ai_family == AF_INET6)
+			{
+				if (setsockopt(f, IPPROTO_IPV6, IPV6_V6ONLY, (void*) &ipv6only_val, sizeof(ipv6only_val)) == -1)
+				{
+					gwarning(NULL, "Setting IPV6_V6ONLY on socket failed");
+					closesocket(f);
+					create_failed = true;
+					break;
+				}
 			}
 
 			if (bind(f, rp->ai_addr, rp->ai_addrlen) != 0)
@@ -2528,13 +2555,14 @@ http_setup(void)
 					}
 				}
 				else
-			    {
+				{
 					gwarning(NULL, "%s (errno=%d), port: %d",strerror(errno), errno, opt.p);
 				}
 
 				/* failed on bind, maybe this address family isn't supported */
 				closesocket(f);
-				continue;
+				create_failed = true;
+				break;
 			}
 
 			/* listen with a big queue */
@@ -2548,7 +2576,8 @@ http_setup(void)
 							  opt.p,
 							  saved_errno,
 							  strerror(saved_errno));
-				continue;
+				create_failed = true;
+				break;
 			}
 			gcb.listen_socks[gcb.listen_sock_count++] = f;
 
@@ -2561,6 +2590,11 @@ http_setup(void)
 		{
 			/* don't need this any more */
 			freeaddrinfo(addrs);
+		}
+		if(create_failed)
+		{
+			clear_listen_sock();
+			create_failed = false;
 		}
 
 		if (gcb.listen_sock_count > 0)
