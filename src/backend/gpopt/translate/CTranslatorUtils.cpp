@@ -1331,8 +1331,7 @@ CTranslatorUtils::FixUnknownTypeConstant(Query *old_query,
 			{
 				if (nullptr == new_query)
 				{
-					new_query = (Query *) gpdb::CopyObject(
-						const_cast<Query *>(old_query));
+					new_query = (Query *) gpdb::CopyObject(old_query);
 				}
 
 				TargetEntry *new_target_entry =

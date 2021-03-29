@@ -1287,7 +1287,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEProducer(const CDXLNode *dxlnode)
 			colref = new_colref;
 		}
 
-		colref_array->Append(const_cast<CColRef *>(colref));
+		colref_array->Append(colref);
 		pcrsProducer->Include(colref);
 	}
 

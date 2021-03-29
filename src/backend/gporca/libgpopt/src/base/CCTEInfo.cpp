@@ -444,8 +444,7 @@ CCTEInfo::IncrementConsumers(ULONG ulConsumerId, ULONG ulParentCTEId)
 {
 	// get map of given parent
 	UlongToConsumerCounterMap *phmulconsumermap =
-		const_cast<UlongToConsumerCounterMap *>(
-			m_phmulprodconsmap->Find(&ulParentCTEId));
+		m_phmulprodconsmap->Find(&ulParentCTEId);
 	if (nullptr == phmulconsumermap)
 	{
 		phmulconsumermap = GPOS_NEW(m_mp) UlongToConsumerCounterMap(m_mp);
@@ -455,8 +454,7 @@ CCTEInfo::IncrementConsumers(ULONG ulConsumerId, ULONG ulParentCTEId)
 	}
 
 	// find counter of given consumer inside this map
-	SConsumerCounter *pconsumercounter =
-		const_cast<SConsumerCounter *>(phmulconsumermap->Find(&ulConsumerId));
+	SConsumerCounter *pconsumercounter = phmulconsumermap->Find(&ulConsumerId);
 	if (nullptr == pconsumercounter)
 	{
 		// no existing counter - start a new one
@@ -513,7 +511,7 @@ CCTEInfo::PdrgPexpr(CMemoryPool *mp) const
 	UlongToCTEInfoEntryMapIter hmulei(m_phmulcteinfoentry);
 	while (hmulei.Advance())
 	{
-		CExpression *pexpr = const_cast<CExpression *>(hmulei.Value()->Pexpr());
+		CExpression *pexpr = hmulei.Value()->Pexpr();
 		pexpr->AddRef();
 		pdrgpexpr->Append(pexpr);
 	}
@@ -537,8 +535,7 @@ CCTEInfo::MapComputedToUsedCols(CColumnFactory *col_factory) const
 	UlongToCTEInfoEntryMapIter hmulei(m_phmulcteinfoentry);
 	while (hmulei.Advance())
 	{
-		CExpression *pexprProducer =
-			const_cast<CExpression *>(hmulei.Value()->Pexpr());
+		CExpression *pexprProducer = hmulei.Value()->Pexpr();
 		GPOS_ASSERT(nullptr != pexprProducer);
 		CQueryContext::MapComputedToUsedCols(col_factory, pexprProducer);
 	}
@@ -598,8 +595,7 @@ CCTEInfo::FindConsumersInParent(ULONG ulParentId, CBitSet *pbsUnusedConsumers,
 								CStack<ULONG> *pstack)
 {
 	UlongToConsumerCounterMap *phmulconsumermap =
-		const_cast<UlongToConsumerCounterMap *>(
-			m_phmulprodconsmap->Find(&ulParentId));
+		m_phmulprodconsmap->Find(&ulParentId);
 	if (nullptr == phmulconsumermap)
 	{
 		// no map found for given parent - there are no consumers inside it

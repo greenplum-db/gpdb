@@ -1025,10 +1025,10 @@ CXformUtils::SubqueryAllToAgg(
 
 	// generate a group by expression with sum(subquery-test) and sum(inner null indicator) aggreagtes
 	CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
-	CColRef *pcrSubqTest = const_cast<CColRef *>(
-		CScalarProjectElement::PopConvert((*(*pexprPrj)[1])[0]->Pop())->Pcr());
-	CColRef *pcrInnerNullTest = const_cast<CColRef *>(
-		CScalarProjectElement::PopConvert((*(*pexprPrj)[1])[1]->Pop())->Pcr());
+	CColRef *pcrSubqTest =
+		CScalarProjectElement::PopConvert((*(*pexprPrj)[1])[0]->Pop())->Pcr();
+	CColRef *pcrInnerNullTest =
+		CScalarProjectElement::PopConvert((*(*pexprPrj)[1])[1]->Pop())->Pcr();
 	colref_array->Append(pcrSubqTest);
 	colref_array->Append(pcrInnerNullTest);
 	CExpression *pexprGbAggSum =
@@ -3868,8 +3868,7 @@ CXformUtils::MapPrjElemsWithDistinctAggs(
 			pexprKey = pexprTrue;
 		}
 
-		CExpressionArray *pdrgpexpr =
-			const_cast<CExpressionArray *>(phmexprdrgpexpr->Find(pexprKey));
+		CExpressionArray *pdrgpexpr = phmexprdrgpexpr->Find(pexprKey);
 		BOOL fExists = (nullptr != pdrgpexpr);
 		if (!fExists)
 		{

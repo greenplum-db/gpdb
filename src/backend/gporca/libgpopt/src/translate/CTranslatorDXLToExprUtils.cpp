@@ -238,7 +238,7 @@ CTranslatorDXLToExprUtils::Pdrgpcr(CMemoryPool *mp,
 		colref->MarkAsUsed();
 		GPOS_ASSERT(nullptr != colref);
 
-		colref_array->Append(const_cast<CColRef *>(colref));
+		colref_array->Append(colref);
 	}
 
 	return colref_array;

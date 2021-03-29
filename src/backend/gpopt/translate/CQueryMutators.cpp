@@ -1024,8 +1024,7 @@ CQueryMutators::NormalizeHaving(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 			new_subquery->targetList =
 				gpdb::LAppend(new_subquery->targetList,
-							  (TargetEntry *) gpdb::CopyObject(
-								  const_cast<TargetEntry *>(target_entry)));
+							  (TargetEntry *) gpdb::CopyObject(target_entry));
 		}
 
 		gpdb::GPDBFree(rte->subquery);

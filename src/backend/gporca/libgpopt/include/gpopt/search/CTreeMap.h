@@ -427,7 +427,7 @@ private:
 	Ptn(const T *value)
 	{
 		GPOS_ASSERT(nullptr != value);
-		CTreeNode *ptn = const_cast<CTreeNode *>(m_ptmap->Find(value));
+		CTreeNode *ptn = m_ptmap->Find(value);
 
 		if (nullptr == ptn)
 		{

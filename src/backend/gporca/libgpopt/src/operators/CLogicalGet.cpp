@@ -251,8 +251,7 @@ CLogicalGet::DeriveNotNullColumns(CMemoryPool *mp,
 	CColRefSetIter crsi(*exprhdl.DeriveOutputColumns());
 	while (crsi.Advance())
 	{
-		CColRefTable *pcrtable =
-			CColRefTable::PcrConvert(const_cast<CColRef *>(crsi.Pcr()));
+		CColRefTable *pcrtable = CColRefTable::PcrConvert(crsi.Pcr());
 		if (pcrtable->IsNullable())
 		{
 			pcrs->Exclude(pcrtable);

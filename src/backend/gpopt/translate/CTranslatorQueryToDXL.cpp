@@ -2903,8 +2903,7 @@ CTranslatorQueryToDXL::TranslateSetOpChild(Node *child_node,
 		return dxlnode;
 	}
 
-	CHAR *temp_str =
-		(CHAR *) gpdb::NodeToString(const_cast<Node *>(child_node));
+	CHAR *temp_str = (CHAR *) gpdb::NodeToString(child_node);
 	CWStringDynamic *str =
 		CDXLUtils::CreateDynamicStringFromCharArray(m_mp, temp_str);
 
@@ -3064,7 +3063,7 @@ CTranslatorQueryToDXL::TranslateFromClauseToDXL(Node *node)
 		return TranslateJoinExprInFromToDXL((JoinExpr *) node);
 	}
 
-	CHAR *sz = (CHAR *) gpdb::NodeToString(const_cast<Node *>(node));
+	CHAR *sz = (CHAR *) gpdb::NodeToString(node);
 	CWStringDynamic *str =
 		CDXLUtils::CreateDynamicStringFromCharArray(m_mp, sz);
 

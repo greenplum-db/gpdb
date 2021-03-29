@@ -3509,8 +3509,8 @@ CTranslatorExprToDXL::PdxlnQuantifiedSubplan(
 	pdxlnSubPlan->AddChild(inner_dxlnode);
 
 	// add to hashmap
-	BOOL fRes GPOS_ASSERTS_ONLY = m_phmcrdxln->Insert(
-		const_cast<CColRef *>((*pdrgpcrInner)[0]), pdxlnSubPlan);
+	BOOL fRes GPOS_ASSERTS_ONLY =
+		m_phmcrdxln->Insert((*pdrgpcrInner)[0], pdxlnSubPlan);
 	GPOS_ASSERT(fRes);
 
 	return pdxlnSubPlan;
@@ -7169,8 +7169,7 @@ CTranslatorExprToDXL::PdxlnWindow(CExpression *pexprSeqPrj,
 	{
 		CDistributionSpecHashed *pdshashed =
 			CDistributionSpecHashed::PdsConvert(pds);
-		pdrgpexprPartCol =
-			const_cast<CExpressionArray *>(pdshashed->Pdrgpexpr());
+		pdrgpexprPartCol = pdshashed->Pdrgpexpr();
 		const ULONG size = pdrgpexprPartCol->Size();
 		for (ULONG ul = 0; ul < size; ul++)
 		{
