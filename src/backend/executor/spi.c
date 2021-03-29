@@ -1189,7 +1189,14 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 		MemoryContextSwitchTo(oldcontext);
 		cplan = NULL;			/* portal shouldn't depend on cplan */
 	}
-
+	/* GPDB: Mark all queries as SPI inner queries for extension usage */
+	ListCell   *lc;
+	foreach(lc, stmt_list)
+	{
+		Node *stmt = (Node *) lfirst(lc);
+		if (IsA(stmt, PlannedStmt))
+			((PlannedStmt*)stmt)->metricsQueryType = SPI_INNER_QUERY;
+	}
 	/*
 	 * Set up the portal.
 	 */
