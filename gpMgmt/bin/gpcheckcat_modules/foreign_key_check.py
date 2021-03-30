@@ -9,6 +9,8 @@ class ForeignKeyCheck:
     PURPOSE: detect differences between foreign key and reference key values among catalogs
     """
 
+    ZeroColumnViewOids = None
+
     def __init__(self, db_connection, logger, shared_option, autoCast):
         self.db_connection = db_connection
         self.logger = logger
@@ -16,8 +18,23 @@ class ForeignKeyCheck:
         self.autoCast = autoCast
         self.query_filters = dict()
         self.query_filters['pg_appendonly.relid'] = "(relstorage='a' or relstorage='c')"
-        self.query_filters['pg_attribute.attrelid'] = "true"
+        # Views having empty target list are permitted.  Such views
+        # have no entry in pg_attribute.  This filter excludes
+        # zero-column views from foreign key check between
+        # pg_class and pg_attribute.  The NULL check flags cases as
+        # error where pg_class entry is missing but pg_attribute entry
+        # exists.
+        self.query_filters['pg_attribute.attrelid'] = "(relnatts > 0 or relnatts is NULL)"
         self.query_filters["pg_index.indexrelid"] = "(relkind='i')"
+
+    def isZeroColumnView(self, oid):
+        if ForeignKeyCheck.ZeroColumnViewOids is None:
+            ForeignKeyCheck.ZeroColumnViewOids = []
+            curs = self.db_connection.query(
+                "select oid from pg_class where relnatts = 0 and relkind = 'v'")
+            for row in curs.getresult():
+                ForeignKeyCheck.ZeroColumnViewOids.append(row[0]);
+        return oid in ForeignKeyCheck.ZeroColumnViewOids
 
     def runCheck(self, tables):
         foreign_key_issues = dict()
@@ -114,6 +131,17 @@ class ForeignKeyCheck:
             curs = self.db_connection.query(qry)
             nrows = curs.ntuples()
 
+            # Zero column views need to be excluded from pg_rewrite
+            # and pg_attribute foreign key check.  Such views have an
+            # entry in pg_rewrite but no corresponding entry in
+            # pg_attribute.  The row[1] corresponds to
+            # pg_rewrite_ev_class field in the foreign key check
+            # query.  It is the OID of the rule's entry in pg_class.
+            if catname == 'pg_rewrite' and nrows > 0:
+                for row in curs.getresult():
+                    if self.isZeroColumnView(row[1]):
+                        nrows = nrows - 1
+
             if nrows == 0:
                 self.logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)' %
                                  (catname, fkeystr, pkcatname, pkeystr))
@@ -127,6 +155,8 @@ class ForeignKeyCheck:
                 log_literal(self.logger, logging.ERROR, "    " + " | ".join(fields))
                 for row in curs.getresult():
                     log_literal(self.logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                self.logger.info("Zero column view OIDs: %s" %
+                                 ' '.join(ForeignKeyCheck.ZeroColumnViewOids))
                 results = curs.getresult()
                 issue_list.append((pkcatname, fields, results))
 

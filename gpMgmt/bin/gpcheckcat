@@ -1741,6 +1741,7 @@ def checkPGClass():
     FROM   pg_class tc left outer join
            pg_attribute ta on (tc.oid = ta.attrelid)
     WHERE  ta.attrelid is NULL
+    AND    tc.relnatts > 0
     '''
     err = connect2run(qry, ('relname', 'relkind', 'oid'))
     if not err:
