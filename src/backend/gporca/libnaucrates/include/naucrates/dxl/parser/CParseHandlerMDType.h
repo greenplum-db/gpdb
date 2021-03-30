@@ -123,9 +123,6 @@ private:
 	// id of array type
 	IMDId *m_mdid_array_type;
 
-	// retrieves the address MDId member variable corresponding to the specified token
-	IMDId **GetTokenMDid(Edxltoken token_type);
-
 	// handles a SAX start element event
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace

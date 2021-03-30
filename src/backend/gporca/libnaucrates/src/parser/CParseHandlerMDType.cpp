@@ -307,50 +307,6 @@ CParseHandlerMDType::IsBuiltInType(const IMDId *mdid)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerMDType::GetTokenMDid
-//
-//	@doc:
-//		Return the address of the mdid variable corresponding to the dxl token
-//
-//---------------------------------------------------------------------------
-IMDId **
-CParseHandlerMDType::GetTokenMDid(Edxltoken token_type)
-{
-	switch (token_type)
-	{
-		case EdxltokenMDTypeEqOp:
-			return &m_mdid_eq_op;
-
-		case EdxltokenMDTypeNEqOp:
-			return &m_mdid_neq_op;
-
-		case EdxltokenMDTypeLTOp:
-			return &m_mdid_lt_op;
-
-		case EdxltokenMDTypeLEqOp:
-			return &m_mdid_lteq_op;
-
-		case EdxltokenMDTypeGTOp:
-			return &m_mdid_gt_op;
-
-		case EdxltokenMDTypeGEqOp:
-			return &m_mdid_gteq_op;
-
-		case EdxltokenMDTypeCompOp:
-			return &m_mdid_cmp_op;
-
-		case EdxltokenMDTypeArray:
-			return &m_mdid_array_type;
-
-		default:
-			break;
-	}
-	GPOS_ASSERT(!"Unexpected DXL token when parsing MDType");
-	return nullptr;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CParseHandlerMDType::EndElement
 //
 //	@doc:
