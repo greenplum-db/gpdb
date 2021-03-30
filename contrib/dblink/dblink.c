@@ -57,7 +57,7 @@
 #include "libpq-fe.h"
 #undef FRONTEND
 #else
-#include "libpq-fe.h"
+#include "libpq-fe.h"	#include "libpq-fe.h"
 #endif /* FRONTEND */
 
 #include "access/htup_details.h"
@@ -3101,5 +3101,3 @@ restoreLocalGucs(int nestlevel)
 	if (nestlevel > 0)
 		AtEOXact_GUC(true, nestlevel);
 }
-
-#include "dblink_no_auth.c"

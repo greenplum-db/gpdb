@@ -234,19 +234,3 @@ AS 'MODULE_PATHNAME', 'dblink_fdw_validator'
 LANGUAGE C STRICT;
 
 CREATE FOREIGN DATA WRAPPER dblink_fdw VALIDATOR dblink_fdw_validator;
-
--- dblink_connect_no_auth allows non-superusers to
--- skip authentication when it connects to itself,
--- but initially privileges are revoked from public
-CREATE FUNCTION dblink_connect_no_auth (text)
-RETURNS text
-AS 'MODULE_PATHNAME','dblink_connect_no_auth'
-LANGUAGE C STRICT SECURITY DEFINER;
-
-CREATE FUNCTION dblink_connect_no_auth (text, text)
-RETURNS text
-AS 'MODULE_PATHNAME','dblink_connect_no_auth'
-LANGUAGE C STRICT SECURITY DEFINER;
-
-REVOKE ALL ON FUNCTION dblink_connect_no_auth (text) FROM public;
-REVOKE ALL ON FUNCTION dblink_connect_no_auth (text, text) FROM public;
