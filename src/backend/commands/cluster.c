@@ -639,12 +639,6 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	bool		swap_toast_by_content;
 	TransactionId frozenXid;
 	MultiXactId cutoffMulti;
-	/*
-	 * GPDB_12_MERGE_FIXME: We use specific bool in abstract code. This should
-	 * be somehow hidden by table am api or necessity of this switch should be
-	 * revisited.
-	 */
-	bool		is_ao = RelationIsAppendOptimized(OldHeap);
 
 	/* Mark the correct index as clustered */
 	if (OidIsValid(indexOid))
@@ -674,7 +668,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	 */
 	finish_heap_swap(tableOid, OIDNewHeap, is_system_catalog,
 					 swap_toast_by_content,
-					 !is_ao /* swap_stats */,
+					 true /* swap_stats */,
 					 false, true,
 					 frozenXid, cutoffMulti,
 					 relpersistence);
@@ -803,6 +797,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 									 &isNull);
 		if (isNull)
 			reloptions = (Datum) 0;
+
 		NewHeapCreateToastTable(OIDNewHeap, reloptions, lockmode);
 
 		ReleaseSysCache(tuple);
@@ -1128,7 +1123,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 					Oid *mapped_tables)
 {
 	Relation	relRelation,
-				rel;
+				rel_r1;
 	HeapTuple	reltup1,
 				reltup2;
 	Form_pg_class relform1,
@@ -1137,6 +1132,12 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 				relfilenode2;
 	Oid			swaptemp;
 	char		swptmpchr;
+	bool		is_ao;
+	Oid			relfrozenxid1;
+
+	rel_r1 = relation_open(r1, AccessShareLock);
+	is_ao = RelationIsAppendOptimized(rel_r1);
+	relation_close(rel_r1, AccessShareLock);
 
 	/* We need writable copies of both pg_class tuples. */
 	relRelation = table_open(RelationRelationId, RowExclusiveLock);
@@ -1153,6 +1154,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 
 	relfilenode1 = relform1->relfilenode;
 	relfilenode2 = relform2->relfilenode;
+	relfrozenxid1 = relform1->relfrozenxid;
 
 	if (OidIsValid(relfilenode1) && OidIsValid(relfilenode2))
 	{
@@ -1258,8 +1260,9 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		Assert(MultiXactIdIsValid(cutoffMulti));
 		relform1->relminmxid = cutoffMulti;
 	}
+
 	/* swap size statistics too, since new rel has freshly-updated stats */
-	if (swap_stats)
+	if (swap_stats && !is_ao)
 	{
 		int32		swap_pages;
 		float4		swap_tuples;
@@ -1332,9 +1335,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 				 * compute freeze limit (frozenXid) because AO tables do not
 				 * have relfrozenxid.  The toast tables need to keep existing
 				 * relfrozenxid value unchanged in this case.
-				 *
-				 * GPDB_12_MERGE_FIXME: If the above argument is correct,
-				 * figure out a way check it with an assert.
 				 */
 				swap_relation_files(relform1->reltoastrelid,
 									relform2->reltoastrelid,
@@ -1412,17 +1412,27 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	}
 
 	/* Send statistics from QE to QD */
-	if (Gp_role == GP_ROLE_EXECUTE && swap_stats && !IsSystemClass(r1, relform1))
+	if (Gp_role == GP_ROLE_EXECUTE && swap_stats && !is_ao && !IsSystemClass(r1, relform1))
 	{
-		rel = relation_open(r1, AccessShareLock);
+		rel_r1 = relation_open(r1, AccessShareLock);
 
-		vac_send_relstats_to_qd(rel,
+		vac_send_relstats_to_qd(rel_r1,
 								relform1->relpages,
 								relform1->reltuples,
 								relform1->relallvisible);
 
-		relation_close(rel, AccessShareLock);
+		relation_close(rel_r1, AccessShareLock);
 	}
+
+	if (is_ao)
+	{
+		/*
+		 * AO tables do not have relfrozenxid. The tables need to keep existing
+		 * relfrozenxid value unchanged.
+		 */
+		Assert(relfrozenxid1 == relform1->relfrozenxid);
+	}
+
 	/* Clean up. */
 	heap_freetuple(reltup1);
 	heap_freetuple(reltup2);
