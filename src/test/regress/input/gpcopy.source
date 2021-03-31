@@ -1212,12 +1212,17 @@ CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\
 ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
 DROP TABLE ext_dec17;
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
+COPY sales TO PROGRAM 'cat > /tmp/test_sales_with_external';
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 
 -- Verify that the files don't contain the row from the external partition.
 \set QUIET 'on'
 
 CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_all' ON COORDINATOR FORMAT 'text' (DELIMITER 'off');
+SELECT * FROM pg_temp.read_result;
+DROP EXTERNAL TABLE pg_temp.read_result;
+
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_with_external' ON COORDINATOR FORMAT 'text' (DELIMITER 'off');
 SELECT * FROM pg_temp.read_result;
 DROP EXTERNAL TABLE pg_temp.read_result;
 

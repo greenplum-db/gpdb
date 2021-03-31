@@ -4358,7 +4358,11 @@ copy_opt_item:
 				}
 			| IGNORE_P EXTERNAL PARTITIONS
 				{
-					$$ = makeDefElem("skip_ext_partition", (Node *)makeInteger(true), @1);
+					$$ = makeDefElem("skip_foreign_partitions", (Node *)makeInteger(true), @1);
+				}
+			| IGNORE_P FOREIGN PARTITIONS
+				{
+					$$ = makeDefElem("skip_foreign_partitions", (Node *)makeInteger(true), @1);
 				}
 		;
 

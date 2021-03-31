@@ -1443,6 +1443,8 @@ DROP TABLE
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
 COPY 24
+COPY sales TO PROGRAM 'cat > /tmp/test_sales_with_external';
+COPY 25
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
 COPY 24
@@ -1477,6 +1479,38 @@ SELECT * FROM pg_temp.read_result;
  9       09-01-2017      20.00
  9       09-01-2017      20.00
 (24 rows)
+
+DROP EXTERNAL TABLE pg_temp.read_result;
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_with_external' ON COORDINATOR FORMAT 'text' (DELIMITER 'off');
+SELECT * FROM pg_temp.read_result;
+             line              
+-------------------------------
+ 1       01-01-2017      20.00
+ 1       01-01-2017      20.00
+ 2       02-01-2017      20.00
+ 2       02-01-2017      20.00
+ 3       03-01-2017      20.00
+ 3       03-01-2017      20.00
+ 4       04-01-2017      20.00
+ 4       04-01-2017      20.00
+ 15      05-01-2017      20.00
+ 15      05-01-2017      20.00
+ 25      05-01-2017      20.00
+ 25      05-01-2017      20.00
+ 5       05-01-2017      20.00
+ 5       05-01-2017      20.00
+ 7       07-01-2017      20.00
+ 7       07-01-2017      20.00
+ 8       08-01-2017      20.00
+ 8       08-01-2017      20.00
+ 18      08-01-2017      20.00
+ 18      08-01-2017      20.00
+ 9       09-01-2017      20.00
+ 9       09-01-2017      20.00
+ 11      11-01-2017      20.00
+ 11      11-01-2017      20.00
+ 12      12-01-2017      21.00
+(25 rows)
 
 DROP EXTERNAL TABLE pg_temp.read_result;
 CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_$GP_SEGMENT_ID' FORMAT 'text' (DELIMITER 'off');
