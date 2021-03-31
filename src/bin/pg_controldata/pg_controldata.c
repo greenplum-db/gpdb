@@ -241,7 +241,9 @@ main(int argc, char *argv[])
 				 (unsigned char) ControlFile->mock_authentication_nonce[i]);
 
 	printf(_("pg_control version number:            %u\n"),
-		   ControlFile->pg_control_version);
+		   ControlFile->pg_control_version / 10000);
+	printf(_("pg_control Greenplum version number:  %u\n"),
+		   ControlFile->pg_control_version % 10000);
 	printf(_("Catalog version number:               %u\n"),
 		   ControlFile->catalog_version_no);
 	printf(_("Database system identifier:           %s\n"),
