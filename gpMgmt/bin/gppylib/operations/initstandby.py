@@ -45,7 +45,7 @@ def cleanup_pg_hba_backup(data_dirs_list):
     except Exception as ex:
         logger.error('Unable to cleanup backup of pg_hba.conf %s' % ex)
 
-def cleanup_pg_hba_backup_on_segment(gparr):
+def cleanup_pg_hba_backup_on_segment(gparr, unreachable_hosts=[]):
     """
     Cleanup the pg_hba.conf on all of the segments
     present in the array
@@ -61,6 +61,8 @@ def cleanup_pg_hba_backup_on_segment(gparr):
 
     try:
         for host, data_dirs_list in list(host_to_seg_map.items()):
+            if host in unreachable_hosts:
+                continue
             json_data_dirs_list = json.dumps(str(data_dirs_list))
             cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d '%s' -D" % json_data_dirs_list
             cmd = Command('Cleanup the pg_hba.conf backups on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
@@ -147,7 +149,7 @@ def update_pg_hba(standby_pg_hba_info, data_dirs_list):
         pg_hba_content_list.append(pg_hba_contents)
     return pg_hba_content_list
 
-def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
+def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False, unreachable_hosts=[]):
     """
     Updates the pg_hba.conf on all of the segments 
     present in the array
@@ -165,6 +167,9 @@ def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
 
     try:
         for host, data_dirs_list in list(host_to_seg_map.items()):
+            if host in unreachable_hosts:
+                logger.warning("Manual update of the pg_hba_conf files for all segments on unreachable host %s will be required." % host)
+                continue
             json_data_dirs_list = json.dumps(data_dirs_list)
             cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -p '%s' -d '%s'" % (json_standby_pg_hba_info, json_data_dirs_list)
             cmd = Command('Update the pg_hba.conf on remote hosts', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)

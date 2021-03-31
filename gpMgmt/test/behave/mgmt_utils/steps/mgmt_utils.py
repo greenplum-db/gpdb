@@ -717,14 +717,7 @@ def impl(context):
     run_gpcommand(context, cmd)
 
 def init_standby(context, coordinator_hostname, options, segment_hostname):
-    if coordinator_hostname != segment_hostname:
-        context.standby_hostname = segment_hostname
-        context.standby_port = os.environ.get("PGPORT")
-        remote = True
-    else:
-        context.standby_hostname = coordinator_hostname
-        context.standby_port = get_open_port()
-        remote = False
+    remote = (coordinator_hostname != segment_hostname)
     # -n option assumes gpinitstandby already ran and put standby in catalog
     if "-n" not in options:
         if remote:
@@ -763,10 +756,7 @@ def impl(context, coordinator, standby):
     context.coordinator_port = os.environ.get("PGPORT")
     context.standby_was_initialized = True
 
-@when('the user runs gpinitstandby with options "{options}"')
-@then('the user runs gpinitstandby with options "{options}"')
-@given('the user runs gpinitstandby with options "{options}"')
-def impl(context, options):
+def get_standby_variables_and_set_on_context(context):
     dbname = 'postgres'
     with closing(dbconn.connect(dbconn.DbURL(port=os.environ.get("PGPORT"), dbname=dbname), unsetSearchPath=False)) as conn:
         query = """select distinct content, hostname from gp_segment_configuration order by content limit 2;"""
@@ -778,8 +768,59 @@ def impl(context, options):
         except:
             raise Exception("Did not get two rows from query: %s" % query)
 
-    # if we have two hosts, assume we're testing on a multinode cluster
-    init_standby(context, coordinator_hostname, options, segment_hostname)
+    if coordinator_hostname != segment_hostname:
+        context.standby_hostname = segment_hostname
+        context.standby_port = os.environ.get("PGPORT")
+    else:
+        context.standby_hostname = coordinator_hostname
+        context.standby_port = get_open_port()
+
+    return coordinator_hostname, segment_hostname
+
+@when('the user runs gpinitstandby with options "{options}"')
+@then('the user runs gpinitstandby with options "{options}"')
+@given('the user runs gpinitstandby with options "{options}"')
+def impl(context, options):
+    coordinator_hostname, standby_hostname = get_standby_variables_and_set_on_context(context)
+    init_standby(context, coordinator_hostname, options, standby_hostname)
+
+def _handle_sigpipe():
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+@when('the user runs gpinitstandby and {action} the unreachable host prompt')
+def impl(context, action):
+    coordinator_hostname, standby_hostname = get_standby_variables_and_set_on_context(context)
+    remote = (coordinator_hostname != standby_hostname)
+    context.coordinator_hostname = coordinator_hostname
+    context.coordinator_port = os.environ.get("PGPORT")
+    context.standby_was_initialized = True
+
+    if action == "accepts":
+        answers = "y\ny\n"
+    elif action == "rejects":
+        answers = "y\nn\n"
+    else:
+        raise Exception('Invalid action for the unreachable host prompt (valid options are "accepts" and "rejects"')
+
+    if remote:
+        context.standby_data_dir = coordinator_data_dir
+        cmd = ["ssh", standby_hostname]
+    else:
+        context.standby_data_dir = tempfile.mkdtemp() + "/standby_datadir"
+        cmd = ["bash", "-c"]
+
+    cmd.append("printf '%s' | gpinitstandby -s %s -S %s -P %s" % (answers, standby_hostname, context.standby_data_dir, context.standby_port))
+
+    p = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        preexec_fn=_handle_sigpipe,
+    )
+    context.stdout_message, context.stderr_message = p.communicate()
+    context.ret_code = p.returncode
+    if context.ret_code != 0:
+        context.error_message = context.stderr_message
 
 @when('the user runs gpactivatestandby with options "{options}"')
 @then('the user runs gpactivatestandby with options "{options}"')
