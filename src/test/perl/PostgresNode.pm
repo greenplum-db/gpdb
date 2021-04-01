@@ -1606,6 +1606,17 @@ the B<timed_out> parameter is also given.
 If B<timeout> is set and this parameter is given, the scalar it references
 is set to true if the psql call times out.
 
+=item connstr => B<value>
+
+If set, use this as the connection string for the connection to the
+backend.
+
+=item replication => B<value>
+
+If set, add B<replication=value> to the conninfo string.
+Passing the literal value C<database> results in a logical replication
+connection.
+
 =item extra_params => ['--single-transaction']
 
 If given, it must be an array reference containing additional parameters to B<psql>.
@@ -1637,13 +1648,25 @@ sub psql
 
 	my $stdout            = $params{stdout};
 	my $stderr            = $params{stderr};
+	my $replication = $params{replication};
 	my $timeout           = undef;
 	my $timeout_exception = 'psql timed out';
 
 	local $ENV{PGOPTIONS} = '-c gp_role=utility';
 
-	my @psql_params =
-	  ('psql', '-XAtq', '-d', $self->connstr($dbname), '-f', '-');
+	# Build the connection string.
+	my $psql_connstr;
+	if (defined $params{connstr})
+	{
+		$psql_connstr = $params{connstr};
+	}
+	else
+	{
+		$psql_connstr = $self->connstr($dbname);
+	}
+	$psql_connstr .= defined $replication ? " replication=$replication" : "";
+
+	my @psql_params = ('psql', '-XAtq', '-d', $psql_connstr, '-f', '-');
 
 	# If the caller wants an array and hasn't passed stdout/stderr
 	# references, allocate temporary ones to capture them so we
@@ -1943,6 +1966,51 @@ sub pgbench
 		$self->_pgbench_make_files($files), @args);
 
 	$self->command_checks_all(\@cmd, $stat, $out, $err, $name);
+}
+
+=pod
+
+=item $node->connect_ok($connstr, $test_name)
+
+Attempt a connection with a custom connection string.  This is expected
+to succeed.
+
+=cut
+
+sub connect_ok
+{
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+	my ($self, $connstr, $test_name) = @_;
+	my ($ret,  $stdout,  $stderr)    = $self->psql(
+		'postgres',
+		"SELECT \$\$connected with $connstr\$\$",
+		connstr       => "$connstr",
+		on_error_stop => 0);
+
+	ok($ret == 0, $test_name);
+}
+
+=pod
+
+=item $node->connect_fails($connstr, $expected_stderr, $test_name)
+
+Attempt a connection with a custom connection string.  This is expected
+to fail with a message that matches the regular expression
+$expected_stderr.
+
+=cut
+
+sub connect_fails
+{
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+	my ($self, $connstr, $expected_stderr, $test_name) = @_;
+	my ($ret, $stdout, $stderr) = $self->psql(
+		'postgres',
+		"SELECT \$\$connected with $connstr\$\$",
+		connstr => "$connstr");
+
+	ok($ret != 0, $test_name);
+	like($stderr, $expected_stderr, "$test_name: matches");
 }
 
 =pod

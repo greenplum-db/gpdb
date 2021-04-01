@@ -47,6 +47,8 @@ $common_connstr =
   "user=ssltestuser dbname=trustdb sslmode=require sslcert=invalid sslrootcert=invalid hostaddr=$SERVERHOSTADDR";
 
 # Default settings
-test_connect_ok($common_connstr, '', "Basic SCRAM authentication with SSL");
+$node->connect_ok(
+	"$common_connstr user=ssltestuser",
+	"Basic SCRAM authentication with SSL");
 
-done_testing($number_of_tests);
+
