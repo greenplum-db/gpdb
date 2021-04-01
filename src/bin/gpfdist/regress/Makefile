@@ -14,7 +14,7 @@ endif
 PSQLDIR = $(prefix)/bin
 REGRESS_OPTS = --init-file=init_file
 
-installcheck: watchdog
+installcheck: watchdog ipv4v6_ports
 ifeq ($(enable_gpfdist),yes)
 ifeq ($(with_openssl),yes)
 	cp -rf $(MASTER_DATA_DIRECTORY)/gpfdists data/gpfdist_ssl/certs_matching
@@ -25,6 +25,9 @@ endif
 
 watchdog:
 	sh test_watchdog.sh
+
+ipv4v6_ports:
+	./test_ipv4v6_port.sh
 
 clean:
 	rm -rf regression.* sql results expected
