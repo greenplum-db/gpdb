@@ -2369,6 +2369,17 @@ signal_register()
 
 }
 
+static void clear_listen_sock(void)
+{
+	SOCKET sock = -1;
+	while(gcb.listen_sock_count > 0)
+	{
+		sock = gcb.listen_socks[gcb.listen_sock_count-1];
+		closesocket(sock);
+		gcb.listen_socks[gcb.listen_sock_count-1] = -1;
+		gcb.listen_sock_count--;
+	}
+}
 /* Create HTTP port and start to receive request */
 static void
 http_setup(void)
@@ -2383,6 +2394,8 @@ http_setup(void)
 
 	char service[32];
 	const char *hostaddr = NULL;
+	int ipv6only_val = 1;
+	bool create_failed = false;
 
 #ifdef USE_SSL
 	if (opt.ssl)
@@ -2502,6 +2515,15 @@ http_setup(void)
 				gwarning(NULL, "Setting SO_LINGER on socket failed");
 				continue;
 			}
+			if(rp->ai_family == AF_INET6)
+			{
+				if (setsockopt(f, IPPROTO_IPV6, IPV6_V6ONLY, (void*) &ipv6only_val, sizeof(ipv6only_val)) == -1)
+				{
+					gwarning(NULL, "Setting IPV6_V6ONLY on socket failed");
+					closesocket(f);
+					continue;
+				}
+			}
 
 			if (bind(f, rp->ai_addr, rp->ai_addrlen) != 0)
 			{
@@ -2521,9 +2543,12 @@ http_setup(void)
 						gwarning(NULL, "%s (errno = %d), port: %d",
 					               		strerror(errno), errno, opt.p);
 					}
+					closesocket(f);
+					create_failed = true;
+					break;
 				}
 				else
-			    {
+				{
 					gwarning(NULL, "%s (errno=%d), port: %d",strerror(errno), errno, opt.p);
 				}
 
@@ -2556,6 +2581,11 @@ http_setup(void)
 		{
 			/* don't need this any more */
 			freeaddrinfo(addrs);
+		}
+		if(create_failed)
+		{
+			clear_listen_sock();
+			create_failed = false;
 		}
 
 		if (gcb.listen_sock_count > 0)
