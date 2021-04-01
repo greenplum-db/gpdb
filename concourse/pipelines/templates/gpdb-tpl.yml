@@ -24,6 +24,7 @@
                         'use_concourse_cluster': true },
                       {'name': 'gprecoverseg',
                        'use_concourse_cluster': true},
+                       'additional_ccp_vars': 'number_of_nodes: 3'},
                       {'name': 'gpaddmirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
