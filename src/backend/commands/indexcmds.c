@@ -2467,12 +2467,9 @@ makeObjectName(const char *name1, const char *name2, const char *label)
  * Note: it is theoretically possible to get a collision anyway, if someone
  * else chooses the same name concurrently.  This is fairly unlikely to be
  * a problem in practice, especially if one is holding an exclusive lock on
- * the relation identified by name1.  
- *
- * If choosing multiple names within a single command, there are two options:
- *   1) Create the new object and do CommandCounterIncrement
- *   2) Pass a hash-table to this function to use as a cache of objects 
- *      created in this statement.
+ * the relation identified by name1.  However, if choosing multiple names
+ * within a single command, you'd better create the new object and do
+ * CommandCounterIncrement before choosing the next one!
  *
  * Returns a palloc'd string.
  */
@@ -2481,22 +2478,9 @@ ChooseRelationName(const char *name1, const char *name2,
 				   const char *label, Oid namespaceid,
 				   bool isconstraint)
 {
-	return ChooseRelationNameWithCache(name1, name2, label, namespaceid, isconstraint,
-									   NULL);
-}
-
-/* GPDB_12_MERGE_FIXME: this cache seems to be unused now. I guess we reverted
- * the stuff that used it. Is this still needed? */
-char *
-ChooseRelationNameWithCache(const char *name1, const char *name2,
-							const char *label, Oid namespaceid,
-							bool isconstraint,
-							HTAB *cache)
-{
 	int			pass = 0;
 	char	   *relname = NULL;
 	char		modlabel[NAMEDATALEN];
-	bool		found = false;
 
 	if (GP_ROLE_EXECUTE == Gp_role)
 		elog(ERROR, "relation names cannot be chosen on QE");
@@ -2508,10 +2492,7 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 	{
 		relname = makeObjectName(name1, name2, modlabel);
 
-		if (cache)
-			hash_search(cache, (void *) relname, HASH_FIND, &found);
-
-		if (!found && !OidIsValid(get_relname_relid(relname, namespaceid)))
+		if (!OidIsValid(get_relname_relid(relname, namespaceid)))
 		{
 			if (!isconstraint ||
 				!ConstraintNameExists(relname, namespaceid))
@@ -2521,13 +2502,6 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 		/* found a conflict, so try a new name component */
 		pfree(relname);
 		snprintf(modlabel, sizeof(modlabel), "%s%d", label, ++pass);
-	}
-
-	/* If we are caching found values add the value to our hash */
-	if (cache)
-	{
-		hash_search(cache, (void *) relname, HASH_ENTER, &found);
-		Assert(!found);
 	}
 
 	return relname;
