@@ -1398,8 +1398,6 @@ AddNewRelationType(const char *typeName,
  *	allow_system_table_mods: true to allow creation in system namespaces
  *	is_internal: is this a system-generated catalog?
  *  valid_opts: Validate the reloptions or not?
- *  is_part_child: TRUE if relation is a child partition
- *  is_part_parent: TRUE if relation is a parent partition
  *
  * Output parameters:
  *	typaddress: if not null, gets the object address of the new pg_type entry
@@ -1568,12 +1566,16 @@ heap_create_with_catalog(const char *relname,
 	 * Also not for the auxiliary heaps created for bitmap indexes or append-
 	 * only tables.
 	 *
-	 * In Greenplum, we do not create an array type for child
-	 * partitions. Child partitions are automatically named very similarly
-	 * which can cause typname collisions very easily. If there are a lot of
-	 * typname collisions, it's possible that makeArrayTypeName could fail to
-	 * create a typname and error us out.
-	 * GPDB_12_MERGE_FIXME: Do we still want to do that differently from upstream?
+	 * GPDB:
+	 * In Greenplum, if user using the GPDB's create partition table syntax,
+	 * it may failed with typename collision since the child partition table
+	 * name is generated from user input, which may cause relarrayname exceed
+	 * NAMEDATALEN and gets truncated. Then the name may same with other child
+	 * table's.
+	 *
+	 * The below code is different from upstream since we preassign type
+	 * OID first on QD and use the name as key to retrieve the pre-assigned
+	 * OID from QE.
 	 */
 	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION  && !RelationIsAppendOptimized(new_rel_desc)) ||
 							  relkind == RELKIND_VIEW ||
