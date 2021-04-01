@@ -140,6 +140,7 @@ class ForeignKeyCheck:
             if catname == 'pg_rewrite' and nrows > 0:
                 for row in curs.getresult():
                     if self.isZeroColumnView(row[1]):
+                        self.logger.info("Found zero column view: OID %s" % row[1])
                         nrows = nrows - 1
 
             if nrows == 0:
@@ -155,8 +156,6 @@ class ForeignKeyCheck:
                 log_literal(self.logger, logging.ERROR, "    " + " | ".join(fields))
                 for row in curs.getresult():
                     log_literal(self.logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-                self.logger.info("Zero column view OIDs: %s" %
-                                 ' '.join(ForeignKeyCheck.ZeroColumnViewOids))
                 results = curs.getresult()
                 issue_list.append((pkcatname, fields, results))
 
