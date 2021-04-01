@@ -10,3 +10,12 @@ LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
 ALTER OPERATOR FAMILY citext_ops USING hash ADD
     FUNCTION    2   citext_hash_extended(citext, int8);
+
+CREATE OPERATOR CLASS citext_ops
+DEFAULT FOR TYPE CITEXT USING bitmap AS
+    OPERATOR    1   <  (citext, citext),
+    OPERATOR    2   <= (citext, citext),
+    OPERATOR    3   =  (citext, citext),
+    OPERATOR    4   >= (citext, citext),
+    OPERATOR    5   >  (citext, citext),
+    FUNCTION    1   citext_cmp(citext, citext);

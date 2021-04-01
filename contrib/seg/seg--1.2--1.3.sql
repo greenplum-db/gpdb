@@ -43,3 +43,12 @@ WHERE classid = 'pg_catalog.pg_amproc'::pg_catalog.regclass
 ALTER OPERATOR FAMILY gist_seg_ops USING gist drop function 4 (seg);
 ALTER EXTENSION seg DROP function gseg_decompress(pg_catalog.internal);
 DROP function gseg_decompress(pg_catalog.internal);
+
+CREATE OPERATOR CLASS seg_ops
+    DEFAULT FOR TYPE seg USING bitmap AS
+        OPERATOR        1       < ,
+        OPERATOR        2       <= ,
+        OPERATOR        3       = ,
+        OPERATOR        4       >= ,
+        OPERATOR        5       > ,
+        FUNCTION        1       seg_cmp(seg, seg);

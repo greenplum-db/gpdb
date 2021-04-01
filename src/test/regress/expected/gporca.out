@@ -11588,6 +11588,26 @@ select * from tc, tt where c = v;
  1 | b | 1 | b
 (4 rows)
 
+-- bitmap scan on bitmap index
+create index tc_idx on tc using bitmap(c);
+select * from tc where c='a';
+ a | c 
+---+---
+ 1 | a
+ 1 | A
+(2 rows)
+
+explain select * from tc where c='a';
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.38..34.30 rows=50 width=36)
+   ->  Bitmap Heap Scan on tc  (cost=4.38..33.63 rows=17 width=36)
+         Recheck Cond: (c = 'a'::citext)
+         ->  Bitmap Index Scan on tc_idx  (cost=0.00..4.38 rows=17 width=0)
+               Index Cond: (c = 'a'::citext)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
 -- test gpexpand phase 1
 -- right now, these will fall back to planner
 drop table if exists noexp_hash, gpexp_hash, gpexp_rand, gpexp_repl;

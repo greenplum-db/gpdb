@@ -2400,6 +2400,11 @@ insert into tt values (1, 'b'), (1, 'B');
 
 select * from tc, tt where c = v;
 
+-- bitmap scan on bitmap index
+create index tc_idx on tc using bitmap(c);
+select * from tc where c='a';
+explain select * from tc where c='a';
+
 -- test gpexpand phase 1
 -- right now, these will fall back to planner
 

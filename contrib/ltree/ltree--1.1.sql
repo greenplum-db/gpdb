@@ -298,6 +298,17 @@ CREATE OPERATOR CLASS ltree_ops
         OPERATOR        5       > ,
         FUNCTION        1       ltree_cmp(ltree, ltree);
 
+-- Bitmap support
+
+CREATE OPERATOR CLASS ltree_ops
+    DEFAULT FOR TYPE ltree USING bitmap AS
+        OPERATOR        1       < ,
+        OPERATOR        2       <= ,
+        OPERATOR        3       = ,
+        OPERATOR        4       >= ,
+        OPERATOR        5       > ,
+        FUNCTION        1       ltree_cmp(ltree, ltree);
+
 
 --lquery type
 CREATE FUNCTION lquery_in(cstring)

@@ -98,3 +98,12 @@ ALTER FUNCTION _ltree_penalty(internal, internal, internal) PARALLEL SAFE;
 ALTER FUNCTION _ltree_picksplit(internal, internal) PARALLEL SAFE;
 ALTER FUNCTION _ltree_union(internal, internal) PARALLEL SAFE;
 ALTER FUNCTION _ltree_same(ltree_gist, ltree_gist, internal) PARALLEL SAFE;
+
+CREATE OPERATOR CLASS ltree_ops
+    DEFAULT FOR TYPE ltree USING bitmap AS
+        OPERATOR        1       < ,
+        OPERATOR        2       <= ,
+        OPERATOR        3       = ,
+        OPERATOR        4       >= ,
+        OPERATOR        5       > ,
+        FUNCTION        1       ltree_cmp(ltree, ltree);
