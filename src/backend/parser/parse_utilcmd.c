@@ -373,40 +373,9 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString)
 	 */
 	if (stmt->relKind == RELKIND_RELATION)
 	{
-#if 0
-		int			numsegments = -1;
-
-		/* GPDB_12_MERGE_FIXME */
-		AssertImply(stmt->is_part_parent,
-					stmt->distributedBy == NULL);
-		AssertImply(stmt->is_part_child,
-					stmt->distributedBy != NULL);
-
-		/*
-		 * We want children have the same numsegments with parent.  As
-		 * transformDistributedBy() always set numsegments to DEFAULT, does
-		 * this meet our expectation?  No, because DEFAULT does not always
-		 * equal to DEFAULT itself.  When DEFAULT is set to RANDOM a different
-		 * value is returned each time.
-		 *
-		 * So we have to save the parent numsegments here.
-		 */
-		if (stmt->is_part_child)
-			numsegments = stmt->distributedBy->numsegments;
-#endif
-
 		stmt->distributedBy = transformDistributedBy(pstate, &cxt,
 													 stmt->distributedBy,
 													 likeDistributedBy, bQuiet);
-
-		/*
-		 * And force set it on children after transformDistributedBy().
-		 */
-		/* GPDB_12_MERGE_FIXME */
-#if 0
-		if (stmt->is_part_child)
-			stmt->distributedBy->numsegments = numsegments;
-#endif
 	}
 
 	if (IsA(stmt, CreateForeignTableStmt))
