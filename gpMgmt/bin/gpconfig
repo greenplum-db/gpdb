@@ -19,6 +19,7 @@ import re
 try:
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import GpArray
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
     from gppylib.gplog import *
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
@@ -199,7 +200,8 @@ class Guc:
 
 
 def confirm_user_wants_to_continue():
-    if not ask_yesno('', "Are you sure you want to ignore unreachable hosts?", 'N'):
+    if not ask_yesno('', "One or more segment hosts are not currently reachable. If you continue with gpconfig, "
+                         "GUCs on unreachable segment hosts will not be updated. Do you want to continue?", 'N'):
         LOGGER.info("User Aborted. Exiting...")
         raise Exception("User Aborted. Exiting.")
 
@@ -307,25 +309,39 @@ def do_change(options):
         LOGGER.error(msg)
         raise Exception(msg)
 
+    hosts = [gp_array.coordinator.hostname]
+    if gp_array.standbyCoordinator is not None:
+        hosts.append(gp_array.standbyCoordinator.hostname)
+
+    # if --coordinatoronly, we only need to check coordinator and standby. Else check other hosts too.
+    if not options.coordinatoronly:
+        hosts.extend(gp_array.get_hostlist(includeCoordinator=False))
+
+    unreachable_hosts = get_unreachable_segment_hosts(hosts, len(hosts))
+    if len(unreachable_hosts) > 0:
+        confirm_user_wants_to_continue()
+
     pool = WorkerPool()
     failure = False
     try:
         # do the segments
         if not options.coordinatoronly:
+            reachable_segments = [seg for seg in gp_array.getSegDbList() if seg.hostname not in unreachable_hosts]
             if options.primaryvalue:
-                do_add_config_script(pool, [seg for seg in gp_array.getSegDbList() if seg.isSegmentPrimary()],
+                do_add_config_script(pool, [seg for seg in reachable_segments if seg.isSegmentPrimary()],
                                      options.primaryvalue, options)
 
             if options.mirrorvalue:
-                do_add_config_script(pool, [seg for seg in gp_array.getSegDbList() if seg.isSegmentMirror()],
+                do_add_config_script(pool, [seg for seg in reachable_segments if seg.isSegmentMirror()],
                                      options.mirrorvalue, options)
 
             if not options.primaryvalue and not options.mirrorvalue:
-                do_add_config_script(pool, [seg for seg in gp_array.getSegDbList()], options.value, options)
+                do_add_config_script(pool, [seg for seg in reachable_segments], options.value, options)
 
         # do the coordinator and standby
         if options.coordinatorvalue or options.remove:
-            do_add_config_script(pool, [seg for seg in [gp_array.coordinator, gp_array.standbyCoordinator] if seg is not None], options.coordinatorvalue, options)
+            do_add_config_script(pool, [seg for seg in [gp_array.coordinator, gp_array.standbyCoordinator] if seg is not None and seg.hostname not in unreachable_hosts],
+                                 options.coordinatorvalue, options)
 
         pool.join()
         items = pool.getCompletedItems()
@@ -341,9 +357,9 @@ def do_change(options):
         LOGGER.error('errors in job:')
         LOGGER.error(err.__str__())
         LOGGER.error('exiting early')
-
-    pool.haltWork()
-    pool.joinWorkers()
+    finally:
+        pool.haltWork()
+        pool.joinWorkers()
 
     # Replace literal empty strings with empty quotes, or it will look like the
     # user passed in an incorrect argument, which would be misleading

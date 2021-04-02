@@ -168,6 +168,7 @@ def impl(context, seg_type, content, expected_status):
 
     must_have_expected_status(content, preferred_role, expected_status)
 
+@given('the cluster is returned to a good state')
 @then('the cluster is returned to a good state')
 def impl(context):
     if not hasattr(context, 'old_hostnames'):

@@ -79,7 +79,8 @@ class GpConfig(GpTestCase):
             patch('gpconfig.dbconn.query', return_value=self.cursor),
             patch('gpconfig.dbconn.querySingleton', side_effect=singleton_side_effect),
             patch('gpconfig.GpArray.initFromCatalog', return_value=self.gparray),
-            patch('gpconfig.WorkerPool', return_value=self.pool)
+            patch('gpconfig.WorkerPool', return_value=self.pool),
+            patch('gpconfig.get_unreachable_segment_hosts', return_value=[])
         ])
         sys.argv = ["gpconfig"]  # reset to relatively empty args list
 
