@@ -7,6 +7,11 @@
     <p>This guide describes how to secure a Greenplum Database system. The guide assumes knowledge
       of Linux/UNIX system administration and database management systems. Familiarity with
       structured query language (SQL) is helpful.</p>
+    <note type="important">VMware supports PostgresSQL 9.4 until VMware Tanzu Greenplum 6 is End of
+      Support /End of Life (EOS/EOL). For the exact support period timeframes for each Tanzu
+      Greenplum release, see the <b>Pivotal Product Support Lifecycle Matrix</b> at the <xref
+        href="https://tanzu.vmware.com/support/lifecycle_policy" format="html" scope="external"
+        >VMware Support Lifecycle Policy</xref> page.</note>
     <p>Because Greenplum Database is based on PostgreSQL 9.4, this guide assumes some familiarity
       with PostgreSQL. References to <xref
         href="https://www.postgresql.org/docs/9.4/index.html" scope="external" format="html"
