@@ -350,12 +350,13 @@ GetNewOrPreassignedOid(Relation relation, Oid indexId, AttrNumber oidcolumn,
 		 */
 		if (oid == InvalidOid)
 		{
-			if (IsBinaryUpgrade)
-				oid = GetNewOidWithIndex(relation, indexId, oidcolumn);
-			else
-				elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
-					 RelationGetRelationName(relation), searchkey->objname ? searchkey->objname : "",
-					 searchkey->namespaceOid, searchkey->keyOid1, searchkey->keyOid2);
+			/*
+			 * Greenplum requires a pre-assigned OID to keep QD and QEs
+			 * synchronized in binary upgrade mode, so error out here too.
+			 */
+			elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
+				 RelationGetRelationName(relation), searchkey->objname ? searchkey->objname : "",
+				 searchkey->namespaceOid, searchkey->keyOid1, searchkey->keyOid2);
 		}
 	}
 	else if (Gp_role == GP_ROLE_DISPATCH)
