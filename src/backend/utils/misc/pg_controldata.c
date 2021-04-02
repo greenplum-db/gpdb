@@ -59,7 +59,15 @@ pg_control_system(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errmsg("calculated CRC checksum does not match value stored in file")));
 
-	values[0] = Int32GetDatum(ControlFile->pg_control_version);
+	/*
+	 * Greenplum: first four digits of pg_control_version are PostgreSQL
+	 * version, followed by four digits of Greenplum version.  Here, we return
+	 * PostgreSQL version only, so as to keep it compatible with thrid-party
+	 * contrib modules.  In future, we may introduce a new UDF that will
+	 * return Greenplum version as a new column, say
+	 * "pg_control_greenplum_verison".  See PG_CONTROL_VERSION.
+	 */
+	values[0] = Int32GetDatum(ControlFile->pg_control_version / 10000);
 	nulls[0] = false;
 
 	values[1] = Int32GetDatum(ControlFile->catalog_version_no);
