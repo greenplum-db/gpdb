@@ -61,7 +61,7 @@ CDistributionSpecStrictSingleton::FSatisfies(
 
 	return (
 		(EdtSingleton == pdss->Edt() || EdtStrictSingleton == pdss->Edt()) &&
-		m_est == ((CDistributionSpecStrictSingleton *) pdss)->Est());
+		m_est == static_cast<const CDistributionSpecSingleton *>(pdss)->Est());
 }
 
 
