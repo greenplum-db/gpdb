@@ -5656,7 +5656,6 @@ CTranslatorExprToDXL::PdxlnScCmpPartKey(CExpression *pexprScCmp,
 		{
 			pexprNewPartKey =
 				CUtils::PexprCast(m_mp, m_pmda, pexprPartKey, pmdidTypeOther);
-			pexprPartKey->Release();
 		}
 
 		//Extract cast/func details
