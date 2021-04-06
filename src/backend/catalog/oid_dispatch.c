@@ -350,7 +350,13 @@ GetNewOrPreassignedOid(Relation relation, Oid indexId, AttrNumber oidcolumn,
 		 */
 		if (oid == InvalidOid)
 		{
-			if (IS_QUERY_DISPATCHER())
+			if (IS_QUERY_DISPATCHER() && IsBinaryUpgrade && Gp_role == GP_ROLE_UTILITY)
+				/*
+				 * If it hits here on the QD, it must be (IsBinaryUpgrade &&
+				 * Gp_role == GP_ROLE_UTILITY) already, however, check those
+				 * too in case we have new GP roles in the future, and for
+				 * better code readability.
+				 */
 				oid = GetNewOidWithIndex(relation, indexId, oidcolumn);
 			else
 				/*
