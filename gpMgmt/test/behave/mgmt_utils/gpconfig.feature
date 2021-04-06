@@ -24,20 +24,20 @@ Feature: gpconfig integration tests
        # set same value on coordinator and segments
        When the user runs "gpconfig -c <guc> -v <value>"
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<file_value>" escaped
-        And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
+        And verify that the last line of the file "postgresql.conf" in the coordinator data directory should contain the string "<guc>=<file_value>" escaped
+        And verify that the last line of the file "postgresql.conf" in each segment data directory should contain the string "<guc>=<file_value>"
 
        # set value on coordinator only, leaving segments the same
        When the user runs "gpconfig -c <guc> -v <value_coordinator_only> --masteronly "
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<file_value_coordinator_only>" escaped
-        And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
+        And verify that the last line of the file "postgresql.conf" in the coordinator data directory should contain the string "<guc>=<file_value_coordinator_only>" escaped
+        And verify that the last line of the file "postgresql.conf" in each segment data directory should contain the string "<guc>=<file_value>"
 
        # set value on coordinator with a different value from the segments
        When the user runs "gpconfig -c <guc> -v <value> -m <value_coordinator>"
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<file_value_coordinator>" escaped
-        And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
+        And verify that the last line of the file "postgresql.conf" in the coordinator data directory should contain the string "<guc>=<file_value_coordinator>" escaped
+        And verify that the last line of the file "postgresql.conf" in each segment data directory should contain the string "<guc>=<file_value>"
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s <guc> --file"
@@ -98,7 +98,7 @@ Feature: gpconfig integration tests
         And gpstop should return a return code of 0
 
        When the user writes "<guc>" as "<value>" to the coordinator config file
-       Then verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<value>" escaped
+       Then verify that the last line of the file "postgresql.conf" in the coordinator data directory should contain the string "<guc>=<value>" escaped
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s <guc> --file"
@@ -137,7 +137,7 @@ Feature: gpconfig integration tests
         And gpstop should return a return code of 0
 
        When the user runs "gpconfig -c default_text_search_config -v $'a\nb'"
-       Then verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "default_text_search_config='a\nb'" escaped
+       Then verify that the last line of the file "postgresql.conf" in the coordinator data directory should contain the string "default_text_search_config='a\nb'" escaped
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s default_text_search_config --file"
