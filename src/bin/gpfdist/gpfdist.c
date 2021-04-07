@@ -2394,7 +2394,9 @@ http_setup(void)
 
 	char service[32];
 	const char *hostaddr = NULL;
+#if defined(IPV6_V6ONLY) && defined(IPPROTO_IPV6)
 	int ipv6only_val = 1;
+#endif
 	bool create_failed = false;
 
 #ifdef USE_SSL
