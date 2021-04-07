@@ -1,4 +1,5 @@
 CREATE EXTENSION gp_sparse_vector;
+SET search_path TO sparse_vector;
 DROP TABLE if exists test;
 CREATE TABLE test (a int, b svec) DISTRIBUTED BY (a);
 INSERT INTO test (SELECT 1,gp_extract_feature_histogram('{"one","two","three","four","five","six"}','{"twe","four","five","six","one","three","two","one"}'));

@@ -1,5 +1,7 @@
 CREATE EXTENSION gp_sparse_vector;
 
+SET search_path TO sparse_vector;
+
 DROP TABLE if exists test;
 CREATE TABLE test (a int, b svec) DISTRIBUTED BY (a);
 

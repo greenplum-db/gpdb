@@ -1,4 +1,5 @@
 -- \set FETCH_COUNT 100
+SET search_path TO sparse_vector;
 \timing
 Timing is on.
 drop table if exists test;

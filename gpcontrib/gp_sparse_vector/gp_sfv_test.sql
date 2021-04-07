@@ -1,3 +1,5 @@
+SET search_path TO sparse_vector;
+
 DROP TABLE IF EXISTS features;
 DROP TABLE IF EXISTS corpus;
 DROP TABLE IF EXISTS documents;
