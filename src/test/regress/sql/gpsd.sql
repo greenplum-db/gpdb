@@ -20,6 +20,8 @@ create database gpsd_db_without_hll;
 create table gpsd_foo(a int, s text) partition by range(a);
 create table gpsd_foo_1 partition of gpsd_foo for values from (1) to (5);
 insert into gpsd_foo values(1, 'something');
+insert into gpsd_foo values(2, chr(1000));
+insert into gpsd_foo values(3, chr(105));
 insert into gpsd_foo values(4, 'a \ and a "');
 analyze gpsd_foo;
 
@@ -29,7 +31,7 @@ set allow_system_table_mods to on;
 update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starelid='gpsd_foo'::regclass and staattnum=2;
 
 -- start_ignore
-\! gpsd gpsd_db_without_hll > data/gpsd-without-hll.sql
+\! PYTHONIOENCODING=utf-8 gpsd gpsd_db_without_hll > data/gpsd-without-hll.sql
 -- end_ignore
 
 \c regression
@@ -95,7 +97,7 @@ set allow_system_table_mods to on;
 update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starelid='gpsd_foo'::regclass and staattnum=2;
 
 -- start_ignore
-\! gpsd gpsd_db_with_hll --hll > data/gpsd-with-hll.sql
+\! PYTHONIOENCODING=utf-8 gpsd gpsd_db_with_hll --hll > data/gpsd-with-hll.sql
 -- end_ignore
 
 \c regression

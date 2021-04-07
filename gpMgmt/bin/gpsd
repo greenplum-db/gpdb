@@ -22,7 +22,6 @@ sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'informat
 # unset search path due to CVE-2018-1058
 pgoptions = '-c optimizer=off -c gp_role=utility -c search_path='
 
-
 def ResultIter(cursor, arraysize=1000):
     'An iterator that uses fetchmany to keep memory usage down'
     while True:
