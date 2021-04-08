@@ -649,6 +649,62 @@ insert into replace_col_agg values (2,4);
 
 select coalesce(c, 'total'), count(distinct b) from replace_col_agg group by grouping sets(c,());
 select a, b, count(distinct b)+a from replace_col_agg group by grouping sets((a), (b));
+-- the type cast here will force a RelabelType in the target entry
+select a, b, count(distinct b)::oid = a::oid from replace_col_agg group by grouping sets((a), (b));
 select count(distinct a), b + 1 as f, 1 as g from replace_col_agg GROUP BY grouping sets((f,g), (f));
 
 drop table replace_col_agg;
+
+CREATE TABLE tbla (
+    aid int,
+    i int
+) DISTRIBUTED BY (aid);
+
+CREATE TABLE tblb (
+    bid int,
+    c1 int[],
+    c2 int,
+    c3 int,
+    c4 int,
+    c5 int,
+    c6 int
+) DISTRIBUTED BY (c5);
+
+insert into tbla values (1, 1);
+insert into tbla values (2, 2);
+insert into tbla values (3, 3);
+insert into tblb values (1, '{1, 2, 3}', 1, 1, 1, 1, 1);
+insert into tblb values (2, '{1, 2, 3}', 2, 2, 2, 2, 2);
+insert into tblb values (3, '{1, 2, 3}', 3, 3, 3, 3, 3);
+
+-- c4 should be replaced with NULL in groping sets (bid,i,c2) and (bid,i,c3) when it wrapped in RelabelType
+set optimizer = off;
+explain SELECT
+	bid, i, c2, c3, c4,
+	(i=c4::oid), COUNT(DISTINCT c5)    -- the type cast here will force RelabelType in expression
+FROM tbla a
+INNER JOIN tblb b
+    ON a.i=ANY(b.c1)
+GROUP BY GROUPING SETS(
+    (bid,i,c2),
+    (bid,i,c3),
+    (bid,i,c4)
+)
+ORDER BY 1,2,3,4;
+
+SELECT
+	bid, i, c2, c3, c4,
+	(i=c4::oid), COUNT(DISTINCT c5)    -- the type cast here will force RelabelType in expression
+FROM tbla a
+INNER JOIN tblb b
+    ON a.i=ANY(b.c1)
+GROUP BY GROUPING SETS(
+    (bid,i,c2),
+    (bid,i,c3),
+    (bid,i,c4)
+)
+ORDER BY 1,2,3,4;
+
+reset optimizer;
+drop table tbla;
+drop table tblb;

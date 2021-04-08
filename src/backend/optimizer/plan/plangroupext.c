@@ -2357,13 +2357,15 @@ replace_grouping_columns_targetlist(Node *node, replace_grouping_columns_targetl
 	if (node == NULL || IsA(node, Aggref))
 		return node;
 
+	while (IsA(node, RelabelType))
+		node = (Node *) ((RelabelType *) node)->arg;
+
 	Assert(IsA(ctx->grpcols, List));
 
 	foreach (lc, (List*)ctx->grpcols)
 	{
 		Node *grpcol = lfirst(lc);
 		if (equal(node, grpcol)) {
-
 			/* Generate a NULL constant to replace the node. */
 			Const *null = makeNullConst(exprType((Node *)grpcol), -1);
 			return (Node *)null;

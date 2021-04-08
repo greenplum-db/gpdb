@@ -6144,6 +6144,17 @@ select a, b, count(distinct b)+a from replace_col_agg group by grouping sets((a)
  2 |   |        3
 (5 rows)
 
+-- the type cast here will force a RelabelType in the target entry
+select a, b, count(distinct b)::oid = a::oid from replace_col_agg group by grouping sets((a), (b));
+ a | b | ?column? 
+---+---+----------
+   | 3 | 
+   | 4 | 
+   | 2 | 
+ 1 |   | f
+ 2 |   | f
+(5 rows)
+
 select count(distinct a), b + 1 as f, 1 as g from replace_col_agg GROUP BY grouping sets((f,g), (f));
  count | f | g 
 -------+---+---
@@ -6156,3 +6167,132 @@ select count(distinct a), b + 1 as f, 1 as g from replace_col_agg GROUP BY group
 (6 rows)
 
 drop table replace_col_agg;
+CREATE TABLE tbla (
+    aid int,
+    i int
+) DISTRIBUTED BY (aid);
+CREATE TABLE tblb (
+    bid int,
+    c1 int[],
+    c2 int,
+    c3 int,
+    c4 int,
+    c5 int,
+    c6 int
+) DISTRIBUTED BY (c5);
+insert into tbla values (1, 1);
+insert into tbla values (2, 2);
+insert into tbla values (3, 3);
+insert into tblb values (1, '{1, 2, 3}', 1, 1, 1, 1, 1);
+insert into tblb values (2, '{1, 2, 3}', 2, 2, 2, 2, 2);
+insert into tblb values (3, '{1, 2, 3}', 3, 3, 3, 3, 3);
+-- c4 should be replaced with NULL in groping sets (bid,i,c2) and (bid,i,c3) when it wrapped in RelabelType
+set optimizer = off;
+explain SELECT
+	bid, i, c2, c3, c4,
+	(i=c4::oid), COUNT(DISTINCT c5)    -- the type cast here will force RelabelType in expression
+FROM tbla a
+INNER JOIN tblb b
+    ON a.i=ANY(b.c1)
+GROUP BY GROUPING SETS(
+    (bid,i,c2),
+    (bid,i,c3),
+    (bid,i,c4)
+)
+ORDER BY 1,2,3,4;
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=7.46..7.47 rows=0 width=0)
+   Merge Key: share0_ref1.bid, share0_ref1.i, "outer".c2, "outer".c3
+   ->  Sort  (cost=7.46..7.47 rows=0 width=0)
+         Sort Key: share0_ref1.bid, share0_ref1.i, "outer".c2, "outer".c3
+         ->  Append  (cost=2.48..7.45 rows=0 width=0)
+               ->  GroupAggregate  (cost=2.48..2.48 rows=0 width=41)
+                     Group By: share0_ref1.bid, share0_ref1.i, share0_ref1.c4
+                     ->  Sort  (cost=2.48..2.48 rows=0 width=20)
+                           Sort Key: share0_ref1.bid, share0_ref1.i, share0_ref1.c4
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=2.43..2.47 rows=0 width=20)
+                                 Hash Key: share0_ref1.bid, share0_ref1.i, share0_ref1.c4
+                                 ->  GroupAggregate  (cost=2.43..2.47 rows=0 width=20)
+                                       Group By: share0_ref1.bid, share0_ref1.i, share0_ref1.c4
+                                       ->  Sort  (cost=2.43..2.44 rows=2 width=24)
+                                             Sort Key: share0_ref1.bid, share0_ref1.i, share0_ref1.c4
+                                             ->  Shared Scan (share slice:id 2:0)  (cost=2.20..2.40 rows=2 width=24)
+                                                   ->  Materialize  (cost=2.16..2.20 rows=2 width=24)
+                                                         ->  Nested Loop  (cost=1.01..2.16 rows=2 width=24)
+                                                               Join Filter: a.i = ANY (b.c1)
+                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=4)
+                                                                     ->  Seq Scan on tbla a  (cost=0.00..1.01 rows=1 width=4)
+                                                               ->  Materialize  (cost=1.01..1.02 rows=1 width=53)
+                                                                     ->  Seq Scan on tblb b  (cost=0.00..1.01 rows=1 width=53)
+               ->  GroupAggregate  (cost=2.48..2.48 rows=0 width=41)
+                     Group By: share0_ref2.bid, share0_ref2.i, share0_ref2.c3
+                     ->  Sort  (cost=2.48..2.48 rows=0 width=20)
+                           Sort Key: share0_ref2.bid, share0_ref2.i, share0_ref2.c3
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=2.43..2.47 rows=0 width=20)
+                                 Hash Key: share0_ref2.bid, share0_ref2.i, share0_ref2.c3
+                                 ->  GroupAggregate  (cost=2.43..2.47 rows=0 width=20)
+                                       Group By: share0_ref2.bid, share0_ref2.i, share0_ref2.c3
+                                       ->  Sort  (cost=2.43..2.44 rows=2 width=24)
+                                             Sort Key: share0_ref2.bid, share0_ref2.i, share0_ref2.c3
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=2.20..2.40 rows=2 width=24)
+               ->  GroupAggregate  (cost=2.48..2.48 rows=0 width=41)
+                     Group By: share0_ref3.bid, share0_ref3.i, share0_ref3.c2
+                     ->  Sort  (cost=2.48..2.48 rows=0 width=20)
+                           Sort Key: share0_ref3.bid, share0_ref3.i, share0_ref3.c2
+                           ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=2.43..2.47 rows=0 width=20)
+                                 Hash Key: share0_ref3.bid, share0_ref3.i, share0_ref3.c2
+                                 ->  GroupAggregate  (cost=2.43..2.47 rows=0 width=20)
+                                       Group By: share0_ref3.bid, share0_ref3.i, share0_ref3.c2
+                                       ->  Sort  (cost=2.43..2.44 rows=2 width=24)
+                                             Sort Key: share0_ref3.bid, share0_ref3.i, share0_ref3.c2
+                                             ->  Shared Scan (share slice:id 4:0)  (cost=2.20..2.40 rows=2 width=24)
+ Optimizer status: legacy query optimizer
+(46 rows)
+
+SELECT
+	bid, i, c2, c3, c4,
+	(i=c4::oid), COUNT(DISTINCT c5)    -- the type cast here will force RelabelType in expression
+FROM tbla a
+INNER JOIN tblb b
+    ON a.i=ANY(b.c1)
+GROUP BY GROUPING SETS(
+    (bid,i,c2),
+    (bid,i,c3),
+    (bid,i,c4)
+)
+ORDER BY 1,2,3,4;
+ bid | i | c2 | c3 | c4 | ?column? | count 
+-----+---+----+----+----+----------+-------
+   1 | 1 |  1 |    |    |          |     1
+   1 | 1 |    |  1 |    |          |     1
+   1 | 1 |    |    |  1 | t        |     1
+   1 | 2 |  1 |    |    |          |     1
+   1 | 2 |    |  1 |    |          |     1
+   1 | 2 |    |    |  1 | f        |     1
+   1 | 3 |  1 |    |    |          |     1
+   1 | 3 |    |  1 |    |          |     1
+   1 | 3 |    |    |  1 | f        |     1
+   2 | 1 |  2 |    |    |          |     1
+   2 | 1 |    |  2 |    |          |     1
+   2 | 1 |    |    |  2 | f        |     1
+   2 | 2 |  2 |    |    |          |     1
+   2 | 2 |    |  2 |    |          |     1
+   2 | 2 |    |    |  2 | t        |     1
+   2 | 3 |  2 |    |    |          |     1
+   2 | 3 |    |  2 |    |          |     1
+   2 | 3 |    |    |  2 | f        |     1
+   3 | 1 |  3 |    |    |          |     1
+   3 | 1 |    |  3 |    |          |     1
+   3 | 1 |    |    |  3 | f        |     1
+   3 | 2 |  3 |    |    |          |     1
+   3 | 2 |    |  3 |    |          |     1
+   3 | 2 |    |    |  3 | f        |     1
+   3 | 3 |  3 |    |    |          |     1
+   3 | 3 |    |  3 |    |          |     1
+   3 | 3 |    |    |  3 | t        |     1
+(27 rows)
+
+reset optimizer;
+drop table tbla;
+drop table tblb;
