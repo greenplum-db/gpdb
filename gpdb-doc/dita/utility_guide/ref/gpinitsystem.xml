@@ -265,7 +265,7 @@
                         </ul></pd>
                 </plentry>
                 <plentry>
-                    <pt>--mirror_mode={group|spread}</pt>
+                    <pt>--mirror-mode={group|spread}</pt>
                     <pd>Use this option to specify the placement of mirror segment instances on the
                         segment hosts. The default, <codeph>group</codeph>, groups the mirror
                         segments for all of a host's primary segments on a single alternate host.
