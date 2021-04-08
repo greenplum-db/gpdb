@@ -995,33 +995,7 @@ PostmasterMain(int argc, char *argv[])
 	if (!SelectConfigFiles(userDoption, progname))
 		ExitPostmaster(2);
 
-	/* Validate gp_dbid and gp_contentid */
-	if (GpIdentity.dbid < 0 || GpIdentity.segindex < -1)
-	{
-		if (GpIdentity.dbid != UNINITIALIZED_GP_IDENTITY_VALUE ||
-			GpIdentity.segindex != UNINITIALIZED_GP_IDENTITY_VALUE)
-			ereport(FATAL, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("Invalid gp_dbid(%d) or gp_contentid(%d)",
-									GpIdentity.dbid, GpIdentity.segindex),
-							errhint("Set both gp_dbid and gp_contentid properly, "
-									"or leave them both uninitialized")));
-
-		if (Gp_role != GP_ROLE_UTILITY)
-			ereport(LOG, (errmsg("Force to use gp_role=utility, because both gp_dbid "
-						  "and gp_contentid are uninitialized")));
-		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_ARGV);
-	}
-	/*
-	 * If gp_role is not set from command line in GPDB,
-	 * we set the default gp_role by its gp_contentid.
-	 */
-	else if (Gp_role == GP_ROLE_UNDEFINED)
-	{
-		const char *role;
-		role = GpIdentity.segindex == -1 ? "dispatch" : "execute";
-		SetConfigOption("gp_role", role, PGC_POSTMASTER, PGC_S_ARGV);
-	}
-
+	set_default_gp_role();
 	/*
 	 * CDB/MPP/GPDB: Set the processor affinity (may be a no-op on
 	 * some platforms). The port number is nice to use because we know

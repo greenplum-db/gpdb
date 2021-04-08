@@ -361,6 +361,39 @@ int			cdb_max_slices = 0;
  */
 static GpRoleValue string_to_role(const char *string);
 
+void
+set_default_gp_role()
+{
+	/* Validate gp_dbid and gp_contentid */
+	if (GpIdentity.dbid <= 0 || GpIdentity.segindex < -1)
+	{
+		if (GpIdentity.dbid != UNINITIALIZED_GP_IDENTITY_VALUE ||
+			GpIdentity.segindex != UNINITIALIZED_GP_IDENTITY_VALUE)
+			ereport(FATAL,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("Invalid gp_dbid(%d) or gp_contentid(%d)",
+							GpIdentity.dbid, GpIdentity.segindex),
+					 errhint("Set both gp_dbid and gp_contentid properly: "
+						 	 "gp_dbid > 0 and gp_contentid >= -1, "
+							 "or leave them both uninitialized")));
+
+		if (Gp_role != GP_ROLE_UTILITY && Gp_role != GP_ROLE_UNDEFINED)
+			ereport(FATAL,
+					(errmsg("gp_role should be utility, because both gp_dbid "
+							"and gp_contentid are uninitialized")));
+		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_ARGV);
+	}
+	/*
+	 * If gp_role is not set from command line in GPDB,
+	 * we set the default gp_role by its gp_contentid.
+	 */
+	else if (Gp_role == GP_ROLE_UNDEFINED)
+	{
+		const char *role;
+		role = GpIdentity.segindex == -1 ? "dispatch" : "execute";
+		SetConfigOption("gp_role", role, PGC_POSTMASTER, PGC_S_ARGV);
+	}
+}
 
 /*
  * Convert a Greenplum Database role string (as for gp_role) to an
