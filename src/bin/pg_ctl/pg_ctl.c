@@ -559,6 +559,7 @@ start_postmaster(void)
 #endif							/* WIN32 */
 }
 
+
 static bool
 is_secondary_instance(const char *pg_data)
 {
