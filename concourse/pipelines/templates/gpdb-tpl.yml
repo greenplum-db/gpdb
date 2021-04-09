@@ -475,31 +475,6 @@ resources:
     - README*
 
 {% if "centos7" in os_types %}
-- name: libquicklz-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: libquicklz-devel-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-{% endif %}
-{% if "ubuntu18.04" in os_types %}
-- name: libquicklz-ubuntu18.04
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/ubuntu18.04/libquicklz-dev_(1\.5\.0-.*)-1_amd64.deb
-
-{% endif %}
-{% if "centos7" in os_types %}
 - name: gpdb7-centos7-build
   type: registry-image
   source:
@@ -763,17 +738,11 @@ jobs:
           - check_format
         trigger: ((gpdb_src-trigger-flag))
       - get: gpdb7-centos7-build
-      - get: libquicklz-installer
-        resource: libquicklz-centos7
-      - get: libquicklz-devel-installer
-        resource: libquicklz-devel-centos7
   - task: compile_gpdb
     image: gpdb7-centos7-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       CONFIGURE_FLAGS: ((configure_flags_with_extensions))
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 7
       BLD_TARGETS: "clients"
       RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
       USE_CCACHE: ((use_ccache))
@@ -784,7 +753,7 @@ jobs:
           file: gpdb_artifacts/bin_gpdb.tar.gz
       - put: bin_gpdb_clients_centos7
         params:
-          file: gpdb_artifacts/gpdb-clients-centos7.tar.gz
+          file: gpdb_artifacts/bin_gpdb_clients.tar.gz
 
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
@@ -799,15 +768,11 @@ jobs:
             - check_format
           trigger: ((gpdb_src-trigger-flag))
         - get: gpdb7-ubuntu18.04-build
-        - get: libquicklz-installer
-          resource: libquicklz-ubuntu18.04
     - task: compile_gpdb
       image: gpdb7-ubuntu18.04-build
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
       params:
         CONFIGURE_FLAGS: ((configure_flags_with_extensions))
-        TARGET_OS: ubuntu
-        TARGET_OS_VERSION: "18.04"
         BLD_TARGETS: "clients"
         RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
     - in_parallel:
@@ -817,7 +782,7 @@ jobs:
             file: gpdb_artifacts/bin_gpdb.tar.gz
         - put: bin_gpdb_clients_ubuntu18.04
           params:
-            file: gpdb_artifacts/gpdb-clients-ubuntu18.04.tar.gz
+            file: gpdb_artifacts/bin_gpdb_clients.tar.gz
 
 {% endif %}
 {% if "win" in os_types %}

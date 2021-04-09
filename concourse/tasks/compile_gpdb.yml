@@ -3,9 +3,6 @@ image_resource:
   type: registry-image
 inputs:
   - name: gpdb_src
-  - name: libquicklz-installer
-  - name: libquicklz-devel-installer
-    optional: true
 outputs:
   - name: gpdb_artifacts
 run:
@@ -13,8 +10,6 @@ run:
 caches:
   - path: ccache_dir
 params:
-  TARGET_OS:
-  TARGET_OS_VERSION:
   BLD_TARGETS:
   OUTPUT_ARTIFACT_DIR: gpdb_artifacts
   CONFIGURE_FLAGS:

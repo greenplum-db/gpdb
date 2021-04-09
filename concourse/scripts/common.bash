@@ -6,7 +6,42 @@
 
 function set_env() {
     export TERM=xterm-256color
-    export TIMEFORMAT=$'\e[4;33mIt took %R seconds to complete this step\e[0m';
+    export TIMEFORMAT=$'\e[4;33mIt took %R seconds to complete this step\e[0m'
+}
+
+function os_id() {
+    if [[ -f "/etc/redhat-release" ]]; then
+        echo "centos"
+    else
+        echo "$(
+            . /etc/os-release
+            echo "${ID}"
+        )"
+    fi
+}
+
+function os_version() {
+    if [[ -f "/etc/redhat-release" ]]; then
+        echo "$(sed </etc/redhat-release 's/.*release *//' | cut -d. -f1)"
+    else
+        echo "$(
+            . /etc/os-release
+            echo "${VERSION_ID}"
+        )"
+    fi
+}
+
+build_arch() {
+    local id=$(os_id)
+    local version=$(os_version)
+    # BLD_ARCH expects rhel{6,7,8}_x86_64 || photon3_x86_64 || sles12_x86_64 || ubuntu18.04_x86_64
+    case ${id} in
+    photon | sles) version=$(os_version | cut -d. -f1) ;;
+    centos) id="rhel" ;;
+    *) ;;
+    esac
+
+    echo "${id}${version}_x86_64"
 }
 
 ## ----------------------------------------------------------------------
@@ -27,31 +62,31 @@ function setup_configure_vars() {
 }
 
 function configure() {
-  pushd gpdb_src
-      # The full set of configure options which were used for building the
-      # tree must be used here as well since the toplevel Makefile depends
-      # on these options for deciding what to test. Since we don't ship
-      ./configure --prefix=/usr/local/greenplum-db-devel --disable-orca --enable-gpcloud --enable-mapreduce --enable-orafce --enable-tap-tests --with-gssapi --with-libxml --with-openssl --with-perl --with-python PYTHON=python3 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
+    pushd gpdb_src
+    # The full set of configure options which were used for building the
+    # tree must be used here as well since the toplevel Makefile depends
+    # on these options for deciding what to test. Since we don't ship
+    ./configure --prefix=/usr/local/greenplum-db-devel --disable-orca --enable-gpcloud --enable-mapreduce --enable-orafce --enable-tap-tests --with-gssapi --with-libxml --with-openssl --with-perl --with-python PYTHON=python3 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
-  popd
+    popd
 }
 
 function install_and_configure_gpdb() {
-  install_gpdb
-  setup_configure_vars
-  configure
+    install_gpdb
+    setup_configure_vars
+    configure
 }
 
 function make_cluster() {
-  source /usr/local/greenplum-db-devel/greenplum_path.sh
-  export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
-  export STATEMENT_MEM=250MB
-  pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; LANG=en_US.utf8 make create-demo-cluster"
+    source /usr/local/greenplum-db-devel/greenplum_path.sh
+    export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
+    export STATEMENT_MEM=250MB
+    pushd gpdb_src/gpAux/gpdemo
+    su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; LANG=en_US.utf8 make create-demo-cluster"
 
-  if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
-    # generate the addresses for proxy mode
-    su gpadmin -c bash -- -e <<EOF
+    if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
+        # generate the addresses for proxy mode
+        su gpadmin -c bash -- -e <<EOF
       source /usr/local/greenplum-db-devel/greenplum_path.sh
       source $PWD/gpdemo-env.sh
 
@@ -69,13 +104,13 @@ function make_cluster() {
 
       gpstop -u
 EOF
-  fi
+    fi
 
-  popd
+    popd
 }
 
 function run_test() {
-  su gpadmin -c "bash /opt/run_test.sh $(pwd)"
+    su gpadmin -c "bash /opt/run_test.sh $(pwd)"
 }
 
 function install_python_requirements_on_single_host() {
@@ -99,9 +134,9 @@ function install_python_requirements_on_multi_host() {
 
     pip3 --retries 10 install --user -r ${requirements_txt}
     while read -r host; do
-       scp ${requirements_txt} "$host":/tmp/requirements.txt
-       ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user -r /tmp/requirements.txt
-    done < /tmp/hostfile_all
+        scp ${requirements_txt} "$host":/tmp/requirements.txt
+        ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user -r /tmp/requirements.txt
+    done </tmp/hostfile_all
 }
 
 function setup_coverage() {
@@ -114,13 +149,13 @@ function setup_coverage() {
 
     # This file will be copied into GPDB's PYTHONPATH; it sets up the coverage
     # hook for all Python source files that are executed.
-    cat > /tmp/sitecustomize.py <<SITEEOF
+    cat >/tmp/sitecustomize.py <<SITEEOF
 import coverage
 coverage.process_startup()
 SITEEOF
 
     # Set up coverage.py to handle analysis from multiple parallel processes.
-    cat > /tmp/coveragerc <<COVEOF
+    cat >/tmp/coveragerc <<COVEOF
 [run]
 branch = True
 data_file = $coverage_path/coverage
@@ -131,11 +166,11 @@ COVEOF
     while read -r host; do
         scp /tmp/sitecustomize.py "$host":/usr/local/greenplum-db-devel/lib/python
         scp /tmp/coveragerc "$host":/usr/local/greenplum-db-devel
-        ssh "$host" "mkdir -p $coverage_path" < /dev/null
+        ssh "$host" "mkdir -p $coverage_path" </dev/null
 
         # Enable coverage instrumentation after sourcing greenplum_path.
-        ssh "$host" "echo 'export COVERAGE_PROCESS_START=/usr/local/greenplum-db-devel/coveragerc' >> /usr/local/greenplum-db-devel/greenplum_path.sh" < /dev/null
-    done < /tmp/hostfile_all
+        ssh "$host" "echo 'export COVERAGE_PROCESS_START=/usr/local/greenplum-db-devel/coveragerc' >> /usr/local/greenplum-db-devel/greenplum_path.sh" </dev/null
+    done </tmp/hostfile_all
 }
 
 function tar_coverage() {
@@ -146,16 +181,16 @@ function tar_coverage() {
 
     # Uniquify the coverage files a little bit with the supplied prefix.
     pushd ./coverage/*
-        for f in *; do
-            mv "$f" "$prefix.$f"
-        done
+    for f in *; do
+        mv "$f" "$prefix.$f"
+    done
 
-        # Compress coverage files and remove the originals
-        tar --remove-files -cf "$prefix.tar" *
+    # Compress coverage files and remove the originals
+    tar --remove-files -cf "$prefix.tar" *
     popd
 }
 
-function add_ccache_support(){
+function add_ccache_support() {
 
     _TARGET_OS=$1
 
@@ -177,7 +212,7 @@ function add_ccache_support(){
     fi
 }
 
-function display_ccache_stats(){
+function display_ccache_stats() {
     if [[ "${USE_CCACHE}" = "true" ]]; then
         cat <<EOF
 
@@ -185,7 +220,7 @@ function display_ccache_stats(){
                             CCACHE STATS
 ----------------------------------------------------------------------
 
-$( ccache --show-stats)
+$(ccache --show-stats)
 
 ======================================================================
 
