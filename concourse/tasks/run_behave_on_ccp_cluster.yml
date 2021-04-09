@@ -19,11 +19,14 @@ run:
     # TODO: ask CCP maintainers for a feature to do this for us
     scp cluster_env_files/hostfile_all mdw:/tmp
 
-    # Install patchelf. We need to SSH as root, hence the use of
-    # cluster_env_files.
-    ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "sudo bash -c '
-        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
-    '"
+    # install dependencies
+    while read LINE; do
+        host=$(echo $LINE | awk '{ print $3 }')
+        ssh -n $host "sudo bash -c '
+            cp -a /opt/greenplum-db-test-deps/behave/* /usr/local/greenplum-db-devel/ext/python
+            sudo chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel/ext/python
+        '"
+    done <cluster_env_files/etc_hostfile
 
     # ensure cluster is stopped
     ssh -n mdw "
