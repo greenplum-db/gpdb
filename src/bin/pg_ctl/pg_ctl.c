@@ -40,7 +40,6 @@ typedef long pgpid_t;
 
 /* postgres version ident string */
 #define PM_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
-#define GP_CONTENTID  "gp_contentid=-1"
 
 
 typedef enum
@@ -608,15 +607,24 @@ gp_is_coordinator(const char *pg_data)
 		exit(1);
 	}
 
-	n = strlen(GP_CONTENTID);
+#define SKIP_SPACES(pc)  do { while(*pc == ' ' || *pc == '\t') pc++; }while(0)
+	n = strlen("gp_contentid");
 	while(fgets(line, sizeof(line), file))
 	{
 		p = line;
-		while (*p == ' ' || *p == '\t')
-			p++;
-		if (memcmp(p, GP_CONTENTID, n - 2) == 0)
+		SKIP_SPACES(p);
+		if (memcmp(p, "gp_contentid", n) == 0)
 		{
-			result = memcmp(p, GP_CONTENTID, n) == 0;
+			p += n;
+			if (isalnum(*p) || *p == '_')
+				continue;
+			p = strchr(p, '=');
+			if (p)
+			{
+				p++;
+				SKIP_SPACES(p);
+			}
+			result = p && atoi(p) == -1;
 			break;
 		}
 	}
