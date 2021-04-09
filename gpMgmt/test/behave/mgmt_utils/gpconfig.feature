@@ -179,3 +179,39 @@ Feature: gpconfig integration tests
         | application_name             |  string  | bengie     |
         | application_name             |  string  | 'ben gie'  |
         | application_name             |  string  | ''         |
+
+    @concourse_cluster
+    @demo_cluster
+    Scenario Outline: gpconfig when a primary is unreachable
+      Given the database is running
+        And the user runs "gpconfig -c application_name -v 'initialize'"
+        And gpconfig should return a return code of 0
+        And the host for the primary on content 0 is made unreachable
+
+       When the user runs "<cmd>"
+        And gpconfig should return a return code of <return_code>
+       Then gpconfig <should_confirm> print "GUCs on unreachable segment hosts will not be updated. Do you want to continue?" to stdout
+        And gpconfig should print "<print_statement>" to stdout
+
+        And verify that the last line of the file "postgresql.conf" in the master data directory <should_update_master> contain the string "application_name='easy'" escaped
+        And verify that the last line of the file "postgresql.conf" in each segment data directory <should_update_segment> contain the string "application_name='easy'"
+
+      Given the cluster is returned to a good state
+       When the user runs "gpstop -u"
+       Then gpstop should return a return code of 0
+
+        And the user runs "gpconfig -s application_name"
+        And gpconfig should return a return code of 0
+        And gpconfig <should_update_master> print "Master  value: easy" to stdout
+        And gpconfig <should_update_segment> print "Segment value: easy" to stdout
+
+        And the user runs "gpconfig -s application_name --file"
+        And gpconfig should return a return code of 0
+        And gpconfig <should_update_master> print "Master  value: 'easy'" to stdout
+        And gpconfig <should_update_segment> print "Segment value: 'easy'" to stdout
+
+      Examples:
+        | test description                                          | return_code | should_confirm | print_statement        | should_update_master | should_update_segment | cmd                                                                               |
+        | asks for confirmation and completes when user selects yes | 0           | should         | completed successfully | should               | should                | gpconfig -c application_name -v "easy" < test/behave/mgmt_utils/steps/data/yes.txt|
+        | asks for confirmation and aborts when user selects no     | 1           | should         | User Aborted. Exiting. | should not           | should not            | gpconfig -c application_name -v "easy" < test/behave/mgmt_utils/steps/data/no.txt |
+        | does not ask for confirmation for master only change      | 0           | should not     | completed successfully | should               | should not            | gpconfig -c application_name -v "easy" --masteronly                               |
