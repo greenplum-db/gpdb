@@ -487,7 +487,7 @@ void
 MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 {
 	Relation	segrel;
-	SysScanDesc scan;
+	TableScanDesc	scan;
 	HeapTuple	oldtup = NULL;
 	HeapTuple	newtup;
 	int			tuple_segno = InvalidFileSegNumber;
@@ -517,16 +517,11 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 	tupdesc = RelationGetDescr(segrel);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: we are using systable_beginscan API in this file
-	 * but the API used by aosegfiles.c is table_beginscan_catalog.  Let's
-	 * have parity between the two because they do have parity on master
-	 * branch.
-	 * 
 	 * Since we have the segment-file entry under lock (with
 	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
 	 */
-	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
-	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
+	scan = table_beginscan_catalog(segrel, 0, NULL);
+	while (segno != tuple_segno && (oldtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		tuple_segno = DatumGetInt32(fastgetattr(oldtup, Anum_pg_aocs_segno, tupdesc, &isNull));
 		if (isNull)
@@ -564,7 +559,7 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 
 	pfree(newtup);
 
-	systable_endscan(scan);
+	heap_endscan(scan);
 	heap_close(segrel, RowExclusiveLock);
 }
 
@@ -582,7 +577,7 @@ void
 ClearAOCSFileSegInfo(Relation prel, int segno)
 {
 	Relation	segrel;
-	SysScanDesc	scan;
+	TableScanDesc	scan;
 	HeapTuple	oldtup = NULL;
 	HeapTuple	newtup;
 	int			tuple_segno = InvalidFileSegNumber;
@@ -618,8 +613,8 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	 * Since we have the segment-file entry under lock (with
 	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
 	 */
-	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
-	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
+	scan = table_beginscan_catalog(segrel, 0, NULL);
+	while (segno != tuple_segno && (oldtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		tuple_segno = DatumGetInt32(fastgetattr(oldtup, Anum_pg_aocs_segno, tupdesc, &isNull));
 		if (isNull)
@@ -677,7 +672,7 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	pfree(newtup);
 	pfree(vpinfo);
 
-	systable_endscan(scan);
+	heap_endscan(scan);
 	heap_close(segrel, RowExclusiveLock);
 }
 
