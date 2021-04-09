@@ -56,7 +56,7 @@ LIB_DIR=$(SRC)/lib
 PYLIB_DIR=$(SRC)/ext
 
 core:
-	python3 gpconfig_modules/parse_guc_metadata.py $(DESTDIR)$(prefix)
+	$(PYTHON) gpconfig_modules/parse_guc_metadata.py $(DESTDIR)$(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
 install: installdirs installprograms core psutil pygresql pyyaml
@@ -76,7 +76,7 @@ PYGRESQL_DIR=PyGreSQL-$(PYGRESQL_VERSION)
 pygresql:
 	@echo "--- PyGreSQL"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYGRESQL_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/ && PATH=$(DESTDIR)$(bindir):$$PATH LDFLAGS='$(LDFLAGS) $(PYGRESQL_LDFLAGS)' python3 setup.py build
+	cd $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/ && PATH=$(DESTDIR)$(bindir):$$PATH LDFLAGS='$(LDFLAGS) $(PYGRESQL_LDFLAGS)' $(PYTHON) setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build/lib*-3*/* $(PYLIB_DIR)/
 
 
@@ -90,7 +90,7 @@ psutil:
 	@echo "--- psutil"
 ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PSUTIL_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/ && env -u CC python3 setup.py build
+	cd $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/ && env -u CC $(PYTHON) setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/build/lib.*/psutil $(PYLIB_DIR)
 endif
 
@@ -103,7 +103,7 @@ PYYAML_DIR=PyYAML-$(PYYAML_VERSION)
 pyyaml:
 	@echo "--- pyyaml"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYYAML_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PYYAML_DIR)/ && env -u CC python3 setup.py build
+	cd $(PYLIB_SRC_EXT)/$(PYYAML_DIR)/ && env -u CC $(PYTHON) setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PYYAML_DIR)/build/lib*-3.*/* $(PYLIB_DIR)
 
 #
@@ -126,7 +126,7 @@ SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
 ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
 PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
-PYTHON_VERSION=$(shell python3 -c "import sys; print ('%s.%s' % (sys.version_info[0:2]))")
+PYTHON_VERSION=$(shell $(PYTHON) -c "import sys; print ('%s.%s' % (sys.version_info[0:2]))")
 PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 # TODO: mock-1.0.1-py2.6.egg package should be updated.
@@ -138,9 +138,9 @@ pylint:
 	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYLINT_DIR).tar.gz
 	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOGILAB_ASTNG_DIR).tar.gz
 	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOGILAB_COMMON_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/ && python3 setup.py build 1> /dev/null
-	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)/ && python3 setup.py build 1> /dev/null
-	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)/ && python3 setup.py build 1> /dev/null
+	@cd $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/ && $(PYTHON) setup.py build 1> /dev/null
+	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)/ && $(PYTHON) setup.py build 1> /dev/null
+	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)/ && $(PYTHON) setup.py build 1> /dev/null
 	@cp -r $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)/build/lib/logilab $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
 	@cp -r $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)/build/lib/logilab $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
 	@touch $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/__init__.py
@@ -154,7 +154,7 @@ $(MOCK_BIN):
        mkdir -p $(PYTHONSRC_INSTALL_SITE) && \
 	   cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(MOCK_DIR).tar.gz && \
 	   cd $(PYLIB_SRC_EXT)/$(MOCK_DIR)/ && \
-	   PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python3 setup.py install --prefix $(PYTHONSRC_INSTALL) ; \
+	   PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) $(PYTHON) setup.py install --prefix $(PYTHONSRC_INSTALL) ; \
 	 fi;
 
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python3" *`\
@@ -178,7 +178,7 @@ check: $(MOCK_BIN)
 unitdevel:
 	@echo "Running pure unit tests..."
 	PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
-	    python3 -m unittest discover --verbose -s $(SRC)/gppylib -p "test_unit*.py"
+	    $(PYTHON) -m unittest discover --verbose -s $(SRC)/gppylib -p "test_unit*.py"
 
 
 .PHONY: installcheck-bash
