@@ -3,19 +3,11 @@ image_resource:
   type: registry-image
 inputs:
   - name: gpdb_src
-  - name: libquicklz-installer
-  - name: libquicklz-devel-installer
-    optional: true
-  - name: libsigar-installer
-    optional: true
-  - name: python-tarball
 outputs:
   - name: gpdb_artifacts
 run:
   path: gpdb_src/concourse/scripts/compile_gpdb.bash
 params:
-  TARGET_OS:
-  TARGET_OS_VERSION:
   BLD_TARGETS:
   OUTPUT_ARTIFACT_DIR: gpdb_artifacts
   CONFIGURE_FLAGS:
