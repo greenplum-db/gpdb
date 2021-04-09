@@ -208,6 +208,7 @@ test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
 test: segwalrep/dtx_recovery_wait_lsn
 test: fts_manual_probe
+test: fts_session_reset
 
 # Reindex tests
 test: reindex/abort_reindex

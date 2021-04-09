@@ -751,7 +751,7 @@ cdbcomponent_destroyCdbComponents(void)
 /*
  * Allocated a segdb
  *
- * If thers is idle segdb in the freelist, return it, otherwise, initialize
+ * If there is idle segdb in the freelist, return it, otherwise, initialize
  * a new segdb.
  *
  * idle segdbs has an established connection with segment, but new segdb is
