@@ -3,7 +3,7 @@ PEXPECT_LIB=$(GPHOME)/bin/lib
 # To pass in custom flags as behave args(such as multiple flags),
 # use flags=--tags=foo, --tags=-bar
 behave:
-	@which behave || (echo "behave not found. Run pip install -r gpMgmt/requirements-dev.txt" && exit 1)
+	@which behave || (echo "behave not found" && exit 1)
 	@echo "Running behave on management scripts..."
 	@if [ -n """$(flags)""" ]; then \
 		PYTHONPATH=$$PYTHONPATH:$(PEXPECT_LIB) behave $(CURDIR)/test/behave/* -s -k $(flags) 2>&1 ; \

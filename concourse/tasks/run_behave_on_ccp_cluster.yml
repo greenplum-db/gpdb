@@ -2,8 +2,6 @@ platform: linux
 inputs:
  - name: ccp_src
  - name: cluster_env_files
-caches:
- - path: pip-cache-dir
 run:
   path: bash
   args:
@@ -15,13 +13,6 @@ run:
 
     # TODO: ask CCP maintainers for a feature to do this for us
     scp cluster_env_files/hostfile_all mdw:/tmp
-
-    # Install patchelf. We need to SSH as root, hence the use of
-    # cluster_env_files.
-    ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "sudo bash -c '
-        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
-        install_python_hacks
-    '"
 
     # ensure cluster is stopped
     ssh -n mdw "
@@ -78,19 +69,10 @@ run:
         if [ -d \$MASTER_DATA_DIRECTORY ]; then gpstart -a; fi
     "
 
-    while read -r host; do
-        scp -qr "pip-cache-dir" $host:pip-cache-dir
-    done < cluster_env_files/hostfile_all
-
     ssh -t mdw "
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
-        install_python_requirements_on_multi_host /home/gpadmin/gpdb_src/gpMgmt/requirements-dev.txt
-
         $CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\"
     "
 
     # Refresh the Concourse container cache with the updated contents
     # from the CCP mdw node.
-
-    rm -rf "pip-cache-dir/http"
-    scp -qr mdw:pip-cache-dir/http "pip-cache-dir"
