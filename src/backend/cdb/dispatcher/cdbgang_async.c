@@ -83,6 +83,9 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	 * we have to error out so that the current global transaction can be aborted.
 	 * Before error out, we need to clean up QEs, destroy the gang, and reset
 	 * the session.
+	 * We shouldn't error out in transaction abort state to avoid recursive abort.
+	 * In such case, the dispatcher would catch the error and then dtm does (retry)
+	 * abort.
 	 */
 	if (IsTransactionState())
 	{
