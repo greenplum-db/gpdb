@@ -2778,6 +2778,16 @@ def impl(context):
         code, message = job.reverify(conn)
         if not code:
             raise Exception(message)
+
+
+
+@given('the "{table_name}" table row count in "{dbname}" is saved')
+def impl(context, table_name, dbname):
+    if 'table_row_count' not in context:
+        context.table_row_count = {}
+    if table_name not in context.table_row_count:
+        context.table_row_count[table_name] = _get_row_count_per_segment(table_name, dbname)
+
 @given('distribution information from table "{table}" with data in "{dbname}" is saved')
 def impl(context, table, dbname):
     context.pre_redistribution_row_count = _get_row_count_per_segment(table, dbname)
@@ -2811,6 +2821,15 @@ def impl(context, table, dbname):
     if relative_std_error > tolerance:
         raise Exception("Unexpected variance for redistributed data in table %s. Relative standard error %f exceeded tolerance factor of %f." %
                 (table, relative_std_error, tolerance))
+
+@then('the row count from table "{table_name}" in "{dbname}" is verified against the saved data')
+def impl(context, table_name, dbname):
+    saved_row_count = context.table_row_count[table_name]
+    current_row_count = _get_row_count_per_segment(table_name, dbname)
+
+    if saved_row_count != current_row_count:
+        raise Exception("%s table in %s has %d rows, expected %d rows." % (table_name, dbname, current_row_count, saved_row_count))
+
 
 @then('distribution information from table "{table1}" and "{table2}" in "{dbname}" are the same')
 def impl(context, table1, table2, dbname):

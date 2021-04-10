@@ -356,3 +356,45 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And all the segments are running
           And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: recovering a host with tablespaces succeeds
+        Given the database is running
+
+          # Add data including tablespaces
+          And a tablespace is created with data
+          And database "gptest" exists
+          And the user connects to "gptest" with named connection "default"
+          And the user runs psql with "-c 'CREATE TABLE public.before_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
+          And the user runs psql with "-c 'INSERT INTO public.before_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
+          And the "public.before_host_is_down" table row count in "gptest" is saved
+
+          # Stop one of the nodes as if for hardware replacement and remove any traces as if it was a new node.
+          # Recoverseg requires the host being restored have the same hostname.
+          And the user runs "gpstop -a --host sdw1"
+          And gpstop should return a return code of 0
+          And the user runs remote command "rm -rf /data/gpdata/*" on host "sdw1"
+          And user can start transactions
+
+          # Add data after one of the nodes is down for maintenance
+          And database "gptest" exists
+          And the user connects to "gptest" with named connection "default"
+          And the user runs psql with "-c 'CREATE TABLE public.after_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
+          And the user runs psql with "-c 'INSERT INTO public.after_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
+          And the "public.after_host_is_down" table row count in "gptest" is saved
+
+          # restore the down node onto a node with the same hostname
+          When the user runs "gprecoverseg -a -p sdw1"
+          Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And user can start transactions
+          And the user runs "gprecoverseg -ra"
+          And gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+          And user can start transactions
+
+          # verify the data
+          And the tablespace is valid
+          And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
+          And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data
