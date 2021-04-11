@@ -212,3 +212,44 @@ SELECT * FROM ctas_aocs;
 
 DROP TABLE ctas_base;
 DROP TABLE ctas_aocs;
+-- Github Issue 10760
+-- Previously CTAS with Initplan will dispatch oids twice
+-- start_ignore
+DROP TABLE IF EXISTS t1_github_issue_10760;
+NOTICE:  table "t1_github_issue_10760" does not exist, skipping
+DROP TABLE IF EXISTS t2_github_issue_10760;
+NOTICE:  table "t2_github_issue_10760" does not exist, skipping
+create table t1_github_issue_10760(a int, b int) distributed randomly;
+-- end_ignore
+-- Because there is no Initplan in ORCA of this test case, there is no
+-- 10760 problem in ORCA. So here manually set the optimizer to
+-- ensure that there is Initplan in the execution plan.
+set optimizer=off;
+explain select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760);
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=392.82..1168.23 rows=28700 width=8)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Finalize Aggregate  (cost=392.81..392.82 rows=1 width=8)
+           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=392.75..392.80 rows=3 width=8)
+                 ->  Partial Aggregate  (cost=392.75..392.76 rows=1 width=8)
+                       ->  Seq Scan on t1_github_issue_10760 t1_github_issue_10760_1  (cost=0.00..321.00 rows=28700 width=0)
+   ->  Seq Scan on t1_github_issue_10760  (cost=0.00..392.75 rows=9567 width=8)
+         Filter: (b > $0)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+begin;
+        create table t2_github_issue_10760 as select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760) distributed randomly;
+        drop table t2_github_issue_10760;
+        create table t2_github_issue_10760 as select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760) distributed randomly;
+end;
+select count (distinct oid) from  (select oid from pg_class where relname = 't2_github_issue_10760' union all select oid from gp_dist_random('pg_class') where relname = 't2_github_issue_10760')x;
+ count 
+-------
+     1
+(1 row)
+
+drop table t1_github_issue_10760;
+drop table t2_github_issue_10760;
+reset optimizer;

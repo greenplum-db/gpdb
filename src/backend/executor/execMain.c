@@ -575,10 +575,26 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			if (needDtx)
 				setupDtxTransaction();
 
+			/*
+			 * Aviod dispatching OIDs for InitPlan.
+			 *
+			 * CTAS will first define relation in QD, and generate the OIDs,
+			 * and then dispatch with these OIDs to QEs.
+			 * QEs store these OIDs in a static variable and delete the one
+			 * used to create table.
+			 *
+			 * If CTAS's query contains initplan, when we invoke
+			 * preprocess_initplan to dispatch initplans, if with
+			 * queryDesc->ddesc->oidAssignments be set, these OIDs are
+			 * also dispatched to QEs.
+			 *
+			 * For details please see github issue https://github.com/greenplum-db/gpdb/issues/10760
+			 */
+			List *toplevelOidCache = NIL;
 			if (queryDesc->ddesc != NULL)
 			{
 				queryDesc->ddesc->sliceTable = estate->es_sliceTable;
-				queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
+				toplevelOidCache = GetAssignedOidsForDispatch();
 			}
 
 			/*
@@ -612,6 +628,11 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				}
 
 				preprocess_initplans(queryDesc);
+			}
+
+			if (toplevelOidCache != NIL)
+			{
+				queryDesc->ddesc->oidAssignments = toplevelOidCache;
 			}
 
 			/*

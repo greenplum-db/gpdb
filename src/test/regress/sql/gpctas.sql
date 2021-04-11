@@ -132,3 +132,31 @@ CREATE TABLE ctas_aocs WITH (appendonly=true, orientation=column) AS SELECT * FR
 SELECT * FROM ctas_aocs;
 DROP TABLE ctas_base;
 DROP TABLE ctas_aocs;
+
+-- Github Issue 10760
+-- Previously CTAS with Initplan will dispatch oids twice
+-- start_ignore
+DROP TABLE IF EXISTS t1_github_issue_10760;
+DROP TABLE IF EXISTS t2_github_issue_10760;
+
+create table t1_github_issue_10760(a int, b int) distributed randomly;
+-- end_ignore
+
+-- Because there is no Initplan in ORCA of this test case, there is no
+-- 10760 problem in ORCA. So here manually set the optimizer to
+-- ensure that there is Initplan in the execution plan.
+set optimizer=off;
+explain select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760);
+
+begin;
+        create table t2_github_issue_10760 as select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760) distributed randomly;
+        drop table t2_github_issue_10760;
+        create table t2_github_issue_10760 as select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760) distributed randomly;
+end;
+
+select count (distinct oid) from  (select oid from pg_class where relname = 't2_github_issue_10760' union all select oid from gp_dist_random('pg_class') where relname = 't2_github_issue_10760')x;
+
+drop table t1_github_issue_10760;
+drop table t2_github_issue_10760;
+
+reset optimizer;
