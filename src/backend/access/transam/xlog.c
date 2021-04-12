@@ -7299,17 +7299,8 @@ StartupXLOG(void)
 			 */
 			StartupCLOG();
 			StartupSUBTRANS(oldestActiveXID);
-			/*
-			 * Do not initialize DistributedLog subsystem. Hot standby /
-			 * mirror cannot advance distributed xmin because QD does not
-			 * dispatch queries to mirrors.	 To align with upstream, we still
-			 * want a functional hot standby as far as a single primary/mirror
-			 * pair is concerned.  Initializing distributed log subsystem
-			 * affects oldest xmin computation in hot standby, the oldest xmin
-			 * never advances.	Therefore, avoid initializing distributed log
-			 * in hot standby.	If, in future, queries from QD need to be
-			 * dispatched to mirrors, this will have to change.
-			 */
+			DistributedLog_Startup(oldestActiveXID,
+								   XidFromFullTransactionId(ShmemVariableCache->nextFullXid));
 
 			/*
 			 * If we're beginning at a shutdown checkpoint, we know that
