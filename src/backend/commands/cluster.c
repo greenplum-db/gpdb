@@ -1133,7 +1133,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	Oid			swaptemp;
 	char		swptmpchr;
 	bool		is_ao;
-	Oid			relfrozenxid1;
 
 	rel_r1 = relation_open(r1, AccessShareLock);
 	is_ao = RelationIsAppendOptimized(rel_r1);
@@ -1154,7 +1153,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 
 	relfilenode1 = relform1->relfilenode;
 	relfilenode2 = relform2->relfilenode;
-	relfrozenxid1 = relform1->relfrozenxid;
 
 	if (OidIsValid(relfilenode1) && OidIsValid(relfilenode2))
 	{
@@ -1424,14 +1422,11 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relation_close(rel_r1, AccessShareLock);
 	}
 
-	if (is_ao)
-	{
-		/*
-		 * AO tables do not have relfrozenxid. The tables need to keep existing
-		 * relfrozenxid value unchanged.
-		 */
-		Assert(relfrozenxid1 == relform1->relfrozenxid);
-	}
+	/*
+	 * Greenplum: append-optimized relations should not have a valid
+	 * relfrozenxid.
+	 */
+	Assert(!is_ao || !TransactionIdIsValid(relform1->relfrozenxid));
 
 	/* Clean up. */
 	heap_freetuple(reltup1);
