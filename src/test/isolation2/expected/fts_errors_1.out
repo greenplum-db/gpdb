@@ -3,8 +3,6 @@
 -- Content 1 is used to test the gang interaction in various
 -- sessions when a failover is triggered and mirror is promoted
 -- to primary
-create extension if not exists gp_inject_fault;
-CREATE
 
 -- start_matchsubs
 -- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
@@ -33,9 +31,6 @@ CREATE
 -- start_ignore
 -- end_ignore
 (exited with code 0)
-
-include: helpers/server_helpers.sql;
-CREATE
 
 -- Helper function
 CREATE or REPLACE FUNCTION wait_until_segments_are_down(num_segs int) RETURNS bool AS $$ declare retries int; /* in func */ begin /* in func */ retries := 1200; /* in func */ loop /* in func */ if (select count(*) = num_segs from gp_segment_configuration where status = 'd') then /* in func */ return true; /* in func */ end if; /* in func */ if retries <= 0 then /* in func */ return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
@@ -147,7 +142,9 @@ ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
 ----+----
 (0 rows)
 3:END;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
 -- session 4: not in transaction but has temp table, cann't update
 --            cdb_component_dbs, following query should fail and session
 --            is reset
