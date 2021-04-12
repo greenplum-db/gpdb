@@ -24,9 +24,13 @@
 #define XLOG_TBLSPC_CREATE		0x00
 #define XLOG_TBLSPC_DROP		0x10
 
+#define GP_SUBDIR_LEN 10 /* directory name should be at the most 10 chars */
+
 typedef struct xl_tblspc_create_rec
 {
 	Oid			ts_id;
+	uint32		primary_dir;
+	uint32		mirror_dir;
 	char		ts_path[FLEXIBLE_ARRAY_MEMBER]; /* null-terminated string */
 } xl_tblspc_create_rec;
 

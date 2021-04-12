@@ -51,6 +51,8 @@ typedef struct TablespaceListCell
 	struct TablespaceListCell *next;
 	char		old_dir[MAXPGPATH];
 	char		new_dir[MAXPGPATH];
+	/* new_dir with unique subdir, used to distinguish Greenplum segments */
+	char		new_gp_dir[MAXPGPATH];
 } TablespaceListCell;
 
 typedef struct TablespaceList
@@ -1368,6 +1370,24 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 		(void) fsync_fname(filename, false);
 }
 
+/*
+ * The new_dir member of cell is the target location of a tablespace that
+ * exists in the target segment.  This function appends a randomly generated
+ * unique subdirectory to the target location.  This is the new tablespace's
+ * location, to be used by the new Greenplum segment being created.
+ */
+static void
+get_target_gp_location(TablespaceListCell *cell)
+{
+	strlcpy(cell->new_gp_dir, cell->new_dir, sizeof(cell->new_gp_dir));
+
+	if (!create_unique_subdir(cell->new_gp_dir, NULL))
+	{
+		pg_log_error("could not generate Greenplum segment subdir under %s",
+					 cell->new_dir);
+		exit(1);
+	}
+}
 
 /*
  * Retrieve tablespace path, either relocated or original depending on whether
@@ -1382,12 +1402,41 @@ get_tablespace_mapping(const char *dir)
 	/* Canonicalize path for comparison consistency */
 	strlcpy(canon_dir, dir, sizeof(canon_dir));
 	canonicalize_path(canon_dir);
+	/*
+	 * Greenplum: tablespace locations include system generated subdirectory
+	 * under user-specified path.  We discard the system generated
+	 * subdirectory from source.  It will be replaced with a new subdirectory,
+	 * specific to the new segment being created.  A side benefit is, the
+	 * mapping can be specified entirely in terms of user-specified locations.
+	 */
+	get_parent_directory(canon_dir);
 
 	for (cell = tablespace_dirs.head; cell; cell = cell->next)
+	{
 		if (strcmp(canon_dir, cell->old_dir) == 0)
-			return cell->new_dir;
+		{
+			if (!cell->new_gp_dir)
+				get_target_gp_location(cell);
+			return cell->new_gp_dir;
+ 		}
+	}
 
-	return dir;
+	/*
+	 * The dir is not mapped to anything.  Let's add an identity mapping to
+	 * the list because we must generate a unique subdir even in this case.
+	 */
+	cell = (TablespaceListCell *) pg_malloc0(sizeof(TablespaceListCell));
+	strlcpy(cell->old_dir, canon_dir, sizeof(cell->old_dir));
+	strlcpy(cell->new_dir, canon_dir, sizeof(cell->new_dir));
+
+	if (tablespace_dirs.tail)
+		tablespace_dirs.tail->next = cell;
+	else
+		tablespace_dirs.head = cell;
+	tablespace_dirs.tail = cell;
+	get_target_gp_location(cell);
+
+	return cell->new_gp_dir;
 }
 
 
@@ -1405,7 +1454,6 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 {
 	char		current_path[MAXPGPATH];
 	char		filename[MAXPGPATH];
-	char		gp_tablespace_filename[MAXPGPATH] = {0};
 	const char *mapped_tblspc_path;
 	pgoff_t		current_len_left = 0;
 	int			current_padding = 0;
@@ -1417,25 +1465,9 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 	if (basetablespace)
 		strlcpy(current_path, basedir, sizeof(current_path));
 	else
-	{
 		strlcpy(current_path,
 				get_tablespace_mapping(PQgetvalue(res, rownum, 1)),
 				sizeof(current_path));
-
-		if (target_gp_dbid < 1)
-		{
-			pg_log_error("cannot restore user-defined tablespaces without the --target-gp-dbid option");
-			exit(1);
-		}
-		
-		/* 
-		 * Construct the new tablespace path using the given target gp dbid
-		 */
-		snprintf(gp_tablespace_filename, sizeof(filename), "%s/%d/%s",
-				current_path,
-				target_gp_dbid,
-				GP_TABLESPACE_VERSION_DIRECTORY);
-	}
 
 	/*
 	 * Get the COPY data
@@ -1505,29 +1537,8 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 			/*
 			 * First part of header is zero terminated filename
 			 */
-			if (!basetablespace)
-			{
-				/*
-				 * Append relfile path to --target-gp-dbid tablespace path.
-				 *
-				 * For example, copybuf can be
-				 * "<GP_TABLESPACE_VERSION_DIRECTORY>_db<dbid>/16384/16385".
-				 * We create a pointer to the dbid and relfile "/16384/16385",
-				 * construct the new tablespace with provided dbid, and append
-				 * the dbid and relfile on top.
-				 */
-				char *copybuf_dbid_relfile = strstr(copybuf, "/");
-
-				snprintf(filename, sizeof(filename), "%s%s",
-						 gp_tablespace_filename,
-						 copybuf_dbid_relfile);
-			}
-			else
-			{
-				snprintf(filename, sizeof(filename), "%s/%s", current_path,
-						 copybuf);
-			}
-
+			snprintf(filename, sizeof(filename), "%s/%s", current_path,
+					 copybuf);
 			if (filename[strlen(filename) - 1] == '/')
 			{
 				/*
@@ -1563,14 +1574,6 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 
 						rmtree(filename, true);
 
-					}
-
-					bool is_gp_tablespace_directory = strncmp(gp_tablespace_filename, filename, strlen(filename)) == 0;
-					if (is_gp_tablespace_directory && !forceoverwrite) {
-						/*
-						 * This directory has already been created during beginning of BaseBackup().
-						 */
-						continue;
 					}
 
 					if (mkdir(filename, pg_dir_create_mode) != 0)
@@ -1617,14 +1620,12 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 					filename[strlen(filename) - 1] = '\0';	/* Remove trailing slash */
 
 					mapped_tblspc_path = get_tablespace_mapping(&copybuf[157]);
-					char *mapped_tblspc_path_with_dbid = psprintf("%s/%d", mapped_tblspc_path, target_gp_dbid);
-					if (symlink(mapped_tblspc_path_with_dbid, filename) != 0)
+					if (symlink(mapped_tblspc_path, filename) != 0)
 					{
 						pg_log_error("could not create symbolic link from \"%s\" to \"%s\": %m",
 									 filename, mapped_tblspc_path);
 						exit(1);
 					}
-					pfree(mapped_tblspc_path_with_dbid);
 				}
 				else
 				{
@@ -1984,11 +1985,8 @@ BaseBackup(void)
 		if (format == 'p' && !PQgetisnull(res, i, 1))
 		{
 			char	   *path = unconstify(char *, get_tablespace_mapping(PQgetvalue(res, i, 1)));
-			char path_with_subdir[MAXPGPATH];
 
-			sprintf(path_with_subdir, "%s/%d/%s", path, target_gp_dbid, GP_TABLESPACE_VERSION_DIRECTORY);
-
-			verify_dir_is_empty_or_create(path_with_subdir, &made_tablespace_dirs, &found_tablespace_dirs);
+			verify_dir_is_empty_or_create(path, &made_tablespace_dirs, &found_tablespace_dirs);
 		}
 	}
 
@@ -2472,14 +2470,6 @@ main(int argc, char **argv)
 	if (basedir == NULL)
 	{
 		pg_log_error("no target directory specified");
-		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
-				progname);
-		exit(1);
-	}
-
-	if (target_gp_dbid <= 0)
-	{
-		pg_log_error("no target dbid specified, --target-gp-dbid is required");
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
 		exit(1);

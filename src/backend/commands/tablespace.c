@@ -83,6 +83,7 @@
 #include "commands/tablespace.h"
 #include "common/file_perm.h"
 #include "miscadmin.h"
+#include "pgtar.h"
 #include "postmaster/bgwriter.h"
 #include "storage/bufmgr.h"
 #include "storage/fd.h"
@@ -95,7 +96,6 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-#include "utils/tarrable.h"
 #include "utils/varlena.h"
 
 #include "catalog/heap.h"
@@ -249,6 +249,29 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
 	pfree(dir);
 }
 
+static void
+check_dir_permission(char *location)
+{
+	/*
+	 * Attempt to coerce target directory to safe permissions.  If this fails,
+	 * it doesn't exist or has the wrong owner.
+	 */
+	if (chmod(location, pg_dir_create_mode) != 0)
+	{
+		if (errno == ENOENT)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_FILE),
+					 errmsg("directory \"%s\" does not exist", location),
+					 InRecovery ? errhint("Create this directory for the tablespace before "
+										  "restarting the server.") : 0));
+		else
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not set permissions on directory \"%s\": %m",
+							location)));
+	}
+}
+
 /*
  * Create a table space
  *
@@ -345,12 +368,12 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 
 	/*
 	 * Check that location isn't too long. Remember that we're going to append
-	 * '<dbid>/<GP_TABLESPACE_VERSION_DIRECTORY>/<dboid>/<relid>_<fork>.<nnn>'.
+	 * 'XXXXXXXX/<GP_TABLESPACE_VERSION_DIRECTORY>/<dboid>/<relid>_<fork>.<nnn>'.
 	 * FYI, we never actually
 	 * reference the whole path here, but MakePGDirectory() uses the first two
 	 * parts.
 	 */
-	if (strlen(location) + 1 + MAX_DBID_STRING_LENGTH + 1 + strlen(GP_TABLESPACE_VERSION_DIRECTORY) + 1 +
+	if (strlen(location) + 1 + GP_TABLESPACE_DIR_LEN + 1 + strlen(GP_TABLESPACE_VERSION_DIRECTORY) + 1 +
 		OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1 + OIDCHARS > MAXPGPATH)
 	{
 		ereport(ERROR,
@@ -359,7 +382,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 						location)));
 	}
 
-	if ((strlen(location) + 1 + MAX_DBID_STRING_LENGTH + 1) > MAX_TARABLE_SYMLINK_PATH_LENGTH)
+	if ((strlen(location) + 1 + GP_TABLESPACE_DIR_LEN + 1) > MAX_TARABLE_SYMLINK_PATH_LENGTH)
 		ereport(WARNING, (errmsg("tablespace location \"%s\" is too long for TAR", location),
 						  errdetail("The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).")
 						  ));
@@ -442,13 +465,33 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	/* Post creation hook for new tablespace */
 	InvokeObjectPostCreateHook(TableSpaceRelationId, tablespaceoid, 0);
 
-	create_tablespace_directories(location, tablespaceoid);
+	check_dir_permission(location);
+
+	/*
+	 * Greenplum: create a unique tablespace location for current segment and
+	 * its mirror
+	 */
+	uint32 primary_dir;
+	uint32 mirror_dir;
+	char gplocation[MAXPGPATH];
+
+	strlcpy(gplocation, location, MAXPGPATH);
+	if (!create_unique_subdir(gplocation, &mirror_dir))
+		elog(ERROR, "cannot create unique subdir under %s", gplocation);
+
+	strlcpy(gplocation, location, MAXPGPATH);
+	if (!create_unique_subdir(gplocation, &primary_dir))
+		elog(ERROR, "cannot create unique subdir under %s", gplocation);
+
+	create_tablespace_directories(gplocation, tablespaceoid);
 
 	/* Record the filesystem change in XLOG */
 	{
 		xl_tblspc_create_rec xlrec;
 
 		xlrec.ts_id = tablespaceoid;
+		xlrec.primary_dir = primary_dir;
+		xlrec.mirror_dir = mirror_dir;
 
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec,
@@ -771,19 +814,20 @@ static void
 create_tablespace_directories(const char *location, const Oid tablespaceoid)
 {
 	char	   *linkloc;
-	char	   *location_with_dbid_dir;
 	char	   *location_with_version_dir;
 	struct stat st;
 
-	elog(DEBUG5, "creating tablespace directories for tablespaceoid %d on dbid %d",
-		tablespaceoid, GpIdentity.dbid);
-
 	linkloc = psprintf("pg_tblspc/%u", tablespaceoid);
-	location_with_dbid_dir = psprintf("%s/%d", location, GpIdentity.dbid);
-	location_with_version_dir = psprintf("%s/%s", location_with_dbid_dir,
+	location_with_version_dir = psprintf("%s/%s", location,
 										 GP_TABLESPACE_VERSION_DIRECTORY);
 
 	/*
+	 * Greenplum: permissions on user-specified tablespace location have
+	 * already been checked by the caller.  The location here contains
+	 * segment-specific directory appended to the user-specified location.  We
+	 * keep the following permissions check anyway, to reduce diff against
+	 * upstream PostgreSQL.
+	 *
 	 * Attempt to coerce target directory to safe permissions.  If this fails,
 	 * it doesn't exist or has the wrong owner.
 	 */
@@ -820,31 +864,6 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 	}
 
 	/*
-	 * In GPDB each segment has a directory with its unique dbid under the
-	 * tablespace path. Unlike the location_with_version_dir, do not error out
-	 * if it already exists.
-	 */
-	if (stat(location_with_dbid_dir, &st) < 0) 
-	{
-		if (errno == ENOENT)
-		{
-			if (mkdir(location_with_dbid_dir, S_IRWXU) < 0)
-					ereport(ERROR,
-							(errcode_for_file_access(),
-								errmsg("could not create directory \"%s\": %m", location_with_dbid_dir)));
-		}
-		else
-			ereport(ERROR,
-					(errcode_for_file_access(),
-						errmsg("could not stat directory \"%s\": %m", location_with_dbid_dir)));
-
-	}
-	else
-		ereport(DEBUG1,
-				(errmsg("directory \"%s\" already exists in tablespace",
-					location_with_dbid_dir)));
-
-	/*
 	 * The creation of the version directory prevents more than one tablespace
 	 * in a single location.
 	 */
@@ -858,8 +877,8 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 		else
 			ereport(ERROR,
 					(errcode_for_file_access(),
-				  errmsg("could not create directory \"%s\": %m",
-						 location_with_version_dir)));
+					 errmsg("could not create directory \"%s\": %m",
+							location_with_version_dir)));
 	}
 
 	/*
@@ -871,17 +890,15 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 	/*
 	 * Create the symlink under PGDATA
 	 */
-	if (symlink(location_with_dbid_dir, linkloc) < 0)
+	if (symlink(location, linkloc) < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not create symbolic link \"%s\": %m",
 						linkloc)));
 
 	pfree(linkloc);
-	pfree(location_with_dbid_dir);
 	pfree(location_with_version_dir);
 }
-
 
 /*
  * This block was moved from DropTableSpace, just before inserting the
@@ -1023,7 +1040,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 {
 	char	   *linkloc;
 	char	   *linkloc_with_version_dir;
-	char	    link_target_dir[MAXPGPATH + 1 + MAX_DBID_STRING_LENGTH];
+	char	    link_target_dir[MAXPGPATH + 1 + GP_TABLESPACE_DIR_LEN];
 	int		    rllen;
 	DIR		   *dirdesc;
 	struct dirent *de;
@@ -1966,9 +1983,20 @@ tblspc_redo(XLogReaderState *record)
 	if (info == XLOG_TBLSPC_CREATE)
 	{
 		xl_tblspc_create_rec *xlrec = (xl_tblspc_create_rec *) XLogRecGetData(record);
-		char	   *location = xlrec->ts_path;
+		char	   *gplocation;
 
-		create_tablespace_directories(location, xlrec->ts_id);
+		/*
+		 * Greenplum: when replaying tablespace creation, we need to use the
+		 * right location based on whether we are mirror or performing crash
+		 * recovery on primary.
+		 */
+		if (StandbyMode)
+			gplocation = psprintf("%s/%08X", xlrec->ts_path, xlrec->mirror_dir);
+		else
+			gplocation = psprintf("%s/%08X", xlrec->ts_path, xlrec->primary_dir);
+
+		create_tablespace_directories(gplocation, xlrec->ts_id);
+		pfree(gplocation);
 	}
 	else if (info == XLOG_TBLSPC_DROP)
 	{

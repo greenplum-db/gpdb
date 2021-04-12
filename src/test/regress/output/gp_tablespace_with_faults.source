@@ -113,8 +113,6 @@ create or replace function list_tablespace_dbid_dirs(expected_number_of_tablespa
 
 	result.append('expected {expected_number_of_tablespaces} tablespaces'.format(expected_number_of_tablespaces=expected_number_of_tablespaces))
 	result.append('found %d tablespaces' % found_number_of_tablespaces)
-	for row in rows:
-		result.append(str(row))
 	return result
 $$ language plpython3u;
 create or replace function wait_for_primaries_to_restart() returns boolean as $$
@@ -358,7 +356,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 --           the tablespace directory.
 --
 \set content_id_under_test 0
-\set expected_number_of_tablespaces 1
+\set expected_number_of_tablespaces 2
 \set error_type panic
 \set tablespace_location /tmp/my_tablespace_for_testing
 \set fault_to_set before_xlog_xact_prepare
@@ -396,9 +394,9 @@ select * from list_tablespace_catalog();
 (8 rows)
 
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
-                                 list_tablespace_dbid_dirs                                 
--------------------------------------------------------------------------------------------
- {Success,"expected 1 tablespaces","found 1 tablespaces",/tmp/my_tablespace_for_testing/2}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 2 tablespaces","found 2 tablespaces"}
 (1 row)
 
 DROP TABLESPACE my_tablespace_for_testing;
@@ -467,9 +465,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 DROP TABLESPACE my_tablespace_for_testing;
@@ -630,9 +628,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
@@ -713,9 +711,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
@@ -790,9 +788,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 -- the tablespace should still exist in the catalog
@@ -963,9 +961,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
@@ -1048,9 +1046,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
@@ -1127,9 +1125,9 @@ select force_mirrors_to_catch_up();
 (1 row)
 
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
-                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces"}
 (1 row)
 
 select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog

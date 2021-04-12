@@ -120,8 +120,6 @@ create or replace function list_tablespace_dbid_dirs(expected_number_of_tablespa
 
 	result.append('expected {expected_number_of_tablespaces} tablespaces'.format(expected_number_of_tablespaces=expected_number_of_tablespaces))
 	result.append('found %d tablespaces' % found_number_of_tablespaces)
-	for row in rows:
-		result.append(str(row))
 	return result
 $$ language plpython3u;
 
@@ -244,7 +242,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 --           the tablespace directory.
 --
 \set content_id_under_test 0
-\set expected_number_of_tablespaces 1
+\set expected_number_of_tablespaces 2
 \set error_type panic
 \set tablespace_location /tmp/my_tablespace_for_testing
 \set fault_to_set before_xlog_xact_prepare
