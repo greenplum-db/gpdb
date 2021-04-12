@@ -706,11 +706,6 @@ typedef struct GpId
  */
 extern GpId GpIdentity;
 
-/*
- * Maximum length of string representation of 'dbid' (same as max length of an int4)
- */
-#define MAX_DBID_STRING_LENGTH  11
-
 #define UNINITIALIZED_GP_IDENTITY_VALUE (0)
 #define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
 

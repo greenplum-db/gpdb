@@ -18,6 +18,8 @@ enum tarError
 	TAR_SYMLINK_TOO_LONG
 };
 
+#define MAX_TARABLE_SYMLINK_PATH_LENGTH 100
+
 extern enum tarError tarCreateHeader(char *h, const char *filename, const char *linktarget,
 									 pgoff_t size, mode_t mode, uid_t uid, gid_t gid, time_t mtime);
 extern uint64 read_tar_number(const char *s, int len);

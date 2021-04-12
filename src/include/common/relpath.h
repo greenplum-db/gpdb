@@ -29,7 +29,11 @@
  */
 #define GP_TABLESPACE_VERSION_DIRECTORY	"GPDB_" GP_MAJORVERSION "_" \
 									CppAsString2(CATALOG_VERSION_NO)
-
+/*
+ * Length of segment-specific subdirectory name for user-defined tablespaces.
+ * The name is hex representation of a randomly generated 32-bit integer.
+ */
+#define GP_TABLESPACE_DIR_LEN 8
 
 /* Characters to allow for an OID in a relation path */
 #define OIDCHARS		10		/* max chars printed by %u */
@@ -80,6 +84,9 @@ extern char *GetDatabasePath(Oid dbNode, Oid spcNode);
 
 extern char *GetRelationPath(Oid dbNode, Oid spcNode, Oid relNode,
 							 int backendId, ForkNumber forkNumber);
+
+/* Greenplum: segment-specific tablespace location */
+extern bool create_unique_subdir(char *location, uint32 *segment_dir);
 
 /*
  * Wrapper macros for GetRelationPath.  Beware of multiple

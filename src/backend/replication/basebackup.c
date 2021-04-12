@@ -57,7 +57,6 @@
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/snapmgr.h"
-#include "utils/tarrable.h"
 
 
 typedef struct
@@ -967,26 +966,14 @@ SendBackupHeader(List *tablespaces)
 		else
 		{
 			Size		len;
-			char		*link_path_to_be_sent;
 
 			len = strlen(ti->oid);
 			pq_sendint32(&buf, len);
 			pq_sendbytes(&buf, ti->oid, len);
 
-			if(ti->rpath == NULL)
-			{
-				/* Lop off the dbid before sending the link target. */
-				char *link_path_without_dbid = pstrdup(ti->path);
-				char *file_sep_before_dbid_in_link_path =
-						strrchr(link_path_without_dbid, '/');
-				*file_sep_before_dbid_in_link_path = '\0';
-				link_path_to_be_sent = link_path_without_dbid;
-			}
-			else
-				link_path_to_be_sent = ti->path;
-			len = strlen(link_path_to_be_sent);
+			len = strlen(ti->path);
 			pq_sendint32(&buf, len);
-			pq_sendbytes(&buf, link_path_to_be_sent, len);
+			pq_sendbytes(&buf, ti->path, len);
 		}
 		if (ti->size >= 0)
 			send_int8_string(&buf, ti->size / 1024);
@@ -1409,10 +1396,6 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces,
 								pathbuf),
 						 errdetail("The symbolic link with target \"%s\" is too long. Symlink targets with length greater than %d characters would be truncated.", pathbuf, MAX_TARABLE_SYMLINK_PATH_LENGTH)));
 			linkpath[rllen] = '\0';
-
-			/* Lop off the dbid before sending the link target. */
-			char *file_sep_before_dbid_in_link_path = strrchr(linkpath, '/');
-			*file_sep_before_dbid_in_link_path = '\0';
 
 			size += _tarWriteHeader(pathbuf + basepathlen + 1, linkpath,
 									&statbuf, sizeonly);

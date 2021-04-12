@@ -14,14 +14,27 @@
  */
 #ifndef FRONTEND
 #include "postgres.h"
+#include "utils/elog.h"
 #else
 #include "postgres_fe.h"
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "catalog/pg_tablespace_d.h"
+#include "common/file_perm.h"
 #include "common/relpath.h"
+#include "pgtar.h"
 #include "storage/backendid.h"
 
+
+#ifndef FRONTEND
+#define pg_log_info(...) elog(LOG, __VA_ARGS__)
+#else
+#include "common/logging.h"
+#endif
 
 /*
  * Lookup table of fork name by fork number.
@@ -212,4 +225,85 @@ GetRelationPath(Oid dbNode, Oid spcNode, Oid relNode,
 		}
 	}
 	return path;
+}
+
+/*
+ * Create a unique segment-specific subdirectory under tablespace location
+ *
+ * Use the strong random number generation facility to create a unique
+ * subdirectory under user-specified tablespace location.  It is possible that
+ * two or more segments deployed on the same host choose the same name.  Such
+ * conflicts are handled by generating another random number.  If all attempts
+ * to resolve conflicts fail, NULL is returned.
+ *
+ * The generated subdir name is appended to the location.  The symbolic link
+ * under pg_tblspc/ would have this path as its target.  The subdir name is 8
+ * characters long.  False is returned non-conflicting subdir name cannog be
+ * genenerated.
+ */
+bool
+create_unique_subdir(char *location, uint32 *segment_dir)
+{
+	static bool seeded = false;
+	bool done = false;
+	uint32 randomNum;
+	char subdirname[GP_TABLESPACE_DIR_LEN+1];
+	int attemptsLeft = 5;
+	int len = strlen(location);
+
+	if (len + sizeof(subdirname) > MAX_TARABLE_SYMLINK_PATH_LENGTH)
+	{
+#ifndef FRONTEND
+		elog(ERROR, "tablspace location %s is longer than %d characters",
+			 location,
+			 MAX_TARABLE_SYMLINK_PATH_LENGTH - (uint32) sizeof(subdirname));
+#else
+		pg_log_error("tablspace location %s is longer than %d characters",
+					 location,
+					 MAX_TARABLE_SYMLINK_PATH_LENGTH - (uint32) sizeof(subdirname));
+		exit(EXIT_FAILURE);
+#endif
+	}
+
+	while (attemptsLeft && !done)
+	{
+		if (!pg_strong_random(&randomNum, sizeof(randomNum)))
+		{
+			if (!seeded)
+			{
+				/* seed random number generator with PID */
+				srandom(getpid());
+				seeded = true;
+			}
+			randomNum = random();
+		}
+		snprintf(subdirname, sizeof(subdirname), "%08X", randomNum);
+		join_path_components(location, location, subdirname);
+		if (mkdir(location, pg_dir_create_mode) == 0)
+		{
+			done = true;
+			if (segment_dir)
+				*segment_dir = randomNum;
+		}
+		else
+		{
+			if (errno != EEXIST)
+			{
+#ifndef FRONTEND
+				elog(ERROR, "could not create directory %s: %m",
+					 location);
+#else
+				pg_log_error("could not create directory %s: %m",
+							 location);
+				exit(EXIT_FAILURE);
+#endif
+			}
+
+			pg_log_info("subdir %s already exists, retrying", subdirname);
+			/* Discard the conflicting name */
+			get_parent_directory(location);
+			attemptsLeft--;
+		}
+	}
+	return done;
 }
