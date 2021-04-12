@@ -122,11 +122,10 @@ GetAppendOnlyEntryAttributes(Oid relid,
 {
 	Relation	pg_appendonly;
 	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
+	ScanKeyData	key[1];
+	SysScanDesc	scan;
 	HeapTuple	tuple;
-	bool isNull;
-	Datum dat;
+	Form_pg_appendonly	aoForm;
 
 	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
 	tupDesc = RelationGetDescr(pg_appendonly);
@@ -145,80 +144,21 @@ GetAppendOnlyEntryAttributes(Oid relid,
 				 errmsg("missing pg_appendonly entry for relation \"%s\"",
 						get_rel_name(relid))));
 
+	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
 	if (blocksize != NULL)
-	{
-		dat = heap_getattr(tuple,
-							  Anum_pg_appendonly_blocksize,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segrelid value: NULL")));
-
-		*blocksize = DatumGetInt32(dat);
-	}
+		*blocksize = aoForm->blocksize;
 
 	if (safefswritesize != NULL)
-	{
-		dat = heap_getattr(tuple,
-							  Anum_pg_appendonly_safefswritesize,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segrelid value: NULL")));
-
-		*safefswritesize = DatumGetInt32(dat);
-	}
+		*safefswritesize = aoForm->safefswritesize;
 
 	if (compresslevel != NULL)
-	{
-		dat = heap_getattr(tuple,
-							  Anum_pg_appendonly_compresslevel,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segrelid value: NULL")));
-
-		*compresslevel = DatumGetInt16(dat);
-	}
+		*compresslevel = aoForm->compresslevel;
 
 	if (checksum != NULL)
-	{
-		dat = heap_getattr(tuple,
-							  Anum_pg_appendonly_checksum,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segrelid value: NULL")));
-
-		*checksum = DatumGetBool(dat);
-	}
+		*checksum = aoForm->checksum;
 
 	if (compresstype != NULL)
-	{
-		dat = heap_getattr(tuple,
-							  Anum_pg_appendonly_compresstype,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segrelid value: NULL")));
-
-		*compresstype = *DatumGetName(dat);
-	}
+		namestrcpy(compresstype, NameStr(aoForm->compresstype));
 
 	/* Finish up scan and close pg_appendonly catalog. */
 	systable_endscan(scan);
@@ -249,12 +189,11 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 	ScanKeyData key[1];
 	SysScanDesc scan;
 	HeapTuple	tuple;
-	Datum auxOid;
-	bool isNull;
-	
+	Form_pg_appendonly	aoForm;
+
 	/*
-	 * Check the pg_appendonly relation to be certain the ao table 
-	 * is there. 
+	 * Check the pg_appendonly relation to be certain the ao table
+	 * is there.
 	 */
 	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
 	tupDesc = RelationGetDescr(pg_appendonly);
@@ -273,80 +212,62 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 				 errmsg("missing pg_appendonly entry for relation \"%s\"",
 						get_rel_name(relid))));
 
+	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+
 	if (segrelid != NULL)
-	{
-		auxOid = heap_getattr(tuple,
-							  Anum_pg_appendonly_segrelid,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segrelid value: NULL")));	
-		
-		*segrelid = DatumGetObjectId(auxOid);
-	}
+		*segrelid = aoForm->segrelid;
 
 	if (blkdirrelid != NULL)
-	{
-		auxOid = heap_getattr(tuple,
-							  Anum_pg_appendonly_blkdirrelid,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid blkdirrelid value: NULL")));	
-		
-		*blkdirrelid = DatumGetObjectId(auxOid);
-	}
+		*blkdirrelid = aoForm->blkdirrelid;
 
 	if (blkdiridxid != NULL)
-	{
-		auxOid = heap_getattr(tuple,
-							  Anum_pg_appendonly_blkdiridxid,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid blkdiridxid value: NULL")));	
-		
-		*blkdiridxid = DatumGetObjectId(auxOid);
-	}
+		*blkdiridxid = aoForm->blkdiridxid;
 
 	if (visimaprelid != NULL)
-	{
-		auxOid = heap_getattr(tuple,
-							  Anum_pg_appendonly_visimaprelid,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid visimaprelid value: NULL")));	
-		
-		*visimaprelid = DatumGetObjectId(auxOid);
-	}
+		*visimaprelid = aoForm->visimaprelid;
 
 	if (visimapidxid != NULL)
-	{
-		auxOid = heap_getattr(tuple,
-							  Anum_pg_appendonly_visimapidxid,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid visimapidxid value: NULL")));	
-		
-		*visimapidxid = DatumGetObjectId(auxOid);
-	}
+		*visimapidxid = aoForm->visimapidxid;
+
+	/* Finish up scan and close pg_appendonly catalog. */
+	systable_endscan(scan);
+	table_close(pg_appendonly, AccessShareLock);
+}
+
+void
+GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry)
+{
+	Relation	pg_appendonly;
+	TupleDesc	tupDesc;
+	ScanKeyData key[1];
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	Form_pg_appendonly	aoForm;
+
+	/*
+	 * Check the pg_appendonly relation to be certain the ao table
+	 * is there.
+	 */
+	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
+	tupDesc = RelationGetDescr(pg_appendonly);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_appendonly_relid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
+							  NULL, 1, key);
+	tuple = systable_getnext(scan);
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("missing pg_appendonly entry for relation \"%s\"",
+						get_rel_name(relid))));
+
+	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
+
 	/* Finish up scan and close pg_appendonly catalog. */
 	systable_endscan(scan);
 	table_close(pg_appendonly, AccessShareLock);

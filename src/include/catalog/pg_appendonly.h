@@ -146,6 +146,9 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 						  Oid *visimaprelid,
 						  Oid *visimapidxid);
 
+
+void
+GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry);
 /*
  * Update the segrelid and/or blkdirrelid if the input new values
  * are valid OIDs.
