@@ -559,8 +559,8 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 
 	pfree(newtup);
 
-	heap_endscan(scan);
-	heap_close(segrel, RowExclusiveLock);
+	table_endscan(scan);
+	table_close(segrel, RowExclusiveLock);
 }
 
 /*
@@ -672,8 +672,8 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	pfree(newtup);
 	pfree(vpinfo);
 
-	heap_endscan(scan);
-	heap_close(segrel, RowExclusiveLock);
+	table_endscan(scan);
+	table_close(segrel, RowExclusiveLock);
 }
 
 void
