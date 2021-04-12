@@ -462,24 +462,491 @@ ERROR:  canceling statement due to user request
 ERROR:  canceling statement due to user request
 24<:  <... completed>
 ERROR:  canceling statement due to user request
+
+10q: ... <quitting>
+11q: ... <quitting>
+12q: ... <quitting>
+13q: ... <quitting>
+14q: ... <quitting>
+
+
+20q: ... <quitting>
+21q: ... <quitting>
+22q: ... <quitting>
+23q: ... <quitting>
+24q: ... <quitting>
+-- end_ignore
+
+-- start_ignore
+! gpconfig -c gp_resource_group_cpu_ceiling_enforcement -v on;
+20210405:09:43:44:019995 gpconfig:hubert-gp-centos:huanzhang-[INFO]:-completed successfully with parameters '-c gp_resource_group_cpu_ceiling_enforcement -v on'
+
+! gpstop -rai;
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Starting gpstop with args: -rai
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Gathering information and validating the environment...
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Obtaining Segment details from coordinator...
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14449.gd1235cef56 build dev'
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Coordinator segment instance directory=/home/huanzhang/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Attempting forceful termination of any leftover coordinator process
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Terminating processes for segment /home/huanzhang/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20210405:09:43:44:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Stopping coordinator standby host hubert-gp-centos mode=immediate
+20210405:09:43:46:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown standby process on hubert-gp-centos
+20210405:09:43:46:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20210405:09:43:46:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20210405:09:43:46:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-0.00% of jobs completed
+20210405:09:43:47:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-100.00% of jobs completed
+20210405:09:43:47:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20210405:09:43:47:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-0.00% of jobs completed
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-100.00% of jobs completed
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-   Segments stopped successfully      = 6
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-   Segments with errors during stop   = 0
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Database successfully shutdown with no errors reported
+20210405:09:43:48:020373 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Restarting System...
+
+-- end_ignore
+
+-- prepare parallel queries in the two groups
+10: SET ROLE TO role1_cpu_test;
+SET
+11: SET ROLE TO role1_cpu_test;
+SET
+12: SET ROLE TO role1_cpu_test;
+SET
+13: SET ROLE TO role1_cpu_test;
+SET
+14: SET ROLE TO role1_cpu_test;
+SET
+
+20: SET ROLE TO role2_cpu_test;
+SET
+21: SET ROLE TO role2_cpu_test;
+SET
+22: SET ROLE TO role2_cpu_test;
+SET
+23: SET ROLE TO role2_cpu_test;
+SET
+24: SET ROLE TO role2_cpu_test;
+SET
+
+--
+-- now we get prepared.
+--
+-- on empty load the cpu usage shall be 0%
+--
+--
+-- a group should not burst to use all the cpu usage
+-- when it's the only one with running queries.
+--
+-- so the cpu usage shall be 10%
+--
+
+10&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+11&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+12&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+13&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+14&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+
+-- start_ignore
+1:TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                           
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.32, "0": 0.1, "1": 0.15, "2": 0.13}, "rg1_cpu_test": {"-1": 9.76, "0": 11.32, "1": 11.78, "2": 10.05}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                            
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.16, "0": 0.09, "1": 0.09, "2": 0.06}, "rg1_cpu_test": {"-1": 10.25, "0": 10.16, "1": 10.17, "2": 9.95}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.15, "0": 0.05, "1": 0.05, "2": 0.05}, "rg1_cpu_test": {"-1": 9.94, "0": 9.97, "1": 9.97, "2": 9.97}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.12, "0": 0.07, "1": 0.07, "2": 0.07}, "rg1_cpu_test": {"-1": 9.97, "0": 10.0, "1": 10.0, "2": 10.0}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                             
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.15, "0": 0.06, "1": 0.06, "2": 0.05}, "rg1_cpu_test": {"-1": 10.05, "0": 10.08, "1": 10.08, "2": 10.08}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                            
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.14, "0": 0.07, "1": 0.11, "2": 0.04}, "rg1_cpu_test": {"-1": 10.1, "0": 10.14, "1": 10.12, "2": 10.14}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.15, "0": 0.08, "1": 0.08, "2": 0.07}, "rg1_cpu_test": {"-1": 9.92, "0": 9.95, "1": 9.95, "2": 9.95}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                             
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.14, "0": 0.04, "1": 0.08, "2": 0.04}, "rg1_cpu_test": {"-1": 10.13, "0": 10.15, "1": 10.16, "2": 10.15}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                            
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.15, "0": 0.09, "1": 0.07, "2": 0.07}, "rg1_cpu_test": {"-1": 10.13, "0": 10.13, "1": 9.92, "2": 10.14}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                             
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.11, "0": 0.06, "1": 0.03, "2": 0.03}, "rg1_cpu_test": {"-1": 10.13, "0": 10.15, "1": 10.16, "2": 10.16}, "rg2_cpu_test": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+-- end_ignore
+
+1:SELECT verify_cpu_usage('rg1_cpu_test', 10, 2);
+ verify_cpu_usage 
+------------------
+ t                
+(1 row)
+
+-- start_ignore
+1:SELECT * FROM cancel_all;
+ pg_cancel_backend 
+-------------------
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+(5 rows)
+
+10<:  <... completed>
+ERROR:  canceling statement due to user request
+11<:  <... completed>
+ERROR:  canceling statement due to user request
+12<:  <... completed>
+ERROR:  canceling statement due to user request
+13<:  <... completed>
+ERROR:  canceling statement due to user request
+14<:  <... completed>
+ERROR:  canceling statement due to user request
+-- end_ignore
+
+10q: ... <quitting>
+11q: ... <quitting>
+12q: ... <quitting>
+13q: ... <quitting>
+14q: ... <quitting>
+
+10: SET ROLE TO role1_cpu_test;
+SET
+11: SET ROLE TO role1_cpu_test;
+SET
+12: SET ROLE TO role1_cpu_test;
+SET
+13: SET ROLE TO role1_cpu_test;
+SET
+14: SET ROLE TO role1_cpu_test;
+SET
+
+--
+-- when there are multiple groups with parallel queries,
+-- they should follow the ceiling enforcement of the cpu usage.
+--
+-- rg1_cpu_test:rg2_cpu_test is 0.1:0.2, so:
+--
+-- - rg1_cpu_test gets 10%;
+-- - rg2_cpu_test gets 20%;
+--
+
+10&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+11&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+12&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+13&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+14&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+
+20&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+21&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+22&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+23&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+24&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;  <waiting ...>
+
+-- start_ignore
+1:TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.14, "0": 0.02, "1": 0.05, "2": 0.05}, "rg1_cpu_test": {"-1": 10.07, "0": 10.06, "1": 10.06, "2": 10.06}, "rg2_cpu_test": {"-1": 19.88, "0": 19.93, "1": 19.93, "2": 19.93}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.2, "0": 0.07, "1": 0.05, "2": 0.1}, "rg1_cpu_test": {"-1": 9.87, "0": 9.93, "1": 9.93, "2": 9.91}, "rg2_cpu_test": {"-1": 19.93, "0": 20.03, "1": 20.03, "2": 19.99}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                   
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.17, "0": 0.03, "1": 0.05, "2": 0.07}, "rg1_cpu_test": {"-1": 9.97, "0": 10.01, "1": 10.01, "2": 10.01}, "rg2_cpu_test": {"-1": 19.9, "0": 19.98, "1": 19.98, "2": 19.98}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.15, "0": 0.03, "1": 0.03, "2": 0.04}, "rg1_cpu_test": {"-1": 10.03, "0": 9.98, "1": 9.99, "2": 9.99}, "rg2_cpu_test": {"-1": 20.51, "0": 20.28, "1": 20.29, "2": 20.3}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.14, "0": 0.05, "1": 0.05, "2": 0.02}, "rg1_cpu_test": {"-1": 9.95, "0": 9.97, "1": 9.97, "2": 9.98}, "rg2_cpu_test": {"-1": 19.87, "0": 19.92, "1": 19.92, "2": 19.93}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.16, "0": 0.07, "1": 0.06, "2": 0.06}, "rg1_cpu_test": {"-1": 10.49, "0": 9.89, "1": 9.81, "2": 10.15}, "rg2_cpu_test": {"-1": 21.55, "0": 20.42, "1": 20.5, "2": 20.39}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                              
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.15, "0": 0.06, "1": 0.05, "2": 0.03}, "rg1_cpu_test": {"-1": 9.93, "0": 9.92, "1": 9.92, "2": 9.92}, "rg2_cpu_test": {"-1": 19.84, "0": 19.9, "1": 19.9, "2": 19.9}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.14, "0": 0.06, "1": 0.06, "2": 0.06}, "rg1_cpu_test": {"-1": 9.67, "0": 9.46, "1": 9.54, "2": 9.53}, "rg2_cpu_test": {"-1": 21.12, "0": 20.67, "1": 20.88, "2": 20.88}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.12, "0": 0.08, "1": 0.08, "2": 0.08}, "rg1_cpu_test": {"-1": 9.9, "0": 9.92, "1": 9.92, "2": 9.93}, "rg2_cpu_test": {"-1": 19.91, "0": 19.96, "1": 19.96, "2": 19.96}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+1:SELECT fetch_sample();
+ fetch_sample                                                                                                                                                                                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"default_group": {"-1": 0.0, "0": 0.0, "1": 0.0, "2": 0.0}, "admin_group": {"-1": 0.13, "0": 0.06, "1": 0.07, "2": 0.09}, "rg1_cpu_test": {"-1": 8.71, "0": 9.96, "1": 10.1, "2": 10.5}, "rg2_cpu_test": {"-1": 17.65, "0": 20.94, "1": 20.1, "2": 21.04}} 
+(1 row)
+1:SELECT pg_sleep(1.7);
+ pg_sleep 
+----------
+          
+(1 row)
+-- end_ignore
+
+1:SELECT verify_cpu_usage('rg1_cpu_test', 10, 2);
+ verify_cpu_usage 
+------------------
+ t                
+(1 row)
+1:SELECT verify_cpu_usage('rg2_cpu_test', 20, 2);
+ verify_cpu_usage 
+------------------
+ t                
+(1 row)
+
+-- start_ignore
+1:SELECT * FROM cancel_all;
+ pg_cancel_backend 
+-------------------
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+ t                 
+(10 rows)
+
+10<:  <... completed>
+ERROR:  canceling statement due to user request
+11<:  <... completed>
+ERROR:  canceling statement due to user request
+12<:  <... completed>
+ERROR:  canceling statement due to user request
+13<:  <... completed>
+ERROR:  canceling statement due to user request
+14<:  <... completed>
+ERROR:  canceling statement due to user request
+
+20<:  <... completed>
+ERROR:  canceling statement due to user request
+21<:  <... completed>
+ERROR:  canceling statement due to user request
+22<:  <... completed>
+ERROR:  canceling statement due to user request
+23<:  <... completed>
+ERROR:  canceling statement due to user request
+24<:  <... completed>
+ERROR:  canceling statement due to user request
+
+10q: ... <quitting>
+11q: ... <quitting>
+12q: ... <quitting>
+13q: ... <quitting>
+14q: ... <quitting>
+
+
+20q: ... <quitting>
+21q: ... <quitting>
+22q: ... <quitting>
+23q: ... <quitting>
+24q: ... <quitting>
+
+1q: ... <quitting>
+-- end_ignore
+
+-- start_ignore
+! gpconfig -c gp_resource_group_cpu_ceiling_enforcement -v off;
+20210405:09:44:48:022326 gpconfig:hubert-gp-centos:huanzhang-[INFO]:-completed successfully with parameters '-c gp_resource_group_cpu_ceiling_enforcement -v off'
+
+! gpstop -rai;
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Starting gpstop with args: -rai
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Gathering information and validating the environment...
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Obtaining Segment details from coordinator...
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14449.gd1235cef56 build dev'
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Coordinator segment instance directory=/home/huanzhang/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Attempting forceful termination of any leftover coordinator process
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Terminating processes for segment /home/huanzhang/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20210405:09:44:48:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Stopping coordinator standby host hubert-gp-centos mode=immediate
+20210405:09:44:49:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown standby process on hubert-gp-centos
+20210405:09:44:49:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20210405:09:44:49:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20210405:09:44:49:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-0.00% of jobs completed
+20210405:09:44:50:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-100.00% of jobs completed
+20210405:09:44:50:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20210405:09:44:50:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-0.00% of jobs completed
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-100.00% of jobs completed
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-   Segments stopped successfully      = 6
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-   Segments with errors during stop   = 0
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Database successfully shutdown with no errors reported
+20210405:09:44:51:022698 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Restarting System...
+
 -- end_ignore
 
 -- restore admin_group's cpu_rate_limit
-ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 10;
+2:ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 10;
 ALTER
 
 -- cleanup
-REVOKE ALL ON FUNCTION busy() FROM role1_cpu_test;
+2:REVOKE ALL ON FUNCTION busy() FROM role1_cpu_test;
 REVOKE
-REVOKE ALL ON FUNCTION busy() FROM role2_cpu_test;
+2:REVOKE ALL ON FUNCTION busy() FROM role2_cpu_test;
 REVOKE
-DROP ROLE role1_cpu_test;
+2:DROP ROLE role1_cpu_test;
 DROP
-DROP ROLE role2_cpu_test;
+2:DROP ROLE role2_cpu_test;
 DROP
-DROP RESOURCE GROUP rg1_cpu_test;
+2:DROP RESOURCE GROUP rg1_cpu_test;
 DROP
-DROP RESOURCE GROUP rg2_cpu_test;
+2:DROP RESOURCE GROUP rg2_cpu_test;
 DROP
-DROP LANGUAGE plpython3u CASCADE;
+2:DROP LANGUAGE plpython3u CASCADE;
 DROP

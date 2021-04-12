@@ -32,9 +32,12 @@ CXformImplementFullOuterMergeJoin::CXformImplementFullOuterMergeJoin(
 }
 
 CXform::EXformPromise
-CXformImplementFullOuterMergeJoin::Exfp(CExpressionHandle &	 //exprhdl
-) const
+CXformImplementFullOuterMergeJoin::Exfp(CExpressionHandle &exprhdl) const
 {
+	if (exprhdl.DeriveHasSubquery(2))
+	{
+		return CXform::ExfpNone;
+	}
 	return CXform::ExfpHigh;
 }
 

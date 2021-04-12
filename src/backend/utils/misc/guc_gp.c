@@ -219,6 +219,7 @@ int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
+bool		gp_resource_group_cpu_ceiling_enforcement;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -2726,6 +2727,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_resource_group_cpu_ceiling_enforcement", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("If the value is true, ceiling enforcement of CPU usage will be enabled"),
+			NULL
+		},
+		&gp_resource_group_cpu_ceiling_enforcement,
+		false, NULL, NULL
+	},
+
+	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
@@ -2784,6 +2794,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_pause_on_restore_point_replay", PGC_SIGHUP, DEVELOPER_OPTIONS,
+		 gettext_noop("Pause recovery when a restore point is replayed."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_pause_on_restore_point_replay,
+		false,
+		NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL

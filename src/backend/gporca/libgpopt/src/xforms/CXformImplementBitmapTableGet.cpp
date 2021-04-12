@@ -45,6 +45,18 @@ CXformImplementBitmapTableGet::CXformImplementBitmapTableGet(CMemoryPool *mp)
 {
 }
 
+CXform::EXformPromise
+CXformImplementBitmapTableGet::Exfp(CExpressionHandle &exprhdl) const
+{
+	if (exprhdl.DeriveHasSubquery(0) || exprhdl.DeriveHasSubquery(1))
+	{
+		return CXform::ExfpNone;
+	}
+
+
+	return CXform::ExfpHigh;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CXformImplementBitmapTableGet::Transform

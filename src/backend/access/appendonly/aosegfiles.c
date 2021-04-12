@@ -675,7 +675,7 @@ ClearFileSegInfo(Relation parentrel, int segno)
 	simple_heap_update(pg_aoseg_rel, &tuple->t_self, new_tuple);
 	heap_freetuple(new_tuple);
 
-	heap_endscan(aoscan);
+	table_endscan(aoscan);
 	table_close(pg_aoseg_rel, RowExclusiveLock);
 
 	pfree(new_record);
@@ -925,7 +925,7 @@ UpdateFileSegInfo_internal(Relation parentrel,
 	heap_freetuple(new_tuple);
 
 	/* Finish up scan */
-	heap_endscan(aoscan);
+	table_endscan(aoscan);
 	table_close(pg_aoseg_rel, RowExclusiveLock);
 
 	pfree(new_record);

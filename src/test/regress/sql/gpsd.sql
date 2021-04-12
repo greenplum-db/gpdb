@@ -20,6 +20,7 @@ create database gpsd_db_without_hll;
 create table gpsd_foo(a int, s text) partition by range(a);
 create table gpsd_foo_1 partition of gpsd_foo for values from (1) to (5);
 insert into gpsd_foo values(1, 'something');
+insert into gpsd_foo values(4, 'a \ and a "');
 analyze gpsd_foo;
 
 -- arbitrarily populate stats data values having text (with quotes) in a slot

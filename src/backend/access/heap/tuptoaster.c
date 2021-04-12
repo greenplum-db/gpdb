@@ -876,13 +876,13 @@ toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
 		hoff = MAXALIGN(hoff);
 		/* now convert to a limit on the tuple data size */
 		maxDataLen = RelationGetToastTupleTarget(rel, TOAST_TUPLE_TARGET) - hoff;
-		maxDataLen = TOAST_TUPLE_TARGET - hoff;
 	}
 	else
 	{
-		// GPDB_12_MERGE_FIXME: use RelationGetToastTupleTarget here too?
-		maxDataLen = toast_tuple_target;
-		hoff = -1; /* keep compiler quiet about using 'hoff' uninitialized */
+		/* Since reloptions for AO table is not permitted, so using TOAST_TUPLE_TARGET */
+		hoff = sizeof(MemTupleData);
+		hoff = MAXALIGN(hoff);
+		maxDataLen = TOAST_TUPLE_TARGET - hoff;
 	}
 
 	/*
@@ -1095,15 +1095,7 @@ toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
 	 * increase the target tuple size, so that 'm' attributes aren't stored
 	 * externally unless really necessary.
 	 */
-	/*
-	 * FIXME: Should we do something like this with memtuples on
-	 * AO tables too? Currently we do not increase the target tuple size for AO
-	 * table, so there are occasions when columns of type 'm' will be stored
-	 * out-of-line but they could otherwise be accommodated in-block
-	 * c.f. upstream Postgres commit ca7c8168de76459380577eda56a3ed09b4f6195c
-	 */
-	if (!ismemtuple)
-		maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
+	maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
 
 	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
 							   toast_values, toast_isnull) > maxDataLen &&

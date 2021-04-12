@@ -184,12 +184,9 @@ con6 /gpdata/*/log/gpdb*.csv' &gt; seglog.out
                     information from a Greenplum Database system. You can then send the information
                     to VMware Customer Support to aid in the diagnosis of Greenplum Database errors
                     or system failures.</p>
-                <p>The <codeph>gpmt</codeph> utility command is available in the <codeph>bin</codeph>
-                  directory of your Greenplum Database installation. You can find usage information
-                  for this utility on the
-                  <xref href="https://community.pivotal.io/s/article/Greenplum-Magic-Tool-GPMT"
-                     format="html" scope="external">Greenplum Magic Tool (GPMT)</xref> page located
-                  in the VMware Tanzu Community Knowledge Base.</p>
+                <p>The <codeph>gpmt</codeph> utility command is available in the
+                        <codeph>bin</codeph> directory of your Greenplum Database installation. See
+                        <xref href="../utility_guide/ref/gpmt.xml"/> for usage information.</p>
             </body>
         </topic>
     </topic>

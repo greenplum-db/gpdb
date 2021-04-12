@@ -133,6 +133,7 @@ static bool detectCgroupMountPoint(void);
 static void initCpu(void);
 static void initCpuSet(void);
 static void createDefaultCpuSetGroup(void);
+static int64 getCfsPeriodUs(ResGroupCompType);
 
 /*
  * currentGroupIdInCGroup & oldCaps are used for reducing redundant
@@ -1339,6 +1340,45 @@ initCpuSet(void)
 	createDefaultCpuSetGroup();
 }
 
+static int64
+getCfsPeriodUs(ResGroupCompType comp)
+{
+	int64		cfs_period_us;
+
+	/*
+	 * calculate cpu rate limit of system.
+	 *
+	 * Ideally the cpu quota is calculated from parent infomation:
+	 *
+	 * system_cfs_quota_us := parent.cfs_period_us * ncores.
+	 *
+	 * However on centos6 we found parent.cfs_period_us can be 0 and is not
+	 * writable.  In the other side, gpdb.cfs_period_us should be equal to
+	 * parent.cfs_period_us because sub dirs inherit parent properties by
+	 * default, so we read it instead.
+	 */
+	cfs_period_us = readInt64(RESGROUP_ROOT_ID, BASETYPE_GPDB,
+							  comp, "cpu.cfs_period_us");
+	if (cfs_period_us == 0LL)
+	{
+		/*
+		 * if gpdb.cfs_period_us is also 0 try to correct it by setting the
+		 * default value 100000 (100ms).
+		 */
+		writeInt64(RESGROUP_ROOT_ID, BASETYPE_GPDB,
+				   comp, "cpu.cfs_period_us", 100000LL);
+
+		/* read again to verify the effect */
+		cfs_period_us = readInt64(RESGROUP_ROOT_ID, BASETYPE_GPDB,
+								  comp, "cpu.cfs_period_us");
+		if (cfs_period_us <= 0LL)
+			CGROUP_CONFIG_ERROR("invalid cpu.cfs_period_us value: "
+								INT64_FORMAT,
+								cfs_period_us);
+	}
+	return cfs_period_us;
+}
+
 /* Return the name for the OS group implementation */
 const char *
 ResGroupOps_Name(void)
@@ -1433,37 +1473,7 @@ ResGroupOps_Bless(void)
 	/* get system cpu cores */
 	ncores = getCpuCores();
 
-	/*
-	 * calculate cpu rate limit of system.
-	 *
-	 * Ideally the cpu quota is calculated from parent infomation:
-	 *
-	 * system_cfs_quota_us := parent.cfs_period_us * ncores.
-	 *
-	 * However on centos6 we found parent.cfs_period_us can be 0 and is not
-	 * writable.  In the other side, gpdb.cfs_period_us should be equal to
-	 * parent.cfs_period_us because sub dirs inherit parent properties by
-	 * default, so we read it instead.
-	 */
-	cfs_period_us = readInt64(RESGROUP_ROOT_ID, BASETYPE_GPDB,
-							  comp, "cpu.cfs_period_us");
-	if (cfs_period_us == 0LL)
-	{
-		/*
-		 * if gpdb.cfs_period_us is also 0 try to correct it by setting the
-		 * default value 100000 (100ms).
-		 */
-		writeInt64(RESGROUP_ROOT_ID, BASETYPE_GPDB,
-				   comp, "cpu.cfs_period_us", 100000LL);
-
-		/* read again to verify the effect */
-		cfs_period_us = readInt64(RESGROUP_ROOT_ID, BASETYPE_GPDB,
-								  comp, "cpu.cfs_period_us");
-		if (cfs_period_us <= 0LL)
-			CGROUP_CONFIG_ERROR("invalid cpu.cfs_period_us value: "
-								INT64_FORMAT,
-								cfs_period_us);
-	}
+	cfs_period_us = getCfsPeriodUs(comp);
 	system_cfs_quota_us = cfs_period_us * ncores;
 
 	/* read cpu rate limit of parent cgroup */
@@ -1723,6 +1733,18 @@ ResGroupOps_SetCpuRateLimit(Oid group, int cpu_rate_limit)
 							 "cpu.shares");
 	writeInt64(group, BASETYPE_GPDB, comp,
 			   "cpu.shares", shares * cpu_rate_limit / 100);
+
+	/* set cpu.cfs_quota_us if hard CPU enforment is enabled */
+	if (gp_resource_group_cpu_ceiling_enforcement)
+	{
+		int64 periods = getCfsPeriodUs(comp);
+		writeInt64(group, BASETYPE_GPDB, comp, "cpu.cfs_quota_us",
+				   periods * ResGroupOps_GetCpuCores() * cpu_rate_limit / 100);
+	}
+	else
+	{
+		writeInt64(group, BASETYPE_GPDB, comp, "cpu.cfs_quota_us", -1);
+	}
 }
 
 /*

@@ -25,6 +25,7 @@
 #include <sys/poll.h>
 #endif
 
+#include "access/xact.h"
 #include "storage/ipc.h"		/* For proc_exit_inprogress  */
 #include "tcop/tcopprot.h"
 #include "libpq-fe.h"
@@ -77,6 +78,26 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	/* allocate and initialize a gang structure */
 	newGangDefinition = buildGangDefinition(segments, segmentType);
 	CurrentGangCreating = newGangDefinition;
+	/*
+	 * If we're in a global transaction, and there is some primary segment down,
+	 * we have to error out so that the current global transaction can be aborted.
+	 * Before error out, we need to clean up QEs, destroy the gang, and reset
+	 * the session.
+	 * We shouldn't error out in transaction abort state to avoid recursive abort.
+	 * In such case, the dispatcher would catch the error and then dtm does (retry)
+	 * abort.
+	 */
+	if (IsTransactionState())
+	{
+		for (i = 0; i < size; i++)
+		{
+			if (FtsIsSegmentDown(newGangDefinition->db_descriptors[i]->segment_database_info))
+			{
+				DisconnectAndDestroyAllGangs(true);
+				elog(ERROR, "gang was lost due to cluster reconfiguration");
+			}
+		}
+	}
 	totalSegs = getgpsegmentCount();
 	Assert(totalSegs > 0);
 

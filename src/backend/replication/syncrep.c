@@ -489,7 +489,6 @@ SyncRepInitConfig(void)
 	 */
 	if (IS_QUERY_DISPATCHER() && MyWalSnd->is_for_gp_walreceiver)
 	{
-		Assert(priority == 0);
 		priority = 1;
 	}
 

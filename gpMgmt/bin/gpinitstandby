@@ -15,6 +15,7 @@ try:
     from gppylib import gparray
     from gppylib.db import dbconn
     from gppylib.userinput import *
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment
     from gppylib.operations.package import SyncPackages
     from gppylib.commands.pg import PgBaseBackup
@@ -183,7 +184,7 @@ def parseargs():
    
    
 #-------------------------------------------------------------------------
-def print_summary(options, array, standby_datadir):
+def print_summary(options, array, standby_datadir, unreachable_hosts=[]):
     """Display summary of gpinitstandby operations."""
     
     logger.info('-----------------------------------------------------')
@@ -239,6 +240,24 @@ def print_summary(options, array, standby_datadir):
                            'standby coordinator initialization?', 'N')
         if not yn:
             raise GpInitStandbyException('User canceled')
+
+    # If the standby is initialized while some hosts are unreachable, the cluster will end up in an inconsistent
+    # state after those hosts are brought back up, because only some of them will have had their pg_hba.conf
+    # files modified appropriately.  To ensure consistency we can either abort and force the user to wait until
+    # their cluster is in a good state to init their standby, or we can go ahead and let them init it so long
+    # as they fix everything when they bring the hosts back up, and since both of those are the better choice in
+    # different circumstances we offer that choice to the user.
+    if len(unreachable_hosts) != 0 and not options.remove:
+        logger.warning('One or more segment hosts are not currently reachable: %s' % " ".join(unreachable_hosts))
+        if options.confirm:
+            logger.warning('If you continue with initialization, pg_hba.conf files on these hosts will not be updated.')
+            logger.warning('Manual effort will be required to update these files once all hosts are reachable again.')
+            if not ask_yesno(None, 'Do you want to continue?', 'N'):
+                raise GpInitStandbyException('User canceled')
+        else:
+            logger.warning('Proceeding will leave the cluster in an inconsistent state.')
+            logger.warning('If you want to continue with initialization, re-run gpinitstandby without the -a option.')
+            raise GpInitStandbyException('Unable to proceed while one or more hosts are unreachable')
 
 
 #-------------------------------------------------------------------------
@@ -366,9 +385,13 @@ def create_standby(options):
 
         # validate
         validate_standby_init(options, array, standby_datadir)
+
+        # check for unreachable hosts
+        segment_hosts = [seg.getSegmentHostName() for seg in array.getDbList() if not seg.isSegmentCoordinator() and not seg.isSegmentStandby()]
+        unreachable_hosts = get_unreachable_segment_hosts(segment_hosts, DEFAULT_BATCH_SIZE)
         
         # display summary
-        print_summary(options, array, standby_datadir)
+        print_summary(options, array, standby_datadir, unreachable_hosts)
         
         # sync packages
         # The design decision here is to squash any exceptions resulting from the 
@@ -390,7 +413,7 @@ def create_standby(options):
         logger.info('Updating pg_hba.conf file...')
         update_pg_hba_conf(options, array)
         logger.debug('Updating pg_hba.conf file on segments...')
-        update_pg_hba_conf_on_segments(array, options.standby_host, options.hba_hostnames)
+        update_pg_hba_conf_on_segments(array, options.standby_host, options.hba_hostnames, unreachable_hosts)
         logger.info('pg_hba.conf files updated successfully.')
 
         copy_coordinator_datadir_to_standby(options, array, standby_datadir)
@@ -462,7 +485,7 @@ def create_standby(options):
 
             logger.info('Cleaning up pg_hba.conf backup files...')
             # should cleanup on segments first
-            cleanup_pg_hba_backup_on_segment(array)
+            cleanup_pg_hba_backup_on_segment(array, unreachable_hosts)
             cleanup_pg_hba_conf_backup(array)
             logger.info('Backup files of pg_hba.conf cleaned up successfully.')
 

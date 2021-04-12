@@ -35,7 +35,7 @@ def ResultIter(cursor, arraysize=1000):
 
 def getVersion(envOpts):
     cmd = subprocess.Popen('psql --pset footer -Atqc "select version()" template1', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=envOpts)
-    if cmd.wait() is not 0:
+    if cmd.wait() != 0:
         sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + cmd.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
     return cmd.communicate()[0].decode('ascii')
@@ -44,7 +44,7 @@ def getVersion(envOpts):
 def dumpSchema(connectionInfo, envOpts):
     dump_cmd = 'pg_dump -h {host} -p {port} -U {user} -s -x -O {database}'.format(**connectionInfo)
     p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
-    if p.wait() is not 0:
+    if p.wait() != 0:
         sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
 
@@ -52,7 +52,7 @@ def dumpSchema(connectionInfo, envOpts):
 def dumpGlobals(connectionInfo, envOpts):
     dump_cmd = 'pg_dumpall -h {host} -p {port} -U {user} -l {database} -g'.format(**connectionInfo)
     p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
-    if p.wait() is not 0:
+    if p.wait() != 0:
         sys.stderr.write('\nError while dumping globals.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
 
@@ -75,14 +75,15 @@ def dumpTupleCount(cur):
 
 
 def dumpStats(cur, inclHLL):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
-        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
+    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, pgs.* ' \
+        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt, pg_namespace pgtn ' \
         'WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN ' + \
         sysnslist + \
         ' and pgc.oid = pgs.starelid ' \
         'and pga.attrelid = pgc.oid ' \
         'and pga.attnum = pgs.staattnum ' \
         'and pga.atttypid = pgt.oid ' \
+        'and pgt.typnamespace = pgtn.oid ' \
         'ORDER BY pgc.relname, pgs.staattnum'
     pstring = '--\n' \
         '-- Table: {0}, Attribute: {1}\n' \

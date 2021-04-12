@@ -1405,7 +1405,7 @@ ProcessCopyOptions(ParseState *pstate,
 		cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
 
 	cstate->escape_off = false;
-	cstate->skip_ext_partition = false;
+	cstate->skip_foreign_partitions = false;
 
 	cstate->is_copy_from = is_from;
 
@@ -1644,13 +1644,13 @@ ProcessCopyOptions(ParseState *pstate,
 						 errmsg("conflicting or redundant options")));
 			cstate->on_segment = true;
 		}
-		else if (strcmp(defel->defname, "skip_ext_partition") == 0)
+		else if (strcmp(defel->defname, "skip_foreign_partitions") == 0)
 		{
-			if (cstate->skip_ext_partition)
+			if (cstate->skip_foreign_partitions)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->skip_ext_partition = true;
+			cstate->skip_foreign_partitions = true;
 		}
 		else if (!rel_is_external_table(cstate->rel->rd_id))
 			ereport(ERROR,
@@ -2057,7 +2057,7 @@ BeginCopy(ParseState *pstate,
 		int			cursorOptions = CURSOR_OPT_PARALLEL_OK;
 
 		/* GPDB: Pass the IGNORE EXTERNAL PARTITION option to the planner. */
-		if (cstate->skip_ext_partition)
+		if (cstate->skip_foreign_partitions)
 			cursorOptions |= CURSOR_OPT_SKIP_FOREIGN_PARTITIONS;
 
 		plan = pg_plan_query(query, cursorOptions, NULL);
@@ -2602,30 +2602,6 @@ BeginCopyTo(ParseState *pstate,
 	}
 	else
 		cstate->dispatch_mode = COPY_DIRECT;
-
-	/*
-	 * GPDB_12_MERGE_FIXME: We used to have this limitation, but now that we
-	 * handle partitioned tables by invoking the planner (we basically do
-	 * the "COPY (SELECT ...) TO" trick automatically now), we handle it
-	 * just fine. Do we still want to restrict it? If not, we can just
-	 * remove this.
-	 *
-	 * Whether we resurrect or remove this, we should add a test for it; no
-	 * existing test covered this error.
-	 */
-#if 0
-	if (rel != NULL && rel_has_external_partition(rel->rd_id))
-	{
-		if (!cstate->skip_ext_partition)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("cannot copy from relation \"%s\" which has external partition(s)",
-							RelationGetRelationName(rel)),
-					 errhint("Try the COPY (SELECT ...) TO variant.")));
-		}
-	}
-#endif
 
 	bool		pipe = (filename == NULL || (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment));
 

@@ -62,6 +62,42 @@ Feature: Tests for gpinitstandby feature
         And gpinitstandby should not print "Traceback" to stdout
         And rely on environment.py to restore path permissions
 
+    Scenario: gpinitstandby requires additional confirmation prompt when a segment host is unreachable
+        Given the database is running
+          And the standby is not initialized
+          And the host for the primary on content 0 is made unreachable
+
+         When the user runs gpinitstandby and accepts the unreachable host prompt
+
+         Then gpinitstandby should return a return code of 0
+          And gpinitstandby should print "If you continue with initialization, pg_hba.conf files on these hosts will not be updated." to stdout
+          And gpinitstandby should print "Manual update of the pg_hba_conf files for all segments on unreachable host invalid_host will be required." to stdout
+          And the cluster is returned to a good state
+
+    Scenario: gpinitstandby exits if confirmation is not given when a segment host is unreachable
+        Given the database is running
+          And the standby is not initialized
+          And the host for the primary on content 0 is made unreachable
+
+         When the user runs gpinitstandby and rejects the unreachable host prompt
+
+         Then gpinitstandby should return a return code of 2
+          And gpinitstandby should print "If you continue with initialization, pg_hba.conf files on these hosts will not be updated." to stdout
+          And gpinitstandby should print "Error initializing standby coordinator: User canceled" to stdout
+          And the cluster is returned to a good state
+
+    Scenario: gpinitstandby exits if -a is used when a segment host is unreachable
+        Given the database is running
+          And the standby is not initialized
+          And the host for the primary on content 0 is made unreachable
+
+         When the user runs gpinitstandby with options " "
+
+         Then gpinitstandby should return a return code of 2
+          And gpinitstandby should print "If you want to continue with initialization, re-run gpinitstandby without the -a option." to stdout
+          And gpinitstandby should print "Error initializing standby coordinator: Unable to proceed while one or more hosts are unreachable" to stdout
+          And the cluster is returned to a good state
+
     Scenario: gpinitstandby creates the standby with default data_checksums on
         Given the database is running
         And the standby is not initialized

@@ -1190,10 +1190,6 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 	 * and pg_attribute tuples to avoid overhead cost if there still leaf
 	 * tables not analyzed. Return false once find a leaf table not analyzed.
 	 */
-	/* GPDB_12_MERGE_FIXME: what's the appropriate lock level? AccessShareLock
-	 * is enough to scan the table, but are we updating them, too? If not,
-	 * NoLock might be enough?
-	 */
 	oid_list = find_all_inheritors(attrelid, NoLock, NULL);
 	foreach(lc, oid_list)
 	{

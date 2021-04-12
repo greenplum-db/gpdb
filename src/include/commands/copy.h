@@ -246,7 +246,7 @@ typedef struct CopyStateData
 	List	   *qe_attnumlist;
 	bool		stopped_processing_at_delim;
 
-	bool          skip_ext_partition;  /* skip external partition */
+	bool		skip_foreign_partitions;  /* skip foreign/external partitions */
 
 	bool		on_segment; /* QE save data files locally */
 	bool		ignore_extra_line; /* Don't count CSV header or binary trailer in

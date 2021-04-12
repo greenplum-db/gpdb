@@ -169,14 +169,9 @@ static void free_readfile(char **optlines);
 static pgpid_t start_postmaster(void);
 static void read_post_opts(void);
 
+static bool is_secondary_instance(const char *pg_data);
 static WaitPMResult wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint);
 static bool postmaster_is_alive(pid_t pid);
-
-static char postopts_file[MAXPGPATH];
-static char backup_file[MAXPGPATH];
-static char promote_file[MAXPGPATH];
-static char pid_file[MAXPGPATH];
-static char backup_file[MAXPGPATH];
 
 #if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
 static void unlimit_core_size(void);
@@ -564,6 +559,20 @@ start_postmaster(void)
 }
 
 
+static bool
+is_secondary_instance(const char *pg_data)
+{
+	char		standby_signal[MAXPGPATH];
+	int			rc;
+
+	snprintf(standby_signal, sizeof(standby_signal), "%s/standby.signal", pg_data);
+	rc = access(standby_signal, R_OK);
+
+	if (rc == -1 && errno != ENOENT)
+		write_stderr(_("could not test the existence of standby.signal: %m"));
+
+	return rc == 0;
+}
 
 /*
  * Wait for the postmaster to become ready.
@@ -583,13 +592,11 @@ static WaitPMResult
 wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint)
 {
 	int			i;
-	bool		gpdb_master_distributed_mode;
+	bool		is_coordinator;
 
-	/* check if starting GPDB master in distributed mode */
-	if (strstr(post_opts, "gp_role=dispatch"))
-		gpdb_master_distributed_mode = true;
-	else
-		gpdb_master_distributed_mode = false;
+	/* check if starting GPDB coordinator in distributed mode */
+	is_coordinator = strstr(post_opts, "gp_role=dispatch") != NULL
+                        && !is_secondary_instance(pg_data);
 
 	for (i = 0; i < wait_seconds * WAITS_PER_SEC; i++)
 	{
@@ -631,7 +638,11 @@ wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint)
 				 */
 				char	   *pmstatus = optlines[LOCK_FILE_LINE_PM_STATUS - 1];
 
-				if (strcmp(pmstatus, gpdb_master_distributed_mode?PM_STATUS_DTM_RECOVERED:PM_STATUS_READY) == 0 ||
+				/*
+				 * The READY status for coordinator is `dtmready`, while the READY
+				 * status is really ready for other nodes.
+				 */
+				if (strcmp(pmstatus, is_coordinator ? PM_STATUS_DTM_RECOVERED : PM_STATUS_READY) == 0 ||
 					strcmp(pmstatus, PM_STATUS_STANDBY) == 0)
 				{
 					/* postmaster is done starting up */

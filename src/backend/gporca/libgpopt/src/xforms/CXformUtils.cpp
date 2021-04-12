@@ -3684,9 +3684,9 @@ CXformUtils::FJoinPredOnSingleChild(CMemoryPool *mp, CExpressionHandle &exprhdl)
 		pdrgpcrs->Append(pcrsOutput);
 	}
 
-	GPOS_ASSERT(nullptr != exprhdl.PexprScalarExactChild(arity - 1));
 	CExpressionArray *pdrgpexprPreds = CPredicateUtils::PdrgpexprConjuncts(
-		mp, exprhdl.PexprScalarExactChild(arity - 1));
+		mp, exprhdl.PexprScalarExactChild(arity - 1,
+										  true /*error_on_null_return*/));
 	const ULONG ulPreds = pdrgpexprPreds->Size();
 	BOOL fPredUsesSingleChild = false;
 	for (ULONG ulPred = 0; !fPredUsesSingleChild && ulPred < ulPreds; ulPred++)

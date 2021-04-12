@@ -117,7 +117,7 @@ echo "restore_command = 'cp ${ARCHIVE_PREFIX}%c/%f %p'
 recovery_target_name = 'test_restore_point'
 recovery_target_action = 'promote'
 recovery_end_command = 'touch ${!REPLICA_VAR}/recovery_finished'" >> ${!REPLICA_VAR}/postgresql.conf
-  echo "" > ${!REPLICA_VAR}/postgresql.auto.conf
+echo "" > ${!REPLICA_VAR}/postgresql.auto.conf
   touch ${!REPLICA_VAR}/recovery.signal
   pg_ctl start -D ${!REPLICA_VAR} -l /dev/null
 done

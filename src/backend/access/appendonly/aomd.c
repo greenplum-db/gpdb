@@ -237,7 +237,7 @@ mdunlink_ao(RelFileNodeBackend rnode, ForkNumber forkNumber, bool isRedo)
 					(errcode_for_file_access(),
 					 errmsg("could not remove file \"%s\": %m", path)));
 	}
-	/* This storage manager is not concerend with forks other than MAIN_FORK */
+	/* This storage manager is not concerned with forks other than MAIN_FORK */
 	else if (forkNumber == MAIN_FORKNUM)
 	{
 		int pathSize = strlen(path);
@@ -536,9 +536,6 @@ ao_truncate_one_rel(Relation rel)
 	 *
 	 * Segfile 0 first, ao_foreach_extent_file() doesn't invoke the
 	 * callback for it.
-	 *
-	 * GPDB_12_MERGE_FIXME: shouldn't we unlink, not truncate, the
-	 * other segfiles?
 	 */
 	truncate_ao_perFile(0, &truncateFiles);
 	ao_foreach_extent_file(truncate_ao_perFile, &truncateFiles);

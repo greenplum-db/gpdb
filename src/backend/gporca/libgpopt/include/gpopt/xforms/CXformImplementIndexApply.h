@@ -57,11 +57,13 @@ public:
 		return "CXformImplementIndexApply";
 	}
 
-	// compute xform promise for a given expression handle
 	EXformPromise
-	Exfp(CExpressionHandle &  // exprhdl
-	) const override
+	Exfp(CExpressionHandle &exprhdl) const override
 	{
+		if (exprhdl.DeriveHasSubquery(2))
+		{
+			return ExfpNone;
+		}
 		return ExfpHigh;
 	}
 

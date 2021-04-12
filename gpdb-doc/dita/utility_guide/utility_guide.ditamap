@@ -35,7 +35,8 @@
             <topicref href="ref/gpmapreduce.xml"/>
             <topicref href="ref/gpmapreduce-yaml.xml"/>
             <topicref href="ref/gpmovemirrors.xml"/>
-            <!-- hidden until testing is complete -msk
+            <topicref href="ref/gpmt.xml" otherprops="pivotal"/>
+<!-- hidden until testing is complete -msk
         <topicref href="ref/gpmovemirrors.xml"/>
 -->
             <topicref href="ref/gppkg.xml"/>

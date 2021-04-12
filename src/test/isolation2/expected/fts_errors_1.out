@@ -142,7 +142,9 @@ ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
 ----+----
 (0 rows)
 3:END;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
 -- session 4: not in transaction but has temp table, cann't update
 --            cdb_component_dbs, following query should fail and session
 --            is reset

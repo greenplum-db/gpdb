@@ -133,19 +133,14 @@ def dump_query(connectionInfo, query_file):
         toolkit_f.write(query)
 
     # disable .psqlrc to prevent unexpected timing and format output
-    query_cmd = "psql %s --pset footer --no-psqlrc -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
+    query_cmd = "psql %s --pset footer --no-psqlrc -v ON_ERROR_STOP=1 -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
     print(query_cmd)
 
     p = subprocess.Popen(query_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
 
-    if p.wait() is not 0:
-        errormsg = p.communicate()[1].decode('ascii')
-        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
-        sys.exit(1)
-
     outmsg, errormsg = p.communicate()
-    if errormsg:
-        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
+    if p.returncode != 0:
+        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg.decode() + '\n\n')
         sys.exit(1)
     return outmsg
 
@@ -185,8 +180,9 @@ def pg_dump_object(mr_query, connectionInfo, envOpts):
         (dmp_cmd, mr_query.relids, mr_query.funcids, Escape(out_file))
     print(dmp_cmd)
     p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
-    if p.wait() is not 0:
-        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
+    _, errormsg = p.communicate()
+    if p.returncode != 0:
+        sys.stderr.writelines('\nError when executing pg_dump.\n\n' + errormsg.decode() + '\n\n')
         sys.exit(1)
 
 def dump_tuple_count(cur, oid_str, f_out):
@@ -211,14 +207,15 @@ def dump_tuple_count(cur, oid_str, f_out):
         f_out.writelines(updateStmt)
 
 def dump_stats(cur, oid_str, f_out, inclHLL):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
-        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
+    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, pgs.* ' \
+        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt, pg_namespace pgtn ' \
         'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) ' \
         'and pgn.nspname NOT LIKE \'pg_temp_%%\' ' \
         'and pgc.oid = pgs.starelid ' \
         'and pga.attrelid = pgc.oid ' \
         'and pga.attnum = pgs.staattnum ' \
         'and pga.atttypid = pgt.oid ' \
+        'and pgt.typnamespace = pgtn.oid ' \
         'ORDER BY pgc.relname, pgs.staattnum' % (oid_str)
 
     pstring = '--\n' \
@@ -241,7 +238,7 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
         if schemaname != 'pg_catalog':
             linecomment = '-- ' # This will comment out the DELETE query
 
-        f_out.writelines(pstring.format(Escape(vals[0]), Escape(vals[2]), linecomment, starelid, vals[5], ',\n'.join(rowVals)))
+        f_out.writelines(pstring.format(Escape(vals[0]), Escape(vals[2]), linecomment, starelid, vals[6], ',\n'.join(rowVals)))
 
 def main():
     parser = parse_cmd_line()

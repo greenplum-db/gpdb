@@ -70,7 +70,29 @@ RelationBuildPartitionDesc(Relation rel)
 				nparts;
 	PartitionKey key = RelationGetPartitionKey(rel);
 	MemoryContext oldcxt;
+	MemoryContext rbcontext;
 	int		   *mapping;
+
+	/*
+	 * GPDB: Bring back the temporary memory context which gets removed in
+	 * upstream commit d3f48dfae42f9655425d1f58f396e495c7fb7812.
+	 * The reason is when using the GPDB's CREATE PARTITION TABLE syntax,
+	 * it'll create lots of subpartitions under the same portal and the memory
+	 * leak below will blow up the CurrentMemoryContext, upstream's syntax does
+	 * not have this issue since one portal can only create one partition table.
+	 *
+	 * Although we can set -DRECOVER_RELATION_BUILD_MEMORY=1 at compile time to
+	 * use upstream logic to free the leak for each RelationBuildDesc() call.
+	 * But seems like there is performance concern.
+	 * See https://www.postgresql.org/message-id/30380.1552657187%40sss.pgh.pa.us
+	 *
+	 * So we decide to revert part of the commit, this only affect partition
+	 * related relations, so the performance should not have much impact.
+	 */
+	rbcontext = AllocSetContextCreate(CurrentMemoryContext,
+									  "RelationBuildPartitionDesc",
+									  ALLOCSET_DEFAULT_SIZES);
+	oldcxt = MemoryContextSwitchTo(rbcontext);
 
 	/*
 	 * Get partition oids from pg_inherits.  This uses a single snapshot to
@@ -203,11 +225,11 @@ RelationBuildPartitionDesc(Relation rel)
 	/* If there are no partitions, the rest of the partdesc can stay zero */
 	if (nparts > 0)
 	{
-		/* Create PartitionBoundInfo, using the caller's context. */
+		/* Create PartitionBoundInfo, using the temporary context. */
 		boundinfo = partition_bounds_create(boundspecs, nparts, key, &mapping);
 
 		/* Now copy all info into relcache's partdesc. */
-		oldcxt = MemoryContextSwitchTo(rel->rd_pdcxt);
+		MemoryContextSwitchTo(rel->rd_pdcxt);
 		partdesc->boundinfo = partition_bounds_copy(boundinfo, key);
 		partdesc->oids = (Oid *) palloc(nparts * sizeof(Oid));
 		partdesc->is_leaf = (bool *) palloc(nparts * sizeof(bool));
@@ -221,8 +243,9 @@ RelationBuildPartitionDesc(Relation rel)
 		 *
 		 * Also record leaf-ness of each partition.  For this we use
 		 * get_rel_relkind() which may leak memory, so be sure to run it in
-		 * the caller's context.
+		 * the temporary context.
 		 */
+		MemoryContextSwitchTo(rbcontext);
 		for (i = 0; i < nparts; i++)
 		{
 			int			index = mapping[i];
@@ -234,6 +257,9 @@ RelationBuildPartitionDesc(Relation rel)
 	}
 
 	rel->rd_partdesc = partdesc;
+	/* Return to caller's context, and blow away the temporary context. */
+	MemoryContextSwitchTo(oldcxt);
+	MemoryContextDelete(rbcontext);
 }
 
 /*

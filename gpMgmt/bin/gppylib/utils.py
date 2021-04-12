@@ -508,15 +508,21 @@ def Escape(query_str):
     return pgdb.escape_string(query_str)
 
 
+def escapeArrayElement(query_str):
+    # also escape backslashes and double quotes, in addition to the doubling of single quotes
+    return pgdb.escape_string(query_str).replace('\\','\\\\').replace('"','\\"')
+
+
 # Transform Python list to Postgres array literal (of the form: '{...}')
 def format_array_literal(val):
     if len(val) == 0:
         val = "'{}'"
     elif isinstance(val[0], str):
         # Convert ['..', '..', ...] to '{"..", "..", ...}'
-        val = ['"%s"' % Escape(e) for e in val]
+        val = ['"%s"' % escapeArrayElement(e) for e in val]
         val = ','.join(val)
-        val = "'{%s}'" % val
+        # use an escaped string and add one more layer of escape symbols
+        val = "E'{%s}'" % val.replace('\\', '\\\\')
     else:
         # Convert [.., .., ...] to '{.., .., ...}'
         val = str(val)
@@ -531,6 +537,7 @@ def formatInsertValuesList(row, starelid, inclHLL):
 
     rowVals = ["\t%s" % (starelid)]
 
+    # the types of the columns in the pg_statistic table, except for starelid and stavalues[1-5]
     types = ['smallint',  # staattnum
              'boolean',
              'real',
@@ -559,14 +566,22 @@ def formatInsertValuesList(row, starelid, inclHLL):
              ]
     i = 0
     hll = False
+    typeschema = row[3]
+    typename = row[4]
+    if typeschema != "pg_catalog":
+        # a type that is not built-in, qualify it with its schema name
+        # and play it safe by double-quoting the identifiers
+        typename = '"%s"."%s"' % (typeschema, typename)
 
     # Populate types for stavaluesN: infer the type from pg_type.typname
-    if row[3][0] == '_':
-        rowTypes = types + [row[3]] * 5
+    if row[4][0] == '_':
+        # column is an array type, use as is
+        rowTypes = types + [typename] * 5
     else:
-        rowTypes = types + [row[3] + '[]'] * 5
+        # non-array type, make an array type out of it
+        rowTypes = types + [typename + '[]'] * 5
 
-    for val, typ in zip(row[5:], rowTypes):
+    for val, typ in zip(row[6:], rowTypes):
         i = i + 1
         # Check stakind1 to see if slot is a hll slot or a full hll slot
         if i == 10 and (val == 98 or val == 99):
