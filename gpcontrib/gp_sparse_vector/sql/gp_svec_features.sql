@@ -50,3 +50,5 @@ DROP TABLE corpus;
 DROP TABLE documents;
 DROP TABLE WEIGHTS;
 DROP EXTENSION gp_sparse_vector;
+
+SET search_path TO DEFAULT;
