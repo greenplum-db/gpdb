@@ -260,8 +260,8 @@ host    all   dba   192.168.0.0/32  md5</codeblock></li>
             <plentry>
               <pt>Trust</pt>
               <pd>Allows the connection unconditionally, without the need for a password or any
-                other authentication. This entry is commonly used for the <codeph>gpadmin</codeph>
-                role, and for Greenplum utilities (for example <codeph>gpinitsystem</codeph>,
+                other authentication. This entry is required for the <codeph>gpadmin</codeph> role,
+                and for Greenplum utilities (for example <codeph>gpinitsystem</codeph>,
                   <codeph>gpstop</codeph>, or <codeph>gpstart</codeph> amongst others) that need to
                 connect between nodes without prompting for input or a password. </pd>
               <pd>
