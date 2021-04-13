@@ -81,6 +81,7 @@
 #include "catalog/pg_tablespace.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "postmaster/fts.h"
 #include "postmaster/postmaster.h"
 #include "replication/syncrep.h"
 #include "storage/sinvaladt.h"
@@ -5323,6 +5324,29 @@ str_time(pg_time_t tnow)
 	return buf;
 }
 
+static void
+ensureAutoFailoverSignalFile(void)
+{
+	FILE *file;
+	int rc;
+	if (GpIdentity.segindex != -1)
+		return;
+
+	rc = access(GP_AUTO_FAILOVER_SIGNAL, R_OK | W_OK);
+	if (rc == 0)
+		return;
+
+	if (errno != ENOENT)
+		ereport(FATAL,
+				(errmsg("can't access " GP_AUTO_FAILOVER_SIGNAL ": %m")));
+
+	file = fopen(GP_AUTO_FAILOVER_SIGNAL, "w");
+	if (file == NULL)
+		ereport(FATAL,
+				(errmsg("can't create " GP_AUTO_FAILOVER_SIGNAL ": %m")));
+	fclose(file);
+}
+
 /*
  * See if there are any recovery signal files and if so, set state for
  * recovery.
@@ -5393,6 +5417,7 @@ readRecoverySignalFile(void)
 	{
 		StandbyModeRequested = true;
 		ArchiveRecoveryRequested = true;
+		ensureAutoFailoverSignalFile();
 	}
 	else if (recovery_signal_file_found)
 	{
