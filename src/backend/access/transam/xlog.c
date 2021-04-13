@@ -5324,6 +5324,12 @@ str_time(pg_time_t tnow)
 	return buf;
 }
 
+/*
+ * Ensure that the standby coordinator has the signal file
+ * for auto failover. The signal has no effect for the standby
+ * until it's promoted. See more details in the definition of
+ * `GP_AUTO_FAILOVER_SIGNAL`.
+ */
 static void
 ensureAutoFailoverSignalFile(void)
 {
