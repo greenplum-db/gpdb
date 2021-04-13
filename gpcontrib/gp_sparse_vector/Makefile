@@ -7,7 +7,7 @@ override CFLAGS+=-std=gnu99
 
 MODULE_big = gp_svec
 EXTENSION = gp_sparse_vector
-DATA = gp_sparse_vector--1.0.0.sql
+DATA = gp_sparse_vector--1.0.1.sql gp_sparse_vector--1.0.0--1.0.1.sql
 REGRESS = gp_svec gp_svec_features
 
 OBJS = gp_sfv.o sparse_vector.o operators.o SparseData.o
