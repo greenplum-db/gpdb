@@ -3667,7 +3667,7 @@ append_string_to_pipe_chunk(PipeProtoChunk *buffer, const char* input)
 	 */
 	if (len >= PIPE_MAX_PAYLOAD * 20)
 	{
-		len = PIPE_MAX_PAYLOAD * 20 - 1;
+		len = pg_mbcliplen(input, len, PIPE_MAX_PAYLOAD * 20 - 1);
 	}
 
 	char *data = buffer->data + buffer->hdr.len;
