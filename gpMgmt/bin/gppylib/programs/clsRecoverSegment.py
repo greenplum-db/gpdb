@@ -36,7 +36,6 @@ from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import writeLinesToFile, normalizeAndValidateInputPath, TableLogger
-from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
 from gppylib.heapchecksum import HeapChecksum
@@ -217,7 +216,6 @@ class GpRecoverSegmentProgram:
                 rows.append(self._getParsedRow(filename, lineno, line))
 
         allAddresses = [row["newAddress"] for row in rows if "newAddress" in row]
-        interfaceLookup = GpInterfaceToHostNameCache(self.__pool, allAddresses, [None]*len(allAddresses))
 
         failedSegments = []
         failoverSegments = []
@@ -264,10 +262,9 @@ class GpRecoverSegmentProgram:
 
                 dataDirectory = normalizeAndValidateInputPath(row["newDataDirectory"], "config file",
                                                               row['lineno'])
-
-                hostName = interfaceLookup.getHostName(address)
-                if hostName is None:
-                    raise Exception('Unable to find host name for address %s from line:%s' % (address, row['lineno']))
+                # FIXME: hostname probably should not be address, but to do so, "hostname" should be added to gpaddmirrors config file
+                # FIXME: This appears identical to __getMirrorsToBuildFromConfigFilein clsAddMirrors
+                hostName = address
 
                 # now update values in failover segment
                 failoverSegment.setSegmentAddress(address)
@@ -343,7 +340,7 @@ class GpRecoverSegmentProgram:
                 segHostname = seg.getSegmentHostName()
 
                 # Haven't seen this hostname before so we put it on a new host
-                if not recoverHostMap.has_key(segHostname):
+                if segHostname not in recoverHostMap:
                     try:
                         recoverHostMap[segHostname] = self.__options.newRecoverHosts[recoverHostIdx]
                     except:
@@ -355,7 +352,7 @@ class GpRecoverSegmentProgram:
                 if isStandardArray:
                     # We have a standard array configuration, so we'll try to use the same
                     # interface naming convention.  If this doesn't work, we'll correct it
-                    # below on name lookup
+                    # below during ping failure
                     segInterface = segAddress[segAddress.rfind('-'):]
                     destAddress = recoverHostMap[segHostname] + segInterface
                     destHostname = recoverHostMap[segHostname]
@@ -374,36 +371,14 @@ class GpRecoverSegmentProgram:
             if unreachable_hosts:
                 raise ExceptionNoStackTraceNeeded("Cannot recover. The recovery target host %s is unreachable." % (' '.join(map(str, unreachable_hosts))))
 
-            # Now that we've generated the mapping, look up all the addresses to make
-            # sure they are resolvable.
-            interfaces = [address for (_ignore, address) in recoverAddressMap.values()]
-            interfaceLookup = GpInterfaceToHostNameCache(self.__pool, interfaces, [None] * len(interfaces))
-
-            for key in recoverAddressMap.keys():
+            for key in list(recoverAddressMap.keys()):
                 (newHostname, newAddress) = recoverAddressMap[key]
                 try:
-                    addressHostnameLookup = interfaceLookup.getHostName(newAddress)
-                    # Lookup failed so use hostname passed in for everything.
-                    if addressHostnameLookup is None:
-                        interfaceHostnameWarnings.append(
-                            "Lookup of %s failed.  Using %s for both hostname and address." % (newAddress, newHostname))
-                        newAddress = newHostname
+                    unix.Ping.local("ping new address", newAddress)
                 except:
-                    # Catch all exceptions.  We will use hostname instead of address
-                    # that we generated.
-                    interfaceHostnameWarnings.append(
-                        "Lookup of %s failed.  Using %s for both hostname and address." % (newAddress, newHostname))
+                    # new address created is invalid, so instead use same hostname for address
+                    self.logger.info("Ping of %s failed, Using %s for both hostname and address.", newAddress, newHostname)
                     newAddress = newHostname
-
-                # if we've updated the address to use the hostname because of lookup failure
-                # make sure the hostname is resolvable and up
-                if newHostname == newAddress:
-                    try:
-                        unix.Ping.local("ping new hostname", newHostname)
-                    except:
-                        raise Exception("Ping of host %s failed." % newHostname)
-
-                # Save changes in map
                 recoverAddressMap[key] = (newHostname, newAddress)
 
             if len(self.__options.newRecoverHosts) != recoverHostIdx:
