@@ -110,8 +110,6 @@ ALTER OPERATOR * (svec, svec)
 ALTER OPERATOR ^ (svec, svec)
 	SET SCHEMA sparse_vector;
 
-
-
 ALTER OPERATOR = (float8[], float8[])
 	SET SCHEMA sparse_vector;
 
