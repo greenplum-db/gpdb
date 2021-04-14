@@ -3120,6 +3120,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gpload_enable_custom_format", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Whether or not to enable switch 'text' format to custom formatter 'text_in' to simulate actions in gpdb5."),
+			gettext_noop("Default value is 0."),
+			GUC_NOT_IN_SAMPLE
+		},
+		&gpload_enable_custom_format,
+		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"writable_external_table_bufsize", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Buffer size in kilobytes for writable external table before writing data to gpfdist."),
 			gettext_noop("Valid value is between 32K and 128M: [32, 131072]."),

@@ -1908,6 +1908,7 @@ class gpload:
     def test_custom_formatter(self):
         # Test if 'text_in' custom formatter can be used
         self.support_cusfmt = 0
+        self.enable_custom_format = 0;
         try:
             queryString = """CREATE OR REPLACE FUNCTION text_in() RETURNS record
 			AS '$libdir/gpfmt_gpss.so', 'text_import'
@@ -1921,6 +1922,13 @@ class gpload:
             resultList = self.db.query(queryString.encode('utf-8')).getresult()
             if len(resultList) > 0:
                 self.support_cusfmt = 1
+            
+            queryString = """show gpload_enable_custom_format"""
+            resultList = self.db.query(queryString.encode('utf-8')).getresult()
+            val = int(resultList[0][0])
+            if val != 0:
+                self.enable_custom_format = 1
+            
         except Exception, e:
             self.log(self.ERROR, 'could not run SQL "%s": %s' % (queryString, unicode(e)))
 
@@ -2319,12 +2327,18 @@ class gpload:
         self.custom_contan_pre = ""
         self.reuse_tbl_Opts = ""
         self.use_customfmt = 0
-        if self.support_cusfmt and formatType == 'text':
-            self.formatOpts = "formatter='text_in'"
-            self.reuse_tbl_Opts = "formatter 'text_in' "
-            self.custom_contan = "="
-            self.custom_contan_pre = ", "
-            self.use_customfmt = 1
+        
+        if formatType == 'text':
+            if self.enable_custom_format and self.support_cusfmt:
+                self.log(self.INFO, "Use gpdb5 text format to create external table")
+                self.formatOpts = "formatter='text_in'"
+                self.reuse_tbl_Opts = "formatter 'text_in' "
+                self.custom_contan = "="
+                self.custom_contan_pre = ", "
+                self.use_customfmt = 1
+            elif self.enable_custom_format and not self.support_cusfmt:
+                self.log(self.INFO, "Try to use gpdb5 text format, but cannot find 'text_in' function. Use gpdb6 text format to create external table") 
+
         self.get_external_table_formatOpts('delimiter')
 
         nullas = self.getconfig('gpload:input:null_as', unicode, False)
@@ -2894,6 +2908,7 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
 
+        self.test_custom_formatter() # Whether to support gpdb5 text format
 
         if method=='insert':
             self.do_method_insert()
@@ -2948,7 +2963,6 @@ class gpload:
         start = time.time()
         self.read_config()
         self.setup_connection()
-        self.test_custom_formatter()
         self.read_table_metadata()
         self.read_columns()
         self.read_mapping()
