@@ -168,8 +168,6 @@ MemTupleClearMatch(MemTuple mtup)
 	mtup->PRIVATE_mt_len &= ~MEMTUP_HAS_MATCH;
 }
 
-extern bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind);
-
 extern bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind);
 
 #endif /* MEMTUP_H */

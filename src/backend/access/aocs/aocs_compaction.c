@@ -286,7 +286,11 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, slot);
+			if (Debug_appendonly_print_compaction)
+				ereport(DEBUG5,
+						(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
+								AOTupleIdGet_segmentFileNum(aoTupleId),
+								AOTupleIdGet_rowNum(aoTupleId))));
 		}
 
 		/*

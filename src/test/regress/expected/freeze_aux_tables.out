@@ -71,16 +71,12 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create table test_table_ao (id int, col1 int) with (appendonly=true, orientation=row);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table test_table_ao_with_toast (id int, col1 int, col2 text) with (appendonly=true, orientation=row);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table test_table_co (id int, col1 int) with (appendonly=true, orientation=column);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create index test_heap_idx on test_table_heap using btree(id);
 create index test_heap_wt_idx on test_table_heap_with_toast using btree(id);
 create index test_heap_ao_idx on test_table_ao using btree(id);
-create index test_heap_ao_wt_idx on test_table_ao_with_toast using btree(id);
 create index test_heap_co_idx on test_table_co using btree(id);
 -- Advance XID counter, vacuum, and check that relfrozenxid was advanced for
 -- all the tables, including auxiliary tables, even though there were no
@@ -122,20 +118,6 @@ group by segid = -1, relname, classify_age(age);
  t         | pg_aoblkdir_<oid>  | very young
 (6 rows)
 
-select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao_with_toast')
-group by segid = -1, relname, classify_age(age);
- is_master |      relname       | classify_age 
------------+--------------------+--------------
- f         | pg_toast_<oid>     | old
- t         | pg_toast_<oid>     | very young
- t         | pg_aovisimap_<oid> | very young
- f         | pg_aovisimap_<oid> | old
- f         | pg_aoblkdir_<oid>  | old
- f         | pg_aoseg_<oid>     | old
- t         | pg_aoseg_<oid>     | very young
- t         | pg_aoblkdir_<oid>  | very young
-(8 rows)
-
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_co')
 group by segid = -1, relname, classify_age(age);
  is_master |      relname       | classify_age 
@@ -152,7 +134,6 @@ group by segid = -1, relname, classify_age(age);
 vacuum test_table_heap;
 vacuum test_table_heap_with_toast;
 vacuum test_table_ao;
-vacuum test_table_ao_with_toast;
 vacuum test_table_co;
 -- Check table ages.
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_heap')
@@ -185,20 +166,6 @@ group by segid = -1, relname, classify_age(age);
  t         | pg_aoblkdir_<oid>  | very young
 (6 rows)
 
-select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao_with_toast')
-group by segid = -1, relname, classify_age(age);
- is_master |      relname       | classify_age 
------------+--------------------+--------------
- f         | pg_aoblkdir_<oid>  | young
- f         | pg_toast_<oid>     | young
- t         | pg_toast_<oid>     | very young
- f         | pg_aovisimap_<oid> | young
- t         | pg_aovisimap_<oid> | very young
- t         | pg_aoseg_<oid>     | very young
- f         | pg_aoseg_<oid>     | young
- t         | pg_aoblkdir_<oid>  | very young
-(8 rows)
-
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_co')
 group by segid = -1, relname, classify_age(age);
  is_master |      relname       | classify_age 
@@ -216,12 +183,10 @@ group by segid = -1, relname, classify_age(age);
 INSERT INTO test_table_heap select i, i*2 from generate_series(1, 20)i;
 INSERT INTO test_table_heap_with_toast select i, i*2, i*5 from generate_series(1, 20)i;
 INSERT INTO test_table_ao select i, i*2 from generate_series(1, 20)i;
-INSERT INTO test_table_ao_with_toast select i, i*2, i*5 from generate_series(1, 20)i;
 INSERT INTO test_table_co select i, i*2 from generate_series(1, 20)i;
 delete from test_table_heap;
 delete from test_table_heap_with_toast;
 delete from test_table_ao;
-delete from test_table_ao_with_toast;
 delete from test_table_co;
 select count(*) from test_table_heap;
  count 
@@ -236,12 +201,6 @@ select count(*) from test_table_heap_with_toast;
 (1 row)
 
 select count(*) from test_table_ao;
- count 
--------
-     0
-(1 row)
-
-select count(*) from test_table_ao_with_toast;
  count 
 -------
      0
@@ -262,7 +221,6 @@ select advance_xid_counter(500);
 vacuum freeze test_table_heap;
 vacuum freeze test_table_heap_with_toast;
 vacuum freeze test_table_ao;
-vacuum freeze test_table_ao_with_toast;
 vacuum freeze test_table_co;
 -- Check table ages again. Because we used VACUUM FREEZE, they should be
 -- very young now.
@@ -295,20 +253,6 @@ group by segid = -1, relname, classify_age(age);
  t         | pg_aoblkdir_<oid>  | very young
  f         | pg_aovisimap_<oid> | very young
 (6 rows)
-
-select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao_with_toast')
-group by segid = -1, relname, classify_age(age);
- is_master |      relname       | classify_age 
------------+--------------------+--------------
- f         | pg_toast_<oid>     | very young
- f         | pg_aoblkdir_<oid>  | very young
- f         | pg_aoseg_<oid>     | very young
- t         | pg_toast_<oid>     | very young
- t         | pg_aovisimap_<oid> | very young
- t         | pg_aoseg_<oid>     | very young
- t         | pg_aoblkdir_<oid>  | very young
- f         | pg_aovisimap_<oid> | very young
-(8 rows)
 
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_co')
 group by segid = -1, relname, classify_age(age);

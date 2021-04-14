@@ -74,13 +74,11 @@ set vacuum_freeze_min_age = 50;
 create table test_table_heap (id int, col1 int) with (appendonly=false);
 create table test_table_heap_with_toast (id int, col1 int, col2 text) with (appendonly=false);
 create table test_table_ao (id int, col1 int) with (appendonly=true, orientation=row);
-create table test_table_ao_with_toast (id int, col1 int, col2 text) with (appendonly=true, orientation=row);
 create table test_table_co (id int, col1 int) with (appendonly=true, orientation=column);
 
 create index test_heap_idx on test_table_heap using btree(id);
 create index test_heap_wt_idx on test_table_heap_with_toast using btree(id);
 create index test_heap_ao_idx on test_table_ao using btree(id);
-create index test_heap_ao_wt_idx on test_table_ao_with_toast using btree(id);
 create index test_heap_co_idx on test_table_co using btree(id);
 
 -- Advance XID counter, vacuum, and check that relfrozenxid was advanced for
@@ -98,9 +96,6 @@ group by segid = -1, relname, classify_age(age);
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao')
 group by segid = -1, relname, classify_age(age);
 
-select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao_with_toast')
-group by segid = -1, relname, classify_age(age);
-
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_co')
 group by segid = -1, relname, classify_age(age);
 
@@ -108,7 +103,6 @@ group by segid = -1, relname, classify_age(age);
 vacuum test_table_heap;
 vacuum test_table_heap_with_toast;
 vacuum test_table_ao;
-vacuum test_table_ao_with_toast;
 vacuum test_table_co;
 
 -- Check table ages.
@@ -121,9 +115,6 @@ group by segid = -1, relname, classify_age(age);
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao')
 group by segid = -1, relname, classify_age(age);
 
-select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao_with_toast')
-group by segid = -1, relname, classify_age(age);
-
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_co')
 group by segid = -1, relname, classify_age(age);
 
@@ -132,19 +123,16 @@ group by segid = -1, relname, classify_age(age);
 INSERT INTO test_table_heap select i, i*2 from generate_series(1, 20)i;
 INSERT INTO test_table_heap_with_toast select i, i*2, i*5 from generate_series(1, 20)i;
 INSERT INTO test_table_ao select i, i*2 from generate_series(1, 20)i;
-INSERT INTO test_table_ao_with_toast select i, i*2, i*5 from generate_series(1, 20)i;
 INSERT INTO test_table_co select i, i*2 from generate_series(1, 20)i;
 
 delete from test_table_heap;
 delete from test_table_heap_with_toast;
 delete from test_table_ao;
-delete from test_table_ao_with_toast;
 delete from test_table_co;
 
 select count(*) from test_table_heap;
 select count(*) from test_table_heap_with_toast;
 select count(*) from test_table_ao;
-select count(*) from test_table_ao_with_toast;
 select count(*) from test_table_co;
 
 select advance_xid_counter(500);
@@ -152,7 +140,6 @@ select advance_xid_counter(500);
 vacuum freeze test_table_heap;
 vacuum freeze test_table_heap_with_toast;
 vacuum freeze test_table_ao;
-vacuum freeze test_table_ao_with_toast;
 vacuum freeze test_table_co;
 
 -- Check table ages again. Because we used VACUUM FREEZE, they should be
@@ -164,9 +151,6 @@ select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('te
 group by segid = -1, relname, classify_age(age);
 
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao')
-group by segid = -1, relname, classify_age(age);
-
-select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_ao_with_toast')
 group by segid = -1, relname, classify_age(age);
 
 select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('test_table_co')

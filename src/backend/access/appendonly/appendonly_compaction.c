@@ -318,34 +318,6 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 						AOTupleIdGet_segmentFileNum(&newAoTupleId), AOTupleIdGet_rowNum(&newAoTupleId))));
 }
 
-void
-AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot)
-{
-	AOTupleId  *oldAoTupleId;
-
-	Assert(slot);
-
-	oldAoTupleId = (AOTupleId *) &slot->tts_tid;
-	/* Extract all the values of the tuple */
-	slot_getallattrs(slot);
-
-	/* GPDB_12_MERGE_FIXME: loop through all attributes, call toast_delete_datum()
-	 * on any toasted datums, like toast_delete does for heap tuples */
-#if 0
-	tuple = TupGetMemTuple(slot);
-	if (MemTupleHasExternal(tuple, mt_bind))
-	{
-		toast_delete_memtup(rel, tuple, mt_bind);
-	}
-#endif
-	
-	if (Debug_appendonly_print_compaction)
-		ereport(DEBUG5,
-				(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
-						AOTupleIdGet_segmentFileNum(oldAoTupleId),
-						AOTupleIdGet_rowNum(oldAoTupleId))));
-}
-
 /*
  * Assumes that the segment file lock is already held.
  * Assumes that the segment file should be compacted.
@@ -449,7 +421,11 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, slot);
+			if (Debug_appendonly_print_compaction)
+				ereport(DEBUG5,
+						(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
+								AOTupleIdGet_segmentFileNum(aoTupleId),
+								AOTupleIdGet_rowNum(aoTupleId))));
 		}
 
 		/*

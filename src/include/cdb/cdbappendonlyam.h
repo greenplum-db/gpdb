@@ -78,7 +78,6 @@ typedef struct AppendOnlyInsertDescData
 	int64			bufferCount;
 	int64			blockFirstRowNum;
 	bool			usingChecksum;
-	bool			useNoToast;
 	bool			skipModCountIncrement;
 	int32			completeHeaderLen;
 	uint8			*tempSpace;
@@ -87,19 +86,9 @@ typedef struct AppendOnlyInsertDescData
 	int32			maxDataLen;
 	int32			tempSpaceLen;
 
-	char						*title;
-				/*
-				 * A phrase that better describes the purpose of the this open.
-				 *
-				 * We manage the storage for this.
-				 */
+	char		   *title;	/* A phrase that better describes the purpose of this open.
+							 * We manage the storage for this. */
 
-	/*
-	 * These serve the equivalent purpose of the uppercase constants of the same
-	 * name in tuptoaster.h but here we make these values dynamic.
-	 */	
-	int32			toast_tuple_threshold;
-	int32			toast_tuple_target;
 	AppendOnlyStorageAttributes storageAttributes;
 	AppendOnlyStorageWrite		storageWrite;
 

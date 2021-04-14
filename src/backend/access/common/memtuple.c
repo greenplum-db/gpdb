@@ -947,29 +947,6 @@ memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind,
 	memtuple_get_values(mtup, pbind, datum, isnull, false /* aligned */);
 }
 
-bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
-{
-	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup) ? &pbind->large_bind : &pbind->bind;
-	int i;
-
-	for(i=0; i<pbind->tupdesc->natts; ++i)
-	{
-		MemTupleAttrBinding *attrbind = &(colbind->bindings[i]);
-		if(attrbind->flag == MTB_ByRef)
-		{
-			bool isnull;
-			Datum d = memtuple_getattr(mtup, pbind, i+1, &isnull);
-			if(!isnull)
-			{
-				if(VARATT_IS_EXTERNAL(DatumGetPointer(d)))
-					return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 /*
  * Check if a memtuple has null attributes with bindings that can possibly be misaligned.
  *
