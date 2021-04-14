@@ -1923,7 +1923,7 @@ class gpload:
             if len(resultList) > 0:
                 self.support_cusfmt = 1
             
-            queryString = """show gpload_enable_custom_format"""
+            queryString = """show gpload_enable_custom_format;"""
             resultList = self.db.query(queryString.encode('utf-8')).getresult()
             val = int(resultList[0][0])
             if val != 0:
