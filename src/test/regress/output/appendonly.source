@@ -1189,7 +1189,7 @@ DROP TABLE aosizetest_2;
 -- to indexes etc.)
 CREATE TABLE aosizetest_3(a text) WITH (appendonly=true);
 insert into aosizetest_3 select repeat('x', 100) from generate_series(1, 10000);
-SELECT pg_total_relation_size('aosizetest_3') between 1400000 and 1500000;
+SELECT pg_total_relation_size('aosizetest_3') between 1300000 and 1400000;
  ?column? 
 ----------
  t
