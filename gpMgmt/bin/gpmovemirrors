@@ -25,6 +25,7 @@ try:
     from gppylib.operations.startSegments import *
     from pgdb import DatabaseError
     from gppylib import gparray, gplog, pgconf, userinput, utils
+    from gppylib.operations.validate_disk_space import RelocateSegmentPair, RelocateDiskUsage, InsufficientDiskSpaceError
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
 
 except ImportError as e:
@@ -339,6 +340,7 @@ try:
     newConfig.read_input_file(options.input_filename)
 
     PgHbaEntriesToUpdate = []
+    pairs = []
     """ Do some sanity checks on the input. """
     for oldMirror, newMirror in zip(newConfig.oldMirrorList, newConfig.newMirrorList):
         seg = lookupGpdb(oldMirror.address, oldMirror.port, oldMirror.dataDirectory)
@@ -362,6 +364,12 @@ try:
                 if segment.getSegmentContentId() == seg.getSegmentContentId() and segment.getSegmentRole() != seg.getSegmentRole():
                     PgHbaEntriesToUpdate.append((segment.getSegmentDataDirectory(), segment.getSegmentHostName(), newMirror.address))
 
+        pair = RelocateSegmentPair(oldMirror.address, oldMirror.dataDirectory, newMirror.address, newMirror.dataDirectory)
+        pairs.append(pair)
+
+    disk_usage = RelocateDiskUsage(pairs, options.batch_size)
+    if not disk_usage.validate_disk_space():
+        raise InsufficientDiskSpaceError("Insufficient disk space on target mirror hosts.")
 
     """ Prepare common execution steps for running commands on segments """
     mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
