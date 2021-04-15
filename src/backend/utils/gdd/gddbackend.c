@@ -61,6 +61,7 @@ typedef struct EdgeSatelliteData
 
 void GlobalDeadLockDetectorMain(Datum main_arg);
 
+static bool IsValidGxid(List *gxids, DistributedTransactionId check_gxid);
 static void GlobalDeadLockDetectorLoop(void);
 static int  doDeadLockCheck(void);
 static void buildWaitGraph(GddCtx *ctx);
@@ -123,6 +124,22 @@ GlobalDeadLockDetectorMain(Datum main_arg)
 
 	/* One iteration done, go away */
 	proc_exit(0);
+}
+
+static bool
+IsValidGxid(List *gxids, DistributedTransactionId check_gxid)
+{
+	ListCell *cell;
+	DistributedTransactionId gxid;
+
+	foreach(cell, gxids)
+	{
+		gxid = *(DistributedTransactionId*) lfirst(cell);
+		if (gxid == check_gxid)
+			return true;
+	}
+
+	return false;
 }
 
 static void
@@ -277,8 +294,8 @@ buildWaitGraph(GddCtx *ctx)
 
 			for (i = 0; i < tuple_num; i++)
 			{
-				TransactionId  waiter_xid;
-				TransactionId  holder_xid;
+				DistributedTransactionId  waiter_xid;
+				DistributedTransactionId  holder_xid;
 				HeapTuple	   tuple;
 				Datum		   d;
 				bool		   solidedge;
@@ -300,11 +317,11 @@ buildWaitGraph(GddCtx *ctx)
 
 				d = heap_getattr(tuple, 2, tupdesc, &isnull);
 				Assert(!isnull);
-				waiter_xid = DatumGetTransactionId(d);
+				waiter_xid = DatumGetInt64(d);
 
 				d = heap_getattr(tuple, 3, tupdesc, &isnull);
 				Assert(!isnull);
-				holder_xid = DatumGetTransactionId(d);
+				holder_xid = DatumGetInt64(d);
 
 				d = heap_getattr(tuple, 4, tupdesc, &isnull);
 				Assert(!isnull);
@@ -335,8 +352,8 @@ buildWaitGraph(GddCtx *ctx)
 				holder_data->sessionid = DatumGetInt32(d);
 
 				/* Skip edges with invalid gxids */
-				if (!list_member_int(gxids, waiter_xid) ||
-					!list_member_int(gxids, holder_xid))
+				if (!IsValidGxid(gxids, waiter_xid) ||
+					!IsValidGxid(gxids, holder_xid))
 					continue;
 
 				edge = GddCtxAddEdge(ctx, segid, waiter_xid, holder_xid, solidedge);
@@ -344,6 +361,9 @@ buildWaitGraph(GddCtx *ctx)
 				edge->from->data = (void *) waiter_data;
 				edge->to->data = (void *) holder_data;
 			}
+
+			if (gxids != NIL)
+				list_free_deep(gxids);
 		}
 	}
 	PG_CATCH();
@@ -378,7 +398,7 @@ breakDeadLock(GddCtx *ctx)
 	{
 		int             pid;
 
-		TransactionId	xid = lfirst_int(cell);
+		DistributedTransactionId xid = *(DistributedTransactionId*) lfirst(cell);
 
 		pid = GetPidByGxid(xid);
 		Assert(pid > 0);
@@ -387,6 +407,9 @@ breakDeadLock(GddCtx *ctx)
 							Int32GetDatum(pid),
 							CStringGetTextDatum("cancelled by global deadlock detector"));
 	}
+
+	if (xids != NIL)
+		list_free_deep(xids);
 }
 
 static void
@@ -396,9 +419,9 @@ dumpCancelResult(StringInfo str, List *xids)
 
 	foreach(cell, xids)
 	{
-		TransactionId	xid = lfirst_int(cell);
+		DistributedTransactionId xid = *(DistributedTransactionId*) lfirst(cell);
 
-		appendStringInfo(str, "%u(Master Pid: %d)", xid, GetPidByGxid(xid));
+		appendStringInfo(str, UINT64_FORMAT"(Master Pid: %d)", xid, GetPidByGxid(xid));
 
 		if (lnext(cell))
 			appendStringInfo(str, ",");
@@ -473,8 +496,8 @@ dumpGddEdge(GddEdge *edge, StringInfo str)
 	Assert(str != NULL);
 
 	appendStringInfo(str,
-					 "\"p%d of dtx%d con%d waits for a %s lock on %s mode, "
-					 "blocked by p%d of dtx%d con%d\"",
+					 "\"p%d of dtx"UINT64_FORMAT" con%d waits for a %s lock on %s mode, "
+					 "blocked by p%d of dtx"UINT64_FORMAT" con%d\"",
 					 GET_PID_FROM_VERT(edge->from),
 					 edge->from->id,
 					 GET_SESSIONID_FROM_VERT(edge->from),

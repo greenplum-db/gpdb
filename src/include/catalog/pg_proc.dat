@@ -10848,7 +10848,7 @@
    proname => 'gp_dist_wait_status', prorows => '1000', proisstrict => 'f',
    proretset => 't', provolatile => 'v', proparallel => 'r',
    prorettype => 'record', proargtypes => '',
-   proallargtypes => '{int4,xid,xid,bool,int4,int4,text,text,int4,int4}',
+   proallargtypes => '{int4,int8,int8,bool,int4,int4,text,text,int4,int4}',
    proargmodes => '{o,o,o,o,o,o,o,o,o,o}',
    proargnames => '{segid,waiter_dxid,holder_dxid,holdTillEndXact,waiter_lpid,holder_lpid,waiter_lockmode,waiter_locktype,waiter_sessionid,holder_sessionid}',
    prosrc => 'gp_dist_wait_status' },

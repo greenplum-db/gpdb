@@ -4874,7 +4874,9 @@ ListAllGxid(void)
 		gxid = tmGxact->gxid;
 		if (gxid == InvalidDistributedTransactionId)
 			continue;
-		gxids = lappend_int(gxids, gxid);
+		DistributedTransactionId *pgxid = palloc(sizeof(DistributedTransactionId));
+		*pgxid = gxid;
+		gxids = lappend(gxids, pgxid);
 	}
 
 	LWLockRelease(ProcArrayLock);

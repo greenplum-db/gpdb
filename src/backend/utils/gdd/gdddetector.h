@@ -27,7 +27,7 @@ typedef struct GddGraph		GddGraph;
 typedef struct GddStat		GddStat;
 
 extern GddCtx *GddCtxNew(void);
-extern GddEdge *GddCtxAddEdge(GddCtx *ctx, int segid, int from, int to, bool solid);
+extern GddEdge *GddCtxAddEdge(GddCtx *ctx, int segid, DistributedTransactionId from, DistributedTransactionId to, bool solid);
 extern void GddCtxReduce(GddCtx *ctx);
 extern List *GddCtxBreakDeadLock(GddCtx *ctx);
 extern bool GddCtxEmpty(GddCtx *ctx);

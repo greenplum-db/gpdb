@@ -20,19 +20,19 @@
 /***************************************************************************/
 
 static GddGraph *gddCtxGetGraph(GddCtx *ctx, int segid);
-static GddStat *gddCtxGetGlobalStat(GddCtx *ctx, int vid);
-static void gddCtxRemoveVid(GddCtx *ctx, int vid);
+static GddStat *gddCtxGetGlobalStat(GddCtx *ctx, DistributedTransactionId vid);
+static void gddCtxRemoveVid(GddCtx *ctx, DistributedTransactionId vid);
 static int gddCtxGetMaxVid(GddCtx *ctx);
 
-static GddStat *gddStatNew(int vid);
-static void gddStatInit(GddStat *stat, int vid);
+static GddStat *gddStatNew(DistributedTransactionId vid);
+static void gddStatInit(GddStat *stat, DistributedTransactionId vid);
 
 static GddGraph *gddGraphNew(int id);
-static GddVert *gddGraphGetVert(GddGraph *graph, int vid);
-static GddEdge *gddGraphMakeEdge(GddGraph *graph, int from, int to, bool solid);
-static void gddGraphRemoveVid(GddGraph *graph, int vid);
+static GddVert *gddGraphGetVert(GddGraph *graph, DistributedTransactionId vid);
+static GddEdge *gddGraphMakeEdge(GddGraph *graph, DistributedTransactionId from, DistributedTransactionId to, bool solid);
+static void gddGraphRemoveVid(GddGraph *graph, DistributedTransactionId vid);
 
-static GddVert *gddVertNew(int id);
+static GddVert *gddVertNew(DistributedTransactionId id);
 static void gddVertBindStats(GddVert *vert, GddStat *global, GddStat *topstat);
 static bool gddVertUnlinkAll(GddVert *vert);
 static bool gddVertReduce(GddVert *vert);
@@ -47,9 +47,9 @@ static void gddEdgeUnlinkTo(GddEdge *edge, GddListIter *toiter);
 
 static void gddMapInit(GddMap *map);
 static void gddMapEnsureCapacity(GddMap *map, int capacity);
-static GddPair *gddMapGetPair(GddMap *map, int key);
-static void *gddMapGet(GddMap *map, int key);
-static void gddMapSetUnsafe(GddMap *map, int key, void *ptr);
+static GddPair *gddMapGetPair(GddMap *map, DistributedTransactionId key);
+static void *gddMapGet(GddMap *map, DistributedTransactionId key);
+static void gddMapSetUnsafe(GddMap *map, DistributedTransactionId key, void *ptr);
 
 /***************************************************************************/
 
@@ -74,7 +74,7 @@ GddCtxNew(void)
  * Return the edge.
  */
 GddEdge *
-GddCtxAddEdge(GddCtx *ctx, int segid, int from, int to, bool solid)
+GddCtxAddEdge(GddCtx *ctx, int segid, DistributedTransactionId from, DistributedTransactionId to, bool solid)
 {
 	GddEdge		*edge;
 	GddGraph	*graph;
@@ -154,15 +154,16 @@ GddCtxBreakDeadLock(GddCtx *ctx)
 		 * The only policy supported for now is to cancel the youngest vert,
 		 * who has the max vid.
 		 */
-		int			maxvid = gddCtxGetMaxVid(ctx);
+		DistributedTransactionId *maxvid = palloc(sizeof(DistributedTransactionId));
+		*maxvid = gddCtxGetMaxVid(ctx);
 
-		vids = lappend_int(vids, maxvid);
+		vids = lappend(vids, maxvid);
 
 		/*
 		 * Cancel this vert and reduce again to see if more deadlocks
 		 * are detected.
 		 */
-		gddCtxRemoveVid(ctx, maxvid);
+		gddCtxRemoveVid(ctx, *maxvid);
 		GddCtxReduce(ctx);
 	}
 
@@ -211,7 +212,7 @@ gddCtxGetGraph(GddCtx *ctx, int segid)
  * A new one is created if it's first seen.
  */
 static GddStat *
-gddCtxGetGlobalStat(GddCtx *ctx, int vid)
+gddCtxGetGlobalStat(GddCtx *ctx, DistributedTransactionId vid)
 {
 	GddStat		*global;
 
@@ -232,7 +233,7 @@ gddCtxGetGlobalStat(GddCtx *ctx, int vid)
  * Remove verts whose vert id equal to vid on all local graphs.
  */
 static void
-gddCtxRemoveVid(GddCtx *ctx, int vid)
+gddCtxRemoveVid(GddCtx *ctx, DistributedTransactionId vid)
 {
 	GddMapIter	iter;
 
@@ -255,7 +256,7 @@ gddCtxGetMaxVid(GddCtx *ctx)
 {
 	GddMapIter	graphiter;
 	GddMapIter	vertiter;
-	int			maxvid = 0;
+	DistributedTransactionId maxvid = 0;
 
 	Assert(ctx != NULL);
 
@@ -281,7 +282,7 @@ gddCtxGetMaxVid(GddCtx *ctx)
  * Create a new global struct.
  */
 static GddStat *
-gddStatNew(int vid)
+gddStatNew(DistributedTransactionId vid)
 {
 	GddStat		*stat = palloc(sizeof(*stat));
 
@@ -294,7 +295,7 @@ gddStatNew(int vid)
  * Initialize a global struct.
  */
 static void
-gddStatInit(GddStat *stat, int vid)
+gddStatInit(GddStat *stat, DistributedTransactionId vid)
 {
 	Assert(stat != NULL);
 
@@ -326,7 +327,7 @@ gddGraphNew(int id)
  * A new one is created if it's first seen.
  */
 static GddVert *
-gddGraphGetVert(GddGraph *graph, int vid)
+gddGraphGetVert(GddGraph *graph, DistributedTransactionId vid)
 {
 	GddVert		*vert;
 
@@ -349,7 +350,7 @@ gddGraphGetVert(GddGraph *graph, int vid)
  * The edge is not linked yet.
  */
 static GddEdge *
-gddGraphMakeEdge(GddGraph *graph, int from, int to, bool solid)
+gddGraphMakeEdge(GddGraph *graph, DistributedTransactionId from, DistributedTransactionId to, bool solid)
 {
 	GddEdge		*edge;
 	GddVert		*vfrom;
@@ -369,7 +370,7 @@ gddGraphMakeEdge(GddGraph *graph, int from, int to, bool solid)
  * Remove the vert whose vert id is vid.
  */
 static void
-gddGraphRemoveVid(GddGraph *graph, int vid)
+gddGraphRemoveVid(GddGraph *graph, DistributedTransactionId vid)
 {
 	GddMapIter	iter;
 
@@ -401,7 +402,7 @@ gddGraphRemoveVid(GddGraph *graph, int vid)
  * Create a new vert.
  */
 static GddVert *
-gddVertNew(int id)
+gddVertNew(DistributedTransactionId id)
 {
 	GddVert		*vert = palloc(sizeof(*vert));
 
@@ -693,7 +694,7 @@ gddMapEnsureCapacity(GddMap *map, int capacity)
  * Return NULL if key is not found.
  */
 static GddPair *
-gddMapGetPair(GddMap *map, int key)
+gddMapGetPair(GddMap *map, DistributedTransactionId key)
 {
 	int			i;
 
@@ -717,7 +718,7 @@ gddMapGetPair(GddMap *map, int key)
  * then use gddMapGetPair() instead of this one.
  */
 static void *
-gddMapGet(GddMap *map, int key)
+gddMapGet(GddMap *map, DistributedTransactionId key)
 {
 	GddPair		*pair = gddMapGetPair(map, key);
 
@@ -731,7 +732,7 @@ gddMapGet(GddMap *map, int key)
  * that k does not exist.
  */
 static void
-gddMapSetUnsafe(GddMap *map, int key, void *ptr)
+gddMapSetUnsafe(GddMap *map, DistributedTransactionId key, void *ptr)
 {
 	GddPair		*pair;
 

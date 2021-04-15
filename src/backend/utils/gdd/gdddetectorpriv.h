@@ -140,7 +140,7 @@
  */
 struct GddPair
 {
-	int			key;
+	DistributedTransactionId key;
 	void		*ptr;
 };
 
@@ -192,7 +192,7 @@ struct GddEdge
  */
 struct GddVert
 {
-	int			id;				/* vert id */
+	DistributedTransactionId id; /* vert id */
 
 	/*
 	 * Pointer to ctx->topstat, all the verts on all the globals maintain
@@ -231,7 +231,7 @@ struct GddGraph
  */
 struct GddStat
 {
-	int			id;				/* vert id */
+	DistributedTransactionId id; /* vert id */
 
 	int			indeg;			/* in degree */
 	int			outdeg;			/* out degree */

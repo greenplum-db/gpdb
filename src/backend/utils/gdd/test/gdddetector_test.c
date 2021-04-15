@@ -48,8 +48,8 @@
 typedef struct TestWaitRelation
 {
 	int 		seg_id;
-	TransactionId	waiter_xid;
-	TransactionId	holder_xid;
+	DistributedTransactionId	waiter_xid;
+	DistributedTransactionId	holder_xid;
 	bool		solid_edge;
 	int 		waiter_pid;
 	int 		holder_pid;
@@ -95,8 +95,8 @@ loadTestWaitRelations(GddCtx *ctx, TestWaitRelation *wait_relations, int num)
 	 */
 	for (i = 0; i < num; i++)
 	{
-		TransactionId  waiter_xid;
-		TransactionId  holder_xid;
+		DistributedTransactionId  waiter_xid;
+		DistributedTransactionId  holder_xid;
 		bool		   solidedge;
 		int			   segid;
 		GddEdge       *edge;
@@ -246,8 +246,8 @@ test_reduce_large_graph_pair_deadlocks(void **state)
 		TestWaitRelation *r1 = &wait_relations[i*2];
 		TestWaitRelation *r2 = &wait_relations[i*2+1];
 
-		TransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
-		TransactionId gxid2 = gxid1 + 100;
+		DistributedTransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
+		DistributedTransactionId gxid2 = gxid1 + 100;
 		int segment1 = i; /* segment id starts with 0. */
 		int segment2 = i+1;
 
@@ -341,8 +341,8 @@ test_reduce_large_graph_no_deadlock1(void **state)
 		TestWaitRelation *r1 = &wait_relations[i*2];
 		TestWaitRelation *r2 = &wait_relations[i*2+1];
 
-		TransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
-		TransactionId gxid2 = gxid1 + 100;
+		DistributedTransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
+		DistributedTransactionId gxid2 = gxid1 + 100;
 		int segment1 = i; /* segment id starts with 0. */
 		int segment2 = i+1;
 
@@ -433,8 +433,8 @@ test_reduce_large_graph_single_deadlock(void **state)
 	{
 		TestWaitRelation *r = &wait_relations[i];
 
-		TransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
-		TransactionId gxid2 = (gxid1 < num_transactions) ? gxid1 + 1 : 1;
+		DistributedTransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
+		DistributedTransactionId gxid2 = (gxid1 < num_transactions) ? gxid1 + 1 : 1;
 		int segment = i; /* segment id starts with 0. */
 
 		/* Make up pids and session ids. */
@@ -513,8 +513,8 @@ test_reduce_large_graph_no_deadlock2(void **state)
 	{
 		TestWaitRelation *r = &wait_relations[i];
 
-		TransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
-		TransactionId gxid2 = (gxid1 < num_transactions) ? gxid1 + 1 : 1;
+		DistributedTransactionId gxid1 = i + 1; /* Valid gxids start with 1. */
+		DistributedTransactionId gxid2 = (gxid1 < num_transactions) ? gxid1 + 1 : 1;
 		int segment = i; /* segment id starts with 0. */
 
 		/* Make up pids and session ids. */
