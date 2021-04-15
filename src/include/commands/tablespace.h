@@ -29,8 +29,6 @@
 typedef struct xl_tblspc_create_rec
 {
 	Oid			ts_id;
-	uint32		primary_dir;
-	uint32		mirror_dir;
 	char		ts_path[FLEXIBLE_ARRAY_MEMBER]; /* null-terminated string */
 } xl_tblspc_create_rec;
 

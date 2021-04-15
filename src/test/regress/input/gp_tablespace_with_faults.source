@@ -242,7 +242,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 --           the tablespace directory.
 --
 \set content_id_under_test 0
-\set expected_number_of_tablespaces 2
+\set expected_number_of_tablespaces 1
 \set error_type panic
 \set tablespace_location /tmp/my_tablespace_for_testing
 \set fault_to_set before_xlog_xact_prepare

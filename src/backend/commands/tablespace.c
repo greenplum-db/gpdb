@@ -468,19 +468,13 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	check_dir_permission(location);
 
 	/*
-	 * Greenplum: create a unique tablespace location for current segment and
-	 * its mirror
+	 * Greenplum: create a unique tablespace location, dedicated to current
+	 * segment.
 	 */
-	uint32 primary_dir;
-	uint32 mirror_dir;
 	char gplocation[MAXPGPATH];
 
 	strlcpy(gplocation, location, MAXPGPATH);
-	if (!create_unique_subdir(gplocation, &mirror_dir))
-		elog(ERROR, "cannot create unique subdir under %s", gplocation);
-
-	strlcpy(gplocation, location, MAXPGPATH);
-	if (!create_unique_subdir(gplocation, &primary_dir))
+	if (!create_unique_subdir(gplocation, DataDir))
 		elog(ERROR, "cannot create unique subdir under %s", gplocation);
 
 	create_tablespace_directories(gplocation, tablespaceoid);
@@ -490,13 +484,11 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 		xl_tblspc_create_rec xlrec;
 
 		xlrec.ts_id = tablespaceoid;
-		xlrec.primary_dir = primary_dir;
-		xlrec.mirror_dir = mirror_dir;
 
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec,
 						 offsetof(xl_tblspc_create_rec, ts_path));
-		XLogRegisterData((char *) location, strlen(location) + 1);
+		XLogRegisterData((char *) gplocation, strlen(gplocation) + 1);
 
 		SIMPLE_FAULT_INJECTOR("before_xlog_create_tablespace");
 		(void) XLogInsert(RM_TBLSPC_ID, XLOG_TBLSPC_CREATE);
@@ -1188,6 +1180,7 @@ remove_symlink:
 		}
 		else
 		{
+			unlink_gp_segment(link_target_dir);
 			if(directory_is_empty(link_target_dir) && rmdir(link_target_dir) < 0)
 				ereport(redo ? LOG : ERROR,
 						(errcode_for_file_access(),
@@ -1968,6 +1961,86 @@ get_tablespace_name(Oid spc_oid)
 	return result;
 }
 
+/*
+ * Greenplum: when replaying tablespace creation on standby, we either have to
+ * use the location in the WAL record or generate a new random subdir.  This
+ * function contains the logic to make that decision.  It returns a location
+ * after creating it on filesystem, if necessary.
+ *
+ * Two scenarios need consideration:
+ *
+ * 1. Normal WAL replay on standby - if the location from WAL record does not
+ * exist, use the location from WAL record.  The location should be created on
+ * filesystem first.  If the location from WAL record already exists, generate
+ * new location.
+ *
+ * 2. Recovering from a crash on standby - if the location from WAL already
+ * exists and contains a symlink back to our data directory, the tablespace
+ * creation is being replayed more than once.  Use the location from WAL
+ * again, as it was used during previous replay.  Otherwise, generate new
+ * location.
+ */
+static char *
+get_standby_location(xl_tblspc_create_rec *xlrec)
+{
+	Assert(StandbyMode);
+
+	struct stat st;
+	if (stat(xlrec->ts_path, &st) == 0 && S_ISDIR(st.st_mode))
+	{
+		/* Read the segment data dir link */
+		char *linkloc = psprintf("%s/%s", xlrec->ts_path, GP_SEGMENT_LINK);
+		uint32 len = strlen(DataDir);
+		char *linktarget = (char *) palloc(len + 1);
+		size_t ret = readlink(linkloc, linktarget, len + 1);
+		linktarget[len] = '\0';
+		/* Log readlink failure but don't error out. */
+		if (ret < 0)
+			elog(LOG, "tablespace %d, could not read link %s: %m",
+				 xlrec->ts_id, linkloc);
+
+		if (ret == len && strcmp(linktarget, DataDir) == 0)
+		{
+			/* The location in WAL record exists and belongs to us. */
+			return xlrec->ts_path;
+		}
+
+		/*
+		 * The location in WAL record exists but doesn't belong to us.  This
+		 * can happen when us and our primary are deployed on the same host.
+		 * Generate new location.
+		 */
+		len = strlen(xlrec->ts_path);
+		char *gplocation = (char *) palloc(len + 1);
+		strlcpy(gplocation, xlrec->ts_path, len + 1);
+		get_parent_directory(gplocation);
+		check_dir_permission(gplocation);
+		if (!create_unique_subdir(gplocation, DataDir))
+			elog(ERROR, "cannot create unique subdir under %s",
+				 gplocation);
+		Assert(strlen(gplocation) == len);
+		/*
+		 * XXX Recovering from crash may lead to orphan tablespace
+		 * directories.  It is possible that this WAL record was already
+		 * replayed before crash.  We will leak the directory created in
+		 * previous replay because we don't remember it anywhere.  This should
+		 * happen only if we are deployed on the same host as our primary,
+		 * which is not likely to happen in production.
+		 */
+		return gplocation;
+	}
+	else
+	{
+		/*
+		 * Use the same location as recorded in the WAL record.  We are
+		 * deployed on a different host as compared to our primary.
+		 */
+		if (MakePGDirectory(xlrec->ts_path) < 0)
+			elog(ERROR, "cannot create directory %s: %m", xlrec->ts_path);
+		link_gp_segment(xlrec->ts_path, DataDir);
+		return xlrec->ts_path;
+	}
+}
 
 /*
  * TABLESPACE resource manager's routines
@@ -1983,20 +2056,24 @@ tblspc_redo(XLogReaderState *record)
 	if (info == XLOG_TBLSPC_CREATE)
 	{
 		xl_tblspc_create_rec *xlrec = (xl_tblspc_create_rec *) XLogRecGetData(record);
-		char	   *gplocation;
+		char *gplocation;
 
-		/*
-		 * Greenplum: when replaying tablespace creation, we need to use the
-		 * right location based on whether we are mirror or performing crash
-		 * recovery on primary.
-		 */
 		if (StandbyMode)
-			gplocation = psprintf("%s/%08X", xlrec->ts_path, xlrec->mirror_dir);
+			gplocation = get_standby_location(xlrec);
 		else
-			gplocation = psprintf("%s/%08X", xlrec->ts_path, xlrec->primary_dir);
-
+		{
+			/*
+			 * Recovering from a crash on primary - use the location from WAL
+			 * record.  It must already exist on filesystem because the
+			 * location is created before emitting the WAL record in normal
+			 * operation.
+			 */
+			gplocation = xlrec->ts_path;
+		}
 		create_tablespace_directories(gplocation, xlrec->ts_id);
-		pfree(gplocation);
+
+		if (gplocation != xlrec->ts_path)
+			pfree(gplocation);
 	}
 	else if (info == XLOG_TBLSPC_DROP)
 	{

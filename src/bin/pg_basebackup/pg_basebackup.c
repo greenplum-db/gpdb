@@ -1381,7 +1381,7 @@ get_target_gp_location(TablespaceListCell *cell)
 {
 	strlcpy(cell->new_gp_dir, cell->new_dir, sizeof(cell->new_gp_dir));
 
-	if (!create_unique_subdir(cell->new_gp_dir, NULL))
+	if (!create_unique_subdir(cell->new_gp_dir, basedir))
 	{
 		pg_log_error("could not generate Greenplum segment subdir under %s",
 					 cell->new_dir);

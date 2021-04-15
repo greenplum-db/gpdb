@@ -37,6 +37,14 @@ CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
 	RETURNS TEXT
 	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
     LANGUAGE C;
+CREATE OR REPLACE FUNCTION gp_qd_tablespace_link(tblspc oid)
+	RETURNS TEXT
+	AS '@abs_builddir@/regress.so', 'gp_segment_tablespace_link'
+    LANGUAGE C execute on coordinator;
+CREATE OR REPLACE FUNCTION gp_segment_tablespace_link(tblspc oid)
+	RETURNS TEXT
+	AS '@abs_builddir@/regress.so', 'gp_segment_tablespace_link'
+    LANGUAGE C execute on all segments;
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
 CREATE TABLESPACE ul_testspace LOCATION '@testtablespace@_unlogged';
@@ -68,15 +76,33 @@ FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='ul_tes
             -1 | testtablespace_unlogged
 (4 rows)
 
+select oid as _oid from pg_tablespace where spcname = 'testspace' \gset spc
 -- Test that test tablespaces have the catalog directory directly under their
 -- symlink
-SELECT pg_ls_dir('./pg_tblspc/' || oid) = get_tablespace_version_directory_name()
-         AS has_version_dir
-FROM pg_tablespace WHERE spcname = 'testspace';
+select count(*) = 1 as has_version_dir
+       from pg_ls_dir('./pg_tblspc/' || :spc_oid) d
+       where d = get_tablespace_version_directory_name();
  has_version_dir 
 -----------------
  t
 (1 row)
+
+-- Validate symlink from tablespace location back to segment data dir
+select c.content, c.role from gp_qd_tablespace_link(:spc_oid) d
+       inner join gp_segment_configuration c on d = c.datadir;
+ content | role 
+---------+------
+      -1 | p
+(1 row)
+
+select c.content, c.role from gp_segment_tablespace_link(:spc_oid) d
+       inner join gp_segment_configuration c on d = c.datadir;
+ content | role 
+---------+------
+       2 | p
+       0 | p
+       1 | p
+(3 rows)
 
 -- Ensure mirrors have applied filesystem changes
 SELECT force_mirrors_to_catch_up();
@@ -398,7 +424,8 @@ WHERE a.versiondirs != get_tablespace_version_directory_name();
     versiondirs    
 -------------------
  GPDB_99_399999991
-(1 row)
+ gp_segment
+(2 rows)
 
 SELECT count(*) FROM
   (SELECT pg_ls_dir('pg_tblspc/' || oid) AS versiondirs

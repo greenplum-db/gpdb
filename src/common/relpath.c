@@ -228,6 +228,42 @@ GetRelationPath(Oid dbNode, Oid spcNode, Oid relNode,
 }
 
 /*
+ * Create a symlink to the segment's data directory in the specified subdir,
+ * as an aid in debugging.  It helps map a randomly generated tablespace
+ * subdir to the Greenplum segment that created it.
+ */
+void
+link_gp_segment(const char *tblspcdir, const char *datadir)
+{
+	char *linkloc = psprintf("%s/%s", tblspcdir, GP_SEGMENT_LINK);
+	if (symlink(datadir, linkloc) < 0)
+	{
+#ifndef FRONTEND
+		elog(ERROR, "could not create symbolic link \"%s\": %m", linkloc);
+#else
+		pg_log_error("could not create symbolic link \"%s\": %m", linkloc);
+		exit(EXIT_FAILURE);
+#endif
+	}
+	pfree(linkloc);
+}
+
+void
+unlink_gp_segment(const char *tblspcdir)
+{
+	char *linkloc = psprintf("%s/%s", tblspcdir, GP_SEGMENT_LINK);
+	if (unlink(linkloc) < 0)
+	{
+#ifndef FRONTEND
+		elog(LOG, "could not remove symbolic link \"%s\": %m", linkloc);
+#else
+		pg_log_info("could not remove symbolic link \"%s\": %m", linkloc);
+#endif
+	}
+	pfree(linkloc);
+}
+
+/*
  * Create a unique segment-specific subdirectory under tablespace location
  *
  * Use the strong random number generation facility to create a unique
@@ -242,7 +278,7 @@ GetRelationPath(Oid dbNode, Oid spcNode, Oid relNode,
  * genenerated.
  */
 bool
-create_unique_subdir(char *location, uint32 *segment_dir)
+create_unique_subdir(char *location, const char *datadir)
 {
 	static bool seeded = false;
 	bool done = false;
@@ -282,8 +318,7 @@ create_unique_subdir(char *location, uint32 *segment_dir)
 		if (mkdir(location, pg_dir_create_mode) == 0)
 		{
 			done = true;
-			if (segment_dir)
-				*segment_dir = randomNum;
+			link_gp_segment(location, datadir);
 		}
 		else
 		{

@@ -356,7 +356,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 --           the tablespace directory.
 --
 \set content_id_under_test 0
-\set expected_number_of_tablespaces 2
+\set expected_number_of_tablespaces 1
 \set error_type panic
 \set tablespace_location /tmp/my_tablespace_for_testing
 \set fault_to_set before_xlog_xact_prepare
@@ -396,7 +396,7 @@ select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
                 list_tablespace_dbid_dirs                 
 ----------------------------------------------------------
- {Success,"expected 2 tablespaces","found 2 tablespaces"}
+ {Success,"expected 1 tablespaces","found 1 tablespaces"}
 (1 row)
 
 DROP TABLESPACE my_tablespace_for_testing;

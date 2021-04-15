@@ -40,6 +40,15 @@ CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
 	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
     LANGUAGE C;
 
+CREATE OR REPLACE FUNCTION gp_qd_tablespace_link(tblspc oid)
+	RETURNS TEXT
+	AS '@abs_builddir@/regress.so', 'gp_segment_tablespace_link'
+    LANGUAGE C execute on coordinator;
+
+CREATE OR REPLACE FUNCTION gp_segment_tablespace_link(tblspc oid)
+	RETURNS TEXT
+	AS '@abs_builddir@/regress.so', 'gp_segment_tablespace_link'
+    LANGUAGE C execute on all segments;
 
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
@@ -57,11 +66,19 @@ SELECT gp_segment_id,
        END AS tblspc_loc
 FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='ul_testspace'));
 
+select oid as _oid from pg_tablespace where spcname = 'testspace' \gset spc
+
 -- Test that test tablespaces have the catalog directory directly under their
 -- symlink
-SELECT pg_ls_dir('./pg_tblspc/' || oid) = get_tablespace_version_directory_name()
-         AS has_version_dir
-FROM pg_tablespace WHERE spcname = 'testspace';
+select count(*) = 1 as has_version_dir
+       from pg_ls_dir('./pg_tblspc/' || :spc_oid) d
+       where d = get_tablespace_version_directory_name();
+
+-- Validate symlink from tablespace location back to segment data dir
+select c.content, c.role from gp_qd_tablespace_link(:spc_oid) d
+       inner join gp_segment_configuration c on d = c.datadir;
+select c.content, c.role from gp_segment_tablespace_link(:spc_oid) d
+       inner join gp_segment_configuration c on d = c.datadir;
 
 -- Ensure mirrors have applied filesystem changes
 SELECT force_mirrors_to_catch_up();
