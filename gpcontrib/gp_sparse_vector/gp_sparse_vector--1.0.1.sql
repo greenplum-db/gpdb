@@ -1,9 +1,9 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
---\echo Use "CREATE EXTENSION gp_sparse_vector" to load this file. \quit
+\echo Use "CREATE EXTENSION gp_sparse_vector" to load this file. \quit
 
---CREATE SCHEMA sparse_vector;
+CREATE SCHEMA sparse_vector;
 
---SET search_path TO sparse_vector;
+SET search_path TO sparse_vector;
 
 DROP TYPE IF EXISTS svec CASCADE;
 CREATE TYPE svec;
