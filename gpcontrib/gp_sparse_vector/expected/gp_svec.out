@@ -19,18 +19,18 @@ DROP TABLE IF EXISTS test2;
 NOTICE:  table "test2" does not exist, skipping
 CREATE TABLE test2 AS SELECT * FROM test DISTRIBUTED BY (a);
 -- Test the plus operator (should be 9 rows)
-SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2;
+SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2 ORDER BY 1;
  cross_product_sum 
 -------------------
- {2,1,2,1,1,1}
- {4,3,2,2,2,2}
  {0,0,2,0,0,0}
- {2,2,2,1,1,1}
- {2,2,2,1,1,1}
- {4,4,2,2,2,2}
  {2,1,2,1,1,1}
- {4,3,2,2,2,2}
+ {2,1,2,1,1,1}
+ {2,2,2,1,1,1}
+ {2,2,2,1,1,1}
  {4,2,2,2,2,2}
+ {4,3,2,2,2,2}
+ {4,3,2,2,2,2}
+ {4,4,2,2,2,2}
 (9 rows)
 
 -- Test ORDER BY

@@ -15,7 +15,7 @@ SELECT a,b::float8[] cross_product_equals FROM (SELECT a,b FROM test) foo WHERE 
 DROP TABLE IF EXISTS test2;
 CREATE TABLE test2 AS SELECT * FROM test DISTRIBUTED BY (a);
 -- Test the plus operator (should be 9 rows)
-SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2;
+SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2 ORDER BY 1;
 
 -- Test ORDER BY
 SELECT (t1.b+t2.b)::float8[] cross_product_sum, l2norm(t1.b+t2.b) l2norm, (t1.b+t2.b) sparse_vector FROM test t1, test2 t2 ORDER BY 3;
