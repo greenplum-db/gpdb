@@ -1905,16 +1905,24 @@ class gpload:
             self.log(self.DEBUG, '%s: %s'%(name,typ))
 
 
+    def test_enable_custom_format(self):
+        # Test custom format guc
+        self.enable_custom_format = 0;
+        queryString = """show gpload_enable_custom_format;"""
+        resultList = self.db.query(queryString.encode('utf-8')).getresult()
+        val = int(resultList[0][0])
+        if val != 0:
+            self.enable_custom_format = 1
+
     def test_custom_formatter(self):
         # Test if 'text_in' custom formatter can be used
         self.support_cusfmt = 0
-        self.enable_custom_format = 0;
         try:
             queryString = """CREATE OR REPLACE FUNCTION text_in() RETURNS record
-			AS '$libdir/gpfmt_gpss.so', 'text_import'
+                       AS '$libdir/gpfmt_gpss.so', 'text_import'
                       LANGUAGE C STABLE; """
             self.db.query(queryString.encode('utf-8'))
-        
+
             queryString = """SELECT c.oid FROM pg_catalog.pg_proc c 
                                LEFT JOIN pg_catalog.pg_namespace n
                                ON n.oid = c.pronamespace
@@ -1922,15 +1930,11 @@ class gpload:
             resultList = self.db.query(queryString.encode('utf-8')).getresult()
             if len(resultList) > 0:
                 self.support_cusfmt = 1
-            
-            queryString = """show gpload_enable_custom_format;"""
-            resultList = self.db.query(queryString.encode('utf-8')).getresult()
-            val = int(resultList[0][0])
-            if val != 0:
-                self.enable_custom_format = 1
-            
+
         except Exception, e:
-            self.log(self.ERROR, 'could not run SQL "%s": %s' % (queryString, unicode(e)))
+            self.log(self.DEBUG, 'could not run SQL "%s": %s' % (queryString, unicode(e)))
+            
+            
 
     def read_table_metadata(self):
         # KAS Note to self. If schema is specified, then probably should use PostgreSQL rules for defining it.
@@ -2908,7 +2912,7 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
 
-        self.test_custom_formatter() # Whether to support gpdb5 text format
+        self.test_enable_custom_format()
 
         if method=='insert':
             self.do_method_insert()
@@ -2963,6 +2967,7 @@ class gpload:
         start = time.time()
         self.read_config()
         self.setup_connection()
+        self.test_custom_formatter()
         self.read_table_metadata()
         self.read_columns()
         self.read_mapping()
