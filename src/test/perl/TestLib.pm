@@ -101,7 +101,7 @@ BEGIN
 	if ($windows_os)
 	{
 		require Win32API::File;
-		Win32API::File->import(qw(createFile OsFHandleOpen CloseHandle));
+		Win32API::File->import(qw(createFile OsFHandleOpen CloseHandle setFilePointer));
 	}
 
 	$timeout_default = $ENV{PG_TEST_TIMEOUT_DEFAULT};
@@ -306,6 +306,15 @@ sub slurp_dir
 	return @direntries;
 }
 
+=pod
+
+=item slurp_file(filename [, $offset])
+
+Return the full contents of the specified file, beginning from an
+offset position if specified.
+
+=cut
+
 sub slurp_file
 {
 	my ($filename, $offset) = @_;
@@ -327,6 +336,14 @@ sub slurp_file
 		  or croak "could not open \"$filename\": $^E";
 		OsFHandleOpen($fh = IO::Handle->new(), $fHandle, 'r')
 		  or croak "could not read \"$filename\": $^E\n";
+		if (defined($offset))
+		{
+			setFilePointer($fh, $offset, qw(FILE_BEGIN))
+			  or croak "could not seek \"$filename\": $^E\n";
+		}
+		$contents = <$fh>;
+		CloseHandle($fHandle)
+		  or croak "could not close \"$filename\": $^E\n";
 	}
 
 	if (defined($offset))
