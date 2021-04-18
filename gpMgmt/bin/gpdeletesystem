@@ -21,6 +21,7 @@ try:
     from gppylib import gparray, pgconf
     from gppylib.operations.deletesystem import validate_pgport
     from gppylib.userinput import *
+    from gppylib.operations.segment_tablespace_locations import get_tablespace_locations
 except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -188,28 +189,6 @@ def check_for_dump_files(options):
     return gp.GpDirsExist.local('check for dump dirs', baseDir=options.coordinator_data_dir, dirName="'*dump*'") \
            or gp.GpDirsExist.local('check for dump dirs', baseDir=options.coordinator_data_dir, dirName="'*backups*'")
 
-def getTablespaceDirs():
-    ''' Create list of user-created tablespace locations for each host '''
-    tblspclocs = {}
-    gettblspcoids_sql = "select oid from pg_tablespace where spcname not in ('pg_default', 'pg_global')"
-    gettblspclocs_sql = "select c.hostname, t.tblspc_loc from gp_tablespace_location(%s) t, gp_segment_configuration c where t.gp_segment_id = c.content group by c.hostname, t.tblspc_loc"
-
-    # Get the tablespace oids
-    with closing(dbconn.connect(dbconn.DbURL())) as conn:
-        tblspcoids = dbconn.query(conn, gettblspcoids_sql).fetchall()
-
-        # Use the tablespace oids to get the tablespace locations
-        for row in tblspcoids:
-            tblspcoid = row[0]
-            query_results = dbconn.query(conn, gettblspclocs_sql % tblspcoid).fetchall()
-            for query_result in query_results:
-                if query_result[0] in tblspclocs:
-                   tblspclocs[query_result[0]].append(query_result[1])
-                else:
-                   tblspclocs[query_result[0]] = [query_result[1]]
-
-    return tblspclocs
-
 # -------------------------------------------------------------------------
 # delete_system() - deletes a GPDB system
 # -------------------------------------------------------------------------
@@ -229,9 +208,12 @@ def delete_cluster(options):
     dburl = dbconn.DbURL(port=options.pgport)
     try:
         array = gparray.GpArray.initFromCatalog(dburl, True)
-        tablespaceDirs = getTablespaceDirs()
     except Exception as ex:
         raise GpDeleteSystemException('Failed to get database configuration: %s' % ex.__str__())
+
+    #get tablespace locations of segments from all hosts
+    tablespace_locations = get_tablespace_locations(True, None)
+
     # get all segdbs
     segments = array.getDbList()
 
@@ -260,16 +242,16 @@ def delete_cluster(options):
         pool = base.WorkerPool(numWorkers=options.batch_size)
 
         try:
-            logger.info('Deleting tablespace directories...')
-            for segmentHost in tablespaceDirs:
-                for tablespaceDir in tablespaceDirs[segmentHost]:
-                    logger.debug('Queueing up command to remove %s:%s' % (segmentHost,
-                                                                          tablespaceDir))
-                    cmd = unix.RemoveDirectory('remove tablespace dir', tablespaceDir,
-                                               ctxt=base.REMOTE, remoteHost=segmentHost)
+            if tablespace_locations:
+                logger.info('Deleting tablespace directories...')
+                for host, tablespace_dir in tablespace_locations:
+
+                    logger.debug('Queueing up command to remove %s:%s' % (host, tablespace_dir))
+                    cmd = unix.RemoveDirectory('remove tablespace dir', tablespace_dir,
+                                               ctxt=base.REMOTE, remoteHost=host)
                     pool.addCommand(cmd)
 
-            logger.info('Waiting for worker threads to delete tablespace dirs...')
+                logger.info('Waiting for worker threads to delete tablespace dirs...')
         finally:
             pool.join()
             pool.haltWork()

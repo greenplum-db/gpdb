@@ -26,6 +26,7 @@ try:
     from pgdb import DatabaseError
     from gppylib import gparray, gplog, pgconf, userinput, utils
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
+    from gppylib.operations.segment_tablespace_locations import get_tablespace_locations
 
 except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -298,6 +299,7 @@ args = None
 pidfilepid = None  # pid of the process which has the lock
 locktorelease = None
 sml = None  # sml (simple main lock)
+mirror_tablespace_locations = {}   #map of mirror and its tablespace locations
 
 logger = get_default_logger()
 
@@ -374,6 +376,10 @@ try:
     totalDirsToDelete = len(mirrorsToDelete)
     numberOfWorkers = min(totalDirsToDelete, options.batch_size)
 
+    """ Fetch tablespace locations before mirror move """
+    for mirror in mirrorsToDelete:
+        mirror_tablespace_locations[mirror.dataDirectory] = get_tablespace_locations(False, mirror.dataDirectory)
+
     """ Update pg_hba.conf on primary segments with new mirror information """
 
     if numberOfWorkers > 0:
@@ -440,11 +446,23 @@ try:
     cmd = GpRecoverSeg("Running gprecoverseg", options=recoversegOptions)
     cmd.run(validateAfter=True)
 
+    """ Reinitialize gparray after the new mirrors are in place. """
+    gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
+    mirrorDirectories = set((seg.getSegmentHostName(),seg.getSegmentContentId()) for seg in gpArrayInstance.getDbList() if seg.isSegmentMirror())
+
     """ Delete old mirror directories. """
     if numberOfWorkers > 0:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in mirrorsToDelete:
-            logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
+            logger.info("About to remove old mirror segment directories: " + mirror.dataDirectory)
+
+            if mirror_tablespace_locations[mirror.dataDirectory]:
+                for host, content, tablespace_dir in mirror_tablespace_locations[mirror.dataDirectory]:
+                    if (host, content) not in mirrorDirectories:
+                        cmd = RemoveDirectory("removing old mirror tablespace directory", tablespace_dir, ctxt=REMOTE,
+                                              remoteHost=mirror.address)
+                        pool.addCommand(cmd)
+
             cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
                                   remoteHost=mirror.address)
             pool.addCommand(cmd)
