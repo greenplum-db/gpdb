@@ -172,6 +172,10 @@ Feature: Tests for gpmovemirrors
           And a sample gpmovemirrors input file is created in "spread" configuration
          When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_spread"
          Then gpmovemirrors should return a return code of 0
+          And verify the tablespace directories on host "sdw2" for content "1" are deleted
+          And verify the tablespace directories on host "sdw1" for content "5" are deleted
+          And verify the tablespace directories on host "sdw3" for content "1" are valid
+          And verify the tablespace directories on host "sdw2" for content "5" are valid
           And verify the database has mirrors
           And all the segments are running
           And the segments are synchronized
