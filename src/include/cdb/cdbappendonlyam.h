@@ -77,13 +77,11 @@ typedef struct AppendOnlyInsertDescData
 	VarBlockMaker	varBlockMaker;
 	int64			bufferCount;
 	int64			blockFirstRowNum;
-	bool			shouldCompress;
 	bool			usingChecksum;
 	bool			useNoToast;
 	bool			skipModCountIncrement;
 	int32			completeHeaderLen;
 	uint8			*tempSpace;
-	uint8			*uncompressedBuffer; /* used for compression */
 
 	int32			usableBlockSize;
 	int32			maxDataLen;

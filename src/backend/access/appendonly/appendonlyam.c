@@ -377,51 +377,6 @@ errcontext_appendonly_insert_block_user_limit(AppendOnlyInsertDesc aoInsertDesc)
 	return 0;
 }
 
-
-/*
- * errcontext_appendonly_insert_block
- *
- * Add an errcontext() line showing the table, segment file, offset in file, block count of the block being inserted.
- */
-static int
-errcontext_appendonly_insert_block(AppendOnlyInsertDesc aoInsertDesc)
-{
-	char	   *relationName = NameStr(aoInsertDesc->aoi_rel->rd_rel->relname);
-	int			segmentFileNum = aoInsertDesc->cur_segno;
-	int64		headerOffsetInFile = AppendOnlyStorageWrite_CurrentPosition(&aoInsertDesc->storageWrite);
-	int64		blockFirstRowNum = aoInsertDesc->blockFirstRowNum;
-	int64		bufferCount = aoInsertDesc->bufferCount;
-
-	errcontext("Append-Only table '%s', segment file #%d, block header offset in file = " INT64_FORMAT ", "
-			   "block first row number " INT64_FORMAT ", bufferCount " INT64_FORMAT ")",
-			   relationName,
-			   segmentFileNum,
-			   headerOffsetInFile,
-			   blockFirstRowNum,
-			   bufferCount);
-
-	return 0;
-}
-
-/*
- * errdetail_appendonly_insert_block_header
- *
- * Add an errdetail() line showing the Append-Only Storage block header for the block being inserted.
- */
-static void
-errdetail_appendonly_insert_block_header(AppendOnlyInsertDesc aoInsertDesc)
-{
-	uint8	   *header;
-
-	bool		usingChecksum;
-
-	header = AppendOnlyStorageWrite_GetCurrentInternalBuffer(&aoInsertDesc->storageWrite);
-
-	usingChecksum = aoInsertDesc->usingChecksum;
-
-	errdetail_appendonly_storage_content_header(header, usingChecksum, aoInsertDesc->storageWrite.formatVersion);
-}
-
 /*
  * Open the next file segment for write.
  */
@@ -1432,37 +1387,20 @@ setupNextWriteBlock(AppendOnlyInsertDesc aoInsertDesc)
 	AppendOnlyStorageWrite_SetFirstRowNum(&aoInsertDesc->storageWrite,
 										  aoInsertDesc->blockFirstRowNum);
 
-	if (!aoInsertDesc->shouldCompress)
-	{
-		aoInsertDesc->nonCompressedData =
-			AppendOnlyStorageWrite_GetBuffer(
-											 &aoInsertDesc->storageWrite,
-											 AoHeaderKind_SmallContent);
+	aoInsertDesc->nonCompressedData =
+		AppendOnlyStorageWrite_GetBuffer(
+											&aoInsertDesc->storageWrite,
+											AoHeaderKind_SmallContent);
 
-		/*
-		 * Prepare our VarBlock for items.  Leave room for the Append-Only
-		 * Storage header.
-		 */
-		VarBlockMakerInit(&aoInsertDesc->varBlockMaker,
-						  aoInsertDesc->nonCompressedData,
-						  aoInsertDesc->maxDataLen,
-						  aoInsertDesc->tempSpace,
-						  aoInsertDesc->tempSpaceLen);
-
-	}
-	else
-	{
-		/*
-		 * Block oriented compression.  We also restrict the size of the
-		 * buffer to leave room for the Append-Only Storage header in case the
-		 * block cannot be compressed by the compress library.
-		 */
-		VarBlockMakerInit(&aoInsertDesc->varBlockMaker,
-						  aoInsertDesc->uncompressedBuffer,
-						  aoInsertDesc->maxDataLen,
-						  aoInsertDesc->tempSpace,
-						  aoInsertDesc->tempSpaceLen);
-	}
+	/*
+		* Prepare our VarBlock for items.  Leave room for the Append-Only
+		* Storage header.
+		*/
+	VarBlockMakerInit(&aoInsertDesc->varBlockMaker,
+						aoInsertDesc->nonCompressedData,
+						aoInsertDesc->maxDataLen,
+						aoInsertDesc->tempSpace,
+						aoInsertDesc->tempSpaceLen);
 
 	aoInsertDesc->bufferCount++;
 }
@@ -1491,78 +1429,34 @@ finishWriteBlock(AppendOnlyInsertDesc aoInsertDesc)
 
 	aoInsertDesc->varblockCount++;
 
-	if (!aoInsertDesc->shouldCompress)
+	if (itemCount == 1)
 	{
-		if (itemCount == 1)
-		{
-			dataLen = VarBlockCollapseToSingleItem(
-												    /* target */ aoInsertDesc->nonCompressedData,
-												    /* source */ aoInsertDesc->nonCompressedData,
-												    /* sourceLen */ dataLen);
-			executorBlockKind = AoExecutorBlockKind_SingleRow;
-		}
-
-		aoInsertDesc->storageWrite.logicalBlockStartOffset =
-			BufferedAppendNextBufferPosition(&(aoInsertDesc->storageWrite.bufferedAppend));
-
-		AppendOnlyStorageWrite_FinishBuffer(
-											&aoInsertDesc->storageWrite,
-											dataLen,
-											executorBlockKind,
-											itemCount);
-		aoInsertDesc->nonCompressedData = NULL;
-		Assert(!AppendOnlyStorageWrite_IsBufferAllocated(&aoInsertDesc->storageWrite));
-
-		elogif(Debug_appendonly_print_insert, LOG,
-			   "Append-only insert finished uncompressed block for table '%s' "
-			   "(length = %d, application specific %d, item count %d, block count " INT64_FORMAT ")",
-			   NameStr(aoInsertDesc->aoi_rel->rd_rel->relname),
-			   dataLen,
-			   executorBlockKind,
-			   itemCount,
-			   aoInsertDesc->bufferCount);
+		dataLen = VarBlockCollapseToSingleItem(
+												/* target */ aoInsertDesc->nonCompressedData,
+												/* source */ aoInsertDesc->nonCompressedData,
+												/* sourceLen */ dataLen);
+		executorBlockKind = AoExecutorBlockKind_SingleRow;
 	}
-	else
-	{
-		if (itemCount == 1)
-		{
-			dataLen = VarBlockCollapseToSingleItem(
-												    /* target */ aoInsertDesc->uncompressedBuffer,
-												    /* source */ aoInsertDesc->uncompressedBuffer,
-												    /* sourceLen */ dataLen);
-			executorBlockKind = AoExecutorBlockKind_SingleRow;
-		}
-		else
-		{
-			Assert(executorBlockKind == AoExecutorBlockKind_VarBlock);
 
-			/*
-			 * Just before finishing the attempting to compress the VarBlock,
-			 * let's verify the VarBlock has integrity, honor, etc.
-			 */
-			if (gp_appendonly_verify_write_block)
-			{
-				VarBlockCheckError varBlockCheckError;
+	aoInsertDesc->storageWrite.logicalBlockStartOffset =
+		BufferedAppendNextBufferPosition(&(aoInsertDesc->storageWrite.bufferedAppend));
 
-				varBlockCheckError = VarBlockIsValid(aoInsertDesc->uncompressedBuffer, dataLen);
-				if (varBlockCheckError != VarBlockCheckOk)
-					ereport(ERROR,
-							(errcode(ERRCODE_INTERNAL_ERROR),
-							 errmsg("verify block during write found VarBlock is not valid, valid block check error %d, detail '%s'",
-									varBlockCheckError,
-									VarBlockGetCheckErrorStr()),
-							 errdetail_appendonly_insert_block_header(aoInsertDesc),
-							 errcontext_appendonly_insert_block(aoInsertDesc)));
-			}
-		}
+	AppendOnlyStorageWrite_FinishBuffer(
+										&aoInsertDesc->storageWrite,
+										dataLen,
+										executorBlockKind,
+										itemCount);
+	aoInsertDesc->nonCompressedData = NULL;
+	Assert(!AppendOnlyStorageWrite_IsBufferAllocated(&aoInsertDesc->storageWrite));
 
-		AppendOnlyStorageWrite_Content(
-									   &aoInsertDesc->storageWrite,
-									   aoInsertDesc->uncompressedBuffer,
-									   dataLen,
-									   executorBlockKind,
-									   itemCount);
-	}
+	elogif(Debug_appendonly_print_insert, LOG,
+			"Append-only insert finished uncompressed block for table '%s' "
+			"(length = %d, application specific %d, item count %d, block count " INT64_FORMAT ")",
+			NameStr(aoInsertDesc->aoi_rel->rd_rel->relname),
+			dataLen,
+			executorBlockKind,
+			itemCount,
+			aoInsertDesc->bufferCount);
 
 	/* Insert an entry to the block directory */
 	AppendOnlyBlockDirectory_InsertEntry(
