@@ -34,20 +34,6 @@ resources:
   source:
     repository: pivotaldata/gpdb7-centos7-test
 
-- name: libquicklz-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: libquicklz-devel-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
 - name: clang_toolchain
   type: registry-image
   source:
@@ -64,10 +50,6 @@ jobs:
       version: every
     - get: gpdb7-centos7-build
     - get: gpdb7-centos7-test
-    - get: libquicklz-installer
-      resource: libquicklz-centos7
-    - get: libquicklz-devel-installer
-      resource: libquicklz-devel-centos7
     - get: clang_toolchain
 
   - put: gpdb_pr
@@ -110,8 +92,6 @@ jobs:
       image: gpdb7-centos7-build
       params:
         CONFIGURE_FLAGS: ((configure_flags_with_extensions))
-        TARGET_OS: centos
-        TARGET_OS_VERSION: 7
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 
