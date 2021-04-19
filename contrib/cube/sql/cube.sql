@@ -430,3 +430,6 @@ SELECT c~>(-2), c FROM test_cube ORDER BY c~>(-2) LIMIT 15; -- descending by rig
 SELECT c~>(-3), c FROM test_cube ORDER BY c~>(-3) LIMIT 15; -- descending by lower bound
 SELECT c~>(-4), c FROM test_cube ORDER BY c~>(-4) LIMIT 15; -- descending by upper bound
 RESET enable_indexscan;
+
+-- Test that has all opclasses
+select opcname,amname from pg_opclass opc,  pg_am am  where am.oid=opc.opcmethod and opcintype='cube'::regtype;

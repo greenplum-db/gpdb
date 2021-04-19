@@ -1265,3 +1265,12 @@ FROM test_seg WHERE s @> '11.2..11.3' OR s IS NULL ORDER BY s;
            |            |          
 (144 rows)
 
+-- Test that has all opclasses
+select opcname,amname from pg_opclass opc,  pg_am am  where am.oid=opc.opcmethod and opcintype='seg'::regtype;
+   opcname    | amname
+--------------+--------
+ seg_ops      | btree
+ gist_seg_ops | gist
+ seg_ops      | bitmap
+(3 rows)
+

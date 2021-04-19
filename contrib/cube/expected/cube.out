@@ -1948,3 +1948,12 @@ SELECT c~>(-4), c FROM test_cube ORDER BY c~>(-4) LIMIT 15; -- descending by upp
 (15 rows)
 
 RESET enable_indexscan;
+
+select opcname,amname from pg_opclass opc,  pg_am am  where am.oid=opc.opcmethod and opcintype='cube'::regtype;
+    opcname    | amname
+---------------+--------
+ cube_ops      | btree
+ gist_cube_ops | gist
+ cube_ops      | bitmap
+(3 rows)
+

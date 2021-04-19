@@ -233,3 +233,6 @@ SELECT * FROM test_seg WHERE s @> '11..11.3' GROUP BY s;
 -- Test functions
 SELECT seg_lower(s), seg_center(s), seg_upper(s)
 FROM test_seg WHERE s @> '11.2..11.3' OR s IS NULL ORDER BY s;
+
+-- Test that has all opclasses
+select opcname,amname from pg_opclass opc,  pg_am am  where am.oid=opc.opcmethod and opcintype='citext'::regtype;
