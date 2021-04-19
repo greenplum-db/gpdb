@@ -200,6 +200,7 @@ static void copy_generic_path_info(Plan *dest, Path *src);
 static void copy_plan_costsize(Plan *dest, Plan *src);
 static void label_sort_with_costsize(PlannerInfo *root, Sort *plan,
 									 double limit_tuples);
+static void adjust_slice_segment(PlanSlice *ps);
 static SeqScan *make_seqscan(List *qptlist, List *qpqual, Index scanrelid);
 static SampleScan *make_samplescan(List *qptlist, List *qpqual, Index scanrelid,
 								   TableSampleClause *tsc);
@@ -3108,6 +3109,7 @@ create_motion_plan(PlannerInfo *root, CdbMotionPath *path)
 			sendSlice->gangType = GANGTYPE_SINGLETON_READER;
 			sendSlice->numsegments = subpath->locus.numsegments;
 			sendSlice->segindex = gp_session_id % subpath->locus.numsegments;
+			adjust_slice_segment(sendSlice);
 			break;
 
 		case CdbLocusType_Replicated:
@@ -6124,6 +6126,30 @@ label_sort_with_costsize(PlannerInfo *root, Sort *plan, double limit_tuples)
 	plan->plan.plan_width = lefttree->plan_width;
 	plan->plan.parallel_aware = false;
 	plan->plan.parallel_safe = lefttree->parallel_safe;
+}
+
+/*
+ * For replicated table scan slice, instead of choosing the segment to execute
+ * the slice based on the gp_session_id, we choose the one that already in the
+ * dtx segments list, in this way, we can reduce the segments involved in a
+ * dtx, or even turn a 2PC dtx into 1PC.
+ */
+static void
+adjust_slice_segment(PlanSlice *ps)
+{
+	MemoryContext oldContext;
+	int segindex;
+
+	Assert(MyTmGxactLocal != NULL);
+
+	if (list_length(MyTmGxactLocal->dtxSegments) == 0)
+		return;
+
+	oldContext = MemoryContextSwitchTo(TopTransactionContext);
+	segindex = lfirst_int(list_head(MyTmGxactLocal->dtxSegments));
+	ps->segindex = segindex;
+
+	MemoryContextSwitchTo(oldContext);
 }
 
 /*****************************************************************************
