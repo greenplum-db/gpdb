@@ -387,49 +387,48 @@ select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i i
 
 -- MPP-14222
 explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
-                                                                                                                                                                                                          QUERY PLAN                                                                                                                                                                                                           
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..1390613100118.43 rows=4 width=12)
-   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1390613100118.43 rows=10 width=12)
-         Merge Key: a.i, b_1.i, c_1.j
-         ->  Limit  (cost=0.00..1390613100118.43 rows=4 width=12)
-               ->  Sort  (cost=0.00..1390613100118.43 rows=90 width=12)
-                     Sort Key: a.i, b_1.i, c_1.j
-                     ->  Nested Loop  (cost=0.00..1390613100118.39 rows=90 width=12)
+                                                                                                                                                                                                             QUERY PLAN                                                                                                                                                                                                              
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..1422599929621233.25 rows=4 width=12)
+   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1422599929621233.25 rows=270 width=12)
+         Merge Key: a.i, b.i, c.j
+         ->  Sort  (cost=0.00..1422599929621233.25 rows=90 width=12)
+               Sort Key: a.i, b.i, c.j
+               ->  Nested Loop  (cost=0.00..1422599929621233.25 rows=90 width=12)
+                     Join Filter: true
+                     ->  Nested Loop  (cost=0.00..1389257742908.73 rows=10 width=8)
                            Join Filter: true
-                           ->  Nested Loop  (cost=0.00..1324033.29 rows=18 width=8)
-                                 Join Filter: true
-                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                       ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
-                                 ->  Seq Scan on c c_1  (cost=0.00..431.00 rows=3 width=4)
-                           ->  Materialize  (cost=0.00..1356696141.29 rows=5 width=4)
-                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1356696141.29 rows=5 width=4)
-                                       ->  Result  (cost=0.00..1356696141.29 rows=2 width=4)
-                                             ->  Seq Scan on a  (cost=0.00..1356696141.29 rows=2 width=4)
-                                                   Filter: (j = (SubPlan 2))
-                                                   SubPlan 2  (slice3; segments: 3)
-                                                     ->  Result  (cost=0.00..1324036.57 rows=1 width=4)
-                                                           Filter: (c.j = a.j)
-                                                           ->  Materialize  (cost=0.00..1324036.57 rows=9 width=4)
-                                                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324036.57 rows=9 width=4)
-                                                                       ->  Result  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                             ->  Seq Scan on c  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                                   Filter: (SubPlan 1)
-                                                                                   SubPlan 1  (slice2; segments: 3)
+                           ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1356696152.56 rows=5 width=4)
+                                 ->  Result  (cost=0.00..1356696152.56 rows=2 width=4)
+                                       ->  Seq Scan on a  (cost=0.00..1356696152.56 rows=2 width=4)
+                                             Filter: (j = (SubPlan 2))
+                                             SubPlan 2  (slice4; segments: 3)
+                                               ->  Result  (cost=0.00..1324036.59 rows=1 width=4)
+                                                     Filter: (c_1.j = a.j)
+                                                     ->  Materialize  (cost=0.00..1324036.58 rows=9 width=4)
+                                                           ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324036.58 rows=9 width=4)
+                                                                 ->  Result  (cost=0.00..1324036.58 rows=3 width=4)
+                                                                       ->  Seq Scan on c c_1  (cost=0.00..1324036.58 rows=3 width=4)
+                                                                             Filter: (SubPlan 1)
+                                                                             SubPlan 1  (slice3; segments: 3)
+                                                                               ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                      ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                                                                                           Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
                                                                                            ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                                 Filter: ((CASE WHEN ((sum((CASE WHEN (c.i = b.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c.i = b.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
-                                                                                                 ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                                       ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
-                                                                                                             ->  Result  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                                   ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                                                                                                         Filter: (c.i = b.i)
-                                                                                                                         ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                                     ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
-                                                                                                                                           Filter: (i <> 10)
+                                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                                                                                                       ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                             ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                                                                                                   Filter: (c_1.i = b_1.i)
+                                                                                                                   ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                                         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                                               ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
+                                                                                                                                     Filter: (i <> 10)
+                           ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                     ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                 ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(40 rows)
+(39 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
  i | i  | j  
@@ -447,46 +446,46 @@ select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j
 (10 rows)
 
 explain select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.j limit 10;
-                                                                                                                                                                                                          QUERY PLAN                                                                                                                                                                                                           
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..1390613099120.34 rows=4 width=4)
-   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1390613099120.34 rows=10 width=4)
+                                                                                                                                                                                                       QUERY PLAN                                                                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..1422599929603056.50 rows=4 width=4)
+   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1422599929603056.50 rows=270 width=4)
          Merge Key: a.j
-         ->  Limit  (cost=0.00..1390613099120.34 rows=4 width=4)
-               ->  Sort  (cost=0.00..1390613099120.34 rows=90 width=4)
-                     Sort Key: a.j
-                     ->  Nested Loop  (cost=0.00..1390613099120.32 rows=90 width=4)
+         ->  Sort  (cost=0.00..1422599929603056.50 rows=90 width=4)
+               Sort Key: a.j
+               ->  Nested Loop  (cost=0.00..1422599929603056.50 rows=90 width=4)
+                     Join Filter: true
+                     ->  Nested Loop  (cost=0.00..1389257742890.98 rows=10 width=4)
                            Join Filter: true
-                           ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1356696141.27 rows=5 width=4)
-                                 ->  Seq Scan on a  (cost=0.00..1356696141.27 rows=2 width=4)
-                                       Filter: (j = (SubPlan 2))
-                                       SubPlan 2  (slice4; segments: 3)
-                                         ->  Result  (cost=0.00..1324036.57 rows=1 width=4)
-                                               Filter: (c_1.j = a.j)
-                                               ->  Materialize  (cost=0.00..1324036.57 rows=9 width=4)
-                                                     ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324036.57 rows=9 width=4)
-                                                           ->  Result  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                 ->  Seq Scan on c c_1  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                       Filter: (SubPlan 1)
-                                                                       SubPlan 1  (slice3; segments: 3)
+                           ->  Seq Scan on a  (cost=0.00..1356696152.54 rows=2 width=4)
+                                 Filter: (j = (SubPlan 2))
+                                 SubPlan 2  (slice5; segments: 3)
+                                   ->  Result  (cost=0.00..1324036.59 rows=1 width=4)
+                                         Filter: (c_1.j = a.j)
+                                         ->  Materialize  (cost=0.00..1324036.58 rows=9 width=4)
+                                               ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1324036.58 rows=9 width=4)
+                                                     ->  Result  (cost=0.00..1324036.58 rows=3 width=4)
+                                                           ->  Seq Scan on c c_1  (cost=0.00..1324036.58 rows=3 width=4)
+                                                                 Filter: (SubPlan 1)
+                                                                 SubPlan 1  (slice4; segments: 3)
+                                                                   ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                          ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                                                                               Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
                                                                                ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                     Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
-                                                                                     ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
-                                                                                                 ->  Result  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                       ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                                                                                             Filter: (c_1.i = b_1.i)
-                                                                                                             ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                         ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
-                                                                                                                               Filter: (i <> 10)
-                           ->  Materialize  (cost=0.00..1324032.34 rows=18 width=1)
-                                 ->  Nested Loop  (cost=0.00..1324032.34 rows=18 width=1)
-                                       Join Filter: true
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=1)
-                                             ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=1)
-                                       ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=1)
+                                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                                                                                           ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                                                                                       Filter: (c_1.i = b_1.i)
+                                                                                                       ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                             ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                                   ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
+                                                                                                                         Filter: (i <> 10)
+                           ->  Materialize  (cost=0.00..431.00 rows=6 width=1)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=6 width=1)
+                                       ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=1)
+                     ->  Materialize  (cost=0.00..431.00 rows=9 width=1)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=1)
+                                 ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (39 rows)
 
@@ -628,35 +627,35 @@ select * from A,B where A.j = any (select C.j from C where C.j = A.j and B.i = a
 explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = any (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
                                                                      QUERY PLAN                                                                      
 -----------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..3164000295.47 rows=4 width=12)
-   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..3164000295.47 rows=10 width=12)
-         Merge Key: a.i, b_1.i, c_1.j
-         ->  Limit  (cost=0.00..3164000295.47 rows=4 width=12)
-               ->  Sort  (cost=0.00..3164000295.47 rows=90 width=12)
-                     Sort Key: a.i, b_1.i, c_1.j
-                     ->  Nested Loop  (cost=0.00..3164000295.43 rows=90 width=12)
+ Limit  (cost=0.00..1852039752658.48 rows=4 width=12)
+   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1852039752658.48 rows=10 width=12)
+         Merge Key: a.i, b.i, c.j
+         ->  Limit  (cost=0.00..1852039752658.48 rows=4 width=12)
+               ->  Sort  (cost=0.00..1852039752658.48 rows=90 width=12)
+                     Sort Key: a.i, b.i, c.j
+                     ->  Nested Loop  (cost=0.00..1852039752658.44 rows=90 width=12)
                            Join Filter: true
-                           ->  Nested Loop  (cost=0.00..1324033.29 rows=18 width=8)
+                           ->  Nested Loop  (cost=0.00..1808631708.95 rows=10 width=8)
                                  Join Filter: true
-                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                       ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
-                                 ->  Seq Scan on c c_1  (cost=0.00..431.00 rows=3 width=4)
-                           ->  Materialize  (cost=0.00..1765379.74 rows=5 width=4)
-                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1765379.74 rows=5 width=4)
-                                       ->  Result  (cost=0.00..1765379.74 rows=2 width=4)
-                                             ->  Seq Scan on a  (cost=0.00..1765379.74 rows=2 width=4)
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1765379.90 rows=5 width=4)
+                                       ->  Result  (cost=0.00..1765379.90 rows=2 width=4)
+                                             ->  Seq Scan on a  (cost=0.00..1765379.90 rows=2 width=4)
                                                    Filter: (j = (SubPlan 1))
-                                                   SubPlan 1  (slice2; segments: 3)
+                                                   SubPlan 1  (slice3; segments: 3)
                                                      ->  Result  (cost=0.00..862.00 rows=1 width=4)
-                                                           Filter: (c.j = a.j)
+                                                           Filter: (c_1.j = a.j)
                                                            ->  Materialize  (cost=0.00..862.00 rows=6 width=4)
-                                                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=6 width=4)
+                                                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=6 width=4)
                                                                        ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
-                                                                             Hash Cond: ((c.i = b.i) AND (c.i = b.i))
-                                                                             ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=8)
+                                                                             Hash Cond: ((c_1.i = b_1.i) AND (c_1.i = b_1.i))
+                                                                             ->  Seq Scan on c c_1  (cost=0.00..431.00 rows=3 width=8)
                                                                              ->  Hash  (cost=431.00..431.00 rows=2 width=4)
-                                                                                   ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                                                                                   ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
                                                                                          Filter: (i <> 10)
+                                 ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                           ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                       ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (30 rows)
 
@@ -824,51 +823,51 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i = all (s
 (4 rows)
 
 explain select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
-                                                                                                                                                                                                       QUERY PLAN                                                                                                                                                                                                        
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..2712506236.82 rows=4 width=12)
-   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..2712506236.82 rows=10 width=12)
-         Merge Key: a.i, b_1.i, c_1.j
-         ->  Limit  (cost=0.00..2712506236.82 rows=4 width=12)
-               ->  Sort  (cost=0.00..2712506236.82 rows=90 width=12)
-                     Sort Key: a.i, b_1.i, c_1.j
-                     ->  Nested Loop  (cost=0.00..2712506236.78 rows=90 width=12)
+                                                                                                                                                                                                             QUERY PLAN                                                                                                                                                                                                              
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..1389709677402.02 rows=4 width=12)
+   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1389709677402.02 rows=10 width=12)
+         Merge Key: a.i, b.i, c.j
+         ->  Limit  (cost=0.00..1389709677402.02 rows=4 width=12)
+               ->  Sort  (cost=0.00..1389709677402.02 rows=90 width=12)
+                     Sort Key: a.i, b.i, c.j
+                     ->  Nested Loop  (cost=0.00..1389709677401.98 rows=90 width=12)
                            Join Filter: true
-                           ->  Nested Loop  (cost=0.00..1324033.29 rows=18 width=8)
+                           ->  Nested Loop  (cost=0.00..1357137494.83 rows=10 width=8)
                                  Join Filter: true
-                                 ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                       ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
-                                 ->  Seq Scan on c c_1  (cost=0.00..431.00 rows=3 width=4)
-                           ->  Materialize  (cost=0.00..1324467.57 rows=5 width=4)
-                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1324467.57 rows=5 width=4)
-                                       ->  Hash Join  (cost=0.00..1324467.57 rows=2 width=4)
-                                             Hash Cond: (((sum(c.j)) = (a.j)::bigint) AND (c.j = a.j))
-                                             ->  GroupAggregate  (cost=0.00..1324036.57 rows=3 width=12)
-                                                   Group Key: c.j
-                                                   ->  Sort  (cost=0.00..1324036.57 rows=3 width=4)
-                                                         Sort Key: c.j
-                                                         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324036.57 rows=3 width=4)
-                                                               Hash Key: c.j
-                                                               ->  Result  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                     ->  Seq Scan on c  (cost=0.00..1324036.57 rows=3 width=4)
+                                 ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..1324467.58 rows=5 width=4)
+                                       ->  Hash Join  (cost=0.00..1324467.58 rows=2 width=4)
+                                             Hash Cond: (((sum(c_1.j)) = (a.j)::bigint) AND (c_1.j = a.j))
+                                             ->  GroupAggregate  (cost=0.00..1324036.58 rows=3 width=12)
+                                                   Group Key: c_1.j
+                                                   ->  Sort  (cost=0.00..1324036.58 rows=3 width=4)
+                                                         Sort Key: c_1.j
+                                                         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324036.58 rows=3 width=4)
+                                                               Hash Key: c_1.j
+                                                               ->  Result  (cost=0.00..1324036.58 rows=3 width=4)
+                                                                     ->  Seq Scan on c c_1  (cost=0.00..1324036.58 rows=3 width=4)
                                                                            Filter: (SubPlan 1)
-                                                                           SubPlan 1  (slice2; segments: 3)
+                                                                           SubPlan 1  (slice3; segments: 3)
                                                                              ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                    ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                         Filter: ((CASE WHEN ((sum((CASE WHEN (c.i <> b.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c.i <> b.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                                                                                         Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i <> b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i <> b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
                                                                                          ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                                ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                                                                                                      ->  Result  (cost=0.00..431.00 rows=1 width=8)
                                                                                                            ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                                                                                                 Filter: (c.i = b.i)
+                                                                                                                 Filter: (c_1.i = b_1.i)
                                                                                                                  ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                             ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                                                                                                                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                                             ->  Seq Scan on b b_1  (cost=0.00..431.00 rows=2 width=4)
                                                                                                                                    Filter: (i <> 10)
                                              ->  Hash  (cost=431.00..431.00 rows=2 width=8)
-                                                   ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
+                                                   ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
                                                          Hash Key: a.j
                                                          ->  Seq Scan on a  (cost=0.00..431.00 rows=2 width=8)
+                                 ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                           ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                       ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (44 rows)
 
@@ -934,25 +933,21 @@ select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C where not 
 explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
                                                                                                                                                                                                     QUERY PLAN                                                                                                                                                                                                     
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..2260124027.48 rows=4 width=12)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..2260124027.48 rows=10 width=12)
+ Limit  (cost=0.00..926470287116.12 rows=4 width=12)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..926470287116.12 rows=10 width=12)
          Merge Key: a.i, b.i, c.j
-         ->  Limit  (cost=0.00..2260124027.48 rows=4 width=12)
-               ->  Sort  (cost=0.00..2260124027.48 rows=18 width=12)
+         ->  Limit  (cost=0.00..926470287116.12 rows=4 width=12)
+               ->  Sort  (cost=0.00..926470287116.12 rows=18 width=12)
                      Sort Key: a.i, b.i, c.j
-                     ->  Nested Loop  (cost=0.00..2260124027.48 rows=18 width=12)
+                     ->  Nested Loop  (cost=0.00..926470287116.11 rows=18 width=12)
                            Join Filter: true
-                           ->  Nested Loop  (cost=0.00..1324033.29 rows=18 width=8)
+                           ->  Nested Loop  (cost=0.00..904755277.76 rows=2 width=8)
                                  Join Filter: true
-                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                       ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
-                                 ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
-                           ->  Materialize  (cost=0.00..882688.08 rows=1 width=4)
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..882688.08 rows=1 width=4)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..882688.08 rows=1 width=4)
                                        ->  Result  (cost=0.00..882688.08 rows=1 width=4)
                                              ->  Seq Scan on a  (cost=0.00..882688.08 rows=1 width=4)
                                                    Filter: (SubPlan 1)
-                                                   SubPlan 1  (slice1; segments: 3)
+                                                   SubPlan 1  (slice2; segments: 3)
                                                      ->  Result  (cost=0.00..0.00 rows=1 width=1)
                                                            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                                                                  Filter: ((CASE WHEN ((sum((CASE WHEN (a.j <> "outer".j) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN ("outer".j IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (a.j IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (a.j <> "outer".j) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
@@ -961,6 +956,10 @@ explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C whe
                                                                              ->  Result  (cost=0.00..0.00 rows=0 width=8)
                                                                                    ->  Result  (cost=0.00..0.00 rows=0 width=4)
                                                                                          One-Time Filter: false
+                                 ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                           ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                       ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (28 rows)
 

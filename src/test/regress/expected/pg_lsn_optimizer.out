@@ -75,19 +75,19 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
                                                               QUERY PLAN                                                              
 --------------------------------------------------------------------------------------------------------------------------------------
  Sort
-   Sort Key: (((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn)
+   Sort Key: (((((generate_series_1.generate_series)::text || '/'::text) || (generate_series_2.generate_series)::text))::pg_lsn)
    ->  HashAggregate
-         Group Key: ((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn
+         Group Key: ((((generate_series_1.generate_series)::text || '/'::text) || (generate_series_2.generate_series)::text))::pg_lsn
          ->  Result
                ->  Nested Loop
                      Join Filter: true
                      ->  Nested Loop
                            Join Filter: true
                            ->  Result
-                                 Filter: (generate_series_2.generate_series <= 10)
+                                 Filter: ((generate_series_2.generate_series > 0) AND (generate_series_2.generate_series <= 10))
                                  ->  Function Scan on generate_series generate_series_2
                            ->  Result
-                                 Filter: ((generate_series_1.generate_series > 0) AND (generate_series_1.generate_series <= 10))
+                                 Filter: (generate_series_1.generate_series <= 10)
                                  ->  Function Scan on generate_series generate_series_1
                      ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)

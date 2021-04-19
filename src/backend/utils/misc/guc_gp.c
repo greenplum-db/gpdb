@@ -4920,7 +4920,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_join_order,
-		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
+		JOIN_ORDER_EXHAUSTIVE_SEARCH, optimizer_join_order_options,
 		NULL, NULL, NULL
 	},
 

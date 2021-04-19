@@ -162,9 +162,9 @@ get_explain_output($$
 WHERE et like '%Join Filter:%' or et like '%Hash Cond:%';
                        et                       
 ------------------------------------------------
- Hash Cond: ("inner".column1 = "inner".column1)
  Join Filter: true
  Join Filter: true
+ Hash Cond: ("outer".column1 = "outer".column1)
 (3 rows)
 
 SELECT trim(et) et from
