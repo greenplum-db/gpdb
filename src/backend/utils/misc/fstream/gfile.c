@@ -511,7 +511,236 @@ gz_file_open(gfile_t *fd)
 	return 0;
 }
 #endif
+#ifdef USE_ZSTD
+struct zstdlib_stuff
+{
+	ZSTD_inBuffer in;
+	ZSTD_outBuffer out;
+	int in_size, out_size;
+	ZSTD_CCtx* cctx;
+	ZSTD_DCtx* dctx;
+	unsigned char in_buffer[COMPRESSION_BUFFER_SIZE];
+	unsigned char out_buffer[COMPRESSION_BUFFER_SIZE];
+};
+static ssize_t
+zstd_file_read(gfile_t* fd, void* ptr, size_t len)
+{
+	struct zstdlib_stuff* zstd = fd->u.zstd;
 
+	for (;;)
+	{
+		size_t	ret;
+		/*
+		 * 'out->dst' is our output buffer.
+		 * 'pos' is a pointer to the next pos in 'out_buffer'
+		 * 'out_size' is num bytes currently read out of 'out_buffer'
+		 *
+		 * if s is >0 we have data in 'out.dst' that we didn't write
+		 * yet, write it and return.
+		 */
+		int s = zstd->out.pos - zstd->out_size;
+
+		if (s > 0)
+		{
+			if (s > len)
+				s = len;
+			memcpy(ptr, zstd->out_buffer + zstd->out_size, s);
+			zstd->out_size += s;
+			return s;
+		}
+
+		/* ok, wrote all 'out' data. reset back to beginning of 'out_buffer' */
+		zstd->out_size = 0;
+		zstd->out.pos = 0;
+
+		/*
+		 * Fill up our input buffer from the input file.
+		 */
+		while (zstd->in_size < sizeof zstd->in_buffer)
+		{
+			s = read_and_retry(fd, zstd->in_buffer + zstd->in_size, sizeof zstd->in_buffer - zstd->in_size);
+
+			if (s < 0)
+			{
+				/* read error */
+				gfile_printf_then_putc_newline("ZSTD read_and_retry failed");
+				return -1;
+			}
+			if(s == 0)
+			{
+				break;
+			}
+
+			zstd->in_size += s;
+		}
+
+		/* size of bytes at next in */
+		zstd->in.size = zstd->in_size;
+
+		/* remaining free space at next out */
+		zstd->out.size = sizeof zstd->out_buffer;
+
+		/* decompress */
+		if (zstd->in.size == 0)
+		{
+			/* No more data to be decompressed and out_buffer is empty */
+			return 0;
+		}
+
+		ret = ZSTD_decompressStream(zstd->dctx, &zstd->out, &zstd->in);
+		if (ZSTD_isError(ret))
+		{
+			gfile_printf_then_putc_newline("ZSTD_decompressStream failed");
+			return -1;
+		}
+
+		/* if no more data available for decompression reset input buf */
+		if (zstd->in.pos == zstd->in_size)
+		{
+			zstd->in.pos = 0;
+			zstd->in_size = 0;
+		}
+	}
+}
+
+static int
+zstd_file_write_one_chunk(gfile_t *fd, ZSTD_EndDirective mode)
+{
+	/*
+	 * 0 - means we are ok
+	 */
+	size_t remain = 0, have, finished = 0;
+	struct zstdlib_stuff* zstd = fd->u.zstd;
+
+	do
+	{
+		zstd->out.size = COMPRESSION_BUFFER_SIZE;
+		zstd->out.dst = zstd->out_buffer;
+		zstd->out.pos = 0;
+		remain = ZSTD_compressStream2(zstd->cctx, &zstd->out, &zstd->in, mode);    /* no bad return value */
+		if (ZSTD_isError(remain))
+		{
+			gfile_printf_then_putc_newline("ZSTD_compressStream failed");
+			return -1;
+		}
+		have = zstd->out.pos;
+
+		if ( write_and_retry(fd, zstd->out_buffer, have) != have)
+		{
+			gfile_printf_then_putc_newline("ZSTD write_and_retry failed");
+			return -1;
+		}
+		finished = (mode == ZSTD_e_end) ? (remain == 0) : (zstd->in.pos == zstd->in.size);
+	} while (!finished);
+	/*
+	 * if the ZSTD_compressStream2 engine filled all the output buffer, it may have more data, so we must try again
+	 */
+	return 0;
+}
+
+static ssize_t
+zstd_file_write(gfile_t *fd, void *ptr, size_t size)
+{
+	int ret;
+	size_t left_to_compress = size;
+	size_t one_iter_compress;
+	struct zstdlib_stuff* zstd = fd->u.zstd;
+
+	do
+	{
+		/*
+		 * we do not wish that the size of the input buffer to the ZSTD_compressStream2 engine, will be greater
+		 * than the recomended COMPRESSION_BUFFER_SIZE.
+		 */
+		one_iter_compress = (left_to_compress > COMPRESSION_BUFFER_SIZE) ? COMPRESSION_BUFFER_SIZE : left_to_compress;
+
+		zstd->in.size = one_iter_compress;
+		zstd->in.src = (void *)((unsigned char *)ptr + (size - left_to_compress));
+		zstd->in.pos = 0;
+
+		ret = zstd_file_write_one_chunk(fd, ZSTD_e_continue);
+		if (0 != ret)
+		{
+			return ret;
+		}
+
+		left_to_compress -= one_iter_compress;
+	} while( left_to_compress > 0 );
+
+	return size;
+}
+
+static int
+zstd_file_close(gfile_t *fd)
+{
+	int ret;
+	if ( fd->is_write == TRUE ) /* writing, or in other words compressing */
+	{
+		ZSTD_freeDCtx(fd->u.zstd->dctx);
+	}
+	else
+	{
+		/* flush any remaining data _and_ close current frame */
+		ret = zstd_file_write_one_chunk(fd, ZSTD_e_end);
+		if (0 != ret)
+		{
+			return ret;
+		}
+		ZSTD_freeCCtx(fd->u.zstd->cctx);
+	}
+
+	gfile_free(fd->u.zstd);
+	return 0;
+}
+static int
+zstd_file_open(gfile_t *fd)
+{
+	if (!(fd->u.zstd = gfile_malloc(sizeof *fd->u.zstd)))
+	{
+		gfile_printf_then_putc_newline("Out of memory");
+		return 1;
+	}
+
+	memset(fd->u.zstd, 0, sizeof *fd->u.zstd);
+
+	fd->u.zstd->in.src = fd->u.zstd->in_buffer;
+	fd->u.zstd->out.dst = fd->u.zstd->out_buffer;
+
+	fd->read = zstd_file_read;
+	fd->write = zstd_file_write;
+	fd->close = zstd_file_close;
+
+	if ( fd->is_write == FALSE )/* for read */
+	{
+		/*
+		 * reading a compressed file
+		 */
+		if (!(fd->u.zstd->dctx = ZSTD_createDCtx()))
+		{
+			gfile_printf_then_putc_newline("ZSTD_createDCtx failed");
+			return 1;
+		}
+	}
+	else
+	{
+		/*
+		 * writing a compressed file
+		 */
+		if (!(fd->u.zstd->cctx = ZSTD_createCCtx()))
+		{
+			gfile_printf_then_putc_newline("ZSTD_createCCtx() failed");
+			return 1;
+		}
+		if(ZSTD_isError(ZSTD_CCtx_setParameter(fd->u.zstd->cctx, ZSTD_c_compressionLevel, 1)))
+		{
+			gfile_printf_then_putc_newline("ZSTD_CCtx_setParameter failed");
+			return 1;
+		}
+	}
+
+	return 0;
+}
+#endif
 #ifdef GPFXDIST
 /*
  * subprocess support
@@ -982,6 +1211,20 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		return bz_file_open(fd);
 #endif
 	}
+	else if (s && strcasecmp(s, ".zstd"))
+	{
+#ifndef USE_ZSTD
+		gfile_printf_then_putc_newline(".zstd not supported");
+#else
+		fd->compression = ZSTD_COMPRESSION;
+		if (flags != GFILE_OPEN_FOR_READ)
+		{
+			fd->is_write = TRUE;
+		}
+
+		return zstd_file_open(fd);
+#endif
+	}
 	else if (s && strcasecmp(s,".z") == 0)
 		gfile_printf_then_putc_newline("gfile compression .z file is not supported");
 	else if (s && strcasecmp(s,".zip") == 0)
@@ -1014,7 +1257,7 @@ gfile_close(gfile_t*fd)
 			* for the compressed data implementation we need to call the "close" callback. Other implementations
 			* didn't use to call this callback here and it will remain so.
 			*/
-			if (fd->compression == GZ_COMPRESSION)
+			if (fd->compression == GZ_COMPRESSION || fd->compression == ZSTD_COMPRESSION)
 			{
 				fd->close(fd);
 			}
