@@ -35,7 +35,7 @@ public:
 	CPhysicalLeftOuterHashJoin(CMemoryPool *mp,
 							   CExpressionArray *pdrgpexprOuterKeys,
 							   CExpressionArray *pdrgpexprInnerKeys,
-							   IMdIdArray *hash_opfamilies = nullptr);
+							   IMdIdArray *hash_opfamilies);
 
 	// dtor
 	~CPhysicalLeftOuterHashJoin() override;
