@@ -674,7 +674,7 @@ static int
 zstd_file_close(gfile_t *fd)
 {
 	int ret;
-	if ( fd->is_write == TRUE ) /* writing, or in other words compressing */
+	if ( fd->is_write == FALSE ) /* writing, or in other words compressing */
 	{
 		ZSTD_freeDCtx(fd->u.zstd->dctx);
 	}
@@ -1211,10 +1211,10 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		return bz_file_open(fd);
 #endif
 	}
-	else if (s && strcasecmp(s, ".zstd"))
+	else if (s && strcasecmp(s, ".zst") == 0)
 	{
 #ifndef USE_ZSTD
-		gfile_printf_then_putc_newline(".zstd not supported");
+		gfile_printf_then_putc_newline(".zst not supported");
 #else
 		fd->compression = ZSTD_COMPRESSION;
 		if (flags != GFILE_OPEN_FOR_READ)
