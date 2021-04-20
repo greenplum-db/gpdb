@@ -25,6 +25,11 @@
                       {'name': 'gprecoverseg',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 3'},
+                      {'name': 'gprecoverseg_newhost',
+                       'use_concourse_cluster': true,
+                       'additional_ccp_vars': 'number_of_nodes: 7',
+                       'reserve_spare_hosts': true,
+                       'sudo_access_on_hosts': true},
                       {'name': 'gpaddmirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
@@ -2135,6 +2140,25 @@ jobs:
             file: ccp_src/ci/tasks/gen_cluster.yml
             params:
               <<: *ccp_gen_cluster_default_params
+          {% if test.reserve_spare_hosts %}
+          - get: alpine-docker
+          - task: reserve_spare_hosts
+            image: alpine-docker
+            config:
+              platform: linux
+              inputs:
+                - name: cluster_env_files
+              outputs:
+                - name: cluster_env_files
+              run:
+                path: sh
+                args:
+                  - -exc
+                  - |
+                    # modify the hostfile_init used by gpinitsystem to exclude the last two hosts, so they are spares
+                    cp cluster_env_files/hostfile_init cluster_env_files/hostfile_init_orig
+                    head -n -2 cluster_env_files/hostfile_init_orig > cluster_env_files/hostfile_init
+          {% endif %}
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
@@ -2195,6 +2219,25 @@ jobs:
             params:
               <<: *ccp_gen_cluster_default_params
               PLATFORM: ubuntu18.04
+          {% if test.reserve_spare_hosts %}
+          - get: alpine-docker
+          - task: reserve_spare_hosts
+            image: alpine-docker
+            config:
+              platform: linux
+              inputs:
+                - name: cluster_env_files
+              outputs:
+                - name: cluster_env_files
+              run:
+                path: sh
+                args:
+                  - -exc
+                  - |
+                    # modify the hostfile_init used by gpinitsystem to exclude the last two hosts, so they are spares
+                    cp cluster_env_files/hostfile_init cluster_env_files/hostfile_init_orig
+                    head -n -2 cluster_env_files/hostfile_init_orig > cluster_env_files/hostfile_init
+          {% endif %}
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
