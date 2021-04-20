@@ -46,7 +46,7 @@ function generate_build_number() {
 	# Only if its git repo, add commit SHA as build number
 	# BUILD_NUMBER file is used by getversion file in GPDB to append to version
 	if [ -d .git ]; then
-		echo "commit: $(git rev-parse HEAD)" >BUILD_NUMBER
+		echo "commit:$(git rev-parse HEAD)" >BUILD_NUMBER
 	fi
 	popd
 }
