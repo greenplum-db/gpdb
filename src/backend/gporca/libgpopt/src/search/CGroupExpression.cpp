@@ -21,6 +21,7 @@
 #include "gpopt/base/COptimizationContext.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysicalAgg.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CBinding.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/xforms/CXformFactory.h"
@@ -813,6 +814,9 @@ CGroupExpression::Transform(
 	CBinding binding;
 	CXformContext *pxfctxt = GPOS_NEW(mp) CXformContext(mp);
 
+	COptimizerConfig *optconfig =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+	ULONG bindThreshold = optconfig->GetHint()->UlXformBindThreshold();
 	CExpression *pexprPattern = pxform->PexprPattern();
 	CExpression *pexpr = binding.PexprExtract(mp, this, pexprPattern, NULL);
 	while (NULL != pexpr)
@@ -823,7 +827,8 @@ CGroupExpression::Transform(
 		ulNumResults = pxfres->Pdrgpexpr()->Size() - ulNumResults;
 		PrintXform(mp, pxform, pexpr, pxfres, ulNumResults);
 
-		if (pxform->IsApplyOnce() ||
+		if ((bindThreshold != 0 && (*pulNumberOfBindings) > bindThreshold) ||
+			pxform->IsApplyOnce() ||
 			(0 < pxfres->Pdrgpexpr()->Size() &&
 			 !CXformUtils::FApplyToNextBinding(pxform, pexpr)))
 		{

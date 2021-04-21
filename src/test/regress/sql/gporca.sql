@@ -3054,6 +3054,29 @@ ANALYZE tone;
 
 WITH cte AS (SELECT one(min(a)) from tone) SELECT 1 FROM tone, cte c1;
 
+--- optimizer_xform_bind_threshold should limit the search space and quickly
+--- generate a plan (<100ms, but if this GUC is not set it will take minutes to
+--- optimize)
+create table binding (a int) distributed by (a);
+set optimizer_xform_bind_threshold=100;
+
+set statement_timeout = '15s';
+select a in (
+       select a from binding as t1 where a in (
+           select a from binding as t2 where a in (
+               select a from binding as t3 where a in (
+                   select a from binding as t4 join binding as t5 using(a) group by t4.a
+                   union
+                   select a from binding as t4 join binding as t5 using(a) group by t4.a
+                   union
+                   select a from binding as t4 join binding as t5 using(a) group by t4.a
+               )
+           )
+       )
+   ) from binding;
+reset optimizer_xform_bind_threshold;
+reset statement_timeout;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
