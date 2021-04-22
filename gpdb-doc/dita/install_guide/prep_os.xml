@@ -426,7 +426,7 @@ always [never]</codeblock></p>
             <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
           connections between systems to perform their tasks. In large Greenplum Database
           deployments, cloud deployments, or deployments with a large number of segments per host,
-          these utilities may exceed the hosts' maximum threshold for unauthenticated connections.
+          these utilities may exceed the host's maximum threshold for unauthenticated connections.
           When this occurs, you receive errors such as: <codeph>ssh_exchange_identification:
             Connection closed by remote host</codeph>.</p>
       <p>To increase this connection threshold for your Greenplum Database system, update the SSH
@@ -563,7 +563,7 @@ Retype new password: &lt;changeme&gt;</codeblock></p>
           <note>Make sure the <codeph>gpadmin</codeph> user has the same user id (uid) and group id
             (gid) numbers on each host to prevent problems with scripts or services that use them
             for identity or permissions. For example, backing up Greenplum databases to some
-            networked filesy stems or storage appliances could fail if the <codeph>gpadmin</codeph>
+            networked filesystems or storage appliances could fail if the <codeph>gpadmin</codeph>
             user has different uid or gid numbers on different segment hosts. When you create the
               <codeph>gpadmin</codeph> group and user, you can use the <codeph>groupadd -g</codeph>
             option to specify a gid number and the <codeph>useradd -u</codeph> option to specify the

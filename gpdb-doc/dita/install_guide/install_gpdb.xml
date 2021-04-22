@@ -107,7 +107,7 @@ libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R
           <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin &lt;directory>/greenplum*</codeblock></li>
       </ol>
       <note>All example procedures in the Greenplum Database documentation assume that you installed
-        to the default directory, <codeph>/usr/local</codeph>. If you install to a non-default
+        to the default directory, which is <codeph>/usr/local</codeph>. If you install to a non-default
         directory, substitute that directory for <codeph>/usr/local</codeph>.<p>If you install to a
           non-default directory using <codeph>rpm</codeph>, you will need to continue using
             <codeph>rpm</codeph> (and of <codeph>yum</codeph>) to perform minor version upgrades;

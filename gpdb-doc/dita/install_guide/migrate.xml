@@ -73,7 +73,7 @@
           will also need to drop any dependent database objects that reference compatibility
           functions.<p>Install the Oracle Compatibility Functions in Greenplum 6 by creating the
               <codeph>orafce</codeph> module in each database where you require the
-            functions:<codeblock>$ psql -d <varname>dbname</varname> 'CREATE EXTENSION orafce'</codeblock>See
+            functions:<codeblock>$ psql -d <varname>dbname</varname> -c 'CREATE EXTENSION orafce'</codeblock>See
               <xref href="install_modules.xml#topic_d45_wcw_pgb"/> for information about installing
               <codeph>orafce</codeph> and other modules.</p></li>
         <li>When restoring language-based user-defined functions, the shared object file must be in
@@ -133,9 +133,9 @@
                 <codeph>procpid</codeph> column is renamed to <codeph>pid</codeph>.</li>
             <li>In the <codeph>pg_stat_activity</codeph> system table, the <codeph>procpid</codeph>
               column is renamed to <codeph>pid</codeph>. The <codeph>current_query</codeph> column
-              is replaced by two columns <codeph>state</codeph>: the state of the backend, and
-                <codeph>query</codeph>: the last run query, or currently running query if
-                <codeph>state</codeph> is <codeph>active</codeph>. </li>
+              is replaced by two columns: <codeph>state</codeph> (the state of the backend), and
+                <codeph>query</codeph> (the last run query, or currently running query if
+                <codeph>state</codeph> is <codeph>active</codeph>). </li>
             <li>In the <codeph>gp_distribution_policy</codeph> system table, the
                 <codeph>attrnums</codeph> column is renamed to <codeph>distkey</codeph> and its data
               type is changed to <codeph>int2vector</codeph>. A backend function
