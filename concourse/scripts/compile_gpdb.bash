@@ -133,7 +133,7 @@ function include_libuv() {
 	local includedir=/usr/include
 	local libdir
 	case "${OS}" in
-	centos | sles) libdir=/usr/lib64 ;;
+	centos | sles | photon) libdir=/usr/lib64 ;;
 	ubuntu) libdir=/usr/lib/x86_64-linux-gnu ;;
 	*) return ;;
 	esac
