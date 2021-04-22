@@ -1496,12 +1496,26 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relform1->relfrozenxid = frozenXid;
 		Assert(MultiXactIdIsValid(cutoffMulti));
 		relform1->relminmxid = cutoffMulti;
-		/*
-		 * Don't know partition parent or not here but passing false is perfect
-		 * for assertion, as valid relfrozenxid means it shouldn't be parent.
-		 */
-		Assert(should_have_valid_relfrozenxid(relform1->relkind,
-											  relform1->relstorage, false));
+
+		if (relform1->relkind == RELKIND_MATVIEW &&
+			(relform1->relstorage == RELSTORAGE_EXTERNAL ||
+			 relform1->relstorage == RELSTORAGE_FOREIGN  ||
+			 relform1->relstorage == RELSTORAGE_VIRTUAL ||
+			 relform1->relstorage == RELSTORAGE_AOROWS ||
+			 relform1->relstorage == RELSTORAGE_AOCOLS))
+		{
+			relform1->relfrozenxid = InvalidTransactionId;
+			relform1->relminmxid = InvalidTransactionId;
+		}
+		else
+		{
+			/*
+			 * Don't know partition parent or not here but passing false is perfect
+			 * for assertion, as valid relfrozenxid means it shouldn't be parent.
+			 */
+			Assert(should_have_valid_relfrozenxid(relform1->relkind,
+												  relform1->relstorage, false));
+		}
 	}
 
 	/*
