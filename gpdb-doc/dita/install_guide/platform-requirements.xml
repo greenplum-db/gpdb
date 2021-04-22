@@ -227,7 +227,7 @@
         directories. </p>
       <p>Greenplum Database <ph otherprops="pivotal">is supported </ph><ph otherprops="oss-only">can
           run </ph>on Amazon Web Services (AWS) servers using either Amazon instance store (Amazon
-        uses the volume names <codeph>ephemeral[0-20]</codeph>) or Amazon Elastic Block Store
+        uses the volume names <codeph>ephemeral[0-23]</codeph>) or Amazon Elastic Block Store
         (Amazon EBS) storage. If using Amazon EBS storage the storage should be RAID of Amazon EBS
         volumes and mounted with the XFS file system<ph otherprops="pivotal"> for it to be a
           supported configuration</ph>.</p>
