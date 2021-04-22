@@ -1,0 +1,180 @@
+-- Test a pg_rewind failure bug. (See the test end for details).
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+include: helpers/server_helpers.sql;
+CREATE
+
+CREATE TABLE tst_missing_tbl (a int);
+CREATE
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+
+-- Run a checkpoint so that the below sqls won't cause a checkpoint
+-- until an explicit checkpoint command is issued by the test.
+-- checkpoint_timeout is by default 300 but below test should be able
+-- to finish in 300 seconds.
+CHECKPOINT;
+CHECKPOINT
+
+-- Based on assumption that wal_keep_segments is 5 and gp_keep_all_xlog is off
+-- (All are default values).
+SHOW wal_keep_segments;
+ wal_keep_segments 
+-------------------
+ 5                 
+(1 row)
+SHOW gp_keep_all_xlog;
+ gp_keep_all_xlog 
+------------------
+ off              
+(1 row)
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+-- Should be not needed mostly but let's 100% ensure since pg_switch_xlog()
+-- won't switch if it is on the boundary already (seldom though).
+0U: SELECT pg_switch_xlog is not null FROM pg_switch_xlog();
+ ?column? 
+----------
+ t        
+(1 row)
+INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+
+-- Hang at checkpointer before writing checkpoint xlog.
+SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+0U&: CHECKPOINT;  <waiting ...>
+SELECT gp_wait_until_triggered_fault('checkpoint_after_redo_calculated', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Stop the primary immediately and promote the mirror.
+SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+SELECT role, preferred_role from gp_segment_configuration where content = 0;
+ role | preferred_role 
+------+----------------
+ m    | p              
+ p    | m              
+(2 rows)
+
+-- Write something (promote adds a 'End Of Recovery' xlog that causes the
+-- divergence between primary and mirror,but I add a write here so that we know
+-- that a wal divergence is explicitly triggered and 100% completed.  Also
+-- sanity check the tuple distribution (assumption of the test).
+1: INSERT INTO tst_missing_tbl values(2),(1),(5);
+INSERT 3
+1: SELECT gp_segment_id, count(*) from tst_missing_tbl group by gp_segment_id;
+ gp_segment_id | count 
+---------------+-------
+ 0             | 9     
+ 1             | 9     
+ 2             | 9     
+(3 rows)
+
+-- CHECKPOINT should fail now.
+0U<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+-- Ensure that pg_rewind succeeds. For unclean shutdown, there are two
+-- checkpoints are introduced in pg_rewind when running single-mode postgres
+-- (one is the checkpoint after crash recovery and another is the shutdown
+-- checkpoint) and previously the checkpoints clean up the wal files that
+-- include the previous checkpoint (before divergence LSN) for pg_rewind and
+-- thus makes gprecoverseg (pg_rewind) fail.
+!\retcode gprecoverseg -a -v;
+-- start_ignore
+-- Here is the example of pg_rewind failure without the fix.
+2021-04-22 14:50:34.328253 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","database system was interrupted; last known up at 2021-04-22 14:50:26 CST",,,,,,,,"StartupXLOG","xlog.c",6443,
+2021-04-22 14:50:34.328728 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","database system was not properly shut down; automatic recovery in progress",,,,,,,,"StartupXLOG","xlog.c",6849,
+2021-04-22 14:50:34.329229 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","redo starts at 0/C0A8360",,,,,,,,"StartupXLOG","xlog.c",7115,
+2021-04-22 14:50:34.329582 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","record with zero length at 0/28000268",,,,,,,,"ReadRecord","xlog.c",4285,
+2021-04-22 14:50:34.329699 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","redo done at 0/28000200",,,,,,,,"StartupXLOG","xlog.c",7377,
+2021-04-22 14:50:34.329786 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","last completed transaction was at log time 2021-04-22 14:50:28.135467+08",,,,,,,,"StartupXLOG","xlog.c",7382,
+2021-04-22 14:50:34.330183 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","end of transaction log location is 0/28000268",,,,,,,,"StartupXLOG","xlog.c",7451,
+2021-04-22 14:50:34.330842 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","latest completed transaction id is 731 and next transaction id is 732",,,,,,,,"StartupXLOG","xlog.c",7739,
+2021-04-22 14:50:34.331036 CST,,,p1388,th259749856,,,,0,,,seg0,,,,,"LOG","00000","database system is ready",,,,,,,,"StartupXLOG","xlog.c",7763,
+
+PostgreSQL stand-alone backend 9.4.24
+servers diverged at WAL position 0/28000268 on timeline 1
+could not open file "/data2/gpdb6/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_xlog/000000010000000000000004": No such file or directory
+
+could not find previous WAL record at 0/100002D8
+Failure, exiting
+'
+  stderr=''
+20210422:14:50:34:001240 gprecoverseg:host67:pguo-[DEBUG]:-pg_rewind results: cmd had rc=1 completed=True halted=False
+  stdout='connected to server
+20210422:14:50:34:001240 gprecoverseg:host67:pguo-[DEBUG]:-rewind dbid: 2 failed
+20210422:14:50:34:001240 gprecoverseg:host67:pguo-[WARNING]:-Incremental recovery failed for dbid 2. You must use gprecoverseg -F to recover the segment.
+-- end_ignore
+(exited with code 0)
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+!\retcode gprecoverseg -ar;
+(exited with code 0)
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+1: DROP TABLE tst_missing_tbl;
+DROP

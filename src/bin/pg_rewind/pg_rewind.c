@@ -750,8 +750,14 @@ ensureCleanShutdown(const char *argv0)
 	 * hard to have the above kind of dtx transaction on DB_FOR_COMMON_ACCESS
 	 * since the commands (e.g. create database with template
 	 * DB_FOR_COMMON_ACCESS) would fail.
+	 *
+	 * gpdb: use gp_keep_all_xlog to keep all xlog files so that they are not
+	 * recycled/removed by checkpoints. Previously there is bug that the
+	 * checkpoint wal file before the divergence LSN is removed/recycled since
+	 * the single mode postgres creates two checkpoints (one after crash
+	 * recovery and another is shutdown postgres).
 	 */
-	snprintf(cmd, MAXCMDLEN, "\"%s\" --single -D \"%s\" %s < %s",
+	snprintf(cmd, MAXCMDLEN, "\"%s\" --single -c gp_keep_all_xlog=true -D \"%s\" %s < %s",
 			 exec_path, datadir_target, DB_FOR_COMMON_ACCESS, DEVNULL);
 
 	if (system(cmd) != 0)
