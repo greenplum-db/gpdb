@@ -176,8 +176,8 @@
               <entry colname="col2">
                 <ul id="ul_us1_b4n_r4">
                   <li>150MB per host for Greenplum installation</li>
-                  <li>Approximately 300MB per segment instance for meta data</li>
-                  <li>Data drives capped at 70% full</li>
+                  <li>Approximately 300MB per segment instance for metadata</li>
+                  <li>Cap disk capacity at 70% full to accommodate temporary files and prevent performance degradation</li>
                 </ul>
               </entry>
             </row>
