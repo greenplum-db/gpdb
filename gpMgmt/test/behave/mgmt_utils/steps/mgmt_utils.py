@@ -153,6 +153,7 @@ def impl(context, num_primaries):
 
 
 @given('the user runs psql with "{psql_cmd}" against database "{dbname}"')
+@when('the user runs psql with "{psql_cmd}" against database "{dbname}"')
 @then('the user runs psql with "{psql_cmd}" against database "{dbname}"')
 def impl(context, dbname, psql_cmd):
     cmd = "psql -d %s %s" % (dbname, psql_cmd)
@@ -1039,6 +1040,40 @@ def impl(context, seg):
         context.mseg_hostname = context.mseg.getSegmentHostName()
         context.mseg_dbid = context.mseg.getSegmentDbId()
         context.mseg_data_dir = context.mseg.getSegmentDataDirectory()
+
+
+@given('the cluster configuration has no segments where "{filter}"')
+def impl(context, filter):
+    SLEEP_PERIOD = 5
+    MAX_DURATION = 300
+    MAX_TRIES = MAX_DURATION // SLEEP_PERIOD
+
+    num_tries = 0
+    num_matching = 10
+    while num_matching and num_tries < MAX_TRIES:
+        num_tries += 1
+        time.sleep(SLEEP_PERIOD)
+        context.execute_steps(u'''
+        Given the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    ''')
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+            sql = "SELECT count(*) FROM gp_segment_configuration WHERE %s" % filter
+            num_matching = dbconn.execSQLForSingleton(conn, sql)
+
+    if num_matching:
+        raise Exception("could not achieve desired state")
+
+    context.execute_steps(u'''
+    Given the user runs psql with "-c 'BEGIN; CREATE TEMP TABLE tempt(a int); COMMIT'" against database "postgres"
+    ''')
+
+
+@given('the cluster configuration is saved for "{when}"')
+@then('the cluster configuration is saved for "{when}"')
+def impl(context, when):
+    if not hasattr(context, 'saved_array'):
+        context.saved_array = {}
+    context.saved_array[when] = GpArray.initFromCatalog(dbconn.DbURL())
 
 
 @when('we run a sample background script to generate a pid on "{seg}" segment')
