@@ -517,10 +517,15 @@ struct zstdlib_stuff
 	ZSTD_inBuffer in;
 	ZSTD_outBuffer out;
 	int in_size, out_size;
-	ZSTD_CCtx* cctx;
-	ZSTD_DCtx* dctx;
+	ZSTD_CStream* cstream;
+	ZSTD_DStream* dstream;
 	unsigned char in_buffer[COMPRESSION_BUFFER_SIZE];
 	unsigned char out_buffer[COMPRESSION_BUFFER_SIZE];
+};
+enum compress_mode
+{
+	ZSTD_CONTINUE_FLUSH = 0,
+	ZSTD_END_FLUSH = 2,
 };
 static ssize_t
 zstd_file_read(gfile_t* fd, void* ptr, size_t len)
@@ -587,7 +592,7 @@ zstd_file_read(gfile_t* fd, void* ptr, size_t len)
 			return 0;
 		}
 
-		ret = ZSTD_decompressStream(zstd->dctx, &zstd->out, &zstd->in);
+		ret = ZSTD_decompressStream(zstd->dstream, &zstd->out, &zstd->in);
 		if (ZSTD_isError(ret))
 		{
 			gfile_printf_then_putc_newline("ZSTD_decompressStream failed");
@@ -602,9 +607,19 @@ zstd_file_read(gfile_t* fd, void* ptr, size_t len)
 		}
 	}
 }
-
+static inline size_t zstd_compression_with_mode(ZSTD_CStream* zcs, ZSTD_outBuffer* output, ZSTD_inBuffer* input, int mode)
+{
+	if(mode != ZSTD_END_FLUSH)
+	{
+		return ZSTD_compressStream(zcs, output, input);
+	}
+	else
+	{
+		return ZSTD_endStream(zcs, output);
+	}
+}
 static int
-zstd_file_write_one_chunk(gfile_t *fd, ZSTD_EndDirective mode)
+zstd_file_write_one_chunk(gfile_t *fd, int mode)
 {
 	/*
 	 * 0 - means we are ok
@@ -617,10 +632,10 @@ zstd_file_write_one_chunk(gfile_t *fd, ZSTD_EndDirective mode)
 		zstd->out.size = COMPRESSION_BUFFER_SIZE;
 		zstd->out.dst = zstd->out_buffer;
 		zstd->out.pos = 0;
-		remain = ZSTD_compressStream2(zstd->cctx, &zstd->out, &zstd->in, mode);    /* no bad return value */
+		remain = zstd_compression_with_mode(zstd->cstream, &zstd->out, &zstd->in, mode);    /* no bad return value */
 		if (ZSTD_isError(remain))
 		{
-			gfile_printf_then_putc_newline("ZSTD_compressStream failed");
+			gfile_printf_then_putc_newline("zstd_compression_with_mode failed mode:%d", mode);
 			return -1;
 		}
 		have = zstd->out.pos;
@@ -630,7 +645,7 @@ zstd_file_write_one_chunk(gfile_t *fd, ZSTD_EndDirective mode)
 			gfile_printf_then_putc_newline("ZSTD write_and_retry failed");
 			return -1;
 		}
-		finished = (mode == ZSTD_e_end) ? (remain == 0) : (zstd->in.pos == zstd->in.size);
+		finished = (mode == ZSTD_END_FLUSH) ? (remain == 0) : (zstd->in.pos == zstd->in.size);
 	} while (!finished);
 	/*
 	 * if the ZSTD_compressStream2 engine filled all the output buffer, it may have more data, so we must try again
@@ -658,7 +673,7 @@ zstd_file_write(gfile_t *fd, void *ptr, size_t size)
 		zstd->in.src = (void *)((unsigned char *)ptr + (size - left_to_compress));
 		zstd->in.pos = 0;
 
-		ret = zstd_file_write_one_chunk(fd, ZSTD_e_continue);
+		ret = zstd_file_write_one_chunk(fd, ZSTD_CONTINUE_FLUSH);
 		if (0 != ret)
 		{
 			return ret;
@@ -676,17 +691,17 @@ zstd_file_close(gfile_t *fd)
 	int ret;
 	if ( fd->is_write == FALSE ) /* writing, or in other words compressing */
 	{
-		ZSTD_freeDCtx(fd->u.zstd->dctx);
+		ZSTD_freeDStream(fd->u.zstd->dstream);
 	}
 	else
 	{
 		/* flush any remaining data _and_ close current frame */
-		ret = zstd_file_write_one_chunk(fd, ZSTD_e_end);
+		ret = zstd_file_write_one_chunk(fd, ZSTD_END_FLUSH);
 		if (0 != ret)
 		{
 			return ret;
 		}
-		ZSTD_freeCCtx(fd->u.zstd->cctx);
+		ZSTD_freeCStream(fd->u.zstd->cstream);
 	}
 
 	gfile_free(fd->u.zstd);
@@ -715,9 +730,14 @@ zstd_file_open(gfile_t *fd)
 		/*
 		 * reading a compressed file
 		 */
-		if (!(fd->u.zstd->dctx = ZSTD_createDCtx()))
+		if (!(fd->u.zstd->dstream = ZSTD_createDStream()))
 		{
-			gfile_printf_then_putc_newline("ZSTD_createDCtx failed");
+			gfile_printf_then_putc_newline("ZSTD_createDStream failed");
+			return 1;
+		}
+		if(ZSTD_isError(ZSTD_initDStream(fd->u.zstd->dstream)))
+		{
+			gfile_printf_then_putc_newline("ZSTD_initDStream failed");
 			return 1;
 		}
 	}
@@ -726,14 +746,14 @@ zstd_file_open(gfile_t *fd)
 		/*
 		 * writing a compressed file
 		 */
-		if (!(fd->u.zstd->cctx = ZSTD_createCCtx()))
+		if (!(fd->u.zstd->cstream = ZSTD_createCStream()))
 		{
-			gfile_printf_then_putc_newline("ZSTD_createCCtx() failed");
+			gfile_printf_then_putc_newline("ZSTD_createCStream() failed");
 			return 1;
 		}
-		if(ZSTD_isError(ZSTD_CCtx_setParameter(fd->u.zstd->cctx, ZSTD_c_compressionLevel, 1)))
+		if(ZSTD_isError(ZSTD_initCStream(fd->u.zstd->cstream, 3)))
 		{
-			gfile_printf_then_putc_newline("ZSTD_CCtx_setParameter failed");
+			gfile_printf_then_putc_newline("ZSTD_initCStream failed");
 			return 1;
 		}
 	}
