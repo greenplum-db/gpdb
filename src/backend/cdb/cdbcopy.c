@@ -55,6 +55,7 @@
 #include "miscadmin.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
+#include "access/xact.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbcopy.h"
 #include "cdb/cdbdisp_query.h"
@@ -566,6 +567,19 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				 */
 				if (!first_error)
 					first_error = cdbdisp_get_PQerror(res);
+			}
+
+			if (q->conn->wrote_xlog)
+			{
+				MarkTopTransactionWriteXLogOnExecutor();
+
+				/*
+				* Reset the worte_xlog here. Since if the received pgresult not process
+				* the xlog write message('x' message sends from QE in ReadyForQuery),
+				* the value may still refer to previous dispatch statement. Which may
+				* always mark current top transaction has wrote xlog on executor.
+				*/
+				q->conn->wrote_xlog = false;
 			}
 
 			/*
