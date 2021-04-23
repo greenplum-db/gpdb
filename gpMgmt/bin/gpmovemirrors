@@ -255,9 +255,9 @@ class Configuration:
                     self.oldMirrorList.append(oldMirror)
                     self.newMirrorList.append(newMirror)
                 except ValueError:
-                    raise ValueError('Missing or invalid value on line %d of file: %s.' % (line, inputFile))
+                    raise ValueError('Missing or invalid value on line %d of file: %s.' % (lineno, inputFile))
                 except Exception, e:
-                    raise Exception('Invalid input file on line %d of file %s: %s' % (line, inputFile, str(e)))
+                    raise Exception('Invalid input file on line %d of file %s: %s' % (lineno, inputFile, str(e)))
 
     def write_output_file(self, filename, oldToNew=True):
         """ Write out the configuration in a format appropriate for use with the -i option. """
