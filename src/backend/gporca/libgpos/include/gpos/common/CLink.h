@@ -15,16 +15,9 @@ namespace gpos
 // allocation-less lists, e.g. in synchronized hashtables etc.
 struct SLink
 {
-private:
-public:
-	SLink(const SLink &) = delete;
-
 	// link forward/backward
 	void *m_next{nullptr};
 	void *m_prev{nullptr};
-
-	// ctor
-	SLink() = default;
 };
 
 }  // namespace gpos
