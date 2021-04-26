@@ -199,7 +199,7 @@ def confirm_user_wants_to_continue():
 
 def print_verbosely(options, hostname, directory):
     if options.verbose:
-        msg = "normalized_host=%s host=%s dir=%s" % (hostname, directory)
+        msg = "host=%s dir=%s" % (hostname, directory)
         LOGGER.info(msg)
 
 
