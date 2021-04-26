@@ -103,7 +103,7 @@ function include_zstd() {
 function include_quicklz() {
 	local libdir
 	case "${OS}" in
-	centos | sles) libdir=/usr/lib64 ;;
+	centos | sles | photon) libdir=/usr/lib64 ;;
 	ubuntu) libdir=/usr/local/lib ;;
 	*) return ;;
 	esac
