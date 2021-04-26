@@ -184,9 +184,10 @@ declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /dat
                 example:<codeblock>$ cd ~
 $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem</codeblock><p>For
                 a fully redundant system (with a standby coordinator and a <i>spread</i> mirror
-                configuration) include the <codeph>-s</codeph> and <codeph>-S</codeph> options. For
+                configuration) include the <codeph>-s</codeph> and
+                  <codeph>--mirror-mode=spread</codeph> options. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
-  -s <varname>standby_master_hostname</varname> -S</codeblock><p>During
+  -s <varname>standby_master_hostname</varname> --mirror-mode=spread</codeblock><p>During
                 a new cluster creation, you may use the <codeph><varname>-O
                     output_configuration_file</varname></codeph> option to save the cluster
                 configuration details in a file. For
@@ -194,7 +195,10 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 output file can be edited and used at a later stage as the input file of the
                   <codeph>-I</codeph> option, to create a new cluster or to recover from a backup.
                 See <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-                  >gpinitsystem</xref> for further details.</p></li>
+                  >gpinitsystem</xref> for further details. <note>Calling
+                    <codeph>gpinitsystem</codeph> with the <codeph>-O</codeph> option does not
+                  initialize the Greenplum Database system; it merely saves a file with cluster
+                  configuration details.</note></p></li>
             <li id="jm138853">The utility will verify your setup information and make sure it can
               connect to each host and access the data directories specified in your configuration.
               If all of the pre-checks are successful, the utility will prompt you to confirm your
