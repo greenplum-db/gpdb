@@ -3242,7 +3242,6 @@ CopyFromDispatch(CopyState cstate)
 	CdbCopy    *cdbCopy;
 
 	GpDistributionData *distData = NULL;		/*distribution policy for root table */
-	GpDistributionData *part_distData = palloc(sizeof(GpDistributionData));		/* distribution policy for part table */
 	GetAttrContext *getAttrContext = palloc(sizeof(GetAttrContext));		/* get attr values context */
 	/* init partition data*/
 	PartitionData *partitionData = palloc(sizeof(PartitionData));
@@ -3610,9 +3609,9 @@ CopyFromDispatch(CopyState cstate)
 
 			while (!cstate->raw_buf_done)
 			{
-				part_distData->cdbHash = NULL;
-				part_distData->policy = NULL;
+				GpDistributionData *part_distData = NULL;	/* distribution policy for part table */
 				Oid loaded_oid = InvalidOid;
+
 				if (QueryCancelPending)
 				{
 					/* quit processing loop */
@@ -3998,12 +3997,23 @@ CopyFromDispatch(CopyState cstate)
 						getAttrContext->nulls = nulls;
 						getAttrContext->values = values;
 						getAttrContext->cdbCopy = cdbCopy;
-						getAttrContext->original_lineno_for_qe =
-							original_lineno_for_qe;
+						getAttrContext->original_lineno_for_qe = original_lineno_for_qe;
+						/*
+						 * part_distData is allocated under the per tuple memory context
+						 * which gets reset in each loop.
+						 */
 						part_distData = GetDistributionPolicyForPartition(
 							        cstate, estate, partitionData,
 							        distData->hashmap, distData->p_attr_types,
 							        getAttrContext, oldcontext);
+					}
+					else
+					{
+						/*
+						 * part_distData is allocated under the per tuple memory context
+						 * which gets reset in each loop.
+						 */
+						part_distData = (GpDistributionData *) palloc0(sizeof(GpDistributionData));
 					}
 
 					if (!part_distData->cdbHash)
