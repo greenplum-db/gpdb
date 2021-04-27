@@ -197,7 +197,7 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 See <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
                   >gpinitsystem</xref> for further details. <note>Calling
                     <codeph>gpinitsystem</codeph> with the <codeph>-O</codeph> option does not
-                  initialize the Greenplum Database system; it merely saves a file with cluster
+                  initialize the Greenplum Database system; it merely generates and saves a file with cluster
                   configuration details.</note></p></li>
             <li id="jm138853">The utility will verify your setup information and make sure it can
               connect to each host and access the data directories specified in your configuration.
