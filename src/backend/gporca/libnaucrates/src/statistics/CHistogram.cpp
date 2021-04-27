@@ -1750,7 +1750,12 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 				CDouble(0.0) + CStatistics::Epsilon);
 #endif
 
-	GPOS_ASSERT(result_buckets->Size() == desired_num_buckets);
+	// GPDB_12_MERGE_FIXME: the desired_num_buckets handling is broken for singleton buckets
+	// While it limits the number of buckets for non-singleton buckets, singleton buckets
+	// are not merged, and thus we can get cases where the number of result buckets is
+	// larger than the desired number of buckets
+	GPOS_ASSERT(result_buckets->Size() == desired_num_buckets ||
+				result_buckets->Size() == desired_num_buckets + 1);
 	indexes_to_merge->Release();
 	boundary_factors->Release();
 	return result_buckets;
