@@ -175,7 +175,9 @@ class PgControlData(Command):
 
 
 class PgBaseBackup(Command):
-    def __init__(self, pgdata, host, port, create_slot=False, replication_slot_name=None, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0, logfile=None,
+    def __init__(self, pgdata, host, port, create_slot=False, replication_slot_name=None,
+                 excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False,
+                 target_gp_dbid=0, logfile=None, nosync =False,
                  recovery_mode=True):
         cmd_tokens = ['pg_basebackup', '-c', 'fast']
         cmd_tokens.append('-D')
@@ -198,6 +200,9 @@ class PgBaseBackup(Command):
 
         if forceoverwrite:
             cmd_tokens.append('--force-overwrite')
+
+        if nosync:
+            cmd_tokens.append('--no-sync')
 
         if recovery_mode:
             cmd_tokens.append('--write-recovery-conf')

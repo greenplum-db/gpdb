@@ -42,7 +42,8 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile):
+                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName,
+                 logfileDirectory, progressFile, nosync):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -68,6 +69,7 @@ class ConfExpSegCmd(Command):
         self.validationOnly = validationOnly
 
         self.forceoverwrite = forceoverwrite
+        self.nosync = nosync
         Command.__init__(self, name, cmdstr)
 
     def validatePath(self, path):
@@ -141,6 +143,7 @@ class ConfExpSegCmd(Command):
                                        create_slot = False,
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
+                                       nosync=self.nosync,
                                        target_gp_dbid=self.dbid,
                                        logfile=self.progressFile)
                     try:
@@ -162,6 +165,7 @@ class ConfExpSegCmd(Command):
                                            create_slot = True,
                                            replication_slot_name=self.replicationSlotName,
                                            forceoverwrite=True,
+                                           nosync=self.nosync,
                                            target_gp_dbid=self.dbid,
                                            logfile=self.progressFile)
                         try:
@@ -313,6 +317,7 @@ def parseargs():
     parser.add_option("-V", "--validation-only", dest="validationOnly", action='store_true', default=False)
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
     parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
+    parser.add_option('-N', '--no-sync', dest='nosync', action='store_true', default=False)
     parser.add_option('-l', '--log-dir', dest="logfileDirectory", type="string")
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
@@ -410,6 +415,7 @@ try:
                            , verbose = options.verbose
                            , validationOnly = options.validationOnly
                            , forceoverwrite = options.forceoverwrite
+                           , nosync = options.nosync
                            , replicationSlotName = options.replicationSlotName
                            , logfileDirectory = options.logfileDirectory
                            , progressFile= progressFile

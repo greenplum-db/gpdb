@@ -153,13 +153,14 @@ class GpMirrorListToBuild:
         INPLACE = 1
         SEQUENTIAL = 2
 
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, nosync=False, progressMode=Progress.INPLACE):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
         self.__progressMode = progressMode
         self.__parallelDegree = parallelDegree
         self.__forceoverwrite = forceoverwrite
+        self.__nosync = nosync
         self.__additionalWarnings = additionalWarnings or []
         if not logger:
             raise Exception('logger argument cannot be None')
@@ -591,7 +592,8 @@ class GpMirrorListToBuild:
                                           ctxt=gp.REMOTE,
                                           remoteHost=hostName,
                                           validationOnly=validationOnly,
-                                          forceoverwrite=self.__forceoverwrite)
+                                          forceoverwrite=self.__forceoverwrite,
+                                          nosync=self.__nosync)
         #
         # validate directories for target segments
         #
