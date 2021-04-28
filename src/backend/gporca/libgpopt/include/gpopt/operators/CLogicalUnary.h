@@ -98,7 +98,7 @@ public:
 	DeriveFunctionProperties(CMemoryPool *mp,
 							 CExpressionHandle &exprhdl) const override
 	{
-		return PfpDeriveFromScalar(mp, exprhdl, 1 /*ulScalarIndex*/);
+		return PfpDeriveFromScalar(mp, exprhdl);
 	}
 
 	//-------------------------------------------------------------------------------------

@@ -543,10 +543,9 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 
 	const IMDFunction *pmdfunc = m_pmda->RetrieveFunc(mdid_func);
 
-	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability() ||
-		IMDFunction::EfdaNoSQL != pmdfunc->GetFuncDataAccess())
+	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasVolatileOrSQLFunc();
+		COptCtxt::PoctxtFromTLS()->SetHasVolatileFunc();
 	}
 
 	return pexpr;
@@ -2954,10 +2953,9 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 		pexprFunc = GPOS_NEW(m_mp) CExpression(m_mp, pop);
 	}
 
-	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability() ||
-		IMDFunction::EfdaNoSQL != pmdfunc->GetFuncDataAccess())
+	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasVolatileOrSQLFunc();
+		COptCtxt::PoctxtFromTLS()->SetHasVolatileFunc();
 	}
 
 	return pexprFunc;

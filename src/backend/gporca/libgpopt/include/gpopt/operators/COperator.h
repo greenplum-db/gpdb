@@ -63,10 +63,6 @@ protected:
 	// return an addref'ed copy of the operator
 	virtual COperator *PopCopyDefault();
 
-	// derive data access function property from children
-	static IMDFunction::EFuncDataAcc EfdaDeriveFromChildren(
-		CExpressionHandle &exprhdl, IMDFunction::EFuncDataAcc efdaDefault);
-
 	// derive stability function property from children
 	static IMDFunction::EFuncStbl EfsDeriveFromChildren(
 		CExpressionHandle &exprhdl, IMDFunction::EFuncStbl efsDefault);
@@ -74,8 +70,7 @@ protected:
 	// derive function properties from children
 	static CFunctionProp *PfpDeriveFromChildren(
 		CMemoryPool *mp, CExpressionHandle &exprhdl,
-		IMDFunction::EFuncStbl efsDefault,
-		IMDFunction::EFuncDataAcc efdaDefault, BOOL fHasVolatileFunctionScan,
+		IMDFunction::EFuncStbl efsDefault, BOOL fHasVolatileFunctionScan,
 		BOOL fScan);
 
 	// generate unique operator ids

@@ -349,9 +349,7 @@ CExpressionFactorizer::PcrsUsedByPushableScalar(CExpression *pexpr)
 	if (0 < pexpr->DeriveDefinedColumns()->Size() ||
 		pexpr->DeriveHasSubquery() ||
 		IMDFunction::EfsVolatile ==
-			pexpr->DeriveScalarFunctionProperties()->Efs() ||
-		IMDFunction::EfdaNoSQL !=
-			pexpr->DeriveScalarFunctionProperties()->Efda())
+			pexpr->DeriveScalarFunctionProperties()->Efs())
 	{
 		return nullptr;
 	}

@@ -923,9 +923,8 @@ CLogical::DeriveFunctionProperties(CMemoryPool *mp,
 	IMDFunction::EFuncStbl efs =
 		EfsDeriveFromChildren(exprhdl, IMDFunction::EfsImmutable);
 
-	return GPOS_NEW(mp)
-		CFunctionProp(efs, IMDFunction::EfdaNoSQL,
-					  exprhdl.FChildrenHaveVolatileFuncScan(), false /*fScan*/);
+	return GPOS_NEW(mp) CFunctionProp(
+		efs, exprhdl.FChildrenHaveVolatileFuncScan(), false /*fScan*/);
 }
 
 //---------------------------------------------------------------------------
@@ -952,24 +951,16 @@ CLogical::DeriveTableDescriptor(CMemoryPool *, CExpressionHandle &) const
 //
 //---------------------------------------------------------------------------
 CFunctionProp *
-CLogical::PfpDeriveFromScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
-							  ULONG ulScalarIndex)
+CLogical::PfpDeriveFromScalar(CMemoryPool *mp, CExpressionHandle &exprhdl)
 {
 	GPOS_CHECK_ABORT;
-	GPOS_ASSERT(ulScalarIndex == exprhdl.Arity() - 1);
-	GPOS_ASSERT(exprhdl.FScalarChild(ulScalarIndex));
 
 	// collect stability from all children
 	IMDFunction::EFuncStbl efs =
 		EfsDeriveFromChildren(exprhdl, IMDFunction::EfsImmutable);
 
-	// get data access from scalar child
-	CFunctionProp *pfp = exprhdl.PfpChild(ulScalarIndex);
-	GPOS_ASSERT(nullptr != pfp);
-	IMDFunction::EFuncDataAcc efda = pfp->Efda();
-
 	return GPOS_NEW(mp) CFunctionProp(
-		efs, efda, exprhdl.FChildrenHaveVolatileFuncScan(), false /*fScan*/);
+		efs, exprhdl.FChildrenHaveVolatileFuncScan(), false /*fScan*/);
 }
 
 //---------------------------------------------------------------------------

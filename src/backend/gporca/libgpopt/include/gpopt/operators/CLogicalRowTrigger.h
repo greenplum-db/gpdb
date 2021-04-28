@@ -41,10 +41,7 @@ private:
 	CColRefArray *m_pdrgpcrNew;
 
 	// stability
-	IMDFunction::EFuncStbl m_efs;
-
-	// data access
-	IMDFunction::EFuncDataAcc m_efda;
+	IMDFunction::EFuncStbl m_efs{IMDFunction::EfsImmutable};
 
 	// initialize function properties
 	void InitFunctionProperties();
