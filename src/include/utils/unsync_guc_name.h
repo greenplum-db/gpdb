@@ -27,7 +27,6 @@
 		"block_size",
 		"bonjour",
 		"bonjour_name",
-		"bytea_output",
 		"checkpoint_completion_target",
 		"checkpoint_segments",
 		"checkpoint_timeout",
