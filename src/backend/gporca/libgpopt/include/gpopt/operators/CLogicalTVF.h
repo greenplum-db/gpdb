@@ -47,9 +47,6 @@ private:
 	// function stability
 	IMDFunction::EFuncStbl m_efs;
 
-	// function data access
-	IMDFunction::EFuncDataAcc m_efda;
-
 	// does this function return a set of rows
 	BOOL m_returns_set;
 

@@ -99,7 +99,7 @@ public:
 	virtual CFunctionProp *
 	DeriveFunctionProperties(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	{
-		return PfpDeriveFromScalar(mp, exprhdl, 1 /*ulScalarIndex*/);
+		return PfpDeriveFromScalar(mp, exprhdl);
 	}
 
 	//-------------------------------------------------------------------------------------

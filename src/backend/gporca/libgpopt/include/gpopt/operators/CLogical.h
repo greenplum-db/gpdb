@@ -159,8 +159,7 @@ protected:
 
 	// derive function properties using data access property of scalar child
 	static CFunctionProp *PfpDeriveFromScalar(CMemoryPool *mp,
-											  CExpressionHandle &exprhdl,
-											  ULONG ulScalarIndex);
+											  CExpressionHandle &exprhdl);
 
 	// derive outer references
 	static CColRefSet *DeriveOuterReferences(CMemoryPool *mp,

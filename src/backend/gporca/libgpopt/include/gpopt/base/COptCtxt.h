@@ -93,7 +93,7 @@ private:
 
 	// does the query contain any volatile functions or
 	// functions that read/modify SQL data
-	BOOL m_has_volatile_or_SQL_func;
+	BOOL m_has_volatile_func;
 
 	// does the query have replicated tables
 	BOOL m_has_replicated_tables;
@@ -145,9 +145,9 @@ public:
 	}
 
 	void
-	SetHasVolatileOrSQLFunc()
+	SetHasVolatileFunc()
 	{
-		m_has_volatile_or_SQL_func = true;
+		m_has_volatile_func = true;
 	}
 
 	void
@@ -170,9 +170,9 @@ public:
 	}
 
 	BOOL
-	HasVolatileOrSQLFunc() const
+	HasVolatileFunc() const
 	{
-		return m_has_volatile_or_SQL_func;
+		return m_has_volatile_func;
 	}
 
 	BOOL
@@ -195,11 +195,8 @@ public:
 		// This optmization can not be applied if the query contains any of the following:
 		// (1). master-only tables
 		// (2). a volatile function
-		// (3). a function SQL dataaccess: EfdaContainsSQL or EfdaReadsSQLData or EfdaModifiesSQLData
-		//      In such cases, it is safe to *always* enforce gather motion on master as there is no way to determine
-		//      if the SQL contains any master-only tables.
 		return !GPOS_FTRACE(EopttraceDisableNonMasterGatherForDML) &&
-			   FDMLQuery() && !HasMasterOnlyTables() && !HasVolatileOrSQLFunc();
+			   FDMLQuery() && !HasMasterOnlyTables() && !HasVolatileFunc();
 	}
 
 	// column factory accessor

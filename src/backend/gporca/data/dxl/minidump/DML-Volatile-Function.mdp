@@ -5,10 +5,9 @@
 	 INSERT INTO x VALUES(1), (2), (3), (4), (5);
 	 CREATE TABLE y(a INT);
 
-	 Objective: If a DML query contains a function with SQL dataaccess, we
-	 can not optimize it by enfocring a non-master gather whenever a singleton
-	 execution is needed since there is no way for us to determine if the function
-	 accesses a master-only table.
+-- Objective: If a DML query contains a volatile function, we do not optimize
+-- it by enfocring a non-master gather whenever a singleton execution -- it's
+-- not clear why though.
 
 	 INSERT INTO y SELECT test_func_pg_stats() FROM x LIMIT 2;	 
   ]]>

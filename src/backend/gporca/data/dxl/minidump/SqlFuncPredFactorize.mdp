@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
--- A function that "CONTAINS SQL" is treated like volatile and passed up for
--- predicate "factorization", but it really should be considered.
+-- A function that "CONTAINS SQL" used to be treated like volatile and used to
+-- be passed up for predicate "factorization".
 
--- In the following plan, ORCA chose not to infer a predicate for either base
--- table scans even though it could.
+-- In the following plan, ORCA used not to infer a predicate for either base
+-- table scan even though it could.
 
 -- Gather Motion 3:1  (slice1; segments: 3)
 --   ->  Hash Join
@@ -13,10 +13,12 @@
 --         Join Filter: (((yolo(foo.b) = 1) AND (yolo(bar.c) = 2)) OR ((yolo(foo.b) = 3) AND (yolo(bar.c) = 4)))
 --         ->  Seq Scan on public.foo
 --               Output: foo.a, foo.b
+--               Filter: ((yolo(foo.b) = 1) OR (yolo(foo.b) = 3))
 --         ->  Hash
 --               Output: bar.c
 --               ->  Seq Scan on public.bar
 --                     Output: bar.c
+--                     Filter: ((yolo(bar.c) = 2) OR (yolo(bar.c) = 4))
 
 CREATE FUNCTION yolo(int) RETURNS int
 LANGUAGE SQL STRICT IMMUTABLE AS 'SELECT 42';
@@ -320,14 +322,14 @@ WHERE a = c AND
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000573" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000639" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:ProjList/>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000569" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000635" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
@@ -371,7 +373,7 @@ WHERE a = c AND
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -381,7 +383,22 @@ WHERE a = c AND
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
+            <dxl:Filter>
+              <dxl:Or>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:FuncExpr FuncId="0.49180.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                    <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:FuncExpr>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                </dxl:Comparison>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:FuncExpr FuncId="0.49180.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                    <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:FuncExpr>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
+                </dxl:Comparison>
+              </dxl:Or>
+            </dxl:Filter>
             <dxl:TableDescriptor Mdid="0.49181.1.0" TableName="foo" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -398,14 +415,29 @@ WHERE a = c AND
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000059" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="c">
                 <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
+            <dxl:Filter>
+              <dxl:Or>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:FuncExpr FuncId="0.49180.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                    <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                  </dxl:FuncExpr>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                </dxl:Comparison>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:FuncExpr FuncId="0.49180.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                    <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                  </dxl:FuncExpr>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
+                </dxl:Comparison>
+              </dxl:Or>
+            </dxl:Filter>
             <dxl:TableDescriptor Mdid="0.49184.1.0" TableName="bar" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>

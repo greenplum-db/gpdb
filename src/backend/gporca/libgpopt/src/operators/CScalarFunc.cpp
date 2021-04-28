@@ -38,7 +38,6 @@ CScalarFunc::CScalarFunc(CMemoryPool *mp)
 	  m_return_type_modifier(default_type_modifier),
 	  m_pstrFunc(NULL),
 	  m_efs(IMDFunction::EfsSentinel),
-	  m_efda(IMDFunction::EfdaSentinel),
 	  m_returns_set(false),
 	  m_returns_null_on_null_input(false),
 	  m_fBoolReturnType(false)
@@ -72,7 +71,6 @@ CScalarFunc::CScalarFunc(CMemoryPool *mp, IMDId *mdid_func,
 	const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
 
 	m_efs = pmdfunc->GetFuncStability();
-	m_efda = pmdfunc->GetFuncDataAccess();
 	m_returns_set = pmdfunc->ReturnsSet();
 
 	m_returns_null_on_null_input = pmdfunc->IsStrict();
