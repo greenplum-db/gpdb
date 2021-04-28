@@ -1393,8 +1393,12 @@ def impl(context, filename, output):
     print contents
     check_stdout_msg(context, output)
 
+@then('verify that the last line of the file "{filename}" in the master data directory {contain} the string "{output}"')
+def impl(context, filename, contain, output):
+    return verify_master_file_last_line(context, filename, contain, output, "")
+
 @then('verify that the last line of the file "{filename}" in the master data directory {contain} the string "{output}"{escape}')
-def impl(context, filename, contain, output, escape):
+def verify_master_file_last_line(context, filename, contain, output, escape):
     if contain == 'should contain':
         valuesShouldExist = True
     elif contain == 'should not contain':
