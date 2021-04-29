@@ -57,6 +57,7 @@ anchors:
   action: create
   delete_on_failure: true
   generate_random_name: true
+  plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
   terraform_source: ccp_src/google/
 
 - &ccp_default_vars
@@ -65,6 +66,7 @@ anchors:
 
 - &destroy_common
   action: destroy
+  plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
   terraform_source: ccp_src/google/
   vars:
     aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
@@ -436,6 +438,15 @@ resources:
 
 - name: terraform_2
   <<: *terraform_cluster
+
+- name: terraform.d
+  source:
+    access_key_id: ((bucket-access-key-id))
+    bucket: ccp-terraform-provider-plugins
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
+    versioned_file: plugin-cache.tgz
+  type: s3
 
 - name: alpine-docker
   type: registry-image
@@ -1140,6 +1151,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
+      - get: terraform.d
+        params:
+          unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1242,6 +1256,9 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: ccp_src
           - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
           - put: terraform
             params:
               <<: *ccp_default_params
@@ -1333,6 +1350,9 @@ jobs:
             passed: [compile_gpdb_ubuntu18.04]
             trigger: [[ test_trigger ]]
           - get: ccp_src
+          - get: terraform.d
+            params:
+              unpack: true
           - put: terraform
             params:
               <<: *ccp_default_params
@@ -1392,6 +1412,9 @@ jobs:
       - get: ccp_src
       - get: ccp-image
       - get: alpine-docker
+      - get: terraform.d
+        params:
+          unpack: true
     - task: generate-ssh-keys
       image: alpine-docker
       config:
@@ -1562,6 +1585,9 @@ jobs:
       - get: icw_planner_centos7_dump
         passed: [icw_planner_centos7]
       - get: ccp_src
+      - get: terraform.d
+        params:
+          unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1607,6 +1633,9 @@ jobs:
       - get: ccp-image
       - get: icw_planner_centos7_dump
         passed: [icw_planner_centos7]
+      - get: terraform.d
+        params:
+          unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
