@@ -823,7 +823,8 @@ CGroupExpression::Transform(
 		ulNumResults = pxfres->Pdrgpexpr()->Size() - ulNumResults;
 		PrintXform(mp, pxform, pexpr, pxfres, ulNumResults);
 
-		if ((*pulNumberOfBindings) > bindThreshold || pxform->IsApplyOnce() ||
+		if ((bindThreshold != 0 && (*pulNumberOfBindings) > bindThreshold) ||
+			pxform->IsApplyOnce() ||
 			(0 < pxfres->Pdrgpexpr()->Size() &&
 			 !CXformUtils::FApplyToNextBinding(pxform, pexpr)))
 		{

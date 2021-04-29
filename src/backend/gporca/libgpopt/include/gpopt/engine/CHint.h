@@ -18,7 +18,7 @@
 #define JOIN_ORDER_DP_THRESHOLD ULONG(10)
 #define BROADCAST_THRESHOLD ULONG(10000000)
 #define PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD ULONG(10)
-#define XFORM_BIND_THRESHOLD ULONG(10000)
+#define XFORM_BIND_THRESHOLD ULONG(0)
 
 
 namespace gpopt
@@ -137,7 +137,7 @@ public:
 		return m_ulPushGroupByBelowSetopThreshold;
 	}
 
-	// Skip CXformPushGbBelowSetOp if set op arity is greater than this
+	// Stop generating alternatives for group expression if bindings exceed this threshold
 	ULONG
 	UlXformBindThreshold() const
 	{

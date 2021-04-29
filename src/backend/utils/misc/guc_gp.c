@@ -3856,7 +3856,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_xform_bind_threshold,
-		10000, 0, INT_MAX,
+		0, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
