@@ -1,0 +1,50 @@
+-- start_ignore
+drop table if exists bir;
+drop table if exists yolo cascade;
+-- end_ignore
+create table bir (a int, b int) distributed by (a);
+CREATE
+insert into bir select i, i from generate_series(1, 5) i;
+INSERT 5
+
+create table yolo (a int, b int) WITH (appendonly=true, orientation=@orientation@) distributed by (a);
+CREATE
+create index yolo_idx on yolo using btree (a);
+CREATE
+
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: insert into yolo select i, i from generate_series(1, 10000) i;
+INSERT 10000
+2: insert into yolo select i, i from generate_series(1, 2) i;
+INSERT 2
+1: commit;
+COMMIT
+2: abort;
+ABORT
+
+analyze yolo;
+ANALYZE
+
+-- repro needs a plan with bitmap index join with bir on the outer side
+set optimizer_enable_hashjoin = off;
+SET
+set enable_nestloop = on;
+SET
+set enable_hashjoin = off;
+SET
+set enable_seqscan = off;
+SET
+
+select * from bir left join yolo on (bir.a = yolo.a) order by bir.a;
+a|b|a|b
+-+-+-+-
+1|1|1|1
+2|2|2|2
+3|3|3|3
+4|4|4|4
+5|5|5|5
+(5 rows)
+
