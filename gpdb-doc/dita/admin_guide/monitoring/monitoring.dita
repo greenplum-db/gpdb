@@ -223,8 +223,8 @@ FROM gp_master_mirroring;</codeblock></p>
                                                 capacities approaching 100%.</li>
                                         </ul></p>
                                 </entry>
-                                <entry>Free space on the system by removing some data or
-                                    files.</entry>
+                                <entry>Use <codeph>VACUUM</codeph>/<codeph>VACUUM FULL</codeph> on
+                                    user tables to reclaim space occupied by dead rows.</entry>
                             </row>
                             <row>
                                 <entry>Check for errors or dropped packets on the network
@@ -405,9 +405,10 @@ FROM gp_master_mirroring;</codeblock></p>
                             </thead>
                             <tbody>
                                 <row>
-                                    <entry>Mark deleted rows in heap tables so that the space they
-                                        occupy can be reused.<p>Recommended frequency:
-                                            daily</p><p>Severity: CRITICAL</p></entry>
+                                    <entry>Reclaim space occupied by deleted rows in the  heap
+                                        tables so that the space they occupy can be
+                                            reused.<p>Recommended frequency: daily</p><p>Severity:
+                                            CRITICAL</p></entry>
                                     <entry>Vacuum user
                                         tables:<codeblock>VACUUM <i>&lt;table></i>;</codeblock></entry>
                                     <entry>Vacuum updated tables regularly to prevent bloating.

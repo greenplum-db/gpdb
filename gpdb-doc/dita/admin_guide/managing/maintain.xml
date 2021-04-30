@@ -148,7 +148,7 @@ WHERE a.relnamespace=b.oid AND b.nspname='pg_catalog' AND a.relkind='r'"
 
 reindexdb --system -d $DBNAME
 psql -tc "SELECT 'VACUUM' || $SYSTABLES" $DBNAME | psql -a $DBNAME
-analyzedb -s pg_catalog -d $DBNAME
+analyzedb -as pg_catalog -d $DBNAME
 </codeblock>
           <note>If you are performing catalog maintenance during a maintenance period and you need
             to stop a process due to time constraints, run the Greenplum Database function

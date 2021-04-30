@@ -355,7 +355,7 @@
       <section id="section_cv2_crv_mt"><title>Analyzing Partitioned Tables</title><p>When the
             <codeph>ANALYZE</codeph> command is run on a partitioned table, it analyzes each child
           leaf partition table, one at a time. You can run <codeph>ANALYZE</codeph> on just new or
-          changed partition files to avoid analyzing partitions that have not changed. </p><p>The
+          changed partition tables to avoid analyzing partitions that have not changed. </p><p>The
             <codeph>analyzedb</codeph> command-line utility skips unchanged partitions
           automatically. It also runs concurrent sessions so it can analyze several partitions
           concurrently. It runs five sessions by default, but the number of sessions can be set from

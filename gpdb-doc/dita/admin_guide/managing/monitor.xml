@@ -294,7 +294,7 @@ Distributed by: (sale_id)
                   base tables. If the filters and distribution keys are the same, consider
                   redistributing some of the base tables with different distribution keys. </li>
                 <li> Check the cardinality of the join keys. If they have low cardinality, try to
-                  rewrite the query with different joining columns or or additional filters on the
+                  rewrite the query with different joining columns or additional filters on the
                   tables to reduce the number of rows. These changes could change the query
                   semantics.</li>
               </ol></p>
