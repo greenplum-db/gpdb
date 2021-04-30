@@ -2968,6 +2968,10 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 {
 	IMDRelation::Erelstoragetype rel_storage_type =
 		IMDRelation::ErelstorageSentinel;
+	if (rel->rd_partdesc->nparts == 0)
+	{
+		return IMDRelation::ErelstorageHeap;
+	}
 	for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
 	{
 		Oid oid = rel->rd_partdesc->oids[i];
