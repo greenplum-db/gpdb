@@ -2076,6 +2076,13 @@ scanToFetchTuple(AppendOnlyFetchDesc aoFetchDesc,
 	}
 }
 
+static void
+resetCurrentBlockInfo(CurrentBlock * currentBlock)
+{
+	currentBlock->have = false;
+	currentBlock->firstRowNum = 0;
+	currentBlock->lastRowNum = 0;
+}
 
 AppendOnlyFetchDesc
 appendonly_fetch_init(Relation relation,
@@ -2231,7 +2238,8 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	 */
 	if (aoFetchDesc->currentBlock.have)
 	{
-		if (segmentFileNum == aoFetchDesc->currentSegmentFile.num &&
+		if (aoFetchDesc->currentSegmentFile.isOpen &&
+			segmentFileNum == aoFetchDesc->currentSegmentFile.num &&
 			segmentFileNum == aoFetchDesc->blockDirectory.currentSegmentFileNum &&
 			segmentFileNum == aoFetchDesc->executorReadBlock.segmentFileNum)
 		{
@@ -2253,7 +2261,7 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 			}
 
 			/*
-			 * Otherwize, if the current Block Directory entry covers the
+			 * Otherwise, if the current Block Directory entry covers the
 			 * request tuples, lets use its information as another performance
 			 * optimization.
 			 */
@@ -2321,8 +2329,6 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 		}
 	}
 
-/* 	resetCurrentBlockInfo(aoFetchDesc); */
-
 	/*
 	 * Open or switch open, if necessary.
 	 */
@@ -2353,6 +2359,9 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 			/* Segment file not in aoseg table.. */
 			/* Must be aborted or deleted and reclaimed. */
 		}
+
+		/* Reset currentBlock info */
+		resetCurrentBlockInfo(&(aoFetchDesc->currentBlock));
 	}
 
 	/*
