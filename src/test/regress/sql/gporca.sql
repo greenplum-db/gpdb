@@ -2875,6 +2875,12 @@ select enable_xform('CXformInnerJoin2NLJoin');
 reset optimizer_enable_hashjoin;
 reset optimizer_trace_fallback;
 
+-- ensure that orca does not evaluate the max card to be zero
+-- based on constraint contradiction and must return a row
+create table constraints_tbl (a int, b int, check (NOT(b IS NOT NULL AND b IN (1, 2))));
+insert into constraints_tbl values (1, 3);
+select * from constraints_tbl where b=3;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

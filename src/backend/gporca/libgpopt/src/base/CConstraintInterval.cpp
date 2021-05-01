@@ -38,11 +38,12 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CConstraintInterval::CConstraintInterval(CMemoryPool *mp, const CColRef *colref,
 										 CRangeArray *pdrgprng,
-										 BOOL fIncludesNull)
+										 BOOL fIncludesNull, BOOL is_partial)
 	: CConstraint(mp),
 	  m_pcr(colref),
 	  m_pdrgprng(pdrgprng),
-	  m_fIncludesNull(fIncludesNull)
+	  m_fIncludesNull(fIncludesNull),
+	  m_is_partial(is_partial)
 {
 	GPOS_ASSERT(NULL != colref);
 	GPOS_ASSERT(NULL != pdrgprng);
@@ -62,6 +63,18 @@ CConstraintInterval::~CConstraintInterval()
 {
 	m_pdrgprng->Release();
 	m_pcrsUsed->Release();
+}
+
+BOOL
+CConstraintInterval::IsPartial()
+{
+	return m_is_partial;
+}
+
+void
+CConstraintInterval::SetIsPartial()
+{
+	m_is_partial = true;
 }
 
 //---------------------------------------------------------------------------
@@ -566,8 +579,9 @@ CConstraintInterval::PciIntervalFromScalarBoolOp(CMemoryPool *mp,
 		{
 			CConstraintInterval *pciChild = PciIntervalFromScalarExpr(
 				mp, (*pexpr)[0], colref, !infer_nulls_as);
-			if (NULL == pciChild)
+			if (NULL == pciChild || pciChild->IsPartial())
 			{
+				CRefCount::SafeRelease(pciChild);
 				return NULL;
 			}
 
@@ -686,8 +700,6 @@ CConstraintInterval::PciIntervalFromScalarBoolAnd(CMemoryPool *mp,
 	{
 		CConstraintInterval *pciChild =
 			PciIntervalFromScalarExpr(mp, (*pexpr)[ul], colref, infer_nulls_as);
-		// here is where we will return a NULL child from not being able to create a
-		// CConstraint interval from the ScalarExpr
 		if (NULL != pciChild && NULL != pci)
 		{
 			CConstraintInterval *pciAnd = pci->PciIntersect(mp, pciChild);
@@ -698,6 +710,11 @@ CConstraintInterval::PciIntervalFromScalarBoolAnd(CMemoryPool *mp,
 		else if (NULL != pciChild)
 		{
 			pci = pciChild;
+			pci->SetIsPartial();
+		}
+		else if (NULL != pci)
+		{
+			pci->SetIsPartial();
 		}
 	}
 
@@ -1078,7 +1095,7 @@ CConstraintInterval::PciIntersect(CMemoryPool *mp, CConstraintInterval *pci)
 	}
 
 	return GPOS_NEW(mp) CConstraintInterval(
-		mp, m_pcr, pdrgprngNew, m_fIncludesNull && pci->FIncludesNull());
+		mp, m_pcr, pdrgprngNew, m_fIncludesNull && pci->FIncludesNull(), this->IsPartial() || pci->IsPartial());
 }
 
 //---------------------------------------------------------------------------
@@ -1318,6 +1335,7 @@ CConstraintInterval::MdidType()
 CConstraintInterval *
 CConstraintInterval::PciComplement(CMemoryPool *mp)
 {
+	GPOS_ASSERT(!m_is_partial);
 	// create an unbounded interval
 	CConstraintInterval *pciUniversal =
 		PciUnbounded(mp, m_pcr, true /*fIncludesNull*/);
@@ -1458,6 +1476,11 @@ CConstraintInterval::OsPrint(IOstream &os) const
 	if (m_fIncludesNull)
 	{
 		os << "[NULL] ";
+	}
+
+	if (m_is_partial)
+	{
+		os << "[IsPartial] ";
 	}
 
 	os << "}";

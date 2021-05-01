@@ -55,6 +55,10 @@ private:
 	// does the interval include the null value
 	BOOL m_fIncludesNull;
 
+	// set to true if any of the constraint interval for a scalar expression
+	// child cannot be created
+	BOOL m_is_partial;
+
 	// hidden copy ctor
 	CConstraintInterval(const CConstraintInterval &);
 
@@ -120,7 +124,7 @@ private:
 public:
 	// ctor
 	CConstraintInterval(CMemoryPool *mp, const CColRef *colref,
-						CRangeArray *pdrgprng, BOOL is_null);
+						CRangeArray *pdrgprng, BOOL is_null, BOOL is_partial=false);
 
 	// dtor
 	virtual ~CConstraintInterval();
@@ -250,6 +254,10 @@ public:
 	static CConstraintInterval *PcnstrIntervalFromScalarArrayCmp(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref,
 		BOOL infer_nulls_as = false);
+
+	BOOL IsPartial();
+
+	void SetIsPartial();
 
 };	// class CConstraintInterval
 
