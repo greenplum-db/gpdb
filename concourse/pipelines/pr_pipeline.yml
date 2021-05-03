@@ -49,11 +49,6 @@ resources:
       secret_access_key: {{bucket-secret-access-key}}
       versioned_file: {{binary_swap_gpdb_centos_versioned_file}}
 
-  - name: clang_toolchain
-    type: registry-image
-    source:
-      repository: gcr.io/data-orca/clang-toolchain
-
 jobs:
   - name: compile-and-test-pull-request
     plan:
@@ -66,7 +61,6 @@ jobs:
           - get: centos-gpdb-dev-6
           - get: gpaddon_src
           - get: gpdb_5x_upstream
-          - get: clang_toolchain
       # We use the 5X_STABLE source for running make sync_tools instead for security.
       # For example, this would prevent a user to submit a PR that maliciously
       # modifies the sync_tools task to expose the ivy credentials.
@@ -120,7 +114,6 @@ jobs:
             inputs: [{ name: gpdb_pr }]
             outputs: [{ name: gpdb_src }]
         - task: check_format
-          image: clang_toolchain
           file: gpdb_src/concourse/tasks/check_format.yml
         - task: compile_gpdb
           file: gpdb_src/concourse/tasks/compile_gpdb.yml

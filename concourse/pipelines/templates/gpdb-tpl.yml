@@ -359,11 +359,6 @@ resources:
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
 
-- name: clang_toolchain
-  type: registry-image
-  source:
-    repository: gcr.io/data-orca/clang-toolchain
-
 - name: ccp-image
   type: registry-image
   source:
@@ -1123,12 +1118,9 @@ jobs:
 
 - name: check_format
   plan:
-    - in_parallel:
-      - get: gpdb_src
-        trigger: true
-      - get: clang_toolchain
+    - get: gpdb_src
+      trigger: true
     - task: check_format
-      image: clang_toolchain
       file: gpdb_src/concourse/tasks/check_format.yml
 
 ## ======================================================================
