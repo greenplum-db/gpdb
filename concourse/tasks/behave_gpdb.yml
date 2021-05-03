@@ -4,6 +4,7 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
+  - name: python-behave
 outputs:
 params:
   BEHAVE_TAGS: ""

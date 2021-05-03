@@ -1,0 +1,16 @@
+platform: linux
+inputs:
+ - name: ccp_src
+ - name: cluster_env_files
+ - name: python-behave
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+    ccp_src/scripts/setup_ssh_to_cluster.sh
+    ssh centos@mdw "sudo bash -c \"yum --cacheonly list installed mailx valgrind\""
+    scp python-behave/behave-*.tar.gz centos@mdw:/tmp/.
+    ssh gpadmin@mdw "tar -xzf /tmp/behave-*.tar.gz -C /usr/local/greenplum-db-devel/ext/python/"
+    ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""

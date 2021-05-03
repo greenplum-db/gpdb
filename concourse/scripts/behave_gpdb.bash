@@ -59,6 +59,11 @@ function gpcheck_setup() {
         * hard  nproc   131072" >> /etc/security/limits.conf
 }
 
+function install_behave() {
+    # Behave is stored in GCS and pulled for Concourse Behave tests
+    tar -xzf python-behave/behave-*.tar.gz -C /usr/local/greenplum-db-devel/ext/python/
+}
+
 function _main() {
 
     if [ -z "${BEHAVE_TAGS}" ] && [ -z "${BEHAVE_FLAGS}" ]; then
@@ -77,6 +82,7 @@ function _main() {
         time gpcheck_setup
     fi
 
+    time install_behave
     time run_test
 }
 
