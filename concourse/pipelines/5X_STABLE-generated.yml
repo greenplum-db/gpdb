@@ -111,7 +111,6 @@ groups:
   - DPM_backup-restore_ddboost_part1
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
-  - DPM_backup_43_restore_5
   - gptransfer-43x-to-5x
   - gptransfer-5x-to-5x
   - gate_dpm_end
@@ -253,7 +252,6 @@ groups:
   - DPM_backup-restore_ddboost_part1
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
-  - DPM_backup_43_restore_5
   - gptransfer-43x-to-5x
   - gptransfer-5x-to-5x
   - gate_dpm_end
@@ -3524,58 +3522,6 @@ jobs:
   ensure:
     <<: *dpm_ccp_destroy
 
-- name: DPM_backup_43_restore_5
-  plan:
-  - *ccp_jitter_delay
-  - in_parallel:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_dpm_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
-      trigger: true
-    - get: gpdb4_binary
-      resource: bin_gpdb4_centos6
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-    - get: terraform.d
-      params:
-        unpack: true
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: setup_gpdb4
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    input_mapping:
-      gpdb_binary: gpdb4_binary
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_backup_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-  - task: setup_gpdb5
-    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: run_restore_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
 - name: gptransfer-43x-to-5x
   plan:
   - *ccp_jitter_delay
@@ -3801,7 +3747,6 @@ jobs:
       - DPM_backup-restore_ddboost_part1
       - DPM_backup-restore_ddboost_part2
       - DPM_backup-restore_ddboost_part3
-      - DPM_backup_43_restore_5
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
     - get: bin_gpdb_centos6
@@ -3810,7 +3755,6 @@ jobs:
       - DPM_backup-restore_ddboost_part1
       - DPM_backup-restore_ddboost_part2
       - DPM_backup-restore_ddboost_part3
-      - DPM_backup_43_restore_5
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
 
@@ -4485,7 +4429,6 @@ jobs:
       - DPM_backup-restore_ddboost_part1
       - DPM_backup-restore_ddboost_part2
       - DPM_backup-restore_ddboost_part3
-      - DPM_backup_43_restore_5
       - MM_gprecoverseg
       - MM_gpcheckcat
       - MM_gpcheckperf
