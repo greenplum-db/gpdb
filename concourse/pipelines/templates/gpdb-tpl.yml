@@ -163,7 +163,7 @@ groups:
 - name: Release
   jobs:
   - gate_release_candidate_start
-  - compile_gpdb_ubuntu16_oss_abi
+##  - compile_gpdb_ubuntu16_oss_abi
   - Release_Candidate
   - Build_Release_Candidate_RPMs
 

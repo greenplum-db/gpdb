@@ -12,16 +12,23 @@ WORKDIR ${BUILDDIR}
 #############################
 # build ORCA
 #############################
+ENV ORCA_VERSION=3.116.0
 ENV INSTLOC=/usr/local/greenplum-db-devel
 ENV BLD_ARCH=ubuntu1604_amd64
 
-WORKDIR ${BUILDDIR}/depends
+WORKDIR ${BUILDDIR}/temp_build_orca
 
 # fix the /root/.ccache missing issue during build
 RUN mkdir -p /root/.ccache && \
     touch  /root/.ccache/ccache.conf && \
-    ./configure --prefix=${BUILDDIR}/gpAux/ext/${BLD_ARCH} && \
-    make install_local
+    wget https://github.com/greenplum-db/gporca/archive/refs/tags/v${ORCA_VERSION}.tar.gz && \
+    tar -xzf v${ORCA_VERSION}.tar.gz && \
+    cd gporca-${ORCA_VERSION} && \
+    cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=${BUILDDIR}/temp_build_orca -H. -Brel && \
+    ninja install -C rel && \
+    mkdir -p ${BUILDDIR}/gpAux/ext/${BLD_ARCH} && \
+    cp -R ../lib ${BUILDDIR}/gpAux/ext/${BLD_ARCH}/ && \
+    cp -R ../include ${BUILDDIR}/gpAux/ext/${BLD_ARCH}/
 
 #############################
 # get ready for `make dist`
@@ -82,7 +89,7 @@ RUN make PARALLEL_MAKE_OPTS=-j8 -s dist
 ENV LOADERSINSTLOC=${INSTLOC}/greenplum-loaders
 
 # copy the dependencies for runtime
-RUN cp ${BUILDDIR}/depends/build/lib/lib* ${INSTLOC}/lib/ && \
+RUN cp ${BUILDDIR}/temp_build_orca/lib/lib* ${INSTLOC}/lib/ && \
     # We copy both symlinks and its target if they are under the same
     # directory.  If the symlink redirected to different directory, we
     # dereference and only copy the target over.

@@ -1,6 +1,0 @@
-[requires]
-orca/v3.116.0@gpdb/stable
-
-[imports]
-include, * -> build/include
-lib, * -> build/lib

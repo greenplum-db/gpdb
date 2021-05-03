@@ -10,7 +10,7 @@ SRC_DIR=gpdb_src
 cp -R debian_release/debian ${SRC_DIR}/
 
 # Regex to capture required gporca version and download gporca source
-ORCA_TAG=$(grep -Po 'v\d+.\d+.\d+' ${SRC_DIR}/depends/conanfile_orca.txt)
+ORCA_TAG=v$(grep -Po 'ORCA_VERSION=\K(\d+.\d+.\d+)' ${SRC_DIR}/concourse/scripts/compile_gpdb_open_source_ubuntu.bash)
 git clone --branch ${ORCA_TAG} https://github.com/greenplum-db/gporca.git ${SRC_DIR}/gporca
 
 pushd ${SRC_DIR}
