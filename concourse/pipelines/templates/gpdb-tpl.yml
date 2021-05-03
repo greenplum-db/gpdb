@@ -990,11 +990,6 @@ resources:
     regexp: gp-internal-artifacts/madlib-snowflakes/boost_(1_61_0).tar.gz
 {% endif %}
 
-- name: clang_toolchain
-  type: registry-image
-  source:
-    repository: gcr.io/data-orca/clang-toolchain
-
 - name: reduced-frequency-trigger
   type: time
   source:
@@ -1026,12 +1021,9 @@ jobs:
 
 - name: check_format
   plan:
-    - in_parallel:
-      - get: gpdb_src
-        trigger: true
-      - get: clang_toolchain
+    - get: gpdb_src
+      trigger: true
     - task: check_format
-      image: clang_toolchain
       file: gpdb_src/concourse/tasks/check_format.yml
 
 ## ======================================================================

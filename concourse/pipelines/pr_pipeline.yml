@@ -34,11 +34,6 @@ resources:
   source:
     repository: pivotaldata/gpdb6-centos7-test
 
-- name: clang_toolchain
-  type: registry-image
-  source:
-    repository: gcr.io/data-orca/clang-toolchain
-
 jobs:
 - name: compile_and_test_gpdb
   public: true
@@ -50,7 +45,6 @@ jobs:
       version: every
     - get: gpdb6-centos7-build
     - get: gpdb6-centos7-test
-    - get: clang_toolchain
 
   - put: gpdb_pr
     params:
@@ -85,7 +79,6 @@ jobs:
         inputs: [{ name: gpdb_pr }]
         outputs: [{ name: gpdb_src }]
     - task: check_format
-      image: clang_toolchain
       file: gpdb_src/concourse/tasks/check_format.yml
     - task: compile_gpdb_centos7
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml

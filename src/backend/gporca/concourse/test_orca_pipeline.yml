@@ -54,7 +54,6 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
 
-
 jobs:
 - name: compile_and_test_gpdb
   max_in_flight: 10
@@ -130,3 +129,6 @@ jobs:
         file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
         image: gpdb6-centos7-build
         timeout: 1h
+
+      - task: check_format
+        file: gpdb_src/concourse/tasks/check_format.yml
