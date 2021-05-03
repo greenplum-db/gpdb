@@ -431,6 +431,15 @@ resources:
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-aws/
 
+- name: terraform.d-all
+  source:
+    access_key_id: ((bucket-access-key-id))
+    bucket: ccp-terraform-provider-plugins
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
+    versioned_file: plugin-cache-all.tgz
+  type: s3
+
 {% endif %}
 - name: aix_environments
   type: pool
@@ -898,6 +907,7 @@ ccp_aws_default_params_anchor: &ccp_aws_default_params
   action: create
   delete_on_failure: true
   generate_random_name: true
+  plugin_dir: ../../terraform.d-all/plugin-cache/linux_amd64
   terraform_source: ccp_src/aws/
 
 ccp_vars_anchor: &ccp_default_vars
@@ -957,6 +967,7 @@ dpm_ccp_destroy_anchor: &dpm_ccp_destroy
   params:
     action: destroy
     env_name_file: terraform_for_dpm/name
+    plugin_dir: ../../terraform.d-all/plugin-cache/linux_amd64
     terraform_source: ccp_src/aws/
     vars:
       aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
@@ -2852,7 +2863,7 @@ jobs:
       tags: ["ddboost"]
     - get: ddboost_rpm
       tags: ["ddboost"]
-    - get: terraform.d
+    - get: terraform.d-all
       params:
         unpack: true
   - put: terraform_for_dpm
@@ -2931,7 +2942,7 @@ jobs:
       tags: ["ddboost"]
     - get: ddboost_rpm
       tags: ["ddboost"]
-    - get: terraform.d
+    - get: terraform.d-all
       params:
         unpack: true
   - put: terraform_for_dpm
@@ -3010,7 +3021,7 @@ jobs:
       tags: ["ddboost"]
     - get: ddboost_rpm
       tags: ["ddboost"]
-    - get: terraform.d
+    - get: terraform.d-all
       params:
         unpack: true
   - put: terraform_for_dpm
