@@ -719,6 +719,12 @@ jobs:
       trigger: true
     - task: check_format
       file: gpdb_src/concourse/tasks/check_format.yml
+    - task: clang_tidy
+      file: gpdb_src/concourse/tasks/clang_tidy.yml
+      {% if use_ICW_workers %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
+
 
 ## ======================================================================
 ##   ____                      _ _

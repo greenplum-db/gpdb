@@ -120,3 +120,8 @@ jobs:
         input_mapping:
           gpdb_src: gpdb_pr
         timeout: 1h
+
+      - task: clang_tidy
+        input_mapping:
+          gpdb_src: gpdb_pr
+        file: gpdb_src/concourse/tasks/clang_tidy.yml

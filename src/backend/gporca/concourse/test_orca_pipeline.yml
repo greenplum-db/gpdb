@@ -123,3 +123,6 @@ jobs:
 
       - task: check_format
         file: gpdb_src/concourse/tasks/check_format.yml
+
+      - task: clang_tidy
+        file: gpdb_src/concourse/tasks/clang_tidy.yml
