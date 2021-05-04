@@ -26,6 +26,7 @@ class Options:
 
         self.outputSampleConfigFile = None
         self.parallelDegree = 1
+        self.parallelPerHost = 1
         self.forceFullResynchronization = None
         self.persistent_check = None
         self.quiet = None

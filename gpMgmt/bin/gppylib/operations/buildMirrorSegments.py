@@ -167,13 +167,14 @@ class GpMirrorListToBuild:
         INPLACE = 1
         SEQUENTIAL = 2
 
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
         self.__progressMode = progressMode
         self.__parallelDegree = parallelDegree
         self.__forceoverwrite = forceoverwrite
+        self.__parallelPerHost = parallelPerHost
         self.__additionalWarnings = additionalWarnings or []
         if not logger:
             raise Exception('logger argument cannot be None')
@@ -603,7 +604,7 @@ class GpMirrorListToBuild:
                                           gplog.get_logger_dir(),
                                           newSegments=True,
                                           verbose=gplog.logging_is_verbose(),
-                                          batchSize=self.__parallelDegree,
+                                          batchSize=self.__parallelPerHost,
                                           ctxt=gp.REMOTE,
                                           remoteHost=hostName,
                                           validationOnly=validationOnly,
@@ -724,7 +725,7 @@ class GpMirrorListToBuild:
     def __ensureSharedMemCleaned(self, gpEnv, directives):
         """
 
-        @param directives a list of the GpStopSegmentDirectoryDirective values indicating which segments to cleanup 
+        @param directives a list of the GpStopSegmentDirectoryDirective values indicating which segments to cleanup
 
         """
 
@@ -763,7 +764,7 @@ class GpMirrorListToBuild:
             cmd = gp.GpSegStopCmd("remote segment stop on host '%s'" % hostName,
                                   gpEnv.getGpHome(), gpEnv.getGpVersion(),
                                   mode='fast', dbs=segments, verbose=gplog.logging_is_verbose(),
-                                  ctxt=base.REMOTE, remoteHost=hostName)
+                                  ctxt=base.REMOTE, remoteHost=hostName, segment_batch_size=self.__parallelPerHost)
 
             cmds.append(cmd)
 
@@ -851,9 +852,10 @@ class GpMirrorListToBuild:
     def __createStartSegmentsOp(self, gpEnv):
         return startSegments.StartSegmentsOperation(self.__pool, self.__quiet,
                                                     gpEnv.getGpVersion(),
-                                                    gpEnv.getGpHome(), gpEnv.getMasterDataDir()
-                                                    )
+                                                    gpEnv.getGpHome(), gpEnv.getMasterDataDir(),
+                                                    parallel=self.__parallelPerHost)
 
+    # FIXME: This function seems to be unused. Remove if not required.
     def __updateGpIdFile(self, gpEnv, gpArray, segments):
         segmentByHost = GpArray.getSegmentsByHostName(segments)
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(segments)
@@ -867,7 +869,7 @@ class GpMirrorListToBuild:
                                          gplog.get_logger_dir(),
                                          newSegments=False,
                                          verbose=gplog.logging_is_verbose(),
-                                         batchSize=self.__parallelDegree,
+                                         batchSize=self.__parallelPerHost,
                                          ctxt=gp.REMOTE,
                                          remoteHost=hostName,
                                          validationOnly=False,
