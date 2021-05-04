@@ -376,8 +376,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	rel_storage_type = RetrieveRelStorageType(rel.get());
 
 	// get relation columns
-	mdcol_array =
-		RetrieveRelColumns(mp, md_accessor, rel.get(), rel_storage_type);
+	mdcol_array = RetrieveRelColumns(mp, md_accessor, rel.get());
 	const ULONG max_cols =
 		GPDXL_SYSTEM_COLUMNS + (ULONG) rel->rd_att->natts + 1;
 	ULONG *attno_mapping = ConstructAttnoMapping(mp, mdcol_array, max_cols);
@@ -492,9 +491,9 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 //
 //---------------------------------------------------------------------------
 CMDColumnArray *
-CTranslatorRelcacheToDXL::RetrieveRelColumns(
-	CMemoryPool *mp, CMDAccessor *md_accessor, Relation rel,
-	IMDRelation::Erelstoragetype rel_storage_type)
+CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
+											 CMDAccessor *md_accessor,
+											 Relation rel)
 {
 	CMDColumnArray *mdcol_array = GPOS_NEW(mp) CMDColumnArray(mp);
 
@@ -577,10 +576,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(
 	// add system columns
 	if (RelHasSystemColumns(rel->rd_rel->relkind))
 	{
-		BOOL is_ao_table =
-			IMDRelation::ErelstorageAppendOnlyRows == rel_storage_type ||
-			IMDRelation::ErelstorageAppendOnlyCols == rel_storage_type;
-		AddSystemColumns(mp, mdcol_array, rel, is_ao_table);
+		AddSystemColumns(mp, mdcol_array, rel);
 	}
 
 	return mdcol_array;
@@ -747,21 +743,13 @@ CTranslatorRelcacheToDXL::RetrieveRelDistributionOpFamilies(CMemoryPool *mp,
 void
 CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 										   CMDColumnArray *mdcol_array,
-										   Relation rel, BOOL is_ao_table)
+										   Relation rel)
 {
-	/* is_ao_table = is_ao_table || gpdb::IsAppendOnlyPartitionTable(rel->rd_id); */
-
 	for (INT i = SelfItemPointerAttributeNumber;
 		 i > FirstLowInvalidHeapAttributeNumber; i--)
 	{
 		AttrNumber attno = AttrNumber(i);
 		GPOS_ASSERT(0 != attno);
-
-		if (IsTransactionVisibilityAttribute(i) && is_ao_table)
-		{
-			// skip transaction attrbutes like xmin, xmax, cmin, cmax for AO tables
-			continue;
-		}
 
 		// get system name for that attribute
 		const CWStringConst *sys_colname =
@@ -781,24 +769,6 @@ CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 
 		mdcol_array->Append(md_col);
 	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::IsTransactionVisibilityAttribute
-//
-//	@doc:
-//		Check if attribute number is one of the system attributes related to
-//		transaction visibility such as xmin, xmax, cmin, cmax
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorRelcacheToDXL::IsTransactionVisibilityAttribute(INT attno)
-{
-	return attno == MinTransactionIdAttributeNumber ||
-		   attno == MaxTransactionIdAttributeNumber ||
-		   attno == MinCommandIdAttributeNumber ||
-		   attno == MaxCommandIdAttributeNumber;
 }
 
 //---------------------------------------------------------------------------
@@ -2462,17 +2432,10 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 		case AO_ROW_TABLE_AM_OID:
 			rel_storage_type = IMDRelation::ErelstorageAppendOnlyRows;
 			break;
-// GPDB_12_MERGE_FIXME: why did ORCA even care about relstorage = 'v'??? DEAD CODE!
-#if NOT_USED
-		case RELSTORAGE_VIRTUAL:
-			rel_storage_type = IMDRelation::ErelstorageVirtual;
-			break;
-#endif
 		case 0:
-			// GPDB_12_MERGE_FIXME: pretend partitioned tables are heap
-			// ORCA should stop asking about storage types of a partitioned table
+
 			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
-				rel_storage_type = IMDRelation::ErelstorageHeap;
+				rel_storage_type = RetrieveStorageTypeForPartitionedTable(rel);
 			else if (gpdb::RelIsExternalTable(rel->rd_id))
 				rel_storage_type = IMDRelation::ErelstorageExternal;
 			else
@@ -2999,5 +2962,47 @@ CTranslatorRelcacheToDXL::RetrieveIndexPartitions(CMemoryPool *mp, OID rel_oid)
 
 	return partition_oids;
 }
+
+IMDRelation::Erelstoragetype
+CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
+{
+	IMDRelation::Erelstoragetype rel_storage_type =
+		IMDRelation::ErelstorageSentinel;
+	if (rel->rd_partdesc->nparts == 0)
+	{
+		return IMDRelation::ErelstorageHeap;
+	}
+	for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
+	{
+		Oid oid = rel->rd_partdesc->oids[i];
+		gpdb::RelationWrapper child_rel = gpdb::GetRelation(oid);
+		IMDRelation::Erelstoragetype child_storage =
+			RetrieveRelStorageType(child_rel.get());
+
+		if (rel_storage_type == IMDRelation::ErelstorageSentinel)
+		{
+			rel_storage_type = child_storage;
+		}
+
+		// fall back if any external partitions, we need additional logic to
+		// handle distribution or will get wrong results
+		if (child_storage == IMDRelation::ErelstorageExternal)
+		{
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT(
+					"Partitioned table with external/foreign partition"));
+		}
+		// mark any partitioned table with supported partitions of mixed storage types,
+		// this is more conservative for certain skans (eg: we can't do an index scan if any
+		// partition is ao, we must only do a sequential or bitmap scan)
+		if (rel_storage_type != child_storage)
+		{
+			rel_storage_type = IMDRelation::ErelstorageMixedPartitioned;
+		}
+	}
+	return rel_storage_type;
+}
+
 
 // EOF

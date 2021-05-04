@@ -1114,6 +1114,7 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	{
 		((Join *) plan)->prefetch_inner = false;
 		((Join *) plan)->prefetch_joinqual = false;
+		((Join *) plan)->prefetch_qual = false;
 	}
 
 	/*
@@ -1128,6 +1129,18 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 
 		((Join *) plan)->prefetch_joinqual = contain_motion(root,
 															(Node *) joinqual);
+	}
+
+	/*
+	 * Similar for non join qual. If it contains a motion and outer relation
+	 * also contains a motion, then we should set prefetch_qual to true.
+	 */
+	if (((Join *) plan)->prefetch_qual)
+	{
+		List *qual = ((Join *) plan)->plan.qual;
+
+		((Join *) plan)->prefetch_qual = contain_motion(root,
+															(Node *) qual);
 	}
 
 	/*
@@ -4980,6 +4993,14 @@ create_nestloop_plan(PlannerInfo *root,
 		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
+	/*
+	 * Similar for non join qual.
+	 */
+	if (best_path->outerjoinpath &&
+		best_path->outerjoinpath->motionHazard &&
+		join_plan->join.plan.qual != NIL)
+		join_plan->join.prefetch_qual = true;
+
 	return join_plan;
 }
 
@@ -5353,6 +5374,14 @@ create_mergejoin_plan(PlannerInfo *root,
 		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
+	/*
+	 * Similar for non join qual.
+	 */
+	if (best_path->jpath.innerjoinpath &&
+		best_path->jpath.innerjoinpath->motionHazard &&
+		join_plan->join.plan.qual != NIL)
+		join_plan->join.prefetch_qual = true;
+
 	/* Costs of sort and material steps are included in path cost already */
 	copy_generic_path_info(&join_plan->join.plan, &best_path->jpath.path);
 
@@ -5552,6 +5581,14 @@ create_hashjoin_plan(PlannerInfo *root,
 		best_path->jpath.outerjoinpath->motionHazard &&
 		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
+
+	/*
+	 * Similar for non join qual.
+	 */
+	if (best_path->jpath.outerjoinpath &&
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.plan.qual != NIL)
+		join_plan->join.prefetch_qual = true;
 
 	copy_generic_path_info(&join_plan->join.plan, &best_path->jpath.path);
 

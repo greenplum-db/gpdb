@@ -39,12 +39,12 @@
 <xref href="#topic_ddb-plugin/ddb-options" format="dita">options</xref>: 
   <xref href="#topic_ddb-plugin/ddb-host" format="dita">hostname</xref>: "&lt;<varname>data-domain-host</varname>>"
   <xref href="#topic_ddb-plugin/ddb-user" format="dita">username</xref>: "&lt;<varname>ddboost-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-pwd-encrypt" format="dita">password-encryption</xref>: "on" | "off"       
+  <xref href="#topic_ddb-plugin/ddb-pwd-encrypt" format="dita">password_encryption</xref>: "on" | "off"       
   <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: "&lt;<varname>ddboost-pwd</varname>>"
   <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: "&lt;<varname>data-domain-id</varname>>"
   <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: "&lt;<varname>data-domain-dir</varname>>"
   <xref href="#topic_ddb-plugin/ddb-replication" format="dita">replication</xref>: "on" | "off"
-  <xref href="#topic_ddb-plugin/ddb-replication-streams" format="dita">replication-streams</xref>: <varname>integer</varname>
+  <xref href="#topic_ddb-plugin/ddb-replication_streams" format="dita">replication_streams</xref>: <varname>integer</varname>
   <xref href="#topic_ddb-plugin/ddb-remote-host" format="dita">remote_hostname</xref>: "&lt;<varname>remote-dd-host</varname>>"
   <xref href="#topic_ddb-plugin/ddb-remote-user" format="dita">remote_username</xref>: "&lt;<varname>remote-ddboost-ID</varname>>"
   <xref href="#topic_ddb-plugin/ddb-remote-pwd-encrypt" format="dita">remote_password_encryption</xref> "on" | "off"
@@ -120,8 +120,8 @@
                     <codeph>gpbackup_manager replicate-backup</codeph> command. For information
                   about replication,see <xref href="replication-ddb.xml"/>.</pd>
               </plentry>
-              <plentry id="ddb-replication-streams">
-                <pt>replication-streams</pt>
+              <plentry id="ddb-replication_streams">
+                <pt>replication_streams</pt>
                 <pd>Optional. Used with the <codeph>gpbackup_manager replicate-backup</codeph>
                   command, ignored otherwise. Specifies the maximum number of Data Domain I/O
                   streams that can be used when replicating a backup set on a remote Data Domain

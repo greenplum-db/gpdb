@@ -566,6 +566,19 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 
 			pgstat_combine_one_qe_result(&oidMap, res, nest_level, q->segindex);
 
+			if (q->conn->wrote_xlog)
+			{
+				MarkTopTransactionWriteXLogOnExecutor();
+
+				/*
+				* Reset the worte_xlog here. Since if the received pgresult not process
+				* the xlog write message('x' message sends from QE in ReadyForQuery),
+				* the value may still refer to previous dispatch statement. Which may
+				* always mark current top transaction has wrote xlog on executor.
+				*/
+				q->conn->wrote_xlog = false;
+			}
+
 			/*
 			 * If we are still in copy mode, tell QE to stop it.  COPY_IN
 			 * protocol has a way to say 'end of copy' but COPY_OUT doesn't.

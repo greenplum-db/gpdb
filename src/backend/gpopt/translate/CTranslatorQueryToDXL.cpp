@@ -1023,11 +1023,9 @@ CTranslatorQueryToDXL::GetDXLCtasOptionArray(
 	ListCell *lc = nullptr;
 	BOOL is_ao_table = false;
 	BOOL is_AOCO = false;
-	BOOL is_parquet = false;
 
 	CWStringConst str_append_only(GPOS_WSZ_LIT("appendonly"));
 	CWStringConst str_orientation(GPOS_WSZ_LIT("orientation"));
-	CWStringConst str_orientation_parquet(GPOS_WSZ_LIT("parquet"));
 	CWStringConst str_orientation_column(GPOS_WSZ_LIT("column"));
 
 	ForEach(lc, options)
@@ -1058,15 +1056,7 @@ CTranslatorQueryToDXL::GetDXLCtasOptionArray(
 			if (name_str->Equals(&str_orientation) &&
 				value_str->Equals(&str_orientation_column))
 			{
-				GPOS_ASSERT(!is_parquet);
 				is_AOCO = true;
-			}
-
-			if (name_str->Equals(&str_orientation) &&
-				value_str->Equals(&str_orientation_parquet))
-			{
-				GPOS_ASSERT(!is_AOCO);
-				is_parquet = true;
 			}
 		}
 
@@ -1088,10 +1078,6 @@ CTranslatorQueryToDXL::GetDXLCtasOptionArray(
 	else if (is_ao_table)
 	{
 		*storage_type = IMDRelation::ErelstorageAppendOnlyRows;
-	}
-	else if (is_parquet)
-	{
-		*storage_type = IMDRelation::ErelstorageAppendOnlyParquet;
 	}
 
 	return ctas_storage_options;
@@ -3176,24 +3162,18 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	NoteDistributionPolicyOpclasses(rte);
 
 	IMdIdArray *partition_mdids = md_rel->ChildPartitionMdids();
-	IMDRelation::Erelstoragetype rel_storage_type =
-		IMDRelation::ErelstorageSentinel;
 	for (ULONG ul = 0; partition_mdids && ul < partition_mdids->Size(); ++ul)
 	{
 		IMDId *part_mdid = (*partition_mdids)[ul];
 		const IMDRelation *partrel = m_md_accessor->RetrieveRel(part_mdid);
 
-		if (partrel->RetrieveRelStorageType() != rel_storage_type)
+		if (partrel->RetrieveRelStorageType() ==
+			IMDRelation::ErelstorageExternal)
 		{
-			if (rel_storage_type == IMDRelation::ErelstorageSentinel)
-			{
-				rel_storage_type = partrel->RetrieveRelStorageType();
-				continue;
-			}
-
-			// Multi-level partitioned tables are unsupported - fall back
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("Heterogeneous partition storage types"));
+			// Partitioned tables with external/foreign partitions
+			GPOS_RAISE(
+				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				GPOS_WSZ_LIT("External/foreign partition storage types"));
 		}
 	}
 
@@ -3854,6 +3834,9 @@ CTranslatorQueryToDXL::TranslateJoinExprInFromToDXL(JoinExpr *join_expr)
 	ForBoth(lc_node, rte->joinaliasvars, lc_col_name, alias->colnames)
 	{
 		Node *join_alias_node = (Node *) lfirst(lc_node);
+		// rte->joinaliasvars may contain NULL ptrs which indicates dropped columns
+		if (!join_alias_node)
+			continue;
 		GPOS_ASSERT(IsA(join_alias_node, Var) ||
 					IsA(join_alias_node, CoalesceExpr));
 		Value *value = (Value *) lfirst(lc_col_name);

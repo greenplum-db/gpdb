@@ -30,7 +30,7 @@
           to <codeph>on</codeph> and add the options that the plugin uses to access the remote Data
           Domain system that stores the replicated backup.</p><p>When using
             <codeph>gpbackup</codeph>, the <codeph>replication</codeph> option must be set to
-            <codeph>on</codeph>. </p><p>The configuration file <codeph>replication-streams</codeph>
+            <codeph>on</codeph>. </p><p>The configuration file <codeph>replication_streams</codeph>
           option is ignored, the default value is used. </p>Performing a backup operation with
         replication increases the time required to perform a backup. The backup set is copied to the
         local Data Domain system, and then replicated on the remote Data Domain system using DD

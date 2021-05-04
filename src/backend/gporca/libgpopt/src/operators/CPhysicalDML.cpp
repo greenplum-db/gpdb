@@ -503,14 +503,13 @@ CPhysicalDML::PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc)
 		COptimizerConfig *optimizer_config =
 			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
 
-		BOOL fInsertSortOnParquet = FInsertSortOnParquet();
 		BOOL fInsertSortOnRows = FInsertSortOnRows(optimizer_config);
 
-		if (fInsertSortOnParquet || fInsertSortOnRows)
+		if (fInsertSortOnRows)
 		{
 			GPOS_ASSERT(CLogicalDML::EdmlInsert == m_edmlop);
 			m_input_sort_req = true;
-			// if this is an INSERT over a partitioned Parquet or Row-oriented table,
+			// if this is an INSERT over a Row-oriented table,
 			// sort tuples by their table oid
 			IMDId *mdid = m_pcrTableOid->RetrieveType()->GetMdidForCmpType(
 				IMDType::EcmptL);
@@ -520,22 +519,6 @@ CPhysicalDML::PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc)
 	}
 
 	return pos;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalDML::FInsertSortOnParquet
-//
-//	@doc:
-//		Do we need to sort on parquet table
-//
-//---------------------------------------------------------------------------
-BOOL
-CPhysicalDML::FInsertSortOnParquet()
-{
-	return !GPOS_FTRACE(EopttraceDisableSortForDMLOnParquet) &&
-		   (IMDRelation::ErelstorageAppendOnlyParquet ==
-			m_ptabdesc->RetrieveRelStorageType());
 }
 
 //---------------------------------------------------------------------------

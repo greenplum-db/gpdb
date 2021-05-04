@@ -182,6 +182,32 @@ ERROR:  Invalid parameter value "0" for resource type "MEMORY_LIMIT". Value must
 create resource queue test_rq with (active_statements=2);
 drop resource queue test_rq;
 create resource queue test_rq with (active_statements=2, memory_limit='1024MB');
+--
+-- CPU priority feature
+--
+create resource queue test_rq_cpu with (active_statements=2, priority='HIGH');
+create user test_rp_user with login;
+alter role test_rp_user resource queue test_rq_cpu;
+SET ROLE test_rp_user;
+-- query priority and weight on master
+select rqppriority, rqpweight from gp_toolkit.gp_resq_priority_backend where rqpsession in (select sess_id from pg_stat_activity where pid  = pg_backend_pid());
+ rqppriority | rqpweight 
+-------------+-----------
+ HIGH        |      1000
+(1 row)
+
+-- query priority and weight on segments
+select rqppriority, rqpweight from gp_dist_random('gp_toolkit.gp_resq_priority_backend') where rqpsession in (select sess_id from pg_stat_activity where pid  = pg_backend_pid());
+ rqppriority | rqpweight 
+-------------+-----------
+ HIGH        |      1000
+ HIGH        |      1000
+ HIGH        |      1000
+(3 rows)
+
+RESET ROLE;
+drop user test_rp_user;
+drop resource queue test_rq_cpu;
 -- Alters
 alter resource queue test_rq with (memory_limit='1024mb');
 ERROR:  Invalid parameter value "1024mb" for resource type "MEMORY_LIMIT". Value must be in kB, MB or GB.

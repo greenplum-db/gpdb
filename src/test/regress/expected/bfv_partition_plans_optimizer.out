@@ -1284,28 +1284,30 @@ explain execute f2(2); -- should eliminate partitions
 insert into r_co values (1,1), (2,2), (3,3);
 analyze r_co; 
 explain select * from r_co where a=2; -- should eliminate partitions
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1.03 rows=1 width=8)
-   ->  Seq Scan on r_co_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
-         Filter: (a = 2)
- Optimizer: Postgres query optimizer
-(4 rows)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Append  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on r_co_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
+               Filter: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 -- test partition elimination in prepared statements on CO tables
 prepare f3(int) as select * from r_co where a = $1 order by a,b; 
 --force_explain
 explain execute f3(2); -- should eliminate partitions
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=1.02..1.07 rows=3 width=8)
-   Merge Key: r_co_1_prt_2.b
-   ->  Sort  (cost=1.02..1.03 rows=1 width=8)
-         Sort Key: r_co_1_prt_2.b
-         ->  Seq Scan on r_co_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
-               Filter: (a = 2)
- Optimizer: Postgres query optimizer
-(7 rows)
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
+   Merge Key: r_co_1_prt_2.a, r_co_1_prt_2.b
+   ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+         Sort Key: r_co_1_prt_2.a, r_co_1_prt_2.b
+         ->  Append  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on r_co_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
+                     Filter: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 -- start_ignore
 drop table r_part;

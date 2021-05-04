@@ -2427,25 +2427,22 @@ select count(*) from
   left join
   (select * from tenk1 y order by y.unique2) y
   on x.thousand = y.unique2 and x.twothousand = y.hundred and x.fivethous = y.unique2;
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Aggregate
-   ->  Merge Left Join
-         Merge Cond: (x.thousand = y.unique2)
-         Join Filter: ((x.twothousand = y.hundred) AND (x.fivethous = y.unique2))
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               Merge Key: x.thousand, x.twothousand, x.fivethous
-               ->  Subquery Scan on x
-                     ->  Sort
-                           Sort Key: x_1.thousand, x_1.twothousand, x_1.fivethous
-                           ->  Seq Scan on tenk1 x_1
-         ->  Materialize
-               ->  Gather Motion 3:1  (slice2; segments: 3)
-                     Merge Key: y.unique2
-                     ->  Subquery Scan on y
-                           ->  Index Scan using tenk1_unique2 on tenk1 y_1
- Optimizer: Postgres query optimizer
-(16 rows)
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Left Join
+                     Hash Cond: ((tenk1.thousand = tenk1_1.unique2) AND (tenk1.twothousand = tenk1_1.hundred) AND (tenk1.fivethous = tenk1_1.unique2))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: tenk1.thousand, tenk1.twothousand, tenk1.thousand
+                           ->  Seq Scan on tenk1
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: tenk1_1.unique2, tenk1_1.hundred, tenk1_1.unique2
+                                 ->  Seq Scan on tenk1 tenk1_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 select count(*) from
   (select * from tenk1 x order by x.thousand, x.twothousand, x.fivethous) x

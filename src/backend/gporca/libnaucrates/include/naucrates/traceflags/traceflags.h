@@ -146,9 +146,6 @@ enum EOptTraceFlag
 	EopttraceApplyLeftOuter2InnerUnionAllLeftAntiSemiJoinDisregardingStats =
 		103017,
 
-	// Disable sort below Insert for Parquet tables
-	EopttraceDisableSortForDMLOnParquet = 103018,
-
 	// Do not keep an order-by, even if it is right under a DML operator
 	EopttraceRemoveOrderBelowDML = 103019,
 

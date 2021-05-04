@@ -427,7 +427,7 @@ always [never]</codeblock></p>
             <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
           connections between systems to perform their tasks. In large Greenplum Database
           deployments, cloud deployments, or deployments with a large number of segments per host,
-          these utilities may exceed the hosts' maximum threshold for unauthenticated connections.
+          these utilities may exceed the host's maximum threshold for unauthenticated connections.
           When this occurs, you receive errors such as: <codeph>ssh_exchange_identification:
             Connection closed by remote host</codeph>.</p>
       <p>To increase this connection threshold for your Greenplum Database system, update the SSH

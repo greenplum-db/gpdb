@@ -3506,22 +3506,16 @@ CDXLOperatorFactory::ParseRelationStorageType(const XMLCh *xml_val)
 	}
 
 	if (0 == XMLString::compareString(
-				 xml_val,
-				 CDXLTokens::XmlstrToken(EdxltokenRelStorageAppendOnlyParquet)))
-	{
-		return IMDRelation::ErelstorageAppendOnlyParquet;
-	}
-
-	if (0 == XMLString::compareString(
 				 xml_val, CDXLTokens::XmlstrToken(EdxltokenRelStorageExternal)))
 	{
 		return IMDRelation::ErelstorageExternal;
 	}
 
 	if (0 == XMLString::compareString(
-				 xml_val, CDXLTokens::XmlstrToken(EdxltokenRelStorageVirtual)))
+				 xml_val,
+				 CDXLTokens::XmlstrToken(EdxltokenRelStorageMixedPartitioned)))
 	{
-		return IMDRelation::ErelstorageVirtual;
+		return IMDRelation::ErelstorageMixedPartitioned;
 	}
 
 	GPOS_ASSERT(!"Unrecognized storage type");

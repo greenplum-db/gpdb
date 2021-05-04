@@ -927,6 +927,7 @@ typedef struct Join
 
 	bool		prefetch_inner; /* to avoid deadlock in MPP */
 	bool		prefetch_joinqual; /* to avoid deadlock in MPP */
+	bool		prefetch_qual; /* to avoid deadlock in MPP */
 } Join;
 
 /* ----------------

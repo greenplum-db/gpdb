@@ -73,7 +73,7 @@
             <li>libyaml</li>
             <li>zlib</li>
             <li>openldap</li>
-            <li>openssh</li>
+            <li>openssh-client</li>
             <li>openssl</li>
             <li>openssl-libs (RHEL7/Centos7)</li>
             <li>perl</li>
@@ -107,7 +107,6 @@
             <li>libyaml-0-2 </li>
             <li>zlib1g </li>
             <li>libldap-2.4-2 </li>
-            <li>openssh-client </li>
             <li>openssh-client </li>
             <li>openssl </li>
             <li>perl </li>
@@ -177,8 +176,8 @@
               <entry colname="col2">
                 <ul id="ul_us1_b4n_r4">
                   <li>150MB per host for Greenplum installation</li>
-                  <li>Approximately 300MB per segment instance for meta data</li>
-                  <li>Appropriate free space for data with disks at no more than 70% capacity</li>
+                  <li>Approximately 300MB per segment instance for metadata</li>
+                  <li>Cap disk capacity at 70% full to accommodate temporary files and prevent performance degradation</li>
                 </ul>
               </entry>
             </row>
@@ -195,7 +194,7 @@
     <topic id="topic_elb_4ss_n4b" otherprops="pivotal">
       <title>Tanzu Greenplum on DCA Systems</title>
       <body>
-        <p>Tanzu Greenplum version 6.9 and later is supported on Dell EMC DCA systems with software
+        <p>You must run Tanzu Greenplum version 6.9 or later on Dell EMC DCA systems, with software
           version 4.2.0.0 and later.</p>
       </body>
     </topic>
@@ -228,7 +227,7 @@
         directories. </p>
       <p>Greenplum Database <ph otherprops="pivotal">is supported </ph><ph otherprops="oss-only">can
           run </ph>on Amazon Web Services (AWS) servers using either Amazon instance store (Amazon
-        uses the volume names <codeph>ephemeral[0-20]</codeph>) or Amazon Elastic Block Store
+        uses the volume names <codeph>ephemeral[0-23]</codeph>) or Amazon Elastic Block Store
         (Amazon EBS) storage. If using Amazon EBS storage the storage should be RAID of Amazon EBS
         volumes and mounted with the XFS file system<ph otherprops="pivotal"> for it to be a
           supported configuration</ph>.</p>
@@ -481,8 +480,8 @@
     <topic id="topic_zkq_j5b_hbb">
       <title>Greenplum Command Center</title>
       <body>
-        <p>Tanzu Greenplum 6.8 is compatible only with Tanzu Greenplum Command Center
-          6.2 and later. See the <xref href="http://gpcc.docs.pivotal.io" format="html"
+        <p>Tanzu Greenplum 6.15 is compatible only with Tanzu Greenplum Command Center
+          6.4.0 and later. See the <xref href="http://gpcc.docs.pivotal.io" format="html"
             scope="external">Greenplum Command Center documentation</xref> for additional
           compatibility information. </p>
       </body>

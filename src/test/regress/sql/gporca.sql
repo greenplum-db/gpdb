@@ -3201,6 +3201,10 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
 ,      item_shipment_status_code
 ;
 
+-- test partioned table with no partitions
+create table no_part (a int, b int) partition by list (a) distributed by (b);
+select * from no_part;
+
 reset optimizer_trace_fallback;
 
 -- start_ignore
