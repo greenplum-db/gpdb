@@ -295,7 +295,8 @@ class GpRecoverSegmentProgram:
 
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                    self.__options.parallelDegree, forceoverwrite=True,
-                                   progressMode=self.getProgressMode())
+                                   progressMode=self.getProgressMode(),
+                                   parallelPerHost=self.__options.parallelPerHost)
 
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
@@ -409,7 +410,8 @@ class GpRecoverSegmentProgram:
                                    self.__options.parallelDegree,
                                    interfaceHostnameWarnings,
                                    forceoverwrite=True,
-                                   progressMode=self.getProgressMode())
+                                   progressMode=self.getProgressMode(),
+                                   parallelPerHost=self.__options.parallelPerHost)
 
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:
@@ -534,7 +536,10 @@ class GpRecoverSegmentProgram:
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
             raise ProgramArgumentValidationException(
-                "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
+                "Invalid parallelDegree value provided with -B argument: %d" % self.__options.parallelDegree)
+        if self.__options.parallelPerHost < 1 or self.__options.parallelPerHost > 128:
+            raise ProgramArgumentValidationException(
+                "Invalid parallelPerHost value provided with -b argument: %d" % self.__options.parallelPerHost)
 
         self.__pool = WorkerPool(self.__options.parallelDegree)
         gpEnv = GpCoordinatorEnvironment(self.__options.coordinatorDataDirectory, True)
@@ -669,7 +674,7 @@ class GpRecoverSegmentProgram:
             self.logger.info("No checksum validation necessary when there are no segments to recover.")
             return
 
-        heap_checksum = HeapChecksum(gpArray, num_workers=len(live_segments), logger=self.logger)
+        heap_checksum = HeapChecksum(gpArray, num_workers=min(self.__options.parallelDegree, len(live_segments)), logger=self.logger)
         successes, failures = heap_checksum.get_segments_checksum_settings(live_segments)
         # go forward if we have at least one segment that has replied
         if len(successes) == 0:
@@ -746,7 +751,14 @@ class GpRecoverSegmentProgram:
         addTo.add_option("-B", None, type="int", default=16,
                          dest="parallelDegree",
                          metavar="<parallelDegree>",
-                         help="Max # of workers to use for building recovery segments.  [default: %default]")
+                         help="Max number of hosts to operate on in parallel. Valid values are: 1-%d"
+                              % gp.MAX_SEGHOST_NUM_WORKERS)
+        addTo.add_option("-b", None, type="int", default=64,
+                         dest="parallelPerHost",
+                         metavar="<parallelPerHost>",
+                         help="Max number of segments per host to operate on in parallel. Valid values are: 1-%d"
+                              % gp.MAX_SEGHOST_NUM_WORKERS)
+
         addTo.add_option("-r", None, default=False, action='store_true',
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
