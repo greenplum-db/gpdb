@@ -38,24 +38,20 @@ matrix:
         - stage: test
         - stage: check-format
           os: linux
-          dist: bionic
+          dist: focal
           addons:
             apt:
-              sources:
-                - *common_sources
-                - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
-                  key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
               packages:
-                - clang-format-10
+                - clang-format-11
                 - parallel
           before_install: ~
           install: ~
           before_script: ~
           after_script: ~
           script:
-            - env CLANG_FORMAT=clang-format-10 src/tools/fmt gen
+            - env CLANG_FORMAT=clang-format-11 src/tools/fmt gen
             - git diff --exit-code
-            - env CLANG_FORMAT=clang-format-10 src/tools/fmt chk
+            - env CLANG_FORMAT=clang-format-11 src/tools/fmt chk
 
 stages:
   - check-format
