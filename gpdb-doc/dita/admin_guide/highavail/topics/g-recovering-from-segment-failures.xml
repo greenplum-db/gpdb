@@ -28,7 +28,7 @@
         <li id="ki155646">After the host is online and you can connect to it, run the <codeph><xref
               href="../../../utility_guide/ref/gprecoverseg.xml"
             >gprecoverseg</xref></codeph> utility from the master host to reactivate the failed
-          segment instances and start the process of sycnronizing the master and mirror instances.
+          segment instances and start the process of synchronizing the master and mirror instances.
           For example:<codeblock>$ gprecoverseg</codeblock>
         </li>
         <li id="ki158500">The recovery process brings up the failed segments and identifies the

@@ -59,14 +59,12 @@
             <row>
               <entry colname="col1">ROW SHARE</entry>
               <entry colname="col2">
-                <codeph>SELECT...FOR <varname>lock_strength</varname></codeph><p>See <xref
-                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
+                <codeph>SELECT...FOR <varname>lock_strength</varname></codeph></entry>
               <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
               <entry colname="col1">ROW EXCLUSIVE</entry>
-              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph><p>See <xref
-                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
+              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph></entry>
               <entry colname="col3">SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
@@ -94,8 +92,7 @@
               <entry colname="col1">EXCLUSIVE</entry>
               <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>,
                   <codeph>SELECT...FOR <varname>lock_strength</varname></codeph>, <codeph>REFRESH
-                  MATERIALIZED VIEW CONCURRENTLY</codeph><p>See <xref href="#topic2/lock_note"
-                    format="dita">Note</xref>.</p></entry>
+                  MATERIALIZED VIEW CONCURRENTLY</codeph></entry>
               <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
                 ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
