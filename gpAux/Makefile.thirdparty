@@ -20,7 +20,6 @@ ifeq "$(BLD_ARCH)" ""
 BLD_ARCH:=$(shell $(BLD_TOP)/releng/set_bld_arch.sh)
 endif
 
-aix7_ppc_64_BLD_BITS=64
 rhel6_x86_64_BLD_BITS=64
 rhel7_x86_64_BLD_BITS=64
 rhel8_x86_64_BLD_BITS=64
@@ -110,9 +109,6 @@ BLD_ZLIB-1.2.3_INCDIR=$(BLD_ZLIB_HOME)/include
 .PHONY: thirdparty-dist thirdparty-dist-base thirdparty-dist-exceptions
 
 BLD_DYLIB_NAME=so
-ifeq "$(findstring aix,$(BLD_ARCH))" "aix"
-BLD_DYLIB_NAME=a
-endif
 
 ifneq "$(wildcard $(BLD_THIRDPARTY_LIB_DIR))" ""
 BLD_THIRDPARTY_BASE_SHARED_OBJECTS_DIRS=$(shell find $(BLD_THIRDPARTY_LIB_DIR) -type d)

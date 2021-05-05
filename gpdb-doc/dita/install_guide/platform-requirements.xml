@@ -292,8 +292,6 @@
           <li class="- topic/li ">Red Hat Enterprise Linux x86_64 8.x (RHEL 8)</li>
           <li>Ubuntu 18.04 LTS</li>
           <li>SUSE Linux Enterprise Server x86_64 12 (SLES 12)</li>
-          <!-- li dir="ltr">AIX 7.2 (64-bit) (Client and Load Tools only)</li>
-          <li id="pm445742" class="- topic/li ">SuSE Linux Enterprise Server x86_64 SLES 11</li> -->
           <li dir="ltr">Windows 10 (32-bit and 64-bit)</li>
           <li dir="ltr">Windows 8 (32-bit and 64-bit)</li>
           <li>Windows Server 2012 (32-bit and 64-bit)</li>
