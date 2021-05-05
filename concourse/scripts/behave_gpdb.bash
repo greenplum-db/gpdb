@@ -27,6 +27,11 @@ function gen_env(){
     chmod a+x /opt/run_test.sh
 }
 
+function setup_behave() {
+    dep_dir="${1:-/opt/greenplum-db-test-deps}"
+    [[ -f /usr/local/greenplum-db-devel/ext/python/bin/behave ]] || cp -a ${dep_dir}/behave/* /usr/local/greenplum-db-devel/ext/python
+}
+
 function _main() {
 
     if [ -z "${BEHAVE_TAGS}" ] && [ -z "${BEHAVE_FLAGS}" ]; then
@@ -35,6 +40,7 @@ function _main() {
     fi
 
     time install_gpdb
+    time setup_behave
     time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 
     # Run inside a subshell so it does not pollute the environment after

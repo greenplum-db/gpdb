@@ -62,6 +62,15 @@ run:
         '"
     done <cluster_env_files/etc_hostfile
 
+    # install dependencies
+    while read LINE; do
+        host=$(echo $LINE | awk '{ print $3 }')
+        ssh -n $host "sudo bash -c '
+            cp -a /opt/greenplum-db-test-deps/behave/* /usr/local/greenplum-db-devel/ext/python
+            sudo chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel/ext/python
+        '"
+    done <cluster_env_files/etc_hostfile
+
     # start cluster back up
     ssh -n mdw "
         source /usr/local/greenplum-db-devel/greenplum_path.sh
@@ -74,5 +83,3 @@ run:
         $CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\"
     "
 
-    # Refresh the Concourse container cache with the updated contents
-    # from the CCP mdw node.
