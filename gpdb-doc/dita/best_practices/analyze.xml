@@ -4,7 +4,7 @@
   <title>Updating Statistics with ANALYZE</title>
   <body>
     <p>The most important prerequisite for good query performance is to begin with accurate
-      statistics for the tables. Updating stastistics with the <codeph>ANALYZE</codeph> statement
+      statistics for the tables. Updating statistics with the <codeph>ANALYZE</codeph> statement
       enables the query planner to generate optimal query plans. When a table is analyzed,
       information about the data is stored in the system catalog tables. If the stored information
       is out of date, the planner can generate inefficient plans.</p>
