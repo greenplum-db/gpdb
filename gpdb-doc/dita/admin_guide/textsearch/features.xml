@@ -179,7 +179,7 @@ SELECT numnode('foo &amp; bar'::tsquery);
               value (the substitute) within the current
                 <codeph><i>query</i></codeph> value. For example:</p>
             <codeblock>CREATE TABLE aliases (id int, t tsquery, s tsquery);
-INSERT INTO aliases VALUES('a', 'c');
+INSERT INTO aliases VALUES(1, 'a', 'c');
 
 SELECT ts_rewrite('a &amp; b'::tsquery, 'SELECT t,s FROM aliases');
  ts_rewrite
