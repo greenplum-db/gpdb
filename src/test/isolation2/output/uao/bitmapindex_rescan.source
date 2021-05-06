@@ -1,3 +1,7 @@
+-- start_ignore
+drop table if exists bir;
+drop table if exists yolo cascade;
+-- end_ignore
 create table bir (a int, b int) distributed by (a);
 CREATE
 insert into bir select i, i from generate_series(1, 5) i;
