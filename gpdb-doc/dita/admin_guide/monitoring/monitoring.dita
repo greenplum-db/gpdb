@@ -110,9 +110,9 @@ WHERE preferred_role &lt;&gt; role;</codeblock></p>
                                 <entry>
                                     <p>When the segments are not running in their preferred role,
                                         hosts have uneven numbers of primary segments on each host,
-                                        implying that processing is skewed. Wait for a potential
-                                        window and restart the database to bring the segments into
-                                        their preferred roles.</p>
+                                        implying that processing is skewed. Run <codeph>gprecoverseg
+                                            -r</codeph> to bring the segments back into their
+                                        preferred roles.</p>
                                 </entry>
                             </row>
                             <row>
