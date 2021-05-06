@@ -108,14 +108,14 @@ FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
 (6 rows)
 </codeblock></p></li>
           <li>Run a <codeph>gpssh</codeph> command to check file sizes across all of the segment
-            nodes in the system. Replace <codeph>&lt;OID&gt;</codeph> with the OID of the database
-            from the prior
-              command:<codeblock>[gpadmin@mdw kend]$ gpssh -f ~/hosts -e \
-    "du -b /data[1-2]/primary/gpseg*/base/<varname>&lt;OID&gt;</varname>/pgsql_tmp/*" | \
+          nodes in the system. Replace <codeph>&lt;OID&gt;</codeph> with the OID of the database
+          from the prior
+            command:<codeblock>[gpadmin@mdw kend]$ gpssh -f ~/hosts -e \
+    "du -b /data[1-2]/primary/gpseg*/base/pgsql_tmp/*" | \
     grep -v "du -b" | sort | awk -F" " '{ arr[$1] = arr[$1] + $2 ; tot = tot + $2 }; END \
     { for ( i in arr ) print "Segment node" i, arr[i], "bytes (" arr[i]/(1024**3)" GB)"; \
     print "Total", tot, "bytes (" tot/(1024**3)" GB)" }' -</codeblock><p>Example
-              output:<codeblock>Segment node[sdw1] 2443370457 bytes (2.27557 GB)
+            output:<codeblock>Segment node[sdw1] 2443370457 bytes (2.27557 GB)
 Segment node[sdw2] 1766575328 bytes (1.64525 GB)
 Segment node[sdw3] 1761686551 bytes (1.6407 GB)
 Segment node[sdw4] 1780301617 bytes (1.65804 GB)
@@ -124,18 +124,18 @@ Segment node[sdw6] 1830073754 bytes (1.70439 GB)
 Segment node[sdw7] 1767310099 bytes (1.64594 GB)
 Segment node[sdw8] 1765105802 bytes (1.64388 GB)
 Total 14856967207 bytes (13.8366 GB)</codeblock></p><p>If
-              there is a <i>significant and sustained</i> difference in disk usage, then the queries
-              being executed should be investigated for possible skew (the example output above does
-              not reveal significant skew). In monitoring systems, there will always be some skew,
-              but often it is <i>transient</i> and will be <i>short in duration</i>. </p></li>
+            there is a <i>significant and sustained</i> difference in disk usage, then the queries
+            being executed should be investigated for possible skew (the example output above does
+            not reveal significant skew). In monitoring systems, there will always be some skew, but
+            often it is <i>transient</i> and will be <i>short in duration</i>. </p></li>
           <li>If significant and sustained skew appears, the next task is to identify the offending
             query. <p>The command in the previous step sums up the entire node. This time, find the
               actual segment directory. You can do this from the master or by logging into the
               specific node identified in the previous step. Following is an example run from the
-              master. </p><p>This example looks specifically for sort files. Not all spill files or
-              skew situations are caused by sort files, so you will need to customize the
-              command:<codeblock>$ gpssh -f ~/hosts -e 
-    "ls -l /data[1-2]/primary/gpseg*/base/19979/pgsql_tmp/*" 
+              master. </p><p>This example looks specifically for sort files. Not all spill files or skew situations are caused
+            by sort files, so you will need to customize the
+            command:<codeblock>$ gpssh -f ~/hosts -e 
+    "ls -l /data[1-2]/primary/gpseg*/base/pgsql_tmp/*" 
     | grep -i sort | awk '{sub(/base.*tmp\//, ".../", $10); print $1,$6,$10}' | sort -k2 -n</codeblock></p><p>Here
               is output from this command:
               <codeblock>[sdw1] 288718848
@@ -165,13 +165,12 @@ Total 14856967207 bytes (13.8366 GB)</codeblock></p><p>If
                 <codeph>sdw8</codeph> is the culprit, as its sort files are larger than the others
               in the output.</p></li>
           <li>Log in to the offending node with <codeph>ssh</codeph> and become root. Use the
-              <codeph>lsof</codeph> command to find the PID for the process that owns one of the
-            sort
-            files:<codeblock>[root@sdw8 ~]# lsof /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1
+            <codeph>lsof</codeph> command to find the PID for the process that owns one of the sort
+          files:<codeblock>[root@sdw8 ~]# lsof /data2/primary/gpseg45/base/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1
 COMMAND  PID    USER    FD   TYPE DEVICE  SIZE        NODE        NAME
-postgres 15673  gpadmin 11u  REG  8,48    1073741824  64424546751 /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1</codeblock>The
-            PID, <codeph>15673</codeph>, is also part of the file name, but this may not always be
-            the case.</li>
+postgres 15673  gpadmin 11u  REG  8,48    1073741824  64424546751 /data2/primary/gpseg45/base/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1</codeblock>The
+          PID, <codeph>15673</codeph>, is also part of the file name, but this may not always be the
+          case.</li>
           <li>Use the <codeph>ps</codeph> command with the PID to identify the database and
             connection
             information:<codeblock>[root@sdw8 ~]# ps -eaf | grep 15673

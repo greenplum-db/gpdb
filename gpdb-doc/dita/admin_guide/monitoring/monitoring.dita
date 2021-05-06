@@ -180,12 +180,10 @@ FROM gp_master_mirroring;</codeblock></p>
                                         <codeblock>SELECT count(*) FROM gp_segment_configuration;</codeblock></p>
                                 </entry>
                                 <entry>
-                                    <p>If this query fails the active master may be down. Try again
-                                        several times and then inspect the active master manually.
-                                        If the active master is down, reboot or power cycle the
-                                        active master to ensure no processes remain on the active
-                                        master and then trigger the activation of the standby
-                                        master.</p>
+                                    <p>If this query fails, the active master may be down. Try to
+                                        start the database on the original master if the server is
+                                        up and running. If that fails, try to activate the standby
+                                        master as master.</p>
                                 </entry>
                             </row>
                         </tbody>
