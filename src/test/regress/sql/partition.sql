@@ -3842,3 +3842,26 @@ copy exchange_part from STDIN DELIMITER as '|';
 select * from exchange_part;
 drop table exchange_part;
 drop table exchange1;
+
+-- check if partition names having keywords (reserved, non-reserved and
+-- unclassified) are properly quoted when dumped with the quote_all_identifiers
+-- GUC set. For a comprehensive list, please refer:
+-- https://www.postgresql.org/docs/8.3/sql-keywords-appendix.html
+SET quote_all_identifiers TO on;
+CREATE TABLE t_quote_test (a int, b int, c int, d int, e text)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        SUBPARTITION BY RANGE (c)
+            SUBPARTITION TEMPLATE (
+            START (1) END (2) EVERY (1),
+            DEFAULT SUBPARTITION "current" )
+        SUBPARTITION BY LIST (e)
+            SUBPARTITION TEMPLATE (
+            SUBPARTITION "at" VALUES ('val1'),
+            SUBPARTITION "window" VALUES ('val2'),
+            DEFAULT SUBPARTITION dsp )
+        ( START (2002) END (2003) EVERY (1),
+        DEFAULT PARTITION dp );
+SELECT pg_get_partition_def('t_quote_test'::regclass, true, true);
+DROP TABLE t_quote_test;
+RESET quote_all_identifiers;

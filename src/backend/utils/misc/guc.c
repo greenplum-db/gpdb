@@ -1197,6 +1197,15 @@ static struct config_bool ConfigureNamesBool[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"quote_all_identifiers", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("When generating SQL fragments, quote all identifiers."),
+			NULL,
+		},
+		&quote_all_identifiers,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
