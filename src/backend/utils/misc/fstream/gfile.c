@@ -407,7 +407,7 @@ gz_file_write(gfile_t *fd, void *ptr, size_t size)
 	do
 	{
 		/*
-		 * we do not wish that the size of the input buffer to  the deflate engine, will be greater
+		 * we do not wish that the size of the input buffer to the deflate engine, will be greater
 		 * than the recomended COMPRESSION_BUFFER_SIZE.
 		 */
 		one_iter_compress = (left_to_compress > COMPRESSION_BUFFER_SIZE) ? COMPRESSION_BUFFER_SIZE : left_to_compress;
@@ -522,9 +522,11 @@ struct zstdlib_stuff
 	unsigned char in_buffer[COMPRESSION_BUFFER_SIZE];
 	unsigned char out_buffer[COMPRESSION_BUFFER_SIZE];
 };
+/* Defined in later version 1.4.8 of zstd.h */
 enum compress_mode
 {
 	ZSTD_CONTINUE_FLUSH = 0,
+	ZSTD_FLUSH_FLUSH = 1,
 	ZSTD_END_FLUSH = 2,
 };
 static ssize_t
@@ -537,7 +539,7 @@ zstd_file_read(gfile_t* fd, void* ptr, size_t len)
 		size_t	ret;
 		/*
 		 * 'out->dst' is our output buffer.
-		 * 'pos' is a pointer to the next pos in 'out_buffer'
+		 * 'pos' is a size_t value equal to the next pos in 'out_buffer'
 		 * 'out_size' is num bytes currently read out of 'out_buffer'
 		 *
 		 * if s is >0 we have data in 'out.dst' that we didn't write
@@ -579,10 +581,10 @@ zstd_file_read(gfile_t* fd, void* ptr, size_t len)
 			zstd->in_size += s;
 		}
 
-		/* size of bytes at next in */
+		/* size of bytes at next decompression */
 		zstd->in.size = zstd->in_size;
 
-		/* remaining free space at next out */
+		/* remaining free space at next decompression */
 		zstd->out.size = sizeof zstd->out_buffer;
 
 		/* decompress */
@@ -607,6 +609,8 @@ zstd_file_read(gfile_t* fd, void* ptr, size_t len)
 		}
 	}
 }
+/* In later version we can use ZSTD_compressStream2 with mode parameter,
+ * but in order to coordinate with earlier version, we use the following two functions instead */
 static inline size_t zstd_compression_with_mode(ZSTD_CStream* zcs, ZSTD_outBuffer* output, ZSTD_inBuffer* input, int mode)
 {
 	if(mode != ZSTD_END_FLUSH)
@@ -648,7 +652,7 @@ zstd_file_write_one_chunk(gfile_t *fd, int mode)
 		finished = (mode == ZSTD_END_FLUSH) ? (remain == 0) : (zstd->in.pos == zstd->in.size);
 	} while (!finished);
 	/*
-	 * if the ZSTD_compressStream2 engine filled all the output buffer, it may have more data, so we must try again
+	 * if the ZSTD_compressStream or ZSTD_endStream engine filled all the output buffer, it may have more data, so we must try again
 	 */
 	return 0;
 }
@@ -664,8 +668,8 @@ zstd_file_write(gfile_t *fd, void *ptr, size_t size)
 	do
 	{
 		/*
-		 * we do not wish that the size of the input buffer to the ZSTD_compressStream2 engine, will be greater
-		 * than the recomended COMPRESSION_BUFFER_SIZE.
+		 * we do not wish that the size of the input buffer to the ZSTD_compressStream engine, will be greater
+		 * than the recommended COMPRESSION_BUFFER_SIZE.
 		 */
 		one_iter_compress = (left_to_compress > COMPRESSION_BUFFER_SIZE) ? COMPRESSION_BUFFER_SIZE : left_to_compress;
 
@@ -751,7 +755,7 @@ zstd_file_open(gfile_t *fd)
 			gfile_printf_then_putc_newline("ZSTD_createCStream() failed");
 			return 1;
 		}
-		if(ZSTD_isError(ZSTD_initCStream(fd->u.zstd->cstream, 3)))
+		if(ZSTD_isError(ZSTD_initCStream(fd->u.zstd->cstream, ZSTD_CLEVEL_DEFAULT)))
 		{
 			gfile_printf_then_putc_newline("ZSTD_initCStream failed");
 			return 1;
