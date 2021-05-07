@@ -1335,7 +1335,7 @@ setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
 	/*
 	 * Quote all identifiers, if requested.
 	 */
-	if (quote_all_identifiers && AH->remoteVersion >= 90100)
+	if (quote_all_identifiers && AH->remoteVersion >= 80300)
 		ExecuteSqlStatement(AH, "SET quote_all_identifiers = true");
 
 	/*
