@@ -98,6 +98,9 @@ matrix:
           dist: focal
           addons:
             apt:
+              sources:
+                - sourceline: 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main'
+                  key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
               packages:
                 - ninja-build
                 - clang-11
@@ -120,6 +123,9 @@ matrix:
           dist: focal
           addons:
             apt:
+              sources:
+                - sourceline: 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main'
+                  key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
               packages:
                 - clang-format-11
                 - parallel
