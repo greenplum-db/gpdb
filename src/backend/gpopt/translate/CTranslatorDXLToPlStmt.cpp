@@ -3320,7 +3320,7 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 
 	TranslatePlanCosts(partition_selector_dxlnode, plan);
 
-	CDXLNode *child_dxlnode = NULL;
+	CDXLNode *child_dxlnode = nullptr;
 	CDXLTranslationContextArray *child_contexts =
 		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 
@@ -3332,23 +3332,23 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 
 	Plan *child_plan = TranslateDXLOperatorToPlan(
 		child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-	GPOS_ASSERT(NULL != child_plan && "child plan cannot be NULL");
+	GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
 
 	partition_selector->plan.lefttree = child_plan;
 
 	child_contexts->Append(&child_context);
 
 	CDXLNode *project_list_dxlnode = (*partition_selector_dxlnode)[0];
-	plan->targetlist =
-		TranslateDXLProjList(project_list_dxlnode, NULL /*base_table_context*/,
-							 child_contexts, output_context);
+	plan->targetlist = TranslateDXLProjList(project_list_dxlnode,
+											nullptr /*base_table_context*/,
+											child_contexts, output_context);
 
 	CMDIdGPDB *mdid =
 		CMDIdGPDB::CastMdid(partition_selector_dxlop->GetRelMdId());
 	gpdb::RelationWrapper relation = gpdb::GetRelation(mdid->Oid());
 
 	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt(
-		m_mp, NULL /*base_table_context*/, child_contexts, output_context,
+		m_mp, nullptr /*base_table_context*/, child_contexts, output_context,
 		m_dxl_to_plstmt_context);
 
 	// paramid
@@ -3471,7 +3471,7 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 			1;
 		RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
 			phy_append_dxlop->GetDXLTableDesc(), index, &base_table_context);
-		GPOS_ASSERT(NULL != rte);
+		GPOS_ASSERT(nullptr != rte);
 		rte->requiredPerms |= ACL_SELECT;
 
 		m_dxl_to_plstmt_context->AddRTE(rte);

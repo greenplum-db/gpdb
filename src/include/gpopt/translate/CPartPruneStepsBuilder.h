@@ -47,7 +47,7 @@ private:
 						   CMappingColIdVarPlStmt *colid_var_mapping,
 						   CTranslatorDXLToScalar *translator_dxl_to_scalar);
 
-	CPartPruneStepsBuilder(const CPartPruneStepsBuilder &) = delete;
+	CPartPruneStepsBuilder(const CPartPruneStepsBuilder &) = default;
 
 public:
 	// dtor
