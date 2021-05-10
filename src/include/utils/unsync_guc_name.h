@@ -440,7 +440,6 @@
 		"random_page_cost",
 		"readable_external_table_timeout",
 		"gpfdist_retry_timeout",
-		"gpload_enable_custom_format",
 		"repl_catchup_within_range",
 		"resource_cleanup_gangs_on_wait",
 		"resource_scheduler",

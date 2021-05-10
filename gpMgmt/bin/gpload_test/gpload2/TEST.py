@@ -437,7 +437,6 @@ class PSQLError(Exception):
 
 # case numbers that need to do some modify to avoid compare fail
 Modify_Output_Case = [44]
-Modify_Dir2POS_Case = [37]
 
 def alterOutFile(num,old_str,new_str):
     file = 'query'+str(num)+'.out'
@@ -487,10 +486,6 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
             pat2 = r'[a-zA-Z0-9/\_-]*/data_file'  # file location
             newpat2 = 'pathto/data_file'
             alterOutFile(num, [pat1,pat2], [newpat1,newpat2])
-        if num in Modify_Dir2POS_Case:
-            pat = r'gpfdist://[a-zA-Z0-9:./\_-]*/data_file.txt'  # file location
-            newpat = 'LOCATION'
-            alterOutFile(num, [pat], [newpat])
         self.check_result(file)
 
     def test_00_gpload_formatOpts_setup(self):

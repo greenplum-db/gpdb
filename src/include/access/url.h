@@ -114,6 +114,5 @@ extern size_t url_custom_fwrite(void *ptr, size_t size, URL_FILE *file, CopyStat
 /* GUC */
 extern int readable_external_table_timeout;
 extern int gpfdist_retry_timeout;
-extern int gpload_enable_custom_format;
 
 #endif
