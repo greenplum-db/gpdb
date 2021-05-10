@@ -6,6 +6,7 @@
 
 -- set these values purely to cut down test time, as default ts trigger is
 -- every min and 5 retries
+include: helpers/server_helpers.sql;
 alter system set gp_fts_probe_interval to 10;
 alter system set gp_fts_probe_retries to 0;
 select pg_reload_conf();
