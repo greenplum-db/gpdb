@@ -586,8 +586,8 @@ rm privkey.pem</codeblock></li>
           </ul></p>
         <p>If Greenplum Database master mirroring is enabled with SSL client authentication, the SSL
           server files <i>should not be placed</i> in the default directory
-            <codeph>$MASTER_DATA_DIRECTORY</codeph>. If an <codeph>initstandby</codeph> operation is
-          performed, the contents of <codeph>$MASTER_DATA_DIRECTORY</codeph> is copied from the
+            <codeph>$MASTER_DATA_DIRECTORY</codeph>. If an <codeph>gpinitstandby</codeph> operation
+          is performed, the contents of <codeph>$MASTER_DATA_DIRECTORY</codeph> is copied from the
           master to the standby master and the incorrect SSL key, and cert files (the master files,
           and not the standby master files) will prevent standby master start up. </p>
         <p>You can specify a different directory for the location of the SSL server files with the

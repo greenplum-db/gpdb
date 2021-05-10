@@ -96,7 +96,7 @@
         <ul>
           <li id="jb176751"><b>Are the optimizer's estimates close to reality?</b> Run
               <codeph>EXPLAIN ANALYZE</codeph> and see if the number of rows the optimizer estimated
-            is close to the number of rows the query operation returned .</li>
+            is close to the number of rows the query operation returned.</li>
           <li id="jb158716"><b>Are selective predicates applied early in the plan?</b> The most
             selective filters should be applied early in the plan so fewer rows move up the plan
             tree.</li>

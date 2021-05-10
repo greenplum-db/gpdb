@@ -69,7 +69,7 @@ ThirdKey: "This is a string: not a mapping"</codeblock>
 - five scalar values
 # inline sequence
 [this, is, a list, with, five scalar values]</codeblock>
-      <p>A <i>mapping</i> is used to pair up data values with indentifiers called <i>keys</i>.
+      <p>A <i>mapping</i> is used to pair up data values with identifiers called <i>keys</i>.
         Mappings use a colon and space (<codeph>: </codeph>) for each <codeph>key: value</codeph>
         pair, or can also be specified inline as a comma-separated list within curly braces. The
           <i>key</i> is used as an index for retrieving data from a mapping. </p>

@@ -81,9 +81,9 @@ CREATE TABLE foo(i int);
       <p>These tablespaces use the default system location, the data directory locations created at
         system initialization.</p>
       <p>To see tablespace information, use the <codeph>pg_tablespace</codeph> catalog table to get
-        the objecct ID (OID) of the tablespace and then use
-          <codeph>gp_tablespace_location()</codeph> function to display the tablespace directories.
-        This is an example that lists one user-defined tablespace, <codeph>myspace</codeph>:</p>
+        the object ID (OID) of the tablespace and then use <codeph>gp_tablespace_location()</codeph>
+        function to display the tablespace directories. This is an example that lists one
+        user-defined tablespace, <codeph>myspace</codeph>:</p>
       <p>
         <codeblock>SELECT oid, * FROM pg_tablespace ;
 

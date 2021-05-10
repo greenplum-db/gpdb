@@ -290,14 +290,16 @@ FROM gp_master_mirroring;</codeblock></p>
                         </thead>
                         <tbody>
                             <row>
-                                <entry>Run catalog consistency checks to ensure the catalog on each
-                                    host in the cluster is consistent and in a good
-                                        state.<p>Recommended frequency: weekly</p><p>Severity:
-                                        IMPORTANT</p></entry>
-                                <entry>Run the Greenplum
-                                    <codeph>gpcheckcat</codeph> utility in each
-                                    database:<codeblock>gpcheckcat -O</codeblock></entry>
-                                <entry>Run repair scripts for any issues detected.</entry>
+                                <entry>Run catalog consistency checks in each database to ensure the
+                                    catalog on each host in the cluster is consistent and in a good
+                                        state.<p>You may run this command while the database is up
+                                        and running. </p><p>Recommended frequency:
+                                        weekly</p><p>Severity: IMPORTANT</p></entry>
+                                <entry>Run the Greenplum <codeph>gpcheckcat</codeph> utility in each
+                                        database:<codeblock>gpcheckcat -O</codeblock><note> With the
+                                            <codeph>-O</codeph> option, <codeph>gpcheckcat</codeph>
+                                        runs just 10 of its usual 15 tests.</note></entry>
+                                <entry>Run the repair scripts for any issues identified.</entry>
                             </row>
                             <row>
                                 <entry>Check for <codeph>pg_class</codeph> entries that have no

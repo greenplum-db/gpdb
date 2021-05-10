@@ -329,8 +329,8 @@
               deleted, or locked a target row, the <codeph>REPEATABLE READ</codeph> transaction
               waits for the concurrent transaction to commit or roll back the change. If the
               concurrent transaction commits the change, the <codeph>REPEATABLE READ</codeph>
-              transaction rolls back. If the concurrent transaction rolls back its change,
-                the<codeph>REPEATABLE READ</codeph> transaction can commit its changes. </li>
+              transaction rolls back. If the concurrent transaction rolls back its change, the
+                <codeph>REPEATABLE READ</codeph> transaction can commit its changes. </li>
           </ul>
         </section>
         <p id="ix141505">The default transaction isolation level in Greenplum Database is
@@ -452,7 +452,7 @@ holder_sessionid | 8
             sub-query.<codeblock>DELETE FROM t USING t1 WHERE t.c > t1.c;</codeblock></li>
         </ul>
         <p>The following table shows the concurrent <codeph>UPDATE</codeph> or
-            <codeph>DELETE</codeph> commands that are manged by the Global Deadlock Detector. For
+            <codeph>DELETE</codeph> commands that are managed by the Global Deadlock Detector. For
           example, concurrent simple <codeph>UPDATE</codeph> commands on the same table row are
           managed by the Global Deadlock Detector. For a concurrent complex <codeph>UPDATE</codeph>
           and a simple <codeph>UPDATE</codeph>, only one <codeph>UPDATE</codeph> is performed, and

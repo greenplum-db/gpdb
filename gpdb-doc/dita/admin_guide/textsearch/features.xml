@@ -2,8 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="features">
   <title>Additional Text Search Features</title>
-  <shortdesc>Greenplum Database has additional functions and operators you can
-    use to manipulate search and query vectors, and to rewite search queries. </shortdesc>
+  <shortdesc>Greenplum Database has additional functions and operators you can use to manipulate
+    search and query vectors, and to rewrite search queries. </shortdesc>
   <body>
     <p>This section contains the following subtopics:</p>
     <ul id="ul_tyj_lyw_4fb">
