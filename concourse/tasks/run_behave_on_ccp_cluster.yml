@@ -71,6 +71,20 @@ run:
         '"
     done <cluster_env_files/etc_hostfile
 
+    # This allows sudo access for gpadmin on all machines in the cluster.
+    # One use is to modify networking on the cluster machines, as is done to
+    # add/delete blackhole routes in the gprecoverseg_newhost tests.
+    SUDO_ACCESS_ON_HOSTS=${SUDO_ACCESS_ON_HOSTS:-0}
+    SUDO_MDW_USERNAME=${SUDO_MDW_USERNAME:-centos}
+    if (( $SUDO_ACCESS_ON_HOSTS )); then
+        while read LINE; do
+            host=$(echo $LINE | awk '{ print $3 }')
+            ssh -n $SUDO_MDW_USERNAME@$host "
+              sudo usermod -a -G google-sudoers gpadmin
+            "
+        done <cluster_env_files/etc_hostfile
+    fi
+
     # start cluster back up
     ssh -n mdw "
         source /usr/local/greenplum-db-devel/greenplum_path.sh

@@ -2165,6 +2165,9 @@ jobs:
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
             image: ccp-image
             params:
+              {% if test.sudo_access_on_hosts %}
+              SUDO_ACCESS_ON_HOSTS: 1
+              {% endif %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               [[ test.env ]]
             on_success:
@@ -2244,6 +2247,10 @@ jobs:
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
             image: gpdb6-ubuntu18.04-test
             params:
+              {% if test.sudo_access_on_hosts %}
+              SUDO_ACCESS_ON_HOSTS: 1
+              SUDO_MDW_USERNAME: ubuntu
+              {% endif %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               [[ test.env ]]
             on_success:
