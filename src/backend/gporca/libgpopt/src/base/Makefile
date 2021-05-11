@@ -31,7 +31,6 @@ OBJS        = CAutoOptCtxt.o \
               CCostContext.o \
               CDatumSortedSet.o \
               CDefaultComparator.o \
-              CDistributionSpecExternal.o \
               CDistributionSpecHashed.o \
               CDistributionSpecHashedNoOp.o \
               CDistributionSpecNonSingleton.o \
