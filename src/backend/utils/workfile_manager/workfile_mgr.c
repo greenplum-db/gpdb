@@ -549,7 +549,7 @@ workfile_mgr_create_set(const char *operator_name, const char *prefix, bool hold
 	if (!proc_exit_hook_registered)
 	{
 		/* register proc-exit hook to ensure temp files are dropped at exit */
-		before_shmem_exit(AtProcExit_WorkFile, 0);
+		on_shmem_exit(AtProcExit_WorkFile, 0);
 		proc_exit_hook_registered = true;
 	}
 
