@@ -48,9 +48,11 @@ CXformIndexGet2IndexScan::Exfp(CExpressionHandle &exprhdl) const
 
 	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
 	CIndexDescriptor *pindexdesc = popGet->Pindexdesc();
+	BOOL possible_ao_table = ptabdesc->IsAORowOrColTable() ||
+							 ptabdesc->RetrieveRelStorageType() ==
+								 IMDRelation::ErelstorageMixedPartitioned;
 
-	if (pindexdesc->IndexType() == IMDIndex::EmdindBtree &&
-		ptabdesc->IsAORowOrColTable())
+	if (pindexdesc->IndexType() == IMDIndex::EmdindBtree && possible_ao_table)
 	{
 		// we don't support btree index scans on AO tables
 		return CXform::ExfpNone;

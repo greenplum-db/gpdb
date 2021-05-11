@@ -17,7 +17,8 @@
       <ol>
         <li id="ki155791">Run the <codeph>gpactivatestandby</codeph> utility from the standby master
           host you are activating. For
-            example:<codeblock>$ gpactivatestandby -d /data/master/gpseg-1</codeblock><p>Where
+            example:<codeblock>$ export PGPORT=5432
+$ gpactivatestandby -d /data/master/gpseg-1</codeblock><p>Where
               <codeph>-d</codeph> specifies the data directory of the master host you are
             activating.</p><p>After you activate the standby, it becomes the <i>active</i> or
               <i>primary</i> master for your Greenplum Database array. </p></li>

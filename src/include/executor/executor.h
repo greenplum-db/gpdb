@@ -647,7 +647,7 @@ extern void CheckSubscriptionRelkind(char relkind, const char *nspname,
 									 const char *relname);
 
 extern void fake_outer_params(JoinState *node);
-extern void ExecPrefetchJoinQual(JoinState *node);
+extern void ExecPrefetchQual(JoinState *node, bool isJoinQual);
 
 /* Additions for MPP Slice table utilities defined in execUtils.c */
 extern GpExecIdentity getGpExecIdentity(QueryDesc *queryDesc,

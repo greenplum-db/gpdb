@@ -370,17 +370,17 @@ ALTER TEXT SEARCH CONFIGURATION russian
         <codeblock>SELECT plainto_tsquery('supernova star');
  plainto_tsquery
 -----------------
- 'sn'
+ 'supernova' &amp; 'star'
 
 SELECT to_tsvector('supernova star');
  to_tsvector
 -------------
- 'sn':1</codeblock>
+ 'star':2 'supernova':1</codeblock>
         <p>In principle, one can use <codeph>to_tsquery</codeph> if you quote the argument:</p>
         <codeblock>SELECT to_tsquery('''supernova star''');
  to_tsquery
 ------------
- 'sn'</codeblock>
+ 'supernova' &amp; 'star'</codeblock>
         <p>Notice that <codeph>supernova star</codeph> matches <codeph>supernovae stars</codeph> in
             <codeph>thesaurus_astro</codeph> because we specified the <codeph>english_stem</codeph>
           stemmer in the <codeph>thesaurus</codeph> definition. The stemmer removed the
@@ -392,7 +392,7 @@ SELECT to_tsvector('supernova star');
 SELECT plainto_tsquery('supernova star');
        plainto_tsquery
 -----------------------------
- 'sn' &amp; 'supernova' &amp; 'star'</codeblock>
+ 'supernova' &amp; 'star'</codeblock>
       </sectiondiv>
     </section>
     <section id="ispell">

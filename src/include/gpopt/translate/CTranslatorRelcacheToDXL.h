@@ -237,9 +237,9 @@ private:
 									 CDouble *null_freq);
 
 	// get the relation columns
-	static CMDColumnArray *RetrieveRelColumns(
-		CMemoryPool *mp, CMDAccessor *md_accessor, Relation rel,
-		IMDRelation::Erelstoragetype rel_storage_type);
+	static CMDColumnArray *RetrieveRelColumns(CMemoryPool *mp,
+											  CMDAccessor *md_accessor,
+											  Relation rel);
 
 	// return the dxl representation of the column's default value
 	static CDXLNode *GetDefaultColumnValue(CMemoryPool *mp,
@@ -295,9 +295,6 @@ private:
 	// return the check constraints defined on the relation with the given oid
 	static IMdIdArray *RetrieveRelCheckConstraints(CMemoryPool *mp, OID oid);
 
-	// does attribute number correspond to a transaction visibility attribute
-	static BOOL IsTransactionVisibilityAttribute(INT attrnum);
-
 	// does relation type have system columns
 	static BOOL RelHasSystemColumns(char rel_kind);
 
@@ -327,6 +324,9 @@ private:
 
 	static IMdIdArray *RetrieveIndexPartitions(CMemoryPool *mp, OID rel_oid);
 
+	static IMDRelation::Erelstoragetype RetrieveStorageTypeForPartitionedTable(
+		Relation rel);
+
 public:
 	// retrieve a metadata object from the relcache
 	static IMDCacheObject *RetrieveObject(CMemoryPool *mp,
@@ -339,7 +339,7 @@ public:
 
 	// add system columns (oid, tid, xmin, etc) in table descriptors
 	static void AddSystemColumns(CMemoryPool *mp, CMDColumnArray *mdcol_array,
-								 Relation rel, BOOL is_ao_table);
+								 Relation rel);
 
 	// retrieve an index from the relcache
 	static IMDIndex *RetrieveIndex(CMemoryPool *mp, CMDAccessor *md_accessor,

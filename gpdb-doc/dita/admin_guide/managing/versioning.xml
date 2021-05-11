@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="kg1382433">About the Greenplum Database Release Version Number</title>
-  <shortdesc>Greenplum Database version numbers and they way they change identify
+  <shortdesc>Greenplum Database version numbers and the way they change identify
     what has been modified from one Greenplum Database release to the next.</shortdesc>
   <body>
     <p>A Greenplum Database release version number takes the format

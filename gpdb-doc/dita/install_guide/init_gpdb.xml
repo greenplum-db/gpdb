@@ -29,15 +29,15 @@
       <p>Because Greenplum Database is distributed, the process for initializing a Greenplum
         Database management system (DBMS) involves initializing several individual PostgreSQL
         database instances (called <i>segment instances</i> in Greenplum).</p>
-      <p>Each database instance (the coordinator and all segments) must be initialized across all of the
+      <p>Each database instance (the master and all segments) must be initialized across all of the
         hosts in the system in such a way that they can all work together as a unified DBMS.
         Greenplum provides its own version of <codeph>initdb</codeph> called <codeph><xref
             href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
             >gpinitsystem</xref></codeph>, which takes care of initializing the database on the
-        coordinator and on each segment instance, and starting each instance in the correct order. </p>
+        master and on each segment instance, and starting each instance in the correct order. </p>
       <p>After the Greenplum Database database system has been initialized and started, you can then
         create and manage databases as you would in a regular PostgreSQL DBMS by connecting to the
-        Greenplum coordinator.</p>
+        Greenplum master.</p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -53,20 +53,20 @@
         <li id="jm138493">Create your Greenplum Database system configuration file. See <xref
             href="#topic5" type="topic" format="dita"/>.</li>
         <li id="jm138497">By default, Greenplum Database will be initialized using the locale of the
-          coordinator host system. Make sure this is the correct locale you want to use, as some locale
+          master host system. Make sure this is the correct locale you want to use, as some locale
           options cannot be changed after initialization. See <xref href="localization.xml#topic1"
             type="topic" format="dita"/> for more information.</li>
-        <li id="jm143805">Run the Greenplum Database initialization utility on the coordinator host. See
+        <li id="jm143805">Run the Greenplum Database initialization utility on the master host. See
             <xref href="#topic6" type="topic" format="dita"/>.</li>
         <li>Set the Greenplum Database timezone. See <xref href="#topic_xkd_d1q_l2b" format="dita"
           />.</li>
         <li>Set environment variables for the Greenplum Database user. See <xref href="#topic8"
             format="dita"/>.</li>
       </ol>
-      <p>When performing the following initialization tasks, you must be logged into the coordinator host
+      <p>When performing the following initialization tasks, you must be logged into the master host
         as the <codeph>gpadmin</codeph> user, and to run Greenplum Database utilities, you must
         source the <codeph>greenplum_path.sh</codeph> file to set Greenplum Database environment
-        variables. For example, if you are logged into the coordinator, run these
+        variables. For example, if you are logged into the master, run these
         commands.<codeblock>$ su - gpadmin
 $ source /usr/local/greenplum-db/greenplum_path.sh</codeblock></p>
     </body>
@@ -79,8 +79,8 @@ $ source /usr/local/greenplum-db/greenplum_path.sh</codeblock></p>
           segment instances per host by the number host addresses listed per host times the number
           of data directory locations specified in the <codeph>gpinitsystem_config</codeph>
           file.</p>
-        <p>This file should only contain <varname>segment</varname> host addresses (not the coordinator
-          or standby coordinator). For segment machines with multiple, unbonded network interfaces, this
+        <p>This file should only contain <varname>segment</varname> host addresses (not the master
+          or standby master). For segment machines with multiple, unbonded network interfaces, this
           file should list the host address names for each interface — one per line.</p>
         <note type="note">The Greenplum Database segment host naming convention is
             <varname>sdwN</varname> where <varname>sdw</varname> is a prefix and
@@ -130,8 +130,8 @@ sdw4-2</codeblock></li>
             <li id="jm138730">Open the file you just copied in a text editor. <p>Set all of the
                 required parameters according to your environment. See <codeph><xref
                     href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-                  >gpinitsystem</xref></codeph> for more information. A Greenplum Database system
-                must contain a coordinator instance and at <i>least two</i> segment instances (even if
+                    >gpinitsystem</xref></codeph> for more information. A Greenplum Database system
+                must contain a master instance and at <i>least two</i> segment instances (even if
                 setting up a single node system). </p><p>The <codeph>DATA_DIRECTORY</codeph>
                 parameter is what determines how many segments per host will be created. If your
                 segment hosts have multiple network interfaces, and you used their interface address
@@ -146,7 +146,7 @@ sdw4-2</codeblock></li>
 PORT_BASE=6000 
 declare -a DATA_DIRECTORY=(/data1/primary /data1/primary /data1/primary /data2/primary /data2/primary /data2/primary)
 MASTER_HOSTNAME=mdw 
-MASTER_DIRECTORY=/data/coordinator 
+MASTER_DIRECTORY=/data/master 
 MASTER_PORT=5432 
 TRUSTED SHELL=ssh
 CHECK_POINT_SEGMENTS=8
@@ -183,10 +183,11 @@ declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /dat
                 (<codeph>hostfile_gpinitsystem</codeph>). For
                 example:<codeblock>$ cd ~
 $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem</codeblock><p>For
-                a fully redundant system (with a standby coordinator and a <i>spread</i> mirror
-                configuration) include the <codeph>-s</codeph> and <codeph>-S</codeph> options. For
+                a fully redundant system (with a standby master and a <i>spread</i> mirror
+                configuration) include the <codeph>-s</codeph> and
+                  <codeph>--mirror-mode=spread</codeph> options. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
-  -s <varname>standby_master_hostname</varname> -S</codeblock><p>During
+  -s <varname>standby_master_hostname</varname> --mirror-mode=spread</codeblock><p>During
                 a new cluster creation, you may use the <codeph><varname>-O
                     output_configuration_file</varname></codeph> option to save the cluster
                 configuration details in a file. For
@@ -194,14 +195,17 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 output file can be edited and used at a later stage as the input file of the
                   <codeph>-I</codeph> option, to create a new cluster or to recover from a backup.
                 See <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-                  >gpinitsystem</xref> for further details.</p></li>
+                  >gpinitsystem</xref> for further details. <note>Calling
+                    <codeph>gpinitsystem</codeph> with the <codeph>-O</codeph> option does not
+                  initialize the Greenplum Database system; it merely generates and saves a file with cluster
+                  configuration details.</note></p></li>
             <li id="jm138853">The utility will verify your setup information and make sure it can
               connect to each host and access the data directories specified in your configuration.
               If all of the pre-checks are successful, the utility will prompt you to confirm your
               configuration. For
               example:<codeblock>=&gt; Continue with Greenplum creation? <b>Yy/Nn</b></codeblock></li>
             <li id="jm143919">Press <codeph>y</codeph> to start the initialization.</li>
-            <li id="jm141337">The utility will then begin setup and initialization of the coordinator
+            <li id="jm141337">The utility will then begin setup and initialization of the master
               instance and each segment instance in the system. Each segment instance is set up in
               parallel. Depending on the number of segments, this process can take a while.</li>
             <li id="jm141341">At the end of a successful setup, the utility will start your
@@ -248,7 +252,7 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
           supported timezone. Greenplum Database uses a timezone from a set of internally stored
           PostgreSQL timezones. Setting the Greenplum Database timezone prevents Greenplum Database
           from selecting a timezone each time the cluster is restarted and sets the timezone for the
-          Greenplum Database coordinator and segment instances. </p>
+          Greenplum Database master and segment instances. </p>
         <p>Use the <codeph><xref href="../utility_guide/ref/gpconfig.xml" type="topic"
               >gpconfig</xref></codeph> utility to show and set the Greenplum Database timezone. For
           example, these commands show the Greenplum Database timezone and set the timezone to
@@ -267,12 +271,12 @@ $ gpconfig -c TimeZone -v 'US/Pacific'</codeblock>You
     <body>
       <p>You must set environment variables in the Greenplum Database user
         (<codeph>gpadmin</codeph>) environment that runs Greenplum Database on the Greenplum
-        Database coordinator and standby coordinator hosts. A <codeph>greenplum_path.sh</codeph> file is
+        Database master and standby master hosts. A <codeph>greenplum_path.sh</codeph> file is
         provided in the Greenplum Database installation directory with environment variable settings
         for Greenplum Database. </p>
       <p>The Greenplum Database management utilities also require that the
           <codeph>MASTER_DATA_DIRECTORY</codeph> environment variable be set. This should point to
-        the directory created by the <codeph>gpinitsystem</codeph> utility in the coordinator data
+        the directory created by the <codeph>gpinitsystem</codeph> utility in the master data
         directory location. </p>
       <note>The <codeph>greenplum_path.sh</codeph> script changes the operating environment in order
         to support running the Greenplum Database-specific utilities. These same changes to the
@@ -291,13 +295,13 @@ $ gpconfig -c TimeZone -v 'US/Pacific'</codeblock>You
           <li id="jm145072">Add lines to this file to source the <codeph>greenplum_path.sh</codeph>
             file and set the <codeph>MASTER_DATA_DIRECTORY</codeph> environment variable. For
             example:<codeblock>source /usr/local/greenplum-db/greenplum_path.sh
-export MASTER_DATA_DIRECTORY=/data/coordinator/gpseg-1</codeblock></li>
+export MASTER_DATA_DIRECTORY=/data/master/gpseg-1</codeblock></li>
           <li id="jm145148">(Optional) You may also want to set some client session environment
             variables such as <codeph>PGPORT</codeph>, <codeph>PGUSER</codeph> and
               <codeph>PGDATABASE</codeph> for convenience. For
             example:<codeblock>export PGPORT=5432
 export PGUSER=gpadmin
-export PGDATABASE=<varname>default_login_database_name</varname></codeblock></li>
+export PGDATABASE=gpadmin</codeblock></li>
           <li>(Optional) If you use RHEL 7 or CentOS 7, add the following line to the end of the
               <codeph>.bashrc</codeph> file to enable using the <codeph>ps</codeph> command in the
               <codeph>greenplum_path.sh</codeph>
@@ -306,8 +310,8 @@ export PGDATABASE=<varname>default_login_database_name</varname></codeblock></li
           <li id="jm145155">After editing the profile file, source it to make the changes active.
             For example:<codeblock>$ source ~/.bashrc
 </codeblock></li>
-          <li id="jm145342">If you have a standby coordinator host, copy your environment file to the
-            standby coordinator as well. For
+          <li id="jm145342">If you have a standby master host, copy your environment file to the
+            standby master as well. For
             example:<codeblock>$ cd ~
 $ scp .bashrc <varname>standby_hostname</varname>:`pwd`</codeblock></li>
         </ol>

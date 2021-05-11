@@ -65,13 +65,11 @@ IMDRelation::GetStorageTypeStr(IMDRelation::Erelstoragetype rel_storage_type)
 		case ErelstorageAppendOnlyRows:
 			return CDXLTokens::GetDXLTokenStr(
 				EdxltokenRelStorageAppendOnlyRows);
-		case ErelstorageAppendOnlyParquet:
-			return CDXLTokens::GetDXLTokenStr(
-				EdxltokenRelStorageAppendOnlyParquet);
 		case ErelstorageExternal:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageExternal);
-		case ErelstorageVirtual:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageVirtual);
+		case ErelstorageMixedPartitioned:
+			return CDXLTokens::GetDXLTokenStr(
+				EdxltokenRelStorageMixedPartitioned);
 		default:
 			return nullptr;
 	}

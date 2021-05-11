@@ -306,6 +306,7 @@ vm.dirty_ratio = 10</codeblock></p>
       <p>The XFS options can also be set in the <codeph>/etc/fstab</codeph> file. This example entry
         from an <codeph>fstab</codeph> file specifies the XFS options.</p>
       <codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock>
+      <note>You must have root permission to edit the <codeph>/etc/fstab</codeph> file.</note>
     </section>
     <section id="disk_io_settings">
       <title>Disk I/O Settings</title>
@@ -314,13 +315,13 @@ vm.dirty_ratio = 10</codeblock></p>
           <p>Read-ahead value</p>
           <p>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
             16384. To verify the read-ahead value of a disk device:</p>
-          <codeblock># /sbin/blockdev --getra <varname>devname</varname></codeblock>
+          <codeblock># sudo /sbin/blockdev --getra <varname>devname</varname></codeblock>
           <p>For example:</p>
-          <codeblock># /sbin/blockdev --getra /dev/sdb</codeblock>
+          <codeblock># sudo /sbin/blockdev --getra /dev/sdb</codeblock>
           <p>To set blockdev (read-ahead) on a device:</p>
-          <codeblock># /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
+          <codeblock># sudo /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
           <p>For example:</p>
-          <codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
+          <codeblock># sudo /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
           <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
             information about using that command (<codeph>man blockdev</codeph> opens the man
             page).</p>
@@ -426,13 +427,14 @@ always [never]</codeblock></p>
             <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
           connections between systems to perform their tasks. In large Greenplum Database
           deployments, cloud deployments, or deployments with a large number of segments per host,
-          these utilities may exceed the hosts' maximum threshold for unauthenticated connections.
+          these utilities may exceed the host's maximum threshold for unauthenticated connections.
           When this occurs, you receive errors such as: <codeph>ssh_exchange_identification:
             Connection closed by remote host</codeph>.</p>
       <p>To increase this connection threshold for your Greenplum Database system, update the SSH
             <codeph>MaxStartups</codeph> and <codeph>MaxSessions</codeph> configuration parameters
           in one of the <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph>
-          SSH daemon configuration files.</p>
+          SSH daemon configuration files. <note>You must have root permission to edit these two
+            files.</note></p>
         <p>If you specify <codeph>MaxStartups</codeph> and <codeph>MaxSessions</codeph> using a
           single integer value, you identify the maximum number of concurrent unauthenticated
           connections (<codeph>MaxStartups</codeph>) and maximum number of open shell, login, or
@@ -464,14 +466,16 @@ MaxSessions 200</codeblock></p>
         example, to add the parameter <codeph>transparent_hugepage=never</codeph> to all kernels on
         a system. <ol id="ol_bxf_g3x_j1b">
           <li>Add the parameter to the <codeph>GRUB_CMDLINE_LINUX</codeph> line in the file
-            parameter in
-            <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
+              parameter in
+                <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=cl/root rd.lvm.lv=cl/swap rhgb quiet <b>transparent_hugepage=never</b>"
-GRUB_DISABLE_RECOVERY="true"</codeblock></li>
+              GRUB_DISABLE_RECOVERY="true"</codeblock><note>You
+                must have root permission to edit the <codeph>/etc/default/grub</codeph>
+                file.</note></li>
           <li>As root, run the <codeph>grub2-mkconfig</codeph> command to update the
             kernels.<codeblock># grub2-mkconfig -o /boot/grub2/grub.cfg</codeblock></li>
           <li>Reboot the system.</li>
@@ -545,30 +549,32 @@ server 10.6.220.20</codeblock></li>
         automate the tasks of creating the <codeph>gpadmin</codeph> user and installing the
         Greenplum Database software on all hosts in the cluster. </note>
       <ol id="ol_k23_3cz_thb">
-        <li>Create the <codeph>gpadmin</codeph> group and user.
-          <note>If you are installing Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to
-            disable IPC object removal by creating the <codeph>gpadmin</codeph> user as a system
-            account, provide both the <codeph>-r</codeph> option (create the user as a system
-            account) and the <codeph>-m</codeph> option (create a home directory) to the
-              <codeph>useradd</codeph> command. On Ubuntu systems, you must use the
-              <codeph>-m</codeph> option with the <codeph>useradd</codeph> command to create a home
-            directory for a user.</note><p>This example creates the <codeph>gpadmin</codeph> group,
-            creates the <codeph>gpadmin</codeph> user as a system account with a home directory and
-            as a member of the <codeph>gpadmin</codeph> group, and creates a password for the
+        <li>Create the <codeph>gpadmin</codeph> group and user. <note>If you are installing
+            Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to disable IPC object removal by
+            creating the <codeph>gpadmin</codeph> user as a system account, provide both the
+              <codeph>-r</codeph> option (create the user as a system account) and the
+              <codeph>-m</codeph> option (create a home directory) to the <codeph>useradd</codeph>
+            command. On Ubuntu systems, you must use the <codeph>-m</codeph> option with the
+              <codeph>useradd</codeph> command to create a home directory for a user.</note><p>This
+            example creates the <codeph>gpadmin</codeph> group, creates the <codeph>gpadmin</codeph>
+            user as a system account with a home directory and as a member of the
+              <codeph>gpadmin</codeph> group, and creates a password for the
             user.<codeblock># groupadd gpadmin
 # useradd gpadmin -r -m -g gpadmin
 # passwd gpadmin
 New password: &lt;changeme&gt;
 Retype new password: &lt;changeme&gt;</codeblock></p>
-          <note>Make sure the <codeph>gpadmin</codeph> user has the same user id (uid) and group id
-            (gid) numbers on each host to prevent problems with scripts or services that use them
-            for identity or permissions. For example, backing up Greenplum databases to some
-            networked filesy stems or storage appliances could fail if the <codeph>gpadmin</codeph>
-            user has different uid or gid numbers on different segment hosts. When you create the
-              <codeph>gpadmin</codeph> group and user, you can use the <codeph>groupadd -g</codeph>
-            option to specify a gid number and the <codeph>useradd -u</codeph> option to specify the
-            uid number. Use the command <codeph>id gpadmin</codeph> to see the uid and gid for the
-              <codeph>gpadmin</codeph> user on the current host.</note></li>
+          <note>You must have root permission to create the <codeph>gpadmin</codeph> group and
+            user.</note><note>Make sure the <codeph>gpadmin</codeph> user has the same user id (uid)
+            and group id (gid) numbers on each host to prevent problems with scripts or services
+            that use them for identity or permissions. For example, backing up Greenplum databases
+            to some networked filesy stems or storage appliances could fail if the
+              <codeph>gpadmin</codeph> user has different uid or gid numbers on different segment
+            hosts. When you create the <codeph>gpadmin</codeph> group and user, you can use the
+              <codeph>groupadd -g</codeph> option to specify a gid number and the <codeph>useradd
+              -u</codeph> option to specify the uid number. Use the command <codeph>id
+              gpadmin</codeph> to see the uid and gid for the <codeph>gpadmin</codeph> user on the
+            current host.</note></li>
         <li>Switch to the <codeph>gpadmin</codeph> user and generate an SSH key pair for the
             <codeph>gpadmin</codeph>
           user.<codeblock>$ su gpadmin
@@ -581,7 +587,7 @@ Enter same passphrase again:
 </codeblock>At
           the passphrase prompts, press Enter so that SSH connections will not require entry of a
           passphrase.</li>
-        <li>(Optional) Grant sudo access to the <codeph>gpadmin</codeph> user.<p>On Red Hat or
+        <li>Grant sudo access to the <codeph>gpadmin</codeph> user.<p>On Red Hat or
             CentOS, run <codeph>visudo</codeph> and uncomment the <codeph>%wheel</codeph> group
             entry.<codeblock>%wheel        ALL=(ALL)       NOPASSWD: ALL</codeblock></p><p>Make sure
             you uncomment the line that has the <codeph>NOPASSWD</codeph> keyword. </p><p>Add the

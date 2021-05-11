@@ -57,6 +57,7 @@ anchors:
   action: create
   delete_on_failure: true
   generate_random_name: true
+  plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
   terraform_source: ccp_src/google/
 
 - &ccp_default_vars
@@ -65,6 +66,7 @@ anchors:
 
 - &destroy_common
   action: destroy
+  plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
   terraform_source: ccp_src/google/
   vars:
     aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
@@ -437,16 +439,20 @@ resources:
 - name: terraform_2
   <<: *terraform_cluster
 
+- name: terraform.d
+  source:
+    access_key_id: ((bucket-access-key-id))
+    bucket: ccp-terraform-provider-plugins
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
+    versioned_file: plugin-cache.tgz
+  type: s3
+
 - name: alpine-docker
   type: registry-image
   source:
     repository: alpine
     tag: latest
-
-- name: clang_toolchain
-  type: registry-image
-  source:
-    repository: gcr.io/data-orca/clang-toolchain
 
 - name: ccp-image
   type: registry-image
@@ -709,13 +715,16 @@ jobs:
 
 - name: check_format
   plan:
-    - in_parallel:
-      - get: gpdb_src
-        trigger: true
-      - get: clang_toolchain
+    - get: gpdb_src
+      trigger: true
     - task: check_format
-      image: clang_toolchain
       file: gpdb_src/concourse/tasks/check_format.yml
+    - task: clang_tidy
+      file: gpdb_src/concourse/tasks/clang_tidy.yml
+      {% if use_ICW_workers %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
+
 
 ## ======================================================================
 ##   ____                      _ _
@@ -1140,6 +1149,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
+      - get: terraform.d
+        params:
+          unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1242,6 +1254,9 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: ccp_src
           - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
           - put: terraform
             params:
               <<: *ccp_default_params
@@ -1333,6 +1348,9 @@ jobs:
             passed: [compile_gpdb_ubuntu18.04]
             trigger: [[ test_trigger ]]
           - get: ccp_src
+          - get: terraform.d
+            params:
+              unpack: true
           - put: terraform
             params:
               <<: *ccp_default_params
@@ -1392,6 +1410,9 @@ jobs:
       - get: ccp_src
       - get: ccp-image
       - get: alpine-docker
+      - get: terraform.d
+        params:
+          unpack: true
     - task: generate-ssh-keys
       image: alpine-docker
       config:
@@ -1562,6 +1583,9 @@ jobs:
       - get: icw_planner_centos7_dump
         passed: [icw_planner_centos7]
       - get: ccp_src
+      - get: terraform.d
+        params:
+          unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1607,6 +1631,9 @@ jobs:
       - get: ccp-image
       - get: icw_planner_centos7_dump
         passed: [icw_planner_centos7]
+      - get: terraform.d
+        params:
+          unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params

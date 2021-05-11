@@ -73,9 +73,6 @@ private:
 	// needs the data to be sorted or not
 	BOOL m_input_sort_req;
 
-	// do we need to sort on parquet table
-	BOOL FInsertSortOnParquet();
-
 	// do we need to sort on insert
 	BOOL FInsertSortOnRows(COptimizerConfig *optimizer_config);
 

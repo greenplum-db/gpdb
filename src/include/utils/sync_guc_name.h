@@ -1,3 +1,4 @@
+		"bytea_output",
 		"client_min_messages",
 		"commit_delay",
 		"commit_siblings",

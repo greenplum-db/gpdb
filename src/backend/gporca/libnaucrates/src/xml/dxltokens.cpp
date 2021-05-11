@@ -510,9 +510,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		 GPOS_WSZ_LIT("AppendOnly, Column-oriented")},
 		{EdxltokenRelStorageAppendOnlyRows,
 		 GPOS_WSZ_LIT("AppendOnly, Row-oriented")},
-		{EdxltokenRelStorageAppendOnlyParquet,
-		 GPOS_WSZ_LIT("AppendOnly, Parquet")},
-		{EdxltokenRelStorageVirtual, GPOS_WSZ_LIT("Virtual")},
+		{EdxltokenRelStorageMixedPartitioned, GPOS_WSZ_LIT("MixedPartitioned")},
 		{EdxltokenRelStorageExternal, GPOS_WSZ_LIT("External")},
 
 		{EdxltokenRelDistrPolicy, GPOS_WSZ_LIT("DistributionPolicy")},

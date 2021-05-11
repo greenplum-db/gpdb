@@ -36,19 +36,25 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create table t_subplan (c1 int, c2 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t_subplan2 (c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- First load enough data on all the relations to generate redistribute-both
 -- motion instead of broadcast-one motion.
 insert into t_inner select i, i from generate_series(1,:scale) i;
 insert into t_outer select i, i from generate_series(1,:scale) i;
 insert into t_subplan select i, i from generate_series(1,:scale) i;
+insert into t_subplan2 select i, i from generate_series(1,:scale) i;
 analyze t_inner;
 analyze t_outer;
 analyze t_subplan;
+analyze t_subplan2;
 -- Then delete all of them and load the real data, do not use TRUNCATE as it
 -- will clear the analyze information.
 delete from t_inner;
 delete from t_outer;
 delete from t_subplan;
+delete from t_subplan2;
 -- t_inner is the inner relation, it does not need much data as long as it is
 -- not empty.
 insert into t_inner values (:x0, :x0);
@@ -63,6 +69,8 @@ insert into t_outer select :x0, :x0 from generate_series(1,:scale) i;
 -- to hashjoin@slice4@seg1 it has to wait for ACK from it, this can happen
 -- before hashjoin@slice4@seg1 reading from outer@slice1.
 insert into t_subplan select :x0, :x0 from generate_series(1,:scale) i;
+-- t_subplan2 is same as t_subplan, used for case of multiple quals
+insert into t_subplan2 select :x0, :x0 from generate_series(1,:scale) i;
 -- In the past hash join do the job like this:
 --
 -- 10. read all the inner tuples and build the hash table;
@@ -129,5 +137,31 @@ NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg2 slice1 127.0.1.1:700
  count 
 -------
  10000
+(1 row)
+
+-- Except JoinQual, NonJoinQual has the similar deadlock issue.
+-- Test NonJoinQual which should also be prefetched.
+select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
+	where (t_inner.c1 is null or not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1));
+NOTICE:  prefetch non join qual in slice 0 of plannode 3
+NOTICE:  prefetch non join qual in slice 1 of plannode 3  (seg0 slice1 10.146.0.4:7002 pid=13096)
+NOTICE:  prefetch non join qual in slice 1 of plannode 3  (seg1 slice1 10.146.0.4:7003 pid=13097)
+NOTICE:  prefetch non join qual in slice 1 of plannode 3  (seg2 slice1 10.146.0.4:7004 pid=13098)
+ count 
+-------
+     0
+(1 row)
+
+-- Test NonJoinQual includes multiple motion nodes
+select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
+	where (t_inner.c1 is null or not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1)
+	or not exists (select 0 from t_subplan2 where t_subplan2.c2=t_outer.c1));
+NOTICE:  prefetch non join qual in slice 0 of plannode 3
+NOTICE:  prefetch non join qual in slice 1 of plannode 3  (seg0 slice1 10.146.0.4:7002 pid=13096)
+NOTICE:  prefetch non join qual in slice 1 of plannode 3  (seg1 slice1 10.146.0.4:7003 pid=13097)
+NOTICE:  prefetch non join qual in slice 1 of plannode 3  (seg2 slice1 10.146.0.4:7004 pid=13098)
+ count 
+-------
+     0
 (1 row)
 

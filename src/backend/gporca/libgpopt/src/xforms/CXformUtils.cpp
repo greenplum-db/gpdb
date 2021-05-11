@@ -2120,6 +2120,9 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 							  IMDIndex::EmdindexType emdindtype,
 							  IMDIndex::EmdindexType altindtype)
 {
+	BOOL possible_ao_table = pmdrel->IsAORowOrColTable() ||
+							 pmdrel->RetrieveRelStorageType() ==
+								 IMDRelation::ErelstorageMixedPartitioned;
 	// GiST can match with either Btree or Bitmap indexes
 	if (pmdindex->IndexType() == IMDIndex::EmdindGist ||
 		// GIN and BRIN can only match with Bitmap Indexes
@@ -2131,7 +2134,7 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 	}
 	else if (emdindtype == IMDIndex::EmdindBitmap &&
 			 pmdindex->IndexType() == IMDIndex::EmdindBtree &&
-			 pmdrel->IsAORowOrColTable())
+			 possible_ao_table)
 	{
 		// continue, Btree indexes on AO tables can be treated as Bitmap tables
 	}
@@ -2142,8 +2145,7 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 				 ->IndexType()) ||	// otherwise make sure the index matches the given type(s)
 		0 == pcrsScalar->Size() ||	// no columns to match index against
 		(emdindtype != IMDIndex::EmdindBitmap &&
-		 pmdrel
-			 ->IsAORowOrColTable()))  // only bitmap scans are supported on AO tables
+		 possible_ao_table))  // only bitmap scans are supported on AO tables
 	{
 		return false;
 	}
@@ -3094,9 +3096,14 @@ CXformUtils::PexprBitmapSelectBestIndex(
 
 			pexprIndex->Release();
 
+			BOOL possible_ao_table =
+				pmdrel->IsAORowOrColTable() ||
+				pmdrel->RetrieveRelStorageType() ==
+					IMDRelation::ErelstorageMixedPartitioned;
+
 			// Btree indexes on AO tables are only great when the NDV is high. Do this check here
 			if (selectivity > AO_TABLE_BTREE_INDEX_SELECTIVITY_THRESHOLD &&
-				pmdrel->IsAORowOrColTable() &&
+				possible_ao_table &&
 				pmdindex->IndexType() == IMDIndex::EmdindBtree)
 			{
 				pdrgpexprIndex->Release();

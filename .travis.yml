@@ -99,6 +99,11 @@ matrix:
           addons:
             apt:
               packages:
+                # FIXME: the following two are workarounds for broken libc version in Travis
+                # BEGIN HACK
+                - libc6-dev=2.31-0ubuntu9.2
+                - libc6=2.31-0ubuntu9.2
+                # END HACK
                 - ninja-build
                 - clang-11
                 - clang-tidy-11
@@ -121,16 +126,16 @@ matrix:
           addons:
             apt:
               packages:
-                - clang-format-10
+                - clang-format-11
                 - parallel
           before_install: ~
           install: ~
           before_script: ~
           after_script: ~
           script:
-            - env CLANG_FORMAT=clang-format-10 src/tools/fmt gen
+            - env CLANG_FORMAT=clang-format-11 src/tools/fmt gen
             - git diff --exit-code
-            - env CLANG_FORMAT=clang-format-10 src/tools/fmt chk
+            - env CLANG_FORMAT=clang-format-11 src/tools/fmt chk
 
 stages:
   - lint
