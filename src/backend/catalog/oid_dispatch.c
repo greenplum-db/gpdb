@@ -479,6 +479,12 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 	return key;
 }
 
+extern void
+RestoreOidAssignments(List *oid_assignments)
+{
+	dispatch_oids = oid_assignments;
+}
+
 /* ----------------------------------------------------------------
  * Functions for use in QE.
  * ----------------------------------------------------------------
