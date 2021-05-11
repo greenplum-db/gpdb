@@ -7,6 +7,9 @@ logger = gplog.get_default_logger()
 
 
 def get_unreachable_segment_hosts(hosts, num_workers):
+    if not hosts:
+        return []
+
     pool = base.WorkerPool(numWorkers=num_workers)
     try:
         for host in hosts:
