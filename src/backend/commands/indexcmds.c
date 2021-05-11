@@ -69,6 +69,7 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
+#include "access/xact.h"
 #include "catalog/aoblkdir.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/oid_dispatch.h"
@@ -2786,9 +2787,14 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
 /*
  * ReindexTable
  *		Recreate all indexes of a table (and of its toast table, if any)
+ *
+ * GPDB: isTopLevel is not exist in upstream, but since we support reindex
+ * on partitioned table, this will have non-rollback-able side effects,
+ * so we need to make sure reindex on partitioned table must not run inside
+ * a transaction block.
  */
 Oid
-ReindexTable(ReindexStmt *stmt)
+ReindexTable(ReindexStmt *stmt, bool isTopLevel)
 {
 	RangeVar   *relation = stmt->relation;
 	int			options = stmt->options;
@@ -2814,13 +2820,17 @@ ReindexTable(ReindexStmt *stmt)
 	/*
 	 * PostgreSQL doesn't allow REINDEX on a partitioned table, but we support
 	 * it in Greenplum.
-	 *
-	 *
 	 */
 	if (get_rel_relkind(heapOid) == RELKIND_PARTITIONED_TABLE)
 	{
-		// FIXME transasction block check?
 		List	   *prels;
+
+		/*
+		 * To prevent non-rollback-able side effects, this case isn't allowed
+		 * within a transaction block. There are numerous other subtle
+		 * dependencies on this, too, like pl/sql execution.
+		 */
+		PreventInTransactionBlock(isTopLevel, "REINDEX TABLE(on partitioned table)");
 
 		prels = find_all_inheritors(heapOid,
 									concurrent ? ShareUpdateExclusiveLock : ShareLock,

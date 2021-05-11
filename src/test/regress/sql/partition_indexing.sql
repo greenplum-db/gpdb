@@ -431,3 +431,44 @@ drop index gpidxpart_idx;
 create index gpidxpart_idx on only gpidxpart(a);
 select relhassubclass from pg_class where relname = 'gpidxpart_idx';
 drop index gpidxpart_idx;
+
+-- GPDB: Prevent REINDEX TABLE on partitioned table run in transaction block.
+-- Since we expand partitioned table when do the reindex, and try to reindex
+-- each table in new transaction, this will lead non-rollback-able side effects.
+create table reindex_part(id int, r int) partition by range (r);
+create table reindex_part_1 partition of reindex_part for values from (1) TO (11);
+create table reindex_part_2 partition of reindex_part for values from (11) TO (21);
+create index reidx_idx on reindex_part (id);
+
+-- This should raise error
+begin;
+reindex table reindex_part;
+end;
+
+-- This should success
+begin;
+reindex table reindex_part_1;
+end;
+
+-- This should raise error
+CREATE FUNCTION reindex_in_func() RETURNS void
+AS $$
+begin
+reindex table reindex_part;
+end
+$$
+LANGUAGE plpgsql;
+select reindex_in_func();
+
+-- This should success
+CREATE OR REPLACE FUNCTION reindex_in_func() RETURNS void
+AS $$
+begin
+reindex table reindex_part_1;
+end
+$$
+LANGUAGE plpgsql;
+select reindex_in_func();
+
+drop table reindex_part;
+drop function reindex_in_func();

@@ -948,7 +948,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 						ReindexIndex(stmt);
 						break;
 					case REINDEX_OBJECT_TABLE:
-						ReindexTable(stmt);
+						ReindexTable(stmt, isTopLevel);
 						break;
 					case REINDEX_OBJECT_SCHEMA:
 					case REINDEX_OBJECT_SYSTEM:
