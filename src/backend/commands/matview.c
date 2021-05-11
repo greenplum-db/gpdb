@@ -24,6 +24,7 @@
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/oid_dispatch.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -427,6 +428,24 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	Query	   *copied_query;
 	uint64		processed;
 
+	/*
+	 * Greenplum specific behavior:
+	 * MPP architecture need to make sure OIDs of the temp table are the same
+	 * among QD and all QEs. It stores the OID in the static variable dispatch_oids.
+	 * This variable will be consumed for each dispatch.
+	 *
+	 * During planning, Greenplum might pre-evalute some function expr, this will
+	 * lead to dispatch if the function is in SQL or PLPGSQL and consume the above
+	 * static variable. So later refresh matview's dispatch will not find the
+	 * oid on QEs.
+	 *
+	 * We first store the OIDs information in a local variable, and then restore
+	 * it for later refresh matview's dispatch to solve the above issue.
+	 *
+	 * See Github Issue for details: https://github.com/greenplum-db/gpdb/issues/11956
+	 */
+	List       *saved_dispatch_oids = GetAssignedOidsForDispatch();
+
 	/* Lock and rewrite, using a copy to preserve the original query. */
 	copied_query = copyObject(query);
 	AcquireRewriteLocks(copied_query, true, false);
@@ -458,6 +477,8 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	queryDesc = CreateQueryDesc(plan, queryString,
 								GetActiveSnapshot(), InvalidSnapshot,
 								dest, NULL, NULL, 0);
+
+	RestoreOidAssignments(saved_dispatch_oids);
 
 	/* call ExecutorStart to prepare the plan for execution */
 	ExecutorStart(queryDesc, 0);

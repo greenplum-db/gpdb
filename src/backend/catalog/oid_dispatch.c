@@ -193,6 +193,12 @@ ClearOidAssignmentsOnCommit(void)
 	preserve_oids_on_commit = false;
 }
 
+extern void
+RestoreOidAssignments(List *oid_assignments)
+{
+	dispatch_oids = oid_assignments;
+}
+
 /* ----------------------------------------------------------------
  * Functions for use in QE.
  * ----------------------------------------------------------------
