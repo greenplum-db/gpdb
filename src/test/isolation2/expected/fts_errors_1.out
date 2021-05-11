@@ -3,6 +3,8 @@
 -- Content 1 is used to test the gang interaction in various
 -- sessions when a failover is triggered and mirror is promoted
 -- to primary
+create extension if not exists gp_inject_fault;
+CREATE
 
 -- start_matchsubs
 -- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
@@ -31,6 +33,9 @@
 -- start_ignore
 -- end_ignore
 (exited with code 0)
+
+include: helpers/server_helpers.sql;
+CREATE
 
 -- Helper function
 CREATE or REPLACE FUNCTION wait_until_segments_are_down(num_segs int) RETURNS bool AS $$ declare retries int; /* in func */ begin /* in func */ retries := 1200; /* in func */ loop /* in func */ if (select count(*) = num_segs from gp_segment_configuration where status = 'd') then /* in func */ return true; /* in func */ end if; /* in func */ if retries <= 0 then /* in func */ return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
@@ -134,7 +139,7 @@ END
 -- session 2: in transaction, gxid is dispatched to writer gang, cann't
 --            update cdb_component_dbs, following query should fail
 2:END;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:94)
 -- session 3: in transaction and has a cursor, cann't update
 --            cdb_component_dbs, following query should fail
 3:FETCH ALL FROM c1;
@@ -142,14 +147,12 @@ ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
 ----+----
 (0 rows)
 3:END;
-ERROR: server closed the connection unexpectedly
-	This probably means the server terminated abnormally
-	before or while processing the request.
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:94)
 -- session 4: not in transaction but has temp table, cann't update
 --            cdb_component_dbs, following query should fail and session
 --            is reset
 4:select * from tmp4;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:94)
 4:select * from tmp4;
 ERROR:  relation "tmp4" does not exist
 LINE 1: select * from tmp4;
@@ -157,7 +160,7 @@ LINE 1: select * from tmp4;
 -- session 5: has a subtransaction, cann't update cdb_component_dbs,
 --            following query should fail
 5:select * from tmp51;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:94)
 5:ROLLBACK TO SAVEPOINT s1;
 ERROR:  Could not rollback to savepoint (ROLLBACK TO SAVEPOINT s1)
 5:END;
