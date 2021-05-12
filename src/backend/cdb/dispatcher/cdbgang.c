@@ -1339,7 +1339,12 @@ static bool cleanupGang(Gang *gp)
 
 		/* if segment is down, the gang can not be reused */
 		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
+		{
+			/* If cluster is reconfigured during a transaction, then error out */
+			if (IsTransactionState())
+				elog(ERROR, "cluster is reconfigured during a transaction");
 			return false;
+		}
 
 		/* Note, we cancel all "still running" queries */
 		if (!cdbconn_discardResults(segdbDesc, 20))

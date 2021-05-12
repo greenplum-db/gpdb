@@ -254,6 +254,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	AbortAfterProcarrayEnd,
 
+	CdbDispFinishCommand,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

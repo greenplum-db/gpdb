@@ -373,6 +373,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault when creating new TOAST tables, to modify the chunk size */
 	_("abort_after_procarray_end"),
 		/* inject fault in AbortTransaction after ProcArrayEndTransaction */
+	_("cdbdisp_finish_command"),
+		/* inject fault in cdbdisp_finishCommand */
 	_("not recognized"),
 };
 

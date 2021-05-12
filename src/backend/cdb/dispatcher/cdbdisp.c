@@ -265,6 +265,7 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 	}
 	PG_END_TRY();
 
+	SIMPLE_FAULT_INJECTOR(CdbDispFinishCommand);
 	/*
 	 * If no errors, free the CdbDispatchResults objects and return.
 	 */
