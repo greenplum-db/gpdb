@@ -27,12 +27,14 @@ resources:
 - name: gpdb6-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
+    tag: latest
 
 - name: gpdb6-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test
+    tag: latest
 
 jobs:
 - name: compile_and_test_gpdb

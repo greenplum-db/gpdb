@@ -113,8 +113,8 @@ anchors:
         image_resource:
           type: registry-image
           source:
-            repository: pivotaldata/ccp
-            tag: "7"
+            repository: gcr.io/data-gpdb-public-images/ccp
+            tag: "latest"
         inputs:
           - name: ccp_src
           - name: terraform
@@ -136,8 +136,8 @@ anchors:
   image_resource:
     type: registry-image
     source:
-      repository: pivotaldata/ccp
-      tag: "7"
+      repository: gcr.io/data-gpdb-public-images/ccp
+      tag: "latest"
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
@@ -543,8 +543,8 @@ resources:
 - name: ccp-image
   type: registry-image
   source:
-    repository: pivotaldata/ccp
-    tag: '7'
+    repository: gcr.io/data-gpdb-public-images/ccp
+    tag: 'latest'
 
 {% endif %}
 {% endif %}
@@ -580,13 +580,13 @@ resources:
 - name: gpdb6-centos6-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos6-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos6-build
     tag: latest
 
 - name: gpdb6-centos6-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos6-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos6-test
     tag: latest
 
 {% endif %}
@@ -594,20 +594,20 @@ resources:
 - name: gpdb6-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
     tag: latest
 
 - name: gpdb6-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test
     tag: latest
 {% endif %}
 {% if "centos8" in os_types %}
 - name: gpdb6-centos8-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos8-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos8-build
     tag: latest
 {% endif %}
 
@@ -615,7 +615,7 @@ resources:
 - name: gpdb6-photon3-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-photon3-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-photon3-build
     tag: latest
 {% endif %}
 
@@ -623,7 +623,7 @@ resources:
 - name: gpdb6-oracle7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-oel7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-oel7-test
     tag: latest
 
 {% endif %}
@@ -632,25 +632,25 @@ resources:
 - name: gpdb6-ubuntu18.04-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-ubuntu18.04-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-ubuntu18.04-build
     tag: latest
 
 - name: gpdb6-ubuntu18.04-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-ubuntu18.04-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-ubuntu18.04-test
     tag: latest
 
 {% endif %}
 
 {% if "sles12" in os_types %}
 - name: gpdb6-sles12-build
-  type: docker-image
+  type: registry-image
   source:
-    repository: pivotaldata/gpdb6-sles12-build
+    repository: gcr.io/data-gpdb-private-images/gpdb6-sles12-build
     tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "centos6" in os_types %}
@@ -1756,8 +1756,8 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: "7"
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       inputs:
         - name: ccp_src
         - name: cluster_env_files
