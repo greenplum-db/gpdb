@@ -9,5 +9,9 @@ run:
   - |
     set -ex
     ccp_src/scripts/setup_ssh_to_cluster.sh
-    ssh centos@mdw "sudo bash -c \"yum --cacheonly list installed mailx valgrind\""
+    ssh centos@mdw "sudo bash -c '
+          cp -a /opt/greenplum-db-test-deps/behave/* /usr/local/greenplum-db-devel/ext/python
+          chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel/ext/python
+          yum --cacheonly list installed mailx valgrind
+    '"
     ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""
