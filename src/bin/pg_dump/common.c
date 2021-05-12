@@ -322,8 +322,7 @@ flagInhTables(Archive *fout, TableInfo *tblinfo, int numTables,
 		 * pg_dump chokes on external tables, if an external table is
 		 * used as a partition, and a column has attislocal=false.
 		 */
-		if (tblinfo[i].relkind == RELKIND_FOREIGN_TABLE ||
-			tblinfo[i].relstorage == 'x' /* RELSTORAGE_EXTERNAL */)
+		if (tblinfo[i].relstorage == 'x' /* RELSTORAGE_EXTERNAL */)
 			continue;
 
 		/*
@@ -528,8 +527,7 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
 		 * pg_dump chokes on external tables, if an external table is
 		 * used as a partition, and a column has attislocal=false.
 		 */
-		if (tblinfo[i].relkind == RELKIND_FOREIGN_TABLE ||
-			tblinfo[i].relstorage == 'x' /* RELSTORAGE_EXTERNAL */)
+		if (tblinfo[i].relstorage == 'x' /* RELSTORAGE_EXTERNAL */)
 			continue;
 
 		/* Don't bother computing anything for non-target tables, either */
