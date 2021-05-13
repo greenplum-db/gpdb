@@ -1155,6 +1155,7 @@ class gpload:
         self.error_table = False
         self.gpdb_version = ""
         self.options.max_retries = 0
+        self.support_cusfmt = 0
         seenv = False
         seenq = False
 
