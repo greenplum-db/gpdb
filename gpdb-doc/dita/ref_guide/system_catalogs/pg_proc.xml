@@ -303,8 +303,8 @@
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4">Where the function executes when it is invoked: <codeph>m</codeph>
-              - master only, <codeph>a</codeph> - any segment instance, <codeph>i</codeph> -
-              initplan, <codeph>s</codeph> - all segment instances.</entry>
+              - master only, <codeph>a</codeph> - any segment instance, <codeph>s</codeph> - all
+              segment instances, <codeph>i</codeph> - initplan.</entry>
           </row>
         </tbody>
       </tgroup>
