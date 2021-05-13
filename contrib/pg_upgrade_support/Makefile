@@ -5,7 +5,8 @@
 
 PGFILEDESC = "pg_upgrade_support - server-side functions for pg_upgrade"
 
-MODULES = pg_upgrade_support
+MODULE_big = pg_upgrade_support
+OBJS = deprecated_objects.o pg_upgrade_support.o
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

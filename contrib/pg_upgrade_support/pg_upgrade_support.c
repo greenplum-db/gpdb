@@ -49,6 +49,8 @@
 #include "rewrite/rewriteHandler.h"
 #include "optimizer/walkers.h"
 
+#include "deprecated_objects.h"
+
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
 #endif
@@ -61,6 +63,8 @@ Datum		view_has_anyarray_casts(PG_FUNCTION_ARGS);
 
 Datum		view_has_unknown_casts(PG_FUNCTION_ARGS);
 
+Datum 		view_references_deprecated_tables(PG_FUNCTION_ARGS);
+
 PG_FUNCTION_INFO_V1(add_pg_enum_label);
 
 PG_FUNCTION_INFO_V1(create_empty_extension);
@@ -68,6 +72,8 @@ PG_FUNCTION_INFO_V1(create_empty_extension);
 PG_FUNCTION_INFO_V1(view_has_anyarray_casts);
 
 PG_FUNCTION_INFO_V1(view_has_unknown_casts);
+
+PG_FUNCTION_INFO_V1(view_references_deprecated_tables);
 
 static bool check_node_anyarray_walker(Node *node, void *context);
 
@@ -790,4 +796,31 @@ check_node_unknown_walker(Node *node, void *context)
 	}
 
 	return expression_tree_walker(node, check_node_unknown_walker, context);
+}
+
+Datum
+view_references_deprecated_tables(PG_FUNCTION_ARGS)
+{
+	Oid			view_oid = PG_GETARG_OID(0);
+	Relation 	rel = try_relation_open(view_oid, AccessShareLock, false);
+	Query		*viewquery;
+	bool		found;
+
+	if (!RelationIsValid(rel))
+		elog(ERROR, "Could not open relation file for relation oid %u", view_oid);
+
+	if(rel->rd_rel->relkind == RELKIND_VIEW)
+	{
+		viewquery = get_view_query(rel);
+		found = query_tree_walker(viewquery,
+								  check_node_deprecated_tables_walker,
+								  NULL,
+								  QTW_EXAMINE_RTES);
+	}
+	else
+		found = false;
+
+	relation_close(rel, AccessShareLock);
+
+	PG_RETURN_BOOL(found);
 }
