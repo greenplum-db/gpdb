@@ -35,7 +35,7 @@ function configure() {
 
 function make_cluster() {
   source /usr/local/greenplum-db-devel/greenplum_path.sh
-  export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
+  export BLDWRAP_POSTGRES_CONF_ADDONS="${BLDWRAP_POSTGRES_CONF_ADDONS} gp_debug_invalid_page_lsn=on"
   # Currently, the max_concurrency tests in src/test/isolation2
   # require max_connections of at least 129.
   export DEFAULT_QD_MAX_CONNECT=150

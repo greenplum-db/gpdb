@@ -383,11 +383,16 @@ PageGetLSN(Page page)
 	return ((PageHeader) page)->pd_lsn;
 }
 
+extern bool gp_debug_invalid_page_lsn;
 /*
  * Additional macros for access to page headers
  */
-#define PageSetLSN(page, lsn) \
-	(((PageHeader) (page))->pd_lsn = (lsn))
+#define PageSetLSN(page, lsn)												\
+	do {																	\
+		if (gp_debug_invalid_page_lsn && XLogRecPtrIsInvalid(lsn))			\
+			elog(PANIC, "setting invalid LSN");								\
+		(((PageHeader) (page))->pd_lsn = (lsn));							\
+	} while (0)
 
 #define PageHasFreeLinePointers(page) \
 	(((PageHeader) (page))->pd_flags & PD_HAS_FREE_LINES)

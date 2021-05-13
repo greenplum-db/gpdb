@@ -177,6 +177,7 @@ int			Test_blocksize_override = 0;
 int			Test_safefswritesize_override = 0;
 bool		Master_mirroring_administrator_disable = false;
 int			gp_max_local_distributed_cache = 1024;
+bool		gp_debug_invalid_page_lsn = false;
 bool		gp_appendonly_verify_block_checksums = true;
 bool		gp_appendonly_verify_write_block = false;
 bool		gp_appendonly_verify_eof = true;
@@ -1127,6 +1128,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_debug_pgproc,
+		false, NULL, NULL
+	},
+
+	{
+		{"gp_debug_invalid_page_lsn", PGC_SIGHUP, DEVELOPER_OPTIONS,
+			gettext_noop("PANIC if invalid LSN is assigned to a heap page."),
+			NULL /* long description */ ,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_debug_invalid_page_lsn,
 		false, NULL, NULL
 	},
 

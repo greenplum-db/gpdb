@@ -142,6 +142,7 @@ clean_output
 start_binary $GPHOME_CURRENT
 run_pre_test
 run_tests schedule1${VARIANT}
+gpconfig -r gp_debug_invalid_page_lsn --skipvalidation
 
 ## Change the binary, dump, and then compare the two dumps generated
 ## by both binaries. Then we do some inserts and dump again. We source
