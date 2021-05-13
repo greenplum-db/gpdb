@@ -16,7 +16,7 @@
 -- m/started gpfdist/
 -- s/started gpfdist -p \d* -P \d* -f .*/ports/
 -- m/gpfdist:/
--- s#gpfdist://\d*.\d*.\d*.\d*:\d*//\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*data_file.txt#LOCATION#
+-- s#gpfdist://\d*.\d*.\d*.\d*:\d*//(.*/)*data_file.txt#LOCATION#
 -- m/data_file.tbl/
 -- s/(").*data_file.tbl(")/data/
 -- m/cmdtime/

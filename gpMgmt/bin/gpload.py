@@ -116,6 +116,7 @@ valid_tokens = {
     "quote": {'parse_children': True, 'parent': "input"},
     "encoding": {'parse_children': True, 'parent': "input"},
     "force_not_null": {'parse_children': False, 'parent': "input"},
+    "fill_missing_fields": {'parse_children': False, 'parent': "input"},
     "error_limit": {'parse_children': True, 'parent': "input"},
     "error_percent": {'parse_children': True, 'parent': "input"},
     "error_table": {'parse_children': True, 'parent': "input"},
@@ -1157,6 +1158,7 @@ class gpload:
         self.startTimestamp = time.time()
         self.error_table = False
         self.gpdb_version = ""
+        self.support_cusfmt = 0
         seenv = False
         seenq = False
 
@@ -1907,6 +1909,40 @@ class gpload:
             self.log(self.DEBUG, '%s: %s'%(name,typ))
 
 
+    def check_enable_custom_format(self):
+        # Test custom format guc
+        self.enable_custom_format = 0;
+        if self.support_cusfmt:
+            queryString = """show dataflow.prefer_custom_text;"""
+            resultList = self.db.query(queryString.encode('utf-8')).getresult()
+            val = resultList[0][0]
+            if val == 'on':
+                self.enable_custom_format = 1
+
+    def check_custom_formatter(self):
+        # Check if 'text_in' custom formatter can be used
+        self.support_cusfmt = 0
+        try:
+            # make sure dataflow extension has been created.
+            queryString = """CREATE EXTENSION IF NOT EXISTS dataflow;"""
+            self.db.query(queryString.encode('utf-8'))
+            # load gpss.so to enable "dataflow.prefer_custom_text" guc.
+            queryString = """SELECT dataflow_version();"""
+            self.db.query(queryString.encode('utf-8'))
+            # show "dataflow.prefer_custom_text" guc, this guc only exists in gpdb6.
+            queryString = """SHOW dataflow.prefer_custom_text;"""
+            self.db.query(queryString.encode('utf-8'))
+
+            queryString = """SELECT c.oid FROM pg_catalog.pg_proc c 
+                               LEFT JOIN pg_catalog.pg_namespace n
+                               ON n.oid = c.pronamespace
+                               WHERE c.proname = 'text_in';"""
+            resultList = self.db.query(queryString.encode('utf-8')).getresult()
+            if len(resultList) > 0:
+                self.support_cusfmt = 1
+
+        except Exception, e:
+            self.log(self.DEBUG, 'could not run SQL "%s": %s' % (queryString, unicode(e)))
 
     def read_table_metadata(self):
         # KAS Note to self. If schema is specified, then probably should use PostgreSQL rules for defining it.
@@ -2085,9 +2121,15 @@ class gpload:
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
 
-        sql+= """and pgext.fmttype = %s
-                 and pgext.writable = false
-                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+        if formatType != 'custom':
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote(formatType[0]), quote("%" + quote_unident(formatOpts.rstrip())))
+        # Custom formatter option ends with space ' '
+        else:
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote('b'), quote("%" + quote_unident(formatOpts)))
 
         if limitStr:
             sql += "and pgext.rejectlimit = %s " % limitStr
@@ -2167,9 +2209,15 @@ class gpload:
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
 
-        sql+= """and pgext.fmttype = %s
-                 and pgext.writable = false
-                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+        if formatType != 'custom':
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote(formatType[0]), quote("%" + quote_unident(formatOpts.rstrip())))
+        # Custom formatter option ends with space ' '
+        else:
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote('b'), quote("%" + quote_unident(formatOpts)))
 
         if limitStr:
             sql += "and pgext.rejectlimit = %s " % limitStr
@@ -2268,21 +2316,24 @@ class gpload:
             if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
                 subval = val[2:-1]
                 if subval == "\\'":
-                    self.formatOpts += "%s %s " % (specify_str, val)
+                    val = val
+                    self.formatOpts += "%s%s%s%s " % (self.custom_contan_pre, specify_str, self.custom_contan, val)
+                    self.reuse_tbl_Opts += "%s %s" % (specify_str, val)
                 else:
                     val = subval.decode('unicode-escape')
-                    self.formatOpts += "%s '%s' " % (specify_str, val)
+                    self.formatOpts += "%s%s%s'%s' " % (self.custom_contan_pre, specify_str, self.custom_contan, val)
+                    self.reuse_tbl_Opts += "%s '%s' " % (specify_str, val)
             elif len(val.decode('unicode-escape')) == 1:
                 val = val.decode('unicode-escape')
-                self.formatOpts += "%s '%s' " % (specify_str, val)
-
+                self.formatOpts += "%s%s%s'%s' " % (self.custom_contan_pre, specify_str, self.custom_contan, val)
+                self.reuse_tbl_Opts += "%s '%s' " % (specify_str, val)
             else:
                 self.control_file_warning(option +''' must be single ASCII character, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
                 self.control_file_error("Invalid option, gpload quit immediately")
                 sys.exit(2);
         else:
-            self.formatOpts += "%s '%s' " % (specify_str, val)
-
+            self.formatOpts += "%s%s%s'%s' " % (self.custom_contan_pre, specify_str, self.custom_contan, val)
+            self.reuse_tbl_Opts += "%s '%s' " % (specify_str, val)
 
     #
     # Create a new external table or find a reusable external table to use for this operation
@@ -2296,17 +2347,33 @@ class gpload:
         formatType = self.getconfig('gpload:input:format', unicode, 'text').lower()
         locationStr = ','.join(map(quote,self.locations))
 
+        self.custom_contan = " "
+        self.custom_contan_pre = ""
+        self.reuse_tbl_Opts = ""
+        self.use_customfmt = 0
+        
+        if formatType == 'text':
+            if self.enable_custom_format:
+                self.log(self.INFO, "Use gpdb5 text format to create external table")
+                self.formatOpts = "formatter='text_in'"
+                self.reuse_tbl_Opts = "formatter 'text_in' "
+                self.custom_contan = "="
+                self.custom_contan_pre = ", "
+                self.use_customfmt = 1
+
         self.get_external_table_formatOpts('delimiter')
 
         nullas = self.getconfig('gpload:input:null_as', unicode, False)
         self.log(self.DEBUG, "null " + unicode(nullas))
         if nullas != False: # could be empty string
-            self.formatOpts += "null %s " % quote_no_slash(nullas)
+            self.formatOpts += "%snull%s%s " % (self.custom_contan_pre, self.custom_contan, quote_no_slash(nullas))
+            self.reuse_tbl_Opts += "null %s " % (quote_no_slash(nullas))
         elif formatType=='csv':
             self.formatOpts += "null '' "
+            self.reuse_tbl_Opts += "null '' "
         else:
-            self.formatOpts += "null %s " % quote_no_slash("\N")
-
+            self.formatOpts += "%snull%s%s " % (self.custom_contan_pre, self.custom_contan, quote_no_slash("\N"))
+            self.reuse_tbl_Opts += "null %s " % (quote_no_slash("\N"))
 
         esc = self.getconfig('gpload:input:escape', None, None)
         if esc:
@@ -2315,27 +2382,40 @@ class gpload:
             if esc.lower() == 'off':
                 if formatType == 'csv':
                     self.control_file_error("ESCAPE cannot be set to OFF in CSV mode")
-                self.formatOpts += "escape 'off' "
+                self.formatOpts += "%sescape%s'off' " % (self.custom_contan_pre, self.custom_contan)
+                self.reuse_tbl_Opts += "escape 'off' "
             else:
                 self.get_external_table_formatOpts('escape')
         else:
             if formatType=='csv':
                 self.get_external_table_formatOpts('quote','escape')
             else:
-                self.formatOpts += "escape '\\'"
+                self.formatOpts += "%sescape%s'\\'" % (self.custom_contan_pre, self.custom_contan)
+                self.reuse_tbl_Opts += "escape '\\' "
 
         if formatType=='csv':
             self.get_external_table_formatOpts('quote')
 
-        if self.getconfig('gpload:input:header',bool,False):
+        if self.getconfig('gpload:input:header',bool,False) and not self.use_customfmt: #TODO:text_in format not support header now
             self.formatOpts += "header "
+            self.reuse_tbl_Opts += "header "
+
+        if formatType == 'csv' or formatType == 'text':
+            if self.getconfig('gpload:input:fill_missing_fields', bool, False):
+                if self.use_customfmt:
+                    self.formatOpts += ', fill_missing_fields=true'
+                    self.reuse_tbl_Opts += "fill_missing_fields 'true' "
+                else:
+                    self.formatOpts += 'fill missing fields '
+                    self.reuse_tbl_Opts += 'fill missing fields '
 
         force_not_null_columns = self.getconfig('gpload:input:force_not_null',list,[])
         if force_not_null_columns:
             for i in force_not_null_columns:
                 if type(i) != unicode and type(i) != str:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
-            self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
+            self.formatOpts += "force not null %s " % ','.join(force_not_null_columns) #only for csv
+            self.reuse_tbl_Opts += "force not null %s " % ','.join(force_not_null_columns)
 
         encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
@@ -2367,6 +2447,8 @@ class gpload:
         else:
             from_cols = self.from_columns
 
+        if self.use_customfmt:
+            formatType = 'custom'
         # If the 'reuse tables' option was specified we now try to find an
         # already existing external table in the catalog which will match
         # the one that we need to use. It must have identical attributes,
@@ -2398,12 +2480,12 @@ class gpload:
                     return
             else:
                 # process the single quotes in order to successfully find an existing external table to reuse.
-                self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
+                self.reuse_tbl_Opts = self.reuse_tbl_Opts.replace("E'\\''","'\''")
                 if self.fast_match:
-                    sql = self.get_fast_match_exttable_query(formatType, self.formatOpts,
+                    sql = self.get_fast_match_exttable_query(formatType, self.reuse_tbl_Opts,
                         limitStr, self.extSchemaName, self.log_errors, encodingCode)
                 else:
-                    sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
+                    sql = self.get_reuse_exttable_query(formatType, self.reuse_tbl_Opts,
                         limitStr, from_cols, self.extSchemaName, self.log_errors, encodingCode)
 
                 resultList = self.db.query(sql.encode('utf-8')).getresult()
@@ -2831,6 +2913,7 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
 
+        self.check_enable_custom_format()
 
         if method=='insert':
             self.do_method_insert()
@@ -2885,6 +2968,7 @@ class gpload:
         start = time.time()
         self.read_config()
         self.setup_connection()
+        self.check_custom_formatter()
         self.read_table_metadata()
         self.read_columns()
         self.read_mapping()

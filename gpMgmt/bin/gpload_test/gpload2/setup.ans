@@ -17,6 +17,9 @@ DROP TABLE
 DROP TABLE IF EXISTS testSpecialChar;
 NOTICE:  table "testspecialchar" does not exist, skipping
 DROP TABLE
+DROP TABLE IF EXISTS testheaderreuse;
+NOTICE:  table "testheaderreuse" does not exist, skipping
+DROP TABLE
 CREATE TABLE texttable (
             s1 text, s2 text, s3 text, dt timestamp,
             n1 smallint, n2 integer, n3 bigint, n4 decimal,
@@ -31,4 +34,9 @@ CREATE TABLE test.csvtable (
             DISTRIBUTED BY (year);
 CREATE TABLE
 CREATE TABLE testSpecialChar("Field1" bigint, "Field#2" text) DISTRIBUTED BY ("Field1");
+CREATE TABLE
+CREATE TABLE testheaderreuse (
+            field1            integer not null,
+            field2            text,
+            field3            text) DISTRIBUTED randomly;
 CREATE TABLE
