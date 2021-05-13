@@ -890,8 +890,6 @@ static int	get_sync_bit(int method);
 /* New functions added for WAL replication */
 static void XLogProcessCheckpointRecord(XLogRecord *rec);
 
-static void GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo);
-
 static void CopyXLogRecordToWAL(int write_len, bool isLogSwitch,
 					XLogRecData *rdata,
 					XLogRecPtr StartPos, XLogRecPtr EndPos);
@@ -9076,7 +9074,6 @@ CreateCheckPoint(int flags)
 	 */
 	if (gp_keep_all_xlog == false && _logSegNo)
 	{
-		GetXLogCleanUpTo(recptr, &_logSegNo);
 		KeepLogSeg(recptr, &_logSegNo);
 		InvalidateObsoleteReplicationSlots(_logSegNo);
 		_logSegNo--;
@@ -9563,8 +9560,14 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	/*
 	 * Calculate how many segments are kept by slots first, adjusting for
 	 * max_slot_wal_keep_size.
+	 *
+	 * Greenplum: coordinator needs a different way to determine the keep
+	 * point as replication slot is not created there.
 	 */
-	keep = XLogGetReplicationSlotMinimumLSN();
+	keep = IS_QUERY_DISPATCHER() ?
+		WalSndCtlGetXLogCleanUpTo() :
+		XLogGetReplicationSlotMinimumLSN();
+
 #ifdef FAULT_INJECTOR
 	/*
 	 * Let the WAL still needed be removed.  This is used to test if WAL sender
@@ -12261,28 +12264,6 @@ bool
 IsStandbyMode(void)
 {
 	return StandbyMode;
-}
-
-static void
-GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo)
-{
-	/*
-	 * See if we have a live WAL sender and see if it has a
-	 * start xlog location (with active basebackup) or standby fsync location
-	 * (with active standby). We have to compare it with prev. checkpoint
-	 * location. We use the min out of them to figure out till
-	 * what point we need to save the xlog seg files
-	 */
-	XLogRecPtr xlogCleanUpTo = WalSndCtlGetXLogCleanUpTo();
-	if (!XLogRecPtrIsInvalid(xlogCleanUpTo))
-	{
-		if (recptr < xlogCleanUpTo)
-			xlogCleanUpTo = recptr;
-	}
-	else
-		xlogCleanUpTo = recptr;
-
-	KeepLogSeg(xlogCleanUpTo, _logSegNo);
 }
 
 /*
