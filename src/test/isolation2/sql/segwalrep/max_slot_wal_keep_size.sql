@@ -25,23 +25,19 @@ BEGIN
 END; 
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION check_wal_file_count(content int)
-RETURNS text AS $$
-    import subprocess
-    rv = plpy.execute("select datadir from gp_segment_configuration where content = 0 and role = 'p'", 2)
-    datadir = rv[0]['datadir']
-    cmd = 'ls %s/pg_xlog/ | grep "^[0-9A-F]*$" | wc -l' % datadir
-    remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-    return remove_output.strip()
-$$ LANGUAGE PLPYTHONU;
+-- On content 0 primary, retain max 64MB (1 WAL file) for replication
+-- slots.  The other GUCs are needed to make the test run faster.
+0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
+0U: ALTER SYSTEM SET wal_keep_segments TO 0;
+0U: ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period TO 0;
+0U: select pg_reload_conf();
+-- And on coordinator, also to make the test faster.
+ALTER SYSTEM SET gp_fts_probe_retries TO 1;
+select pg_reload_conf();
 
--- max_slot_wal_keep_size is 64MB * 4
-!\retcode gpconfig -c max_slot_wal_keep_size -v 256;
-!\retcode gpconfig -c checkpoint_segments -v 1 --skipvalidation;
-!\retcode gpconfig -c wal_keep_segments -v 0 --skipvalidation;
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
-!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
-!\retcode gpstop -u;
+-- Create a checkpoint now so that another checkpoint doesn't get
+-- triggered when the test doesn't expect it to.
+CHECKPOINT;
 
 -- walsender skip sending WAL to the mirror
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
@@ -52,10 +48,21 @@ $$ LANGUAGE PLPYTHONU;
 2: INSERT INTO t_slot_size_limit SELECT generate_series(1,1000);
 
 -- generate 2 more WAL files, which exceeds 'max_slot_wal_keep_size'
-2: SELECT advance_xlog(12);
+2: SELECT advance_xlog(2);
 
 -- checkpoint will trigger the check of obsolete replication slot, it will stop the walsender.
-2: CHECKPOINT;
+0U: CHECKPOINT;
+
+-- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
+-- where 1 is the max_slot_wal_keep_size set above.
+0U: select count(pg_ls_dir) < current_setting('checkpoint_segments')::int * 2 + 2
+    from pg_ls_dir('pg_xlog') where pg_ls_dir like '________________________';
+
+-- Replication slot on content 0 primary should report invalid LSN
+-- because the WAL file it needs is already removed when checkpoint
+-- was created.
+0U: select * from pg_get_replication_slots();
+0Uq:
 
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
 1: SELECT gp_request_fts_probe_scan();
@@ -64,8 +71,6 @@ $$ LANGUAGE PLPYTHONU;
 -- check the mirror is down and the sync_error is set.
 1: SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
 1: SELECT sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
--- the number of WAL file is approximate to 1 + XLOGfileslop(checkpoint_segments * 2 + 1) + max_slot_wal_keep_size / 64 / 1024 
-1: SELECT check_wal_file_count(0)::int <= 8;
 
 -- do full recovery
 !\retcode gprecoverseg -aF;
@@ -75,22 +80,13 @@ select wait_until_segment_synchronized(0);
 1: SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
 1: SELECT state, sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
--- failover to the mirror and check the data on the primary is replicated to the mirror
-1: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
-1: select gp_request_fts_probe_scan();
-1: select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
-1: SELECT count(*) FROM t_slot_size_limit;
+0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
+0U: ALTER SYSTEM RESET wal_keep_segments;
+0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
+0U: select pg_reload_conf();
+0Uq:
+ALTER SYSTEM RESET gp_fts_probe_retries;
+select pg_reload_conf();
 
-!\retcode gprecoverseg -a;
-!\retcode gprecoverseg -ar;
-
-!\retcode gpconfig -r wal_keep_segments --skipvalidation;
-!\retcode gpconfig -r checkpoint_segments --skipvalidation;
-!\retcode gpconfig -r max_slot_wal_keep_size;
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
-!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
-!\retcode gpstop -u;
-
--- no limit on the wal keep size
-1: SELECT advance_xlog(12);
-1: SELECT check_wal_file_count(0)::int > 12;
+1q:
+2q:

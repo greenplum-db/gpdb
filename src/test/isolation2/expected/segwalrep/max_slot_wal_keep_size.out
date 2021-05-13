@@ -9,51 +9,32 @@ CREATE
 CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS $$ DECLARE i int; BEGIN i := 0; CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); LOOP IF i >= num THEN DROP TABLE t_dummy_switch; RETURN; END IF; PERFORM pg_switch_xlog() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; INSERT INTO t_dummy_switch SELECT generate_series(1,10); i := i + 1; END LOOP; DROP TABLE t_dummy_switch; END; $$ language plpgsql;
 CREATE
 
-CREATE OR REPLACE FUNCTION check_wal_file_count(content int) RETURNS text AS $$ import subprocess rv = plpy.execute("select datadir from gp_segment_configuration where content = 0 and role = 'p'", 2) datadir = rv[0]['datadir'] cmd = 'ls %s/pg_xlog/ | grep "^[0-9A-F]*$" | wc -l' % datadir remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) return remove_output.strip() $$ LANGUAGE PLPYTHONU;
-CREATE
+-- On content 0 primary, retain max 64MB (1 WAL file) for replication
+-- slots.  The other GUCs are needed to make the test run faster.
+0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
+ALTER
+0U: ALTER SYSTEM SET wal_keep_segments TO 0;
+ALTER
+0U: ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period TO 0;
+ALTER
+0U: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+-- And on coordinator, also to make the test faster.
+ALTER SYSTEM SET gp_fts_probe_retries TO 1;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
 
--- max_slot_wal_keep_size is 64MB * 4
-!\retcode gpconfig -c max_slot_wal_keep_size -v 256;
--- start_ignore
-20200728:18:07:07:087460 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c max_slot_wal_keep_size -v 256'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -c checkpoint_segments -v 1 --skipvalidation;
--- start_ignore
-20200603:13:55:20:376404 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c wal_keep_segments -v 0 --skipvalidation'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -c wal_keep_segments -v 0 --skipvalidation;
--- start_ignore
-20200603:13:55:21:376485 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c max_slot_wal_keep_size -v 65536'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
--- start_ignore
-20200603:13:55:21:376568 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
--- start_ignore
-20200603:13:55:21:376614 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_mark_mirror_down_grace_period -v 0'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpstop -u;
--- start_ignore
-20200603:13:55:21:376696 gpstop:09c5497cf854:gpadmin-[INFO]:-Starting gpstop with args: -u
-20200603:13:55:21:376696 gpstop:09c5497cf854:gpadmin-[INFO]:-Gathering information and validating the environment...
-20200603:13:55:21:376696 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20200603:13:55:21:376696 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200603:13:55:21:376696 gpstop:09c5497cf854:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.7.1+dev.83.g8ba3a41176e build dev'
-20200603:13:55:21:376696 gpstop:09c5497cf854:gpadmin-[INFO]:-Signalling all postmaster processes to reload
-
--- end_ignore
-(exited with code 0)
+-- Create a checkpoint now so that another checkpoint doesn't get
+-- triggered when the test doesn't expect it to.
+CHECKPOINT;
+CHECKPOINT
 
 -- walsender skip sending WAL to the mirror
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
@@ -72,15 +53,33 @@ CREATE
 INSERT 1000
 
 -- generate 2 more WAL files, which exceeds 'max_slot_wal_keep_size'
-2: SELECT advance_xlog(12);
+2: SELECT advance_xlog(2);
  advance_xlog 
 --------------
               
 (1 row)
 
 -- checkpoint will trigger the check of obsolete replication slot, it will stop the walsender.
-2: CHECKPOINT;
+0U: CHECKPOINT;
 CHECKPOINT
+
+-- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
+-- where 1 is the max_slot_wal_keep_size set above.
+0U: select count(pg_ls_dir) < current_setting('checkpoint_segments')::int * 2 + 2 from pg_ls_dir('pg_xlog') where pg_ls_dir like '________________________';
+ ?column? 
+----------
+ t        
+(1 row)
+
+-- Replication slot on content 0 primary should report invalid LSN
+-- because the WAL file it needs is already removed when checkpoint
+-- was created.
+0U: select * from pg_get_replication_slots();
+ slot_name                     | plugin | slot_type | datoid | active | xmin | catalog_xmin | restart_lsn 
+-------------------------------+--------+-----------+--------+--------+------+--------------+-------------
+ internal_wal_replication_slot |        | physical  |        | t      |      |              |             
+(1 row)
+0Uq: ... <quitting>
 
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
  gp_inject_fault_infinite 
@@ -106,12 +105,6 @@ END
  sync_error 
 ------------
  walread    
-(1 row)
--- the number of WAL file is approximate to 1 + XLOGfileslop(checkpoint_segments * 2 + 1) + max_slot_wal_keep_size / 64 / 1024
-1: SELECT check_wal_file_count(0)::int <= 8;
- ?column? 
-----------
- t        
 (1 row)
 
 -- do full recovery
@@ -180,201 +173,25 @@ select wait_until_segment_synchronized(0);
  streaming | none       
 (1 row)
 
--- failover to the mirror and check the data on the primary is replicated to the mirror
-1: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
- pg_ctl 
---------
- OK     
+0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
+ALTER
+0U: ALTER SYSTEM RESET wal_keep_segments;
+ALTER
+0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
+ALTER
+0U: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
 (1 row)
-1: select gp_request_fts_probe_scan();
- gp_request_fts_probe_scan 
----------------------------
- t                         
-(1 row)
-1: select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
- content | preferred_role | role | status | mode 
----------+----------------+------+--------+------
- 0       | p              | m    | d      | n    
- 0       | m              | p    | u      | n    
-(2 rows)
-1: SELECT count(*) FROM t_slot_size_limit;
- count 
--------
- 1000  
+0Uq: ... <quitting>
+ALTER SYSTEM RESET gp_fts_probe_retries;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
 (1 row)
 
-!\retcode gprecoverseg -a;
--- start_ignore
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -a
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.9.0+dev.60.g75932a9ebe5 build dev'
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.9.0+dev.60.g75932a9ebe5 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jul 26 2020 15:49:04 (with assert checking)'
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Standard
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery 1 of 1
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Synchronization mode                 = Incremental
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance host                 = 09c5497cf854
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance address              = 09c5497cf854
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance port                 = 6002
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance host        = 09c5497cf854
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance address     = 09c5497cf854
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance port        = 6005
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-1 segment(s) to recover
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating configuration with new mirrors
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating mirrors
-20200727:06:59:49:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Running pg_rewind on required mirrors
-...
-20200727:06:59:53:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting mirrors
-20200727:06:59:53:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-era is e4307b9cbf2d16a8_200727064945
-20200727:06:59:53:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Process results...
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Triggering FTS probe
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating segments for streaming is completed.
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
-20200727:06:59:54:327010 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-
--- end_ignore
-(exited with code 0)
-!\retcode gprecoverseg -ar;
--- start_ignore
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -ar
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.9.0+dev.60.g75932a9ebe5 build dev'
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.9.0+dev.60.g75932a9ebe5 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jul 26 2020 15:49:04 (with assert checking)'
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Rebalance
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Unbalanced segment 1 of 2
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance host        = 09c5497cf854
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance address     = 09c5497cf854
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance port        = 6005
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Balanced role                   = Mirror
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Current role                    = Primary
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Unbalanced segment 2 of 2
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance host        = 09c5497cf854
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance address     = 09c5497cf854
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Unbalanced instance port        = 6002
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Balanced role                   = Primary
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Current role                    = Mirror
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Getting unbalanced segments
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Stopping unbalanced primary segments...
-20200727:06:59:54:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Triggering segment reconfiguration
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting segment synchronization
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-=============================START ANOTHER RECOVER=========================================
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.9.0+dev.60.g75932a9ebe5 build dev'
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.9.0+dev.60.g75932a9ebe5 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jul 26 2020 15:49:04 (with assert checking)'
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Standard
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery 1 of 1
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Synchronization mode                 = Incremental
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance host                 = 09c5497cf854
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance address              = 09c5497cf854
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance port                 = 6005
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance host        = 09c5497cf854
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance address     = 09c5497cf854
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance port        = 6002
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-1 segment(s) to recover
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating configuration with new mirrors
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating mirrors
-20200727:06:59:58:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Running pg_rewind on required mirrors
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting mirrors
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-era is e4307b9cbf2d16a8_200727064945
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Process results...
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Triggering FTS probe
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating segments for streaming is completed.
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-==============================END ANOTHER RECOVER==========================================
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-The rebalance operation has completed successfully.
-20200727:06:59:59:327165 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-
--- end_ignore
-(exited with code 0)
-
-!\retcode gpconfig -r wal_keep_segments --skipvalidation;
--- start_ignore
-20200727:18:51:40:466637 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-r wal_keep_segments --skipvalidation'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -r checkpoint_segments --skipvalidation;
--- start_ignore
-20200727:18:51:40:466718 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-r checkpoint_segments --skipvalidation'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -r max_slot_wal_keep_size;
--- start_ignore
-20200603:13:55:25:377100 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-r max_slot_wal_keep_size'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
--- start_ignore
-20200603:13:55:26:377182 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-r gp_fts_probe_retries --masteronly'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
--- start_ignore
-20200603:13:55:26:377228 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-r gp_fts_mark_mirror_down_grace_period'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpstop -u;
--- start_ignore
-20200603:13:55:26:377311 gpstop:09c5497cf854:gpadmin-[INFO]:-Starting gpstop with args: -u
-20200603:13:55:26:377311 gpstop:09c5497cf854:gpadmin-[INFO]:-Gathering information and validating the environment...
-20200603:13:55:26:377311 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20200603:13:55:26:377311 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200603:13:55:26:377311 gpstop:09c5497cf854:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.7.1+dev.83.g8ba3a41176e build dev'
-20200603:13:55:26:377311 gpstop:09c5497cf854:gpadmin-[INFO]:-Signalling all postmaster processes to reload
-
--- end_ignore
-(exited with code 0)
-
--- no limit on the wal keep size
-1: SELECT advance_xlog(12);
- advance_xlog 
---------------
-              
-(1 row)
-1: SELECT check_wal_file_count(0)::int > 12;
- ?column? 
-----------
- t        
-(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
