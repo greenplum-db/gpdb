@@ -9555,7 +9555,6 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	XLogSegNo	currSegNo;
 	XLogSegNo	segno;
 	XLogRecPtr	keep;
-	bool setvalue = false;
 	static XLogRecPtr CkptRedoBeforeMinLSN = InvalidXLogRecPtr;
 
 	XLByteToSeg(recptr, currSegNo);
@@ -9597,17 +9596,13 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 		}
 
 		XLByteToSeg(keep, segno);
-		setvalue = true;
 
 		/* Cap by max_slot_wal_keep_size ... */
 		if (max_slot_wal_keep_size_mb >= 0)
 		{
 			XLogRecPtr	slot_keep_segs;
-
 			slot_keep_segs = ConvertToXSegs(max_slot_wal_keep_size_mb);
-
-			if (slot_keep_segs > wal_keep_segments &&
-				currSegNo - segno > slot_keep_segs)
+			if (currSegNo - segno > slot_keep_segs)
 				segno = currSegNo - slot_keep_segs;
 		}
 	}
@@ -9620,11 +9615,10 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 			segno = 1;
 		else
 			segno = currSegNo - wal_keep_segments;
-		setvalue = true;
 	}
 
 	/* don't delete WAL segments newer than the calculated segment */
-	if (setvalue && (XLogRecPtrIsInvalid(*logSegNo) || segno < *logSegNo))
+	if (segno < *logSegNo)
 		*logSegNo = segno;
 }
 

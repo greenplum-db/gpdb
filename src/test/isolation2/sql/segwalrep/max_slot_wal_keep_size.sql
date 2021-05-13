@@ -43,9 +43,9 @@ CREATE TABLE t_slot_size_limit(a int, fname text);
 ----------
 -- Case 1:
 --
---   Verify that max_slot_wal_keep_size GUC is overridden when the
---   oldest PREPARE record falls behind the replay_lsn.  This behavior
---   is Greenplum-specific.
+--   Verify that max_slot_wal_keep_size GUC is ignored and more WAL is
+--   retained when the oldest active PREPARE record falls behind the
+--   cutoff specified by the GUC.
 ----------
 
 -- Suspend QD after preparing a distributed transaction, it will be
@@ -73,16 +73,30 @@ CREATE TABLE t_slot_size_limit(a int, fname text);
 
 2: BEGIN;
 
--- Trigger the fault in walsender.
+-- Trigger the fault in walsender.  Also triggers checkpoint.
 2: SELECT advance_xlog_on_seg0(1);
 1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid)
    FROM gp_segment_configuration WHERE content=0 AND role='p';
 
--- Generate more WAL on seg0 than max_slot_wal_keep_size.  This should
--- trigger checkpoint as checkpoint_segments is set to 1.  The
--- checkpoint is expected to retain WAL even when mirror has lagged
--- behind more than max_slot_wal_keep_size.
+-- Skip checkpoints on seg0.  So that when new WAL is generated in the
+-- next step, checkpoints don't get triggered asynchronously.
+1: SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+0U: CHECKPOINT;
+1: SELECT gp_wait_until_triggered_fault('checkpoint', 1, dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.
 2: SELECT advance_xlog_on_seg0(3);
+
+-- Resume checkpoints.
+1: SELECT gp_inject_fault('checkpoint', 'reset', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+-- At this point:
+--    PREPARE LSN < previous checkpoint < restart_lsn
+-- The checkpoint should retain WAL even when mirror has lagged behind
+-- more than max_slot_wal_keep_size.
+0U: CHECKPOINT;
 
 -- Replication slot on content 0 primary should report valid LSN
 -- because checkpoint must override max_slot_wal_keep_size GUC in
@@ -121,14 +135,31 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
 -- lag again.
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
 
--- Trigger the fault in walsender.
+-- Trigger the fault in walsender.  Also triggers checkpoint.
 2: SELECT advance_xlog_on_seg0(1);
 1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid)
    FROM gp_segment_configuration WHERE content=0 AND role='p';
 
--- Generate more WAL on seg0 than max_slot_wal_keep_size.  This should
--- also create at least one checkpoint due to checkpoint_segments.
+-- Replication slot should be valid at this time.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+
+-- Skip checkpoints on seg0.  So that when new WAL is generated in the
+-- next step, checkpoints don't get triggered asynchronously.
+1: SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+0U: CHECKPOINT;
+1: SELECT gp_wait_until_triggered_fault('checkpoint', 1, dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.
 2: SELECT advance_xlog_on_seg0(3);
+
+-- Resume checkpoints.
+1: SELECT gp_inject_fault('checkpoint', 'reset', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+-- WAL older than max_slot_wal_keep_size should be removed by this
+-- checkpoint.
+0U: CHECKPOINT;
 
 -- Replication slot on content 0 primary should report invalid LSN
 -- because the WAL files needed by it are removed by previous
