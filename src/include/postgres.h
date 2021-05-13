@@ -348,7 +348,7 @@ typedef struct
  * convert between a Datum and the appropriate C type.
  */
 
-typedef uint64 Datum;
+typedef uintptr_t Datum;
 typedef union Datum_U
 {
 	Datum d;
