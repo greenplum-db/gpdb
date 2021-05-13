@@ -6,12 +6,16 @@
 include: helpers/server_helpers.sql;
 CREATE
 
-CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS $$ DECLARE i int; BEGIN i := 0; CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); LOOP IF i >= num THEN DROP TABLE t_dummy_switch; RETURN; END IF; PERFORM pg_switch_xlog() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; INSERT INTO t_dummy_switch SELECT generate_series(1,10); i := i + 1; END LOOP; DROP TABLE t_dummy_switch; END; $$ language plpgsql;
+CREATE OR REPLACE FUNCTION advance_xlog_on_seg0(num int) RETURNS void AS $$ DECLARE i int; BEGIN i := 0; CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); LOOP IF i >= num THEN DROP TABLE t_dummy_switch; RETURN; END IF; PERFORM pg_switch_xlog() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; INSERT INTO t_dummy_switch SELECT generate_series(1,10); i := i + 1; END LOOP; DROP TABLE t_dummy_switch; END; $$ language plpgsql;
 CREATE
 
--- On content 0 primary, retain max 64MB (1 WAL file) for replication
--- slots.  The other GUCs are needed to make the test run faster.
-0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
+-- On content 0 primary, retain max 128MB (2 WAL files) for
+-- replication slots.  That makes it necessary to set
+-- checkpoint_segments to a lower value, that is 1 WAL file.  Other
+-- GUCs are needed to make the test run faster.
+0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 128;
+ALTER
+0U: ALTER SYSTEM SET checkpoint_segments TO 1;
 ALTER
 0U: ALTER SYSTEM SET wal_keep_segments TO 0;
 ALTER
@@ -31,12 +35,43 @@ select pg_reload_conf();
  t              
 (1 row)
 
--- Create a checkpoint now so that another checkpoint doesn't get
--- triggered when the test doesn't expect it to.
-CHECKPOINT;
-CHECKPOINT
+CREATE TABLE t_slot_size_limit(a int, fname text);
+CREATE
 
--- walsender skip sending WAL to the mirror
+----------
+-- Case 1:
+--
+--   Verify that max_slot_wal_keep_size GUC is overridden when the
+--   oldest PREPARE record falls behind the replay_lsn.  This behavior
+--   is Greenplum-specific.
+----------
+
+-- Suspend QD after preparing a distributed transaction, it will be
+-- resumed after checkpoint.
+1: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- This transaction is prepared on segments but not committed yet.  We
+-- advance WAL beyond max_slot_wal_keep_size in the next few steps.
+-- Checkpointer should retain WAL upto this prepare LSN, otherwise we
+-- will never be able to finish this transaction.  Recording two-phase
+-- commit state like this in WAL records in Greenplum specific
+-- behavior.  In newer Greenplum versions and PostgreSQL, two-phase
+-- state file is used to record this state, and checkpointer does not
+-- need to be mindful of prepare WAL records.
+3&: INSERT INTO t_slot_size_limit SELECT generate_series(101,120);  <waiting ...>
+1: SELECT gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Walsender skip sending WAL to the mirror, build replication lag.
+-- Note that this fault causes SyncRepWaitForLSN to get stuck.  We try
+-- to avoid committing transactions in subsequent steps until this
+-- fault is reset.
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
  gp_inject_fault_infinite 
 --------------------------
@@ -45,41 +80,125 @@ CHECKPOINT
 
 2: BEGIN;
 BEGIN
-2: DROP TABLE IF EXISTS t_slot_size_limit;
-DROP
-2: CREATE TABLE t_slot_size_limit(a int);
-CREATE
-2: INSERT INTO t_slot_size_limit SELECT generate_series(1,1000);
-INSERT 1000
 
--- generate 2 more WAL files, which exceeds 'max_slot_wal_keep_size'
-2: SELECT advance_xlog(2);
- advance_xlog 
---------------
-              
+-- Trigger the fault in walsender.
+2: SELECT advance_xlog_on_seg0(1);
+ advance_xlog_on_seg0 
+----------------------
+                      
+(1 row)
+1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
 (1 row)
 
--- checkpoint will trigger the check of obsolete replication slot, it will stop the walsender.
-0U: CHECKPOINT;
-CHECKPOINT
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.  This should
+-- trigger checkpoint as checkpoint_segments is set to 1.  The
+-- checkpoint is expected to retain WAL even when mirror has lagged
+-- behind more than max_slot_wal_keep_size.
+2: SELECT advance_xlog_on_seg0(3);
+ advance_xlog_on_seg0 
+----------------------
+                      
+(1 row)
 
--- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
--- where 1 is the max_slot_wal_keep_size set above.
-0U: select count(pg_ls_dir) < current_setting('checkpoint_segments')::int * 2 + 2 from pg_ls_dir('pg_xlog') where pg_ls_dir like '________________________';
- ?column? 
+-- Replication slot on content 0 primary should report valid LSN
+-- because checkpoint must override max_slot_wal_keep_size GUC in
+-- order to retain the PREPARE record created by session 3.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+ restart_lsn_is_valid 
+----------------------
+ t                    
+(1 row)
+-- WAL accumulated should be greater than max_slot_wal_keep_size
+-- (which is set to 128MB above).
+0U: select pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) / 1024 /1024 > 128 as max_slot_size_overridden from pg_get_replication_slots();
+ max_slot_size_overridden 
+--------------------------
+ t                        
+(1 row)
+
+-- The mirror should remain up in FTS configuration.
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
+ role | preferred_role | status 
+------+----------------+--------
+ p    | p              | u      
+ m    | m              | u      
+(2 rows)
+
+-- Unblock walsender, so that the transaction in session 3 can be
+-- finished.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- Unblock the session that was suspected after prepare-transaction
+-- step.  It should be able to finish the transaction.
+1: SELECT gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+3<:  <... completed>
+INSERT 20
+3: select count(*) from t_slot_size_limit;
+ count 
+-------
+ 20    
+(1 row)
+3q: ... <quitting>
+
 ----------
- t        
+-- Case 2:
+--
+--   Verify that max_slot_wal_keep_size GUC is honored by invalidating
+--   replication slot.
+----------
+
+-- Make walsender skip sending WAL to the mirror to build replication
+-- lag again.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- Trigger the fault in walsender.
+2: SELECT advance_xlog_on_seg0(1);
+ advance_xlog_on_seg0 
+----------------------
+                      
+(1 row)
+1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.  This should
+-- also create at least one checkpoint due to checkpoint_segments.
+2: SELECT advance_xlog_on_seg0(3);
+ advance_xlog_on_seg0 
+----------------------
+                      
 (1 row)
 
 -- Replication slot on content 0 primary should report invalid LSN
--- because the WAL file it needs is already removed when checkpoint
--- was created.
-0U: select * from pg_get_replication_slots();
- slot_name                     | plugin | slot_type | datoid | active | xmin | catalog_xmin | restart_lsn 
--------------------------------+--------+-----------+--------+--------+------+--------------+-------------
- internal_wal_replication_slot |        | physical  |        | t      |      |              |             
+-- because the WAL files needed by it are removed by previous
+-- checkpoint.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+ restart_lsn_is_valid 
+----------------------
+ f                    
 (1 row)
-0Uq: ... <quitting>
 
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
  gp_inject_fault_infinite 
@@ -110,47 +229,6 @@ END
 -- do full recovery
 !\retcode gprecoverseg -aF;
 -- start_ignore
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -aF
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.9.0+dev.60.g75932a9ebe5 build dev'
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.9.0+dev.60.g75932a9ebe5 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jul 26 2020 15:49:04 (with assert checking)'
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Standard
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery 1 of 1
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Synchronization mode                 = Full
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance host                 = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance address              = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance port                 = 6005
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance host        = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance address     = 09c5497cf854
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance port        = 6002
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-1 segment(s) to recover
-20200727:10:49:04:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-384857: /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Validating remote directories
-20200727:10:49:05:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Configuring new segments
-09c5497cf854 (dbid 5): pg_basebackup: base backup completed
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating configuration with new mirrors
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating mirrors
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting mirrors
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-era is e4307b9cbf2d16a8_200727100220
-20200727:10:49:06:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Process results...
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Triggering FTS probe
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating segments for streaming is completed.
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
-20200727:10:49:07:387723 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
 
 -- end_ignore
 (exited with code 0)
@@ -174,6 +252,8 @@ select wait_until_segment_synchronized(0);
 (1 row)
 
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
+ALTER
+0U: ALTER SYSTEM RESET checkpoint_segments;
 ALTER
 0U: ALTER SYSTEM RESET wal_keep_segments;
 ALTER

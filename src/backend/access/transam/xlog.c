@@ -9608,10 +9608,7 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 
 			if (slot_keep_segs > wal_keep_segments &&
 				currSegNo - segno > slot_keep_segs)
-			{
-				*logSegNo = currSegNo - slot_keep_segs;
-				return;
-			}
+				segno = currSegNo - slot_keep_segs;
 		}
 	}
 

@@ -5,7 +5,7 @@
 
 include: helpers/server_helpers.sql;
 
-CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS
+CREATE OR REPLACE FUNCTION advance_xlog_on_seg0(num int) RETURNS void AS
 $$
 DECLARE
 	i int; 
@@ -25,9 +25,12 @@ BEGIN
 END; 
 $$ language plpgsql;
 
--- On content 0 primary, retain max 64MB (1 WAL file) for replication
--- slots.  The other GUCs are needed to make the test run faster.
-0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
+-- On content 0 primary, retain max 128MB (2 WAL files) for
+-- replication slots.  That makes it necessary to set
+-- checkpoint_segments to a lower value, that is 1 WAL file.  Other
+-- GUCs are needed to make the test run faster.
+0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 128;
+0U: ALTER SYSTEM SET checkpoint_segments TO 1;
 0U: ALTER SYSTEM SET wal_keep_segments TO 0;
 0U: ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period TO 0;
 0U: select pg_reload_conf();
@@ -35,34 +38,102 @@ $$ language plpgsql;
 ALTER SYSTEM SET gp_fts_probe_retries TO 1;
 select pg_reload_conf();
 
--- Create a checkpoint now so that another checkpoint doesn't get
--- triggered when the test doesn't expect it to.
-CHECKPOINT;
+CREATE TABLE t_slot_size_limit(a int, fname text);
 
--- walsender skip sending WAL to the mirror
-1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+----------
+-- Case 1:
+--
+--   Verify that max_slot_wal_keep_size GUC is overridden when the
+--   oldest PREPARE record falls behind the replay_lsn.  This behavior
+--   is Greenplum-specific.
+----------
+
+-- Suspend QD after preparing a distributed transaction, it will be
+-- resumed after checkpoint.
+1: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', dbid)
+   FROM gp_segment_configuration WHERE content=-1 AND role='p';
+-- This transaction is prepared on segments but not committed yet.  We
+-- advance WAL beyond max_slot_wal_keep_size in the next few steps.
+-- Checkpointer should retain WAL upto this prepare LSN, otherwise we
+-- will never be able to finish this transaction.  Recording two-phase
+-- commit state like this in WAL records in Greenplum specific
+-- behavior.  In newer Greenplum versions and PostgreSQL, two-phase
+-- state file is used to record this state, and checkpointer does not
+-- need to be mindful of prepare WAL records.
+3&: INSERT INTO t_slot_size_limit SELECT generate_series(101,120);
+1: SELECT gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, dbid)
+   FROM gp_segment_configuration WHERE content=-1 AND role='p';
+
+-- Walsender skip sending WAL to the mirror, build replication lag.
+-- Note that this fault causes SyncRepWaitForLSN to get stuck.  We try
+-- to avoid committing transactions in subsequent steps until this
+-- fault is reset.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
 
 2: BEGIN;
-2: DROP TABLE IF EXISTS t_slot_size_limit;
-2: CREATE TABLE t_slot_size_limit(a int);
-2: INSERT INTO t_slot_size_limit SELECT generate_series(1,1000);
 
--- generate 2 more WAL files, which exceeds 'max_slot_wal_keep_size'
-2: SELECT advance_xlog(2);
+-- Trigger the fault in walsender.
+2: SELECT advance_xlog_on_seg0(1);
+1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
 
--- checkpoint will trigger the check of obsolete replication slot, it will stop the walsender.
-0U: CHECKPOINT;
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.  This should
+-- trigger checkpoint as checkpoint_segments is set to 1.  The
+-- checkpoint is expected to retain WAL even when mirror has lagged
+-- behind more than max_slot_wal_keep_size.
+2: SELECT advance_xlog_on_seg0(3);
 
--- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
--- where 1 is the max_slot_wal_keep_size set above.
-0U: select count(pg_ls_dir) < current_setting('checkpoint_segments')::int * 2 + 2
-    from pg_ls_dir('pg_xlog') where pg_ls_dir like '________________________';
+-- Replication slot on content 0 primary should report valid LSN
+-- because checkpoint must override max_slot_wal_keep_size GUC in
+-- order to retain the PREPARE record created by session 3.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+-- WAL accumulated should be greater than max_slot_wal_keep_size
+-- (which is set to 128MB above).
+0U: select pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) / 1024 /1024 > 128
+    as max_slot_size_overridden from pg_get_replication_slots();
+
+-- The mirror should remain up in FTS configuration.
+SELECT gp_request_fts_probe_scan();
+SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
+
+-- Unblock walsender, so that the transaction in session 3 can be
+-- finished.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Unblock the session that was suspected after prepare-transaction
+-- step.  It should be able to finish the transaction.
+1: SELECT gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'reset', dbid)
+   FROM gp_segment_configuration WHERE content=-1 AND role='p';
+3<:
+3: select count(*) from t_slot_size_limit;
+3q:
+
+----------
+-- Case 2:
+--
+--   Verify that max_slot_wal_keep_size GUC is honored by invalidating
+--   replication slot.
+----------
+
+-- Make walsender skip sending WAL to the mirror to build replication
+-- lag again.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Trigger the fault in walsender.
+2: SELECT advance_xlog_on_seg0(1);
+1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.  This should
+-- also create at least one checkpoint due to checkpoint_segments.
+2: SELECT advance_xlog_on_seg0(3);
 
 -- Replication slot on content 0 primary should report invalid LSN
--- because the WAL file it needs is already removed when checkpoint
--- was created.
-0U: select * from pg_get_replication_slots();
-0Uq:
+-- because the WAL files needed by it are removed by previous
+-- checkpoint.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
 
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
 1: SELECT gp_request_fts_probe_scan();
@@ -81,6 +152,7 @@ select wait_until_segment_synchronized(0);
 1: SELECT state, sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
+0U: ALTER SYSTEM RESET checkpoint_segments;
 0U: ALTER SYSTEM RESET wal_keep_segments;
 0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
 0U: select pg_reload_conf();
