@@ -76,7 +76,10 @@
     </section>
     <section id="password-strength-recommendations">
       <title>Operating System Users and File System</title>
-      <p> To protect the network from intrusion, system administrators should verify the passwords
+      <p>
+        <note>Commands shown in this section should be run as the root user.</note>
+      </p>
+      <p>To protect the network from intrusion, system administrators should verify the passwords
         used within an organization are sufficiently strong. The following recommendations can
         strengthen a password: </p>
       <ul>
