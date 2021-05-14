@@ -3,7 +3,7 @@
 <topic id="topic_th5_5bf_jr">
   <title>Encrypting Data and Database Connections</title>
   <shortdesc>Describes how to encrypt data at rest in the database or in transit over the network,
-    to protect from evesdroppers or man-in-the-middle attacks.</shortdesc>
+    to protect from eavesdroppers or man-in-the-middle attacks.</shortdesc>
   <body>
     <ul id="ul_wxd_dxc_lr">
       <li>Connections between clients and the master database can be encrypted with SSL. This is
