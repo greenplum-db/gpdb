@@ -308,23 +308,41 @@ Pv2MikPS2fKOAg1R3LpMa8zDEtl4w3vckPQNrQNnYuUtfj6ZoCxv
     username varchar(100), ssn bytea); 
 
 INSERT INTO userssn(username, ssn)
-SELECT robotccs.username, pgp_pub_encrypt(robotccs.ssn, keys.pubkey) AS ssn
-FROM ( 
-        VALUES ('Alice', '123-45-6788'), ('Bob', '123-45-6799')) 
-            AS robotccs(username, ssn)
-CROSS JOIN  (SELECT  dearmor('-----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v2.0.14 (GNU/Linux)
-            
-mQENBFS1Zf0BCADNw8Qvk1V1C36Kfcwd3Kpm/dijPfRyyEwB6PqKyA05jtWiXZTh
-2His1ojSP6LI0cSkIqMU9LAlncecZhRIhBhuVgKlGSgd9texg2nnSL9Admqik/yX
-R5syVKG+qcdWuvyZg9oOOmeyjhc3n+kkbRTEMuM3flbMs8shOwzMvstCUVmuHU/V
-. . .
-WH+N2lasoUaoJjb2kQGhLOnFbJuevkyBylRz+hI/+8rJKcZOjQkmmK8Hkk8qb5x/
-HMUc55H0g2qQAY0BpnJHgOOQ45Q6pk3G2/7Dbek5WJ6K1wUrFy51sNlGWE8pvgEx
-/UUZB+dYqCwtvX0nnBu1KNCmk2AkEcFK3YoliCxomdOxhFOv9AKjjojDyC65KJci
-Pv2MikPS2fKOAg1R3LpMa8zDEtl4w3vckPQNrQNnYuUtfj6ZoCxv
-=XZ8J
------END PGP PUBLIC KEY BLOCK-----' AS pubkey) AS keys;
+SELECT robotccs.username, pgp_pub_encrypt(robotccs.ssn, keys.pubkey) AS
+ssn
+FROM (
+VALUES ('Alice', '123-45-6788'), ('Bob', '123-45-6799'))
+AS robotccs(username, ssn)
+CROSS JOIN (SELECT dearmor('-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v2.0.22 (GNU/Linux)
+
+mQENBGCb7NQBCADfCoMFIbjb6dup8eJHgTpo8TILiIubqhqASHqUPe/v3eI+p9W8
+mZbTZo+EUFCJmFZx8RWw0s0t4DG3fzBQOv5y2oBEu9sg3ofgFkK6TaQV7ueZfifx
+S1DxQE8kWEFrGsB13VJlLMMLPr4tdjtaYOdn5b+3N4/8GOJALn2CeWrP8lIXaget
+5pG3e0IzsHszyX4J/pm/pIttZn2gDmjWfPWIXiz4Wg82294uXij+O98TfI2AQyq3
+DDDFUQksrbSCBdRLD8sggQUTQ0+aah9pYfK4Tv3YYDXRCKCtit8v2H+fmqsTzCBe
+6tDd2+4+cqgVxiZA3r1MTkCJqirYRS7+aU+VABEBAAG0IGJhbGFrcmlzaG5hIDxi
+YWxhaXQwMkBnbWFpbC5jb20+iQE/BBMBAgApBQJgm+zUAhsDBQkB4TOABwsJCAcD
+AgEGFQgCCQoLBBYCAwECHgECF4AACgkQxQtUDV1goa3VaQgA3O7TAhA3cxRIhc3V
+Zv2S+ncYBLXE8YrPjwcZd4CzhRg0zl4iVQWCyRac8o6vLO08SrR1AluQetCGEoFc
+Vew29efdoqrCcJIRrZ9XExP9dFcB+VFeWPBIo/0O7LIVWCT88CqzUZf+aAU8RH88
+Ah5hIOH/FFLtzTwuEc056McsGztKp7nNf5PEhXUBDw/st/q5K9D3eGlu1qMTqigU
+grMHySK6Mado1tZ4FKjjcQrH61lQGuPSw8QqhtFInoiVyliYNiEt+wmm62zQRqhb
+wUbbMyvKySDjUS3/ZjukqksYzMnlYCoHzfaMFdaGNaRvNfsN1me7R9zjOpjLipGv
+sIB+m7kBDQRgm+zUAQgAwbh7VGZUPcMK6nhKwr9PyLehvc/pb2lOEAlzQVqrZY27
+5MjYruczL+JYcgjaXtUj2VmGBuUzjOrzDJzCHjSFiFpJe4oWp2S0Adf3OcFRbSuK
+QKGUv2Ok+QC7/jkDDfw1hxS/Ttd1fbSDi3oY2RvQngpFtu7AMA/PoacAgqzDU6Ep
+VyNVWg7iQXqhRKyhSrCWUgwNYXRyBCPUQ/VDrAIeIqa1p3R81zcPY5yzd55Awuix
+FrSUBk8GEiVme6nqkFZACXVkNEl3yhsELwuYHuZU1K1p0ohSO49R683jj8bha431
+3IZMiYcKoCL3KZfOsu3ynIa5PxsFVm8VlG9BctGWNQARAQABiQElBBgBAgAPBQJg
+m+zUAhsMBQkB4TOAAAoJEMULVA1dYKGtvuUIALla0GaGGkiP4AtRJKVBYuUixjG1
+1s6jp8SOKjttiXl9MdW95kiB4pfp7s4ZCMdk8U9w886RF7aPN+89q/ej1bsRcN3y
+T9dl2HhMOatlVhBUOcYrqSBEWgwtQbX36hFzhp1tNCDOvtDpsfLNHJr8vIpXAeyz
+juW0/vEgrAtSK8P2/kmRsmNM/LJIbCBHD+tTSTHZ194+QYUc1KYXW4NV5LLW08MY
+skETyovyVDFYEpTMVrRKJYLROhEBv8cqYgKq1XtcIH8eiwJIZ0L1L/1Cw7Z/BpRT
+WbrwmhXTpqi+/Vdm7q9gPFoAfw/ur44hJGsc13bQxdmluTigSN2f+qf9RzA=
+=xdQf
+-----END PGP PUBLIC KEY BLOCK-----')  as pubkey) AS keys;
 </codeblock></li>
         <li>Verify that the <codeph>ssn</codeph> column is
           encrypted.<codeblock>test_db=# select * from userssn;
