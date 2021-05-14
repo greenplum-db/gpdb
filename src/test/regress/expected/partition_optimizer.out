@@ -7956,3 +7956,82 @@ select * from exchange_part;
 
 drop table exchange_part;
 drop table exchange1;
+-- check if partition names having keywords (reserved, non-reserved and
+-- unclassified) are properly quoted when dumped with the quote_all_identifiers
+-- GUC set. For a comprehensive list, please refer:
+-- https://www.postgresql.org/docs/8.3/sql-keywords-appendix.html
+SET quote_all_identifiers TO on;
+CREATE TABLE t_quote_test (a int, b int, c int, d int, e text)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        SUBPARTITION BY RANGE (c)
+            SUBPARTITION TEMPLATE (
+            START (1) END (2) EVERY (1),
+            DEFAULT SUBPARTITION "current" )
+        SUBPARTITION BY LIST (e)
+            SUBPARTITION TEMPLATE (
+            SUBPARTITION "at" VALUES ('val1'),
+            SUBPARTITION "window" VALUES ('val2'),
+            DEFAULT SUBPARTITION dsp )
+        ( START (2002) END (2003) EVERY (1),
+        DEFAULT PARTITION dp );
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp" for table "t_quote_test"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_current" for table "t_quote_test_1_prt_dp"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_current_3_prt_at" for table "t_quote_test_1_prt_dp_2_prt_current"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_current_3_prt_window" for table "t_quote_test_1_prt_dp_2_prt_current"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_current_3_prt_dsp" for table "t_quote_test_1_prt_dp_2_prt_current"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_2" for table "t_quote_test_1_prt_dp"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_2_3_prt_at" for table "t_quote_test_1_prt_dp_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_2_3_prt_window" for table "t_quote_test_1_prt_dp_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_dp_2_prt_2_3_prt_dsp" for table "t_quote_test_1_prt_dp_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2" for table "t_quote_test"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_current" for table "t_quote_test_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_current_3_prt_at" for table "t_quote_test_1_prt_2_2_prt_current"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_current_3_prt_window" for table "t_quote_test_1_prt_2_2_prt_current"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_current_3_prt_dsp" for table "t_quote_test_1_prt_2_2_prt_current"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_2" for table "t_quote_test_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_2_3_prt_at" for table "t_quote_test_1_prt_2_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_2_3_prt_window" for table "t_quote_test_1_prt_2_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "t_quote_test_1_prt_2_2_prt_2_3_prt_dsp" for table "t_quote_test_1_prt_2_2_prt_2"
+SELECT pg_get_partition_def('t_quote_test'::regclass, true, true);
+                                                                  pg_get_partition_def
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ PARTITION BY RANGE("b")
+           SUBPARTITION BY RANGE("c")
+                   SUBPARTITION BY LIST("e")
+           (
+           START (2002) END (2003) EVERY (1) WITH (tablename='t_quote_test_1_prt_2', appendonly=false )
+                   (
+                   START (1) END (2) EVERY (1) WITH (tablename='t_quote_test_1_prt_2_2_prt_2', appendonly=false )
+                           (
+                           SUBPARTITION "at" VALUES('val1') WITH (tablename='t_quote_test_1_prt_2_2_prt_2_3_prt_at', appendonly=false ),
+                           SUBPARTITION "window" VALUES('val2') WITH (tablename='t_quote_test_1_prt_2_2_prt_2_3_prt_window', appendonly=false ),
+                           DEFAULT SUBPARTITION "dsp"  WITH (tablename='t_quote_test_1_prt_2_2_prt_2_3_prt_dsp', appendonly=false )
+                           ),
+                   DEFAULT SUBPARTITION "current"  WITH (tablename='t_quote_test_1_prt_2_2_prt_current', appendonly=false )
+                           (
+                           SUBPARTITION "at" VALUES('val1') WITH (tablename='t_quote_test_1_prt_2_2_prt_current_3_prt_at', appendonly=false ),
+                           SUBPARTITION "window" VALUES('val2') WITH (tablename='t_quote_test_1_prt_2_2_prt_current_3_prt_window', appendonly=false ),
+                           DEFAULT SUBPARTITION "dsp"  WITH (tablename='t_quote_test_1_prt_2_2_prt_current_3_prt_dsp', appendonly=false )
+                           )
+                   ),
+           DEFAULT PARTITION "dp"  WITH (tablename='t_quote_test_1_prt_dp', appendonly=false )
+                   (
+                   START (1) END (2) EVERY (1) WITH (tablename='t_quote_test_1_prt_dp_2_prt_2', appendonly=false )
+                           (
+                           SUBPARTITION "at" VALUES('val1') WITH (tablename='t_quote_test_1_prt_dp_2_prt_2_3_prt_at', appendonly=false ),
+                           SUBPARTITION "window" VALUES('val2') WITH (tablename='t_quote_test_1_prt_dp_2_prt_2_3_prt_window', appendonly=false ),
+                           DEFAULT SUBPARTITION "dsp"  WITH (tablename='t_quote_test_1_prt_dp_2_prt_2_3_prt_dsp', appendonly=false )
+                           ),
+                   DEFAULT SUBPARTITION "current"  WITH (tablename='t_quote_test_1_prt_dp_2_prt_current', appendonly=false )
+                           (
+                           SUBPARTITION "at" VALUES('val1') WITH (tablename='t_quote_test_1_prt_dp_2_prt_current_3_prt_at', appendonly=false ),
+                           SUBPARTITION "window" VALUES('val2') WITH (tablename='t_quote_test_1_prt_dp_2_prt_current_3_prt_window', appendonly=false ),
+                           DEFAULT SUBPARTITION "dsp"  WITH (tablename='t_quote_test_1_prt_dp_2_prt_current_3_prt_dsp', appendonly=false )
+                           )
+                   )
+           )
+(1 row)
+
+DROP TABLE t_quote_test;
+RESET quote_all_identifiers;
