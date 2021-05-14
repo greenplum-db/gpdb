@@ -345,6 +345,7 @@ usage(void)
 			 "                         include required WAL files with specified method\n"));
 	printf(_("  -z, --gzip             compress tar output\n"));
 	printf(_("  -Z, --compress=0-9     compress tar output with given compression level\n"));
+	printf(_("  --force-overwrite      force to overwrite the target directory\n"));
 	printf(_("  --target-gp-dbid       create tablespace subdirectories with given dbid\n"));
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -c, --checkpoint=fast|spread\n"
