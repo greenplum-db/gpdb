@@ -90,7 +90,13 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 #define WalSegMaxSize (1024 * 1024 * 1024)
 /* default number of min and max wal segments */
 #define DEFAULT_MIN_WAL_SEGS 5
-#define DEFAULT_MAX_WAL_SEGS 64
+/*
+ * gpdb: PG hardcodes this as 64. We don't expect to keep that many segment
+ * files given we use 64MB as default segment file size while PG uses 16MB,
+ * also note this value affects that checkpoint frequency. Let's just ensure
+ * the max wal segment size is same on gpdb and PG.
+ */
+#define DEFAULT_MAX_WAL_SEGS (64*(16*1024*1024)/DEFAULT_XLOG_SEG_SIZE)
 
 /* check that the given size is a valid wal_segment_size */
 #define IsPowerOf2(x) (x > 0 && ((x) & ((x)-1)) == 0)
