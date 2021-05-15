@@ -369,6 +369,11 @@ class GpRecoverSegmentProgram:
                 # Save off the new host/address for this address.
                 recoverAddressMap[segAddress] = (destHostname, destAddress)
 
+            new_recovery_hosts = [destHostname for (destHostname, destAddress) in recoverAddressMap.values()]
+            unreachable_hosts = get_unreachable_segment_hosts(new_recovery_hosts, len(new_recovery_hosts))
+            if unreachable_hosts:
+                raise ExceptionNoStackTraceNeeded("Cannot recover. The recovery target host %s is unreachable." % (' '.join(map(str, unreachable_hosts))))
+
             # Now that we've generated the mapping, look up all the addresses to make
             # sure they are resolvable.
             interfaces = [address for (_ignore, address) in recoverAddressMap.values()]
@@ -423,13 +428,18 @@ class GpRecoverSegmentProgram:
                 # these two lines make it so that failoverSegment points to the object that is registered in gparray
                 failoverSegment = failedSegment
                 failedSegment = failoverSegment.copy()
+                failoverSegment.unreachable = False  # recover to a new host; it is reachable as checked above.
                 failoverSegment.setSegmentHostName(newRecoverHost)
                 failoverSegment.setSegmentAddress(newRecoverAddress)
                 port = portAssigner.findAndReservePort(newRecoverHost, newRecoverAddress)
                 failoverSegment.setSegmentPort(port)
-
-            if failedSegment.unreachable:
-                continue
+            else:
+                # we are recovering to the same host("in place") and hence
+                # cannot recover if the failed segment is unreachable.
+                # This is equivalent to failoverSegment.unreachable that we should be doing here but
+                # due to how the code is factored failoverSegment is None here.
+                if failedSegment.unreachable:
+                    continue
 
             segs.append(GpMirrorToBuild(failedSegment, liveSegment, failoverSegment, forceFull))
 
