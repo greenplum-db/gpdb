@@ -2374,7 +2374,7 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
  *		Recreate all indexes of a table (and of its toast table, if any)
  */
 Oid
-ReindexTable(ReindexStmt *stmt)
+ReindexTable(ReindexStmt *stmt, bool isTopLevel)
 {
 	MemoryContext	private_context, oldcontext;
 	List	   *prels = NIL, *relids = NIL;
@@ -2423,6 +2423,46 @@ ReindexTable(ReindexStmt *stmt)
 	relids = lappend_oid(relids, heapOid);
 	relids = list_concat_unique_oid(relids, prels);
 	MemoryContextSwitchTo(oldcontext);
+
+	if (list_length(relids) == 1)
+	{
+		bool result;
+
+		MemoryContextDelete(private_context);
+		result = reindex_relation(heapOid,
+								  REINDEX_REL_PROCESS_TOAST |
+									REINDEX_REL_CHECK_CONSTRAINTS);
+		if (!result)
+			ereport(NOTICE,
+					(errmsg("table \"%s\" has no indexes to reindex",
+							stmt->relation->relname)));
+
+		if (result && Gp_role == GP_ROLE_DISPATCH)
+		{
+			ReindexStmt    *qestmt;
+			qestmt = makeNode(ReindexStmt);
+			qestmt->relid = heapOid;
+			qestmt->kind = OBJECT_TABLE;
+
+			CdbDispatchUtilityStatement((Node *) qestmt,
+										DF_CANCEL_ON_ERROR |
+											DF_WITH_SNAPSHOT,
+										GetAssignedOidsForDispatch(),
+										NULL);
+		}
+
+		return heapOid;
+	}
+
+	/*
+	 * We cannot run REINDEX TABLE on partitioned table inside a user
+	 * transaction block; if we were inside a transaction, then our commit-
+	 * and start-transaction-command calls would not have the intended effect!
+	 * For example, if it gets called under pl language, it'll mess up
+	 * pl language's transaction management which may cause panic.
+	 */
+	PreventTransactionChain(isTopLevel,
+							"REINDEX TABLE <partitioned_table>");
 
 	/* various checks on each partition */
 	foreach (lc, prels)

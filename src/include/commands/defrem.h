@@ -31,7 +31,7 @@ extern Oid DefineIndex(Oid relationId,
 			bool skip_build,
 			bool quiet);
 extern Oid	ReindexIndex(ReindexStmt *stmt);
-extern Oid	ReindexTable(ReindexStmt *stmt);
+extern Oid	ReindexTable(ReindexStmt *stmt, bool isTopLevel);
 extern Oid	ReindexDatabase(ReindexStmt *stmt);
 extern char *makeObjectName(const char *name1, const char *name2,
 			   const char *label);

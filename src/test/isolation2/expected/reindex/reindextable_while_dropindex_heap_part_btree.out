@@ -34,17 +34,16 @@ DELETE FROM reindex_dropindex_crtab_part_heap_btree  WHERE id < 128;
 DELETE 254
 1: BEGIN;
 BEGIN
-2: BEGIN;
-BEGIN
-1: REINDEX TABLE  reindex_dropindex_crtab_part_heap_btree;
-REINDEX
-2&: DROP INDEX reindex_dropindex_crtab_part_heap_btree_owner_idx;  <waiting ...>
+1: LOCK reindex_dropindex_crtab_part_heap_btree IN ACCESS EXCLUSIVE MODE;
+LOCK
+2&: REINDEX TABLE  reindex_dropindex_crtab_part_heap_btree;  <waiting ...>
+3&: DROP INDEX reindex_dropindex_crtab_part_heap_btree_owner_idx;  <waiting ...>
 1: COMMIT;
 COMMIT
 2<:  <... completed>
+REINDEX
+3<:  <... completed>
 DROP
-2: COMMIT;
-COMMIT
 3: select count(*) from reindex_dropindex_crtab_part_heap_btree where id = 998;
  count 
 -------
