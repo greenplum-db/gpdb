@@ -1342,7 +1342,7 @@ static bool cleanupGang(Gang *gp)
 		{
 			/* If cluster is reconfigured during a transaction, then error out */
 			if (IsTransactionState())
-				elog(ERROR, "cluster is reconfigured during a transaction");
+				elog(ERROR, "gang was lost due to cluster reconfiguration");
 			return false;
 		}
 

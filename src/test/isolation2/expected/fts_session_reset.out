@@ -60,7 +60,7 @@ t
 
 -- insert data again and commit in serssion1, expect error and abort transaction
 1<:  <... completed>
-ERROR:  cluster is reconfigured during a transaction (cdbgang.c:1345)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang.c:1345)
 ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:238)
 1: truncate test_fts_session_reset2;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
