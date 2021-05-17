@@ -3584,13 +3584,3 @@ ALTER TABLE test_part_integrity ATTACH PARTITION test_part_integrity_p1 FOR VALU
 ALTER TABLE test_part_integrity ATTACH PARTITION test_part_integrity_p2 FOR VALUES IN (2);
 SELECT * FROM test_part_integrity;
 DROP TABLE test_part_integrity;
-
--- Test external table as left child of union all with replicated table
-select gp_debug_set_create_table_default_numsegments('FULL');
-
-CREATE EXTERNAL TABLE multilocation_external_table(a INTEGER)
-location ('file://@hostname@@abs_srcdir@/data/location1.csv', 'file://@hostname@@abs_srcdir@/data/location2.csv', 'file://@hostname@@abs_srcdir@/data/location3.csv')
-ON ALL FORMAT 'text';
-CREATE TABLE simple_replicated_table(a integer) DISTRIBUTED REPLICATED;
-EXPLAIN SELECT A FROM multilocation_external_table UNION ALL SELECT A FROM simple_replicated_table;
-SELECT A FROM multilocation_external_table UNION ALL SELECT A FROM simple_replicated_table;
