@@ -80,8 +80,7 @@ public:
 	DerivePropertyConstraint(CMemoryPool *mp,
 							 CExpressionHandle &exprhdl) const override
 	{
-		return PpcDeriveConstraintIntersectUnion(mp, exprhdl,
-												 false /*fIntersect*/);
+		return PpcDeriveConstraintSetop(mp, exprhdl, false /*fIntersect*/);
 	}
 
 	//-------------------------------------------------------------------------------------
