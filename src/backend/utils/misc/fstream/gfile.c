@@ -512,6 +512,10 @@ gz_file_open(gfile_t *fd)
 }
 #endif
 #ifdef USE_ZSTD
+
+#ifndef ZSTD_CLEVEL_DEFAULT
+#  define ZSTD_CLEVEL_DEFAULT 3 /* In version before 1.3.7 the macro may not be defined */
+#endif
 struct zstdlib_stuff
 {
 	ZSTD_inBuffer in;
