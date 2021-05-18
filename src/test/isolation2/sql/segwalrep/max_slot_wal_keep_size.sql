@@ -174,14 +174,6 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
 1: SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
 1: SELECT sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
--- do full recovery
-!\retcode gprecoverseg -aF;
-select wait_until_segment_synchronized(0);
-
--- the mirror is up and the replication is back
-1: SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
-1: SELECT state, sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
-
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
 0U: ALTER SYSTEM RESET checkpoint_segments;
 0U: ALTER SYSTEM RESET wal_keep_segments;
@@ -190,6 +182,14 @@ select wait_until_segment_synchronized(0);
 0Uq:
 ALTER SYSTEM RESET gp_fts_probe_retries;
 select pg_reload_conf();
+
+-- do full recovery
+!\retcode gprecoverseg -aF;
+select wait_until_segment_synchronized(0);
+
+-- the mirror is up and the replication is back
+1: SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
+1: SELECT state, sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
 1q:
 2q:

@@ -283,6 +283,28 @@ END
  walread    
 (1 row)
 
+0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
+ALTER
+0U: ALTER SYSTEM RESET checkpoint_segments;
+ALTER
+0U: ALTER SYSTEM RESET wal_keep_segments;
+ALTER
+0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
+ALTER
+0U: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+0Uq: ... <quitting>
+ALTER SYSTEM RESET gp_fts_probe_retries;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+
 -- do full recovery
 !\retcode gprecoverseg -aF;
 -- start_ignore
@@ -305,28 +327,6 @@ select wait_until_segment_synchronized(0);
  state     | sync_error 
 -----------+------------
  streaming | none       
-(1 row)
-
-0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
-ALTER
-0U: ALTER SYSTEM RESET checkpoint_segments;
-ALTER
-0U: ALTER SYSTEM RESET wal_keep_segments;
-ALTER
-0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
-ALTER
-0U: select pg_reload_conf();
- pg_reload_conf 
-----------------
- t              
-(1 row)
-0Uq: ... <quitting>
-ALTER SYSTEM RESET gp_fts_probe_retries;
-ALTER
-select pg_reload_conf();
- pg_reload_conf 
-----------------
- t              
 (1 row)
 
 1q: ... <quitting>
