@@ -123,15 +123,15 @@ test_KeepLogSeg(void **state)
 	 ***********************************************/
 	/* Current Delete pointer */
 	wal_keep_size_mb = 0;
-	_logSegNo = 9 * XLogSegmentsPerXLogId(wal_segment_size) + 45;
+	_logSegNo = recptr / wal_segment_size - 3;
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId(wal_segment_size) + 45);
+	assert_int_equal(_logSegNo, recptr / wal_segment_size - 3);
 
 	wal_keep_size_mb = -1;
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId(wal_segment_size) + 45);
+	assert_int_equal(_logSegNo, recptr / wal_segment_size - 3);
 	/************************************************/
 }
 
