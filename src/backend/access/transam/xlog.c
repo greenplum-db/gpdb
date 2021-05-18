@@ -966,7 +966,6 @@ static int	get_sync_bit(int method);
 
 /* New functions added for WAL replication */
 static void XLogProcessCheckpointRecord(XLogReaderState *rec);
-
 static void CopyXLogRecordToWAL(int write_len, bool isLogSwitch,
 								XLogRecData *rdata,
 								XLogRecPtr StartPos, XLogRecPtr EndPos);
@@ -10204,8 +10203,14 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	/*
 	 * Calculate how many segments are kept by slots first, adjusting for
 	 * max_slot_wal_keep_size.
+	 *
+	 * Greenplum: coordinator needs a different way to determine the keep
+	 * point as replication slot is not created there.
 	 */
-	keep = XLogGetReplicationSlotMinimumLSN();
+	keep = IS_QUERY_DISPATCHER() ?
+		WalSndCtlGetXLogCleanUpTo() :
+		XLogGetReplicationSlotMinimumLSN();
+
 #ifdef FAULT_INJECTOR
 	/*
 	 * Ignore the replication slot's LSN and let the WAL still needed by the
