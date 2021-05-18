@@ -2699,6 +2699,12 @@ XLogSendPhysical(void)
 	if (got_STOPPING)
 		WalSndSetState(WALSNDSTATE_STOPPING);
 
+#ifdef FAULT_INJECTOR
+	/* the walsender skip send WAL to the mirror . */
+	if (SIMPLE_FAULT_INJECTOR("walsnd_skip_send") == FaultInjectorTypeSkip)
+		return;
+#endif
+
 	if (streamingDoneSending)
 	{
 		WalSndCaughtUp = true;
