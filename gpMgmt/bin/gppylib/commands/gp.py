@@ -419,7 +419,7 @@ class SegmentRewind(Command):
     SegmentRewind is used to run pg_rewind using source server.
     """
 
-    def __init__(self, name, target_dbid, target_host, target_datadir,
+    def __init__(self, name, target_host, target_datadir,
                  source_host, source_port, progress_file,
                  verbose=False, ctxt=REMOTE):
 
@@ -433,7 +433,7 @@ class SegmentRewind(Command):
         # Build the pg_rewind command. Do not run pg_rewind if standby.signal
         # file exists in target data directory because the target instance can
         # be started up normally as a mirror for WAL replication catch up.
-        rewind_cmd = 'rm -f %s/recovery.ok.dbid%s; if [ ! -f %s/standby.signal ]; then PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (gplog.get_logger_dir(), target_dbid, target_datadir, source_server, target_datadir)
+        rewind_cmd = 'rm -f %s.success; if [ ! -f %s/standby.signal ]; then PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (pipes.quote(progress_file), target_datadir, source_server, target_datadir)
 
         if verbose:
             rewind_cmd = rewind_cmd + ' --progress'
@@ -443,7 +443,10 @@ class SegmentRewind(Command):
         # a corrupted pg_control file) to stderr.
         rewind_cmd = rewind_cmd + " > {} 2>&1".format(pipes.quote(progress_file))
 
-        rewind_cmd = rewind_cmd + ' && touch %s/recovery.ok.dbid%s; fi' % (gplog.get_logger_dir(), target_dbid)
+        # touch a marker file to indicate pg_rewind success. If pg_rewind fails,
+        # we keep the progress file (pg_rewind log) for debugging, else we
+        # delete log file.
+        rewind_cmd = rewind_cmd + ' && touch %s.success; fi' % (pipes.quote(progress_file))
 
         self.cmdStr = rewind_cmd
 
