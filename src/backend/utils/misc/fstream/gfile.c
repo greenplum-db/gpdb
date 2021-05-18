@@ -513,8 +513,12 @@ gz_file_open(gfile_t *fd)
 #endif
 #ifdef USE_ZSTD
 
+/* The value range of the level could be found at zstd.h at different versions.
+ * Although the level in ZSTD_initCStream() has the same meaning in different
+ * versions, the macro ZSTD_CLEVEL_DEFAULT may not be defined before 1.3.7.
+ * So we borrow the macro from zstd.h at 1.3.7 in case it is not defined */
 #ifndef ZSTD_CLEVEL_DEFAULT
-#  define ZSTD_CLEVEL_DEFAULT 3 /* In version before 1.3.7 the macro may not be defined */
+#  define ZSTD_CLEVEL_DEFAULT 3
 #endif
 struct zstdlib_stuff
 {
