@@ -10197,7 +10197,6 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	XLogSegNo	currSegNo;
 	XLogSegNo	segno;
 	XLogRecPtr	keep;
-	bool setvalue = false;
 
 	XLByteToSeg(recptr, currSegNo, wal_segment_size);
 	segno = currSegNo;
@@ -10225,14 +10224,11 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 		if (max_slot_wal_keep_size_mb >= 0)
 		{
 			XLogRecPtr	slot_keep_segs;
-
 			slot_keep_segs =
 				ConvertToXSegs(max_slot_wal_keep_size_mb, wal_segment_size);
-
 			if (currSegNo - segno > slot_keep_segs)
 				segno = currSegNo - slot_keep_segs;
 		}
-		setvalue = true;
 	}
 
 	/* but, keep at least wal_keep_size if that's set */
@@ -10248,12 +10244,11 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 				segno = 1;
 			else
 				segno = currSegNo - keep_segs;
-			setvalue = true;
 		}
 	}
 
 	/* don't delete WAL segments newer than the calculated segment */
-	if (setvalue && segno < *logSegNo)
+	if (segno < *logSegNo)
 		*logSegNo = segno;
 }
 

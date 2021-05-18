@@ -3,12 +3,16 @@
 -- obsoleted. In this case, the mirror will be marked down as well and need full
 -- recovery to brought it back.
 
-CREATE OR REPLACE FUNCTION advance_xlog(num int) RETURNS void AS $$ DECLARE i int; /* in func */ BEGIN i := 0; /* in func */ CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); /* in func */ LOOP IF i >= num THEN DROP TABLE t_dummy_switch; /* in func */ RETURN; /* in func */ END IF; /* in func */ PERFORM pg_switch_wal() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; /* in func */ INSERT INTO t_dummy_switch SELECT generate_series(1,10); /* in func */ i := i + 1; /* in func */ END LOOP; /* in func */ DROP TABLE t_dummy_switch; /* in func */ END; /* in func */ $$ language plpgsql;
+CREATE OR REPLACE FUNCTION advance_xlog_on_seg0(num int) RETURNS void AS $$ DECLARE i int; /* in func */ BEGIN i := 0; /* in func */ CREATE TABLE t_dummy_switch(i int) DISTRIBUTED BY (i); /* in func */ LOOP IF i >= num THEN DROP TABLE t_dummy_switch; /* in func */ RETURN; /* in func */ END IF; /* in func */ PERFORM pg_switch_wal() FROM gp_dist_random('gp_id') WHERE gp_segment_id=0; /* in func */ INSERT INTO t_dummy_switch SELECT generate_series(1,10); /* in func */ i := i + 1; /* in func */ END LOOP; /* in func */ DROP TABLE t_dummy_switch; /* in func */ END; /* in func */ $$ language plpgsql;
 CREATE
 
--- On content 0 primary, retain max 64MB (1 WAL file) for replication
--- slots.  The other GUCs are needed to make the test run faster.
-0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 64;
+-- On content 0 primary, retain max 128MB (2 WAL files) for
+-- replication slots.  That makes it necessary to set
+-- checkpoint_segments to a lower value, that is 1 WAL file.  Other
+-- GUCs are needed to make the test run faster.
+0U: ALTER SYSTEM SET max_slot_wal_keep_size TO 128;
+ALTER
+0U: ALTER SYSTEM SET checkpoint_segments TO 1;
 ALTER
 0U: ALTER SYSTEM SET wal_keep_size TO 0;
 ALTER
@@ -28,12 +32,43 @@ select pg_reload_conf();
  t              
 (1 row)
 
--- Create a checkpoint now so that another checkpoint doesn't get
--- triggered when the test doesn't expect it to.
-CHECKPOINT;
-CHECKPOINT
+CREATE TABLE t_slot_size_limit(a int, fname text);
+CREATE
 
--- walsender skip sending WAL to the mirror
+----------
+-- Case 1:
+--
+--   Verify that max_slot_wal_keep_size GUC is ignored and more WAL is
+--   retained when the oldest active PREPARE record falls behind the
+--   cutoff specified by the GUC.
+----------
+
+-- Suspend QD after preparing a distributed transaction, it will be
+-- resumed after checkpoint.
+1: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault
+-----------------
+ Success:
+(1 row)
+-- This transaction is prepared on segments but not committed yet.  We
+-- advance WAL beyond max_slot_wal_keep_size in the next few steps.
+-- Checkpointer should retain WAL upto this prepare LSN, otherwise we
+-- will never be able to finish this transaction.  Recording two-phase
+-- commit state like this in WAL records in Greenplum specific
+-- behavior.  In newer Greenplum versions and PostgreSQL, two-phase
+-- state file is used to record this state, and checkpointer does not
+-- need to be mindful of prepare WAL records.
+3&: INSERT INTO t_slot_size_limit SELECT generate_series(101,120);  <waiting ...>
+1: SELECT gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_wait_until_triggered_fault
+-------------------------------
+ Success:
+(1 row)
+
+-- Walsender skip sending WAL to the mirror, build replication lag.
+-- Note that this fault causes SyncRepWaitForLSN to get stuck.  We try
+-- to avoid committing transactions in subsequent steps until this
+-- fault is reset.
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
  gp_inject_fault_infinite 
 --------------------------
@@ -42,41 +77,182 @@ CHECKPOINT
 
 2: BEGIN;
 BEGIN
-2: DROP TABLE IF EXISTS t_slot_size_limit;
-DROP
-2: CREATE TABLE t_slot_size_limit(a int);
-CREATE
-2: INSERT INTO t_slot_size_limit SELECT generate_series(1,1000);
-INSERT 1000
 
--- generate 2 more WAL files, which exceeds 'max_slot_wal_keep_size'
-2: SELECT advance_xlog(2);
- advance_xlog 
---------------
-              
+-- Trigger the fault in walsender.  Also triggers checkpoint.
+2: SELECT advance_xlog_on_seg0(1);
+ advance_xlog_on_seg0
+----------------------
+
+(1 row)
+1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault
+-------------------------------
+ Success:
 (1 row)
 
--- checkpoint will trigger the check of obsolete replication slot, it will stop the walsender.
+-- Skip checkpoints on seg0.  So that when new WAL is generated in the
+-- next step, checkpoints don't get triggered asynchronously.
+1: SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault_infinite
+--------------------------
+ Success:
+(1 row)
+0U: CHECKPOINT;
+CHECKPOINT
+1: SELECT gp_wait_until_triggered_fault('checkpoint', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault
+-------------------------------
+ Success:
+(1 row)
+
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.
+2: SELECT advance_xlog_on_seg0(3);
+ advance_xlog_on_seg0
+----------------------
+
+(1 row)
+
+-- Resume checkpoints.
+1: SELECT gp_inject_fault('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault
+-----------------
+ Success:
+(1 row)
+-- At this point:
+--    PREPARE LSN < previous checkpoint < restart_lsn
+-- The checkpoint should retain WAL even when mirror has lagged behind
+-- more than max_slot_wal_keep_size.
 0U: CHECKPOINT;
 CHECKPOINT
 
--- Count of WAL files in pg_xlog should not exceed XLOGfileslop + 1,
--- where 1 is the max_slot_wal_keep_size set above.
-0U: select count(pg_ls_dir) < pg_size_bytes(current_setting('max_wal_size'))::float / (64 * 1024 * 1024) + 1 from pg_ls_dir('pg_wal') where pg_ls_dir like '________________________';
- ?column? 
-----------
- t        
+-- Replication slot on content 0 primary should report valid LSN
+-- because checkpoint must override max_slot_wal_keep_size GUC in
+-- order to retain the PREPARE record created by session 3.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+ restart_lsn_is_valid
+----------------------
+ t
+(1 row)
+-- WAL accumulated should be greater than max_slot_wal_keep_size
+-- (which is set to 128MB above).
+0U: select pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) / 1024 /1024 > 128 as max_slot_size_overridden from pg_get_replication_slots();
+ max_slot_size_overridden
+--------------------------
+ t
 (1 row)
 
--- Replication slot on content 0 primary should report invalid LSN
--- because the WAL file it needs is already removed when checkpoint
--- was created.
-0U: select * from pg_get_replication_slots();
- slot_name                     | plugin | slot_type | datoid | temporary | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn | wal_status | safe_wal_size 
--------------------------------+--------+-----------+--------+-----------+--------+------------+------+--------------+-------------+---------------------+------------+---------------
- internal_wal_replication_slot |        | physical  |        | f         | f      |            |      |              |             |                     | lost       |               
+-- The mirror should remain up in FTS configuration.
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan
+---------------------------
+ t
 (1 row)
-0Uq: ... <quitting>
+SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
+ role | preferred_role | status
+------+----------------+--------
+ p    | p              | u
+ m    | m              | u
+(2 rows)
+
+-- Unblock walsender, so that the transaction in session 3 can be
+-- finished.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault_infinite
+--------------------------
+ Success:
+(1 row)
+
+-- Unblock the session that was suspected after prepare-transaction
+-- step.  It should be able to finish the transaction.
+1: SELECT gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault_infinite
+--------------------------
+ Success:
+(1 row)
+3<:  <... completed>
+INSERT 20
+3: select count(*) from t_slot_size_limit;
+ count
+-------
+ 20
+(1 row)
+3q: ... <quitting>
+
+----------
+-- Case 2:
+--
+--   Verify that max_slot_wal_keep_size GUC is honored by invalidating
+--   replication slot.
+----------
+
+-- Make walsender skip sending WAL to the mirror to build replication
+-- lag again.
+1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault_infinite
+--------------------------
+ Success:
+(1 row)
+
+-- Trigger the fault in walsender.  Also triggers checkpoint.
+2: SELECT advance_xlog_on_seg0(1);
+ advance_xlog_on_seg0
+----------------------
+
+(1 row)
+1: SELECT gp_wait_until_triggered_fault('walsnd_skip_send', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault
+-------------------------------
+ Success:
+(1 row)
+
+-- Replication slot should be valid at this time.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+ restart_lsn_is_valid
+----------------------
+ t
+(1 row)
+
+-- Skip checkpoints on seg0.  So that when new WAL is generated in the
+-- next step, checkpoints don't get triggered asynchronously.
+1: SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault_infinite
+--------------------------
+ Success:
+(1 row)
+0U: CHECKPOINT;
+CHECKPOINT
+1: SELECT gp_wait_until_triggered_fault('checkpoint', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault
+-------------------------------
+ Success:
+(1 row)
+
+-- Generate more WAL on seg0 than max_slot_wal_keep_size.
+2: SELECT advance_xlog_on_seg0(3);
+ advance_xlog_on_seg0
+----------------------
+
+(1 row)
+
+-- Resume checkpoints.
+1: SELECT gp_inject_fault('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault
+-----------------
+ Success:
+(1 row)
+-- WAL older than max_slot_wal_keep_size should be removed by this
+-- checkpoint.
+0U: CHECKPOINT;
+CHECKPOINT
+
+-- Replication slot on content 0 primary should report invalid LSN
+-- because the WAL files needed by it are removed by previous
+-- checkpoint.
+0U: select restart_lsn is not null as restart_lsn_is_valid from pg_get_replication_slots();
+ restart_lsn_is_valid
+----------------------
+ f
+(1 row)
 
 1: SELECT gp_inject_fault_infinite('walsnd_skip_send', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
  gp_inject_fault_infinite 
@@ -104,160 +280,31 @@ END
  walread    
 (1 row)
 
+0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
+ALTER
+0U: ALTER SYSTEM RESET checkpoint_segments;
+ALTER
+0U: ALTER SYSTEM RESET wal_keep_segments;
+ALTER
+0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
+ALTER
+0U: select pg_reload_conf();
+ pg_reload_conf
+----------------
+ t
+(1 row)
+0Uq: ... <quitting>
+ALTER SYSTEM RESET gp_fts_probe_retries;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf
+----------------
+ t
+(1 row)
+
 -- do full recovery
 !\retcode gprecoverseg -aF;
 -- start_ignore
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Starting gprecoverseg with args: -aF
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.1+dev.82.g0281df93bb6 build dev'
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 12.12 (Greenplum Database 7.0.0-beta.1+dev.82.g0281df93bb6 build dev) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0, 64-bit compiled on Feb 15 2023 19:30:23 (with assert checking) Bhuvnesh C.'
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Obtaining Segment details from coordinator...
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Successfully finished pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0 for dbid 2:
-stdout: pg_control version number:            12010700
-Catalog version number:               302302141
-Database system identifier:           7200505323110788637
-Database cluster state:               in production
-pg_control last modified:             Thu 16 Feb 2023 01:56:55 AM PST
-Latest checkpoint location:           0/8C000520
-Latest checkpoint's REDO location:    0/8C0004B0
-Latest checkpoint's REDO WAL file:    000000050000000000000023
-Latest checkpoint's TimeLineID:       5
-Latest checkpoint's PrevTimeLineID:   5
-Latest checkpoint's full_page_writes: on
-Latest checkpoint's NextXID:          0:1218
-Latest checkpoint's NextGxid:         73757
-Latest checkpoint's NextOID:          41058
-Latest checkpoint's NextRelfilenode:  73731
-Latest checkpoint's NextMultiXactId:  1
-Latest checkpoint's NextMultiOffset:  0
-Latest checkpoint's oldestXID:        477
-Latest checkpoint's oldestXID's DB:   13379
-Latest checkpoint's oldestActiveXID:  1217
-Latest checkpoint's oldestMultiXid:   1
-Latest checkpoint's oldestMulti's DB: 24577
-Latest checkpoint's oldestCommitTsXid:0
-Latest checkpoint's newestCommitTsXid:0
-Time of latest checkpoint:            Thu 16 Feb 2023 01:56:55 AM PST
-Fake LSN counter for unlogged rels:   0/3E8
-Minimum recovery ending location:     0/0
-Min recovery ending loc's timeline:   0
-Backup start location:                0/0
-Backup end location:                  0/0
-End-of-backup record required:        no
-wal_level setting:                    replica
-wal_log_hints setting:                off
-max_connections setting:              750
-max_worker_processes setting:         12
-max_wal_senders setting:              10
-max_prepared_xacts setting:           250
-max_locks_per_xact setting:           128
-track_commit_timestamp setting:       off
-Maximum data alignment:               8
-Database block size:                  32768
-Blocks per segment of large relation: 32768
-WAL block size:                       32768
-Bytes per WAL segment:                67108864
-Maximum length of identifiers:        64
-Maximum columns in an index:          32
-Maximum size of a TOAST chunk:        8140
-Size of a large-object chunk:         8192
-Date/time type storage:               64-bit integers
-Float4 argument passing:              by value
-Float8 argument passing:              by value
-Data page checksum version:           1
-Mock authentication nonce:            e9ead429dc981b3bc7bcbc8068e747bdaaee64e59a97f5e81263341a60865ad4
-
-stderr: 
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Successfully finished pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0 for dbid 5:
-stdout: pg_control version number:            12010700
-Catalog version number:               302302141
-Database system identifier:           7200505323110788637
-Database cluster state:               in archive recovery
-pg_control last modified:             Thu 16 Feb 2023 01:57:10 AM PST
-Latest checkpoint location:           0/8415B100
-Latest checkpoint's REDO location:    0/8415B0C8
-Latest checkpoint's REDO WAL file:    000000050000000000000021
-Latest checkpoint's TimeLineID:       5
-Latest checkpoint's PrevTimeLineID:   5
-Latest checkpoint's full_page_writes: on
-Latest checkpoint's NextXID:          0:1217
-Latest checkpoint's NextGxid:         73756
-Latest checkpoint's NextOID:          41058
-Latest checkpoint's NextRelfilenode:  65539
-Latest checkpoint's NextMultiXactId:  1
-Latest checkpoint's NextMultiOffset:  0
-Latest checkpoint's oldestXID:        477
-Latest checkpoint's oldestXID's DB:   13379
-Latest checkpoint's oldestActiveXID:  1217
-Latest checkpoint's oldestMultiXid:   1
-Latest checkpoint's oldestMulti's DB: 24577
-Latest checkpoint's oldestCommitTsXid:0
-Latest checkpoint's newestCommitTsXid:0
-Time of latest checkpoint:            Thu 16 Feb 2023 01:56:55 AM PST
-Fake LSN counter for unlogged rels:   0/3E8
-Minimum recovery ending location:     0/8415B188
-Min recovery ending loc's timeline:   5
-Backup start location:                0/0
-Backup end location:                  0/0
-End-of-backup record required:        no
-wal_level setting:                    replica
-wal_log_hints setting:                off
-max_connections setting:              750
-max_worker_processes setting:         12
-max_wal_senders setting:              10
-max_prepared_xacts setting:           250
-max_locks_per_xact setting:           128
-track_commit_timestamp setting:       off
-Maximum data alignment:               8
-Database block size:                  32768
-Blocks per segment of large relation: 32768
-WAL block size:                       32768
-Bytes per WAL segment:                67108864
-Maximum length of identifiers:        64
-Maximum columns in an index:          32
-Maximum size of a TOAST chunk:        8140
-Size of a large-object chunk:         8192
-Date/time type storage:               64-bit integers
-Float4 argument passing:              by value
-Float8 argument passing:              by value
-Data page checksum version:           1
-Mock authentication nonce:            e9ead429dc981b3bc7bcbc8068e747bdaaee64e59a97f5e81263341a60865ad4
-
-stderr: 
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Greenplum instance recovery parameters
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Recovery type              = Standard
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Recovery 1 of 1
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Synchronization mode                 = Full
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance host                 = station6
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance address              = station6
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance directory            = /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance port                 = 7005
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance host        = station6
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance address     = station6
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance directory   = /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance port        = 7002
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Target                      = in-place
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
-20230216:01:58:56:459860 gprecoverseg:station6:pivotal-[INFO]:-Starting to create new pg_hba.conf on primary segments
-20230216:01:58:57:459860 gprecoverseg:station6:pivotal-[INFO]:-Successfully modified pg_hba.conf on primary segments to allow replication connections
-20230216:01:58:57:459860 gprecoverseg:station6:pivotal-[INFO]:-1 segment(s) to recover
-20230216:01:58:57:459860 gprecoverseg:station6:pivotal-[INFO]:-Ensuring 1 failed segment(s) are stopped
-20230216:01:58:58:459860 gprecoverseg:station6:pivotal-[INFO]:-456041: /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
-20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-Setting up the required segments for recovery
-20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-Updating configuration for mirrors
-20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-Initiating segment recovery. Upon completion, will start the successfully recovered segments
-20230216:01:58:59:459860 gprecoverseg:station6:pivotal-[INFO]:-era is 84f970d55cff544c_230216011245
-station6 (dbid 5): pg_basebackup: base backup completed
-20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Triggering FTS probe
-20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-********************************
-20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Segments successfully recovered.
-20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-********************************
-20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Recovered mirror segments need to sync WAL with primary segments.
-20230216:01:59:01:459860 gprecoverseg:station6:pivotal-[INFO]:-Use 'gpstate -e' to check progress of WAL sync remaining bytes
-
 -- end_ignore
 (exited with code 0)
 select wait_until_segment_synchronized(0);
@@ -277,26 +324,6 @@ select wait_until_segment_synchronized(0);
  state     | sync_error 
 -----------+------------
  streaming | none       
-(1 row)
-
-0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
-ALTER
-0U: ALTER SYSTEM RESET wal_keep_size;
-ALTER
-0U: ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
-ALTER
-0U: select pg_reload_conf();
- pg_reload_conf 
-----------------
- t              
-(1 row)
-0Uq: ... <quitting>
-ALTER SYSTEM RESET gp_fts_probe_retries;
-ALTER
-select pg_reload_conf();
- pg_reload_conf 
-----------------
- t              
 (1 row)
 
 1q: ... <quitting>
