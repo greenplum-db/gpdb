@@ -868,6 +868,7 @@ else \
 \
 	truncateEol(&pstate->line_buf, pstate->eol_type); \
 	pstate->cdbsreh->rawdata = pstate->line_buf.data; \
+	pstate->cdbsreh->rawdata_binary_len = pstate->line_buf.len; \
 	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
 	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
 	pstate->cdbsreh->processed++; \

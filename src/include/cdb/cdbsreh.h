@@ -70,6 +70,7 @@ typedef struct CdbSreh
 	bool	error_log_persistent;	/* persistent error table, when drop the
 									   external table, the error log not get dropped */
 	Oid		relid;					/* parent relation id */
+	int 	rawdata_binary_len;	/* Add for binary rowdata length. For binary msg could contain '\0' */
 } CdbSreh;
 
 /*

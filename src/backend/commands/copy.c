@@ -4989,6 +4989,7 @@ HandleCopyError(CopyState cstate)
 		 * if the error count is reached.
 		 */
 		cdbsreh->rawdata = cstate->line_buf.data;
+		cdbsreh->rawdata_binary_len = cstate->line_buf.len;
 
 		cdbsreh->is_server_enc = cstate->line_buf_converted;
 		cdbsreh->linenumber = cstate->cur_lineno;
@@ -5724,6 +5725,7 @@ HandleQDErrorFrame(CopyState cstate, char *p, int len)
 
 	cdbsreh->linenumber = errframe.lineno;
 	cdbsreh->rawdata = line;
+	cdbsreh->rawdata_binary_len = strlen(line);
 	cdbsreh->errmsg = errormsg;
 	cdbsreh->is_server_enc = errframe.line_buf_converted;
 
