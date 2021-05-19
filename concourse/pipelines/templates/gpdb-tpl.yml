@@ -117,8 +117,8 @@ anchors:
         image_resource:
           type: registry-image
           source:
-            repository: pivotaldata/ccp
-            tag: "7"
+            repository: gcr.io/data-gpdb-public-images/ccp
+            tag: latest
         inputs:
           - name: ccp_src
           - name: terraform
@@ -140,8 +140,8 @@ anchors:
   image_resource:
     type: registry-image
     source:
-      repository: pivotaldata/ccp
-      tag: "7"
+      repository: gcr.io/data-gpdb-public-images/ccp
+      tag: latest
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
@@ -462,8 +462,8 @@ resources:
 - name: ccp-image
   type: registry-image
   source:
-    repository: pivotaldata/ccp
-    tag: '7'
+    repository: gcr.io/data-gpdb-public-images/ccp
+    tag: latest
 
 {% endif %}
 {% endif %}
@@ -489,7 +489,7 @@ resources:
 - name: gpdb7-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-build
     tag: latest
 
 {% endif %}
@@ -497,7 +497,7 @@ resources:
 - name: gpdb7-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
     tag: latest
 
 {% endif %}
@@ -506,13 +506,13 @@ resources:
 - name: gpdb7-ubuntu18.04-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-ubuntu18.04-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-ubuntu18.04-build
     tag: latest
 
 - name: gpdb7-ubuntu18.04-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-ubuntu18.04-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-ubuntu18.04-test
     tag: latest
 
 {% endif %}

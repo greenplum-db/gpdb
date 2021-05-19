@@ -30,7 +30,7 @@ resources:
 - name: gpdb7-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-build
 
 - name: libquicklz-centos7
   type: gcs
