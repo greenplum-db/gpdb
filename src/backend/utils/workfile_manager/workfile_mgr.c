@@ -548,7 +548,13 @@ workfile_mgr_create_set(const char *operator_name, const char *prefix, bool hold
 
 	if (!proc_exit_hook_registered)
 	{
-		/* register proc-exit hook to ensure temp files are dropped at exit */
+		/*
+		 * register proc-exit hook to ensure temp files are dropped at exit.
+		 *
+		 * The hook must run after before_shmem_exit(), because before_shmem_exit may do
+		 * some cleanup in transaction level, but AtProcExit_WorkFile cleans up the session
+		 * level objects which may be referenced by some short-life objects, e.g. executor nodes.
+		 */
 		on_shmem_exit(AtProcExit_WorkFile, 0);
 		proc_exit_hook_registered = true;
 	}
