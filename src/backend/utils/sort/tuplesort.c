@@ -1810,8 +1810,6 @@ tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos,
 	if (stup.tuple)
 	{
 		ExecStoreMinimalTuple(stup.tuple, slot, should_free);
-		if (state->gpmon_pkt)
-			Gpmon_Incr_Rows_Out(state->gpmon_pkt);
 		return true;
 	}
 	else
