@@ -60,6 +60,9 @@ class GpAddMirrorsTest(GpTestCase):
         super(GpAddMirrorsTest, self).tearDown()
 
     def test_validate_heap_checksum_succeeds_if_cluster_consistent(self):
+        sys.argv = ['gpaddmirrors', '-a']
+        options, _ = self.parser.parse_args()
+        self.subject = GpAddMirrorsProgram(options)
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [1])
         self.mock_heap_checksum.return_value.are_segments_consistent.return_value = True
         self.mock_heap_checksum.return_value.check_segment_consistency.return_value = ([2], [], 1)

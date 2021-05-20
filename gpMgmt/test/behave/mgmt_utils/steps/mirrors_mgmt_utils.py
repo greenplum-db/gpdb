@@ -63,15 +63,18 @@ def _write_datadir_config_for_three_mirrors():
     return datadir_config
 
 
-@when("gpaddmirrors adds 3 mirrors")
-def add_three_mirrors(context):
+@when('gpaddmirrors adds 3 mirrors with additional args "{args}"' )
+def add_three_mirrors_with_args(context, args):
     datadir_config = _write_datadir_config_for_three_mirrors()
     mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
     cmd_str = 'gpaddmirrors -o %s -m %s' % (mirror_config_output_file, datadir_config)
     Command('generate mirror_config file', cmd_str).run(validateAfter=True)
-    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % mirror_config_output_file)
-    cmd.run(validateAfter=True)
+    cmd = 'gpaddmirrors -a -v -i %s %s' % (mirror_config_output_file, args)
+    run_gpcommand(context, command=cmd)
 
+@when("gpaddmirrors adds 3 mirrors")
+def add_three_mirrors(context):
+    add_three_mirrors_with_args(context, '')
 
 def add_mirrors(context, options):
     context.mirror_config = _generate_input_config()

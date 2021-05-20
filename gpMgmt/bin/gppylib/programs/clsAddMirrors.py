@@ -31,7 +31,6 @@ from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 logger = gplog.get_default_logger()
 
-MAX_PARALLEL_ADD_MIRRORS = 96
 
 class GpMirrorBuildCalculator:
     """
@@ -319,7 +318,8 @@ class GpAddMirrorsProgram:
             raise Exception("Wrong number of mirrors specified (specified %s mirror(s) for %s primarie(s))" % \
                             (len(toBuild), len(primaries)))
 
-        return GpMirrorListToBuild(toBuild, self.__pool, self.__options.quiet, self.__options.parallelDegree)
+        return GpMirrorListToBuild(toBuild, self.__pool, self.__options.quiet, self.__options.batch_size,
+                                   parallelPerHost=self.__options.segment_batch_size)
 
     def __outputToFile(self, mirrorBuilder, file, gpArray):
         """
@@ -408,7 +408,8 @@ class GpAddMirrorsProgram:
             dataDir = utils.createSegmentSpecificPath(mir.getSegmentDataDirectory(), gpPrefix, mir)
             mir.setSegmentDataDirectory(dataDir)
 
-        return GpMirrorListToBuild(toBuild, self.__pool, self.__options.quiet, self.__options.parallelDegree)
+        return GpMirrorListToBuild(toBuild, self.__pool, self.__options.quiet, self.__options.batch_size,
+                                   parallelPerHost=self.__options.segment_batch_size)
 
     def __getMirrorsToBuildBasedOnOptions(self, gpEnv, gpArray):
         """
@@ -422,23 +423,24 @@ class GpAddMirrorsProgram:
 
     def __displayAddMirrors(self, gpEnv, mirrorBuilder, gpArray):
         logger.info('Greenplum Add Mirrors Parameters')
-        logger.info('---------------------------------------------------------')
-        logger.info('Greenplum coordinator data directory          = %s' % gpEnv.getCoordinatorDataDir())
-        logger.info('Greenplum coordinator port                    = %d' % gpEnv.getCoordinatorPort())
-        logger.info('Parallel batch limit                     = %d' % self.__options.parallelDegree)
+        logger.info('--------------------------------------------')
+        logger.info('Greenplum coordinator data directory    = %s' % gpEnv.getCoordinatorDataDir())
+        logger.info('Greenplum coordinator port              = %d' % gpEnv.getCoordinatorPort())
+        logger.info('Batch size                              = %d' % self.__options.batch_size)
+        logger.info('Segment batch size                      = %d' % self.__options.segment_batch_size)
 
         total = len(mirrorBuilder.getMirrorsToBuild())
         for i, toRecover in enumerate(mirrorBuilder.getMirrorsToBuild()):
-            logger.info('---------------------------------------------------------')
+            logger.info('--------------------------------------------')
             logger.info('Mirror %d of %d' % (i + 1, total))
-            logger.info('---------------------------------------------------------')
+            logger.info('--------------------------------------------')
 
             tabLog = TableLogger()
             programIoUtils.appendSegmentInfoForOutput("Primary", gpArray, toRecover.getLiveSegment(), tabLog)
             programIoUtils.appendSegmentInfoForOutput("Mirror", gpArray, toRecover.getFailoverSegment(), tabLog)
             tabLog.outputTable()
 
-        logger.info('---------------------------------------------------------')
+        logger.info('--------------------------------------------')
 
     def checkMirrorOffset(self, gpArray):
         """
@@ -465,7 +467,7 @@ class GpAddMirrorsProgram:
 
 
     def validate_heap_checksums(self, gpArray):
-        num_workers = min(len(gpArray.get_hostlist()), MAX_PARALLEL_ADD_MIRRORS)
+        num_workers = min(len(gpArray.get_hostlist()), self.__options.batch_size)
         heap_checksum_util = heapchecksum.HeapChecksum(gparray=gpArray, num_workers=num_workers, logger=logger)
         successes, failures = heap_checksum_util.get_segments_checksum_settings()
         if len(successes) == 0:
@@ -497,11 +499,14 @@ class GpAddMirrorsProgram:
             logger.info("Heap checksum setting consistent across cluster")
 
     def run(self):
-        if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
+        if self.__options.batch_size < 1 or self.__options.batch_size > gp.MAX_COORDINATOR_NUM_WORKERS:
             raise ProgramArgumentValidationException(
-                "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
+                "Invalid batch_size provided with -B argument: %d" % self.__options.batch_size)
+        if self.__options.segment_batch_size < 1 or self.__options.segment_batch_size > gp.MAX_SEGHOST_NUM_WORKERS:
+            raise ProgramArgumentValidationException(
+                "Invalid segment_batch_size provided with -b argument: %d" % self.__options.segment_batch_size)
 
-        self.__pool = base.WorkerPool(self.__options.parallelDegree)
+        self.__pool = base.WorkerPool(self.__options.batch_size)
         gpEnv = GpCoordinatorEnvironment(self.__options.coordinatorDataDirectory, True)
 
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getCoordinatorPort())
@@ -596,10 +601,14 @@ class GpAddMirrorsProgram:
                          help="Mirror port offset.  The mirror port offset will be used multiple times "
                               "to derive three sets of ports [default: %default]")
 
-        addTo.add_option("-B", None, type="int", default=16,
-                         dest="parallelDegree",
-                         metavar="<parallelDegree>",
-                         help="Max # of workers to use for building recovery segments.  [default: %default]")
+        addTo.add_option("-B", "--batch-size", type="int", default=gp.DEFAULT_COORDINATOR_NUM_WORKERS,
+                         dest="batch_size",
+                         metavar="<batch_size>",
+                         help='Max number of hosts to operate on in parallel. Valid values are 1-%d' % gp.MAX_COORDINATOR_NUM_WORKERS)
+        addTo.add_option("-b", "--segment-batch-size", type="int", default=gp.DEFAULT_SEGHOST_NUM_WORKERS,
+                         dest="segment_batch_size",
+                         metavar="<segment_batch_size>",
+                         help='Max number of segments per host to operate on in parallel. Valid values are: 1-%d' % gp.MAX_SEGHOST_NUM_WORKERS)
 
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
                           help='use hostnames instead of CIDR in pg_hba.conf')
