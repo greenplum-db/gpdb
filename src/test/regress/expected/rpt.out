@@ -923,6 +923,17 @@ explain (costs off) insert into t_replicate_volatile select nextval('seq_for_ins
  Optimizer: Postgres query optimizer
 (5 rows)
 
+explain (costs off) select a from t_replicate_volatile union all select * from nextval('seq_for_insert_replicated_table');
+                     QUERY PLAN                     
+----------------------------------------------------
+ Append
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT* 1"
+               ->  Seq Scan on t_replicate_volatile
+   ->  Function Scan on nextval
+ Optimizer: Postgres query optimizer
+(6 rows)
+
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
 ERROR:  could not devise a plan (cdbpath.c:2577)

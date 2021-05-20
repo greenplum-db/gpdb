@@ -144,7 +144,8 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Null:
 					case CdbLocusType_Entry:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_OuterQuery:
+					case CdbLocusType_End:
 						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
@@ -177,12 +178,13 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 
 					case CdbLocusType_Entry:
 					case CdbLocusType_General:
+					case CdbLocusType_SegmentGeneral:
 					case CdbLocusType_OuterQuery:
 						break;
 
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
@@ -219,7 +221,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Entry:
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
