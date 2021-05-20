@@ -338,7 +338,10 @@ CIndexOnlyScanTest:
 IndexOnlyScan-NoDistKeyInIndex;
 
 CRightJoinTest:
-RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF
+RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF;
+
+CSqlFunctionTest:
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf
 ")
 
 set(mdp_dir "../data/dxl/minidump/")
