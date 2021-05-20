@@ -926,7 +926,8 @@ select * from
    SubPlan 1
      ->  Values Scan on "*VALUES*_1"
            Output: "*VALUES*_1".column1
-(5 rows)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 select * from
 (values
