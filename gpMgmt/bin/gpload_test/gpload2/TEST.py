@@ -43,6 +43,7 @@ def get_ip(hostname=None):
         if myip.find(":") > 0:
             ipv6 = myip
             return ipv6
+
         elif myip.find(".") > 0:
             ipv4 = myip
             return ipv4
@@ -98,9 +99,11 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',header=None,truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',config='config/config_file',columns=None,mapping='0',portNum='8081',database='reuse_gptest',host='localhost',
+formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',header=None,truncate='False',update_columns='n2',match_columns='true',
+log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True,SQL=None, sql_before=None, sql_after=None):
 
-    f = open(mkpath('config/config_file'),'w')
+    f = open(mkpath(config),'w')
     f.write("VERSION: 1.0.0.1")
     if database:
         f.write("\nDATABASE: "+database)
@@ -116,7 +119,7 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n         PORT: "+portNum)
     f.write("\n         FILE:")
     f.write("\n            - "+mkpath(file))
-    if columns_flag=='1':
+    if columns_flag == '1':
         f.write("\n    - COLUMNS:")
         f.write("\n           - s_s1: text")
         f.write("\n           - s_s2: text")
@@ -131,6 +134,10 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n           - s_n7: double precision")
         f.write("\n           - s_n8: text")
         f.write("\n           - s_n9: text")
+    if columns_flag == '4':
+        f.write("\n    - COLUMNS:")
+        for col in columns:
+            f.write("\n           - "+col)
     if format:
         f.write("\n    - FORMAT: "+format)
     if log_errors:
@@ -159,11 +166,17 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         if mode == 'merge':
             f.write("\n    - MODE: "+'merge')
     f.write("\n    - UPDATE_COLUMNS:")
-    f.write("\n           - n2")
-    f.write("\n    - MATCH_COLUMNS:")
-    f.write("\n           - n1")
-    f.write("\n           - s1")
-    f.write("\n           - s2")
+    f.write("\n           - "+update_columns)
+    f.write("\n")
+    if match_columns=='true':
+        f.write("\n    - MATCH_COLUMNS:")
+        f.write("\n           - n1")
+        f.write("\n           - s1")
+        f.write("\n           - s2")
+    if match_columns=='2':
+        f.write("\n    - MATCH_COLUMNS:")
+        f.write("\n           - '\"Field1\"'")
+        f.write("\n           - '\"Field#2\"'")
     if mapping=='1':
         f.write("\n    - MAPPING:")
         f.write("\n           s1: s_s1")
@@ -188,6 +201,12 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n    - FAST_MATCH: "+fast_match)
         if staging_table:
             f.write("\n    - STAGING_TABLE: "+staging_table)
+    if SQL:
+        f.write("\n   SQL:")
+        if sql_before:
+            f.write("\n    - BEFORE: "+sql_before)
+        if sql_after:
+            f.write("\n    - AFTER: "+sql_after)
     f.write("\n")
     f.close()
 
@@ -434,10 +453,10 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,40):
-           f = open(mkpath('query%d.sql' % num),'w')
-           f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
-           f.close()
+        for num in range(1,43):
+            f = open(mkpath('query%d.sql' % num),'w')
+            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
+            f.close()
         file = mkpath('setup.sql')
         runfile(file)
         self.check_result(file)
@@ -749,6 +768,56 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_01.txt','data_file.txt')
         write_config_file(formatOpts='text',file='data_file.txt',table='texttable',delimiter="'|'", header='true')
         self.doTest(39)
+
+    def test_40_gpload_column_withvarious_quotations_standard_conforming_strings_off(self):
+        """ 40 test gpload input columns with '"col"'  "\"col\""  "'col'" and "col" when standard_conforming_strings is off"""
+        copy_data('external_file_15.txt','data_file.txt')
+        columns = ['\'"Field1"\': bigint','\'"Field#2"\': text' ]
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =off;')
+        copy_data('external_file_16.txt','data_file2.txt')
+        columns = ['"\\"Field1\\"": bigint','"\\"Field#2\\"": text' ]
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file2', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =off;')
+        columns = ['"\'Field1\'": bigint','"\'Field#2\'": text' ]
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file3', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =off;')
+        columns = ['"Field1": bigint','"Field#2": text' ]
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file4', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =off;')
+        f = open(mkpath('query40.sql'),'a')
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file3')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file4')+ " -d reuse_gptest\n")
+        f.close()
+        self.doTest(40)
+
+    def test_41_gpload_column_withvarious_quotations_standard_conforming_strings_on(self):
+        """ 41 test gpload input columns with '"col"'  "\"col\""  "'col'" and "col" when standard_conforming_strings is on"""
+        copy_data('external_file_15.txt','data_file.txt')
+        columns = ['\'"Field1"\': bigint','\'"Field#2"\': text' ]
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =on;')
+        copy_data('external_file_16.txt','data_file2.txt')
+        columns = ['"\\"Field1\\"": bigint','"\\"Field#2\\"": text' ]
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file2', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =on;')
+        columns = ['"\'Field1\'": bigint','"\'Field#2\'": text' ]
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file3', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =on;')
+        columns = ['"Field1": bigint','"Field#2": text' ]
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file4', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =on;')
+        f = open(mkpath('query41.sql'),'a')
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file3')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file4')+ " -d reuse_gptest\n")
+        f.close()
+        self.doTest(41)
+
+    def test_42_gpload_col_without_quotes(self):
+        """42 test gpload column name without quotes but has capital letters and special characters"""
+        copy_data('external_file_15.txt','data_file.txt')
+        columns = ['Field1: bigint','Field#2: text' ]
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =on;')
+        write_config_file(mode='insert',config='config/config_file2', reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =off;')
+        f = open(mkpath('query42.sql'),'w')
+        f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.close()
+        self.doTest(42)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

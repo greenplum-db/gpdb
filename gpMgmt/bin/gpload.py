@@ -1846,6 +1846,20 @@ class gpload:
                     "the Greenplum Database running on port %i?" % (errorMessage,
                     self.options.p))
 
+    def add_quote_if_not(self, col):
+        '''
+        Judge if the column name string has quotations.
+        If not, return a string with double quotations.
+        pyyaml cannot preserve quotes of string in yaml file.
+        So we need to quote the string for furter comparison if it is not quoted.
+        '''
+        if col[0] == '"' and col[-1] == '"':
+            return col
+        elif col[0] == "'" and col[-1] == "'":
+            return col
+        else:
+            return quote_ident(col)
+
     def read_columns(self):
         columns = self.getconfig('gpload:input:columns',list,None, returnOriginal=True)
         if columns != None:
@@ -1859,6 +1873,7 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = d.keys()[0]
+                col_name = self.add_quote_if_not(key)
                 if d[key] is None:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
@@ -1875,7 +1890,7 @@ class gpload:
 
                 # Mark this column as having no mapping, which is important
                 # for do_insert()
-                self.from_columns.append([key.lower(),d[key].lower(),None, False])
+                self.from_columns.append([col_name,d[key].lower(),None, False])
         else:
             self.from_columns = self.into_columns
             self.from_cols_from_user = False
@@ -2465,7 +2480,7 @@ class gpload:
         target_columns = []
         for column in self.into_columns:
             if column[2]:
-                target_columns.append([quote_unident(column[0]), column[1]])
+                target_columns.append([column[0], column[1]])
 
         if self.reuse_tables == True:
             is_temp_table = ''
