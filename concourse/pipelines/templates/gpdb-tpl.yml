@@ -55,7 +55,6 @@ groups:
   - compile_gpdb_open_source_centos6
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
-  - client_loader_remote_test_aix
   - gate_compile_end
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
@@ -171,7 +170,6 @@ groups:
   - compile_gpdb_open_source_centos6
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
-  - client_loader_remote_test_aix
   - gate_compile_end
 
 {% if "ICW" in test_sections %}
@@ -1304,53 +1302,6 @@ jobs:
     - put: installer_aix7_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-aix7_ppc_64.zip
-- name: client_loader_remote_test_aix
-  serial: true
-  plan:
-  - in_parallel:
-    - get: gpdb_src
-      passed:
-      - gate_compile_start
-      - compile_gpdb_aix7_remote
-      - compile_gpdb_centos6
-    - get: installer_aix7_gpdb_clients
-      passed:
-      - compile_gpdb_aix7_remote
-    - get: installer_aix7_gpdb_loaders
-      passed:
-      - compile_gpdb_aix7_remote
-      trigger: true
-    - get: bin_gpdb
-      passed:
-      - compile_gpdb_centos6
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-      passed:
-      - gate_compile_start
-    - put: aix_environments
-      params: {acquire: true}
-  - task: ic_gpdb_cl
-    file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
-    image: centos-gpdb-dev-6
-    params:
-      BLD_TARGETS: "clients loaders"
-      REMOTE_HOST: {{remote_host_test}}
-      REMOTE_PORT: {{remote_port_test}}
-      REMOTE_USER: {{remote_user_test}}
-      REMOTE_KEY: {{remote_key_test}}
-    ensure:
-      do:
-      - task: cleanup_aix
-        file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
-        image: centos-gpdb-dev-6
-        params:
-          REMOTE_HOST: {{remote_host_test}}
-          REMOTE_PORT: {{remote_port_test}}
-          REMOTE_USER: {{remote_user_test}}
-          REMOTE_KEY: {{remote_key_test}}
-      - put: aix_environments
-        params: {release: aix_environments}
-
 - name: gate_compile_end
   plan:
   - in_parallel:
