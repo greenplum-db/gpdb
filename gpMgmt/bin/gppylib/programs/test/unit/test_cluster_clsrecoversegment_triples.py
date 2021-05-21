@@ -7,31 +7,27 @@ import tempfile
 
 import gppylib
 from gparray import Segment, GpArray
-from gppylib.programs import clsRecoverSegment_triples
-from gppylib.programs.clsRecoverSegment_triples import ConfigFileMirrorBuilder, MirrorBuilderFactory, RecoverTriplet
+from gppylib.programs.clsRecoverSegment_triples import RecoveryTripletsUserConfigFile, RecoveryTripletsFactory, RecoveryTriplet
 from test.unit.gp_unittest import GpTestCase
 
-class MirrorBuilderFactoryTestCase(GpTestCase):
+
+class RecoveryTripletsFactoryTestCase(GpTestCase):
     def setUp(self):
         # Set maxDiff to None to see the entire diff on the console in case of failure
         self.maxDiff = None
-
-        # we always mock ping.local to be a no-op. Once we refactor -i and -p to
-        # use the same code path, this mock will no longer be needed
-        clsRecoverSegment_triples.unix.Ping.local = Mock()
 
     def run_single_ConfigFile_test(self, test):
         with tempfile.NamedTemporaryFile() as f:
             f.write(test["config"].encode("utf-8"))
             f.flush()
-            return self._run_single_GpArrayMirrorBuilder_test(test["gparray"], f.name, None, None, test.get("unreachable_existing_hosts"))
+            return self._run_single_FromGpArray_test(test["gparray"], f.name, None, None, test.get("unreachable_existing_hosts"))
 
     def run_single_GpArray_test(self, test):
-        return self._run_single_GpArrayMirrorBuilder_test(test["gparray"], None, test["new_hosts"], test.get("unreachable_hosts"),
+        return self._run_single_FromGpArray_test(test["gparray"], None, test["new_hosts"], test.get("unreachable_hosts"),
                                      test.get("unreachable_existing_hosts"))
 
     #TODO: do we want new hosts here?  We do not officially support new hosts with "-i"
-    def test_ConfigFileMirrorBuilder_getMirrorTriples_should_pass(self):
+    def test_RecoveryTripletsUserConfigFile_getMirrorTriples_should_pass(self):
         tests = [
             {
                 "name": "blank_config_file",
@@ -108,7 +104,7 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
         ]
         self.run_pass_tests(tests, self.run_single_ConfigFile_test)
 
-    def test_ConfigFileMirrorBuilder_getMirrorTriples_should_fail(self):
+    def test_RecoveryTripletsUserConfigFile_getMirrorTriples_should_fail(self):
         tests = [
             {
                 "name": "invalid_failed_address",
@@ -150,20 +146,34 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
                 "name": "no_peer_for_failed_seg",
                 "gparray": self.content0_no_peer_gparray_str,
                 "config": "sdw1|20000|/primary/gpseg0 sdw3|20000|/primary/gpseg5",
-                "expected": "No peer found for dbid 2"
+                "expected": "No peer found for dbid 2. liveSegment is None"
             },
             {
                 "name": "both_peers_down",
                 "gparray": self.content0_mirror_and_its_peer_down_gparray_str,
                 "config": "sdw1|20000|/primary/gpseg0 sdw3|20000|/primary/gpseg5",
-                "expected": "Both segments for content 0 are down. Try restarting"
+                "expected": "Primary segment is not up for content 0"
+            },
+            {
+                "name": "failed_and_live_same_dbid",
+                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                               2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
+                               3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
+                               8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
+                               9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
+                               2|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0
+                               7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
+                               4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
+                               5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
+                "config": "sdw1|20000|/primary/gpseg0 sdw3|20000|/primary/gpseg5",
+                "expected": "For content 2, the dbid values are the same.  A segment may not be recovered from itself"
             },
             #
             #
             # TODO: these should fail, but right now do not.  For recovery port and host, we should detect them here.
             #   For recovery data directory, it is not clear where the check should go.
             # {
-            #     "name": "invalid_recovery_address",
+            #     "name": "invalid_recovery_host",
             #     "config": "sdw1|20000|/primary/gpseg0 host_does_not_exist|20001|/primary/gpseg5",
             # },
             # {
@@ -177,7 +187,7 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
         ]
         self.run_fail_tests(tests, self.run_single_ConfigFile_test)
 
-    def test_GpArrayMirrorBuilder_getMirrorTriples_should_pass(self):
+    def test_RecoveryTripletsInPlaceAndNewHosts_getMirrorTriples_should_pass(self):
         tests = [{
                 "name": "no_new_hosts",
                 "gparray": self.three_failedover_segs_gparray_str,
@@ -241,12 +251,29 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
                              self._triplet('4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2',
                                            '8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2',
                                            '4|2|m|p|s|d|new_2|new_2|20000|/primary/gpseg2')]
-            }
+            },
+            {
+                "name": "failed_unreachable",
+                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                               2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
+                               3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
+                               8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
+                               9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
+                               6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0
+                               7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
+                               4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
+                               5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
+                "new_hosts": ['new_1'],
+                "unreachable_existing_hosts": ['sdw1'],
+                "expected": [self._triplet('2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0',
+                                           '6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0',
+                                           '2|0|m|p|s|d|new_1|new_1|20000|/primary/gpseg0', failed_unreachable=True)]
+            },
         ]
 
         self.run_pass_tests(tests, self.run_single_GpArray_test)
 
-    def test_GpArrayMirrorBuilder_getMirrorTriples_should_fail(self):
+    def test_RecoveryTripletsInPlaceAndNewHosts_getMirrorTriples_should_fail(self):
         tests = [
             {
                 "name": "not_enough_hosts",
@@ -279,16 +306,44 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
             {
                 "name": "no_peer_for_failed_seg",
                 "gparray": self.content0_no_peer_gparray_str,
-                "new_hosts": ['new_1'],
+                "new_hosts": ['new_1', 'new_2'],
                 "unreachable_hosts": [],
-                "expected": "No peer found for dbid 2"
+                "expected": "No peer found for dbid 2. liveSegment is None"
             },
             {
                 "name": "both_peers_down",
                 "gparray": self.content0_mirror_and_its_peer_down_gparray_str,
-                "new_hosts": ['new_1'],
+                "new_hosts": ['new_1', 'new_2'],
                 "unreachable_hosts": [],
-                "expected": "Both segments for content 0 are down. Try restarting"
+                "expected": "Primary segment is not up for content 0"
+            },
+            {
+                "name": "both_peers_down2",
+                "gparray": self.content0_mirror_and_its_peer_down_gparray_str2,
+                "new_hosts": ['new_1', 'new_2'],
+                "unreachable_hosts": [],
+                "expected": "Segment to recover from for content 0 is not a primary"
+            },
+            {
+                "name": "live_unreachable",
+                "gparray": self.three_failedover_segs_gparray_str,
+                "new_hosts": ['new_1','new_2'],
+                "unreachable_existing_hosts": ['sdw2'],
+                "expected": "The recovery source segment sdw2 \(content 0\) is unreachable"
+            },
+            {
+            "name": "failed_and_live_same_dbid",
+            "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                       2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
+                       3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
+                       8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
+                       9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
+                       2|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0
+                       7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
+                       4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
+                       5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
+            "new_hosts": ['new_1'],
+            "expected": "For content 2, the dbid values are the same.  A segment may not be recovered from itself"
             }
         ]
         self.run_fail_tests(tests, self.run_single_GpArray_test)
@@ -298,6 +353,7 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
             with self.subTest(msg=test["name"]):
 
                 initial_gparray, actual_gparray, actual = fn_to_test(test)
+                # expected = self._update_triplets(test["expected"], test.get("set_unreachable_to_false_for_failed_segments_on_these_hosts"))
                 self.assertEqual(test["expected"], actual,
                                  msg="\n\nTest {} failed.\n\nexpected:\n{}\n\ngot:\n{}".format(
                                      test["name"], test["expected"], actual))
@@ -369,20 +425,28 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
                                   9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
                                   6|0|p|m|s|d|sdw2|sdw2|21000|/mirror/gpseg0
                                   7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
-                                  4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2
+                                  4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
                                   5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3'''
 
-    def _run_single_GpArrayMirrorBuilder_test(self, gparray_str, config_file, new_hosts, unreachable_hosts,
+        self.content0_mirror_and_its_peer_down_gparray_str2 = '''1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                                  2|0|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg0
+                                  3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
+                                  8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
+                                  9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
+                                  6|0|p|m|s|d|sdw1|sdw1|21000|/mirror/gpseg0
+                                  7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
+                                  4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
+                                  5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3'''
+
+    def _run_single_FromGpArray_test(self, gparray_str, config_file, new_hosts, unreachable_hosts,
                                               unreachable_existing_hosts=None):
         unreachable_hosts = unreachable_hosts if unreachable_hosts else []
         gppylib.programs.clsRecoverSegment_triples.get_unreachable_segment_hosts = Mock(return_value=unreachable_hosts)
 
         initial_gparray = self.get_gp_array(gparray_str, unreachable_existing_hosts)
         mutated_gparray = self.get_gp_array(gparray_str, unreachable_existing_hosts)
-        i = MirrorBuilderFactory.instance(mutated_gparray,
-                                          config_file=config_file,
-                                          new_hosts=new_hosts)
-        triples = i.getMirrorTriples()
+        i = RecoveryTripletsFactory.instance(mutated_gparray, config_file=config_file, new_hosts=new_hosts)
+        triples = i.getTriplets()
 
         warnings = i.getInterfaceHostnameWarnings()
         if warnings:
@@ -393,8 +457,10 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
         return initial_gparray, mutated_gparray, triples
 
     @staticmethod
-    def _triplet(failed, live, failover):
-        return RecoverTriplet(Segment.initFromString(failed),
+    def _triplet(failed, live, failover, failed_unreachable=False):
+        failedSeg = Segment.initFromString(failed)
+        failedSeg.unreachable = failed_unreachable
+        return RecoveryTriplet(failedSeg,
                               Segment.initFromString(live),
                               Segment.initFromString(failover) if failover else None)
 
@@ -436,6 +502,7 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
             segMap[failed.getSegmentDbId()].hostname = failover.hostname
             segMap[failed.getSegmentDbId()].port = failover.port
             segMap[failed.getSegmentDbId()].datadir = failover.datadir
+            segMap[failed.getSegmentDbId()].unreachable = failover.unreachable
 
         return result
 
@@ -449,21 +516,23 @@ class MirrorBuilderFactoryTestCase(GpTestCase):
         """
         segMap = gparray.getSegDbMap()
         gparray_str = io.StringIO()
-        for seg in sorted(segMap.keys()):
-            gparray_str.write(repr(segMap[seg]))
+        for dbid in sorted(segMap.keys()):
+            gparray_str.write(repr(segMap[dbid]))
+            #TODO gparray's repr function does not include the unreachable property, so we have to add it explicitly heres
+            gparray_str.write(":unreachable=%s" % segMap[dbid].unreachable)
             gparray_str.write('\n')
 
         return gparray_str.getvalue()
 
 
-class MirrorBuilderConfigFileParserTestCase(GpTestCase):
+class RecoveryTripletsUserConfigFileParserTestCase(GpTestCase):
 
     @staticmethod
     def run_single_parser_test(test):
         with tempfile.NamedTemporaryFile() as f:
             f.write(test["config"].encode("utf-8"))
             f.flush()
-            return ConfigFileMirrorBuilder._parseConfigFile(f.name)
+            return RecoveryTripletsUserConfigFile._parseConfigFile(f.name)
 
     passing_tests = [
         {
@@ -606,6 +675,28 @@ class MirrorBuilderConfigFileParserTestCase(GpTestCase):
                          sdw3|20001|/mirror/gpseg5""",
             "expected": "config file lines 1 and 2 conflict: Cannot recover segment sdw3 with data directory "
                         "/mirror/gpseg5 in place if it is used as a recovery segment"
+        },
+        {
+            "name": "old_data_dir_not_absolute",
+            "config": """sdw2|50000|/data2/mirror/gpseg0 sdw3|50000|/data/mirror/gpseg0
+                         sdw2|50001|relative/old/mirror/gpseg1 sdw4|50001|/data/mirror/gpseg1""",
+            "expected": "Path entered.*is invalid; it must be a full path.  Path: 'relative/old/mirror/gpseg1' from: 2"
+        },
+        {
+            "name": "new_data_dir_not_absolute",
+            "config": """sdw2|50001|/data2/mirror/gpseg1 sdw4|50001|relative/new/mirror/gpseg1
+                         sdw2|50000|/data2/mirror/gpseg0 sdw3|50000|/data/mirror/gpseg0""",
+            "expected": "Path entered.*is invalid; it must be a full path.  Path: 'relative/new/mirror/gpseg1' from: 1"
+        },
+        {
+            "name": "old_port_invalid",
+            "config": """sdw2|old_invalid_port|/data2/mirror/gpseg1 sdw4|50001|relative/new/mirror/gpseg1""",
+            "expected": "Invalid port on line 1"
+        },
+        {
+            "name": "new_port_invalid",
+            "config": """sdw2|50001|/data2/mirror/gpseg1 sdw4|new_invalid_port|relative/new/mirror/gpseg1""",
+            "expected": "Invalid port on line 1"
         }
     ]
 

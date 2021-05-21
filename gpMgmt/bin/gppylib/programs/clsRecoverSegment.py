@@ -42,7 +42,7 @@ from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
 from gppylib.heapchecksum import HeapChecksum
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
-from gppylib.programs import clsRecoverSegment_triples
+from gppylib.programs.clsRecoverSegment_triples import RecoveryTripletsFactory
 
 logger = gplog.get_default_logger()
 
@@ -119,25 +119,12 @@ class GpRecoverSegmentProgram:
             lines.append(output_str)
         writeLinesToFile(fileName, lines)
 
-    def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
-        if segs_persistent_mirroring_disabled:
-            self.logger.warn('Segments with dbid %s not recovered; persistent mirroring state is disabled.' %
-                             (', '.join(str(seg_id) for seg_id in segs_persistent_mirroring_disabled)))
-
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
-            segs_with_persistent_mirroring_disabled = []
-            self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
-
-            instance = clsRecoverSegment_triples.MirrorBuilderFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts,
-                                                     self.logger)
-            segs = []
-            for t in instance.getMirrorTriples():
-                #TODO pass just t to GpMirrorToBuild
-                segs.append(GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization))
-
+            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts)
+            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization) for t in instance.getTriplets()]
             return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                        self.__options.parallelDegree,
                                        instance.getInterfaceHostnameWarnings(),
