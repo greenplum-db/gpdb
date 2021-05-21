@@ -37,8 +37,8 @@ resources:
   - name: centos-gpdb-dev-6
     type: registry-image
     source:
-      repository: pivotaldata/centos-gpdb-dev
-      tag: '6-gcc6.2-llvm3.7'
+      repository: gcr.io/data-gpdb-public-images/gpdb5-centos6-build-test
+      tag: 'latest'
 
   - name: binary_swap_gpdb_centos6
     type: s3

@@ -2,10 +2,10 @@
 platform: linux
 
 image_resource:
-  type: docker-image
+  type: registry-image
   source:
-    repository: pivotaldata/ccp
-    tag: "7"
+    repository: gcr.io/data-gpdb-public-images/ccp
+    tag: "latest"
 
 inputs:
 - name: ccp_src

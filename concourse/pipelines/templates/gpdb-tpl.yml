@@ -64,8 +64,6 @@ groups:
   - icw_gporca_centos6
   - icw_planner_centos7
   - icw_gporca_centos7
-  - icw_planner_oracle7
-  - icw_gporca_oracle7
   - icw_gporca_sles11
   - icw_extensions_gpcloud
   - gate_icw_end
@@ -184,8 +182,6 @@ groups:
   - icw_planner_ictcp_centos6
   - icw_planner_centos7
   - icw_gporca_centos7
-  - icw_planner_oracle7
-  - icw_gporca_oracle7
   - icw_gporca_sles11
   - icw_extensions_gpcloud
   - QP_optimizer-functional
@@ -346,8 +342,8 @@ resources:
 - name: ccp-image
   type: registry-image
   source:
-    repository: pivotaldata/ccp
-    tag: '7'
+    repository: gcr.io/data-gpdb-public-images/ccp
+    tag: 'latest'
 
 - name: terraform
   type: terraform
@@ -447,25 +443,28 @@ resources:
 - name: centos-gpdb-dev-6
   type: registry-image
   source:
-    repository: pivotaldata/centos-gpdb-dev
-    tag: '6-gcc6.2-llvm3.7'
+    repository: gcr.io/data-gpdb-public-images/gpdb5-centos6-build-test
+    tag: 'latest'
+
+- name: gpdb5-sles11-build-test
+  type: registry-image
+  source:
+    repository: gcr.io/data-gpdb-private-images/gpdb5-sles11-build-test
+    tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 - name: centos-gpdb-dev-7
   type: registry-image
   source:
-    repository: pivotaldata/centos-gpdb-dev
-    tag: 7-gcc6.2-llvm3.7
-
-- name: oracle-gpdb-test-7
-  type: registry-image
-  source:
-    repository: pivotaldata/oracle7-test
-    tag: gpdb5-latest
+    repository: gcr.io/data-gpdb-public-images/gpdb5-centos7-build-test
+    tag: 'latest'
 
 - name: centos-mingw
   type: registry-image
   source:
-    repository: pivotaldata/centos-mingw
+    repository: gcr.io/data-gpdb-public-images/gpdb5-centos6-build-mingw
+    tag: 'latest'
 
 - name: bin_gpdb_centos6
   type: s3
@@ -906,8 +905,8 @@ set_failed_anchor: &set_failed
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: "7"
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       inputs:
         - name: ccp_src
         - name: terraform
@@ -933,8 +932,8 @@ set_failed_two_clusters_anchor: &set_failed_two_clusters
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: "7"
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       inputs:
         - name: ccp_src
         - name: terraform2
@@ -1148,6 +1147,7 @@ jobs:
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
+    - get: gpdb5-sles11-build-test
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-7
@@ -1162,6 +1162,7 @@ jobs:
       TASK_OS_VERSION: 7
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
+    image: gpdb5-sles11-build-test
     params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: sles
@@ -1450,44 +1451,6 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
-- name: icw_planner_oracle7
-  plan:
-  - in_parallel:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos7
-      passed: [gate_icw_start]
-      trigger: [[ test_trigger ]]
-    - get: oracle-gpdb-test-7
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: oracle-gpdb-test-7
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_oracle7
-  plan:
-  - in_parallel:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos7
-      passed: [gate_icw_start]
-      trigger: [[ test_trigger ]]
-    - get: oracle-gpdb-test-7
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: oracle-gpdb-test-7
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
 - name: icw_gporca_sles11
   plan:
   - in_parallel:
@@ -1497,8 +1460,10 @@ jobs:
       resource: bin_gpdb_sles11
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
+    - get: gpdb5-sles11-build-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_sles11.yml
+    image: gpdb5-sles11-build-test
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
@@ -1622,8 +1587,6 @@ jobs:
       - icw_planner_ictcp_centos6
       - icw_gporca_centos7
       - icw_planner_centos7
-      - icw_gporca_oracle7
-      - icw_planner_oracle7
       - icw_gporca_sles11
       - icw_extensions_gpcloud
       - QP_optimizer-functional
@@ -1641,8 +1604,6 @@ jobs:
       passed:
       - icw_planner_centos7
       - icw_gporca_centos7
-      - icw_gporca_oracle7
-      - icw_planner_oracle7
     - get: bin_gpdb_sles11
       passed:
       - icw_gporca_sles11
@@ -2496,8 +2457,8 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: '7'
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       run:
         path: bash
         args:
@@ -2576,8 +2537,8 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: '7'
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       run:
         path: bash
         args:
@@ -2656,8 +2617,8 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: '7'
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       run:
         path: bash
         args:
@@ -2721,8 +2682,8 @@ jobs:
           image_resource:
             type: registry-image
             source:
-              repository: pivotaldata/ccp
-              tag: "7"
+              repository: gcr.io/data-gpdb-public-images/ccp
+              tag: "latest"
           inputs:
           - name: terraform
           - name: ccp_src
@@ -2754,8 +2715,8 @@ jobs:
           image_resource:
             type: registry-image
             source:
-              repository: pivotaldata/ccp
-              tag: "7"
+              repository: gcr.io/data-gpdb-public-images/ccp
+              tag: "latest"
           inputs:
           - name: terraform
           - name: ccp_src
@@ -2774,8 +2735,8 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: '7'
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       run:
         path: sh
         args:
@@ -2828,8 +2789,8 @@ jobs:
           image_resource:
             type: registry-image
             source:
-              repository: pivotaldata/ccp
-              tag: "7"
+              repository: gcr.io/data-gpdb-public-images/ccp
+              tag: "latest"
           inputs:
           - name: terraform
           - name: ccp_src
@@ -2860,8 +2821,8 @@ jobs:
           image_resource:
             type: registry-image
             source:
-              repository: pivotaldata/ccp
-              tag: "7"
+              repository: gcr.io/data-gpdb-public-images/ccp
+              tag: "latest"
           inputs:
           - name: terraform
           - name: ccp_src
@@ -2880,8 +2841,8 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: '7'
+          repository: gcr.io/data-gpdb-public-images/ccp
+          tag: "latest"
       run:
         path: sh
         args:
@@ -3266,8 +3227,6 @@ jobs:
       - icw_planner_ictcp_centos6
       - icw_planner_centos7
       - icw_gporca_centos7
-      - icw_planner_oracle7
-      - icw_gporca_oracle7
       - icw_gporca_sles11
       - icw_extensions_gpcloud
       - fips_centos6
