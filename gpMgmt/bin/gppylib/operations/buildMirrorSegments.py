@@ -21,7 +21,8 @@ from gppylib.operations.unix import CleanSharedMem
 from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
-from gppylib.programs.clsRecoverSegment_triples import RecoverTriplet
+from gppylib.programs.clsRecoverSegment_triples import RecoveryTriplet
+
 
 logger = gplog.get_default_logger()
 
@@ -71,7 +72,7 @@ class GpMirrorToBuild:
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
         # We need to call this validate function here because addmirrors directly calls GpMirrorToBuild.
-        RecoverTriplet.validate(failedSegment, liveSegment, failoverSegment)
+        RecoveryTriplet.validate(failedSegment, liveSegment, failoverSegment)
 
         self.__failedSegment = failedSegment
         self.__liveSegment = liveSegment
