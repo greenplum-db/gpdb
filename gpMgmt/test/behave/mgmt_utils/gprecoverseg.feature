@@ -35,6 +35,24 @@ Feature: gprecoverseg tests
           And the tablespace is valid
           And the other tablespace is valid
 
+    Scenario Outline: full recovery limits number of parallel processes correctly
+        Given a standard local demo cluster is created
+        And 2 gprecoverseg directory under '/tmp/recoverseg' with mode '0700' is created
+        And a good gprecoverseg input file is created for moving 2 mirrors
+        When the user runs gprecoverseg with input file and additional args "-a -F -v <args>"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
+        And check if gprecoverseg ran "$GPHOME/bin/lib/gpconfigurenewsegment" 2 times with args "-b <segHost_workers>"
+        And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
+        And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
+        And the segments are synchronized
+
+      Examples:
+        | args      | coordinator_workers | segHost_workers |
+        | -B 1 -b 1 |  1                  |  1              |
+        | -B 2 -b 1 |  2                  |  1              |
+        | -B 1 -b 2 |  1                  |  2              |
+
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user stops all primary processes
