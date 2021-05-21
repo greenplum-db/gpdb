@@ -15,11 +15,11 @@ class MirrorMgmtContext:
         self.input_file = None
 
     def input_file_path(self):
-        if self.working_directory is None:
+        if not self.working_directory:
             raise Exception("working directory not set")
         if self.input_file is None:
             raise Exception("input file not set")
-        return path.normpath(path.join(self.working_directory,self.input_file))
+        return path.normpath(path.join(self.working_directory[0], self.input_file))
 
 
 def _generate_input_config(spread=False):
@@ -294,10 +294,16 @@ def impl(context, mirror_config):
                 raise Exception('Expected primaries on %s to all be mirrored to the same host, but they are mirrored to %d different hosts' %
                         (primary_host, num_mirror_hosts))
 
-@given("a gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
-def impl(context, parent_dir, mode):
-    make_temp_dir(context,parent_dir, mode)
-    context.mirror_context.working_directory = context.temp_base_dir
+@given("{num} gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
+@given("{num} gprecoverseg directory under '{parent_dir}' with mode '{mode}' is created")
+def impl(context, num, parent_dir, mode):
+    num_dirs = 1 if num == 'a' else int(num)
+    make_temp_dir(context, parent_dir, mode)
+    context.mirror_context.working_directory = []
+    for i in range(num_dirs):
+        ith_dir = os.path.join(context.temp_base_dir, 'tmp_' + str(i))
+        os.mkdir(ith_dir, int(mode,8))
+        context.mirror_context.working_directory.append(ith_dir)
 
 
 @given("a '{file_type}' gpmovemirrors file is created")
@@ -314,7 +320,7 @@ def impl(context, file_type):
     elif file_type == 'badhost':
         badhost_config = '%s|%s|%s' % ('badhost',
                                        mirror.getSegmentPort(),
-                                       context.mirror_context.working_directory)
+                                       context.mirror_context.working_directory[0])
         contents = '%s %s' % (valid_config, badhost_config)
     elif file_type == 'samedir':
         valid_config_with_same_dir = '%s|%s|%s' % (
@@ -334,7 +340,7 @@ def impl(context, file_type):
         valid_config_with_different_dir = '%s|%s|%s' % (
             mirror.getSegmentHostName(),
             mirror.getSegmentPort(),
-            context.mirror_context.working_directory
+            context.mirror_context.working_directory[0]
         )
         contents = '%s %s' % (valid_config, valid_config_with_different_dir)
     else:
@@ -344,6 +350,26 @@ def impl(context, file_type):
     with open(context.mirror_context.input_file_path(), 'w') as fd:
         fd.write(contents)
 
+@given("a good gpmovemirrors file is created for moving {num} mirrors")
+@given("a good gprecoverseg input file is created for moving {num} mirrors")
+def impl(context, num):
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    contents = ''
+    for i in range(int(num)):
+        mirror = segments[i].mirrorDB
+
+        valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+                                     mirror.getSegmentPort(),
+                                     mirror.getSegmentDataDirectory())
+        valid_config_with_different_dir = '%s|%s|%s' % (
+            mirror.getSegmentHostName(),
+            mirror.getSegmentPort(),
+            context.mirror_context.working_directory[i]
+        )
+        contents += '%s %s\n' % (valid_config, valid_config_with_different_dir)
+    context.mirror_context.input_file = "gpmovemirrors_good_multi.txt"
+    with open(context.mirror_context.input_file_path(), 'w') as fd:
+        fd.write(contents)
 
 @when('the user runs gpmovemirrors')
 def impl(context):
@@ -353,6 +379,12 @@ def impl(context):
 @when('the user runs gpmovemirrors with additional args "{extra_args}"')
 def run_gpmovemirrors(context, extra_args=''):
     cmd = "gpmovemirrors --input=%s %s" % (
+        context.mirror_context.input_file_path(), extra_args)
+    run_gpcommand(context, cmd)
+
+@when('the user runs gprecoverseg with input file and additional args "{extra_args}"')
+def impl(context, extra_args=''):
+    cmd = "gprecoverseg -i %s %s" % (
         context.mirror_context.input_file_path(), extra_args)
     run_gpcommand(context, cmd)
 

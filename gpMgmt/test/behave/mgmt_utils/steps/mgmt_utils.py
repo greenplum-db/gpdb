@@ -508,6 +508,34 @@ def impl(context, command, out_msg, num):
         raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
 
 
+def lines_matching_both(in_str, str_1, str_2):
+    lines = [x.strip() for x in in_str.split('\n')]
+    return [x for x in lines if x.count(str_1) and x.count(str_2)]
+
+
+@then('check if {command} ran "{called_command}" {num} times with args "{args}"')
+def impl(context, command, called_command, num, args):
+    run_cmd_out = "Running Command: %s" % called_command
+    matches = lines_matching_both(context.stdout_message, run_cmd_out, args)
+
+    if len(matches) != int(num):
+        raise Exception("Expected %s to occur with %s args %s times. Found %d. \n %s"
+                        % (called_command, args, num, len(matches), context.stdout_message))
+
+
+@then('{command} should only spawn up to {num} workers in WorkerPool')
+def impl(context, command, num):
+    workerPool_out = "WorkerPool() initialized with"
+    matches = lines_matching_both(context.stdout_message, workerPool_out, command)
+
+    for matched_line in matches:
+        iw_re = re.search('initialized with (\d+) workers', matched_line)
+        init_workers = int(iw_re.group(1))
+        if init_workers > int(num):
+            raise Exception("Expected Workerpool for %s to be initialized with %d workers. Found %d. \n %s"
+                            % (command, num, init_workers, context.stdout_message))
+
+
 @given('{command} should return a return code of {ret_code}')
 @when('{command} should return a return code of {ret_code}')
 @then('{command} should return a return code of {ret_code}')
