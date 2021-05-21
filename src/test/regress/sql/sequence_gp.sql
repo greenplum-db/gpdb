@@ -67,3 +67,10 @@ INSERT INTO descending_sequence_insert SELECT i, nextval('descending_sequence') 
 SELECT * FROM descending_sequence_insert ORDER BY b DESC;
 SELECT * FROM descending_sequence;
 SELECT seqrelid::regclass, seqtypid::regtype, seqstart, seqincrement, seqmax, seqmin, seqcache, seqcycle FROM pg_sequence WHERE seqrelid='descending_sequence'::regclass;
+
+-- Test that we don't produce duplicate sequence values
+DROP SEQUENCE IF EXISTS check_no_duplicates;
+CREATE SEQUENCE check_no_duplicates;
+SELECT nextval('check_no_duplicates') FROM gp_dist_random('gp_id');
+SELECT nextval('check_no_duplicates');
+SELECT nextval('check_no_duplicates') FROM gp_dist_random('gp_id');

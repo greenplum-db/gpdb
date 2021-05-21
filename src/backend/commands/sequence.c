@@ -100,6 +100,16 @@ typedef SeqTableData *SeqTable;
 
 static HTAB *seqhashtab = NULL; /* hash table for SeqTable items */
 
+typedef struct SeqTableKey
+{
+	Oid relid;
+	bool called_from_dispatcher;
+}
+#if defined(pg_attribute_packed)
+			pg_attribute_packed()
+#endif
+SeqTableKey;
+
 /*
  * last_used_seq is updated by nextval() to point to the last used
  * sequence.
@@ -110,6 +120,7 @@ static void fill_seq_with_data(Relation rel, HeapTuple tuple);
 static Relation lock_and_open_sequence(SeqTable seq);
 static void create_seq_hashtable(void);
 static void init_sequence(Oid relid, SeqTable *p_elm, Relation *p_rel);
+static void init_sequence_internal(Oid relid, SeqTable *p_elm, Relation *p_rel, bool called_from_dispatcher);
 static Form_pg_sequence_data read_seq_tuple(Relation rel,
 											Buffer *buf, HeapTuple seqdatatuple);
 static void init_params(ParseState *pstate, List *options, bool for_identity,
@@ -693,7 +704,7 @@ nextval_internal(Oid relid, bool check_permissions, bool called_from_dispatcher)
 	bool		logit = false;
 
 	/* open and lock sequence */
-	init_sequence(relid, &elm, &seqrel);
+	init_sequence_internal(relid, &elm, &seqrel, called_from_dispatcher);
 
 	if (check_permissions &&
 		pg_class_aclcheck(elm->relid, GetUserId(),
@@ -1220,7 +1231,7 @@ create_seq_hashtable(void)
 	HASHCTL		ctl;
 
 	memset(&ctl, 0, sizeof(ctl));
-	ctl.keysize = sizeof(Oid);
+	ctl.keysize = sizeof(struct SeqTableKey);
 	ctl.entrysize = sizeof(SeqTableData);
 
 	seqhashtab = hash_create("Sequence values", 16, &ctl,
@@ -1234,9 +1245,25 @@ create_seq_hashtable(void)
 static void
 init_sequence(Oid relid, SeqTable *p_elm, Relation *p_rel)
 {
+	init_sequence_internal(relid, p_elm, p_rel, false);
+}
+
+/*
+ * GPDB: init_sequence_internal() mostly resembles upstream init_sequence().
+ * However, in Greenplum we manage dispatcher and executor sequence ranges
+ * separately.
+ */
+static void
+init_sequence_internal(Oid _relid, SeqTable *p_elm, Relation *p_rel,
+		bool called_from_dispatcher)
+{
 	SeqTable	elm;
 	Relation	seqrel;
 	bool		found;
+
+	SeqTableKey relid;
+	relid.relid = _relid;
+	relid.called_from_dispatcher = called_from_dispatcher;
 
 	/* Find or create a hash table entry for this sequence */
 	if (seqhashtab == NULL)
@@ -1277,7 +1304,7 @@ init_sequence(Oid relid, SeqTable *p_elm, Relation *p_rel)
 	 * discard any cached-but-unissued values.  We do not touch the currval()
 	 * state, however.
 	 */
-	if (seqrel->rd_rel->relfilenode != elm->filenode)
+	if (seqrel->rd_rel->relfilenode != elm->filenode && called_from_dispatcher)
 	{
 		elm->filenode = seqrel->rd_rel->relfilenode;
 		elm->cached = elm->last;
