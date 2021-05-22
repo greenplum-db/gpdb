@@ -6,14 +6,6 @@ ifeq "$(BLD_ARCH)" ""
 export BLD_ARCH:=$(shell $(BLD_TOP)/releng/set_bld_arch.sh)
 endif
 
-# include thirdparty infrastructure which depends on WHERE_THE...
-BLD_WHERE_THE_LIBRARY_THINGS_ARE=LD_LIBRARY_PATH
-ifneq "$($(BLD_ARCH)_WHERE_THE_LIBRARY_THINGS_ARE)" ""
-BLD_WHERE_THE_LIBRARY_THINGS_ARE=$($(BLD_ARCH)_WHERE_THE_LIBRARY_THINGS_ARE)
-endif
-
-include $(BLD_TOP)/Makefile.thirdparty
-
 # get current working directory with symlinks maintained
 HERE:=$(shell pwd -L)
 
@@ -36,29 +28,8 @@ ifneq "$($(BLD_ARCH)_CXX)" ""
 export CXX=$($(BLD_ARCH)_CXX)
 endif
 
-rhel6_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-rhel7_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-rhel8_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.17
-photon3_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-ubuntu18.04_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-sles12_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
+export BLD_LD_LIBRARY_PATH_FIXED=true
 
-ifneq "$($(BLD_ARCH)_PYTHONHOME)" ""
-export PYTHONHOME=$($(BLD_ARCH)_PYTHONHOME)
-endif
-
-export PYTHON=python
-ifneq "$(PYTHONHOME)" ""
-export PYTHON=$(PYTHONHOME)/bin/python
-endif
-
-# if PYTHONHOME was specified above, use it for the build
-ifneq "$(PYTHONHOME)" ""
-tmpPATH=$(PYTHONHOME)/bin:$(PATH)
-export PATH:=$(tmpPATH)
-tmpLD_LIBRARY_PATH=$(PYTHONHOME)/lib:$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
-export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE):=$(tmpLD_LIBRARY_PATH)
-endif
 
 ##
 ## Control if PATH and LD_LIBRARY_PATH|DYLD_LIBRARY_PATH values are displayed.
@@ -66,7 +37,6 @@ endif
 
 ifeq "$(ENABLE_MAKE_WARNING)" "true"
 $(warning PATH=$(PATH))
-$(warning $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE)))
 endif
 
 # disable our gcc wrapper
@@ -92,11 +62,6 @@ endif
 ifeq "$(BLD_BITS)" ""
 $(error Unable to determine value for BLD_BITS!  You may set this on the command line.)
 endif
-
-GREP=grep
-TAR=tar
-AWK=awk
-
 
 # Functions for use in this and including makefiles
 

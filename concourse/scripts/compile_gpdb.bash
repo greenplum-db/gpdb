@@ -5,16 +5,12 @@ CWDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${CWDIR}/common.bash"
 
 function prep_env() {
-	OS=$(os_id)
-	OS_VERSION=$(os_version)
 	OUTPUT_ARTIFACT_DIR=${OUTPUT_ARTIFACT_DIR:=gpdb_artifacts}
-
 	export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
 	export GPDB_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
 	export BLD_ARCH=$(build_arch)
 
 	GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
-	GPDB_EXT_PATH=${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}
 	GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
 	GPDB_CL_FILENAME=${GPDB_CL_FILENAME:="bin_gpdb_clients.tar.gz"}
 
@@ -22,6 +18,7 @@ function prep_env() {
 	GREENPLUM_CL_INSTALL_DIR=/usr/local/greenplum-clients-devel
 
 	mkdir -p "${GPDB_ARTIFACTS_DIR}"
+	link_python
 
 	# By default, only GPDB Server binary is build.
 	# Use BLD_TARGETS flag with appropriate value string to generate client, loaders
@@ -33,14 +30,6 @@ function prep_env() {
 	fi
 }
 
-function link_python() {
-	if [[ "${OS}" == "centos" ]] && [[ "${OS_VERSION}" == "8" ]]; then
-		ln -sf /opt/python-2.7.17 "$(pwd)/${GPDB_EXT_PATH}/python-2.7.17"
-	else
-		ln -sf /opt/python-2.7.12 "$(pwd)/${GPDB_EXT_PATH}/python-2.7.12"
-	fi
-}
-
 function generate_build_number() {
 	pushd ${GPDB_SRC_PATH}
 	# Only if its git repo, add commit SHA as build number
@@ -49,6 +38,14 @@ function generate_build_number() {
 		echo "commit:$(git rev-parse HEAD)" >BUILD_NUMBER
 	fi
 	popd
+}
+
+function link_python() {
+	echo "Installing python"
+	export PYTHONHOME=$(find /opt -maxdepth 1 -type d -name "python*")
+	export PATH="${PYTHONHOME}/bin:${PATH}"
+	echo "${PYTHONHOME}/lib" >>/etc/ld.so.conf.d/gpdb.conf
+	ldconfig
 }
 
 function build_gpdb() {
@@ -86,62 +83,30 @@ function unittest_check_gpdb() {
 	popd
 }
 
-function include_zstd() {
-	local libdir
-	case "${OS}" in
-	centos | sles | photon) libdir=/usr/lib64 ;;
-	ubuntu) libdir=/usr/lib ;;
-	*) return ;;
-	esac
-	pushd ${GREENPLUM_INSTALL_DIR}
-	cp ${libdir}/pkgconfig/libzstd.pc lib/pkgconfig
-	cp -d ${libdir}/libzstd.so* lib
-	cp /usr/include/zstd*.h include
-	popd
-}
 
-function include_quicklz() {
-	local libdir
-	case "${OS}" in
-	centos | sles | photon) libdir=/usr/lib64 ;;
-	ubuntu) libdir=/usr/local/lib ;;
-	*) return ;;
-	esac
-	pushd ${GREENPLUM_INSTALL_DIR}
-	cp -d ${libdir}/libquicklz.so* lib
-	popd
-}
+function include_dependencies() {
 
-function include_libstdcxx() {
-	if [[ "${OS}" == "centos" ]] && [[ "${OS_VERSION}" != "8" ]]; then
-		pushd /opt/gcc-6*/lib64
-		for libfile in libstdc++.so.*; do
-			case $libfile in
-			*.py) ;;
-				# we don't vendor libstdc++.so.*-gdb.py
-			*)
-				cp -d "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
-				;; # vendor everything else
-			esac
-		done
-		popd
+	mkdir -p ${GREENPLUM_INSTALL_DIR}/{lib,include}
+	declare -a library_search_path header_search_path vendored_headers vendored_libs
+
+	header_search_path=( /usr/local/include/ /usr/include/ )
+	vendored_headers=(zstd*.h uv.h uv )
+
+	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0} libxerces-c{,-3.1}.so)
+
+	if [[ -d /opt/gcc-6.4.0 ]]; then
+		vendored_libs+=(libstdc++.so.6{,.0.22,*.pyc,*.pyo})
+		library_search_path+=( /opt/gcc-6.4.0/lib64 )
 	fi
 
-}
+	library_search_path+=( $(cat /etc/ld.so.conf.d/*.conf | grep -v '#') )
+	library_search_path+=( /lib64 /usr/lib64 /lib /usr/lib)
 
-function include_libuv() {
-	local includedir=/usr/include
-	local libdir
-	case "${OS}" in
-	centos | sles | photon) libdir=/usr/lib64 ;;
-	ubuntu) libdir=/usr/lib/x86_64-linux-gnu ;;
-	*) return ;;
-	esac
-	pushd ${GREENPLUM_INSTALL_DIR}
-	# need to include both uv.h and uv/*.h
-	cp -a ${includedir}/uv* include
-	cp -a ${libdir}/libuv.so* lib
-	popd
+	# Vendor shared libraries - follow symlinks
+	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]] ; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done;
+	# Vendor headers - follow symlinks
+	for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]] ; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
+
 }
 
 function export_gpdb() {
@@ -186,20 +151,10 @@ function export_gpdb_clients() {
 	popd
 }
 
-function build_xerces() {
-	OUTPUT_DIR="${GPDB_EXT_PATH}"
-	mkdir -p xerces_patch/concourse
-	cp -r gpdb_src/src/backend/gporca/concourse/xerces-c xerces_patch/concourse
-	/usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir="${OUTPUT_DIR}"
-	rm -rf build
-}
-
 function _main() {
 
 	prep_env
 
-	build_xerces
-	link_python
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"
 	git_info
@@ -208,10 +163,7 @@ function _main() {
 		unittest_check_gpdb
 	fi
 
-	include_zstd
-	include_quicklz
-	include_libuv
-	include_libstdcxx
+	include_dependencies
 
 	export_gpdb
 	export_gpdb_extensions

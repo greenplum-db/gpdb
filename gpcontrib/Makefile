@@ -1,5 +1,4 @@
 # protect the default target for this file from the targets in Makefile.global
-# and Makefile.thirdparty
 default: all
 
 top_builddir = ..

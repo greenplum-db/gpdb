@@ -96,9 +96,6 @@ function import_remote_key() {
 
 function run_remote_test() {
     set -eo pipefail
-    if [ -f /opt/gcc_env.sh ]; then
-        source /opt/gcc_env.sh
-    fi
 
     scp -P "${REMOTE_PORT}" ./gpdb_src/concourse/scripts/windows_remote_test.ps1 "${REMOTE_USER}@${REMOTE_HOST}:"
     scp -P "${REMOTE_PORT}" ./bin_gpdb_clients_windows/*.msi "${REMOTE_USER}@${REMOTE_HOST}:"

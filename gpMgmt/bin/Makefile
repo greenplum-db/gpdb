@@ -115,7 +115,7 @@ PSUTIL_DIR=psutil-$(PSUTIL_VERSION)
 
 psutil:
 	@echo "--- psutil"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PSUTIL_DIR).tar.gz
+	cd $(PYLIB_SRC_EXT)/ && tar xzf $(PSUTIL_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/ && CC="$(CC)" python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/build/lib.*/psutil $(PYLIB_DIR)
 
@@ -128,7 +128,7 @@ PYYAML_DIR=PyYAML-$(PYYAML_VERSION)
 
 pyyaml:
 	@echo "--- pyyaml"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYYAML_DIR).tar.gz
+	cd $(PYLIB_SRC_EXT)/ && tar xzf $(PYYAML_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PYYAML_DIR)/ && env -u CC python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PYYAML_DIR)/build/lib*/* $(PYLIB_DIR)
 
@@ -161,9 +161,9 @@ UBUNTU_PLATFORM=$(shell if lsb_release -a 2>/dev/null | grep -q 'Ubuntu' ; then 
 
 pylint:
 	@echo "--- pylint"
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYLINT_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOGILAB_ASTNG_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOGILAB_COMMON_DIR).tar.gz
+	@cd $(PYLIB_SRC_EXT)/ && tar xzf $(PYLINT_DIR).tar.gz
+	@cd $(PYLIB_SRC_EXT)/ && tar xzf $(LOGILAB_ASTNG_DIR).tar.gz
+	@cd $(PYLIB_SRC_EXT)/ && tar xzf $(LOGILAB_COMMON_DIR).tar.gz
 	@cd $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/ && python setup.py build 1> /dev/null
 	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)/ && python setup.py build 1> /dev/null
 	@cd $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)/ && python setup.py build 1> /dev/null
@@ -178,7 +178,7 @@ $(MOCK_BIN):
        pip install mock;\
      else\
        mkdir -p $(PYTHONSRC_INSTALL_SITE) && \
-	   cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(MOCK_DIR).tar.gz && \
+	   cd $(PYLIB_SRC_EXT)/ && tar xzf $(MOCK_DIR).tar.gz && \
 	   cd $(PYLIB_SRC_EXT)/$(MOCK_DIR)/ && \
 	   PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL) ; \
 	 fi;
