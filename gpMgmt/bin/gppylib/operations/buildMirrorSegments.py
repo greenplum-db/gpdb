@@ -416,9 +416,6 @@ class GpMirrorListToBuild:
                                                           suppressErrorCheck=True,
                                                           progressCmds=progressCmds)
 
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing rewind progress logfiles",
-                                                          suppressErrorCheck=False)
-
         rewindFailedSegments = []
         for cmd in completedCmds:
             self.__logger.debug('pg_rewind results: %s' % cmd.results)
@@ -428,6 +425,10 @@ class GpMirrorListToBuild:
                 self.__logger.warning(cmd.get_stdout())
                 self.__logger.warning("Incremental recovery failed for dbid %d. You must use gprecoverseg -F to recover the segment." % dbid)
                 rewindFailedSegments.append(rewindInfo[dbid].targetSegment)
+
+        if len(rewindFailedSegments) == 0:
+            self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing rewind progress logfiles",
+                                                              suppressErrorCheck=False)
 
         return rewindFailedSegments
 
