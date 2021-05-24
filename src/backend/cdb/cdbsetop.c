@@ -164,6 +164,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 						break;
 
 					case CdbLocusType_SingleQE:
+					case CdbLocusType_SegmentGeneral:
 						/*
 						 * The input was focused on a single QE, but we need it in the QD.
 						 * It's bit silly to add a Motion to just move the whole result from
@@ -178,7 +179,6 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 
 					case CdbLocusType_Entry:
 					case CdbLocusType_General:
-					case CdbLocusType_SegmentGeneral:
 					case CdbLocusType_OuterQuery:
 						break;
 
