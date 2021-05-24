@@ -789,6 +789,7 @@ _outCreateDomainStmt(StringInfo str, CreateDomainStmt *node)
 	WRITE_NODE_TYPE("CREATEDOMAINSTMT");
 	WRITE_NODE_FIELD(domainname);
 	WRITE_NODE_FIELD(typeName);
+	WRITE_NODE_FIELD(collClause);
 	WRITE_NODE_FIELD(constraints);
 }
 

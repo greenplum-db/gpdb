@@ -3000,6 +3000,7 @@ _outCreateDomainStmt(StringInfo str, const CreateDomainStmt *node)
 	WRITE_NODE_TYPE("CREATEDOMAINSTMT");
 	WRITE_NODE_FIELD(domainname);
 	WRITE_NODE_FIELD_AS(typeName, typename);
+	WRITE_NODE_FIELD(collClause);
 	WRITE_NODE_FIELD(constraints);
 }
 #endif /* COMPILING_BINARY_FUNCS */
