@@ -1832,8 +1832,8 @@ load_hba(void)
 	}
 
 	/* Loaded new file successfully, replace the one we use */
-	if (parsed_hba_context != NULL)
-		MemoryContextDelete(parsed_hba_context);
+	unload_hba();
+
 	parsed_hba_context = hbacxt;
 	parsed_hba_lines = new_parsed_lines;
 
@@ -2210,15 +2210,13 @@ load_ident(void)
 				pg_regfree(&newline->re);
 		}
 	}
-	if (parsed_ident_context != NULL)
-		MemoryContextDelete(parsed_ident_context);
+	unload_ident();
 
 	parsed_ident_context = ident_context;
 	parsed_ident_lines = new_parsed_lines;
 
 	return true;
 }
-
 
 
 /*
@@ -2233,4 +2231,21 @@ void
 hba_getauthmethod(hbaPort *port)
 {
 	check_hba(port);
+}
+
+/*
+ * Extend the visibility of these functions for memory saving
+ */
+void
+unload_hba(void)
+{
+	if (parsed_hba_context != NULL)
+		MemoryContextDelete(parsed_hba_context);
+}
+
+void
+unload_ident(void)
+{
+	if (parsed_ident_context != NULL)
+		MemoryContextDelete(parsed_ident_context);
 }
