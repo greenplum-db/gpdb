@@ -89,6 +89,10 @@ extern bool load_hba(void);
 extern void load_ident(void);
 extern void load_role(void);
 extern void load_role_interval(void);
+extern void unload_hba(void);
+extern void unload_ident(void);
+extern void unload_role(void);
+extern void unload_role_interval(void);
 extern void force_load_role(void);
 extern int	hba_getauthmethod(hbaPort *port);
 extern bool read_pg_database_line(FILE *fp, char *dbname, Oid *dboid,

@@ -1705,12 +1705,7 @@ load_role(void)
 	FILE	   *role_file;
 
 	/* Discard any old data */
-	if (role_lines || role_line_nums)
-		free_lines(&role_lines, &role_line_nums);
-	if (role_sorted)
-		pfree(role_sorted);
-	role_sorted = NULL;
-	role_length = 0;
+	unload_role();
 
 	/* Read in the file contents */
 	filename = auth_getflatfilename();
@@ -1760,12 +1755,7 @@ load_role_interval(void)
 	FILE		*role_interval_file;
 
 	/* Discard any old data */
-	if (role_interval_lines || role_interval_line_nums)
-		free_lines(&role_interval_lines, &role_interval_line_nums);
-	if (role_interval_sorted)
-		pfree(role_interval_sorted);
-	role_interval_sorted = NULL;
-	role_interval_length = 0;
+	unload_role_interval();
 
 	/* Read in the file contents */
 	filename = auth_time_getflatfilename();
@@ -1938,7 +1928,7 @@ load_hba(void)
 	}
 
 	/* Loaded new file successfully, replace the one we use */
-	clean_hba_list(parsed_hba_lines);
+	unload_hba();
 	parsed_hba_lines = new_parsed_lines;
 
 	return true;
@@ -2251,8 +2241,8 @@ load_ident(void)
 {
 	FILE	   *file;
 
-	if (ident_lines || ident_line_nums)
-		free_lines(&ident_lines, &ident_line_nums);
+	/* Discard any old data */
+	unload_ident();
 
 	file = AllocateFile(IdentFileName, "r");
 	if (file == NULL)
@@ -2287,4 +2277,42 @@ hba_getauthmethod(hbaPort *port)
 		return STATUS_OK;
 	else
 		return STATUS_ERROR;
+}
+
+/*
+ * Extend the visibility of these functions for memory saving
+ */
+void
+unload_hba(void)
+{
+	clean_hba_list(parsed_hba_lines);
+}
+
+void
+unload_ident(void)
+{
+	if (ident_lines || ident_line_nums)
+		free_lines(&ident_lines, &ident_line_nums);
+}
+
+void
+unload_role(void)
+{
+	if (role_lines || role_line_nums)
+		free_lines(&role_lines, &role_line_nums);
+	if (role_sorted)
+		pfree(role_sorted);
+	role_sorted = NULL;
+	role_length = 0;
+}
+
+void
+unload_role_interval(void)
+{
+	if (role_interval_lines || role_interval_line_nums)
+		free_lines(&role_interval_lines, &role_interval_line_nums);
+	if (role_interval_sorted)
+		pfree(role_interval_sorted);
+	role_interval_sorted = NULL;
+	role_interval_length = 0;
 }
