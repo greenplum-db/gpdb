@@ -483,7 +483,23 @@ ClientAuthentication(Port *port)
 	if (is_internal_gpdb_conn(port))
 	{
 		if (internal_client_authentication(port))
+		{
+			/*
+			 * Unload hba and ident files to save memory, they are useless if
+			 * we decide to short circuit the client authentication.
+			 *
+			 * In a corner case, these flat files could be big, it would be a
+			 * serious issue if the postmaster forks them with thousands of
+			 * copies without vmem tracking.
+			 *
+			 * FYI, CoW memory is counted by system OOM killer if the Linux
+			 * configuration `vm.overcommit_memory` is 2.
+			 */
+			unload_hba();
+			unload_ident();
+
 			return;
+		}
 
 		/* Else, try the normal authentication */
 	}
