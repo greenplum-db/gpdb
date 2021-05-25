@@ -619,6 +619,15 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		}
 
 		/*
+		 * If this is CREATE TABLE AS ... WITH NO DATA, there's no need
+		 * need to actually execute the plan.
+		 */
+		if (Gp_role == GP_ROLE_DISPATCH &&
+			queryDesc->plannedstmt->intoClause &&
+			queryDesc->plannedstmt->intoClause->skipData)
+			shouldDispatch = false;
+
+		/*
 		 * if in dispatch mode, time to serialize plan and query
 		 * trees, and fire off cdb_exec command to each of the qexecs
 		 */

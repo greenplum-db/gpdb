@@ -731,6 +731,9 @@ _outCreateStmt_common(StringInfo str, CreateStmt *node)
 	WRITE_BOOL_FIELD(buildAoBlkdir);
 	WRITE_NODE_FIELD(attr_encodings);
 	WRITE_BOOL_FIELD(isCtas);
+
+	WRITE_NODE_FIELD(intoQuery);
+	WRITE_NODE_FIELD(intoPolicy);
 }
 
 static void
