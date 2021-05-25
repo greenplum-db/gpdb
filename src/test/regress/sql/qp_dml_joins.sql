@@ -1711,6 +1711,7 @@ UPDATE dml_heap_p SET b = (dml_heap_p.b * 1.1)::int FROM dml_heap_r WHERE dml_he
 -- Insert with join and except
 SET optimizer_trace_fallback=on;
 CREATE TABLE dml_heap_int (a int) DISTRIBUTED BY (a);
+INSERT INTO dml_heap_int SELECT generate_series(1, 3);
 INSERT INTO dml_heap_int
 SELECT t1.a
 FROM dml_heap_int t1
@@ -1719,5 +1720,6 @@ FROM dml_heap_int t1
 		FROM dml_heap_int _t1, dml_heap_int _t2
 		WHERE (_t1.a = _t2.a)
 	EXCEPT (
-		SELECT a
+		SELECT a+1
 		FROM dml_heap_int)) t2 ON (t1.a = t2.a);
+SELECT * FROM dml_heap_int;
