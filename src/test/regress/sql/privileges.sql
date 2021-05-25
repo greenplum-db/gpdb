@@ -1321,3 +1321,130 @@ REVOKE TRUNCATE ON lock_table FROM regress_locktable_user;
 -- clean up
 DROP TABLE lock_table;
 DROP USER regress_locktable_user;
+
+-- Test only option for grant and revoke --
+create user test;
+CREATE TABLE sales (trans_id int, date date, amount int) 
+PARTITION BY RANGE (date);
+CREATE TABLE sales_1 PARTITION OF sales
+    FOR VALUES FROM ('2001-01-01') TO ('2002-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_2 PARTITION OF sales
+    FOR VALUES FROM ('2002-01-01') TO ('2003-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_3 PARTITION OF sales
+    FOR VALUES FROM ('2003-01-01') TO ('2004-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_4 PARTITION OF sales
+    FOR VALUES FROM ('2004-01-01') TO ('2005-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_5 PARTITION OF sales
+    FOR VALUES FROM ('2005-01-01') TO ('2006-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_6 PARTITION OF sales
+    FOR VALUES FROM ('2006-01-01') TO ('2007-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_7 PARTITION OF sales
+    FOR VALUES FROM ('2007-01-01') TO ('2008-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_8 PARTITION OF sales
+    FOR VALUES FROM ('2008-01-01') TO ('2009-01-01')
+    PARTITION BY RANGE (amount);
+CREATE TABLE sales_1_1 PARTITION OF sales_1
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_1_2 PARTITION OF sales_1
+    FOR VALUES FROM (2000) TO (3000);
+CREATE TABLE sales_2_1 PARTITION OF sales_2
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_2_2 PARTITION OF sales_2
+    FOR VALUES FROM (2000) TO (3000);
+CREATE TABLE sales_3_1 PARTITION OF sales_3
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_3_2 PARTITION OF sales_3
+    FOR VALUES FROM (2000) TO (3000);
+CREATE TABLE sales_4_1 PARTITION OF sales_4
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_4_2 PARTITION OF sales_4
+    FOR VALUES FROM (2000) TO (3000);
+CREATE TABLE sales_5_1 PARTITION OF sales_5
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_5_2 PARTITION OF sales_5
+    FOR VALUES FROM (2000) TO (3000);
+CREATE TABLE sales_6_1 PARTITION OF sales_6
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_6_2 PARTITION OF sales_6
+    FOR VALUES FROM (2000) TO (3000);  
+CREATE TABLE sales_7_1 PARTITION OF sales_7
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_7_2 PARTITION OF sales_7
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_8_1 PARTITION OF sales_8
+    FOR VALUES FROM (1000) TO (2000);
+CREATE TABLE sales_8_2 PARTITION OF sales_8
+    FOR VALUES FROM (2000) TO (3000);  
+grant select on sales_1 to test;
+grant select on only sales_2 to test;
+grant select on only sales_3, only sales_4 to test;
+grant select on only sales_5, sales_6 to test;
+grant select on sales_7, only sales_8 to test;
+set role test;
+/*
+The reason why I close the optimizer is that using the only, orca is different 
+from planner. for example sql statement GRANT SELECT ON ONLY table TO user, in
+the orca, user can't select data from table because user don't have child partition
+privilege. But in the planner, user can get data from table because user already has
+the privilege for the parent table. So I decided to be consistent with postgresql using
+planner as correct.
+*/
+set optimizer = off;
+select * from sales_1;
+select * from sales_1_1;
+select * from sales_2;
+select * from sales_2_1;
+select * from sales_3;
+select * from sales_3_1;
+select * from sales_4;
+select * from sales_4_1;
+select * from sales_5;
+select * from sales_5_1;
+select * from sales_6;
+select * from sales_6_1;
+select * from sales_7;
+select * from sales_7_1;
+select * from sales_8;
+select * from sales_8_1;
+insert into sales values(1, '2011-01-01', 1000);
+reset role;
+grant select on sales_1 to test;
+grant select on sales_2 to test;
+grant select on sales_3 to test;
+grant select on sales_4 to test;
+grant select on sales_5 to test;
+grant select on sales_6 to test;
+grant select on sales_7 to test;
+grant select on sales_8 to test;
+revoke select on sales_1 from test;
+revoke select on only sales_2 from test;
+revoke select on only sales_3, only sales_4 from test;
+revoke select on only sales_5, sales_6 from test;
+revoke select on sales_7, only sales_8 from test;
+set role test;
+select * from sales_1;
+select * from sales_1_1;
+select * from sales_2;
+select * from sales_2_1;
+select * from sales_3;
+select * from sales_3_1;
+select * from sales_4;
+select * from sales_4_1;
+select * from sales_5;
+select * from sales_5_1;
+select * from sales_6;
+select * from sales_6_1;
+select * from sales_7;
+select * from sales_7_1;
+select * from sales_8;
+select * from sales_8_1;
+reset optimizer;
+reset role;
+drop role test;

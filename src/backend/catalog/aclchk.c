@@ -742,7 +742,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
 					if (HeapTupleIsValid(tp))
 					{
 						Form_pg_class reltup = (Form_pg_class) GETSTRUCT(tp);
-						if (reltup->relkind == RELKIND_PARTITIONED_TABLE)
+						if (reltup->relkind == RELKIND_PARTITIONED_TABLE && relvar->inh)
 						{
 							List *all_inheritors = find_all_inheritors(relOid, NoLock, NULL);
 							objects = list_concat(objects, all_inheritors);
