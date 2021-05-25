@@ -1707,3 +1707,50 @@ select count(*) from mpp3033b;
   1000
 (1 row)
 
+-- GPDB: Prevent REINDEX TABLE on partitioned table run in transaction block.
+-- Since we expand partitioned table when do the reindex, and try to reindex
+-- each table in its own transaction.
+create table reindex_part(id int, r int) partition by range (r)
+    ( start (1) end (21) every (10) );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "reindex_part_1_prt_1" for table "reindex_part"
+NOTICE:  CREATE TABLE will create partition "reindex_part_1_prt_2" for table "reindex_part"
+create index reidx_idx on reindex_part (id);
+-- This should raise error
+begin;
+reindex table reindex_part;
+ERROR:  REINDEX TABLE <partitioned_table> cannot run inside a transaction block
+end;
+-- This should success
+begin;
+reindex table reindex_part_1_prt_1;
+end;
+-- This should raise error
+CREATE FUNCTION reindex_in_func() RETURNS void
+AS $$
+begin
+reindex table reindex_part;
+end
+$$
+LANGUAGE plpgsql;
+select reindex_in_func();
+ERROR:  REINDEX TABLE <partitioned_table> cannot be executed from a function or multi-command string
+CONTEXT:  SQL statement "reindex table reindex_part"
+PL/pgSQL function "reindex_in_func" line 2 at SQL statement
+-- This should success
+CREATE OR REPLACE FUNCTION reindex_in_func() RETURNS void
+AS $$
+begin
+reindex table reindex_part_1_prt_1;
+end
+$$
+LANGUAGE plpgsql;
+select reindex_in_func();
+ reindex_in_func 
+-----------------
+
+(1 row)
+
+drop table reindex_part;
+drop function reindex_in_func();

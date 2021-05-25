@@ -609,3 +609,43 @@ reindex index mpp3033b_stringu1;
 
 select count(*) from mpp3033a;
 select count(*) from mpp3033b;
+
+-- GPDB: Prevent REINDEX TABLE on partitioned table run in transaction block.
+-- Since we expand partitioned table when do the reindex, and try to reindex
+-- each table in its own transaction.
+create table reindex_part(id int, r int) partition by range (r)
+    ( start (1) end (21) every (10) );
+create index reidx_idx on reindex_part (id);
+
+-- This should raise error
+begin;
+reindex table reindex_part;
+end;
+
+-- This should success
+begin;
+reindex table reindex_part_1_prt_1;
+end;
+
+-- This should raise error
+CREATE FUNCTION reindex_in_func() RETURNS void
+AS $$
+begin
+reindex table reindex_part;
+end
+$$
+LANGUAGE plpgsql;
+select reindex_in_func();
+
+-- This should success
+CREATE OR REPLACE FUNCTION reindex_in_func() RETURNS void
+AS $$
+begin
+reindex table reindex_part_1_prt_1;
+end
+$$
+LANGUAGE plpgsql;
+select reindex_in_func();
+
+drop table reindex_part;
+drop function reindex_in_func();
