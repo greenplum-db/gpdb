@@ -58,3 +58,22 @@
 7: set gp_vmem_idle_resource_timeout to '1h';
 -- end_ignore
 8: set gp_vmem_idle_resource_timeout to '1h';
+
+-- start_ignore
+! for i in `seq 1 10000`; do echo "host all gpadmin 2001:db8:3333:4444:5555:6666:7777:8888/128 trust" >> ${MASTER_DATA_DIRECTORY}/../../dbfast1/demoDataDir0/pg_hba.conf; done;
+! gpstop -rai;
+-- end_ignore
+
+-- The per segment limit should be reached sooner this time, because the
+-- startup memory got bigger.
+-- start_ignore
+9: set gp_vmem_idle_resource_timeout to '1h';
+10: set gp_vmem_idle_resource_timeout to '1h';
+11: set gp_vmem_idle_resource_timeout to '1h';
+-- end_ignore
+12: set gp_vmem_idle_resource_timeout to '1h';
+
+-- start_ignore
+! head -n -10000 ${MASTER_DATA_DIRECTORY}/../../dbfast1/demoDataDir0/pg_hba.conf > /tmp/pg_hba.txt && mv /tmp/pg_hba.txt ${MASTER_DATA_DIRECTORY}/../../dbfast1/demoDataDir0/pg_hba.conf;
+! gpstop -rai;
+-- end_ignore
