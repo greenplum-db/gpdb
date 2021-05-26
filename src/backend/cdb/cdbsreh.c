@@ -117,8 +117,7 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	h = palloc(sizeof(CdbSreh));
 
 	h->errmsg = NULL;
-	h->rawdata = NULL;
-	h->rawdata_binary_len = 0;
+	h->rawdata = makeStringInfo();
 	h->linenumber = 0;
 	h->processed = 0;
 	h->relname = relname;
@@ -153,7 +152,8 @@ destroyCdbSreh(CdbSreh *cdbsreh)
 
 	/* delete the bad row context */
 	MemoryContextDelete(cdbsreh->badrowcontext);
-
+	if (cdbsreh->rawdata->data)
+		pfree(cdbsreh->rawdata->data);
 	pfree(cdbsreh);
 }
 
@@ -252,15 +252,13 @@ FormErrorTuple(CdbSreh *cdbsreh)
 	if (cdbsreh->is_server_enc)
 	{
 		/* raw data */
-		values[errtable_rawdata - 1] = CStringGetTextDatum(cdbsreh->rawdata);
+		values[errtable_rawdata - 1] = CStringGetTextDatum(cdbsreh->rawdata->data);
 		nulls[errtable_rawdata - 1] = false;
 	}
 	else
 	{
 		/* raw bytes */
-		StringInfo str_rawdata = makeStringInfo();
-		appendBinaryStringInfo(str_rawdata, cdbsreh->rawdata, cdbsreh->rawdata_binary_len);
-		values[errtable_rawbytes - 1] = DirectFunctionCall1(bytearecv, PointerGetDatum(str_rawdata));
+		values[errtable_rawbytes - 1] = DirectFunctionCall1(bytearecv, PointerGetDatum(cdbsreh->rawdata));
 		nulls[errtable_rawbytes - 1] = false;
 	}
 

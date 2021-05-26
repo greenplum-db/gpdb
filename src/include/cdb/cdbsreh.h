@@ -52,7 +52,7 @@ typedef struct CdbSreh
 {
 	/* bad row information */
 	char	*errmsg;		/* the error message for this bad data row */
-	char	*rawdata;		/* the bad data row */
+	StringInfo	rawdata;		/* the bad data row which may contain \0 inside */
 	char	*relname;		/* target relation */
 	int64		linenumber;		/* line number of error in original file */
 	uint64  processed;      /* num logical input rows processed so far */
@@ -70,7 +70,6 @@ typedef struct CdbSreh
 	bool	error_log_persistent;	/* persistent error table, when drop the
 									   external table, the error log not get dropped */
 	Oid		relid;					/* parent relation id */
-	int 	rawdata_binary_len;	/* Add for binary rowdata length. For binary msg could contain '\0' */
 } CdbSreh;
 
 /*
