@@ -63,7 +63,7 @@ typedef struct CdbSreh
 {
 	/* bad row information */
 	char	*errmsg;		/* the error message for this bad data row */
-	char	*rawdata;		/* the bad data row */
+	StringInfo	rawdata;		/* the bad data row which may contain \0 inside */
 	char	*relname;		/* target relation */
 	int64		linenumber;		/* line number of error in original file */
 	uint64  processed;      /* num logical input rows processed so far */

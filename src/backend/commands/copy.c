@@ -222,16 +222,18 @@ else \
 	if (Gp_role == GP_ROLE_DISPATCH || cstate->on_segment)\
 	{\
 		Insist(cstate->err_loc_type == ROWNUM_ORIGINAL);\
-		cstate->cdbsreh->rawdata = (char *) palloc(strlen(cstate->line_buf.data) * \
-												   sizeof(char) + 1 + 24); \
+		resetStringInfo(cstate->cdbsreh->rawdata); \
+		enlargeStringInfo(cstate->cdbsreh->rawdata, \
+			strlen(cstate->line_buf.data) * sizeof(char) + 1 + 24); \
 \
 		rawdata_is_a_copy = true; \
-		sprintf(cstate->cdbsreh->rawdata, "%d%c%d%c%s", \
-			    original_lineno_for_qe, \
-				COPY_METADATA_DELIM, \
-				cstate->line_buf_converted, \
-				COPY_METADATA_DELIM, \
-				cstate->line_buf.data);	\
+		cstate->cdbsreh->rawdata->len = \
+			sprintf(cstate->cdbsreh->rawdata->data, "%d%c%d%c%s", \
+			original_lineno_for_qe, \
+			COPY_METADATA_DELIM, \
+			cstate->line_buf_converted, \
+			COPY_METADATA_DELIM, \
+			cstate->line_buf.data);	\
 	}\
 	else\
 	{\
@@ -244,7 +246,10 @@ else \
 				CopyExtractRowMetaData(cstate); \
 		}\
 \
-		cstate->cdbsreh->rawdata = cstate->line_buf.data + cstate->line_buf.cursor; \
+		resetStringInfo(cstate->cdbsreh->rawdata); \
+		appendBinaryStringInfo(cstate->cdbsreh->rawdata, \
+			cstate->line_buf.data + cstate->line_buf.cursor, \
+			cstate->line_buf.len - cstate->line_buf.cursor); \
 	}\
 \
 	cstate->cdbsreh->is_server_enc = cstate->line_buf_converted; \
@@ -271,8 +276,6 @@ else \
 	HandleSingleRowError(cstate->cdbsreh); \
 \
 	/* cleanup any extra memory copies we made */\
-	if (rawdata_is_a_copy) \
-		pfree(cstate->cdbsreh->rawdata); \
 	if (!IsRejectLimitReached(cstate->cdbsreh)) \
 		pfree(cstate->cdbsreh->errmsg); \
 \

@@ -716,6 +716,66 @@ DROP EXTERNAL TABLE ext_transform;
 --
 select count(*) from ext_whois;
 ERROR:  connection with gpfdist failed for gpfdist://@hostname@:7070/whois.csv. effective url: http://127.0.0.1:7070/whois.csv. error code = 61 (Connection refused)  (seg1 slice1 @hostname@:50001 pid=64820)
+-- Test external table sreh output in gp_read_error_log() print rawbytes with \0 in it.
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from exttab1_gpfdist_start;
+      x      
+-------------
+ starting...
+(1 row)
+
+-- end_ignore
+-- sreh 1 text format with bad data.
+drop external table if exists external_sreh_bad_data_text;
+NOTICE:  table "external_sreh_bad_data_text" does not exist, skipping
+create external table external_sreh_bad_data_text(name text) location('gpfdist://@hostname@:7070/exttab1/bad_data.tbl') format 'text' log errors segment reject limit 3;
+select * from external_sreh_bad_data_text;
+NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+ name  
+-------
+ AAABB
+(1 row)
+
+select rawbytes from gp_read_error_log('external_sreh_bad_data_text');
+ rawbytes 
+----------
+ 1\00012
+(1 row)
+
+drop external table external_sreh_bad_data_text;
+-- sreh 2 custom format with bad data.
+drop external table if exists external_sreh_bad_data;
+NOTICE:  table "external_sreh_bad_data" does not exist, skipping
+create external table external_sreh_bad_data(name text) location('gpfdist://@hostname@:7070/exttab1/bad_data.tbl') format 'custom' (formatter='fixedwidth_in', name='5') log errors segment reject limit 3;
+select * from external_sreh_bad_data;
+NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+ name  
+-------
+ AAABB
+(1 row)
+
+select rawbytes from gp_read_error_log('external_sreh_bad_data');
+ rawbytes 
+----------
+ 1\00012
+(1 row)
+
+drop external table external_sreh_bad_data;
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+-- end_ignore
+-- End Test external table sreh output in gp_read_error_log() print rawbytes with \0 in it.
 drop external table ext_whois;
 drop external table exttab1_gpfdist_start;
 drop external table gpfdist_csv_start;

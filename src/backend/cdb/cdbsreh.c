@@ -46,7 +46,6 @@
 
 static void ErrorLogFileName(Oid dbid, Oid relid, bool persistent, char *fname /* out */);
 static int  GetNextSegid(CdbSreh *cdbsreh);
-static void PreprocessByteaData(char *src);
 static void ErrorLogWrite(CdbSreh *cdbsreh);
 static bool ErrorLogPrefixDelete(Oid databaseId, Oid namespaceId, bool persistent);
 
@@ -117,7 +116,7 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	h = palloc(sizeof(CdbSreh));
 	
 	h->errmsg = NULL;
-	h->rawdata = NULL;
+	h->rawdata = makeStringInfo();
 	h->linenumber = 0;
 	h->processed = 0;
 	h->relname = relname;
@@ -154,8 +153,10 @@ destroyCdbSreh(CdbSreh *cdbsreh)
 {
 	
 	/* delete the bad row context */
-    MemoryContextDelete(cdbsreh->badrowcontext);
-	
+	MemoryContextDelete(cdbsreh->badrowcontext);
+	if(cdbsreh->rawdata->data)
+		pfree(cdbsreh->rawdata->data);
+	pfree(cdbsreh->rawdata);
 	pfree(cdbsreh);
 }
 
@@ -196,8 +197,8 @@ void HandleSingleRowError(CdbSreh *cdbsreh)
 		{
 			cdbCopySendData(cdbsreh->cdbcopy,
 							GetNextSegid(cdbsreh),
-							cdbsreh->rawdata,
-							strlen(cdbsreh->rawdata));
+							cdbsreh->rawdata->data,
+							cdbsreh->rawdata->len);
 			
 		}
 		else
@@ -272,14 +273,13 @@ FormErrorTuple(CdbSreh *cdbsreh)
 	if(cdbsreh->is_server_enc)
 	{
 		/* raw data */
-		values[errtable_rawdata - 1] = DirectFunctionCall1(textin, CStringGetDatum(cdbsreh->rawdata));
+		values[errtable_rawdata - 1] = DirectFunctionCall1(textin, CStringGetDatum(cdbsreh->rawdata->data));
 		nulls[errtable_rawdata - 1] = false;
 	}
 	else
 	{
 		/* raw bytes */
-		PreprocessByteaData(cdbsreh->rawdata);
-		values[errtable_rawbytes - 1] = DirectFunctionCall1(byteain, CStringGetDatum(cdbsreh->rawdata));
+		values[errtable_rawbytes - 1] = DirectFunctionCall1(bytearecv, PointerGetDatum(cdbsreh->rawdata));
 		nulls[errtable_rawbytes - 1] = false;
 	}
 
@@ -499,61 +499,6 @@ int GetNextSegid(CdbSreh *cdbsreh)
 	return (cdbsreh->lastsegid++ % total_segs);
 }
 
-/*
- * This function is called when we are preparing to insert a bad row that
- * includes an encoding error into the bytea field of the error log file
- * (rawbytes). In rare occasions this bad row may also have an invalid bytea
- * sequence - a backslash not followed by a valid octal sequence - in which
- * case inserting into the error log file will fail. In here we make a pass to
- * detect if there's a risk of failing. If there isn't we just return. If there
- * is we remove the backslash and replace it with a x20 char. Yes, we are
- * actually modifying the user data, but this is a much better opion than
- * failing the entire load. It's also a bad row - a row that will require user
- * intervention anyway in order to reload.
- *
- * reference: MPP-2107
- *
- * NOTE: code is copied from esc_dec_len() in encode.c and slightly modified.
- */
-static
-void PreprocessByteaData(char *src)
-{
-	const char *end = src + strlen(src);
-	
-	while (src < end)
-	{
-		if (src[0] != '\\')
-			src++;
-		else if (src + 3 < end &&
-				 (src[1] >= '0' && src[1] <= '3') &&
-				 (src[2] >= '0' && src[2] <= '7') &&
-				 (src[3] >= '0' && src[3] <= '7'))
-		{
-			/*
-			 * backslash + valid octal
-			 */
-			src += 4;
-		}
-		else if (src + 1 < end &&
-				 (src[1] == '\\'))
-		{
-			/*
-			 * two backslashes = backslash
-			 */
-			src += 2;
-		}
-		else
-		{
-			/*
-			 * one backslash, not followed by ### valid octal. remove the
-			 * backslash and put a x20 in its place.
-			 */
-			src[0] = ' ';
-			src++;
-		}		
-	}
-	
-}
 
 /*
  * IsRejectLimitValid

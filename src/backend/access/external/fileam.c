@@ -790,7 +790,9 @@ else \
 		PG_RE_THROW(); /* <-- hope to never get here! */ \
 \
 	truncateEol(&pstate->line_buf, pstate->eol_type); \
-	pstate->cdbsreh->rawdata = pstate->line_buf.data; \
+	resetStringInfo(pstate->cdbsreh->rawdata); \
+	appendBinaryStringInfo(pstate->cdbsreh->rawdata, \
+		pstate->line_buf.data, pstate->line_buf.len); \
 	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
 	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
 	pstate->cdbsreh->processed = ++pstate->processed; \
