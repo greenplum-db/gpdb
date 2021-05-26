@@ -79,6 +79,19 @@ static pthread_t memprotOwnerThread = {0,0};
 bool gp_mp_inited = false;
 
 /*
+ * Roughly track the memory without protection
+ *
+ * Greenplum doesn't enable the memory protection on postmaster, since it has
+ * no session, and the CoW memory aquired by fork() could not be accounted.
+ *
+ * So here roughly track the unprotected memory and count it into the startup
+ * memory. In a corner case, this memory could be big, which would be a serious
+ * issue if the postmaster forks them with thousands of copies without this
+ * tracking.
+ */
+static int64 unprotected_vmem_size;
+
+/*
  * UpdateTimeAtomically
  *
  * Updates a OOMTimeType variable atomically, using compare_and_swap_*
@@ -237,10 +250,12 @@ GPMemoryProtect_TrackStartupMemory(void)
 	Assert(gp_mp_inited);
 
 	/*
-	 * When compile without ORCA a postgress process will commit 6MB, this
-	 * includes the memory allocated before vmem tracker initialization.
+	 * This is the memory allocated before vmem tracker initialization.
+	 *
+	 * When compile without ORCA a clean postgress process will commit 6MB, as
+	 * observed.
 	 */
-	bytes += 6L << BITS_IN_MB;
+	bytes += unprotected_vmem_size > (6L << BITS_IN_MB) ? unprotected_vmem_size : (6L << BITS_IN_MB);
 
 #ifdef USE_ORCA
 	/* When compile with ORCA it will commit 6MB more */
@@ -474,12 +489,16 @@ void *gp_malloc(int64 sz)
 
 	void *ret;
 
-	if(gp_mp_inited)
+	if (gp_mp_inited)
 	{
 		return gp_malloc_internal(sz);
 	}
 
 	ret = malloc_and_store_metadata(sz);
+	if (ret)
+	{
+		unprotected_vmem_size += UserPtrSize_GetVmemPtrSize(sz);
+	}
 	return ret;
 }
 
@@ -491,14 +510,15 @@ void *gp_realloc(void *ptr, int64 new_size)
 
 	void *ret = NULL;
 
-	if(!gp_mp_inited)
-	{
-		ret = realloc_and_store_metadata(ptr, new_size);
-		return ret;
-	}
-
 	size_t old_size = UserPtr_GetUserPtrSize(ptr);
 	int64 size_diff = (new_size - old_size);
+
+	if (!gp_mp_inited)
+	{
+		ret = realloc_and_store_metadata(ptr, new_size);
+		unprotected_vmem_size += size_diff;
+		return ret;
+	}
 
 	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
 	{
@@ -547,4 +567,6 @@ void gp_free(void *user_pointer)
 	UserPtr_VerifyChecksum(user_pointer);
 	free(malloc_pointer);
 	VmemTracker_ReleaseVmem(UserPtrSize_GetVmemPtrSize(usable_size));
+	if (!gp_mp_inited)
+		unprotected_vmem_size -= usable_size;
 }
