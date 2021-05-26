@@ -91,9 +91,9 @@ private:
 	// resolve polymorphic types in the given array of type ids, replacing
 	// them with the actual types obtained from the query
 	static IMdIdArray *ResolvePolymorphicTypes(CMemoryPool *mp,
-											   IMdIdArray *mdid_array,
-											   List *arg_types,
-											   FuncExpr *func_expr);
+											   IMdIdArray *return_arg_mdids,
+											   List *input_arg_types,
+											   FuncExpr *funcexpr);
 
 	// update grouping col position mappings
 	static void UpdateGrpColMapping(CMemoryPool *mp,
