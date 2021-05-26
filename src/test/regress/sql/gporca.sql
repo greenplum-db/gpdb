@@ -2053,6 +2053,12 @@ AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
 DROP FUNCTION IF EXISTS func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM);
 
+--TVF accepts ANYENUM, ANYELEMENT, ANYELEMENT return ANYENUM, ANYARRAY
+CREATE FUNCTION return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT) RETURNS TABLE (ae ANYENUM, aa ANYARRAY)
+AS $$ SELECT $1, array[$2, $3] $$ LANGUAGE SQL STABLE;
+SELECT * FROM return_enum_as_array('red'::rainbow, 'yellow'::rainbow, 'blue'::rainbow);
+DROP FUNCTION IF EXISTS return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT);
+
 -- start_ignore
 drop table foo;
 -- end_ignore

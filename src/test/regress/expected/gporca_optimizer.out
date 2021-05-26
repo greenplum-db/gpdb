@@ -10989,6 +10989,19 @@ CONTEXT:  SQL function "func_array_nonarray_enum" during startup
 (1 row)
 
 DROP FUNCTION IF EXISTS func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM);
+--TVF accepts ANYENUM, ANYELEMENT, ANYELEMENT return ANYENUM, ANYARRAY
+CREATE FUNCTION return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT) RETURNS TABLE (ae ANYENUM, aa ANYARRAY)
+AS $$ SELECT $1, array[$2, $3] $$ LANGUAGE SQL STABLE;
+SELECT * FROM return_enum_as_array('red'::rainbow, 'yellow'::rainbow, 'blue'::rainbow);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "return_enum_as_array" during startup
+ ae  |      aa       
+-----+---------------
+ red | {yellow,blue}
+(1 row)
+
+DROP FUNCTION IF EXISTS return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT);
 -- start_ignore
 drop table foo;
 -- end_ignore
