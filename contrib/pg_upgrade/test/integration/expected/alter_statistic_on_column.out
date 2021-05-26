@@ -1,6 +1,0 @@
-CREATE TABLE explicitly_set_statistic_table ( col1 integer NOT NULL );
-CREATE
-ALTER TABLE ONLY explicitly_set_statistic_table ALTER COLUMN col1 SET STATISTICS 10;
-ALTER
-INSERT INTO explicitly_set_statistic_table SELECT i FROM generate_series(1,10)i;
-INSERT 10

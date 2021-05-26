@@ -1,6 +1,0 @@
-SELECT * FROM mismatched_partition_indexes;
- a | b     | c 
----+-------+---
- 2 | boss  | 2 
- 1 | apple | 1 
-(2 rows)

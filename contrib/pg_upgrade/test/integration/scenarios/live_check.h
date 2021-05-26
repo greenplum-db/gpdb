@@ -1,2 +1,0 @@
-void 
-test_a_live_check_with_the_old_server_still_up_does_not_throw_error_message(void **state);

@@ -121,8 +121,6 @@ static _stringlist *extraroles = NULL;
 static _stringlist *extra_install = NULL;
 static char *config_auth_datadir = NULL;
 static bool  ignore_plans = false;
-static char *old_port = "";
-static char *upgrade_test_path = ".";
 
 /* internal variables */
 static const char *progname;
@@ -538,8 +536,6 @@ typedef struct replacements
 	char *cgroup_mnt_point;
 	char *content_zero_hostname;
 	const char *username;
-	const char *old_port;
-	const char *upgrade_test_path;
 } replacements;
 
 /* Internal helper function to detect cgroup mount point at runtime.*/
@@ -600,8 +596,6 @@ convert_line(char *line, replacements *repls)
 		else
 			replace_string(line, "@aoseg@", "aocsseg");
 	}
-	replace_string(line, "@upgrade_test_path@", (char *) repls->upgrade_test_path);
-	replace_string(line, "@old_port@", (char *)repls->old_port);
 }
 
 /*
@@ -827,9 +821,6 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	repls.cgroup_mnt_point = cgroup_mnt_point;
 	repls.content_zero_hostname = content_zero_hostname;
 	repls.username = get_user_name(&errstr);
-
-	repls.upgrade_test_path = upgrade_test_path;
-	repls.old_port = old_port;
 
 	if (repls.username == NULL)
 	{
@@ -2971,14 +2962,6 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			case 29:
 				print_failure_diffs_is_enabled = true;
 				break;
-
-			/* GPDB specific arguments*/
-			case 128:
-				old_port = strdup(optarg);
-				break;
-			case 129:
-				upgrade_test_path = strdup(optarg);
-				break;
 			default:
 				/* getopt_long already emitted a complaint */
 				fprintf(stderr, _("\nTry \"%s -h\" for more information.\n"),
@@ -3018,8 +3001,6 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	inputdir = make_absolute_path(inputdir);
 	outputdir = make_absolute_path(outputdir);
 	dlpath = make_absolute_path(dlpath);
-
-	upgrade_test_path = make_absolute_path(upgrade_test_path);
 
 	/*
 	 * Initialization
