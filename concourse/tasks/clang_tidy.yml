@@ -3,19 +3,46 @@ image_resource:
   type: registry-image
   source:
     repository: gcr.io/data-orca/clang-toolchain
-    tag: 0.2
+    tag: 0.3
 
 inputs:
   - name: gpdb_src
-    path: .
+
 run:
   path: sh
   args:
   - -exc
   - |
-    CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=Debug -Hsrc/backend/gporca -Bbuild.debug
-    src/tools/tidy chk-orca build.debug
-    CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -Hsrc/backend/gporca -Bbuild.relwithdebinfo
-    src/tools/tidy chk-orca build.relwithdebinfo
+    (
+      mkdir vpath.debug
+      cd vpath.debug
+      ../gpdb_src/configure \
+        --enable-cassert \
+        --enable-orca \
+        --without-python --without-readline --without-zlib --without-zstd --without-libbz2 --disable-gpfdist --disable-gpcloud --disable-pxf --without-libcurl \
+        CC="ccache clang-11" CXX="ccache clang++-11" CFLAGS=-O0 CXXFLAGS=-O0
+      bear --append make -s -C src/backend/gpopt
+    )
+    (
+      mkdir vpath.release
+      cd vpath.release
+      ../gpdb_src/configure \
+        --disable-cassert \
+        --enable-orca \
+        --without-python --without-readline --without-zlib --without-zstd --without-libbz2 --disable-gpfdist --disable-gpcloud --disable-pxf --without-libcurl \
+        CC="ccache clang-11" CXX="ccache clang++-11" CFLAGS=-O0 CXXFLAGS=-O0
+      bear --append make -s -C src/backend/gpopt
+    )
+    (
+      cd gpdb_src
+      src/tools/tidy chk-gpopt ../vpath.debug
+      src/tools/tidy chk-gpopt ../vpath.release
+
+      CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=Debug -Hsrc/backend/gporca -Bbuild.debug
+      src/tools/tidy chk-orca build.debug
+      CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -Hsrc/backend/gporca -Bbuild.relwithdebinfo
+      src/tools/tidy chk-orca build.relwithdebinfo
+    )
+
 params:
   CLANG_TIDY: clang-tidy-11

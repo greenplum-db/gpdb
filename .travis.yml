@@ -99,6 +99,7 @@ matrix:
           addons:
             apt:
               packages:
+                - bear
                 - ninja-build
                 - clang-11
                 - clang-tidy-11
@@ -109,6 +110,34 @@ matrix:
           before_script: ~
           after_script: ~
           script:
+            - |
+              (
+              set -e
+              mkdir ../vpath.debug
+              cd ../vpath.debug
+              ../gpdb/configure \
+                --enable-debug \
+                --enable-cassert \
+                --enable-orca \
+                --without-zstd --disable-gpfdist \
+                CC="ccache clang-11" CXX="ccache clang++-11" CFLAGS=-O0 CXXFLAGS=-O0
+              bear --append make -s -C src/backend/gpopt
+              )
+              CLANG_TIDY=clang-tidy-11 src/tools/tidy chk-gpopt ../vpath.debug
+            - |
+              (
+              set -e
+              mkdir ../vpath.release
+              cd ../vpath.release
+              ../gpdb/configure \
+                --enable-debug \
+                --disable-cassert \
+                --enable-orca \
+                --without-zstd --disable-gpfdist \
+                CC="ccache clang-11" CXX="ccache clang++-11" CFLAGS=-O0 CXXFLAGS=-O0
+              bear --append make -s -C src/backend/gpopt
+              )
+              CLANG_TIDY=clang-tidy-11 src/tools/tidy chk-gpopt ../vpath.release
             - CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=Debug -Hsrc/backend/gporca -Bbuild.debug
             - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk-orca build.debug
             - CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -Hsrc/backend/gporca -Bbuild.relwithdebinfo
