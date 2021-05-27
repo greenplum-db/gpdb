@@ -116,7 +116,8 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	h = palloc(sizeof(CdbSreh));
 	
 	h->errmsg = NULL;
-	h->rawdata = makeStringInfo();
+	h->rawdata = (StringInfo) palloc(sizeof(StringInfoData));
+	memset(h->rawdata, 0, sizeof(StringInfoData));
 	h->linenumber = 0;
 	h->processed = 0;
 	h->relname = relname;
@@ -154,8 +155,6 @@ destroyCdbSreh(CdbSreh *cdbsreh)
 	
 	/* delete the bad row context */
 	MemoryContextDelete(cdbsreh->badrowcontext);
-	if(cdbsreh->rawdata->data)
-		pfree(cdbsreh->rawdata->data);
 	pfree(cdbsreh->rawdata);
 	pfree(cdbsreh);
 }
