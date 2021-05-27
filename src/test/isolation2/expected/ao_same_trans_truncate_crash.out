@@ -43,6 +43,8 @@ SELECT gp_wait_until_triggered_fault('fts_probe', 1, dbid) FROM gp_segment_confi
 -- before unlink the file. This cased the crash recovery to PANIC as
 -- couldn't complete the stale fsync request registered by file
 -- truncate WAL record.
+-- Also this is a chance of simply testing SyncAllXLogFile() thats fsync wal
+-- files only during crash recovery.
 1: CHECKPOINT;
 CHECKPOINT
 1: BEGIN;
