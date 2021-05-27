@@ -78,8 +78,15 @@ jobs:
             git submodule update --init --recursive
         inputs: [{ name: gpdb_pr }]
         outputs: [{ name: gpdb_src }]
-    - task: check_format
-      file: gpdb_src/concourse/tasks/check_format.yml
+    - in_parallel:
+      - task: check_format
+        file: gpdb_src/concourse/tasks/check_format.yml
+
+      - task: clang_tidy
+        input_mapping:
+          gpdb_src: gpdb_pr
+        file: gpdb_src/concourse/tasks/clang_tidy.yml
+
     - task: compile_gpdb_centos7
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
       image: gpdb7-centos7-build
@@ -121,7 +128,3 @@ jobs:
           gpdb_src: gpdb_pr
         timeout: 1h
 
-      - task: clang_tidy
-        input_mapping:
-          gpdb_src: gpdb_pr
-        file: gpdb_src/concourse/tasks/clang_tidy.yml
