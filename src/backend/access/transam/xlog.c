@@ -6482,18 +6482,37 @@ StartupXLOG(void)
 	 * in the near future might cause earlier unflushed writes to be lost,
 	 * even though more recent data written to disk from here on would be
 	 * persisted.  To avoid that, fsync the entire data directory.
+	 *
+	 * GPDB: We don't force to fsync the whole pgdata directory as upstream
+	 * code since that could be very slow in cases that the pgdata
+	 * directory has a lot of (e.g. millions of) files. See below for details.
 	 *---------
 	 */
 	if (ControlFile->state != DB_SHUTDOWNED &&
 		ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
 	{
 		RemoveTempXlogFiles();
-		ereport(LOG,
-				(errmsg("force synchronization of the data directory since the"
-						" database system was uncleanly shut down.")));
-		SyncDataDirectory();
-		ereport(LOG,
-				(errmsg("synchronization of the data directory is finished.")));
+		/*
+		 * 1. If the backup_label file exists, we assume the pgdata has already
+		 * been synchronized. This is true on gpdb since we do force fsync
+		 * during pg_basebackup and pg_rewind.
+		 *
+		 * 2. else for the crash recovery case.
+		 *
+		 *    2.1. if full page writes is enabled, we do synchronize the wal
+		 *    files only. wal files must be synchronized here, else if xlog
+		 *    redo writes some buffer pages and those pages are partly
+		 *    synchronized, and then system crashes and some xlogs are lost,
+		 *    those table file pages might be broken.
+		 *
+		 *    2.2. else, simply synchronize the whole pgdata directory though
+		 *    there might be room for optimization but we would mostly not run
+		 *    into this code branch. Since we can not get
+		 *    checkPoint.fullPageWrites here so we do pgdata fsync later (
+		 *    i.e. call SyncDataDirectory()) after reading the checkpoint.
+		 */
+		if (access(BACKUP_LABEL_FILE, F_OK) != 0)
+				SyncAllXLogFiles();
 		if (Gp_role == GP_ROLE_DISPATCH)
 			*shmCleanupBackends = true;
 	}
@@ -6744,6 +6763,17 @@ StartupXLOG(void)
 		memcpy(&checkPoint, XLogRecGetData(xlogreader), sizeof(CheckPoint));
 		wasShutdown = ((record->xl_info & ~XLR_INFO_MASK) == XLOG_CHECKPOINT_SHUTDOWN);
 	}
+
+	/*
+	 * gpdb specific: Do pgdata fsync for the case that is almost not possible
+	 * on real production scenarios. See previous code that calls
+	 * SyncAllXLogFiles() for details.
+	 */
+	if (!checkPoint.fullPageWrites &&
+		!haveBackupLabel &&
+		ControlFile->state != DB_SHUTDOWNED &&
+		ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
+		SyncDataDirectory();
 
 	/*
 	 * Clear out any old relcache cache files.  This is *necessary* if we do

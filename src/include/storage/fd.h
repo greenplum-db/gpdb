@@ -154,6 +154,7 @@ extern void fsync_fname(const char *fname, bool isdir);
 extern int	durable_rename(const char *oldfile, const char *newfile, int loglevel);
 extern int	durable_unlink(const char *fname, int loglevel);
 extern int	durable_link_or_rename(const char *oldfile, const char *newfile, int loglevel);
+extern void SyncAllXLogFiles(void);
 extern void SyncDataDirectory(void);
 extern int	data_sync_elevel(int elevel);
 
