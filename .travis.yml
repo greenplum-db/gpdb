@@ -110,9 +110,9 @@ matrix:
           after_script: ~
           script:
             - CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=Debug -Hsrc/backend/gporca -Bbuild.debug
-            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk build.debug
+            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk-orca build.debug
             - CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -Hsrc/backend/gporca -Bbuild.relwithdebinfo
-            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk build.relwithdebinfo
+            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk-orca build.relwithdebinfo
 
         - name: check-format
           stage: lint

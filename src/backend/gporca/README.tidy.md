@@ -61,18 +61,18 @@ $ CXX=clang++ cmake -GNinja -Hsrc/backend/gporca -DCMAKE_EXPORT_COMPILE_COMMANDS
 To check (it's unsurprising if we pass the check in one configuration but not another)
 
 ```
-$ src/tools/tidy chk build.debug
+$ src/tools/tidy chk-orca build.debug
 ```
 
 and
 
 ```
-$ src/tools/tidy chk build.release
+$ src/tools/tidy chk-orca build.release
 ```
 
 Note that the script assumes the name of `clang-tidy` is `clang-tidy` and it can be found on your `PATH`.
 So if you're (typically) using `clang-tidy` from Homebrew's LLVM package, you'll override that assumption by e.g.:
 
 ```
-$ CLANG_TIDY=/usr/local/opt/llvm/bin/clang-tidy src/tools/tidy chk build.debug
+$ CLANG_TIDY=/usr/local/opt/llvm/bin/clang-tidy src/tools/tidy chk-orca build.debug
 ```
