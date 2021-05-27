@@ -89,11 +89,6 @@ matrix:
           addons:
             apt:
               packages:
-                # FIXME: the following two are workarounds for broken libc version in Travis
-                # BEGIN HACK
-                - libc6-dev=2.31-0ubuntu9.2
-                - libc6=2.31-0ubuntu9.2
-                # END HACK
                 - ninja-build
                 - clang-11
                 - clang-tidy-11
