@@ -15,6 +15,7 @@ from gppylib.commands import base
 from gppylib.gparray import GpArray
 from gppylib.operations import startSegments
 from gppylib.gp_era import read_era
+from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.operations.unix import CleanSharedMem
 from gppylib.system import configurationInterface as configInterface
@@ -42,7 +43,7 @@ gDatabaseDirectories = [
 ]
 
 #
-# Database files that may exist in the root directory and need deleting 
+# Database files that may exist in the root directory and need deleting
 #
 gDatabaseFiles = [
     "PG_VERSION",
@@ -242,30 +243,38 @@ class GpMirrorListToBuild:
         cleanupDirectives = []
         copyDirectives = []
         for toRecover in self.__mirrorsToBuild:
+            failed, live, failover = toRecover.getFailedSegment(), \
+                                     toRecover.getLiveSegment(), \
+                                     toRecover.getFailoverSegment()
 
-            if toRecover.getFailedSegment() is not None:
-                # will stop the failed segment.  Note that we do this even if we are recovering to a different location!
-                toStopDirectives.append(GpStopSegmentDirectoryDirective(toRecover.getFailedSegment()))
-                if toRecover.getFailedSegment().getSegmentStatus() == gparray.STATUS_UP:
-                    toEnsureMarkedDown.append(toRecover.getFailedSegment())
+            if failed is not None:
+                if failed.unreachable:
+                    self.__logger.info('Skipping shared memory cleanup and gpsegstop on unreachable host: %s segment: %s'
+                                       % (failed.getSegmentHostName(), failed.getSegmentContentId()))
+                else:
+                    # will stop the failed segment.
+                    # Note that we do this even if we are recovering to a different location!
+                    toStopDirectives.append(GpStopSegmentDirectoryDirective(failed))
+
+                if failed.getSegmentStatus() == gparray.STATUS_UP:
+                    toEnsureMarkedDown.append(failed)
 
             if toRecover.isFullSynchronization():
 
                 isTargetReusedLocation = False
-                if toRecover.getFailedSegment() is not None and \
-                                toRecover.getFailoverSegment() is None:
+                if failed is not None and failover is None:
                     #
                     # We are recovering a failed segment in-place
                     #
-                    cleanupDirectives.append(GpCleanupSegmentDirectoryDirective(toRecover.getFailedSegment()))
+                    cleanupDirectives.append(GpCleanupSegmentDirectoryDirective(failed))
                     isTargetReusedLocation = True
 
-                if toRecover.getFailoverSegment() is not None:
-                    targetSegment = toRecover.getFailoverSegment()
+                if failover is not None:
+                    targetSegment = failover
                 else:
-                    targetSegment = toRecover.getFailedSegment()
+                    targetSegment = failed
 
-                d = GpCopySegmentDirectoryDirective(toRecover.getLiveSegment(), targetSegment, isTargetReusedLocation)
+                d = GpCopySegmentDirectoryDirective(live, targetSegment, isTargetReusedLocation)
                 copyDirectives.append(d)
 
         self.__ensureStopped(gpEnv, toStopDirectives)
@@ -724,7 +733,7 @@ class GpMirrorListToBuild:
     def __ensureSharedMemCleaned(self, gpEnv, directives):
         """
 
-        @param directives a list of the GpStopSegmentDirectoryDirective values indicating which segments to cleanup 
+        @param directives a list of the GpStopSegmentDirectoryDirective values indicating which segments to cleanup
 
         """
 
@@ -734,10 +743,12 @@ class GpMirrorListToBuild:
         self.__logger.info('Ensuring that shared memory is cleaned up for stopped segments')
         segments = [d.getSegment() for d in directives]
         segmentsByHost = GpArray.getSegmentsByHostName(segments)
+
+        num_workers = min(len(segmentsByHost), self.__parallelDegree)
         operation_list = [RemoteOperation(CleanSharedMem(segments), host=hostName) for hostName, segments in
                           segmentsByHost.items()]
-        ParallelOperation(operation_list).run()
 
+        ParallelOperation(operation_list, num_workers).run()
         for operation in operation_list:
             try:
                 operation.get_ret()
@@ -800,7 +811,7 @@ class GpMirrorListToBuild:
         self.__logger.info("This may take up to %d seconds on large clusters." % wait_time)
 
         # wait for all needed segments to be marked down by the prober.  We'll wait
-        # a max time of double the interval 
+        # a max time of double the interval
         while wait_time > time_elapsed:
             seg_up_count = 0
             current_gparray = GpArray.initFromCatalog(dburl, True)

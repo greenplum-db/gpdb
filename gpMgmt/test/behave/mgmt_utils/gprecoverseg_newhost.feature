@@ -20,6 +20,8 @@ Feature: gprecoverseg tests involving migrating to a new host
       Then gprecoverseg should return a return code of 0
       And the cluster configuration is saved for "<test_case>"
       And the "before" and "<test_case>" cluster configuration matches with the expected for gprecoverseg newhost
+      And gprecoverseg should print "Skipping shared memory cleanup and gpsegstop on unreachable host" to stdout
+      And gprecoverseg should not print "ExecutionError" to stdout
       And the mirrors replicate and fail over and back correctly
       And segment hosts <down> are reconnected to the cluster and to the spare segment hosts "<unused>"
       And the original cluster state is recreated after cleaning up <down> hosts
