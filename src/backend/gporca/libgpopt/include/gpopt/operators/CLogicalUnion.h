@@ -79,8 +79,7 @@ public:
 	virtual CPropConstraint *
 	DerivePropertyConstraint(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	{
-		return PpcDeriveConstraintIntersectUnion(mp, exprhdl,
-												 false /*fIntersect*/);
+		return PpcDeriveConstraintSetop(mp, exprhdl, false /*fIntersect*/);
 	}
 
 	//-------------------------------------------------------------------------------------
