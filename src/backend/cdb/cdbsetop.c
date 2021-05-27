@@ -152,7 +152,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 					case CdbLocusType_Null:
 					case CdbLocusType_Entry:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (
 										errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
@@ -171,6 +171,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 						break;
 
 					case CdbLocusType_SingleQE:
+					case CdbLocusType_SegmentGeneral:
 						Assert(subplanflow->flotype == FLOW_SINGLETON);
 
 						/*
@@ -189,7 +190,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (
 										errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
@@ -223,7 +224,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 					case CdbLocusType_Entry:
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (
 										errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));

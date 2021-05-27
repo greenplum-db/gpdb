@@ -390,6 +390,7 @@ explain (costs off) insert into t_replicate_volatile select random() from t_repl
 explain (costs off) insert into t_replicate_volatile select random(), a, a from generate_series(1, 10) a;
 create sequence seq_for_insert_replicated_table;
 explain (costs off) insert into t_replicate_volatile select nextval('seq_for_insert_replicated_table');
+explain (costs off) select a from t_replicate_volatile union all select * from nextval('seq_for_insert_replicated_table');
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
