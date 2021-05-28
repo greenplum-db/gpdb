@@ -121,7 +121,7 @@ test: db_size_functions
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table external_table_create_privs column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
+test: external_table external_table_union_all external_table_create_privs column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
 test: alter_table_set alter_table_gp alter_table_ao subtransaction_visibility oid_consistency udf_exception_blocks
 # below test(s) inject faults so each of them need to be in a separate group
 test: aocs
