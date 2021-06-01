@@ -47,6 +47,12 @@ DEFAULT_SEGHOST_NUM_WORKERS=64
 #max size of thread pool on segment hosts
 MAX_SEGHOST_NUM_WORKERS=128
 
+#default batch size of thread pool on master
+DEFAULT_MASTER_NUM_WORKERS=16
+
+#max batch size of thread pool on master
+MAX_MASTER_NUM_WORKERS=64
+
 # Application name used by the pg_rewind instance that gprecoverseg starts
 # during incremental recovery. gpstate uses this to figure out when incremental
 # recovery is active.

@@ -2700,6 +2700,7 @@ def impl(context):
 
 @given('an FTS probe is triggered')
 @when('an FTS probe is triggered')
+@then('an FTS probe is triggered')
 def impl(context):
     with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
         dbconn.execSQLForSingleton(conn, "SELECT gp_request_fts_probe_scan()")
