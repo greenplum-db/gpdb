@@ -1088,19 +1088,17 @@ explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- d
 (9 rows)
 
 explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Delete  (cost=0.00..862.04 rows=1 width=1)
-   ->  Result  (cost=0.00..862.00 rows=1 width=22)
-         ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=18)
-               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
-                     Hash Cond: tabdel2.a = tabdel4.a
-                     ->  Seq Scan on tabdel2  (cost=0.00..431.00 rows=1 width=18)
-                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Seq Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Delete on tabdel2  (cost=0.00..862.03 rows=1 width=1)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
+         Hash Cond: (tabdel2_1.a = tabdel4.a)
+         ->  Seq Scan on tabdel2 tabdel2_1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=3 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+                     ->  Seq Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 
 select * from TabDel2;

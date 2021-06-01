@@ -366,7 +366,8 @@ public:
 	// compute distribution spec from the table descriptor
 	static CDistributionSpec *PdsCompute(CMemoryPool *mp,
 										 const CTableDescriptor *ptabdesc,
-										 CColRefArray *pdrgpcrOutput);
+										 CColRefArray *pdrgpcrOutput,
+										 CColRef *gp_segment_id);
 
 	// compute required sort order of the n-th child
 	virtual COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
