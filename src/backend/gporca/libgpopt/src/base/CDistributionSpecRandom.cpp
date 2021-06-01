@@ -13,6 +13,8 @@
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecRouted.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
@@ -41,6 +43,17 @@ CDistributionSpecRandom::CDistributionSpecRandom()
 	}
 }
 
+CDistributionSpecRandom::CDistributionSpecRandom(CColRef *gp_segment_id_)
+	: m_gp_segment_id(gp_segment_id_)
+{
+	if (COptCtxt::PoctxtFromTLS()->FDMLQuery())
+	{
+		// set duplicate sensitive flag to enforce Hash-Distribution of
+		// Const Tables in DML queries
+		MarkDuplicateSensitive();
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDistributionSpecRandom::Matches
@@ -52,15 +65,39 @@ CDistributionSpecRandom::CDistributionSpecRandom()
 BOOL
 CDistributionSpecRandom::Matches(const CDistributionSpec *pds) const
 {
-	if (Edt() != pds->Edt())
+	if (pds->Edt() == CDistributionSpec::EdtRouted)
+	{
+		// This follows a 2x2 decision matrix:
+		// If both gp_segment_ids are null, then it does not match
+		// If one gp_segment_id is null and the other is not, it doesn't match
+		// If both gp_segment_ids are not null, they match iff they are equal
+		const CDistributionSpecRouted *pdsRouted =
+			static_cast<const CDistributionSpecRouted *>(pds);
+		GPOS_ASSERT(pdsRouted != nullptr);
+
+		const BOOL localNull = m_gp_segment_id == nullptr;
+		const BOOL pdsNull = pdsRouted->Pcr() == nullptr;
+
+		if (localNull || pdsNull)
+		{
+			return false;
+		}
+		else
+		{
+			return m_gp_segment_id->Id() == pdsRouted->Pcr()->Id();
+		}
+	}
+	else if (pds->Edt() == CDistributionSpec::EdtRandom)
+	{
+		const CDistributionSpecRandom *pdsRandom =
+			static_cast<const CDistributionSpecRandom *>(pds);
+
+		return pdsRandom->IsDuplicateSensitive() == m_is_duplicate_sensitive;
+	}
+	else
 	{
 		return false;
 	}
-
-	const CDistributionSpecRandom *pdsRandom =
-		dynamic_cast<const CDistributionSpecRandom *>(pds);
-
-	return pdsRandom->IsDuplicateSensitive() == m_is_duplicate_sensitive;
 }
 
 //---------------------------------------------------------------------------

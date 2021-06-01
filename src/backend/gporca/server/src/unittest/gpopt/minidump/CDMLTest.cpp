@@ -50,6 +50,8 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/InsertAssertSort.mdp",
 	"../data/dxl/minidump/UpdateRandomDistr.mdp",
 	"../data/dxl/minidump/DeleteRandomDistr.mdp",
+	"../data/dxl/minidump/DeleteRandomlyDistributedTableJoin.mdp",
+	"../data/dxl/minidump/DeleteRandomlyDistributedTable.mdp",
 	"../data/dxl/minidump/InsertConstTuple.mdp",
 	"../data/dxl/minidump/InsertConstTupleVolatileFunction.mdp",
 	"../data/dxl/minidump/InsertConstTupleVolatileFunctionMOTable.mdp",
