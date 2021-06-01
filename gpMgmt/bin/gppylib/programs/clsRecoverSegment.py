@@ -127,7 +127,7 @@ class GpRecoverSegmentProgram:
 
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
-            return GpSegmentRebalanceOperation(gpEnv, gpArray)
+            return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
             segs_with_persistent_mirroring_disabled = []
             self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)

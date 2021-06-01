@@ -21,6 +21,7 @@ from gppylib.operations.unix import CleanSharedMem
 from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
+from gppylib.programs.clsRecoverSegment_triples import RecoverTriplet
 
 logger = gplog.get_default_logger()
 
@@ -66,55 +67,11 @@ gDatabaseFiles = [
 #   failoverSegment = segment to recover "to"
 # In other words, we are recovering the failedSegment to the failoverSegment using the liveSegment.
 class GpMirrorToBuild:
-    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization, logger=logger):
-        checkNotNone("liveSegment", liveSegment)
+    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization):
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
-        if failedSegment is None and failoverSegment is None:
-            raise Exception("No mirror passed to GpMirrorToBuild")
-
-        if not liveSegment.isSegmentQE():
-            raise ExceptionNoStackTraceNeeded("Segment to recover from for content %s is not a correct segment "
-                                              "(it is a master or standby master)" % liveSegment.getSegmentContentId())
-        if not liveSegment.isSegmentPrimary(True):
-            raise ExceptionNoStackTraceNeeded(
-                "Segment to recover from for content %s is not a primary" % liveSegment.getSegmentContentId())
-        if not liveSegment.isSegmentUp():
-            raise ExceptionNoStackTraceNeeded(
-                "Primary segment is not up for content %s" % liveSegment.getSegmentContentId())
-        if liveSegment.unreachable:
-            raise ExceptionNoStackTraceNeeded(
-                "The recovery source segment %s (content %s) is unreachable." % (liveSegment.getSegmentHostName(),
-                                                                              liveSegment.getSegmentContentId()))
-
-        if failedSegment is not None:
-            if failedSegment.getSegmentContentId() != liveSegment.getSegmentContentId():
-                raise ExceptionNoStackTraceNeeded(
-                    "The primary is not of the same content as the failed mirror.  Primary content %d, "
-                    "mirror content %d" % (liveSegment.getSegmentContentId(), failedSegment.getSegmentContentId()))
-            if failedSegment.getSegmentDbId() == liveSegment.getSegmentDbId():
-                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
-                                                  "A segment may not be recovered from itself" %
-                                                  liveSegment.getSegmentDbId())
-
-        if failoverSegment is not None:
-            if failoverSegment.getSegmentContentId() != liveSegment.getSegmentContentId():
-                raise ExceptionNoStackTraceNeeded(
-                    "The primary is not of the same content as the mirror.  Primary content %d, "
-                    "mirror content %d" % (liveSegment.getSegmentContentId(), failoverSegment.getSegmentContentId()))
-            if failoverSegment.getSegmentDbId() == liveSegment.getSegmentDbId():
-                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
-                                                  "A segment may not be built from itself"
-                                                  % liveSegment.getSegmentDbId())
-            if failoverSegment.unreachable:
-                raise ExceptionNoStackTraceNeeded(
-                    "The recovery target segment %s (content %s) is unreachable." % (failoverSegment.getSegmentHostName(),
-                                                                                     failoverSegment.getSegmentContentId()))
-
-        if failedSegment is not None and failoverSegment is not None:
-            # for now, we require the code to have produced this -- even when moving the segment to another
-            #  location, we preserve the directory
-            assert failedSegment.getSegmentDbId() == failoverSegment.getSegmentDbId()
+        # We need to call this validate function here because addmirrors directly calls GpMirrorToBuild.
+        RecoverTriplet.validate(failedSegment, liveSegment, failoverSegment)
 
         self.__failedSegment = failedSegment
         self.__liveSegment = liveSegment

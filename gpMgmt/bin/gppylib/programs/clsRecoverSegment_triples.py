@@ -4,8 +4,9 @@ from gppylib.commands import unix
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
-from gppylib.utils import normalizeAndValidateInputPath
+from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
+
 
 class RecoverTriplet:
     """
@@ -18,12 +19,65 @@ class RecoverTriplet:
         self.failed = failed
         self.live = live
         self.failover = failover
+        self.validate(failed, live, failover)
 
     def __repr__(self):
         return "Failed: {0} Live: {1} Failover: {2}".format(self.failed, self.live, self.failover)
 
     def __eq__(self, other):
         return self.failed == other.failed and self.live == other.live and self.failover == other.failover
+
+    @staticmethod
+    def validate(failed, live, failover):
+
+        checkNotNone("liveSegment", live)
+
+        if failed is None and failover is None:
+            raise Exception("internal error: insufficient information to recover a mirror")
+
+        if not live.isSegmentQE():
+            raise ExceptionNoStackTraceNeeded("Segment to recover from for content %s is not a correct segment "
+                                              "(it is a master or standby master)" % live.getSegmentContentId())
+        if not live.isSegmentPrimary(True):
+            raise ExceptionNoStackTraceNeeded(
+                "Segment to recover from for content %s is not a primary" % live.getSegmentContentId())
+        if not live.isSegmentUp():
+            raise ExceptionNoStackTraceNeeded(
+                "Primary segment is not up for content %s" % live.getSegmentContentId())
+        if live.unreachable:
+            raise ExceptionNoStackTraceNeeded(
+                "The recovery source segment %s (content %s) is unreachable." % (live.getSegmentHostName(),
+                                                                                 live.getSegmentContentId()))
+
+        if failed is not None:
+            if failed.getSegmentContentId() != live.getSegmentContentId():
+                raise ExceptionNoStackTraceNeeded(
+                    "The primary is not of the same content as the failed mirror.  Primary content %d, "
+                    "mirror content %d" % (live.getSegmentContentId(), failed.getSegmentContentId()))
+            if failed.getSegmentDbId() == live.getSegmentDbId():
+                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
+                                                  "A segment may not be recovered from itself" %
+                                                  live.getSegmentDbId())
+
+        if failover is not None:
+            if failover.getSegmentContentId() != live.getSegmentContentId():
+                raise ExceptionNoStackTraceNeeded(
+                    "The primary is not of the same content as the mirror.  Primary content %d, "
+                    "mirror content %d" % (live.getSegmentContentId(), failover.getSegmentContentId()))
+            if failover.getSegmentDbId() == live.getSegmentDbId():
+                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
+                                                  "A segment may not be built from itself"
+                                                  % live.getSegmentDbId())
+            if failover.unreachable:
+                raise ExceptionNoStackTraceNeeded(
+                    "The recovery target segment %s (content %s) is unreachable." % (failover.getSegmentHostName(),
+                                                                                     failover.getSegmentContentId()))
+
+        if failed is not None and failover is not None:
+            # for now, we require the code to have produced this -- even when moving the segment to another
+            #  location, we preserve the directory
+            assert failed.getSegmentDbId() == failover.getSegmentDbId()
+
 
 class MirrorBuilderFactory:
     @staticmethod
@@ -160,6 +214,7 @@ class GpArrayMirrorBuilder(MirrorBuilder):
                 # due to how the code is factored failoverSegment is None here.
                 if failedSegment.unreachable:
                     continue
+
             self.recoveryTriples.append(RecoverTriplet(failedSegment, liveSegment, failoverSegment))
 
         return self.recoveryTriples
