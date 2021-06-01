@@ -19,6 +19,7 @@
 #include "replication/walsender.h"
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 
 /* Set at database system is ready to accept connections */
 extern pg_time_t PMAcceptingConnectionsStartTime;
@@ -253,6 +254,7 @@ FTSReplicationStatusUpdateForWalState(const char *app_name, WalSndState state)
 
 	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
 	{
+		SIMPLE_FAULT_INJECTOR("enter_catchup_or_streaming");
 		/*
 		 * We can clear the disconnect time once the connection established.
 		 * We only clean the failure count when the wal start streaming, since

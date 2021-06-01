@@ -662,6 +662,25 @@ StartReplication(StartReplicationCmd *cmd)
 	if (!sendTimeLineIsHistoric || cmd->startpoint < sendTimeLineValidUpto)
 	{
 		/*
+		 * Greenplum: Do not enter CATCHUP state if this replication request
+		 * is knwon to fail due to the requested startpoint not being
+		 * available.  If catchup state is entered now and the request fails
+		 * later (see XLogRead), the short window in which this walsender
+		 * remains in catchup state could mislead FTS.  An incoming FTS probe
+		 * during this window would treat the mirror as up and even turn on
+		 * synchronous replication.  And this may happen repeatedly because
+		 * walreceiver is programmed to make connection attempts continuously
+		 * every few seconds.
+		 */
+		if (MyReplicationSlot &&
+			XLogRecPtrIsInvalid(MyReplicationSlot->data.restart_lsn))
+		{
+			XLogSegNo startseg;
+			XLByteToSeg(cmd->startpoint, startseg);
+			CheckXLogRemoved(startseg, sendTimeLine);
+		}
+
+		/*
 		 * When we first start replication the standby will be behind the
 		 * primary. For some applications, for example, synchronous
 		 * replication, it is important to have a clear state for this initial

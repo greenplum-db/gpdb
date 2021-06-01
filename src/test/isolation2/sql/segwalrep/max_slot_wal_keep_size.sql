@@ -174,6 +174,32 @@ SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content 
 1: SELECT role, preferred_role, status FROM gp_segment_configuration WHERE content = 0;
 1: SELECT sync_error FROM gp_stat_replication WHERE gp_segment_id = 0;
 
+-- Fault to check if walsender enters catchup state.
+1: select gp_inject_fault('enter_catchup_or_streaming', 'skip', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Wait for the mirror to make the next connection attempt.
+1: SELECT gp_inject_fault('initialize_wal_sender', 'skip',  dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+-- Note that we wait until the fault is triggered twice.  Waiting
+-- until the second trigger guarantees that first connection attempt
+-- is fully processed and the status check that follows is accurate.
+1: SELECT gp_wait_until_triggered_fault('initialize_wal_sender', 2, dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+-- Validate that walsender does not enter catchup state, once the
+-- replication slot is obsoleted.  There used to be a bug that caused
+-- FTS to be mislead by a walsender that entered catchup state but
+-- failed shorty after due to the requested start point not available.
+-- FTS marked the mirror as up and turn synchronous replication on and
+-- later found it down.  If walsender fails before entering catchup
+-- state, FTS cannot be misled into thinking the mirror is up.  The
+-- following query should show "num times hit" as 0.
+1: select gp_inject_fault('enter_catchup_or_streaming', 'status', dbid)
+   FROM gp_segment_configuration WHERE content=0 AND role='p';
+
+1: SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration;
+
 0U: ALTER SYSTEM RESET max_slot_wal_keep_size;
 0U: ALTER SYSTEM RESET checkpoint_segments;
 0U: ALTER SYSTEM RESET wal_keep_segments;
