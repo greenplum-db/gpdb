@@ -2912,3 +2912,19 @@ drop table agg_hash_1;
 --  drop table agg_hash_2;
 drop table agg_hash_3;
 drop table agg_hash_4;
+-- fix github issue #12061 numsegments of general locus is not -1 on create_minmaxagg_path
+explain analyze select count(*) from pg_class,  (select count(*) >0 from  (select count(*) from pg_class where relname like 't%')x)y;
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=10000000025.03..10000000025.05 rows=1 width=8) (actual time=0.214..0.214 rows=1 loops=1)
+   ->  Nested Loop  (cost=10000000000.02..10000000023.48 rows=622 width=0) (actual time=0.013..0.179 rows=848 loops=1)
+         ->  Aggregate  (cost=0.02..0.03 rows=1 width=1) (actual time=0.003..0.003 rows=1 loops=1)
+               ->  Result  (cost=0.00..0.01 rows=1 width=8) (actual time=0.001..0.001 rows=1 loops=1)
+         ->  Seq Scan on pg_class  (cost=0.00..17.22 rows=622 width=0) (actual time=0.010..0.116 rows=848 loops=1)
+ Planning Time: 0.534 ms
+   (slice0)    Executor memory: 50K bytes.
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Execution Time: 0.302 ms
+(10 rows)
+
