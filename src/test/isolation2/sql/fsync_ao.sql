@@ -113,5 +113,5 @@ select gp_inject_fault('ao_fsync_counter', 'status', dbid)
 select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where content = 0;
 
 !\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
-!\retcode gpconfig -r fsync --skipvalidation;
+!\retcode gpconfig -c fsync -v off --skipvalidation;
 !\retcode gpstop -u;
