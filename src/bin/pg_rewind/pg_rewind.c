@@ -878,6 +878,7 @@ syncTargetDirectory(void)
 	fsync_fname("global/pg_control", false);
 	fsync_fname("backup_label", false);
 	fsync_fname("postgresql.auto.conf", false);
+	fsync_fname(".", true); /* due to new file backup_label. */
 }
 
 /*
