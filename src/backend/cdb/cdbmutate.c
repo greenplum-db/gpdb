@@ -99,7 +99,7 @@ static void assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldno
 static void add_slice_to_motion(Motion *motion,
 					MotionType motionType,
 					List *hashExprs, List *hashOpfamilies, int numsegments,
-					bool isBroadcast);
+					bool isBroadcast, CdbLocusType targetLocus);
 
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
 
@@ -847,7 +847,9 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 				context->sliceDepth == 0)
 				flow->segindex = -1;
 
-			newnode = (Node *) make_union_motion(plan, true, flow->numsegments);
+			newnode = (Node *) make_union_motion(plan, true, flow->numsegments,
+												 flow->segindex == -1 ?
+													CdbLocusType_Entry : CdbLocusType_SingleQE);
 			break;
 
 		case MOVEMENT_BROADCAST:
@@ -860,8 +862,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 												  flow->hashExprs,
 												  flow->hashOpfamilies,
 												  true	/* useExecutorVarFormat */,
-												  flow->numsegments
-				);
+												  flow->numsegments);
 			break;
 
 		case MOVEMENT_EXPLICIT:
@@ -980,7 +981,7 @@ static void
 add_slice_to_motion(Motion *motion,
 					MotionType motionType,
 					List *hashExprs, List *hashOpfamilies, int numsegments,
-					bool isBroadcast)
+					bool isBroadcast, CdbLocusType targetLocus)
 {
 	Oid		   *hashFuncs;
 	ListCell   *expr_cell;
@@ -1025,6 +1026,8 @@ add_slice_to_motion(Motion *motion,
 
 			break;
 		case MOTIONTYPE_FIXED:
+			Assert(targetLocus == CdbLocusType_Null || targetLocus == CdbLocusType_Entry
+				   || targetLocus == CdbLocusType_SingleQE);
 			if (motion->isBroadcast)
 			{
 				/* broadcast */
@@ -1036,10 +1039,13 @@ add_slice_to_motion(Motion *motion,
 			{
 				/* Focus motion */
 				motion->plan.flow = makeFlow(FLOW_SINGLETON, numsegments);
-				motion->plan.flow->locustype = (motion->plan.flow->segindex < 0) ?
-					CdbLocusType_Entry :
-					CdbLocusType_SingleQE;
-
+				if (targetLocus == CdbLocusType_Entry)
+				{
+					motion->plan.flow->locustype = CdbLocusType_Entry;
+					motion->plan.flow->segindex = -1;
+				}
+				else
+					motion->plan.flow->locustype = CdbLocusType_SingleQE;
 			}
 
 			break;
@@ -1062,14 +1068,15 @@ add_slice_to_motion(Motion *motion,
 }
 
 Motion *
-make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments)
+make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments,
+				  CdbLocusType targetLocus)
 {
 	Motion	   *motion;
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false, targetLocus);
 	return motion;
 }
 
@@ -1077,14 +1084,15 @@ Motion *
 make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 						 AttrNumber *sortColIdx, Oid *sortOperators,
 						 Oid *collations, bool *nullsFirst,
-						 bool useExecutorVarFormat, int numsegments)
+						 bool useExecutorVarFormat, int numsegments,
+						 CdbLocusType targetLocus)
 {
 	Motion	   *motion;
 
 	motion = make_motion(root, lefttree,
 						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst,
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false, targetLocus);
 	return motion;
 }
 
@@ -1104,7 +1112,7 @@ make_hashed_motion(Plan *lefttree,
 						 useExecutorVarFormat);
 	add_slice_to_motion(motion, MOTIONTYPE_HASH,
 						hashExprs, hashOpfamilies, numsegments,
-						false);
+						false, CdbLocusType_Null);
 	return motion;
 }
 
@@ -1120,7 +1128,7 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
 
 	add_slice_to_motion(motion, MOTIONTYPE_FIXED,
 						NIL, NIL, numsegments,
-						true);
+						true, CdbLocusType_Null);
 	return motion;
 }
 
@@ -1146,7 +1154,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 
 	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT,
 						NIL, NIL, numsegments,
-						false);
+						false, CdbLocusType_Null);
 	return motion;
 }
 

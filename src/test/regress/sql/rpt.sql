@@ -403,6 +403,26 @@ explain (costs off) update t_replicate_volatile set a = random();
 explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
 explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit 1) x;
 
+create table rtbl (a int, b int, c int, t text) distributed replicated;
+insert into t_hashdist values (1, 1, 1);
+insert into rtbl values (1, 1, 1, 'rtbl');
+
+-- The below tests used to do replicated table scan on entry db which contains empty data.
+-- So a motion node is needed to gather replicated table on entry db.
+-- See issue: https://github.com/greenplum-db/gpdb/issues/11945
+
+-- 1. CTAS when join replicated table with catalog table
+explain (costs off) create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
+create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
+select count(*) from tmp; -- should contain 1 row
+
+-- 2. Join hashed table with (replicated table join catalog) should return 1 row
+explain (costs off) select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
+select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
+
+-- 3. Join hashed table with (set operation on catalog and replicated table)
+explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
+
 reset optimizer;
 
 -- start_ignore

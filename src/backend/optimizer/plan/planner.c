@@ -2981,7 +2981,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				}
 				else
 				{
-					result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
+					result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 				}
 				result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 			}
@@ -3070,7 +3070,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
 				result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
-				result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
+				result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 			}
 
 			result_plan = (Plan *) make_unique(result_plan,
@@ -3109,7 +3109,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			 * handling below.
 			 */
 			current_pathkeys = root->sort_pathkeys;
-			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
+			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 		}
 	}
 

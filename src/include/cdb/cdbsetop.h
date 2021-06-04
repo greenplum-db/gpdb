@@ -72,7 +72,7 @@ extern
 Motion* make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys);
 
 extern
-Motion *make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys);
+Motion *make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys, CdbLocusType targetLocus);
 
 extern
 void mark_append_locus(Plan *plan, GpSetOpType optype);
