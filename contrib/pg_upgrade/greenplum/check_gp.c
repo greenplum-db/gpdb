@@ -1428,6 +1428,14 @@ check_views_referencing_deprecated_tables()
 	int			dbnum;
 	int			i_viewname;
 
+	/*
+	 * An upgrade check for deprecated objects only applies to a major version
+	 * upgrade.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) ==
+		GET_MAJOR_VERSION(new_cluster.major_version))
+		return;
+
 	prep_status("Checking for views referencing deprecated tables");
 
 	snprintf(output_path, sizeof(output_path), "view_deprecated_tables.txt");
