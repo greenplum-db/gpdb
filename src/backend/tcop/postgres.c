@@ -4612,6 +4612,19 @@ PostgresMain(int argc, char *argv[],
 			(errmsg_internal("InitPostgres")));
 	InitPostgres(dbname, InvalidOid, username, NULL);
 
+	/*
+	 * If the PostmasterContext is still around, recycle the space; we don't
+	 * need it anymore after InitPostgres completes.  Note this does not trash
+	 * *MyProcPort, because ConnCreate() allocated that space with malloc()
+	 * ... else we'd need to copy the Port data first.  Also, subsidiary data
+	 * such as the username isn't lost either; see ProcessStartupPacket().
+	 */
+	if (PostmasterContext)
+	{
+		MemoryContextDelete(PostmasterContext);
+		PostmasterContext = NULL;
+	}
+
 	SetProcessingMode(NormalProcessing);
 
 	/*
