@@ -1080,6 +1080,11 @@ DEALLOCATE ext_simple_bar;
 DROP EXTERNAL TABLE ext_simple;
 
 
+-- test 27 test csv options with 3-digt(>=100) ascii option char
+
+CREATE EXTERNAL TABLE full_csvopt(a int, b text, c int) LOCATION('gpfdist://@hostname@:7070/gpfdist2/csvopt.tbl') FORMAT 'csv' (HEADER QUOTE '|' DELIMITER ',' ESCAPE '/' NEWLINE 'LF');
+SELECT * FROM full_csvopt;
+
 -- start_ignore
 select * from gpfdist2_stop;
 -- end_ignore
