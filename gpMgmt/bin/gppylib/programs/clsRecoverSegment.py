@@ -534,10 +534,10 @@ class GpRecoverSegmentProgram:
             return res.fetchall()
 
     def run(self):
-        if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
+        if self.__options.parallelDegree < 1 or self.__options.parallelDegree > gp.MAX_COORDINATOR_NUM_WORKERS:
             raise ProgramArgumentValidationException(
                 "Invalid parallelDegree value provided with -B argument: %d" % self.__options.parallelDegree)
-        if self.__options.parallelPerHost < 1 or self.__options.parallelPerHost > 128:
+        if self.__options.parallelPerHost < 1 or self.__options.parallelPerHost > gp.MAX_SEGHOST_NUM_WORKERS:
             raise ProgramArgumentValidationException(
                 "Invalid parallelPerHost value provided with -b argument: %d" % self.__options.parallelPerHost)
 
@@ -749,12 +749,12 @@ class GpRecoverSegmentProgram:
                          dest="forceFullResynchronization",
                          metavar="<forceFullResynchronization>",
                          help="Force full segment resynchronization")
-        addTo.add_option("-B", None, type="int", default=16,
+        addTo.add_option("-B", None, type="int", default=gp.DEFAULT_COORDINATOR_NUM_WORKERS,
                          dest="parallelDegree",
                          metavar="<parallelDegree>",
                          help="Max number of hosts to operate on in parallel. Valid values are: 1-%d"
-                              % gp.MAX_SEGHOST_NUM_WORKERS)
-        addTo.add_option("-b", None, type="int", default=64,
+                              % gp.MAX_COORDINATOR_NUM_WORKERS)
+        addTo.add_option("-b", None, type="int", default=gp.DEFAULT_SEGHOST_NUM_WORKERS,
                          dest="parallelPerHost",
                          metavar="<parallelPerHost>",
                          help="Max number of segments per host to operate on in parallel. Valid values are: 1-%d"

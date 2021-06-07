@@ -68,8 +68,8 @@ def parseargs():
     parser.add_option('-d', '--master-data-directory', dest='coordinator_data_directory',
                       help='The coordinator data directory for the system. If this option is not specified, \
                             the value is obtained from the $COORDINATOR_DATA_DIRECTORY environment variable.')
-    parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=16, metavar="<batch_size>",
-                      help='Max number of hosts to operate on in parallel. Valid values are 1-%d' % gp.MAX_SEGHOST_NUM_WORKERS)
+    parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=gp.DEFAULT_COORDINATOR_NUM_WORKERS, metavar="<batch_size>",
+                      help='Max number of hosts to operate on in parallel. Valid values are 1-%d' % gp.MAX_COORDINATOR_NUM_WORKERS)
     parser.add_option('-b', '--segment-batch-size', dest='segment_batch_size', type='int', default=gp.DEFAULT_SEGHOST_NUM_WORKERS, metavar="<segment_batch_size>",
                       help='Max number of segments per host to operate on in parallel. Valid values are: 1-%d' % gp.MAX_SEGHOST_NUM_WORKERS)
     parser.add_option('-v', '--verbose', dest="verbose", action='store_true',
@@ -94,8 +94,8 @@ def parseargs():
         logger.error('Unknown argument %s' % args[0])
         parser.exit()
 
-    if options.batch_size < 1 or options.batch_size > gp.MAX_SEGHOST_NUM_WORKERS:
-        logger.error('Invalid value for argument -B. Value must be >= 1 and <= %d' % gp.MAX_SEGHOST_NUM_WORKERS)
+    if options.batch_size < 1 or options.batch_size > gp.MAX_COORDINATOR_NUM_WORKERS:
+        logger.error('Invalid value for argument -B. Value must be >= 1 and <= %d' % gp.MAX_COORDINATOR_NUM_WORKERS)
         parser.print_help()
         parser.exit()
 
