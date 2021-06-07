@@ -138,8 +138,8 @@ static void validateCommandLineArgs(map<char, string> &optionPairs) {
 static void printTemplate() {
     printf(
         "[default]\n"
-        "secret = \"aws secret\"\n"
         "accessid = \"aws access id\"\n"
+        "secret = \"aws secret\"\n"
         "threadnum = 4\n"
         "chunksize = 67108864\n"
         "low_speed_limit = 10240\n"
