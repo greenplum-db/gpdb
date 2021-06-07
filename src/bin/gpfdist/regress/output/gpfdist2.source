@@ -1184,6 +1184,12 @@ EXECUTE ext_simple_bar(1);
 ROLLBACK;
 DEALLOCATE ext_simple_bar;
 DROP EXTERNAL TABLE ext_simple;
+-- test 27 test csv options with 3-digt(>=100) ascii option char
+CREATE EXTERNAL TABLE full_csvopt(a int, b text, c int) LOCATION('gpfdist://@hostname@:7070/gpfdist2/csvopt.tbl') FORMAT 'csv' (HEADER QUOTE '|' DELIMITER ',' ESCAPE '/' NEWLINE 'LF');
+NOTICE:  HEADER means that each one of the data files has a header row.
+SELECT * FROM full_csvopt;
+ 1 | aaa | 2
+
 -- start_ignore
 select * from gpfdist2_stop;
  stopping...

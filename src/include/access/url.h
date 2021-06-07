@@ -61,7 +61,7 @@ typedef struct extvar_t
 	char GP_SEG_PORT[10];
 	char GP_SESSION_ID[10];  /* session id */
  	char GP_SEGMENT_COUNT[6]; /* total number of (primary) segs in the system */
- 	char GP_CSVOPT[13]; /* "m.x...q...h." former -q, -h and -x options for gpfdist.*/
+ 	char GP_CSVOPT[15]; /* "m.x...q...h." former -q, -h and -x options for gpfdist.*/
 
  	/* Hadoop Specific env var */
  	char* GP_HADOOP_CONN_JARDIR;

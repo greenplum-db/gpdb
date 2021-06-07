@@ -92,7 +92,7 @@ static void justifyDatabuf(StringInfo buf);
 static void base16_encode(char *raw, int len, char *encoded);
 static char *get_eol_delimiter(List *params);
 static void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
-				 char *quote, int eol_type, bool header, uint32 scancounter, List *params);
+				 char *quote, EolType eol_type, bool header, uint32 scancounter, List *params);
 
 /* ----------------------------------------------------------------
 *				   external_ interface functions
@@ -2469,7 +2469,7 @@ external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char 
 }
 
 static void
-external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, int eol_type, bool header,
+external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, EolType eol_type, bool header,
 						  uint32 scancounter, List *params)
 {
 	time_t		now = time(0);
@@ -2480,7 +2480,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	int			line_delim_len;
 
 	snprintf(extvar->GP_CSVOPT, sizeof(extvar->GP_CSVOPT),
-			"m%dx%dq%dn%dh%d",
+			"m%1dx%3dq%3dn%1dh%1d",
 			csv ? 1 : 0,
 			escape ? 255 & *escape : 0,
 			quote ? 255 & *quote : 0,
