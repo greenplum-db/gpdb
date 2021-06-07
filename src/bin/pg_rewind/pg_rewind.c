@@ -459,13 +459,13 @@ main(int argc, char **argv)
 	ControlFile_new.state = DB_IN_ARCHIVE_RECOVERY;
 	update_controlfile(datadir_target, &ControlFile_new, do_sync);
 
-	if (showprogress)
-		pg_log_info("syncing target data directory");
-	syncTargetDirectory();
-
 	if (writerecoveryconf)
 		WriteRecoveryConfig(conn, datadir_target,
 							GenerateRecoveryConfig(conn, replication_slot));
+
+	if (showprogress)
+		pg_log_info("syncing target data directory");
+	syncTargetDirectory();
 
 	pg_log_info("Done!");
 
