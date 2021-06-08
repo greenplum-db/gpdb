@@ -256,7 +256,7 @@ text @@ text</codeblock>
           named entity recognition (NER), and parts of speech (POS) recognition.</li>
       </ul>
       <p>See the <xref href="https://gptext.docs.pivotal.io" format="html" scope="external">Tanzu
-          Greenplum Documentation web site</xref> for more information. </p>
+          Greenplum Text Documentation web site</xref> for more information. </p>
     </section>
   </body>
 </topic>
