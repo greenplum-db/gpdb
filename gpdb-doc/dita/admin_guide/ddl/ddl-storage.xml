@@ -80,10 +80,10 @@
           stores <codeph>appendonly</codeph> in the catalog, and displays the same when 
           listing storage options for append-optimized tables.</note>
         <p><codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not allowed on append-optimized
-          tables in a repeatable read  or serizalizable transaction and will cause the transaction
-          to abort. <codeph>DECLARE...FOR UPDATE</codeph> and triggers
-          are not supported with append-optimized tables. <codeph>CLUSTER</codeph> on
-          append-optimized tables is only supported over B-tree indexes.</p>
+          tables in a repeatable read or serializable transaction and will cause the transaction to
+          abort. <codeph>DECLARE...FOR UPDATE</codeph> and triggers are not supported with
+          append-optimized tables. <codeph>CLUSTER</codeph> on append-optimized tables is only
+          supported over B-tree indexes.</p>
       </section>
     </body>
   </topic>
@@ -618,20 +618,27 @@
         <b>Adding Compression in a TYPE Command</b>
       </title>
       <body>
-        <p>When you create a new type, you can define default compression attributes for the type. For example,
-          the following <codeph>CREATE TYPE</codeph> command defines a type named <codeph>int33</codeph>
-          that specifies <codeph>quicklz</codeph> compression: </p>
+        <p>When you create a new type, you can define default compression attributes for the type.
+          For example, the following <codeph>CREATE TYPE</codeph> command defines a type named
+            <codeph>int33</codeph> that specifies <codeph>quicklz</codeph> compression.</p>
+        <p>First, you must define the input and output functions for the new type,
+            <codeph>int33_in</codeph> and <codeph>int33_out</codeph>:</p>
+        <codeblock>CREATE FUNCTION int33_in(cstring) RETURNS int33
+  STRICT IMMUTABLE LANGUAGE internal AS 'int4in';
+CREATE FUNCTION int33_out(int33) RETURNS cstring
+  STRICT IMMUTABLE LANGUAGE internal AS 'int4out';</codeblock>
+        <p>Next, you define the type named <codeph>int33</codeph>:</p>
         <codeblock>CREATE TYPE int33 (
-   internallength = 4,
-   input = int33_in,
-   output = int33_out,
-   alignment = int4,
-   default = 123,
-   passedbyvalue,
-   compresstype="quicklz",
-   blocksize=65536,
-   compresslevel=1
-   );</codeblock>
+   internallength = 4,
+   input = int33_in,
+   output = int33_out,
+   alignment = int4,
+   default = 123,
+   passedbyvalue,
+   compresstype="zlib",
+   blocksize=65536,
+   compresslevel=1
+   );</codeblock>
         <p>When you specify <codeph>int33</codeph> as a column type in a <codeph>CREATE TABLE</codeph>
           command, the column is created with the storage directives you specified for the type:</p>
         <codeblock>CREATE TABLE t2 (c1 int33)

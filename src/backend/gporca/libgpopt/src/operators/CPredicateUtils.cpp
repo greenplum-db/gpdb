@@ -2499,13 +2499,10 @@ CPredicateUtils::FNullRejecting(CMemoryPool *mp, CExpression *pexprScalar,
 	BOOL fHasVolatileFunctions =
 		(IMDFunction::EfsVolatile ==
 		 pexprScalar->DeriveScalarFunctionProperties()->Efs());
-	BOOL fHasSQL = (IMDFunction::EfdaNoSQL !=
-					pexprScalar->DeriveScalarFunctionProperties()->Efda());
 
-	if (fHasVolatileFunctions || fHasSQL ||
-		pexprScalar->DeriveHasNonScalarFunction())
+	if (fHasVolatileFunctions || pexprScalar->DeriveHasNonScalarFunction())
 	{
-		// scalar expression must not have volatile functions, functions with SQL, subquery or non-scalar functions
+		// scalar expression must not have volatile functions, subquery or non-scalar functions
 		return false;
 	}
 

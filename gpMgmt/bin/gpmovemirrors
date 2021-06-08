@@ -31,8 +31,6 @@ except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # constants
-MAX_BATCH_SIZE = 128
-
 GPDB_STOPPED = 1
 GPDB_STARTED = 2
 GPDB_UTILITY = 3
@@ -71,7 +69,9 @@ def parseargs():
                       help='The coordinator data directory for the system. If this option is not specified, \
                             the value is obtained from the $COORDINATOR_DATA_DIRECTORY environment variable.')
     parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=16, metavar="<batch_size>",
-                      help='Expansion configuration batch size. Valid values are 1-%d' % MAX_BATCH_SIZE)
+                      help='Max number of hosts to operate on in parallel. Valid values are 1-%d' % gp.MAX_SEGHOST_NUM_WORKERS)
+    parser.add_option('-b', '--segment-batch-size', dest='segment_batch_size', type='int', default=gp.DEFAULT_SEGHOST_NUM_WORKERS, metavar="<segment_batch_size>",
+                      help='Max number of segments per host to operate on in parallel. Valid values are: 1-%d' % gp.MAX_SEGHOST_NUM_WORKERS)
     parser.add_option('-v', '--verbose', dest="verbose", action='store_true',
                       help='debug output.')
     parser.add_option('-l', '--log-file-directory', dest="logfile_directory",
@@ -94,8 +94,13 @@ def parseargs():
         logger.error('Unknown argument %s' % args[0])
         parser.exit()
 
-    if options.batch_size < 1 or options.batch_size > 128:
-        logger.error('Invalid argument.  -B value must be >= 1 and <= %s' % MAX_BATCH_SIZE)
+    if options.batch_size < 1 or options.batch_size > gp.MAX_SEGHOST_NUM_WORKERS:
+        logger.error('Invalid value for argument -B. Value must be >= 1 and <= %d' % gp.MAX_SEGHOST_NUM_WORKERS)
+        parser.print_help()
+        parser.exit()
+
+    if options.segment_batch_size < 1 or options.segment_batch_size > gp.MAX_SEGHOST_NUM_WORKERS:
+        logger.error('Invalid value for argument -b. Value must be >= 1 and <= %d' % gp.MAX_SEGHOST_NUM_WORKERS)
         parser.print_help()
         parser.exit()
 
@@ -129,6 +134,7 @@ def logOptionValues(options):
     logger.info("  --input                 = " + str(options.input_filename))
     logger.info("  --master-data-directory = " + str(options.coordinator_data_directory))
     logger.info("  --batch-size            = " + str(options.batch_size))
+    logger.info("  --segment-batch-size    = " + str(options.segment_batch_size))
     if options.verbose != None:
         logger.info("  --verbose               = " + str(options.verbose))
     if options.continue_move != None:
@@ -426,7 +432,8 @@ try:
     newConfig.write_output_file(backout_filename, False)
 
     """ Start gprecoverseg. """
-    recoversegOptions = "-i " + newConfig.inputFile + " -v -a -d " + options.coordinator_data_directory
+    recoversegOptions = "-i " + newConfig.inputFile + " -B " + str(options.batch_size) + \
+                        " -b " + str(options.segment_batch_size) + " -v -a -d " + options.coordinator_data_directory
     if options.logfile_directory != None:
         recoversegOptions = recoversegOptions + " -l " + str(options.logfile_directory)
     logger.info('About to run gprecoverseg with options: ' + recoversegOptions)

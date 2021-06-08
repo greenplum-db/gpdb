@@ -18,6 +18,11 @@
 -- m/num times hit:\'[4-9]\'/
 -- s/num times hit:\'[4-9]\'/num times hit:\'greater_than_two\'/
 -- end_matchsubs
+
+-- Prevent autovacuum from dirty-ing buffers.
+alter system set autovacuum = off;
+select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');
+
 begin;
 create function num_dirty_on_qes(relid oid) returns setof bigint as
 $$
@@ -141,3 +146,7 @@ select gp_inject_fault('fsync_counter', 'status', 2::smallint);
 
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration;
+
+-- Reset autovacuum;
+alter system set autovacuum = on;
+select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');

@@ -64,11 +64,16 @@ static List *ic_proxy_unknown_addrs = NIL;
  */
 static ICProxyAddr *ic_proxy_my_addr = NULL;
 
+/*
+ * Compare function for list_qsort().
+ *
+ * The real type of the arguments is "const ListCell **".
+ */
 static int
 ic_proxy_addr_compare_dbid(const void *a, const void *b)
 {
-	const ICProxyAddr *addr1 = a;
-	const ICProxyAddr *addr2 = b;
+	const ICProxyAddr *addr1 = lfirst(*(const ListCell **) a);
+	const ICProxyAddr *addr2 = lfirst(*(const ListCell **) b);
 
 	return addr1->dbid - addr2->dbid;
 }

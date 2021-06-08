@@ -150,6 +150,7 @@ def impl(context, num_primaries):
 
 
 @given('the user runs psql with "{psql_cmd}" against database "{dbname}"')
+@when('the user runs psql with "{psql_cmd}" against database "{dbname}"')
 @then('the user runs psql with "{psql_cmd}" against database "{dbname}"')
 def impl(context, dbname, psql_cmd):
     cmd = "psql -d %s %s" % (dbname, psql_cmd)
@@ -501,6 +502,34 @@ def impl(context, command, out_msg, num):
     count = msg_list.count(out_msg)
     if count != int(num):
         raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
+
+
+def lines_matching_both(in_str, str_1, str_2):
+    lines = [x.strip() for x in in_str.split('\n')]
+    return [x for x in lines if x.count(str_1) and x.count(str_2)]
+
+
+@then('check if {command} ran "{called_command}" {num} times with args "{args}"')
+def impl(context, command, called_command, num, args):
+    run_cmd_out = "Running Command: %s" % called_command
+    matches = lines_matching_both(context.stdout_message, run_cmd_out, args)
+
+    if len(matches) != int(num):
+        raise Exception("Expected %s to occur with %s args %s times. Found %d. \n %s"
+                        % (called_command, args, num, len(matches), context.stdout_message))
+
+
+@then('{command} should only spawn up to {num} workers in WorkerPool')
+def impl(context, command, num):
+    workerPool_out = "WorkerPool() initialized with"
+    matches = lines_matching_both(context.stdout_message, workerPool_out, command)
+
+    for matched_line in matches:
+        iw_re = re.search('initialized with (\d+) workers', matched_line)
+        init_workers = int(iw_re.group(1))
+        if init_workers > int(num):
+            raise Exception("Expected Workerpool for %s to be initialized with %d workers. Found %d. \n %s"
+                            % (command, num, init_workers, context.stdout_message))
 
 
 @given('{command} should return a return code of {ret_code}')
@@ -1081,6 +1110,40 @@ def impl(context, seg):
         context.mseg_hostname = context.mseg.getSegmentHostName()
         context.mseg_dbid = context.mseg.getSegmentDbId()
         context.mseg_data_dir = context.mseg.getSegmentDataDirectory()
+
+
+@given('the cluster configuration has no segments where "{filter}"')
+def impl(context, filter):
+    SLEEP_PERIOD = 5
+    MAX_DURATION = 300
+    MAX_TRIES = MAX_DURATION // SLEEP_PERIOD
+
+    num_tries = 0
+    num_matching = 10
+    while num_matching and num_tries < MAX_TRIES:
+        num_tries += 1
+        time.sleep(SLEEP_PERIOD)
+        context.execute_steps(u'''
+        Given the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    ''')
+        with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
+            sql = "SELECT count(*) FROM gp_segment_configuration WHERE %s" % filter
+            num_matching = dbconn.querySingleton(conn, sql)
+
+    if num_matching:
+        raise Exception("could not achieve desired state")
+
+    context.execute_steps(u'''
+    Given the user runs psql with "-c 'BEGIN; CREATE TEMP TABLE tempt(a int); COMMIT'" against database "postgres"
+    ''')
+
+
+@given('the cluster configuration is saved for "{when}"')
+@then('the cluster configuration is saved for "{when}"')
+def impl(context, when):
+    if not hasattr(context, 'saved_array'):
+        context.saved_array = {}
+    context.saved_array[when] = GpArray.initFromCatalog(dbconn.DbURL())
 
 
 @when('we run a sample background script to generate a pid on "{seg}" segment')
@@ -2538,6 +2601,7 @@ def impl(context):
 
 @given('an FTS probe is triggered')
 @when('an FTS probe is triggered')
+@then('an FTS probe is triggered')
 def impl(context):
     with closing(dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False)) as conn:
         dbconn.querySingleton(conn, "SELECT gp_request_fts_probe_scan()")

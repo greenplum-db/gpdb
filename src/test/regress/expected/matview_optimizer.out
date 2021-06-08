@@ -631,3 +631,20 @@ SELECT * FROM mvtest2;
 ERROR:  materialized view "mvtest2" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command.
 ROLLBACK;
+-- make sure refresh mat view will dispatch oid at the final
+-- execution of the mat view's body query. See Github Issue
+-- https://github.com/greenplum-db/gpdb/issues/11956 for details.
+create table t_github_issue_11956(a int, b int) distributed randomly;
+insert into t_github_issue_11956 values (1, 1);
+create function f_github_issue_11956() returns int as
+$$
+select sum(a+b)::int from t_github_issue_11956
+$$
+language sql stable;
+create materialized view mat_view_github_issue_11956
+as
+select * from t_github_issue_11956 where a > f_github_issue_11956()
+distributed randomly;
+refresh materialized view mat_view_github_issue_11956;
+drop materialized view mat_view_github_issue_11956;
+drop table t_github_issue_11956;

@@ -28,13 +28,17 @@ if type git >/dev/null 2>&1 && [ -d '.git' ] ; then
 		VERSION+=+
 		VERSION+=$(git rev-parse --short HEAD)
 	fi
+# If not a git repository and VERSION file exists, use version string from file.
+elif [[ -s ./VERSION ]]; then
+	VERSION=$(awk -F' build ' '{print $1}' ./VERSION)
+	BUILDNUMBER=$(awk -F' build ' '{print $2}' ./VERSION)
 fi
 
 FLAG="${1:-noflag}"
 if [ "$FLAG" = '--short' ] ; then
     echo "${VERSION}"
 else
-    if [ -f BUILD_NUMBER ] ; then
+    if [[ ${BUILDNUMBER} = 'dev' && -f BUILD_NUMBER ]] ; then
         BUILDNUMBER=`cat BUILD_NUMBER`
     fi
     echo "${VERSION} build ${BUILDNUMBER}"

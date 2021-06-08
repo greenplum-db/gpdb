@@ -1584,22 +1584,26 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
   FROM SUBSELECT_TBL upper
   WHERE f3 IN (SELECT upper.f1 + f2 FROM SUBSELECT_TBL
                WHERE f2 = CAST(f3 AS integer)) ORDER BY 2,3;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.18..2.19 rows=4 width=12)
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000002.39..10000000002.44 rows=3 width=44)
    Merge Key: upper.f1, upper.f3
-   ->  Sort  (cost=2.18..2.19 rows=2 width=12)
+   ->  Sort  (cost=10000000002.39..10000000002.40 rows=1 width=44)
          Sort Key: upper.f1, upper.f3
-         ->  Nested Loop Semi Join  (cost=3.16..6.90 rows=2 width=12)
-               Join Filter: (upper.f1 + subselect_tbl.f2)::double precision = upper.f3
-               ->  Seq Scan on subselect_tbl upper  (cost=0.00..1.01 rows=1 width=12)
-               ->  Materialize  (cost=1.06..1.09 rows=1 width=12)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=12)
-                           ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
-                                 Filter: f2 = f3::integer
- Settings:  optimizer=off
- Optimizer status: Postgres query optimizer
-(13 rows)
+         ->  Result  (cost=10000000002.36..10000000002.38 rows=1 width=44)
+               ->  HashAggregate  (cost=10000000002.36..10000000002.37 rows=1 width=12)
+                     Group Key: (RowIdExpr)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000002.36 rows=1 width=12)
+                           Hash Key: (RowIdExpr)
+                           ->  Nested Loop  (cost=10000000000.00..10000000002.34 rows=1 width=12)
+                                 Join Filter: (((upper.f1 + subselect_tbl.f2))::double precision = upper.f3)
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.13 rows=8 width=12)
+                                       ->  Seq Scan on subselect_tbl upper  (cost=0.00..1.03 rows=3 width=12)
+                                 ->  Materialize  (cost=0.00..1.04 rows=1 width=4)
+                                       ->  Seq Scan on subselect_tbl  (cost=0.00..1.04 rows=1 width=4)
+                                             Filter: (f2 = (f3)::integer)
+ Optimizer: Postgres query optimizer
+(17 rows)
 
 EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
   FROM SUBSELECT_TBL

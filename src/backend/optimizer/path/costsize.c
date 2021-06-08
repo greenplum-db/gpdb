@@ -640,7 +640,6 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 * correlation to the main-table tuple order.  We need a cast here because
 	 * pathnodes.h uses a weak function type to avoid including amapi.h.
 	 */
-	index_orig->num_leading_eq = 0;
 	amcostestimate = (amcostestimate_function) index_orig->amcostestimate;
 	amcostestimate(root, path, loop_count,
 				   &indexStartupCost, &indexTotalCost,
@@ -661,17 +660,6 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 
 		index_pages = ceil(index_pages / numsegments);
 	}
-
-	/*
-	 * CDB: Note whether all of the key columns are matched by equality
-	 * predicates.
-     *
-	 * The index_orig->num_leading_eq field is kludgily used as an implicit result
-	 * parameter from the amcostestimate proc, to avoid changing its externally
-	 * exposed interface. Transfer to IndexPath, then zap to discourage misuse.
-	 */
-	path->num_leading_eq = index_orig->num_leading_eq;
-	index_orig->num_leading_eq = 0;
 
 	/*
 	 * clamp index correlation to 99% or less, so that we always account for at least a little bit
@@ -5502,6 +5490,7 @@ set_subquery_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 	PlannerInfo *subroot = rel->subroot;
 	RelOptInfo *sub_final_rel;
 	ListCell   *lc;
+	double		numsegments;
 
 	/* Should only be applied to base relations that are subqueries */
 	Assert(rel->relid > 0);
@@ -5512,19 +5501,13 @@ set_subquery_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 	 * have the same output rowcount, so just look at cheapest-total.
 	 */
 	sub_final_rel = fetch_upper_rel(subroot, UPPERREL_FINAL, NULL);
-	if (rel->onerow)
-		rel->tuples = 1;
+
+	if (CdbPathLocus_IsPartitioned(sub_final_rel->cheapest_total_path->locus))
+		numsegments = CdbPathLocus_NumSegments(sub_final_rel->cheapest_total_path->locus);
 	else
-	{
-		double		numsegments;
+		numsegments = 1;
 
-		if (CdbPathLocus_IsPartitioned(sub_final_rel->cheapest_total_path->locus))
-			numsegments = CdbPathLocus_NumSegments(sub_final_rel->cheapest_total_path->locus);
-		else
-			numsegments = 1;
-
-		rel->tuples = sub_final_rel->cheapest_total_path->rows * numsegments;
-	}
+	rel->tuples = sub_final_rel->cheapest_total_path->rows * numsegments;
 
 	/*
 	 * Compute per-output-column width estimates by examining the subquery's
@@ -5593,7 +5576,6 @@ set_function_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 {
 	RangeTblEntry *rte;
 	ListCell   *lc;
-	bool		onerow = true;
 
 	/* Should only be applied to base relations that are functions */
 	Assert(rel->relid > 0);
@@ -5610,15 +5592,9 @@ set_function_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 		RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lc);
 		double		ntup = expression_returns_set_rows(root, rtfunc->funcexpr);
 
-		/* CDB: Could the function return more than one row? */
-		if (onerow)
-			onerow = !expression_returns_set(rtfunc->funcexpr);
-
 		if (ntup > rel->tuples)
 			rel->tuples = ntup;
 	}
-	if (rte->functions)
-		rel->onerow = onerow;
 
 	/* Now estimate number of output rows, etc */
 	set_baserel_size_estimates(root, rel);
@@ -5638,12 +5614,13 @@ set_table_function_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 {
 	PlannerInfo *subroot = rel->subroot;
 	RelOptInfo *sub_final_rel;
+	double		numsegments;
 
 	/*
 	 * Estimate number of rows the function itself will return.
 	 *
-	 * If the function can return more than a single row then simply do
-	 * a best guess that it returns the same number of rows as the subscan.
+	 * Do a best guess that it returns the same number of rows as the
+	 * subscan.
 	 *
 	 * This will obviously be way wrong in many cases, to improve we would
 	 * need a stats callback function for table functions.
@@ -5652,19 +5629,13 @@ set_table_function_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 	 * have the same output rowcount, so just look at cheapest-total.
 	 */
 	sub_final_rel = fetch_upper_rel(subroot, UPPERREL_FINAL, NULL);
-	if (rel->onerow)
-		rel->tuples = 1;
+
+	if (CdbPathLocus_IsPartitioned(sub_final_rel->cheapest_total_path->locus))
+		numsegments = CdbPathLocus_NumSegments(sub_final_rel->cheapest_total_path->locus);
 	else
-	{
-		double		numsegments;
+		numsegments = 1;
 
-		if (CdbPathLocus_IsPartitioned(sub_final_rel->cheapest_total_path->locus))
-			numsegments = CdbPathLocus_NumSegments(sub_final_rel->cheapest_total_path->locus);
-		else
-			numsegments = 1;
-
-		rel->tuples = sub_final_rel->cheapest_total_path->rows * numsegments;
-	}
+	rel->tuples = sub_final_rel->cheapest_total_path->rows * numsegments;
 
 	/* Now estimate number of output rows, etc */
 	set_baserel_size_estimates(root, rel);

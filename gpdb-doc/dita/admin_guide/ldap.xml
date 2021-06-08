@@ -20,7 +20,7 @@
     <p>To use LDAP authentication, the Greenplum Database master host must be configured as an LDAP
       client. See your LDAP documentation for information about configuring LDAP clients.</p>
     <section>
-      <title>Enabing LDAP Authentication with STARTTLS and TLS</title>
+      <title>Enabling LDAP Authentication with STARTTLS and TLS</title>
       <p>To enable STARTTLS with the TLS protocol, in the pg_hba.conf file, add an
           <codeph>ldap</codeph> line and specify the <codeph>ldaptls</codeph> parameter with the
         value 1. The default port is 389. In this example, the authentication method parameters
@@ -32,7 +32,7 @@
         550.<codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapport=500 ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"</codeblock></p>
     </section>
     <section>
-      <title>Enabing LDAP Authentication with a Secure Connection and TLS/SSL </title>
+      <title>Enabling LDAP Authentication with a Secure Connection and TLS/SSL </title>
       <p>To enable a secure connection with TLS/SSL, add <codeph>ldaps://</codeph> as the prefix to
         the LDAP server name specified in the <codeph>ldapserver</codeph> parameter. The default
         port is 636.</p>

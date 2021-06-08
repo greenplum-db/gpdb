@@ -59,14 +59,12 @@
             <row>
               <entry colname="col1">ROW SHARE</entry>
               <entry colname="col2">
-                <codeph>SELECT...FOR <varname>lock_strength</varname></codeph><p>See <xref
-                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
+                <codeph>SELECT...FOR <varname>lock_strength</varname></codeph></entry>
               <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
               <entry colname="col1">ROW EXCLUSIVE</entry>
-              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph><p>See <xref
-                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
+              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph></entry>
               <entry colname="col3">SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
@@ -94,8 +92,7 @@
               <entry colname="col1">EXCLUSIVE</entry>
               <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>,
                   <codeph>SELECT...FOR <varname>lock_strength</varname></codeph>, <codeph>REFRESH
-                  MATERIALIZED VIEW CONCURRENTLY</codeph><p>See <xref href="#topic2/lock_note"
-                    format="dita">Note</xref>.</p></entry>
+                  MATERIALIZED VIEW CONCURRENTLY</codeph></entry>
               <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
                 ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
@@ -329,8 +326,8 @@
               deleted, or locked a target row, the <codeph>REPEATABLE READ</codeph> transaction
               waits for the concurrent transaction to commit or roll back the change. If the
               concurrent transaction commits the change, the <codeph>REPEATABLE READ</codeph>
-              transaction rolls back. If the concurrent transaction rolls back its change,
-                the<codeph>REPEATABLE READ</codeph> transaction can commit its changes. </li>
+              transaction rolls back. If the concurrent transaction rolls back its change, the
+                <codeph>REPEATABLE READ</codeph> transaction can commit its changes. </li>
           </ul>
         </section>
         <p id="ix141505">The default transaction isolation level in Greenplum Database is
@@ -452,7 +449,7 @@ holder_sessionid | 8
             sub-query.<codeblock>DELETE FROM t USING t1 WHERE t.c > t1.c;</codeblock></li>
         </ul>
         <p>The following table shows the concurrent <codeph>UPDATE</codeph> or
-            <codeph>DELETE</codeph> commands that are manged by the Global Deadlock Detector. For
+            <codeph>DELETE</codeph> commands that are managed by the Global Deadlock Detector. For
           example, concurrent simple <codeph>UPDATE</codeph> commands on the same table row are
           managed by the Global Deadlock Detector. For a concurrent complex <codeph>UPDATE</codeph>
           and a simple <codeph>UPDATE</codeph>, only one <codeph>UPDATE</codeph> is performed, and

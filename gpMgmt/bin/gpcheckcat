@@ -560,7 +560,8 @@ def checkPartitionIntegrity():
            pg_get_table_distributedby(inhrelid) as dby_child
     from pg_inherits inner join pg_partitioned_table on (pg_inherits.inhparent = pg_partitioned_table.partrelid)
     where pg_get_table_distributedby(inhrelid) is distinct from pg_get_table_distributedby(inhparent)
-          and not (pg_get_table_distributedby(inhparent) = 'DISTRIBUTED RANDOMLY' and pg_get_table_distributedby(inhrelid) = '');
+          and not (pg_get_table_distributedby(inhparent) = 'DISTRIBUTED RANDOMLY' and pg_get_table_distributedby(inhrelid) = '')
+          and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and pg_get_table_distributedby(inhrelid) = '');
     '''
     try:
         curs = db.query(qry)

@@ -93,7 +93,7 @@ public:
 	DeriveFunctionProperties(CMemoryPool *mp,
 							 CExpressionHandle &exprhdl) const override
 	{
-		return PfpDeriveFromScalar(mp, exprhdl, exprhdl.Arity() - 1);
+		return PfpDeriveFromScalar(mp, exprhdl);
 	}
 
 	//-------------------------------------------------------------------------------------

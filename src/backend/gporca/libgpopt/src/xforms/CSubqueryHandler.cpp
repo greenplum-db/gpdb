@@ -1619,7 +1619,6 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 
 	BOOL fSuccess = true;
 	BOOL fUseCorrelated = false;
-	CExpression *pexprInnerSelect = nullptr;
 	CExpression *pexprPredicate = nullptr;
 	CExpression *pexprInner = (*pexprSubquery)[0];
 	COperator::EOperatorId eopidSubq = pexprSubquery->Pop()->Eopid();
@@ -1655,10 +1654,10 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 		}
 	}
 
-	CExpression *pexprInversePred =
-		CXformUtils::PexprInversePred(mp, pexprSubquery);
 	// generate a select with the inverse predicate as the selection predicate
 	// TODO: Handle the case where pexprInversePred == NULL
+	CExpression *pexprInversePred =
+		CXformUtils::PexprInversePred(mp, pexprSubquery);
 	pexprPredicate = pexprInversePred;
 
 	if (EsqctxtValue == esqctxt)
@@ -1678,7 +1677,7 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 				fUseCorrelated = true;
 		}
 
-		pexprInnerSelect = PexprInnerSelect(
+		CExpression *pexprInnerSelect = PexprInnerSelect(
 			mp, colref, pexprInner, pexprPredicate, &fUseNotNullOptimization);
 
 		if (!fUseCorrelated)
@@ -1695,6 +1694,8 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 				mp, pexprOuter, pexprSubquery, esqctxt, ppexprNewOuter,
 				ppexprResidualScalar);
 		}
+
+		// cleanup
 		pexprInner->Release();
 		pexprPredicate->Release();
 	}
@@ -1702,33 +1703,10 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 	{
 		GPOS_ASSERT(EsqctxtFilter == esqctxt);
 
-		// check that inner row in filter is nullable
-		CColRefSet *pcrsNotNullInner = GPOS_NEW(mp) CColRefSet(mp);
-		pcrsNotNullInner->Include(pexprInner->DeriveNotNullColumns());
-		CColRefSet *pcrsUsedInner = GPOS_NEW(mp) CColRefSet(mp);
-		pcrsUsedInner->Include(colref);
-		pcrsUsedInner->Intersection(pexprPredicate->DeriveUsedColumns());
-		pcrsNotNullInner->Intersection(pcrsUsedInner);
-		BOOL fInnerUsesNullableCol =
-			pcrsNotNullInner->Size() != pcrsUsedInner->Size();
-		pcrsNotNullInner->Release();
-		pcrsUsedInner->Release();
-
-		if (fInnerUsesNullableCol)
-		{
-			pexprInnerSelect = CUtils::PexprLogicalSelect(
-				mp, pexprInner, CUtils::PexprIsNotFalse(mp, pexprPredicate));
-		}
-		else
-		{
-			pexprInnerSelect =
-				CUtils::PexprLogicalSelect(mp, pexprInner, pexprPredicate);
-		}
-
 		*ppexprResidualScalar = CUtils::PexprScalarConstBool(mp, true);
 		*ppexprNewOuter =
 			CUtils::PexprLogicalApply<CLogicalLeftAntiSemiApplyNotIn>(
-				mp, pexprOuter, pexprInnerSelect, colref, eopidSubq);
+				mp, pexprOuter, pexprInner, colref, eopidSubq, pexprPredicate);
 	}
 
 	return fSuccess;

@@ -3,6 +3,7 @@ test: check_gxid
 
 test: autovacuum-analyze
 test: lockmodes
+test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock
 

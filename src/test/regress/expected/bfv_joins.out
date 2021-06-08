@@ -3095,15 +3095,15 @@ select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
 (2 rows)
 
 explain select * from nlj1, (select NULL::int a, b from nlj2) other where nlj1.a is not distinct from other.a;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.14 rows=3 width=16)
    ->  Nested Loop  (cost=0.00..2.10 rows=1 width=16)
-         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
-               ->  Seq Scan on nlj2  (cost=0.00..1.01 rows=1 width=4)
-         ->  Materialize  (cost=0.00..1.02 rows=1 width=8)
-               ->  Seq Scan on nlj1  (cost=0.00..1.01 rows=1 width=8)
-                     Filter: (NOT (a IS DISTINCT FROM NULL::integer))
+         Join Filter: (NOT (nlj1.a IS DISTINCT FROM nlj2.a))
+         ->  Seq Scan on nlj1  (cost=0.00..1.01 rows=1 width=8)
+         ->  Materialize  (cost=0.00..1.06 rows=3 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+                     ->  Seq Scan on nlj2  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
 (8 rows)
 

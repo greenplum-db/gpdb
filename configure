@@ -631,6 +631,7 @@ PG_SYSROOT
 PG_VERSION_NUM
 GP_MAJORVERSION
 GP_VERSION_SHORT
+GP_VERSION_LONG
 BLD_ARCH
 PROVE
 DBTOEPUB
@@ -21866,18 +21867,13 @@ GP_VERSION_LONG=`bash ./getversion`
 
 GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
 
+
 echo $GP_VERSION_LONG > VERSION
 GP_VERSION=`cat VERSION`
 
 GP_VERSION_SHORT=`bash ./getversion --short`
 GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
 
-
-GP_VERSION_IN="src/include/catalog/gp_version_at_initdb.in"
-GP_VERSION_DAT="src/include/catalog/gp_version_at_initdb.dat"
-if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_DAT
-fi
 
 GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
 GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
@@ -21998,6 +21994,9 @@ fi
 
 
 ac_config_files="$ac_config_files GNUmakefile src/Makefile.global"
+
+
+ac_config_files="$ac_config_files src/include/catalog/gp_version_at_initdb.dat"
 
 
 ac_config_links="$ac_config_links src/backend/port/pg_sema.c:${SEMA_IMPLEMENTATION} src/backend/port/pg_shmem.c:${SHMEM_IMPLEMENTATION} src/include/pg_config_os.h:src/include/port/${template}.h src/Makefile.port:src/makefiles/Makefile.${template}"
@@ -22721,6 +22720,7 @@ do
     "src/backend/port/tas.s") CONFIG_LINKS="$CONFIG_LINKS src/backend/port/tas.s:src/backend/port/tas/${tas_file}" ;;
     "GNUmakefile") CONFIG_FILES="$CONFIG_FILES GNUmakefile" ;;
     "src/Makefile.global") CONFIG_FILES="$CONFIG_FILES src/Makefile.global" ;;
+    "src/include/catalog/gp_version_at_initdb.dat") CONFIG_FILES="$CONFIG_FILES src/include/catalog/gp_version_at_initdb.dat" ;;
     "src/backend/port/pg_sema.c") CONFIG_LINKS="$CONFIG_LINKS src/backend/port/pg_sema.c:${SEMA_IMPLEMENTATION}" ;;
     "src/backend/port/pg_shmem.c") CONFIG_LINKS="$CONFIG_LINKS src/backend/port/pg_shmem.c:${SHMEM_IMPLEMENTATION}" ;;
     "src/include/pg_config_os.h") CONFIG_LINKS="$CONFIG_LINKS src/include/pg_config_os.h:src/include/port/${template}.h" ;;

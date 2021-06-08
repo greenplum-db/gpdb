@@ -77,7 +77,7 @@ all jobs accounted for
   Generate Pipeline type: .. : prod
   Pipeline file ............ : gpdb_master-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'aix7', 'win']
+  OS Types ................. : ['centos6', 'centos7', 'win']
   Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
   test_trigger ............. : True
 ======================================================================

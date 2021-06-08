@@ -2,8 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="features">
   <title>Additional Text Search Features</title>
-  <shortdesc>Greenplum Database has additional functions and operators you can
-    use to manipulate search and query vectors, and to rewite search queries. </shortdesc>
+  <shortdesc>Greenplum Database has additional functions and operators you can use to manipulate
+    search and query vectors, and to rewrite search queries. </shortdesc>
   <body>
     <p>This section contains the following subtopics:</p>
     <ul id="ul_tyj_lyw_4fb">
@@ -179,7 +179,7 @@ SELECT numnode('foo &amp; bar'::tsquery);
               value (the substitute) within the current
                 <codeph><i>query</i></codeph> value. For example:</p>
             <codeblock>CREATE TABLE aliases (id int, t tsquery, s tsquery);
-INSERT INTO aliases VALUES('a', 'c');
+INSERT INTO aliases VALUES(1, 'a', 'c');
 
 SELECT ts_rewrite('a &amp; b'::tsquery, 'SELECT t,s FROM aliases');
  ts_rewrite

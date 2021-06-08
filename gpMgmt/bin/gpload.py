@@ -1869,6 +1869,20 @@ class gpload:
                     "the Greenplum Database running on port %i?" % (errorMessage,
                     self.options.p))
 
+    def add_quote_if_not(self, col):
+        '''
+        Judge if the column name string has quotations.
+        If not, return a string with double quotations.
+        pyyaml cannot preserve quotes of string in yaml file.
+        So we need to quote the string for furter comparison if it is not quoted.
+        '''
+        if col[0] == '"' and col[-1] == '"':
+            return col
+        elif col[0] == "'" and col[-1] == "'":
+            return col
+        else:
+            return quote_ident(col)
+
     def read_columns(self):
         '''
         get from columns
@@ -1885,6 +1899,7 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = list(d.keys())[0]
+                col_name = self.add_quote_if_not(key)
                 if d[key] is None or not d[key]:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
@@ -1901,7 +1916,7 @@ class gpload:
 
                 # Mark this column as having no mapping, which is important
                 # for do_insert()
-                self.from_columns.append([key,d[key].lower(),None, False])
+                self.from_columns.append([col_name,d[key].lower(),None, False])
         else:
             self.from_columns = self.into_columns
             self.from_cols_from_user = False
@@ -2640,7 +2655,6 @@ class gpload:
                 strE = e.__str__().encode().decode('unicode-escape')
                 strF = sql.encode().decode('unicode-escape')
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
-
         #progress.condition.acquire()
         #progress.number = 1
         #progress.condition.wait()

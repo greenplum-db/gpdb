@@ -144,7 +144,8 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Null:
 					case CdbLocusType_Entry:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_OuterQuery:
+					case CdbLocusType_End:
 						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
@@ -163,6 +164,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 						break;
 
 					case CdbLocusType_SingleQE:
+					case CdbLocusType_SegmentGeneral:
 						/*
 						 * The input was focused on a single QE, but we need it in the QD.
 						 * It's bit silly to add a Motion to just move the whole result from
@@ -182,7 +184,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
@@ -219,7 +221,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Entry:
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
-					default:
+					case CdbLocusType_End:
 						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;

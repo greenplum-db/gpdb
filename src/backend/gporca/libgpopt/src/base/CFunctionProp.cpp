@@ -26,15 +26,12 @@ FORCE_GENERATE_DBGSTR(CFunctionProp);
 //
 //---------------------------------------------------------------------------
 CFunctionProp::CFunctionProp(IMDFunction::EFuncStbl func_stability,
-							 IMDFunction::EFuncDataAcc func_data_access,
 							 BOOL fHasVolatileFunctionScan, BOOL fScan)
 	: m_efs(func_stability),
-	  m_efda(func_data_access),
 	  m_fHasVolatileFunctionScan(fHasVolatileFunctionScan),
 	  m_fScan(fScan)
 {
 	GPOS_ASSERT(IMDFunction::EfsSentinel > func_stability);
-	GPOS_ASSERT(IMDFunction::EfdaSentinel > func_data_access);
 	GPOS_ASSERT_IMP(fScan && IMDFunction::EfsVolatile == func_stability,
 					fHasVolatileFunctionScan);
 }
@@ -84,10 +81,8 @@ IOstream &
 CFunctionProp::OsPrint(IOstream &os) const
 {
 	const CHAR *rgszStability[] = {"Immutable", "Stable", "Volatile"};
-	const CHAR *rgszDataAccess[] = {"NoSQL", "ContainsSQL", "ReadsSQLData",
-									"ModifiesSQLData"};
 
-	os << rgszStability[m_efs] << ", " << rgszDataAccess[m_efda];
+	os << rgszStability[m_efs];
 	return os;
 }
 

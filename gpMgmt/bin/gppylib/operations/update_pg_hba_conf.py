@@ -8,7 +8,7 @@ from gppylib.commands import base, gp, unix
 logger = gplog.get_default_logger()
 
 
-def config_primaries_for_replication(gpArray, hba_hostnames):
+def config_primaries_for_replication(gpArray, hba_hostnames, contents_to_update=None):
     logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
 
     try:
@@ -16,9 +16,12 @@ def config_primaries_for_replication(gpArray, hba_hostnames):
             # We cannot update the pg_hba.conf which uses ssh for hosts that are unreachable.
             if segmentPair.primaryDB.unreachable or segmentPair.mirrorDB.unreachable:
                 continue
+            if contents_to_update and not segmentPair.primaryDB.getSegmentContentId() in contents_to_update:
+                continue
 
             # Start with an empty string so that the later .join prepends a newline to the first entry
             entries = ['']
+            segment_pair_ips = []
             # Add the samehost replication entry to support single-host development
             entries.append('host  replication {username} samehost trust'.format(username=unix.getUserName()))
             if hba_hostnames:
@@ -29,14 +32,13 @@ def config_primaries_for_replication(gpArray, hba_hostnames):
                 if mirror_hostname != primary_hostname:
                     entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=primary_hostname))
             else:
-                mirror_ips = gp.IfAddrs.list_addrs(segmentPair.mirrorDB.getSegmentHostName())
-                for ip in mirror_ips:
+                mirror_hostname = segmentPair.mirrorDB.getSegmentHostName()
+                segment_pair_ips = gp.IfAddrs.list_addrs(mirror_hostname)
+                for ip in segment_pair_ips:
                     cidr_suffix = '/128' if ':' in ip else '/32'
                     cidr = ip + cidr_suffix
                     hba_line_entry = "host all {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr)
                     entries.append(hba_line_entry)
-                mirror_hostname = segmentPair.mirrorDB.getSegmentHostName()
-                segment_pair_ips = gp.IfAddrs.list_addrs(mirror_hostname)
                 primary_hostname = segmentPair.primaryDB.getSegmentHostName()
                 if mirror_hostname != primary_hostname:
                     segment_pair_ips.extend(gp.IfAddrs.list_addrs(primary_hostname))

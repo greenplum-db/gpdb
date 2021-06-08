@@ -723,7 +723,8 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 			}
 
 			if (PQisBusy(dispatchResult->segdbDesc->conn))
-				elog(LOG, "We thought we were done, because finished==true, but libpq says we are still busy");
+				elog(DEBUG1, "did not receive query results on libpq connection %s",
+					 dispatchResult->segdbDesc->whoami);
 		}
 		else
 			ELOG_DISPATCHER_DEBUG("processResults says we have more to do with %d of %d (%s)",

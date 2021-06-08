@@ -27,12 +27,12 @@ resources:
 - name: gpdb7-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-build
 
 - name: gpdb7-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
 
 jobs:
 - name: compile_and_test_gpdb
@@ -120,3 +120,8 @@ jobs:
         input_mapping:
           gpdb_src: gpdb_pr
         timeout: 1h
+
+      - task: clang_tidy
+        input_mapping:
+          gpdb_src: gpdb_pr
+        file: gpdb_src/concourse/tasks/clang_tidy.yml

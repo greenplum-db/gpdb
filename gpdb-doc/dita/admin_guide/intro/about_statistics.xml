@@ -26,7 +26,7 @@
       by calculating statistics on samples of large tables. In most cases, the default settings
       provide the information needed to generate correct execution plans for queries. If the
       statistics produced are not producing optimal query execution plans, the administrator can
-      tune configuration parameters to produce more accurate stastistics by increasing the sample
+      tune configuration parameters to produce more accurate statistics by increasing the sample
       size or the granularity of statistics saved in the system catalog. Producing more accurate
       statistics has CPU and storage costs and may not produce better plans, so it is important to
       view explain plans and test query performance to ensure that the additional statistics-related
@@ -414,10 +414,10 @@
           demonstrate that query plans improve with the new target. For example, to raise the
           default statistics target from 100 to 150 you can use the <codeph>gpconfig</codeph>
           utility:<codeblock>gpconfig -c default_statistics_target -v 150</codeblock></p>
-        <p>The statististics target for individual columns can be set with the <codeph>ALTER
+        <p>The statistics target for individual columns can be set with the <codeph>ALTER
             TABLE</codeph> command. For example, some queries can be improved by increasing the
           target for certain columns, especially columns that have irregular distributions. You can
-          set the target to zero for columns that never contribute to query otpimization. When the
+          set the target to zero for columns that never contribute to query optimization. When the
           target is 0, <codeph>ANALYZE</codeph> ignores the column. For example, the following
             <codeph>ALTER TABLE</codeph> command sets the statistics target for the
             <codeph>notes</codeph> column in the <codeph>emp</codeph> table to zero:</p>

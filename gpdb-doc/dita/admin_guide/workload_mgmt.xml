@@ -33,7 +33,7 @@
       <image href="graphics/resource_queues.jpg" placement="break" width="443px" height="173px"
         id="image_u4c_qxw_wq"/>
     </fig>
-    <p>Resource queues define classes of queries with similar resource requirements. Administratrors
+    <p>Resource queues define classes of queries with similar resource requirements. Administrators
       should create resource queues for the various types of workloads in their organization. For
       example, you could create resource queues for the following classes of queries, corresponding
       to different service level agreements: <ul id="ul_h3q_5qz_zp">
@@ -199,7 +199,7 @@
         it completes, even if during execution it actually consumes less than its allotted amount of
         memory.</p>
       <p>You can use the <codeph>statement_mem</codeph> server configuration parameter to override
-        memory limits set by the current resource queue. At the session level, you can increae
+        memory limits set by the current resource queue. At the session level, you can increase
           <codeph>statement_mem</codeph> up to the resource queue's <codeph>MEMORY_LIMIT</codeph>.
         This will allow an individual query to use all of the memory allocated for the entire queue
         without affecting other resource queues.</p>
@@ -221,9 +221,9 @@
       </p>
       <p>By default each statement submitted to the queue is allocated 500MB of memory. Now consider
         the following series of events:<ol id="ol_hjq_14d_dq">
-          <li>User <codeph>ADHOC_1</codeph> submits query <codeph>Q1</codeph>,
-              overriding<codeph>STATEMENT_MEM</codeph> to 800MB. The <codeph>Q1</codeph> statement
-            is admitted into the system. </li>
+          <li>User <codeph>ADHOC_1</codeph> submits query <codeph>Q1</codeph>, overriding
+              <codeph>STATEMENT_MEM</codeph> to 800MB. The <codeph>Q1</codeph> statement is admitted
+            into the system. </li>
           <li>User <codeph>ADHOC_2</codeph> submits query <codeph>Q2</codeph>, using the default
             500MB.</li>
           <li>With <codeph>Q1</codeph> and <codeph>Q2</codeph> still running, user
@@ -342,9 +342,9 @@
               <li id="iz154513"><codeph>resource_select_only</codeph> - If set to <i>on</i>, then
                   <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>, <codeph>CREATE TABLE
                   AS</codeph><codeph>SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> commands
-                are evaluated. If set to <i>off</i><codeph>INSERT</codeph><ph>,
-                    <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph></ph> commands will be
-                evaluated as well.</li>
+                are evaluated. If set to <i>off</i>
+                <codeph>INSERT</codeph><ph>, <codeph>UPDATE</codeph>, and
+                  <codeph>DELETE</codeph></ph> commands will be evaluated as well.</li>
               <li id="iz157925"><codeph>resource_cleanup_gangs_on_wait</codeph> - Cleans up idle
                 segment worker processes before taking a slot in the resource queue.</li>
               <li id="iz156657"><codeph>stats_queue_level</codeph> - Enables statistics collection

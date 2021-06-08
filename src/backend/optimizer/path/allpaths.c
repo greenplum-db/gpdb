@@ -1769,12 +1769,6 @@ add_paths_to_append_rel(PlannerInfo *root, RelOptInfo *rel,
 		}
 	}
 
-	/* CDB: Just one child (or none)?  Set flag if result is at most 1 row. */
-	if (!subpaths)
-		rel->onerow = true;
-	else if (list_length(subpaths) == 1)
-		rel->onerow = ((Path *) linitial(subpaths))->parent->onerow;
-
 	/*
 	 * If we found unparameterized paths for all children, build an unordered,
 	 * unparameterized Append path for the rel.  (Note: this is correct even
@@ -2478,32 +2472,6 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		subquery = push_down_restrict(root, rel, rte, rti, subquery);
 
 		/*
-		 * CDB: Does the subquery return at most one row?
-		 */
-		rel->onerow = false;
-
-		/* Set-returning function in tlist could give any number of rows. */
-		if (expression_returns_set((Node *)subquery->targetList))
-		{}
-
-		/* Always one row if aggregate function without GROUP BY. */
-		else if (!subquery->groupClause &&
-				 (subquery->hasAggs || subquery->havingQual))
-			rel->onerow = true;
-
-		/* LIMIT 1 or less? */
-		else if (subquery->limitCount &&
-				 IsA(subquery->limitCount, Const) &&
-				 !((Const *) subquery->limitCount)->constisnull)
-		{
-			Const	   *cnst = (Const *) subquery->limitCount;
-
-			if (cnst->consttype == INT8OID &&
-				DatumGetInt64(cnst->constvalue) <= 1)
-				rel->onerow = true;
-		}
-
-		/*
 		 * The upper query might not use all the subquery's output columns; if
 		 * not, we can simplify.
 		 */
@@ -2560,7 +2528,6 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	{
 		/* This is a preplanned sub-query RTE. */
 		rel->subroot = rte->subquery_root;
-		/* XXX rel->onerow = ??? */
 	}
 
 	/* Isolate the params needed by this specific subplan */
@@ -2792,9 +2759,6 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 		}
 	}
 
-	/* Could the function return more than one row? */
-	rel->onerow = !expression_returns_set((Node *) fexpr);
-
 	/* Mark rel with estimated output rows, width, etc */
 	set_table_function_size_estimates(root, rel);
 
@@ -2835,10 +2799,6 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 * in the values expressions.
 	 */
 	required_outer = rel->lateral_relids;
-
-	/* CDB: Just one row? */
-	rel->onerow = (rel->tuples <= 1 &&
-				   !expression_returns_set((Node *) rte->values_lists));
 
 	/* Generate appropriate path */
 	add_path(rel, create_valuesscan_path(root, rel, rte, required_outer));

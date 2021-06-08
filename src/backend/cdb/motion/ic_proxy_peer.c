@@ -814,6 +814,27 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 }
 
 /*
+ * Disconnect a peer.
+ *
+ * The peer can be in any state, the caller only needs to ensure not to call
+ * this function from a peer callback.
+ */
+void
+ic_proxy_peer_disconnect(ICProxyPeer *peer)
+{
+	/* No such a peer yet */
+	if (!peer)
+		return;
+
+	/* No connection is made or being made */
+	if (!(peer->state & IC_PROXY_PEER_STATE_CONNECTING))
+		return;
+
+	ic_proxy_log(LOG, "%s: disconnecting", peer->name);
+	ic_proxy_peer_shutdown(peer);
+}
+
+/*
  * Send a packet to a remote peer.
  */
 void

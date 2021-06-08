@@ -265,11 +265,7 @@ select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where
 
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -r fsync --skipvalidation;
--- start_ignore
-20191204:17:13:27:024868 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
-
--- end_ignore
+!\retcode gpconfig -c fsync -v off --skipvalidation;
 (exited with code 0)
 !\retcode gpstop -u;
 -- start_ignore

@@ -56,6 +56,7 @@
               <p>doParallel</p>
               <p>dplyr</p>
               <p>e1071</p>
+              <p>ellipsis</p>
               <p>fansi</p>
               <p>fastICA</p>
               <p>fBasics</p>
@@ -124,7 +125,6 @@
               <p>Rcpp</p>
               <p>RcppArmadillo</p>
               <p>RcppEigen</p>
-              <p>RcppRoll</p>
               <p>readr</p>
               <p>recipes</p>
               <p>reshape2</p>

@@ -73,7 +73,7 @@
           <codeph>gpfdist</codeph> servers participating in the load, data can be loaded at very
         high rates. </p>
       <p>Primary segments access external files in parallel when using <codeph>gpfdist</codeph> up
-        to the value of <codeph>gp_external_max_segments</codeph>. When optimizing
+        to the value of <codeph>gp_external_max_segs</codeph>. When optimizing
           <codeph>gpfdist</codeph> performance, maximize the parallelism as the number of segments
         increase. Spread the data evenly across as many ETL nodes as possible. Split very large data
         files into equal parts and spread the data across as many file systems as possible. </p>

@@ -784,7 +784,8 @@ ExecEagerFreeFunctionScan(FunctionScanState *node)
 void
 ExecSquelchFunctionScan(FunctionScanState *node)
 {
-	ExecEagerFreeFunctionScan(node);
+	if (!node->delayEagerFree)
+		ExecEagerFreeFunctionScan(node);
 }
 
 void

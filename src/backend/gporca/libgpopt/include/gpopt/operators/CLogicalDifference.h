@@ -77,10 +77,10 @@ public:
 
 	// derive constraint property
 	CPropConstraint *
-	DerivePropertyConstraint(CMemoryPool *,	 //mp,
+	DerivePropertyConstraint(CMemoryPool *mp,
 							 CExpressionHandle &exprhdl) const override
 	{
-		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
+		return PpcDeriveConstraintSetop(mp, exprhdl, false /*fIntersect*/);
 	}
 
 	//-------------------------------------------------------------------------------------

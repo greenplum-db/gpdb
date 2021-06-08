@@ -104,7 +104,7 @@ def test_74_gpload_insert_partial_columns():
 def test_75_gpload_merge_chinese_standard_conforming_str_on():
     """75 gpload merge data with different quotations '"col"'  "\"col\""  "'col'" and "col" 
     with standard_conforming_strings on"""
-    copy_data("external_file_18.txt", "data_file.txt")
+    copy_data("external_file_19.txt", "data_file.txt")
     # '"col"'
     columns1 = {"'\"列1\"'": 'text',"'\"列#2\"'": 'int', "'\"lie3\"'": 'timestamp'}
     # "\"col\""

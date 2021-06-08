@@ -16,10 +16,6 @@ case "`uname -s`" in
     fi
     ;;
 
-    AIX)
-    BLD_ARCH_HOST="aix`uname -v`_`prtconf | grep 'Processor Type' | awk '{print $3}' | perl -p -i -e 's,PowerPC_POWER.,ppc,'`_`prtconf -k | perl -p -i -e 's,Kernel Type: (\d+)-bit,\1,'`"
-    ;;
-
     *)
     BLD_ARCH_HOST="BLD_ARCH_unknown"
     ;;

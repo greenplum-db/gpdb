@@ -3187,3 +3187,21 @@ drop table agg_hash_1;
 --  drop table agg_hash_2;
 drop table agg_hash_3;
 drop table agg_hash_4;
+-- fix github issue #12061 numsegments of general locus is not -1 on create_minmaxagg_path
+explain analyze select count(*) from pg_class,  (select count(*) >0 from  (select count(*) from pg_class where relname like 't%')x)y;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=10000000017.74..10000000017.75 rows=1 width=8) (actual time=0.142..0.142 rows=1 loops=1)
+   ->  Nested Loop  (cost=10000000000.02..10000000016.44 rows=520 width=0) (actual time=0.016..0.114 rows=686 loops=1)
+         ->  Aggregate  (cost=0.02..0.03 rows=1 width=1) (actual time=0.003..0.003 rows=1 loops=1)
+               ->  Result  (cost=0.00..0.01 rows=1 width=8) (actual time=0.001..0.001 rows=1 loops=1)
+         ->  Seq Scan on pg_class  (cost=0.00..11.20 rows=520 width=0) (actual time=0.012..0.071 rows=686 loops=1)
+ Planning Time: 1.961 ms
+   (slice0)    Executor memory: 50K bytes.
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Execution Time: 0.198 ms
+(10 rows)
+

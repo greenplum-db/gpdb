@@ -40,6 +40,18 @@ COMMAND_NOT_FOUND=127
 #Default size of thread pool for gpstart and gpsegstart
 DEFAULT_GPSTART_NUM_WORKERS=64
 
+#Default size of thread pool on segment hosts
+DEFAULT_SEGHOST_NUM_WORKERS=64
+
+#max size of thread pool on segment hosts
+MAX_SEGHOST_NUM_WORKERS=128
+
+#default batch size of thread pool on coordinator
+DEFAULT_COORDINATOR_NUM_WORKERS=16
+
+#max batch size of thread pool on coordinator
+MAX_COORDINATOR_NUM_WORKERS=64
+
 # Application name used by the pg_rewind instance that gprecoverseg starts
 # during incremental recovery. gpstate uses this to figure out when incremental
 # recovery is active.
@@ -624,7 +636,7 @@ class GpSegStartArgs(CmdArgs):
         @param parallel - maximum size of a thread pool to start segments
         """
         if parallel is not None:
-            self.append("-B")
+            self.append("-b")
             self.append(str(parallel))
         return self
 
@@ -661,7 +673,7 @@ class GpSegStartCmd(Command):
 #-----------------------------------------------
 class GpSegStopCmd(Command):
     def __init__(self, name, gphome, version,mode,dbs,timeout=SEGMENT_STOP_TIMEOUT_DEFAULT,
-                 verbose=False, ctxt=LOCAL, remoteHost=None, logfileDirectory=False):
+                 verbose=False, ctxt=LOCAL, remoteHost=None, logfileDirectory=False, segment_batch_size=DEFAULT_SEGHOST_NUM_WORKERS):
         self.gphome=gphome
         self.dblist=dbs
         self.dirportlist=[]
@@ -678,8 +690,8 @@ class GpSegStopCmd(Command):
         else:
             setverbose=""
 
-        self.cmdStr="$GPHOME/sbin/gpsegstop.py %s -D %s -m %s -t %s -V '%s'"  %\
-                        (setverbose,dirstr,mode,timeout,version)
+        self.cmdStr="$GPHOME/sbin/gpsegstop.py %s -D %s -m %s -t %s -V '%s' -b %d" %\
+                        (setverbose,dirstr,mode,timeout,version,segment_batch_size)
 
         if (logfileDirectory):
             self.cmdStr = self.cmdStr + " -l '" + logfileDirectory + "'"
@@ -917,7 +929,7 @@ class ConfigureNewSegment(Command):
         if verbose:
             cmdStr += ' -v '
         if batchSize:
-            cmdStr += ' -B %s' % batchSize
+            cmdStr += ' -b %s' % batchSize
         if validationOnly:
             cmdStr += " --validation-only"
         if writeGpIdFileOnly:

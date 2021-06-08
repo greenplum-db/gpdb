@@ -57,7 +57,11 @@ gDatabaseFiles = [
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
 #                                 failed is not (if both set)...change that, or at least protect against problems
 #
-
+# Note the following uses:
+#   failedSegment = segment that actually failed
+#   liveSegment = segment to recover "from" (in order to restore the failed segment)
+#   failoverSegment = segment to recover "to"
+# In other words, we are recovering the failedSegment to the failoverSegment using the liveSegment.
 class GpMirrorToBuild:
     def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization, logger=logger):
         checkNotNone("liveSegment", liveSegment)
@@ -75,6 +79,10 @@ class GpMirrorToBuild:
         if not liveSegment.isSegmentUp():
             raise ExceptionNoStackTraceNeeded(
                 "Primary segment is not up for content %s" % liveSegment.getSegmentContentId())
+        if liveSegment.unreachable:
+            raise ExceptionNoStackTraceNeeded(
+                "The recovery source segment %s (content %s) is unreachable." % (liveSegment.getSegmentHostName(),
+                                                                              liveSegment.getSegmentContentId()))
 
         if failedSegment is not None:
             if failedSegment.getSegmentContentId() != liveSegment.getSegmentContentId():
@@ -95,6 +103,10 @@ class GpMirrorToBuild:
                 raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
                                                   "A segment may not be built from itself"
                                                   % liveSegment.getSegmentDbId())
+            if failoverSegment.unreachable:
+                raise ExceptionNoStackTraceNeeded(
+                    "The recovery target segment %s (content %s) is unreachable." % (failoverSegment.getSegmentHostName(),
+                                                                                     failoverSegment.getSegmentContentId()))
 
         if failedSegment is not None and failoverSegment is not None:
             # for now, we require the code to have produced this -- even when moving the segment to another
@@ -153,13 +165,14 @@ class GpMirrorListToBuild:
         INPLACE = 1
         SEQUENTIAL = 2
 
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
         self.__progressMode = progressMode
         self.__parallelDegree = parallelDegree
         self.__forceoverwrite = forceoverwrite
+        self.__parallelPerHost = parallelPerHost
         self.__additionalWarnings = additionalWarnings or []
         if not logger:
             raise Exception('logger argument cannot be None')
@@ -359,7 +372,7 @@ class GpMirrorListToBuild:
         # Run pg_rewind on all the targets
         cmds = []
         progressCmds = []
-        removeCmds= []
+        removeCmds = {}
         for rewindSeg in list(rewindInfo.values()):
             # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
             # pg_rewind wants that to make incremental recovery successful finally.
@@ -391,11 +404,10 @@ class GpMirrorListToBuild:
                                    rewindSeg.sourcePort,
                                    rewindSeg.progressFile,
                                    verbose=True)
-            progressCmd, removeCmd = self.__getProgressAndRemoveCmds(rewindSeg.progressFile,
+            progressCmd, removeCmds[cmd] = self.__getProgressAndRemoveCmds(rewindSeg.progressFile,
                                                                      rewindSeg.targetSegment.getSegmentDbId(),
                                                                      rewindSeg.targetSegment.getSegmentHostName())
             cmds.append(cmd)
-            removeCmds.append(removeCmd)
             if progressCmd:
                 progressCmds.append(progressCmd)
 
@@ -403,9 +415,6 @@ class GpMirrorListToBuild:
         completedCmds = self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "rewinding segments",
                                                           suppressErrorCheck=True,
                                                           progressCmds=progressCmds)
-
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing rewind progress logfiles",
-                                                          suppressErrorCheck=False)
 
         rewindFailedSegments = []
         for cmd in completedCmds:
@@ -416,6 +425,11 @@ class GpMirrorListToBuild:
                 self.__logger.warning(cmd.get_stdout())
                 self.__logger.warning("Incremental recovery failed for dbid %d. You must use gprecoverseg -F to recover the segment." % dbid)
                 rewindFailedSegments.append(rewindInfo[dbid].targetSegment)
+                del removeCmds[cmd]
+
+        if removeCmds:
+            self.__runWaitAndCheckWorkerPoolForErrorsAndClear(list(removeCmds.values()), "removing rewind progress logfiles",
+                                                              suppressErrorCheck=False)
 
         return rewindFailedSegments
 
@@ -587,7 +601,7 @@ class GpMirrorListToBuild:
                                           gplog.get_logger_dir(),
                                           newSegments=True,
                                           verbose=gplog.logging_is_verbose(),
-                                          batchSize=self.__parallelDegree,
+                                          batchSize=self.__parallelPerHost,
                                           ctxt=gp.REMOTE,
                                           remoteHost=hostName,
                                           validationOnly=validationOnly,
@@ -724,7 +738,7 @@ class GpMirrorListToBuild:
             cmd = gp.GpSegStopCmd("remote segment stop on host '%s'" % hostName,
                                   gpEnv.getGpHome(), gpEnv.getGpVersion(),
                                   mode='fast', dbs=segments, verbose=gplog.logging_is_verbose(),
-                                  ctxt=base.REMOTE, remoteHost=hostName)
+                                  ctxt=base.REMOTE, remoteHost=hostName, segment_batch_size=self.__parallelPerHost)
 
             cmds.append(cmd)
 
@@ -812,9 +826,10 @@ class GpMirrorListToBuild:
     def __createStartSegmentsOp(self, gpEnv):
         return startSegments.StartSegmentsOperation(self.__pool, self.__quiet,
                                                     gpEnv.getGpVersion(),
-                                                    gpEnv.getGpHome(), gpEnv.getCoordinatorDataDir()
-                                                    )
+                                                    gpEnv.getGpHome(), gpEnv.getCoordinatorDataDir(),
+                                                    parallel=self.__parallelPerHost)
 
+    # FIXME: This function seems to be unused. Remove if not required.
     def __updateGpIdFile(self, gpEnv, gpArray, segments):
         segmentByHost = GpArray.getSegmentsByHostName(segments)
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(segments)
@@ -828,7 +843,7 @@ class GpMirrorListToBuild:
                                          gplog.get_logger_dir(),
                                          newSegments=False,
                                          verbose=gplog.logging_is_verbose(),
-                                         batchSize=self.__parallelDegree,
+                                         batchSize=self.__parallelPerHost,
                                          ctxt=gp.REMOTE,
                                          remoteHost=hostName,
                                          validationOnly=False,

@@ -2,7 +2,7 @@ platform: linux
 image_resource:
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
 inputs:
   - name: bin_gpdb
   - name: gpdb_src

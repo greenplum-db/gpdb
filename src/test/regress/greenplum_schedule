@@ -30,7 +30,7 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort
 test: spi_processed64bit
 test: gp_tablespace_with_faults
 # below test(s) inject faults so each of them need to be in a separate group
@@ -120,7 +120,7 @@ test: db_size_functions
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table external_table_create_privs external_table_persistent_error_log column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
+test: external_table external_table_union_all external_table_create_privs external_table_persistent_error_log column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
 test: alter_table_set alter_table_gp alter_table_ao subtransaction_visibility oid_consistency udf_exception_blocks
 # below test(s) inject faults so each of them need to be in a separate group
 test: aocs

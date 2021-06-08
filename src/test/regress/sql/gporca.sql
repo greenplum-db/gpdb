@@ -2979,6 +2979,7 @@ select enable_xform('CXformSelect2DynamicBitmapBoolOp');
 select enable_xform('CXformJoin2BitmapIndexGetApply');
 select enable_xform('CXformInnerJoin2NLJoin');
 -- end_ignore
+
 reset optimizer_enable_hashjoin;
 reset optimizer_trace_fallback;
 
@@ -3205,7 +3206,39 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
 create table no_part (a int, b int) partition by list (a) distributed by (b);
 select * from no_part;
 
+-- test casting with setops
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except all
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect all
+    select 2019::int)
+select * from v where year > 1;
+
 reset optimizer_trace_fallback;
+
+create table sqall_t1(a int) distributed by (a);
+insert into sqall_t1 values (1), (2), (3);
+set optimizer_join_order='query';
+select * from sqall_t1 where a not in (
+	    select b.a from sqall_t1 a left join sqall_t1 b on false);
+reset optimizer_join_order;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

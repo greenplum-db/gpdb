@@ -193,6 +193,12 @@ ClearOidAssignmentsOnCommit(void)
 	preserve_oids_on_commit = false;
 }
 
+extern void
+RestoreOidAssignments(List *oid_assignments)
+{
+	dispatch_oids = oid_assignments;
+}
+
 /* ----------------------------------------------------------------
  * Functions for use in QE.
  * ----------------------------------------------------------------
@@ -325,8 +331,8 @@ GetPreassignedOid(OidAssignment *searchkey)
  * memorize the OID for dispatch in the QD, and looks up the
  * pre-assigned OID in QE.
  *
- * When adding a function for a new catalog table, look at indexing.h to see what
- * the unique key columns for the table are.
+ * When adding a function for a new catalog table, look at indexing.h
+ * to see what the unique key columns for the table are.
  * ----------------------------------------------------------------
  */
 static Oid
@@ -350,9 +356,19 @@ GetNewOrPreassignedOid(Relation relation, Oid indexId, AttrNumber oidcolumn,
 		 */
 		if (oid == InvalidOid)
 		{
-			if (IsBinaryUpgrade)
+			if (IS_QUERY_DISPATCHER() && IsBinaryUpgrade && Gp_role == GP_ROLE_UTILITY)
+				/*
+				 * If it hits here on the QD, it must be (IsBinaryUpgrade &&
+				 * Gp_role == GP_ROLE_UTILITY) already, however, check those
+				 * too in case we have new GP roles in the future, and for
+				 * better code readability.
+				 */
 				oid = GetNewOidWithIndex(relation, indexId, oidcolumn);
 			else
+				/*
+				 * On QE, Greenplum requires a pre-assigned OID to keep QD and
+				 * QEs synchronized, whether in binary upgrade or not.
+				 */
 				elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
 					 RelationGetRelationName(relation), searchkey->objname ? searchkey->objname : "",
 					 searchkey->namespaceOid, searchkey->keyOid1, searchkey->keyOid2);

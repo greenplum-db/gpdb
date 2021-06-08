@@ -338,13 +338,17 @@ typedef struct
  *
  *  Greenplum CDB:
  *     Datum is always 8 bytes, regardless if it is 32bit or 64bit machine.
- *  so may be > sizeof(void *).
+ *  so may be > sizeof(void *). To align with postgres, which defines Datum as
+ *  uintptr_t type, it is defined as a uintptr_t to make sure the raw Datum
+ *  comparator work. GPDB's document requires a x86_64 environment where
+ *  uintptr_t is 64bits which doesn't violate the original 64bits definition.
+ *  Although it is unclear why did GPDB had that restriction at the beginning.
  *
  * The macros below and the analogous macros for other types should be used to
  * convert between a Datum and the appropriate C type.
  */
 
-typedef int64 Datum;
+typedef uintptr_t Datum;
 typedef union Datum_U
 {
 	Datum d;

@@ -233,6 +233,7 @@ set statement_mem="1MB";
 
 drop table if exists foo;
 create table foo (c int, d int);
+insert into foo values (1, 1);
 
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
@@ -248,7 +249,9 @@ select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
 
 -- Run the test without fault injection
 -- expect to see leak if we hit error
+-- start_ignore
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
+-- end_ignore
 
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;

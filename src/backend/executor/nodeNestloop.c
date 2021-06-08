@@ -700,13 +700,11 @@ splitJoinQualExpr(List *joinqual, List **inner_join_keys_p, List **outer_join_ke
 				}
 				break;
 
-			case T_DistinctExpr:
 			case T_Const:
-
 				/*
-				 * Distinct and constant expressions do not need to be
-				 * splitted into left and right as they don't need to be
-				 * considered for NULL value special cases
+				 * Constant expressions do not need to be splitted into left and
+				 * right as they don't need to be considered for NULL value special
+				 * cases
 				 */
 				break;
 

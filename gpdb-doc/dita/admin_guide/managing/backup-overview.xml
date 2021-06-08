@@ -34,14 +34,9 @@
         master. Additionally, it is often the case that the master host has insufficient disk space
         to save a backup of an entire distributed Greenplum database. </p>
       <p>The <codeph>pg_restore</codeph> utility requires compressed dump files created by
-          <codeph>pg_dump</codeph> or <codeph>pg_dumpall</codeph>. Before starting the restore, you
-        should modify the <codeph>CREATE TABLE</codeph> statements in the dump files to include the
-        Greenplum <codeph>DISTRIBUTED</codeph> clause. If you do not include the
-          <codeph>DISTRIBUTED</codeph> clause, Greenplum Database assigns default values, which may
-        not be optimal. For details, see <codeph>CREATE TABLE</codeph> in the <i>Greenplum Database
-          Reference Guide</i>.</p>
-      <p>To perform a non-parallel restore using parallel backup files, you can copy the backup
-        files from each segment host to the master host, and then load them through the master.</p>
+          <codeph>pg_dump</codeph> or <codeph>pg_dumpall</codeph>. To perform a non-parallel restore
+        using parallel backup files, you can copy the backup files from each segment host to the
+        master host, and then load them through the master.</p>
       <fig id="kk156418">
         <title>Non-parallel Restore Using Parallel Backup Files</title>
         <image href="../graphics/nonpar_restore.jpg" placement="break" width="390px"

@@ -121,16 +121,16 @@ matrix:
           addons:
             apt:
               packages:
-                - clang-format-10
+                - clang-format-11
                 - parallel
           before_install: ~
           install: ~
           before_script: ~
           after_script: ~
           script:
-            - env CLANG_FORMAT=clang-format-10 src/tools/fmt gen
+            - env CLANG_FORMAT=clang-format-11 src/tools/fmt gen
             - git diff --exit-code
-            - env CLANG_FORMAT=clang-format-10 src/tools/fmt chk
+            - env CLANG_FORMAT=clang-format-11 src/tools/fmt chk
 
 stages:
   - lint

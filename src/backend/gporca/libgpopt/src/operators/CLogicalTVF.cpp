@@ -39,7 +39,6 @@ CLogicalTVF::CLogicalTVF(CMemoryPool *mp)
 	  m_pdrgpcoldesc(nullptr),
 	  m_pdrgpcrOutput(nullptr),
 	  m_efs(IMDFunction::EfsImmutable),
-	  m_efda(IMDFunction::EfdaNoSQL),
 	  m_returns_set(true)
 {
 	m_fPattern = true;
@@ -76,7 +75,6 @@ CLogicalTVF::CLogicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 	const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
 
 	m_efs = pmdfunc->GetFuncStability();
-	m_efda = pmdfunc->GetFuncDataAccess();
 	m_returns_set = pmdfunc->ReturnsSet();
 }
 
@@ -109,7 +107,6 @@ CLogicalTVF::CLogicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 	const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
 
 	m_efs = pmdfunc->GetFuncStability();
-	m_efda = pmdfunc->GetFuncDataAccess();
 	m_returns_set = pmdfunc->ReturnsSet();
 }
 
@@ -243,7 +240,7 @@ CLogicalTVF::DeriveFunctionProperties(CMemoryPool *mp,
 									  CExpressionHandle &exprhdl) const
 {
 	BOOL fVolatileScan = (IMDFunction::EfsVolatile == m_efs);
-	return PfpDeriveFromChildren(mp, exprhdl, m_efs, m_efda, fVolatileScan,
+	return PfpDeriveFromChildren(mp, exprhdl, m_efs, fVolatileScan,
 								 true /*fScan*/);
 }
 

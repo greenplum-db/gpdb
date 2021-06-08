@@ -25,6 +25,11 @@
                       {'name': 'gprecoverseg',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 3'},
+                      {'name': 'gprecoverseg_newhost',
+                       'use_concourse_cluster': true,
+                       'additional_ccp_vars': 'number_of_nodes: 7',
+                       'reserve_spare_hosts': true,
+                       'sudo_access_on_hosts': true},
                       {'name': 'gpaddmirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
@@ -112,8 +117,8 @@ anchors:
         image_resource:
           type: registry-image
           source:
-            repository: pivotaldata/ccp
-            tag: "7"
+            repository: gcr.io/data-gpdb-public-images/ccp
+            tag: latest
         inputs:
           - name: ccp_src
           - name: terraform
@@ -135,8 +140,8 @@ anchors:
   image_resource:
     type: registry-image
     source:
-      repository: pivotaldata/ccp
-      tag: "7"
+      repository: gcr.io/data-gpdb-public-images/ccp
+      tag: latest
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
@@ -457,8 +462,8 @@ resources:
 - name: ccp-image
   type: registry-image
   source:
-    repository: pivotaldata/ccp
-    tag: '7'
+    repository: gcr.io/data-gpdb-public-images/ccp
+    tag: latest
 
 {% endif %}
 {% endif %}
@@ -484,7 +489,7 @@ resources:
 - name: gpdb7-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-build
     tag: latest
 
 {% endif %}
@@ -492,7 +497,7 @@ resources:
 - name: gpdb7-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
     tag: latest
 
 {% endif %}
@@ -501,13 +506,13 @@ resources:
 - name: gpdb7-ubuntu18.04-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-ubuntu18.04-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-ubuntu18.04-build
     tag: latest
 
 - name: gpdb7-ubuntu18.04-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-ubuntu18.04-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-ubuntu18.04-test
     tag: latest
 
 {% endif %}
@@ -719,6 +724,12 @@ jobs:
       trigger: true
     - task: check_format
       file: gpdb_src/concourse/tasks/check_format.yml
+    - task: clang_tidy
+      file: gpdb_src/concourse/tasks/clang_tidy.yml
+      {% if use_ICW_workers %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
+
 
 ## ======================================================================
 ##   ____                      _ _
@@ -1263,12 +1274,34 @@ jobs:
             file: ccp_src/ci/tasks/gen_cluster.yml
             params:
               <<: *ccp_gen_cluster_default_params
+          {% if test.reserve_spare_hosts %}
+          - get: alpine-docker
+          - task: reserve_spare_hosts
+            image: alpine-docker
+            config:
+              platform: linux
+              inputs:
+                - name: cluster_env_files
+              outputs:
+                - name: cluster_env_files
+              run:
+                path: sh
+                args:
+                  - -exc
+                  - |
+                    # modify the hostfile_init used by gpinitsystem to exclude the last two hosts, so they are spares
+                    cp cluster_env_files/hostfile_init cluster_env_files/hostfile_init_orig
+                    head -n -2 cluster_env_files/hostfile_init_orig > cluster_env_files/hostfile_init
+          {% endif %}
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
             image: ccp-image
             params:
+              {% if test.sudo_access_on_hosts %}
+              SUDO_ACCESS_ON_HOSTS: 1
+              {% endif %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               TEST_NAME: [[ test.name ]]
               [[ test.env ]]
@@ -1358,12 +1391,35 @@ jobs:
             params:
               <<: *ccp_gen_cluster_default_params
               PLATFORM: ubuntu18.04-gpdb7
+          {% if test.reserve_spare_hosts %}
+          - get: alpine-docker
+          - task: reserve_spare_hosts
+            image: alpine-docker
+            config:
+              platform: linux
+              inputs:
+                - name: cluster_env_files
+              outputs:
+                - name: cluster_env_files
+              run:
+                path: sh
+                args:
+                  - -exc
+                  - |
+                    # modify the hostfile_init used by gpinitsystem to exclude the last two hosts, so they are spares
+                    cp cluster_env_files/hostfile_init cluster_env_files/hostfile_init_orig
+                    head -n -2 cluster_env_files/hostfile_init_orig > cluster_env_files/hostfile_init
+          {% endif %}
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
             image: gpdb7-ubuntu18.04-test
             params:
+              {% if test.sudo_access_on_hosts %}
+              SUDO_ACCESS_ON_HOSTS: 1
+              SUDO_MDW_USERNAME: ubuntu
+              {% endif %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               [[ test.env ]]
             on_success:

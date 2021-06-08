@@ -295,7 +295,8 @@ class GpRecoverSegmentProgram:
 
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                    self.__options.parallelDegree, forceoverwrite=True,
-                                   progressMode=self.getProgressMode())
+                                   progressMode=self.getProgressMode(),
+                                   parallelPerHost=self.__options.parallelPerHost)
 
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
@@ -328,9 +329,6 @@ class GpRecoverSegmentProgram:
         recoverHostMap = {}
         interfaceHostnameWarnings = []
 
-        # Check if the array is a "standard" array
-        (isStandardArray, _ignore) = gpArray.isStandardArray()
-
         recoverHostIdx = 0
 
         if self.__options.newRecoverHosts and len(self.__options.newRecoverHosts) > 0:
@@ -348,22 +346,16 @@ class GpRecoverSegmentProgram:
                         raise Exception('Not enough new recovery hosts given for recovery.')
                     recoverHostIdx += 1
 
-                if isStandardArray:
-                    # We have a standard array configuration, so we'll try to use the same
-                    # interface naming convention.  If this doesn't work, we'll correct it
-                    # below during ping failure
-                    segInterface = segAddress[segAddress.rfind('-'):]
-                    destAddress = recoverHostMap[segHostname] + segInterface
-                    destHostname = recoverHostMap[segHostname]
-                else:
-                    # Non standard configuration so we won't make assumptions on
-                    # naming.  Instead we'll use the hostname passed in for both
-                    # hostname and address and flag for warning later.
-                    destAddress = recoverHostMap[segHostname]
-                    destHostname = recoverHostMap[segHostname]
+                destAddress = recoverHostMap[segHostname]
+                destHostname = recoverHostMap[segHostname]
 
                 # Save off the new host/address for this address.
                 recoverAddressMap[segAddress] = (destHostname, destAddress)
+
+            new_recovery_hosts = [destHostname for (destHostname, destAddress) in recoverAddressMap.values()]
+            unreachable_hosts = get_unreachable_segment_hosts(new_recovery_hosts, len(new_recovery_hosts))
+            if unreachable_hosts:
+                raise ExceptionNoStackTraceNeeded("Cannot recover. The recovery target host %s is unreachable." % (' '.join(map(str, unreachable_hosts))))
 
             for key in list(recoverAddressMap.keys()):
                 (newHostname, newAddress) = recoverAddressMap[key]
@@ -397,13 +389,18 @@ class GpRecoverSegmentProgram:
                 # these two lines make it so that failoverSegment points to the object that is registered in gparray
                 failoverSegment = failedSegment
                 failedSegment = failoverSegment.copy()
+                failoverSegment.unreachable = False  # recover to a new host; it is reachable as checked above.
                 failoverSegment.setSegmentHostName(newRecoverHost)
                 failoverSegment.setSegmentAddress(newRecoverAddress)
                 port = portAssigner.findAndReservePort(newRecoverHost, newRecoverAddress)
                 failoverSegment.setSegmentPort(port)
-
-            if failedSegment.unreachable:
-                continue
+            else:
+                # we are recovering to the same host("in place") and hence
+                # cannot recover if the failed segment is unreachable.
+                # This is equivalent to failoverSegment.unreachable that we should be doing here but
+                # due to how the code is factored failoverSegment is None here.
+                if failedSegment.unreachable:
+                    continue
 
             segs.append(GpMirrorToBuild(failedSegment, liveSegment, failoverSegment, forceFull))
 
@@ -413,7 +410,8 @@ class GpRecoverSegmentProgram:
                                    self.__options.parallelDegree,
                                    interfaceHostnameWarnings,
                                    forceoverwrite=True,
-                                   progressMode=self.getProgressMode())
+                                   progressMode=self.getProgressMode(),
+                                   parallelPerHost=self.__options.parallelPerHost)
 
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:
@@ -422,7 +420,7 @@ class GpRecoverSegmentProgram:
 
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
-            return GpSegmentRebalanceOperation(gpEnv, gpArray)
+            return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         elif self.__options.recoveryConfigFile is not None:
             return self.getRecoveryActionsFromConfigFile(gpArray)
         else:
@@ -538,7 +536,10 @@ class GpRecoverSegmentProgram:
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
             raise ProgramArgumentValidationException(
-                "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
+                "Invalid parallelDegree value provided with -B argument: %d" % self.__options.parallelDegree)
+        if self.__options.parallelPerHost < 1 or self.__options.parallelPerHost > 128:
+            raise ProgramArgumentValidationException(
+                "Invalid parallelPerHost value provided with -b argument: %d" % self.__options.parallelPerHost)
 
         self.__pool = WorkerPool(self.__options.parallelDegree)
         gpEnv = GpCoordinatorEnvironment(self.__options.coordinatorDataDirectory, True)
@@ -644,7 +645,8 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
-            config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
+            contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
+            config_primaries_for_replication(gpArray, self.__options.hba_hostnames, contentsToUpdate)
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 
@@ -673,7 +675,7 @@ class GpRecoverSegmentProgram:
             self.logger.info("No checksum validation necessary when there are no segments to recover.")
             return
 
-        heap_checksum = HeapChecksum(gpArray, num_workers=len(live_segments), logger=self.logger)
+        heap_checksum = HeapChecksum(gpArray, num_workers=min(self.__options.parallelDegree, len(live_segments)), logger=self.logger)
         successes, failures = heap_checksum.get_segments_checksum_settings(live_segments)
         # go forward if we have at least one segment that has replied
         if len(successes) == 0:
@@ -750,7 +752,14 @@ class GpRecoverSegmentProgram:
         addTo.add_option("-B", None, type="int", default=16,
                          dest="parallelDegree",
                          metavar="<parallelDegree>",
-                         help="Max # of workers to use for building recovery segments.  [default: %default]")
+                         help="Max number of hosts to operate on in parallel. Valid values are: 1-%d"
+                              % gp.MAX_SEGHOST_NUM_WORKERS)
+        addTo.add_option("-b", None, type="int", default=64,
+                         dest="parallelPerHost",
+                         metavar="<parallelPerHost>",
+                         help="Max number of segments per host to operate on in parallel. Valid values are: 1-%d"
+                              % gp.MAX_SEGHOST_NUM_WORKERS)
+
         addTo.add_option("-r", None, default=False, action='store_true',
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',

@@ -19,12 +19,12 @@ resources:
 - name: gpdb7-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-build
 
 - name: gpdb7-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb7-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
 
 - name: libquicklz-centos7
   type: gcs
@@ -123,3 +123,6 @@ jobs:
 
       - task: check_format
         file: gpdb_src/concourse/tasks/check_format.yml
+
+      - task: clang_tidy
+        file: gpdb_src/concourse/tasks/clang_tidy.yml

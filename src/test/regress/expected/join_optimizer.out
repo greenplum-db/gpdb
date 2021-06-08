@@ -3337,31 +3337,31 @@ where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
 ------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         ->  Hash Join
-               Hash Cond: ((11) = t1.unique2)
-               Join Filter: (t1.stringu1 > t2.stringu2)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Nested Loop
-                           Join Filter: (11 < 42)
-                           ->  Hash Join
-                                 Hash Cond: (t2.unique1 = (3))
-                                 ->  Seq Scan on tenk1 t2
-                                 ->  Hash
-                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                             Hash Key: (3)
-                                             ->  Seq Scan on onerow onerow_1
-                           ->  Materialize
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Seq Scan on int4_tbl i1
+                     Filter: (f1 = 0)
+         ->  Materialize
+               ->  Hash Join
+                     Hash Cond: ((11) = t1.unique2)
+                     Join Filter: (t1.stringu1 > t2.stringu2)
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Nested Loop
+                                 Join Filter: (11 < 42)
                                  ->  Broadcast Motion 3:3  (slice4; segments: 3)
                                        ->  Seq Scan on onerow
-               ->  Hash
-                     ->  Bitmap Heap Scan on tenk1 t1
-                           Recheck Cond: (unique2 < 42)
-                           ->  Bitmap Index Scan on tenk1_unique2
-                                 Index Cond: (unique2 < 42)
-         ->  Materialize
-               ->  Broadcast Motion 1:3  (slice5; segments: 1)
-                     ->  Seq Scan on int4_tbl i1
-                           Filter: (f1 = 0)
+                                 ->  Materialize
+                                       ->  Hash Join
+                                             Hash Cond: (t2.unique1 = (3))
+                                             ->  Seq Scan on tenk1 t2
+                                             ->  Hash
+                                                   ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                                         Hash Key: (3)
+                                                         ->  Seq Scan on onerow onerow_1
+                     ->  Hash
+                           ->  Bitmap Heap Scan on tenk1 t1
+                                 Recheck Cond: (unique2 < 42)
+                                 ->  Bitmap Index Scan on tenk1_unique2
+                                       Index Cond: (unique2 < 42)
  Optimizer: Postgres query optimizer
 (28 rows)
 
@@ -5770,49 +5770,49 @@ select c.*,a.*,ss1.q1,ss2.q1,ss3.* from
    ->  Nested Loop
          Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, i.f1
          Join Filter: ((COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)) > i.f1)
-         ->  Hash Right Join
-               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
-               Hash Cond: (d.q1 = c.q2)
-               ->  Nested Loop
-                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
-                           ->  Hash Right Join
-                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
-                                 Hash Cond: (b.q1 = a.q2)
-                                 ->  Nested Loop
-                                       Output: b.q1, COALESCE(b.q2, (b2.f1)::bigint)
-                                       Join Filter: (b.q1 < b2.f1)
-                                       ->  Seq Scan on public.int8_tbl b
-                                             Output: b.q1, b.q2
-                                       ->  Materialize
-                                             Output: b2.f1
-                                             ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                                   Output: b2.f1
-                                                   ->  Seq Scan on public.int4_tbl b2
-                                                         Output: b2.f1
-                                 ->  Hash
-                                       Output: a.q1, a.q2
-                                       ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                                             Output: a.q1, a.q2
-                                             Hash Key: a.q2
-                                             ->  Seq Scan on public.int8_tbl a
-                                                   Output: a.q1, a.q2
-                     ->  Seq Scan on public.int8_tbl d
-                           Output: d.q1, COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)
-               ->  Hash
-                     Output: c.q1, c.q2
-                     ->  Redistribute Motion 3:3  (slice5; segments: 3)
-                           Output: c.q1, c.q2
-                           Hash Key: c.q2
-                           ->  Seq Scan on public.int8_tbl c
-                                 Output: c.q1, c.q2
-         ->  Materialize
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
                Output: i.f1
-               ->  Broadcast Motion 3:3  (slice6; segments: 3)
+               ->  Seq Scan on public.int4_tbl i
                      Output: i.f1
-                     ->  Seq Scan on public.int4_tbl i
-                           Output: i.f1
+         ->  Materialize
+               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+               ->  Hash Right Join
+                     Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+                     Hash Cond: (d.q1 = c.q2)
+                     ->  Nested Loop
+                           Output: a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
+                                 ->  Hash Right Join
+                                       Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
+                                       Hash Cond: (b.q1 = a.q2)
+                                       ->  Nested Loop
+                                             Output: b.q1, COALESCE(b.q2, (b2.f1)::bigint)
+                                             Join Filter: (b.q1 < b2.f1)
+                                             ->  Seq Scan on public.int8_tbl b
+                                                   Output: b.q1, b.q2
+                                             ->  Materialize
+                                                   Output: b2.f1
+                                                   ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                         Output: b2.f1
+                                                         ->  Seq Scan on public.int4_tbl b2
+                                                               Output: b2.f1
+                                       ->  Hash
+                                             Output: a.q1, a.q2
+                                             ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                                   Output: a.q1, a.q2
+                                                   Hash Key: a.q2
+                                                   ->  Seq Scan on public.int8_tbl a
+                                                         Output: a.q1, a.q2
+                           ->  Seq Scan on public.int8_tbl d
+                                 Output: d.q1, COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)
+                     ->  Hash
+                           Output: c.q1, c.q2
+                           ->  Redistribute Motion 3:3  (slice6; segments: 3)
+                                 Output: c.q1, c.q2
+                                 Hash Key: c.q2
+                                 ->  Seq Scan on public.int8_tbl c
+                                       Output: c.q1, c.q2
  Optimizer: Postgres query optimizer
 (49 rows)
 

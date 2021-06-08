@@ -778,8 +778,8 @@ Distributed by: (sale_id)
         <p>Greenplum Database provides a utility called <codeph>gplogfilter</codeph> can search
           through a Greenplum Database log file for entries matching the specified criteria. By
           default, this utility searches through the Greenplum Database master log file in the
-          default logging location. For example, to display the last three lines of the master log
-          file:</p>
+          default logging location. For example, to display the last three lines of each of the log
+          files under the master directory:</p>
         <p>
           <codeblock>$ gplogfilter -n 3
 </codeblock>

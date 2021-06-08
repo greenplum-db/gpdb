@@ -1312,3 +1312,6 @@ drop table agg_hash_1;
 --  drop table agg_hash_2;
 drop table agg_hash_3;
 drop table agg_hash_4;
+
+-- fix github issue #12061 numsegments of general locus is not -1 on create_minmaxagg_path
+explain analyze select count(*) from pg_class,  (select count(*) >0 from  (select count(*) from pg_class where relname like 't%')x)y;

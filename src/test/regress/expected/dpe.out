@@ -571,26 +571,24 @@ set enable_hashjoin=off;
 set enable_nestloop=on;
 set enable_mergejoin=off;
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Nested Loop (actual rows=8 loops=1)
          Join Filter: (t.tid = pt_1_prt_2.ptid)
-         Rows Removed by Join Filter: 8
-         ->  Append (actual rows=8 loops=1)
-               Partition Selectors: $0
-               ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
-               ->  Seq Scan on pt_1_prt_3 (actual rows=3 loops=1)
-               ->  Seq Scan on pt_1_prt_4 (never executed)
-               ->  Seq Scan on pt_1_prt_5 (never executed)
-               ->  Seq Scan on pt_1_prt_6 (never executed)
-               ->  Seq Scan on pt_1_prt_junk_data (never executed)
-         ->  Materialize (actual rows=2 loops=9)
-               ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
-                           ->  Seq Scan on t (actual rows=2 loops=1)
+         Rows Removed by Join Filter: 30
+         ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
+               ->  Seq Scan on t (actual rows=2 loops=1)
+         ->  Materialize (actual rows=20 loops=2)
+               ->  Append (actual rows=20 loops=1)
+                     ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
+                     ->  Seq Scan on pt_1_prt_3 (actual rows=3 loops=1)
+                     ->  Seq Scan on pt_1_prt_4 (actual rows=5 loops=1)
+                     ->  Seq Scan on pt_1_prt_5 (actual rows=5 loops=1)
+                     ->  Seq Scan on pt_1_prt_6 (actual rows=4 loops=1)
+                     ->  Seq Scan on pt_1_prt_junk_data (actual rows=3 loops=1)
  Optimizer: Postgres query optimizer
-(17 rows)
+(15 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 

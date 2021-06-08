@@ -248,18 +248,18 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
 -- This should also be a nestloop, but the security barrier forces the inner
 -- scan to be materialized
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         Join Filter: (atest12.a = atest12_1.b)
-         ->  Seq Scan on atest12
-               Filter: (b <<< 5)
+         Join Filter: (atest12_1.a = atest12.b)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: atest12.b
+               ->  Seq Scan on atest12
+                     Filter: (b <<< 5)
          ->  Materialize
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: atest12_1.b
-                     ->  Seq Scan on atest12 atest12_1
-                           Filter: (b <<< 5)
+               ->  Seq Scan on atest12 atest12_1
+                     Filter: (b <<< 5)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -291,18 +291,18 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
 (10 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         Join Filter: (atest12.a = atest12_1.b)
-         ->  Seq Scan on atest12
-               Filter: (b <<< 5)
+         Join Filter: (atest12_1.a = atest12.b)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: atest12.b
+               ->  Seq Scan on atest12
+                     Filter: (b <<< 5)
          ->  Materialize
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: atest12_1.b
-                     ->  Seq Scan on atest12 atest12_1
-                           Filter: (b <<< 5)
+               ->  Seq Scan on atest12 atest12_1
+                     Filter: (b <<< 5)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -326,20 +326,20 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y
 -- But a security barrier view isolates the leaky operator.
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y
   WHERE x.a = y.b and abs(y.a) <<< 5;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         Join Filter: (atest12.a = y.b)
-         ->  Seq Scan on atest12
-               Filter: (b <<< 5)
+         Join Filter: (atest12_1.a = y.b)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: y.b
+               ->  Subquery Scan on y
+                     Filter: (abs(y.a) <<< 5)
+                     ->  Seq Scan on atest12
+                           Filter: (b <<< 5)
          ->  Materialize
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: y.b
-                     ->  Subquery Scan on y
-                           Filter: (abs(y.a) <<< 5)
-                           ->  Seq Scan on atest12 atest12_1
-                                 Filter: (b <<< 5)
+               ->  Seq Scan on atest12 atest12_1
+                     Filter: (b <<< 5)
  Optimizer: Postgres query optimizer
 (13 rows)
 

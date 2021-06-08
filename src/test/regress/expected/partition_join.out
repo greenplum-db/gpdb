@@ -341,20 +341,20 @@ SELECT t1.* FROM prt1 t1 WHERE t1.a IN (SELECT t2.b FROM prt2 t2 WHERE t2.a = 0)
    ->  Sort
          Sort Key: t1.a
          ->  Append
-               ->  Nested Loop Semi Join
-                     Join Filter: (t1.a = t2.b)
+               ->  Hash Semi Join
+                     Hash Cond: (t1.a = t2.b)
                      ->  Seq Scan on prt1_p1 t1
                            Filter: (b = 0)
-                     ->  Materialize
+                     ->  Hash
                            ->  Redistribute Motion 1:3  (slice2; segments: 1)
                                  Hash Key: t2.b
                                  ->  Seq Scan on prt2_p1 t2
                                        Filter: (a = 0)
-               ->  Nested Loop Semi Join
-                     Join Filter: (t1_1.a = t2_1.b)
+               ->  Hash Semi Join
+                     Hash Cond: (t1_1.a = t2_1.b)
                      ->  Seq Scan on prt1_p2 t1_1
                            Filter: (b = 0)
-                     ->  Materialize
+                     ->  Hash
                            ->  Redistribute Motion 1:3  (slice3; segments: 1)
                                  Hash Key: t2_1.b
                                  ->  Seq Scan on prt2_p2 t2_1

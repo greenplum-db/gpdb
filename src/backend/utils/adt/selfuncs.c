@@ -5952,15 +5952,6 @@ btcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	double		num_sa_scans;
 	ListCell   *lc;
 
-    /*
-     * CDB: Tell caller how many leading indexcols are matched by '=' quals.
-     *
-     * CDB TODO: The num_leading_eq field doesn't really belong in IndexOptInfo.
-     * It's just a kludgy way to return an extra result parameter, because we
-     * don't have access here to the IndexPath node where this info should go.
-     */
-    index->num_leading_eq = 0;
-
 	/*
 	 * For a btree scan, only leading '=' quals plus inequality quals for the
 	 * immediately next attribute contribute to index selectivity (these are
@@ -6041,9 +6032,6 @@ btcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 					found_is_null_op = true;
 					/* IS NULL is like = for selectivity purposes */
 					eqQualHere = true;
-
-					/* CDB: Count leading indexcols having '=' quals. */
-					index->num_leading_eq = indexcol + 1;
 				}
 			}
 			else
@@ -6057,13 +6045,7 @@ btcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 													   index->opfamily[indexcol]);
 				Assert(op_strategy != 0);	/* not a member of opfamily?? */
 				if (op_strategy == BTEqualStrategyNumber)
-				{
 					eqQualHere = true;
-
-					/* CDB: Count leading indexcols having '=' quals. */
-					if (!IsA(clause, ScalarArrayOpExpr))
-						index->num_leading_eq = indexcol + 1;
-				}
 			}
 
 			indexBoundQuals = lappend(indexBoundQuals, rinfo);
@@ -6077,7 +6059,7 @@ btcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	 * NullTest invalidates that theory, even though it sets eqQualHere.
 	 */
 	if (index->unique &&
-		index->num_leading_eq == index->nkeycolumns &&
+		indexcol == index->nkeycolumns - 1 &&
 		eqQualHere &&
 		!found_saop &&
 		!found_is_null_op)

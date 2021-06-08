@@ -207,7 +207,7 @@ sdw5|sdw5-1|60012|/gpdata/mirror/gp10|14|10|m</codeblock>
               example:<codeblock>$ gpexpand -i input_file</codeblock><p>The utility detects if an
               expansion schema exists for the Greenplum Database system. If a
                 <i>gpexpand</i> schema exists, remove it with <codeph>gpexpand -c</codeph>
-              before you start a new expansion operation. See <xref href="expand-rm-schema.xml"
+                before you start a new expansion operation. See <xref href="expand-post.xml#topic_xvp_5p2_hpb"
                 type="topic" format="dita"/>.</p><p>When the new segments are initialized and the
               expansion schema is created, the utility prints a success message and exits. </p></li>
         </ol>

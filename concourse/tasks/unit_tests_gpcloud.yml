@@ -2,10 +2,8 @@ platform: linux
 image_resource:
   type: registry-image
   source:
-    repository: pivotaldata/centos7-test
-    tag: gpdb7-latest
-    username:
-    password:
+    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
+    tag: latest
 inputs:
   - name: gpdb_src
 run:

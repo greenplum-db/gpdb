@@ -301,6 +301,8 @@ Pv2MikPS2fKOAg1R3LpMa8zDEtl4w3vckPQNrQNnYuUtfj6ZoCxv
 =XZ8J
 -----END PGP PUBLIC KEY BLOCK-----
 </codeblock></li>
+        <li>Enable the <codeph>pgcrypto</codeph>
+          extension:<codeblock>CREATE EXTENSION pgcrypto;</codeblock></li>
         <li>Create a table called <codeph>userssn</codeph> and insert some sensitive data, social
           security numbers for Bob and Alice, in this example. Paste the public.key contents after
           "dearmor(".

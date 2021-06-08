@@ -578,7 +578,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Force quoting of all identifiers if requested. */
-	if (quote_all_identifiers && server_version >= 90100)
+	if (quote_all_identifiers && server_version >= 80300)
 		executeCommand(conn, "SET quote_all_identifiers = true");
 
 	fprintf(OPF,"--\n-- Greenplum Database cluster dump\n--\n\n");

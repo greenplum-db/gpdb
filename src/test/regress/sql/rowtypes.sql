@@ -268,8 +268,6 @@ select row(1, -3)::testtype1 *> row(1, -2)::testtype1;
 
 -- This returns the "wrong" order because record_image_cmp works on
 -- unsigned datums without knowing about the actual data type.
--- In GPDB, Datum is signed, so this produces different result than
--- on upstream.
 select row(1, -2)::testtype1 *< row(1, 3)::testtype1;
 
 -- other types

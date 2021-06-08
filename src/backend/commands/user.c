@@ -619,23 +619,10 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 	 * pg_largeobject_metadata contains pg_authid.oid's, so we use the
 	 * binary-upgrade override.
 	 *
-	 * GPDB_12_MERGE_FIXME: GetNewOidForAuthId() will return the pre-assigned
-	 * OID, if any, but should we do something special here to check and error out
-	 * if there was no pre-assigned values in binary upgrade mode.
+	 * GetNewOidForAuthId() / GetNewOrPreassignedOid() will return the
+	 * pre-assigned OID, if any, and error out if there was no pre-assigned
+	 * values in binary upgrade mode.
 	 */
-#if 0
-	if (IsBinaryUpgrade)
-	{
-		if (!OidIsValid(binary_upgrade_next_pg_authid_oid))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("pg_authid OID value not set when in binary upgrade mode")));
-
-		roleid = binary_upgrade_next_pg_authid_oid;
-		binary_upgrade_next_pg_authid_oid = InvalidOid;
-	}
-	else
-#endif
 	{
 		roleid = GetNewOidForAuthId(pg_authid_rel, AuthIdOidIndexId,
 									Anum_pg_authid_oid,
@@ -1105,8 +1092,31 @@ AlterRole(AlterRoleStmt *stmt)
 	 */
 	if (issuper >= 0)
 	{
+		bool isNull;
+		Oid roleResgroup;
+
 		new_record[Anum_pg_authid_rolsuper - 1] = BoolGetDatum(issuper > 0);
 		new_record_repl[Anum_pg_authid_rolsuper - 1] = true;
+
+		roleResgroup = heap_getattr(tuple, Anum_pg_authid_rolresgroup,
+								   pg_authid_dsc, &isNull);
+		if (!isNull)
+		{
+			/*
+			 * change the default resource group accordingly: admin_group
+			 * for superuser and default_group for non-superuser
+			 */
+			if (issuper == 0 && roleResgroup == ADMINRESGROUP_OID)
+			{
+				new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(DEFAULTRESGROUP_OID);
+				new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
+			}
+			else if (issuper > 0 && roleResgroup == DEFAULTRESGROUP_OID)
+			{
+				new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(ADMINRESGROUP_OID);
+				new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
+			}
+		}
 
 		/* get current superuser status */
 		bWas_super = (issuper > 0);

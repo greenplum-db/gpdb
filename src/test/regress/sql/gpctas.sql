@@ -160,3 +160,42 @@ drop table t1_github_issue_10760;
 drop table t2_github_issue_10760;
 
 reset optimizer;
+
+-- CTAS with no data will not lead to catalog inconsistent
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/11999
+create or replace function mv_action_select_issue_11999() returns bool language sql as
+'declare c cursor for select 1/0; select true';
+
+create materialized view sro_mv_issue_11999 as select mv_action_select_issue_11999() with no data;
+create table t_sro_mv_issue_11999 as select mv_action_select_issue_11999() with no data;
+
+select count(*)
+from
+(
+  select localoid, policytype, numsegments, distkey
+  from gp_distribution_policy
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+  union all
+  select localoid, policytype, numsegments, distkey
+  from gp_dist_random('gp_distribution_policy')
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+)x;
+
+select count(distinct (localoid, policytype, numsegments, distkey))
+from
+(
+  select localoid, policytype, numsegments, distkey
+  from gp_distribution_policy
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+  union all
+  select localoid, policytype, numsegments, distkey
+  from gp_dist_random('gp_distribution_policy')
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+)x;
+
+-- then refresh should error out
+refresh materialized view sro_mv_issue_11999;

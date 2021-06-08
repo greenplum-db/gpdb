@@ -5210,7 +5210,9 @@ HandleCopyError(CopyState cstate)
 		 * ErrorIfRejectLimit() below will use this information in the error message,
 		 * if the error count is reached.
 		 */
-		cdbsreh->rawdata = cstate->line_buf.data;
+		cdbsreh->rawdata->cursor = 0;
+		cdbsreh->rawdata->data = cstate->line_buf.data;
+		cdbsreh->rawdata->len = cstate->line_buf.len;
 
 		cdbsreh->is_server_enc = cstate->line_buf_converted;
 		cdbsreh->linenumber = cstate->cur_lineno;
@@ -5827,7 +5829,9 @@ HandleQDErrorFrame(CopyState cstate, char *p, int len)
 	line[errframe.line_len] = '\0';
 
 	cdbsreh->linenumber = errframe.lineno;
-	cdbsreh->rawdata = line;
+	cdbsreh->rawdata->cursor = 0;
+	cdbsreh->rawdata->data = line;
+	cdbsreh->rawdata->len = strlen(line);
 	cdbsreh->errmsg = errormsg;
 	cdbsreh->is_server_enc = errframe.line_buf_converted;
 

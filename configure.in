@@ -2758,6 +2758,7 @@ AC_SUBST(BLD_ARCH)
 GP_VERSION_LONG=`bash ./getversion`
 
 GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
+AC_SUBST(GP_VERSION_LONG)
 
 echo $GP_VERSION_LONG > VERSION
 GP_VERSION=`cat VERSION`
@@ -2765,12 +2766,6 @@ GP_VERSION=`cat VERSION`
 GP_VERSION_SHORT=`bash ./getversion --short`
 GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
 AC_SUBST(GP_VERSION_SHORT)
-
-GP_VERSION_IN="src/include/catalog/gp_version_at_initdb.in"
-GP_VERSION_DAT="src/include/catalog/gp_version_at_initdb.dat"
-if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_DAT
-fi
 
 GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
 GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
@@ -2865,6 +2860,8 @@ AC_SUBST(vpath_build)
 
 
 AC_CONFIG_FILES([GNUmakefile src/Makefile.global])
+
+AC_CONFIG_FILES([src/include/catalog/gp_version_at_initdb.dat])
 
 AC_CONFIG_LINKS([
   src/backend/port/pg_sema.c:${SEMA_IMPLEMENTATION}

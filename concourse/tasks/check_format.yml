@@ -3,7 +3,7 @@ image_resource:
   type: registry-image
   source:
     repository: gcr.io/data-orca/clang-toolchain
-    tag: 0.1
+    tag: 0.2
 
 inputs:
   - name: gpdb_src
@@ -12,4 +12,4 @@ run:
   path: src/tools/fmt
   args: [ chk ]
 params:
-  CLANG_FORMAT: clang-format-10
+  CLANG_FORMAT: clang-format-11

@@ -1,6 +1,5 @@
-The Greenplum pg_upgrade code is based on pg_upgrade from 9.3 and has
-been extended to work with Greenplum. This README is intended to document the
-changes that have been done.
+The Greenplum pg_upgrade code has been extended to work with Greenplum. This
+README is intended to document the changes that have been done.
 
 Operation of pg_upgrade remains unchanged as are the available command line
 parameters. Upgrading a Greenplum cluster with pg_upgrade is done by first
@@ -15,7 +14,7 @@ so the upgrade must maintain this invariant.  Further, the upgrade must do as
 much as it can in parallel to ensure the cluster is upgraded with as little
 downtime as possible.  To satisfy both requirements, the upgrade process is
 split between QD and QE.  The QD is first upgraded, and the schema dumped and
-restored.  The new datadirectory created as part of the upgrade is transferred
+restored.  The new data directory created as part of the upgrade is transferred
 to all QEs, with the local QE configuration retained.  The QE upgrade can then
 skip the schema dump/reload part and only transfer the files.
 

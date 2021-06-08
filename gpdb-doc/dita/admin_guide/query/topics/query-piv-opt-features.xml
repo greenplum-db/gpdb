@@ -59,7 +59,12 @@
       <p>This example <cmdname>CREATE TABLE</cmdname> command creates a range partitioned table.</p>
       <codeblock>CREATE TABLE sales(order_id int, item_id int, amount numeric(15,2), 
       date date, yr_qtr int)
-   <b>range partitioned by yr_qtr</b>;</codeblock>
+   PARTITION BY RANGE (yr_qtr) (start (201501) INCLUSIVE end (201504) INCLUSIVE, 
+   start (201601) INCLUSIVE end (201604) INCLUSIVE,
+   start (201701) INCLUSIVE end (201704) INCLUSIVE,     
+   start (201801) INCLUSIVE end (201804) INCLUSIVE,
+   start (201901) INCLUSIVE end (201904) INCLUSIVE,
+   start (202001) INCLUSIVE end (202004) INCLUSIVE);</codeblock>
       <p>GPORCA improves on these types of queries against partitioned tables:</p>
       <ul id="ul_jdl_zwd_gr">
         <li>Full table scan. Partitions are not enumerated in

@@ -408,19 +408,10 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		/*
 		 * If this is CREATE TABLE AS ... WITH NO DATA, there's no need
 		 * need to actually execute the plan.
-		 *
-		 * GPDB_12_MERGE_FIXME: it would be nice to apply this optimization to
-		 * materialized views as well but then QEs cannot tell the difference
-		 * between CTAS and materialized view when CreateStmt is dispatched to
-		 * QEs (see createas.c).  QEs must populate rules for materialized
-		 * views, which doesn't happen if this optimization is applied as is.
 		 */
 		if (queryDesc->plannedstmt->intoClause &&
-			queryDesc->plannedstmt->intoClause->skipData &&
-			queryDesc->plannedstmt->intoClause->viewQuery == NULL)
-		{
+			queryDesc->plannedstmt->intoClause->skipData)
 			shouldDispatch = false;
-		}
 	}
 	else if (Gp_role == GP_ROLE_EXECUTE)
 	{

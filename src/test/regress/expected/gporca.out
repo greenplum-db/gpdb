@@ -12352,7 +12352,7 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.05..10000000003.21 rows=3 width=8)
+ Nested Loop Semi Join  (cost=10000000001.05..10000000003.20 rows=3 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
    ->  Materialize  (cost=1.05..2.17 rows=1 width=4)
@@ -12448,7 +12448,7 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.05..10000000003.21 rows=3 width=8)
+ Nested Loop Semi Join  (cost=10000000001.05..10000000003.20 rows=3 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
    ->  Materialize  (cost=1.05..2.17 rows=1 width=4)
@@ -13231,6 +13231,7 @@ select enable_xform('CXformInnerJoin2NLJoin');
 -----------------------------------
  CXformInnerJoin2NLJoin is enabled
 (1 row)
+
 -- end_ignore
 reset optimizer_enable_hashjoin;
 reset optimizer_trace_fallback;
@@ -13599,4 +13600,59 @@ select * from no_part;
 ---+---
 (0 rows)
 
+-- test casting with setops
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except
+    select 2019::int)
+select * from v where year > 1;
+ year 
+------
+ 2018
+ 2020
+(2 rows)
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except all
+    select 2019::int)
+select * from v where year > 1;
+ year 
+------
+ 2019
+ 2018
+ 2020
+ 2020
+(4 rows)
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect
+    select 2019::int)
+select * from v where year > 1;
+ year 
+------
+ 2019
+(1 row)
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect all
+    select 2019::int)
+select * from v where year > 1;
+ year 
+------
+ 2019
+(1 row)
+
 reset optimizer_trace_fallback;
+create table sqall_t1(a int) distributed by (a);
+insert into sqall_t1 values (1), (2), (3);
+set optimizer_join_order='query';
+select * from sqall_t1 where a not in (
+	    select b.a from sqall_t1 a left join sqall_t1 b on false);
+ a 
+---
+(0 rows)
+
+reset optimizer_join_order;

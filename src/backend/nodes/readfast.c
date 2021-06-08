@@ -745,6 +745,8 @@ _readCreateStmt_common(CreateStmt *local_node)
 	READ_BOOL_FIELD(buildAoBlkdir);
 	READ_NODE_FIELD(attr_encodings);
 	READ_BOOL_FIELD(isCtas);
+	READ_NODE_FIELD(intoQuery);
+	READ_NODE_FIELD(intoPolicy);
 
 	READ_NODE_FIELD(part_idx_oids);
 	READ_NODE_FIELD(part_idx_names);
