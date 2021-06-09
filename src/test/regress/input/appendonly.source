@@ -50,6 +50,10 @@ CREATE TABLE tenk_ao14 (like tenk_heap) with (appendonly=true, appendoptimized=f
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
 
+CREATE TABLE t_ao_alias_31345(i integer) distributed randomly partition by range(i) (
+partition p100 start (1::integer) inclusive end (100::integer) inclusive  with (appendoptimized=true)  ,
+partition p101 start (101::integer) inclusive end (200::integer) inclusive);
+
 -- also make sure appendoptimized works in the gp_default_storage_options GUC
 SET gp_default_storage_options = 'appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
 SET gp_default_storage_options = 'appendoptimized=true,blocksize=32768,compresstype=none,checksum=true,orientation=row';

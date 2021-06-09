@@ -70,6 +70,11 @@ CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
 ERROR:  invalid value for option "appendonly"
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
 ERROR:  parameter "appendonly" specified more than once
+CREATE TABLE t_ao_alias_31345(i integer) distributed randomly partition by range(i) (
+partition p100 start (1::integer) inclusive end (100::integer) inclusive  with (appendoptimized=true)  ,
+partition p101 start (101::integer) inclusive end (200::integer) inclusive);
+NOTICE:  CREATE TABLE will create partition "t_ao_alias_31345_1_prt_p100" for table "t_ao_alias_31345"
+NOTICE:  CREATE TABLE will create partition "t_ao_alias_31345_1_prt_p101" for table "t_ao_alias_31345"
 -- also make sure appendoptimized works in the gp_default_storage_options GUC
 SET gp_default_storage_options = 'appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
 ERROR:  parameter "appendonly" specified more than once
