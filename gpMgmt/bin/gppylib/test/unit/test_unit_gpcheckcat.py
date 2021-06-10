@@ -306,6 +306,87 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertIn('Relation schema: N/A', log_messages)
         self.assertIn('Relation name: N/A', log_messages)
 
+    @patch('gpcheckcat.GPCatalog', return_value=Mock())
+    @patch('sys.exit')
+    @patch('gpcheckcat.runAllChecks', return_value=Mock())
+    @patch('gpcheckcat.getversion', return_value="5.0")
+    def test_skip_one_test(self, mock_ver, mock_run, mock1, mock2):
+        primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
+        for i in range(1, 50):
+            primaries.append(dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=1, dbid=i, isprimary='t'))
+        self.db_connection.query.return_value.dictresult.return_value = primaries
+        self.subject.all_checks = {'test1': 'a', 'test2': 'b', 'test3': 'c'}
+
+        testargs = ['gpcheckcat', '-port 1', '-s test2']
+        with patch.object(sys, 'argv', testargs):
+            self.subject.main()
+        mock_run.assert_has_calls(call(['test1', 'test3']))
+
+    @patch('gpcheckcat.GPCatalog', return_value=Mock())
+    @patch('sys.exit')
+    @patch('gpcheckcat.runAllChecks', return_value=Mock())
+    @patch('gpcheckcat.getversion', return_value="5.0")
+    def test_skip_multiple_test(self, mock_ver, mock_run, mock1, mock2):
+        primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
+        for i in range(1, 50):
+            primaries.append(dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=1, dbid=i, isprimary='t'))
+        self.db_connection.query.return_value.dictresult.return_value = primaries
+        self.subject.all_checks = {'test1': 'a', 'test2': 'b', 'test3': 'c'}
+
+        testargs = ['gpcheckcat', '-port 1', '-s', "test1, test2"]
+        with patch.object(sys, 'argv', testargs):
+            self.subject.main()
+        mock_run.assert_has_calls(call(['test3']))
+
+    @patch('gpcheckcat.GPCatalog', return_value=Mock())
+    @patch('sys.exit')
+    @patch('gpcheckcat.runAllChecks', return_value=Mock())
+    @patch('gpcheckcat.getversion', return_value="5.0")
+    def test_skip_test_warning(self, mock_ver, mock_run, mock1, mock2):
+        primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
+        for i in range(1, 50):
+            primaries.append(dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=1, dbid=i, isprimary='t'))
+        self.db_connection.query.return_value.dictresult.return_value = primaries
+        self.subject.all_checks = {'test1': 'a', 'test2': 'b', 'test3': 'c'}
+
+        testargs = ['gpcheckcat', '-port 1', '-s', "test_invalid, test2"]
+        with patch.object(sys, 'argv', testargs):
+            self.subject.main()
+        mock_run.assert_has_calls(call(['test1', 'test3']))
+        expected_message = "'test_invalid' is not a valid test"
+        log_messages = [args[0][1] for args in self.subject.logger.log.call_args_list]
+        self.assertIn(expected_message, log_messages)
+
+    @patch('gpcheckcat.GPCatalog', return_value=Mock())
+    @patch('sys.exit')
+    @patch('gpcheckcat.runAllChecks', return_value=Mock())
+    @patch('gpcheckcat.getversion', return_value="5.0")
+    def test_run_multiple_test(self, mock_ver, mock_run, mock1, mock2):
+        primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
+        for i in range(1, 50):
+            primaries.append(dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=1, dbid=i, isprimary='t'))
+        self.db_connection.query.return_value.dictresult.return_value = primaries
+        self.subject.all_checks = {'test1': 'a', 'test2': 'b', 'test3': 'c'}
+
+        testargs = ['gpcheckcat', '-port 1', '-R', "test1, test2"]
+        with patch.object(sys, 'argv', testargs):
+            self.subject.main()
+        calls_to_check = [call(['test1', 'test2'])]
+        mock_run.assert_has_calls(calls_to_check)
+
+    @patch('sys.exit')
+    @patch('gpcheckcat.getversion', return_value="5.0")
+    def test_check_test_subset_parameter_count_fail(self, mock_ver, mock_exit):
+        GV = Global()
+        GV.opt['-R'] = 'test1'
+        GV.opt['-s'] = 'test2'
+        GV.opt['-C'] = None
+        GV.retcode = None
+        self.subject.GV = GV
+
+        self.subject.check_test_subset_parameter_count()
+        self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
+
     ####################### PRIVATE METHODS #######################
 
     def _run_batch_size_experiment(self, num_primaries):
@@ -330,6 +411,9 @@ class GpCheckCatTestCase(GpTestCase):
                 self.num_batches += 1
                 self.num_joins = 0
                 self.num_starts = 0
+class Global():
+    def __init__(self):
+        self.opt = {}
 
 if __name__ == '__main__':
     run_tests()
