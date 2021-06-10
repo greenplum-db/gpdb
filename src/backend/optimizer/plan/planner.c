@@ -7319,14 +7319,19 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			{
 				Path	   *path = (Path *) lfirst(lc);
 				double		dNumGroups;
-				bool		is_sorted = false;
+				bool		is_sorted = true;
 
-				if (pathkeys_contained_in(root->group_pathkeys, path->pathkeys))
+				/*
+				 * Insert a Sort node, if required.  But there's no point in
+				 * sorting anything but the cheapest path.
+				 */
+				if (!pathkeys_contained_in(root->group_pathkeys, path->pathkeys))
 				{
 					if (path != partially_grouped_rel->cheapest_total_path)
 						continue;
-					is_sorted = true;
+					is_sorted = false;
 				}
+
 				path = cdb_prepare_path_for_sorted_agg(root,
 													   is_sorted,
 													   grouped_rel,
