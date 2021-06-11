@@ -1,0 +1,62 @@
+-- When we eval a RECORD for the projection, we'll use the slot's type ID info.
+-- It's likely that the slot's type is also RECORD; if so, make sure it's been
+-- "blessed" (assign_record_type_typmod), so that the Datum can be interpreted
+-- later. Because some plan trees may return different slots at different times,
+-- we should make sure we do for all of them. See assign_record_type_typmod in
+-- ExecEvalWholeRowFast for more details.
+
+1: create table t_a (id int, a int, b text);
+CREATE
+1: insert into t_a select i, i, 'a' || i from generate_series(1, 5) as i;
+INSERT 5
+1: create table t_b (id int, a int, b text);
+CREATE
+1: insert into t_b select i, i, 'a' || i from generate_series(1, 5) as i;
+INSERT 5
+
+1: create table t_c (id int);
+CREATE
+1: insert into t_c values (1);
+INSERT 1
+
+1: explain WITH T AS ( select t_a.* from t_a inner join t_c on t_a.id = t_c.id UNION ALL select t_b.* from t_b inner join t_c on t_b.id = t_c.id) select ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(T))) from T;
+QUERY PLAN                                                                           
+-------------------------------------------------------------------------------------
+Aggregate  (cost=0.42..0.43 rows=1 width=32)                                         
+  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.40 rows=7 width=32)    
+        ->  Subquery Scan t  (cost=0.00..0.13 rows=3 width=32)                       
+              ->  Append  (cost=1.02..6.31 rows=3 width=11)                          
+                    ->  Hash Join  (cost=1.02..3.12 rows=2 width=11)                 
+                          Hash Cond: t_a.id = public.t_c.id                          
+                          ->  Seq Scan on t_a  (cost=0.00..2.05 rows=2 width=11)     
+                          ->  Hash  (cost=1.01..1.01 rows=1 width=4)                 
+                                ->  Seq Scan on t_c  (cost=0.00..1.01 rows=1 width=4)
+                    ->  Hash Join  (cost=1.02..3.12 rows=2 width=11)                 
+                          Hash Cond: t_b.id = public.t_c.id                          
+                          ->  Seq Scan on t_b  (cost=0.00..2.05 rows=2 width=11)     
+                          ->  Hash  (cost=1.01..1.01 rows=1 width=4)                 
+                                ->  Seq Scan on t_c  (cost=0.00..1.01 rows=1 width=4)
+Optimizer status: legacy query optimizer                                             
+(15 rows)
+-- quit the seesion to clear type cache
+1q: ... <quitting>
+
+-- this will generate a type cache for a RECORD with tupledesc, and the typemod is 0.
+1: select ('aaa'::text, 'aaa'::text, 'a'::text);
+row        
+-----------
+(aaa,aaa,a)
+(1 row)
+
+-- the below query used to fail an assertion since the second subnode for the Append node
+-- still return a RECORD type slot, but we forget to assign_record_type_typmod for it,
+-- so the typmod is still -1.
+-- And when we send the slot tuple to upper slice, tuple remap will raise assertion failure
+-- in function TRRemapRecord(). If turn off --cassert, the below query will crash, since it
+-- tries to parse the below output RECORD using the above SELECT statement's RECORD tupledesc.
+1: WITH T AS ( select t_a.* from t_a inner join t_c on t_a.id = t_c.id UNION ALL select t_b.* from t_b inner join t_c on t_b.id = t_c.id) select ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(T))) from T;
+array_to_json                                    
+-------------------------------------------------
+[{"id":1,"a":1,"b":"a1"},{"id":1,"a":1,"b":"a1"}]
+(1 row)
+

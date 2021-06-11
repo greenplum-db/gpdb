@@ -23,6 +23,7 @@ test: invalidated_toast_index
 test: dml_on_root_locks_all_parts
 test: dynamic_index_scan
 test: select_for_update
+test: eval_record
 
 # Tests on Append-Optimized tables (row-oriented).
 test: uao/alter_while_vacuum_row
