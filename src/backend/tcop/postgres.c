@@ -637,6 +637,12 @@ ReadCommand(StringInfo inBuf)
 {
 	int			result;
 
+	/*
+	 * XXX this fault location is reached in query executing backends as well
+	 * as many non-query executing processes such as FTS probe handler,
+	 * walsender, etc.  If a test intends to target a query executing backend
+	 * process, consider using "exec_simple_query_start" fault.
+	 */
 	SIMPLE_FAULT_INJECTOR("before_read_command");
 
 	if (whereToSendOutput == DestRemote)
@@ -1645,6 +1651,8 @@ exec_simple_query(const char *query_string)
 	bool		was_logged = false;
 	bool		use_implicit_block;
 	char		msec_str[32];
+
+	SIMPLE_FAULT_INJECTOR("exec_simple_query_start");
 
 	if (Gp_role != GP_ROLE_EXECUTE)
 		increment_command_count();

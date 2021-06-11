@@ -27,12 +27,12 @@
 -- stop mirror
 3: SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=0 AND role = 'm';
 -- trigger master reset
-3: select gp_inject_fault('before_read_command', 'panic', 1);
+3: select gp_inject_fault('exec_simple_query_start', 'panic', current_setting('gp_dbid')::smallint);
 -- verify master panic happens. The PANIC message does not emit sometimes so
 -- mask it.
 -- start_matchsubs
--- m/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n/
--- s/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n//
+-- m/PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'\n/
+-- s/PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'\n//
 -- end_matchsubs
 3: select 1;
 

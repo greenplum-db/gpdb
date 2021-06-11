@@ -149,7 +149,7 @@ select pg_reload_conf();
 
 -- trigger master panic and wait until master down before running any new query.
 17&: SELECT wait_till_master_shutsdown();
-18: SELECT gp_inject_fault('before_read_command', 'panic', 1);
+18: SELECT gp_inject_fault('exec_simple_query_start', 'panic', current_setting('gp_dbid')::smallint);
 18: SELECT 1;
 16<:
 17<:
