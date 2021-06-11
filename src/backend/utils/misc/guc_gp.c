@@ -3951,8 +3951,10 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"dtx_phase2_retry_second", PGC_SUSET, GP_ARRAY_TUNING,
-			gettext_noop("Maximum number of timeout during two phase commit after which master PANICs."),
-			NULL,
+			gettext_noop("Maximum time for which coordinator tries to finish a prepared transaction"),
+			gettext_noop("The timer starts if finising a prepared transaction fails."
+						 " Coordinator keeps retrying the finish-prepared operation"
+						 " until this timeout (seconds)."),
 			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_UNIT_S
 		},
 		&dtx_phase2_retry_second,
