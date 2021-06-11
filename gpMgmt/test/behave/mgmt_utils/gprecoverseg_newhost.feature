@@ -18,6 +18,7 @@ Feature: gprecoverseg tests involving migrating to a new host
       And the cluster configuration has no segments where <down_sql>
       When the user runs <gprecoverseg_cmd>
       Then gprecoverseg should return a return code of 0
+      And pg_hba file "/data/gpdata/mirror/gpseg0/pg_hba.conf" on host "<acting_primary>" contains entries for "<used>"
       And the cluster configuration is saved for "<test_case>"
       And the "before" and "<test_case>" cluster configuration matches with the expected for gprecoverseg newhost
       And gprecoverseg should print "Skipping shared memory cleanup and gpsegstop on unreachable host" to stdout
@@ -29,6 +30,6 @@ Feature: gprecoverseg tests involving migrating to a new host
       And the cluster configuration is saved for "after_recreation"
       And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
       Examples:
-      | test_case      |  down        | spare       | unused | gprecoverseg_cmd               | down_sql                                              |
-      | one_host_down  |  "sdw1"      | "sdw5,sdw6" | sdw6   | "gprecoverseg -a -p sdw5"      | "hostname='sdw1' and status='u'"                      |
-      | two_hosts_down |  "sdw1,sdw3" | "sdw5,sdw6" | none   | "gprecoverseg -a -p sdw5,sdw6" | "(hostname='sdw1' or hostname='sdw3') and status='u'" |
+      | test_case      |  down        | spare       | unused | used | acting_primary | gprecoverseg_cmd                               | down_sql                                              |
+      | one_host_down  |  "sdw1"      | "sdw5,sdw6" | sdw6   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5 --hba-hostnames"      | "hostname='sdw1' and status='u'"                      |
+      | two_hosts_down |  "sdw1,sdw3" | "sdw5,sdw6" | none   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5,sdw6 --hba-hostnames" | "(hostname='sdw1' or hostname='sdw3') and status='u'" |
