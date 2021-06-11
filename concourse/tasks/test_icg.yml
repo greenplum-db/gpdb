@@ -2,7 +2,7 @@ platform: linux
 image_resource:
   type: registry-image
   source:
-    repository: pivotaldata/qp-gpdbdev
+    repository: gcr.io/data-orca/qp-gpdbdev
 inputs:
   - name: gpdb_src
   - name: bin_orca
