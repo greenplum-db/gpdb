@@ -315,6 +315,102 @@ explain (costs off) select * from t_hashdist cross join (select a, count(1) as s
 -- limit
 explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;
 
+--
+-- Test append different numsegments tables work well
+-- See Github issue: https://github.com/greenplum-db/gpdb/issues/12146
+--
+create table t1_12146 (a int, b int) distributed by (a);
+create table t2_12146 (a int, b int) distributed by (a);
+create table t3_12146 (a int, b int) distributed by (a);
+create table t4_12146 (a int, b int) distributed by (a);
+
+-- make t1_12146 and t2_12146 to partially-distributed
+set allow_system_table_mods = on;
+update gp_distribution_policy set numsegments = 2
+where localoid in ('t1_12146'::regclass::oid, 't2_12146'::regclass::oid);
+
+insert into t1_12146 select i,i from generate_series(1, 10000)i;
+insert into t2_12146 select i,i from generate_series(1, 10000)i;
+insert into t3_12146 select i,i from generate_series(1, 10)i;
+insert into t4_12146 select i,i from generate_series(1, 10)i;
+
+-- now set t1_12146 and t2_12146 randomly distributed;
+update gp_distribution_policy
+set distkey = '', distclass = ''
+where localoid in ('t1_12146'::regclass::oid, 't2_12146'::regclass::oid);
+
+analyze t1_12146;
+analyze t2_12146;
+analyze t3_12146;
+analyze t4_12146;
+
+explain select count(*)
+from
+(
+  (
+  -- t1 left join t3 to build broadcast t3 plan
+  -- so that the join's locus is t1's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t1_12146 left join t3_12146 on t1_12146.b = t3_12146.b
+  )
+  union all
+  (
+  -- t2 left join t4 to build broadcast t4 plan
+  -- so that the join's locus is t2's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t2_12146 left join t4_12146 on t2_12146.b = t4_12146.b
+  ) -- the first subplan's locus is not the same
+    -- because strewn locus always not the same
+  union all
+  (
+  -- this will be a full to full redist
+  select
+  *
+  from t3_12146 join t4_12146 on t3_12146.b = t4_12146.a
+  )
+) x;
+
+select count(*)
+from
+(
+  (
+  -- t1 left join t3 to build broadcast t3 plan
+  -- so that the join's locus is t1's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t1_12146 left join t3_12146 on t1_12146.b = t3_12146.b
+  )
+  union all
+  (
+  -- t2 left join t4 to build broadcast t4 plan
+  -- so that the join's locus is t2's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t2_12146 left join t4_12146 on t2_12146.b = t4_12146.b
+  ) -- the first subplan's locus is not the same
+    -- because strewn locus always not the same
+  union all
+  (
+  -- this will be a full to full redist
+  select
+  *
+  from t3_12146 join t4_12146 on t3_12146.b = t4_12146.a
+  )
+) x;
+
+drop table t1_12146;
+drop table t2_12146;
+drop table t3_12146;
+drop table t4_12146;
+
+reset allow_system_table_mods;
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;

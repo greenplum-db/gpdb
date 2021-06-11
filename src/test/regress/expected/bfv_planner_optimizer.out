@@ -569,6 +569,129 @@ explain (costs off) select * from t_hashdist cross join (select * from generate_
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
+--
+-- Test append different numsegments tables work well
+-- See Github issue: https://github.com/greenplum-db/gpdb/issues/12146
+--
+create table t1_12146 (a int, b int) distributed by (a);
+create table t2_12146 (a int, b int) distributed by (a);
+create table t3_12146 (a int, b int) distributed by (a);
+create table t4_12146 (a int, b int) distributed by (a);
+-- make t1_12146 and t2_12146 to partially-distributed
+set allow_system_table_mods = on;
+update gp_distribution_policy set numsegments = 2
+where localoid in ('t1_12146'::regclass::oid, 't2_12146'::regclass::oid);
+insert into t1_12146 select i,i from generate_series(1, 10000)i;
+insert into t2_12146 select i,i from generate_series(1, 10000)i;
+insert into t3_12146 select i,i from generate_series(1, 10)i;
+insert into t4_12146 select i,i from generate_series(1, 10)i;
+-- now set t1_12146 and t2_12146 randomly distributed;
+update gp_distribution_policy
+set distkey = '', distclass = ''
+where localoid in ('t1_12146'::regclass::oid, 't2_12146'::regclass::oid);
+analyze t1_12146;
+analyze t2_12146;
+analyze t3_12146;
+analyze t4_12146;
+explain select count(*)
+from
+(
+  (
+  -- t1 left join t3 to build broadcast t3 plan
+  -- so that the join's locus is t1's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t1_12146 left join t3_12146 on t1_12146.b = t3_12146.b
+  )
+  union all
+  (
+  -- t2 left join t4 to build broadcast t4 plan
+  -- so that the join's locus is t2's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t2_12146 left join t4_12146 on t2_12146.b = t4_12146.b
+  ) -- the first subplan's locus is not the same
+    -- because strewn locus always not the same
+  union all
+  (
+  -- this will be a full to full redist
+  select
+  *
+  from t3_12146 join t4_12146 on t3_12146.b = t4_12146.a
+  )
+) x;
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=60000000416.93..60000000416.94 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=60000000416.88..60000000416.93 rows=3 width=8)
+         ->  Partial Aggregate  (cost=60000000416.88..60000000416.89 rows=1 width=8)
+               ->  Append  (cost=20000000001.29..60000000391.87 rows=10003 width=0)
+                     ->  Subquery Scan on "*SELECT* 1"  (cost=20000000001.29..20000000169.80 rows=5000 width=0)
+                           ->  Hash Left Join  (cost=20000000001.29..20000000119.80 rows=5000 width=16)
+                                 Hash Cond: (t1_12146.b = t3_12146.b)
+                                 ->  Seq Scan on t1_12146  (cost=10000000000.00..10000000056.00 rows=5000 width=4)
+                                 ->  Hash  (cost=10000000001.17..10000000001.17 rows=10 width=4)
+                                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000001.17 rows=10 width=4)
+                                             ->  Seq Scan on t3_12146  (cost=10000000000.00..10000000001.03 rows=3 width=4)
+                     ->  Subquery Scan on "*SELECT* 2"  (cost=20000000001.29..20000000169.80 rows=5000 width=0)
+                           ->  Hash Left Join  (cost=20000000001.29..20000000119.80 rows=5000 width=16)
+                                 Hash Cond: (t2_12146.b = t4_12146.b)
+                                 ->  Seq Scan on t2_12146  (cost=10000000000.00..10000000056.00 rows=5000 width=4)
+                                 ->  Hash  (cost=10000000001.17..10000000001.17 rows=10 width=4)
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=10000000000.00..10000000001.17 rows=10 width=4)
+                                             ->  Seq Scan on t4_12146  (cost=10000000000.00..10000000001.03 rows=3 width=4)
+                     ->  Subquery Scan on "*SELECT* 3"  (cost=20000000001.08..20000000002.25 rows=3 width=0)
+                           ->  Hash Join  (cost=20000000001.08..20000000002.22 rows=3 width=16)
+                                 Hash Cond: (t3_12146_1.b = t4_12146_1.a)
+                                 ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=10000000000.00..10000000001.10 rows=3 width=4)
+                                       Hash Key: t3_12146_1.b
+                                       ->  Seq Scan on t3_12146 t3_12146_1  (cost=10000000000.00..10000000001.03 rows=3 width=4)
+                                 ->  Hash  (cost=10000000001.03..10000000001.03 rows=3 width=4)
+                                       ->  Seq Scan on t4_12146 t4_12146_1  (cost=10000000000.00..10000000001.03 rows=3 width=4)
+ Optimizer: Postgres query optimizer
+(27 rows)
+
+select count(*)
+from
+(
+  (
+  -- t1 left join t3 to build broadcast t3 plan
+  -- so that the join's locus is t1's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t1_12146 left join t3_12146 on t1_12146.b = t3_12146.b
+  )
+  union all
+  (
+  -- t2 left join t4 to build broadcast t4 plan
+  -- so that the join's locus is t2's locus:
+  -- strewn on 2segs
+  select
+  *
+  from t2_12146 left join t4_12146 on t2_12146.b = t4_12146.b
+  ) -- the first subplan's locus is not the same
+    -- because strewn locus always not the same
+  union all
+  (
+  -- this will be a full to full redist
+  select
+  *
+  from t3_12146 join t4_12146 on t3_12146.b = t4_12146.a
+  )
+) x;
+ count 
+-------
+ 20010
+(1 row)
+
+drop table t1_12146;
+drop table t2_12146;
+drop table t3_12146;
+drop table t4_12146;
+reset allow_system_table_mods;
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
