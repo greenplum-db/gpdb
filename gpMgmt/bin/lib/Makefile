@@ -10,6 +10,7 @@ $(recurse)
 PROGRAMS= __init__.py \
 	gp_bash_functions.sh \
 	gp_bash_version.sh \
+	calculate_disk_free.py \
 	gpconfigurenewsegment \
 	gpcreateseg.sh \
 	gppinggpfdist.py \

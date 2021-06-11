@@ -9,6 +9,7 @@ import os
 import platform
 import psutil
 import pwd
+import shlex
 import socket
 import signal
 import uuid
@@ -220,8 +221,8 @@ class GenericPlatform():
     def get_machine_arch_cmd(self):
         return 'uname -i'
 
-    def getDiskFreeCmd(self):
-        return findCmdInPath('df') + " -k"
+    def getDiskUsageCmd(self):
+        return findCmdInPath('du') + " -ks"
 
     def getTarCmd(self):
         return findCmdInPath('tar')
@@ -236,11 +237,6 @@ class LinuxPlatform(GenericPlatform):
 
     def getName(self):
         return "linux"
-
-    def getDiskFreeCmd(self):
-        # -P is for POSIX formatting.  Prevents error 
-        # on lines that would wrap
-        return findCmdInPath('df') + " -Pk"
 
     def getPing6(self):
         return findCmdInPath('ping6')
@@ -330,46 +326,69 @@ class Ping(Command):
 
 
 # -------------df----------------------
+# NOTE: This purposely does not follow the similar pattern of the other commands.
+# Due to the limitations of the Command framework we created a separate python
+# script called calcualte_disk_free.py to determine the free space. This script
+# handles the case where the input directory may not have been created df will
+# fail. Thus, take each path element starting at the end and execute df until
+# it succeeds in order to find the filesystem and free space.
 class DiskFree(Command):
-    def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
+    """
+    CalculateDiskFree executes a python script on each host to determine the
+    disk space free for each filesystem.
+    """
+
+    def __init__(self, remoteHost, directories):
+        name = "calculate disk space free on target host"
+        cmdStr = '$GPHOME/bin/lib/calculate_disk_free.py --directories \"%s\"' % (
+            shlex.quote(directories))
+
+        Command.__init__(self, name, cmdStr, ctxt=REMOTE, remoteHost=remoteHost)
+
+# -------------du----------------------
+class DiskUsage(Command):
+    def __init__(self, name, directory, ctxt=LOCAL, remoteHostAddr=None):
         self.directory = directory
-        cmdStr = "%s %s" % (SYSTEM.getDiskFreeCmd(), directory)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+        cmdStr = "%s %s" % (SYSTEM.getDiskUsageCmd(), directory)
+        Command.__init__(self, name, cmdStr, ctxt, remoteHostAddr)
 
     @staticmethod
-    def get_size(name, remote_host, directory):
-        dfCmd = DiskFree(name, directory, ctxt=REMOTE, remoteHost=remote_host)
+    def get_usage(name, remote_host, directory):
+        dfCmd = DiskUsage(name, directory, ctxt=REMOTE, remoteHostAddr=remote_host)
         dfCmd.run(validateAfter=True)
-        return dfCmd.get_bytes_free()
+        return dfCmd.get_bytes_used()
 
     @staticmethod
-    def get_size_local(name, directory):
-        dfCmd = DiskFree(name, directory)
+    def get_usage_local(name, directory):
+        dfCmd = DiskUsage(name, directory)
         dfCmd.run(validateAfter=True)
-        return dfCmd.get_bytes_free()
+        return dfCmd.get_bytes_used()
 
     @staticmethod
-    def get_disk_free_info_local(name, directory):
-        dfCmd = DiskFree(name, directory)
+    def get_disk_usage_info_local(name, directory):
+        dfCmd = DiskUsage(name, directory)
         dfCmd.run(validateAfter=True)
-        return dfCmd.get_disk_free_output()
+        return dfCmd.disk_usage_output()
 
-    def get_disk_free_output(self):
+    def disk_usage_output(self):
         '''expected output of the form:
-           Filesystem   512-blocks      Used Available Capacity  Mounted on
-           /dev/disk0s2  194699744 158681544  35506200    82%    /
+           194699744  /directory/
 
            Returns data in list format:
-           ['/dev/disk0s2', '194699744', '158681544', '35506200', '82%', '/']
+           ['194699744', '/directory/']
         '''
-        rawIn = self.results.stdout.split('\n')[1]
+        rawIn = self.results.stdout.split('\n')[0]
         return rawIn.split()
 
-    def get_bytes_free(self):
-        disk_free = self.get_disk_free_output()
-        bytesFree = int(disk_free[3]) * 1024
-        return bytesFree
+    def kbytes_used(self):
+        disk_usage = self.disk_usage_output()
+        KbytesUsed = int(disk_usage[0])
+        return KbytesUsed
 
+    def bytes_used(self):
+        disk_usage = self.disk_usage_output()
+        bytesUsed = int(disk_usage[0]) * 1024
+        return bytesUsed
 
 # -------------mkdir------------------
 class MakeDirectory(Command):
