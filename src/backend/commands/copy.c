@@ -4207,12 +4207,7 @@ CopyFrom(CopyState cstate)
 		 */
 		if (!cstate->on_segment)
 		{
-			/*
-			 * Send QD->QE header to all segments except:
-			 * dummy file on master for COPY FROM ON SEGMENT
-			 */
-			if (!cstate->on_segment)
-				SendCopyFromForwardedHeader(cstate, cdbCopy);
+			SendCopyFromForwardedHeader(cstate, cdbCopy);
 		}
 	}
 
