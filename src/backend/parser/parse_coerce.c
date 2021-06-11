@@ -435,8 +435,9 @@ coerce_type(ParseState *pstate, Node *node,
 			Insist(OidIsValid(infunc));
 
 			/* do unknownout(Var) */
-			fe = makeFuncExpr(outfunc, TEXTOID, list_make1(node),
-							  InvalidOid, InvalidOid, cformat);
+			/* set it as an implicit cast to hide this Greenplum hack */
+			fe = makeFuncExpr(outfunc, CSTRINGOID, list_make1(node),
+							  InvalidOid, InvalidOid, COERCE_IMPLICIT_CAST);
 			fe->location = location;
 
 			if (location >= 0 &&

@@ -1411,8 +1411,8 @@ check_views_with_fabricated_unknown_casts()
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
 		pg_fatal("Your installation contains views having unknown\n"
-				 "casts. Drop the view or recreate the view with explicit \n"
-				 "unknown::text type casts before running the upgrade. Alternatively, drop the view \n"
+				 "casts. Drop the view or recreate the view without explicit \n"
+				 "unknown::cstring type casts before running the upgrade. Alternatively, drop the view \n"
 				 "before the upgrade and recreate the view after the upgrade. \n"
 				 "A list of views is in the file:\n"
 				 "\t%s\n\n", output_path);

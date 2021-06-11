@@ -384,11 +384,11 @@ check_node_unknown_walker(Node *node, void *context)
 	{
 		FuncExpr *fe = (FuncExpr *) node;
 		/*
-		 * Check to see if the FuncExpr has an unknown::cstring cast.
+		 * Check to see if the FuncExpr has an unknown::cstring explicit cast.
 		 *
 		 * If it has no such cast yet, check its arguments.
 		 */
-		if ((fe->funcresulttype != CSTRINGOID) || !fe->args || (list_length(fe->args) != 1))
+		if ((fe->funcresulttype != CSTRINGOID) || !fe->args || (list_length(fe->args) != 1) || (fe->funcformat == COERCE_IMPLICIT_CAST))
 			return expression_tree_walker(node, check_node_unknown_walker, context);
 
 		Node *head = lfirst(((List *)fe->args)->head);

@@ -126,3 +126,9 @@ INSERT INTO dml_timestamptz VALUES ('4714-01-27 BC'::timestamptz);
 SELECT * FROM dml_timestamptz ORDER BY 1;
 UPDATE dml_timestamptz SET a = '4714-01-27 BC'::timestamptz;
 SELECT * FROM dml_timestamptz ORDER BY 1;
+
+-- test unknown type casting
+with unknown as (
+        select '2021' as foo
+)
+select foo from unknown where foo = 2021.0;

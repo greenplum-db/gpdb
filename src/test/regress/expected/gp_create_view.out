@@ -147,7 +147,7 @@ CREATE VIEW unknown_v2 AS SELECT field_unknown::date FROM unknown_v1;
 ---------------+------+-----------+---------+-------------
  field_unknown | date |           | plain   | 
 View definition:
- SELECT unknown_v1.field_unknown::text::date AS field_unknown
+ SELECT unknown_v1.field_unknown::date AS field_unknown
    FROM unknown_v1;
 
 SELECT * FROM unknown_v2;
