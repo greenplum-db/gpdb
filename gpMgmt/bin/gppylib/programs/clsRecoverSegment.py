@@ -32,7 +32,7 @@ from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
-from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
+from gppylib.operations.update_pg_hba_on_segments import update_pg_hba_on_segments
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpCoordinatorEnvironment
@@ -365,7 +365,7 @@ class GpRecoverSegmentProgram:
                 self.syncPackages(new_hosts)
 
             contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
-            config_primaries_for_replication(gpArray, self.__options.hba_hostnames, contentsToUpdate)
+            update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.parallelDegree, contentsToUpdate)
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 

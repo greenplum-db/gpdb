@@ -226,19 +226,19 @@ CREATE_QES_MIRROR () {
     # only the entry for replication is added on the primary if mirror hosts are there
     LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${PRIMARY_HOSTADDRESS} ..." 1
     # Add the samehost replication entry to support single-host development
-    local PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} samehost trust"
+    local PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} samehost trust"
     if [ $HBA_HOSTNAMES -eq 0 ];then
         local MIRROR_ADDRESSES=($($TRUSTED_SHELL ${GP_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
         local PRIMARY_ADDRESSES=($($TRUSTED_SHELL ${PRIMARY_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
         for ADDR in "${MIRROR_ADDRESSES[@]}" "${PRIMARY_ADDRESSES[@]}"
         do
             CIDR_ADDR=$(GET_CIDRADDR $ADDR)
-            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} ${CIDR_ADDR} trust"
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${CIDR_ADDR} trust"
         done
     else
-        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} ${GP_HOSTADDRESS} trust"
+        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${GP_HOSTADDRESS} trust"
         if [ "${GP_HOSTADDRESS}" != "${PRIMARY_HOSTADDRESS}" ]; then
-            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} ${PRIMARY_HOSTADDRESS} trust"
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${PRIMARY_HOSTADDRESS} trust"
         fi
     fi
     RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; cat - >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload" <<< "${PG_HBA_ENTRIES}"
