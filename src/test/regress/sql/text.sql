@@ -38,3 +38,9 @@ SELECT '{1,2}'::text::integer[];
 
 CREATE TYPE usr_define_type as (id int, name text);
 SELECT '(1,abc)'::text::usr_define_type;
+
+-- test unknown type casting
+with unknown as (
+        select '2021' as foo
+)
+select foo from unknown where foo = 2021.0;
