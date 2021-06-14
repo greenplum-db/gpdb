@@ -563,6 +563,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/master/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 
+- name: server_src_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server-src/published/master/server-src-rc-*.tar.gz
+
 - name: greenplum-database-release
   type: git
   icon: git
@@ -1951,6 +1958,8 @@ jobs:
           RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
       - task: verify_gpdb_versions
         file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
+      - task: tar_git_repo
+        file: gpdb_src/concourse/tasks/tar_git_repo.yml
   - in_parallel:
       steps:
       - put: bin_gpdb_centos7_rc
@@ -1965,6 +1974,9 @@ jobs:
       - put: bin_gpdb_clients_ubuntu18.04_rc
         params:
           file: "release_candidates/clients-rc-*ubuntu18.04*.tar.gz"
+      - put: server_src_rc
+        params:
+          file: "server_tar/server-src-rc-*.tar.gz"
 
 - name: Build_Release_Candidate_RPMs
   plan:
