@@ -2133,9 +2133,15 @@ class gpload:
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
 
-        sql+= """and pgext.fmttype = %s
-                 and pgext.writable = false
-                 and pgext.fmtopts like %s """ % (quote('b') if formatType == 'custom' else quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+        if formatType != 'custom':
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote(formatType[0]), quote("%" + quote_unident(formatOpts.rstrip())))
+        # Custom formatter option ends with space ' '
+        else:
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote('b'), quote("%" + quote_unident(formatOpts)))
 
         if limitStr:
             sql += "and pgext.rejectlimit = %s " % limitStr
@@ -2215,9 +2221,14 @@ class gpload:
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
 
-        sql+= """and pgext.fmttype = %s
-                 and pgext.writable = false
-                 and pgext.fmtopts like %s """ % (quote('b') if formatType == 'custom' else quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+        if formatType != 'custom':
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote(formatType[0]), quote("%" + quote_unident(formatOpts.rstrip())))
+        else:
+            sql+= """and pgext.fmttype = %s
+                     and pgext.writable = false
+                     and pgext.fmtopts like %s """ % (quote('b'), quote("%" + quote_unident(formatOpts)))
 
         if limitStr:
             sql += "and pgext.rejectlimit = %s " % limitStr
