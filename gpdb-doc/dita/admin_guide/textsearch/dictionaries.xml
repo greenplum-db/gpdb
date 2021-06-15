@@ -407,7 +407,7 @@ SELECT plainto_tsquery('supernova star');
       <p>The standard Greenplum Database distribution does not include any
         Ispell configuration files. Dictionaries for a large number of languages
         are available from <xref
-          href="http://ficus-www.cs.ucla.edu/geoff/ispell.html" format="html"
+          href="https://www.cs.hmc.edu/~geoff/ispell.html" format="html"
           scope="external">Ispell</xref>. Also, some more modern dictionary file
         formats are supported — <xref
           href="http://en.wikipedia.org/wiki/MySpell" format="html"
