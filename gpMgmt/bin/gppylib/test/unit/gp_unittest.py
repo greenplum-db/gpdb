@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import unittest
 
 from mock import MagicMock, Mock
@@ -89,3 +90,19 @@ class FakeCursor:
     def set_result_for_testing(self, result_list):
         self.list = result_list
         self.rowcount = len(result_list)
+
+
+# python2 unittest does not have a concept of subTest.
+# (see https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests)
+class SubTest:
+    @staticmethod
+    @contextmanager
+    def subTest(name):
+        try:
+            yield SubTest(name)
+        except Exception as ex:
+            print(name)
+            raise ex
+
+    def __init__(self, name):
+        self.name = name
