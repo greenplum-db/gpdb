@@ -36,6 +36,7 @@ static void check_views_with_unsupported_lag_lead_function(void);
 static void check_views_with_fabricated_anyarray_casts(void);
 static void check_views_with_fabricated_unknown_casts(void);
 static void check_views_referencing_deprecated_tables(void);
+static void check_views_referencing_deprecated_columns(void);
 
 
 /*
@@ -67,6 +68,7 @@ check_greenplum(void)
 	check_views_with_fabricated_anyarray_casts();
 	check_views_with_fabricated_unknown_casts();
 	check_views_referencing_deprecated_tables();
+	check_views_referencing_deprecated_columns();
 }
 
 /*
@@ -1497,6 +1499,91 @@ check_views_referencing_deprecated_tables()
 				 "tables that no longer exist in the target cluster.\n"
 				 "Drop these views before running the upgrade. Please refer to\n"
 				 "the documentation for a complete list of deprecated tables.\n"
+				 "A list of such views is in the file:\n"
+				 "\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+static void
+check_views_referencing_deprecated_columns()
+{
+	char		output_path[MAXPGPATH];
+	FILE		*script = NULL;
+	bool		found = false;
+	int			dbnum;
+	int			i_viewname;
+
+	/*
+	 * An upgrade check for deprecated objects only applies to a major version
+	 * upgrade.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) ==
+		GET_MAJOR_VERSION(new_cluster.major_version))
+		return;
+
+	prep_status("Checking for views referencing deprecated columns");
+
+	snprintf(output_path, sizeof(output_path), "view_deprecated_columns.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+		bool		db_used = false;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		PQclear(executeQueryOrDie(conn, "SET search_path TO 'public';"));
+
+		/* Install check support function */
+		PQclear(executeQueryOrDie(conn,
+								  "CREATE OR REPLACE FUNCTION "
+								  "view_references_deprecated_columns(OID) "
+								  "RETURNS BOOL "
+								  "AS '$libdir/pg_upgrade_support' "
+								  "LANGUAGE C STRICT;"));
+		res = executeQueryOrDie(conn,
+								"SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname) AS badviewname "
+								"FROM pg_class c JOIN pg_namespace n on c.relnamespace=n.oid "
+								"WHERE c.relkind = 'v' AND "
+								"view_references_deprecated_columns(c.oid) = TRUE AND "
+								"n.nspname NOT IN ('pg_catalog', 'gp_toolkit', 'information_schema');");
+
+		PQclear(executeQueryOrDie(conn, "DROP FUNCTION view_references_deprecated_columns(OID);"));
+		PQclear(executeQueryOrDie(conn, "SET search_path to 'pg_catalog';"));
+
+		ntups = PQntuples(res);
+		i_viewname = PQfnumber(res, "badviewname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s \n",
+					PQgetvalue(res, rowno, i_viewname));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains views referencing columns\n"
+				 "in catalog tables that no longer exist in the target cluster.\n"
+				 "Drop these views before running the upgrade. Please refer to\n"
+				 "the documentation for a complete list of deprecated columns.\n"
 				 "A list of such views is in the file:\n"
 				 "\t%s\n\n", output_path);
 	}
