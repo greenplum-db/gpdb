@@ -2908,6 +2908,39 @@ select * from sqall_t1 where a not in (
 	    select b.a from sqall_t1 a left join sqall_t1 b on false);
 reset optimizer_join_order;
 
+-- Make sure materialize projects child's tlist, not what is requested
+create table material_test(first_id int, second_id int);
+create index material_test_idx on material_test using btree (second_id);
+create table material_test2(first_id int, second_id int);
+
+insert into material_test select generate_series(1,10), generate_series(1,10);
+insert into material_test2 select generate_series(1,10), generate_series(1,10);
+insert into material_test select generate_series(1,100), generate_series(1,100);
+insert into material_test2 select generate_series(1,100), generate_series(1,100);
+
+analyze material_test;
+analyze material_test2;
+
+explain (verbose) with mat_w as (
+select first_id
+from material_test
+where second_id in (1,2,3,4)
+)
+select first_id
+from material_test2
+where first_id in (select first_id from mat_w)
+and first_id in (select first_id from mat_w);
+
+with mat_w as (
+select first_id
+from material_test
+where second_id in (1,2,3,4)
+)
+select first_id
+from material_test2
+where first_id in (select first_id from mat_w)
+and first_id in (select first_id from mat_w);
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
