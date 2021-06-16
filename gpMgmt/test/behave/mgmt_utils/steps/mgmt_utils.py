@@ -364,11 +364,20 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
-@given('the user asynchronously sets up to end that process in {secs} seconds')
-def impl(context, secs):
-    command = "sleep %d; kill -9 %d" % (int(secs), context.asyncproc.pid)
+@given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
+@when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
+def impl(context, process_name, secs):
+    if process_name == 'that':
+        command = "sleep %d; kill -9 %d" % (int(secs), context.asyncproc.pid)
+    else:
+        command = "sleep %d; ps ux | grep %s | awk '{print $2}' | xargs kill" % (int(secs), process_name)
     run_async_command(context, command)
 
+
+@when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in gpinitsystem logs')
+def impl(context, process_name, log_msg):
+    command = "while sleep 3; do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; then ps ux | grep %s |awk '{print $2}' | xargs kill ;break 2; fi; done" % (log_msg, process_name)
+    run_async_command(context, command)
 
 @given('the user asynchronously runs "{command}" and the process is saved')
 @when('the user asynchronously runs "{command}" and the process is saved')
@@ -814,6 +823,28 @@ def impl(context, options):
 def impl(context, options):
     context.execute_steps(u'''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
     context.standby_was_activated = True
+
+@then('gpintsystem logs should {contain} lines about running backout script')
+def impl(context, contain):
+    string_to_find = 'Run command bash .*backout_gpinitsystem.* on master to remove these changes$'
+    command = "egrep '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
+    run_command(context, command)
+    if contain == "contain":
+        if has_exception(context):
+            raise context.exception
+        context.gpinit_backout_command = re.search('Run command(.*)on master', context.stdout_message).group(1)
+    elif contain == "not contain":
+        if not has_exception(context):
+            raise Exception("Logs contain lines about running backout script")
+    else:
+        raise Exception("Incorrect step name, only use 'should contain' and 'should not contain'")
+
+@then('the user runs the gpinitsystem backout script')
+def impl(context):
+    command = context.gpinit_backout_command
+    run_command(context, command)
+    if has_exception(context):
+        raise context.exception
 
 @when('the user runs command "{command}" from standby master')
 @then('the user runs command "{command}" from standby master')
@@ -2176,6 +2207,13 @@ def impl(context, location):
             'mv', '{}.bak'.format(greenplum_path), greenplum_path
         ])
 
+@given('all files in gpAdminLogs directory are deleted')
+@then('all files in gpAdminLogs directory are deleted')
+def impl(context):
+    log_dir = _get_gpAdminLogs_directory()
+    files_found = glob.glob('%s/*' % (log_dir))
+    for file in files_found:
+        os.remove(file)
 
 @then('gpAdminLogs directory has no "{expected_file}" files')
 def impl(context, expected_file):

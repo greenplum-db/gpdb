@@ -527,21 +527,21 @@ CHK_PARAMS () {
 				ERROR_EXIT "[FATAL]-Value $LCMESSAGES is not a valid value for --lc-messages on this system." 2
 			fi
 		fi
-		
+
 		if [ x"" != x"$LCMONETARY" ]; then
 			IN_ARRAY $LCMONETARY "`locale -a`"
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCMONETARY is not a valid value for --lc-monetary on this system." 2
 			fi
 		fi
-		
+
 		if [ x"" != x"$LCNUMERIC" ]; then
 			IN_ARRAY $LCNUMERIC "`locale -a`"
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCNUMERIC is not a valid value for --lc-numeric on this system." 2
 			fi
 		fi
-		
+
 		if [ x"" != x"$LCTIME" ]; then
 			IN_ARRAY $LCTIME "`locale -a`"
 			if [ $? -eq 0 ]; then
@@ -815,6 +815,10 @@ CHK_QES () {
         else
             $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
             LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
+            $ECHO "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+            $ECHO "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\"" >> $BACKOUT_FILE
+            $ECHO "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+            $ECHO "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\"" >> $BACKOUT_FILE
         fi
 
     done
@@ -840,6 +844,10 @@ CHK_QES () {
             else
                 $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
                 LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
+                $ECHO "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+                $ECHO "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\"" >> $BACKOUT_FILE
+                $ECHO "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+                $ECHO "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\"" >> $BACKOUT_FILE
             fi
         done
     else
@@ -1204,7 +1212,7 @@ CREATE_QD_DB () {
         if [ x"" != x"$LCTIME" ]; then
 			LC_TIME_SETTING="--lc-time=$LCTIME"
 		fi
-		
+
 		LC_ALL_SETTINGS=" $LC_COLLATE_SETTING $LC_CTYPE_SETTING $LC_MESSAGES_SETTING $LC_MONETARY_SETTING $LC_NUMERIC_SETTING $LC_TIME_SETTING"
 
 
@@ -1228,7 +1236,7 @@ CREATE_QD_DB () {
 		# if there was an error, copy ${GP_DIR}.initdb to the log
 		if [ $RETVAL -ne 0 ]; then
 		    $CAT ${GP_DIR}.initdb >> $LOG_FILE
-		fi    
+		fi
 		$RM -f ${GP_DIR}.initdb
 		if [ $RETVAL -ne 0 ]; then
 		    ERROR_EXIT "[FATAL]:- Command $cmd failed with error status $RETVAL, see log file $LOG_FILE for more detail" 2
@@ -1363,7 +1371,7 @@ LOAD_QE_SYSTEM_DATA () {
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
 					ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration." 2
-				fi				
+				fi
 				UPDATE_GPCONFIG $MASTER_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p
 				LOG_MSG "[INFO]:-Successfully added segment $GP_HOSTADDRESS to Master system tables"
 		done
@@ -1673,15 +1681,15 @@ READ_INPUT_CONFIG () {
 
     # Validation
     if [ x"" != x"${MASTER_PORT}" ] ; then
-        ERROR_EXIT "[FATAL]:-Problem with configuration. Cannot specify MASTER_PORT and QD_PRIMARY_ARRAY" 2             
+        ERROR_EXIT "[FATAL]:-Problem with configuration. Cannot specify MASTER_PORT and QD_PRIMARY_ARRAY" 2
     fi
 
     if [ x"" != x"${MASTER_HOSTNAME}" ] ; then
-        ERROR_EXIT "[FATAL]:-Problem with configuration file. Cannot specify MASTER_HOSTNAME and QD_PRIMARY_ARRAY" 2                            
+        ERROR_EXIT "[FATAL]:-Problem with configuration file. Cannot specify MASTER_HOSTNAME and QD_PRIMARY_ARRAY" 2
     fi
 
     if [ x"" != x"${MASTER_DIRECTORY}" ] ; then
-        ERROR_EXIT "[FATAL]:-Problem with configuration file. Cannot specify MASTER_DIRECTORY and QD_PRIMARY_ARRAY" 2                           
+        ERROR_EXIT "[FATAL]:-Problem with configuration file. Cannot specify MASTER_DIRECTORY and QD_PRIMARY_ARRAY" 2
     fi
 
     # Make sure it is not a dos file with CTRL M at end of each line
@@ -1752,7 +1760,7 @@ READ_INPUT_CONFIG () {
 
     if [ $TOTAL_MIRRORS -ne 0 ] ; then
         if [ $TOTAL_SEG -ne $TOTAL_MIRRORS ] ; then
-            ERROR_EXIT "[FATAL]:-Problem with configuration file. Cannot specify different number of primary and mirror segments." 2   
+            ERROR_EXIT "[FATAL]:-Problem with configuration file. Cannot specify different number of primary and mirror segments." 2
         fi
     fi
 }
@@ -1978,21 +1986,8 @@ CREATE_SEGMENT IS_PRIMARY
 if [ $REPORT_FAIL -ne 0 ];then
 	LOG_MSG "[FATAL]:-Errors generated from parallel processes" 1
 	LOG_MSG "[INFO]:-Dumped contents of status file to the log file" 1
-	# Need to build a central backout file
-	LOG_MSG "[INFO]:-Building composite backout file" 1
-	for I in /tmp/gpsegcreate.sh_backout*
-	do
-		$CAT $I >> $BACKOUT_FILE
-		$RM -f $I
-	done
-	$ECHO "$RM -f $BACKOUT_FILE" >> $BACKOUT_FILE
 	ERROR_EXIT "[FATAL]:-Failures detected, see log file $LOG_FILE for more detail" 2
 else
-	LOG_MSG "[INFO]:-Deleting distributed backout files" 1
-	for I in ls /tmp/gpsegcreate.sh_backout*
-	do
-		$RM -f $I
-	done
 	LOG_MSG "[INFO]:-Removing back out file" 1
 	$RM -f $BACKOUT_FILE
 	LOG_MSG "[INFO]:-No errors generated from parallel processes" 1
