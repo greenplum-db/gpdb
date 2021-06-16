@@ -6845,9 +6845,10 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 				all_subplans_replicated = false;
 
 				/* Master-only table */
-				if (subplan->flow->flotype == FLOW_PARTITIONED ||
-					subplan->flow->flotype == FLOW_REPLICATED ||
-					(subplan->flow->flotype == FLOW_SINGLETON && subplan->flow->segindex != -1))
+				if (subplan->flow->locustype != CdbLocusType_General &&
+					(subplan->flow->flotype == FLOW_PARTITIONED ||
+					 subplan->flow->flotype == FLOW_REPLICATED ||
+					 (subplan->flow->flotype == FLOW_SINGLETON && subplan->flow->segindex != -1)))
 				{
 					/*
 					 * target table is master-only but flow is
