@@ -764,6 +764,10 @@ CHK_QES () {
         else
             $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
             LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
+            $ECHO "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+            $ECHO "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\"" >> $BACKOUT_FILE
+            $ECHO "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+            $ECHO "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\"" >> $BACKOUT_FILE
         fi
 
     done
@@ -789,6 +793,10 @@ CHK_QES () {
             else
                 $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
                 LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
+                $ECHO "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+                $ECHO "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\"" >> $BACKOUT_FILE
+                $ECHO "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+                $ECHO "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\"" >> $BACKOUT_FILE
             fi
         done
     else
@@ -1946,21 +1954,8 @@ CREATE_SEGMENT IS_PRIMARY
 if [ $REPORT_FAIL -ne 0 ];then
 	LOG_MSG "[FATAL]:-Errors generated from parallel processes" 1
 	LOG_MSG "[INFO]:-Dumped contents of status file to the log file" 1
-	# Need to build a central backout file
-	LOG_MSG "[INFO]:-Building composite backout file" 1
-	for I in /tmp/gpsegcreate.sh_backout*
-	do
-		$CAT $I >> $BACKOUT_FILE
-		$RM -f $I
-	done
-	$ECHO "$RM -f $BACKOUT_FILE" >> $BACKOUT_FILE
 	ERROR_EXIT "[FATAL]:-Failures detected, see log file $LOG_FILE for more detail"
 else
-	LOG_MSG "[INFO]:-Deleting distributed backout files" 1
-	for I in ls /tmp/gpsegcreate.sh_backout*
-	do
-		$RM -f $I
-	done
 	LOG_MSG "[INFO]:-Removing back out file" 1
 	$RM -f $BACKOUT_FILE
 	LOG_MSG "[INFO]:-No errors generated from parallel processes" 1
