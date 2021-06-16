@@ -360,9 +360,13 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
-@given('the user asynchronously sets up to end that process in {secs} seconds')
-def impl(context, secs):
-    command = "sleep %d; kill -9 %d" % (int(secs), context.asyncproc.pid)
+@given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
+@when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
+def impl(context, process_name, secs):
+    if process_name == 'that':
+        command = "sleep %d; kill -9 %d" % (int(secs), context.asyncproc.pid)
+    else:
+        command = "sleep %d; ps ux | grep %s | awk '{print $2}' | xargs kill" % (int(secs), process_name)
     run_async_command(context, command)
 
 
@@ -856,6 +860,23 @@ def impl(context, action):
 def impl(context, options):
     context.execute_steps('''Then the user runs command "gpactivatestandby -a %s" from standby coordinator''' % options)
     context.standby_was_activated = True
+
+@then('gpintsystem logs should contain lines about running backout script')
+def impl(context):
+    string_to_find = 'Run command bash .*backout_gpinitsystem.* on coordinator to remove these changes$'
+    command = "egrep '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
+    run_command(context, command)
+    if has_exception(context):
+        raise context.exception
+    context.gpinit_backout_command = re.search('Run command(.*)on coordinator', context.stdout_message).group(1)
+
+@then('the user runs the gpinitsystem backout script')
+def impl(context):
+    command = context.gpinit_backout_command
+    run_command(context, command)
+    if has_exception(context):
+        raise context.exception
+
 
 @when('the user runs command "{command}" from standby coordinator')
 @then('the user runs command "{command}" from standby coordinator')
@@ -2079,6 +2100,12 @@ def impl(context, location):
             'mv', '{}.bak'.format(greenplum_path), greenplum_path
         ])
 
+@given('all files in gpAdminLogs directory are deleted')
+def impl(context):
+    log_dir = _get_gpAdminLogs_directory()
+    files_found = glob.glob('%s/*' % (log_dir))
+    for file in files_found:
+        os.remove(file)
 
 @then('gpAdminLogs directory has no "{expected_file}" files')
 def impl(context, expected_file):

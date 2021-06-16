@@ -38,6 +38,28 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 0
 
+    Scenario: gpinitsystem creates a backout file when user terminated
+        Given create demo cluster config
+        And all files in gpAdminLogs directory are deleted
+        When the user asynchronously runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile" and the process is saved
+        And the user asynchronously sets up to end bin/gpinitsystem process in 15 seconds
+        And the user waits 20 second
+        Then gpintsystem logs should contain lines about running backout script
+        And the user runs the gpinitsystem backout script
+        And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
+        Then gpinitsystem should return a return code of 0
+        
+    Scenario: gpinitsystem creates a backout file when user terminated gpcreateseg
+        Given create demo cluster config
+        And all files in gpAdminLogs directory are deleted
+        When the user asynchronously runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile" and the process is saved
+        And the user asynchronously sets up to end gpcreateseg process in 15 seconds
+        And the user waits 20 second
+        Then gpintsystem logs should contain lines about running backout script
+        And the user runs the gpinitsystem backout script
+        And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
+        Then gpinitsystem should return a return code of 0
+
     Scenario: gpinitsystem fails with exit code 1 when the functions file is not found
        Given create demo cluster config
            # force a load error when trying to source gp_bash_functions.sh
