@@ -3284,9 +3284,12 @@ def check_gpexpand():
 
 def check_test_subset_parameter_count():
     test_option_count = 0
-    test_option_count = test_option_count + 1 if GV.opt['-R'] else test_option_count
-    test_option_count = test_option_count + 1 if GV.opt['-s'] else test_option_count
-    test_option_count = test_option_count + 1 if GV.opt['-C'] else test_option_count
+    if GV.opt['-R']:
+        test_option_count += 1
+    if GV.opt['-s']:
+        test_option_count += 1
+    if GV.opt['-C']:
+        test_option_count += 1
     if test_option_count > 1:
         myprint("Error: multiple test subset options are selected. Please pass only one of [-R, -s, -C] if necessary.\n")
         setError(ERROR_NOREPAIR)
