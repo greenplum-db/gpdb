@@ -31,3 +31,79 @@ SELECT id, a, char_length(b) FROM delete_test;
 (1 row)
 
 DROP TABLE delete_test;
+-- delete query for issue 12161, found by sqlsmith
+explain(costs off) delete from information_schema.sql_languages
+where
+   cast(null as float8) = case when ((select tgattr from pg_catalog.pg_trigger limit 1 offset 6)
+               <@ (select distkey from pg_catalog.gp_distribution_policy limit 1 offset 5))
+   then (select pg_catalog.stddev(sotusize) from gp_toolkit.gp_size_of_table_uncompressed)
+   else (select checkpoint_write_time from pg_catalog.pg_stat_bgwriter limit 1 offset 4)
+   end
+returning
+ cast(nullif(pg_catalog.pg_xlog_location_diff(
+      cast(case when (cast(null as box) ?# cast(null as box))
+          and ((select typtype from pg_catalog.pg_type limit 1 offset 2)
+               <> cast(null as "char")) then (select sent_location from pg_catalog.pg_stat_replication limit 1 offset 5)
+           else cast(coalesce(cast(coalesce((select sent_location from pg_catalog.gp_stat_replication limit 1 offset 4)
+              ,
+            cast(null as pg_lsn)) as pg_lsn),
+          case when cast(null as date) > cast(null as "timestamp") then (select restart_lsn from pg_catalog.pg_replication_slots limit 1 offset 75)
+               else cast(null as pg_lsn) end
+            ) as pg_lsn) end
+         as pg_lsn),
+      cast(pg_catalog.pg_last_xlog_receive_location() as pg_lsn)), cast(null as "numeric")) as "numeric") as c24;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Delete on sql_languages
+   InitPlan 1 (returns $0)  (slice5)
+     ->  Limit
+           ->  Subquery Scan on gp_stat_replication
+                 ->  Append
+                       ->  Function Scan on gp_stat_get_master_replication r
+                       ->  Gather Motion 3:1  (slice4; segments: 3)
+                             ->  Hash Right Join
+                                   Hash Cond: (r_1.gp_segment_id = e.gp_segment_id)
+                                   ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                         Hash Key: r_1.gp_segment_id
+                                         ->  Function Scan on gp_stat_get_segment_replication r_1
+                                   ->  Hash
+                                         ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                               Hash Key: e.gp_segment_id
+                                               ->  Hash Join
+                                                     Hash Cond: (e.gp_segment_id = c.content)
+                                                     ->  Function Scan on gp_stat_get_segment_replication_error e
+                                                     ->  Hash
+                                                           ->  Broadcast Motion 1:3  (slice2)
+                                                                 ->  Seq Scan on gp_segment_configuration c
+                                                                       Filter: (role = 'm'::"char")
+   ->  Result
+         One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(25 rows)
+
+begin;
+delete from information_schema.sql_languages
+where
+   cast(null as float8) = case when ((select tgattr from pg_catalog.pg_trigger limit 1 offset 6)
+               <@ (select distkey from pg_catalog.gp_distribution_policy limit 1 offset 5))
+   then (select pg_catalog.stddev(sotusize) from gp_toolkit.gp_size_of_table_uncompressed)
+   else (select checkpoint_write_time from pg_catalog.pg_stat_bgwriter limit 1 offset 4)
+   end
+returning
+ cast(nullif(pg_catalog.pg_xlog_location_diff(
+      cast(case when (cast(null as box) ?# cast(null as box))
+          and ((select typtype from pg_catalog.pg_type limit 1 offset 2)
+               <> cast(null as "char")) then (select sent_location from pg_catalog.pg_stat_replication limit 1 offset 5)
+           else cast(coalesce(cast(coalesce((select sent_location from pg_catalog.gp_stat_replication limit 1 offset 4)
+              ,
+            cast(null as pg_lsn)) as pg_lsn),
+          case when cast(null as date) > cast(null as "timestamp") then (select restart_lsn from pg_catalog.pg_replication_slots limit 1 offset 75)
+               else cast(null as pg_lsn) end
+            ) as pg_lsn) end
+         as pg_lsn),
+      cast(pg_catalog.pg_last_xlog_receive_location() as pg_lsn)), cast(null as "numeric")) as "numeric") as c24;
+ c24 
+-----
+(0 rows)
+
+rollback;
