@@ -816,10 +816,7 @@ view_references_deprecated_tables(PG_FUNCTION_ARGS)
 	if(rel->rd_rel->relkind == RELKIND_VIEW)
 	{
 		viewquery = get_view_query(rel);
-		found = query_tree_walker(viewquery,
-								  check_node_deprecated_tables_walker,
-								  NULL,
-								  QTW_EXAMINE_RTES);
+		found = check_node_deprecated_tables_walker((Node *) viewquery, NULL);
 	}
 	else
 		found = false;

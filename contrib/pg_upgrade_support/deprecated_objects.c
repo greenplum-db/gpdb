@@ -25,7 +25,7 @@ static bool is_deprecated_column(Oid reloid, int attnum);
  * don't (as gp_toolkit can be dropped and recreated), which is why we have to
  * look up their Oids at runtime.
  */
-static const Oid deprecated_tables_pg_catalog[]   = {
+static const Oid deprecated_tables_static[] = {
 	5000,	/* pg_catalog.gp_configuration */
 	5029,	/* pg_catalog.gp_db_interfaces */
 	5039,	/* pg_catalog.gp_fault_strategy */
@@ -42,30 +42,30 @@ static const Oid deprecated_tables_pg_catalog[]   = {
 	2614,	/* pg_catalog.pg_listener */
 	5004,	/* pg_catalog.pg_window */
 };
-static const int num_deprecated_tables_pg_catalog = sizeof(deprecated_tables_pg_catalog) / sizeof(Oid);
+static const int num_deprecated_tables_static = sizeof(deprecated_tables_static) / sizeof(Oid);
 
-static const char *deprecated_tables_gp_toolkit[2] = {
+static const char *deprecated_tables_dynamic[]  = {
 	"__gp_localid",
 	"__gp_masterid"
 };
-static const int num_deprecated_tables_gp_toolkit = sizeof(deprecated_tables_gp_toolkit) / sizeof(const char *);
+static const int num_deprecated_tables_dynamic = sizeof(deprecated_tables_dynamic) / sizeof(const char *);
 
 static bool is_deprecated_table(Oid reloid)
 {
 	Oid gp_toolkit_oid;
 
-	for (int i = 0; i < num_deprecated_tables_pg_catalog; i++)
+	for (int i = 0; i < num_deprecated_tables_static; i++)
 	{
-		if (reloid == deprecated_tables_pg_catalog[i])
+		if (reloid == deprecated_tables_static[i])
 			return true;
 	}
 
 	gp_toolkit_oid = LookupExplicitNamespace("gp_toolkit");
 	if (OidIsValid(gp_toolkit_oid))
 	{
-		for (int i = 0; i < num_deprecated_tables_gp_toolkit; i++)
+		for (int i = 0; i < num_deprecated_tables_dynamic; i++)
 		{
-			if (reloid == get_relname_relid(deprecated_tables_gp_toolkit[i], gp_toolkit_oid))
+			if (reloid == get_relname_relid(deprecated_tables_dynamic[i], gp_toolkit_oid))
 				return true;
 		}
 	}
@@ -182,43 +182,22 @@ check_node_deprecated_tables_walker(Node *node, void *context)
 		RangeTblEntry *rte = (RangeTblEntry *) node;
 		return is_deprecated_table(rte->relid);
 	}
-	if (IsA(node, List))
-	{
-		ListCell		*lc;
-		List 			*list = (List *) node;
-		CommonTableExpr	*cte;
-
-		if (list_length(list) == 0)
-			return false;
-
-		if (IsA(linitial(list), CommonTableExpr))
-		{
-			/*
-			 * Recurse into each CTE subquery to look for deprecated relations.
-			 */
-			foreach(lc, list)
-			{
-				cte = (CommonTableExpr *) lfirst(lc);
-				return query_tree_walker((Query *) cte->ctequery,
-										 check_node_deprecated_tables_walker,
-										 NULL,
-										 QTW_EXAMINE_RTES);
-			}
-		}
-	}
 	else if(IsA(node, Query))
 	{
 		/*
-		 * Recurse into each subquery to look for deprecated relations.
+		 * Recurse into (sub)queries to look for deprecated tables.
 		 */
-		Query	*subquery = (Query *) node;
-		return query_tree_walker(subquery,
+		return query_tree_walker((Query *) node,
 								 check_node_deprecated_tables_walker,
 								 NULL,
 								 QTW_EXAMINE_RTES);
 	}
 
-	return false;
+	/*
+	 * This ensures that we look for deprecated tables embedded inside
+	 * expressions (e.g. CTEs, sublinks etc.) which can contain range tables.
+	 */
+	return expression_tree_walker(node, check_node_deprecated_tables_walker, context);
 }
 
 bool
