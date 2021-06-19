@@ -4389,12 +4389,13 @@ targetid_get_partition(Oid targetid, EState *estate, bool openIndices)
 		ctl.keysize = sizeof(Oid);
 		ctl.entrysize = sizeof(*entry);
 		ctl.hash = oid_hash;
+		ctl.hcxt = estate->es_query_cxt;
 
 		parentInfo->ri_partition_hash =
 			hash_create("Partition Result Relation Hash",
 						10,
 						&ctl,
-						HASH_ELEM | HASH_FUNCTION);
+						HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
 	}
 
 	entry = hash_search(parentInfo->ri_partition_hash,
