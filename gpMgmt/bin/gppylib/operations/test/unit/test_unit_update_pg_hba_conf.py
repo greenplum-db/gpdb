@@ -6,6 +6,7 @@ from mock import call, patch, Mock
 import os
 
 from gppylib.commands.base import REMOTE
+from gppylib.commands import gp
 from gppylib.gparray import Segment, GpArray
 from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
 from test.unit.gp_unittest import GpTestCase, run_tests
@@ -47,7 +48,6 @@ host replication gpadmin {ip_primary2}/32 trust"""
     @patch('gppylib.operations.update_pg_hba_conf.Command', return_value=Mock())
     @patch('gppylib.operations.update_pg_hba_conf.gp.IfAddrs.list_addrs', side_effect=[ ['192.168.1.1', '192.168.2.1'], ['10.172.56.16', '10.172.56.20'], ['10.172.56.16', '10.172.56.20'], ['192.168.1.1', '192.168.2.1'], ])
     def test_pghbaconf_updated_successfully_all_failed_segments(self, mock_list_addrs, mock_cmd, mock_username):
-        os.environ["GPHOME"] = "/usr/local/gpdb"
         config_primaries_for_replication(self.gparray, False)
         self.logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
         self.logger.info.assert_any_call("Successfully modified pg_hba.conf on primary segments to allow replication connections")
@@ -56,16 +56,19 @@ host replication gpadmin {ip_primary2}/32 trust"""
         entries1 = self.entries_block.format(ip_primary1 = '192.168.1.1', ip_primary2 = '192.168.2.1', ip_mirror1 = '10.172.56.16', ip_mirror2 = '10.172.56.20')
 
         self.assertEqual(mock_cmd.call_count, 2)
+
+        cmdStr1_value=". {}/greenplum_path.sh; echo '{}' >> /data/primary0/pg_hba.conf; pg_ctl -D /data/primary0 reload".format(gp.get_gphome(), entries0)
+        cmdStr2_value=". {}/greenplum_path.sh; echo '{}' >> /data/primary1/pg_hba.conf; pg_ctl -D /data/primary1 reload".format(gp.get_gphome(), entries1)
+
         mock_cmd.assert_has_calls([
-            call(name="append to pg_hba.conf", cmdStr=". /usr/local/gpdb/greenplum_path.sh; echo '%s' >> /data/primary0/pg_hba.conf; pg_ctl -D /data/primary0 reload" % entries0, ctxt=REMOTE, remoteHost="sdw1"),
-            call(name="append to pg_hba.conf", cmdStr=". /usr/local/gpdb/greenplum_path.sh; echo '%s' >> /data/primary1/pg_hba.conf; pg_ctl -D /data/primary1 reload" % entries1, ctxt=REMOTE, remoteHost="sdw2"),
+            call(name="append to pg_hba.conf", cmdStr=cmdStr1_value, ctxt=REMOTE, remoteHost="sdw1"),
+            call(name="append to pg_hba.conf", cmdStr=cmdStr2_value, ctxt=REMOTE, remoteHost="sdw2"),
         ])
 
     @patch('gppylib.commands.unix.getUserName', return_value="gpadmin")
     @patch('gppylib.operations.update_pg_hba_conf.Command', return_value=Mock())
     @patch('gppylib.operations.update_pg_hba_conf.gp.IfAddrs.list_addrs', return_value=['192.168.1.1', '192.168.2.1'])
     def test_pghbaconf_updated_successfully_one_failed_segment(self, mock_list_addrs, mock_cmd, mock_username):
-        os.environ["GPHOME"] = "/usr/local/gpdb"
         config_primaries_for_replication(self.gparray, False, contents_to_update=[0])
         self.logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
         self.logger.info.assert_any_call("Successfully modified pg_hba.conf on primary segments to allow replication connections")
@@ -73,8 +76,11 @@ host replication gpadmin {ip_primary2}/32 trust"""
         entries = self.entries_block.format(ip_primary1 = '192.168.1.1', ip_primary2 = '192.168.2.1', ip_mirror1 = '192.168.1.1', ip_mirror2 = '192.168.2.1')
 
         self.assertEqual(mock_cmd.call_count, 1)
+
+        cmdStr1_value=". {}/greenplum_path.sh; echo '{}' >> /data/primary0/pg_hba.conf; pg_ctl -D /data/primary0 reload".format(gp.get_gphome(), entries)
+
         mock_cmd.assert_has_calls([
-            call(name="append to pg_hba.conf", cmdStr=". /usr/local/gpdb/greenplum_path.sh; echo '%s' >> /data/primary0/pg_hba.conf; pg_ctl -D /data/primary0 reload" % entries, ctxt=REMOTE, remoteHost="sdw1"),
+            call(name="append to pg_hba.conf", cmdStr=cmdStr1_value, ctxt=REMOTE, remoteHost="sdw1"),
         ])
 
     @patch('gppylib.operations.update_pg_hba_conf.Command', side_effect=Exception("boom"))
