@@ -25,12 +25,6 @@
                 master and all of the segment instances). The <codeph>gpstart</codeph> utility
                 handles the startup of the individual instances. Each instance is started in
                 parallel.</p>
-            <p>The first time an administrator runs <codeph>gpstart</codeph>, the utility creates a
-                hosts cache file named <codeph>.gphostcache</codeph> in the user's home directory.
-                Subsequently, the utility uses this list of hosts to start the system more
-                efficiently. If new hosts are added to the system, you must manually remove this
-                file from the <codeph>gpadmin</codeph> user's home directory. The utility will
-                create a new hosts cache file at the next startup.</p>
             <p>As part of the startup process, the utility checks the consistency of heap checksum
                 setting among the Greenplum Database master and segment instances, either enabled or
                 disabled on all instances. If the heap checksum setting is different among the
