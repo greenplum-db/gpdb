@@ -365,7 +365,7 @@ explain select * from L where 2::numeric is distinct from b::numeric;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000053" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000158" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -379,7 +379,7 @@ explain select * from L where 2::numeric is distinct from b::numeric;
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:TableDescriptor Mdid="0.311296.1.0" TableName="l">
             <dxl:Columns>
@@ -405,7 +405,7 @@ explain select * from L where 2::numeric is distinct from b::numeric;
           <dxl:Filter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">
@@ -439,7 +439,7 @@ explain select * from L where 2::numeric is distinct from b::numeric;
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="a">
@@ -473,7 +473,7 @@ explain select * from L where 2::numeric is distinct from b::numeric;
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="27" Alias="a">

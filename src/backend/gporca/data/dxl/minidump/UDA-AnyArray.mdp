@@ -275,7 +275,7 @@
     <dxl:Plan Id="0" SpaceSize="5">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000117" Rows="1.000000" Width="10"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000165" Rows="1.000000" Width="10"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="f3">
@@ -291,7 +291,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000072" Rows="1.000000" Width="10"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="1.000000" Width="10"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="2" Alias="f3">
@@ -309,7 +309,7 @@
           <dxl:LimitOffset/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000072" Rows="1.000000" Width="10"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="1.000000" Width="10"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="2"/>

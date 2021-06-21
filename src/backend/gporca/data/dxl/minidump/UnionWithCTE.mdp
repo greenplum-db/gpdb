@@ -276,9 +276,9 @@
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="12">
-      <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
+      <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.000263" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000364" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="id">
@@ -291,26 +291,21 @@
             <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:Filter/>
-        <dxl:SortingColumnList/>
-        <dxl:Sequence>
+        <dxl:CTEProducer CTEId="0" Columns="0,9">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.000203" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000176" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
-            <dxl:ProjElem ColId="10" Alias="id">
-              <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
+            <dxl:ProjElem ColId="0" Alias="id">
+              <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="11" Alias="c">
-              <dxl:Ident ColId="11" ColName="c" TypeMdid="0.20.1.0"/>
-            </dxl:ProjElem>
-            <dxl:ProjElem ColId="20" Alias="id">
-              <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
+            <dxl:ProjElem ColId="9" Alias="c">
+              <dxl:Ident ColId="9" ColName="c" TypeMdid="0.20.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:CTEProducer CTEId="0" Columns="0,9">
+          <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000175" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id">
@@ -320,9 +315,11 @@
                 <dxl:Ident ColId="9" ColName="c" TypeMdid="0.20.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
+            <dxl:Filter/>
+            <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="0"/>
@@ -378,10 +375,27 @@
                 </dxl:TableScan>
               </dxl:Sort>
             </dxl:Aggregate>
-          </dxl:CTEProducer>
-          <dxl:Append IsTarget="false" IsZapped="false">
+          </dxl:GatherMotion>
+        </dxl:CTEProducer>
+        <dxl:Append IsTarget="false" IsZapped="false">
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="862.000172" Rows="1.000000" Width="16"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="10" Alias="id">
+              <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="11" Alias="c">
+              <dxl:Ident ColId="11" ColName="c" TypeMdid="0.20.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="20" Alias="id">
+              <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:Filter/>
+          <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000161" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000111" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="id">
@@ -394,37 +408,35 @@
                 <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
+              </dxl:Comparison>
+            </dxl:Filter>
+            <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000111" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
+                <dxl:ProjElem ColId="20" Alias="id">
+                  <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
                 <dxl:ProjElem ColId="10" Alias="id">
                   <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="11" Alias="c">
                   <dxl:Ident ColId="11" ColName="c" TypeMdid="0.20.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="20" Alias="id">
-                  <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="20" ColName="id" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
-              </dxl:Filter>
+              <dxl:Filter/>
               <dxl:OneTimeFilter/>
-              <dxl:Result>
+              <dxl:CTEConsumer CTEId="0" Columns="10,11">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000029" Rows="1.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
-                  <dxl:ProjElem ColId="20" Alias="id">
-                    <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
                   <dxl:ProjElem ColId="10" Alias="id">
                     <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
@@ -432,26 +444,29 @@
                     <dxl:Ident ColId="11" ColName="c" TypeMdid="0.20.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:OneTimeFilter/>
-                <dxl:CTEConsumer CTEId="0" Columns="10,11">
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000029" Rows="1.000000" Width="12"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="10" Alias="id">
-                      <dxl:Ident ColId="10" ColName="id" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="11" Alias="c">
-                      <dxl:Ident ColId="11" ColName="c" TypeMdid="0.20.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                </dxl:CTEConsumer>
-              </dxl:Result>
+              </dxl:CTEConsumer>
             </dxl:Result>
-            <dxl:Result>
+          </dxl:Result>
+          <dxl:Result>
+            <dxl:Properties>
+              <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="16"/>
+            </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="21" Alias="id">
+                <dxl:Ident ColId="21" ColName="id" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="22" Alias="c">
+                <dxl:Ident ColId="22" ColName="c" TypeMdid="0.20.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="31" Alias="id">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="-1"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:Filter/>
+            <dxl:OneTimeFilter/>
+            <dxl:CTEConsumer CTEId="0" Columns="21,22">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000029" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="21" Alias="id">
@@ -460,29 +475,11 @@
                 <dxl:ProjElem ColId="22" Alias="c">
                   <dxl:Ident ColId="22" ColName="c" TypeMdid="0.20.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="31" Alias="id">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="-1"/>
-                </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:OneTimeFilter/>
-              <dxl:CTEConsumer CTEId="0" Columns="21,22">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000029" Rows="1.000000" Width="12"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="21" Alias="id">
-                    <dxl:Ident ColId="21" ColName="id" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="22" Alias="c">
-                    <dxl:Ident ColId="22" ColName="c" TypeMdid="0.20.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-              </dxl:CTEConsumer>
-            </dxl:Result>
-          </dxl:Append>
-        </dxl:Sequence>
-      </dxl:GatherMotion>
+            </dxl:CTEConsumer>
+          </dxl:Result>
+        </dxl:Append>
+      </dxl:Sequence>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

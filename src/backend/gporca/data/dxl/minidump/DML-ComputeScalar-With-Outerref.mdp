@@ -321,7 +321,7 @@
     <dxl:Plan Id="0" SpaceSize="96">
       <dxl:DMLInsert Columns="0" ActionCol="29" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1356691880.647039" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1356691880.677750" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -343,7 +343,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1356691880.636623" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1356691880.667333" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -357,7 +357,7 @@
           <dxl:OneTimeFilter/>
           <dxl:NestedLoopJoin JoinType="In" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1356691880.636620" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="1356691880.667331" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -370,7 +370,7 @@
             </dxl:JoinFilter>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

@@ -702,7 +702,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1294.018798" Rows="1002.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="1294.151383" Rows="1002.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -716,7 +716,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.973989" Rows="1002.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="1294.016954" Rows="1002.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

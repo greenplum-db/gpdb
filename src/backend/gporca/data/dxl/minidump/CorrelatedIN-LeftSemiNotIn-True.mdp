@@ -558,7 +558,7 @@ create table customer
     <dxl:Plan Id="0" SpaceSize="4">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2155.000441" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="2155.000611" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="pn">
@@ -636,12 +636,12 @@ create table customer
                                   <dxl:Ident ColId="40" ColName="ColRef_0040" TypeMdid="0.20.1.0"/>
                                   <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                                 </dxl:Comparison>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                 <dxl:If TypeMdid="0.16.1.0">
                                   <dxl:IsNull>
                                     <dxl:Ident ColId="13" ColName="cn" TypeMdid="0.23.1.0"/>
                                   </dxl:IsNull>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                   <dxl:If TypeMdid="0.16.1.0">
                                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                       <dxl:Ident ColId="39" ColName="ColRef_0039" TypeMdid="0.20.1.0"/>
@@ -825,7 +825,7 @@ create table customer
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000085" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000254" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="2" Alias="pn">
@@ -842,7 +842,7 @@ create table customer
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000120" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="pn">
@@ -859,7 +859,7 @@ create table customer
             <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000120" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="cn">

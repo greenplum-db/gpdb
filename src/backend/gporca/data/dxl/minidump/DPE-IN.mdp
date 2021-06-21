@@ -974,7 +974,7 @@ select * from P,X where P.a=X.a  and X.a  in (1,2);
     <dxl:Plan Id="0" SpaceSize="11">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.284504" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.284578" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -991,7 +991,7 @@ select * from P,X where P.a=X.a  and X.a  in (1,2);
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.284450" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.284471" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

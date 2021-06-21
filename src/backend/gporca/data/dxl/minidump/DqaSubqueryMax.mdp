@@ -638,7 +638,7 @@
     <dxl:Plan Id="0" SpaceSize="24">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="903842.531783" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="914419.769116" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="12" Alias="?column?">
@@ -649,7 +649,7 @@
         <dxl:OneTimeFilter/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="903842.531779" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="914419.769112" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
@@ -658,7 +658,7 @@
           </dxl:JoinFilter>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="451.658715" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="461.988048" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter>
@@ -670,7 +670,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="451.658682" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="461.988015" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>
@@ -683,7 +683,7 @@
               <dxl:Filter/>
               <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="451.658682" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="461.988015" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="13" Alias="ColRef_0013">
@@ -694,7 +694,7 @@
                 <dxl:SortingColumnList/>
                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="451.658667" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="461.988000" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
@@ -707,7 +707,7 @@
                   <dxl:Filter/>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="446.400000" Rows="2000000.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="454.100000" Rows="2000000.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="2" Alias="b">

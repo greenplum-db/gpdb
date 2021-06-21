@@ -210,7 +210,7 @@ SELECT * FROM foo WHERE id::text = 'foo';
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000104" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="id">
@@ -221,7 +221,7 @@ SELECT * FROM foo WHERE id::text = 'foo';
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000059" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id">

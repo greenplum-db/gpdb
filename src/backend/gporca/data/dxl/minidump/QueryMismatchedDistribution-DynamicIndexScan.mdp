@@ -895,7 +895,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000302" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000360" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -909,7 +909,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000248" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000252" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>

@@ -218,7 +218,7 @@ explain  select 1 from foo where foo.a = all('{}');
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000062" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000074" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="8" Alias="?column?">
@@ -229,14 +229,14 @@ explain  select 1 from foo where foo.a = all('{}');
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000058" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000070" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000059" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter>

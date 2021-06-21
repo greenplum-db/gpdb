@@ -257,7 +257,7 @@ explain select * from foo union select * from bar;
     <dxl:Plan Id="0" SpaceSize="20">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000138" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -271,7 +271,7 @@ explain select * from foo union select * from bar;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000048" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>

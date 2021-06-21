@@ -399,7 +399,7 @@ select * from x2 where a in (select a from y union select 1::int8);
     <dxl:Plan Id="0" SpaceSize="36">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.002070" Rows="10.000000" Width="2"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.002108" Rows="10.000000" Width="2"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -410,7 +410,7 @@ select * from x2 where a in (select a from y union select 1::int8);
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.001980" Rows="10.000000" Width="2"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.002018" Rows="10.000000" Width="2"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -430,7 +430,7 @@ select * from x2 where a in (select a from y union select 1::int8);
               </dxl:ParamList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000187" Rows="4.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000225" Rows="4.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="17"/>
@@ -443,7 +443,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000162" Rows="4.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000200" Rows="4.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="17" Alias="a">
@@ -458,7 +458,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                   <dxl:LimitOffset/>
                   <dxl:Append IsTarget="false" IsZapped="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000072" Rows="4.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000109" Rows="4.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="17" Alias="a">
@@ -468,7 +468,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                     <dxl:Filter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="2.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000084" Rows="2.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="17" Alias="a">
@@ -481,20 +481,20 @@ select * from x2 where a in (select a from y union select 1::int8);
                       <dxl:OneTimeFilter/>
                       <dxl:Materialize Eager="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="2.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000076" Rows="2.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
                         <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000038" Rows="2.000000" Width="1"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="2.000000" Width="1"/>
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
                           <dxl:TableScan>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="1"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="1"/>
                             </dxl:Properties>
                             <dxl:ProjList/>
                             <dxl:Filter/>

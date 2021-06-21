@@ -250,7 +250,7 @@ select 1 from (select count(*) from T group by a) as foo;
     <dxl:Plan Id="0" SpaceSize="4">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000048" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000052" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="12" Alias="?column?">
@@ -261,21 +261,21 @@ select 1 from (select count(*) from T group by a) as foo;
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000044" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000048" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
             <dxl:OneTimeFilter/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="0"/>

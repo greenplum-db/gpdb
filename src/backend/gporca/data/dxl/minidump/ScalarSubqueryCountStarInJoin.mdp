@@ -392,7 +392,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
     <dxl:Plan Id="0" SpaceSize="544">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1724.000816" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1724.000861" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="29" Alias="?column?">
@@ -403,7 +403,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1724.000786" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1724.000832" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="29" Alias="?column?">
@@ -417,7 +417,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1724.000784" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1724.000829" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="ColRef_0030">
@@ -428,7 +428,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
             <dxl:OneTimeFilter/>
             <dxl:HashJoin JoinType="Left">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1724.000778" Rows="2.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1724.000824" Rows="2.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="28" Alias="count">
@@ -468,7 +468,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
               </dxl:TableScan>
               <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.000183" Rows="1.000000" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.000191" Rows="1.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="19" Alias="e">
@@ -540,25 +540,25 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                 </dxl:Aggregate>
                 <dxl:Materialize Eager="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000092" Rows="3.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000100" Rows="3.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList/>
                   <dxl:Filter/>
                   <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1,2">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000091" Rows="3.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000099" Rows="3.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
                     <dxl:SortingColumnList/>
                     <dxl:Limit>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="1.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList/>
                       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000044" Rows="1.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>

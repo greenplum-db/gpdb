@@ -1898,7 +1898,7 @@
     <dxl:Plan Id="0" SpaceSize="5">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="868.286653" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="868.288950" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="dist_e">
@@ -1930,7 +1930,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="868.286534" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="868.288592" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="dist_e">
@@ -1995,7 +1995,7 @@
           </dxl:TableScan>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.284739" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.286723" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="21" Alias="empty_col">
@@ -2018,7 +2018,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Append IsTarget="false" IsZapped="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="437.284732" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="437.286716" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="dist_a">
@@ -2037,7 +2037,7 @@
               <dxl:Filter/>
               <dxl:BitmapTableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="437.284732" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.286716" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="22" Alias="dist_a">
@@ -2124,7 +2124,7 @@
               </dxl:BitmapTableScan>
               <dxl:BitmapTableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="437.284732" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.286716" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="33" Alias="dist_a">
@@ -2211,7 +2211,7 @@
               </dxl:BitmapTableScan>
               <dxl:BitmapTableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="437.284732" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.286716" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="44" Alias="dist_a">

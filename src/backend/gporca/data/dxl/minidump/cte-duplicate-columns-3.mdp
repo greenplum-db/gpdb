@@ -235,7 +235,7 @@ with x as (select a a1, a a2, b from foo) select * from x where a1 = 1 and a2 = 
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000128" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000218" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="a1">

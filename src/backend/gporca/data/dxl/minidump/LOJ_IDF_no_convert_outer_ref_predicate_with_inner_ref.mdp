@@ -285,7 +285,7 @@ EXPLAIN SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t1.b IS DISTINC
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000790" Rows="1.600000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000873" Rows="1.600000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">

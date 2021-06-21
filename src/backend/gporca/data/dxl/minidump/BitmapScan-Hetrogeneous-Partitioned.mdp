@@ -818,7 +818,7 @@ explain select * from t where b=3;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="387.962241" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="387.962310" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -832,7 +832,7 @@ explain select * from t where b=3;
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="387.962211" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="387.962221" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -845,7 +845,7 @@ explain select * from t where b=3;
           <dxl:Filter/>
           <dxl:BitmapTableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="387.962211" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="387.962221" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">
@@ -887,7 +887,7 @@ explain select * from t where b=3;
           </dxl:BitmapTableScan>
           <dxl:BitmapTableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="387.962211" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="387.962221" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="a">
@@ -929,7 +929,7 @@ explain select * from t where b=3;
           </dxl:BitmapTableScan>
           <dxl:BitmapTableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="387.962211" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="387.962221" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="27" Alias="a">

@@ -371,7 +371,7 @@ WHERE b in (1,2);
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000159" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000318" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -391,7 +391,7 @@ WHERE b in (1,2);
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:TableDescriptor Mdid="0.671910.1.1" TableName="p">
             <dxl:Columns>
@@ -425,7 +425,7 @@ WHERE b in (1,2);
           <dxl:Filter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="a">
@@ -468,7 +468,7 @@ WHERE b in (1,2);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="22" Alias="a">

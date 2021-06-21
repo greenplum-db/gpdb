@@ -229,7 +229,7 @@ explain select * from r where a=1 and b=2;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000217" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000260" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -243,7 +243,7 @@ explain select * from r where a=1 and b=2;
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000181" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000188" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

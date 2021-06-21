@@ -181,7 +181,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="1,0" ActionCol="9" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.023484" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.023505" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -205,9 +205,9 @@
             <dxl:Column ColId="18" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
-        <dxl:Result>
+        <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000046" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000068" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="b">
@@ -217,33 +217,36 @@
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="9" Alias="ColRef_0009">
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              <dxl:Ident ColId="9" ColName="ColRef_0009" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
-          <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
+          <dxl:SortingColumnList/>
+          <dxl:HashExprList>
+            <dxl:HashExpr>
+              <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+            </dxl:HashExpr>
+          </dxl:HashExprList>
+          <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000049" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="0" Alias="a">
-                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
               <dxl:ProjElem ColId="1" Alias="b">
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
+              <dxl:ProjElem ColId="0" Alias="a">
+                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="9" Alias="ColRef_0009">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList/>
-            <dxl:HashExprList>
-              <dxl:HashExpr>
-                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-              </dxl:HashExpr>
-            </dxl:HashExprList>
+            <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -268,8 +271,8 @@
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>
-          </dxl:RedistributeMotion>
-        </dxl:Result>
+          </dxl:Result>
+        </dxl:RedistributeMotion>
       </dxl:DMLInsert>
     </dxl:Plan>
   </dxl:Thread>

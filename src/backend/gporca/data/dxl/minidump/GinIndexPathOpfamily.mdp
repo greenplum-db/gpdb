@@ -243,10 +243,10 @@
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
+    <dxl:Plan Id="0" SpaceSize="1">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="391.295510" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="387.966471" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
@@ -259,7 +259,7 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="391.295509" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="387.966470" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -270,7 +270,7 @@
           <dxl:SortingColumnList/>
           <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="391.295479" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="387.966440" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns/>
             <dxl:ProjList>
@@ -279,9 +279,9 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:BitmapTableScan>
+            <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="391.295478" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="387.966440" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -289,34 +289,46 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:RecheckCond>
-                <dxl:Comparison ComparisonOperator="@&gt;" OperatorMdid="0.3246.1.0">
-                  <dxl:Ident ColId="0" ColName="a" TypeMdid="0.3802.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.3802.1.0" Value="AAAAFAEAACAEAACAAAAAQHdhaXQ="/>
-                </dxl:Comparison>
-              </dxl:RecheckCond>
-              <dxl:BitmapIndexProbe>
-                <dxl:IndexCondList>
+              <dxl:SortingColumnList/>
+              <dxl:BitmapTableScan>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="387.966435" Rows="1.000000" Width="1"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="0" Alias="a">
+                    <dxl:Ident ColId="0" ColName="a" TypeMdid="0.3802.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:RecheckCond>
                   <dxl:Comparison ComparisonOperator="@&gt;" OperatorMdid="0.3246.1.0">
                     <dxl:Ident ColId="0" ColName="a" TypeMdid="0.3802.1.0"/>
                     <dxl:ConstValue TypeMdid="0.3802.1.0" Value="AAAAFAEAACAEAACAAAAAQHdhaXQ="/>
                   </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.20131.1.0" IndexName="jidx"/>
-              </dxl:BitmapIndexProbe>
-              <dxl:TableDescriptor Mdid="0.20124.1.0" TableName="t">
-                <dxl:Columns>
-                  <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.3802.1.0" ColWidth="90"/>
-                  <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="2" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="3" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="4" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="5" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="6" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="7" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:BitmapTableScan>
+                </dxl:RecheckCond>
+                <dxl:BitmapIndexProbe>
+                  <dxl:IndexCondList>
+                    <dxl:Comparison ComparisonOperator="@&gt;" OperatorMdid="0.3246.1.0">
+                      <dxl:Ident ColId="0" ColName="a" TypeMdid="0.3802.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.3802.1.0" Value="AAAAFAEAACAEAACAAAAAQHdhaXQ="/>
+                    </dxl:Comparison>
+                  </dxl:IndexCondList>
+                  <dxl:IndexDescriptor Mdid="0.20131.1.0" IndexName="jidx"/>
+                </dxl:BitmapIndexProbe>
+                <dxl:TableDescriptor Mdid="0.20124.1.0" TableName="t">
+                  <dxl:Columns>
+                    <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.3802.1.0" ColWidth="90"/>
+                    <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                    <dxl:Column ColId="2" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="3" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="4" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="5" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="6" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="7" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:BitmapTableScan>
+            </dxl:RandomMotion>
           </dxl:Aggregate>
         </dxl:GatherMotion>
       </dxl:Aggregate>

@@ -221,7 +221,7 @@ explain select * from foo where d in ('a', 'b');
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000214" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c">
@@ -235,7 +235,7 @@ explain select * from foo where d in ('a', 'b');
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000079" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c">

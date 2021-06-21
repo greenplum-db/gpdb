@@ -833,7 +833,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
     <dxl:Plan Id="0" SpaceSize="82">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.004074" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.004140" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -847,7 +847,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="In" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.004038" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.004068" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -863,7 +863,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:JoinFilter>
           <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:TableDescriptor Mdid="0.284979.1.1" TableName="t1">
               <dxl:Columns>
@@ -885,7 +885,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             <dxl:Filter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="13" Alias="a">
@@ -919,7 +919,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="18" Alias="a">
@@ -953,7 +953,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="23" Alias="a">
@@ -987,7 +987,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="28" Alias="a">
@@ -1021,7 +1021,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="33" Alias="a">
@@ -1055,7 +1055,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="38" Alias="a">
@@ -1089,7 +1089,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="43" Alias="a">
@@ -1123,7 +1123,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="48" Alias="a">
@@ -1157,7 +1157,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="53" Alias="a">
@@ -1191,7 +1191,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003910" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="58" Alias="a">
@@ -1226,32 +1226,32 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:Append>
           <dxl:Materialize Eager="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000118" Rows="2.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000123" Rows="2.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
             <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000117" Rows="2.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000122" Rows="2.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList/>
               <dxl:Filter/>
               <dxl:SortingColumnList/>
               <dxl:Limit>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000065" Rows="1.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000070" Rows="1.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000064" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList/>
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
                   <dxl:Limit>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000059" Rows="1.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000060" Rows="1.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:TableScan>

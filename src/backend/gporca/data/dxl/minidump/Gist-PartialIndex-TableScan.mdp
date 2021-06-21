@@ -380,7 +380,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000328" Rows="1.000000" Width="44"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000984" Rows="1.000000" Width="44"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -397,7 +397,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000164" Rows="1.000000" Width="44"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000492" Rows="1.000000" Width="44"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -413,7 +413,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           <dxl:Filter/>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000164" Rows="1.000000" Width="44"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000492" Rows="1.000000" Width="44"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="6" Alias="a">
@@ -452,7 +452,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           </dxl:IndexScan>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000164" Rows="1.000000" Width="44"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000492" Rows="1.000000" Width="44"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="12" Alias="a">
@@ -491,7 +491,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=44)
           </dxl:IndexScan>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000164" Rows="1.000000" Width="44"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000492" Rows="1.000000" Width="44"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="a">
