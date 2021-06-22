@@ -266,6 +266,7 @@ static Oid *tempTableSpaces = NULL;
 static int	numTempTableSpaces = -1;
 static int	nextTempTableSpace = 0;
 
+static Oid GetFirstTempTableSpace(void);
 
 /*--------------------
  *
@@ -1235,9 +1236,9 @@ PathNameOpenFile(FileName fileName, int fileFlags, int fileMode)
  * This is used for inter-process communication, where one process creates
  * a file, and another process reads it.
  *
- * NOTE: this ignores `temp_tablespaces`, and always creates the file
- * in the main data directory's pg_temp dir. Otherwise it would be hard
- * for the reader process to find the file created by the writer process.
+ * NOTE: this always uses first tablespace from `temp_tablespaces`. Otherwise
+ * picking randomly from list would be hard for the reader process to find the
+ * file created by the writer process.
  */
 File
 OpenNamedTemporaryFile(const char *fileName,
@@ -1245,16 +1246,42 @@ OpenNamedTemporaryFile(const char *fileName,
 					   bool delOnClose,
 					   bool interXact)
 {
-	File		file;
+	File		file = 0;
 
-	/* Create in the default tablespace. */
-	file = OpenTemporaryFileInTablespace(MyDatabaseTableSpace ?
-										 MyDatabaseTableSpace :
-										 DEFAULTTABLESPACE_OID,
-										 true, /* rejectError */
-										 fileName,
-										 false, /* makenameunique */
-										 create);
+	/*
+	 * If some temp tablespace(s) have been given to us, try to use the first
+	 * one.  If a given tablespace can't be found, we silently fall back to
+	 * the database's default tablespace.
+	 *
+	 * BUT: if the temp file is slated to outlive the current transaction,
+	 * force it into the database's default tablespace, so that it will not
+	 * pose a threat to possible tablespace drop attempts.
+	 */
+	if (numTempTableSpaces > 0 && !interXact)
+	{
+		Oid            tblspcOid = GetFirstTempTableSpace();
+
+		if (OidIsValid(tblspcOid))
+			file = OpenTemporaryFileInTablespace(tblspcOid,
+												 false, /* rejectError */
+												 fileName,
+												 false, /* makenameunique */
+												 create); /* create */
+	}
+
+	/*
+	 * If not, or if tablespace is bad, create in database's default
+	 * tablespace.  MyDatabaseTableSpace should normally be set before we get
+	 * here, but just in case it isn't, fall back to pg_default tablespace.
+	 */
+	if (file <= 0)
+		file = OpenTemporaryFileInTablespace(MyDatabaseTableSpace ?
+											 MyDatabaseTableSpace :
+											 DEFAULTTABLESPACE_OID,
+											 true, /* rejectError */
+											 fileName,
+											 false, /* makenameunique */
+											 create);
 
 	/* Mark it for deletion at close */
 	if (delOnClose)
@@ -2634,6 +2661,19 @@ GetNextTempTableSpace(void)
 	return InvalidOid;
 }
 
+/*
+ * GetFirstTempTableSpace
+ *
+ * Select the First temp tablespace to use.  A result of InvalidOid means to
+ * use the current database's default tablespace.
+ */
+static Oid
+GetFirstTempTableSpace(void)
+{
+	if (numTempTableSpaces > 0)
+		nextTempTableSpace = 0;
+	return InvalidOid;
+}
 
 /*
  * AtEOSubXact_Files
