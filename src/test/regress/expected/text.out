@@ -79,7 +79,7 @@ SELECT '(1,abc)'::text::usr_define_type;
  (1,abc)
 (1 row)
 
--- test unknown type casting
+-- test unknown type implicit casting
 with unknown as (
         select '2021' as foo
 )

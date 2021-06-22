@@ -386,8 +386,14 @@ coerce_type(ParseState *pstate, Node *node,
 			Insist(OidIsValid(outfunc));
 			Insist(OidIsValid(infunc));
 
-			/* do unknownout(Var) */
-			/* set it as an implicit cast to hide this Greenplum hack */
+			/*
+			 * do unknownout(Var)
+			 *
+			 * always supplying COERCE_IMPLICIT_CAST here, set it as an
+			 * implicit cast to hide this Greenplum hack, because the explicit
+			 * cast would be dumped but not able to be loaded, for like a cast
+			 * unknown::cstring::date
+			 */
 			fe = makeFuncExpr(outfunc, CSTRINGOID, list_make1(node), COERCE_IMPLICIT_CAST);
 			fe->location = location;
 

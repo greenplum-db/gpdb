@@ -39,7 +39,7 @@ SELECT '{1,2}'::text::integer[];
 CREATE TYPE usr_define_type as (id int, name text);
 SELECT '(1,abc)'::text::usr_define_type;
 
--- test unknown type casting
+-- test unknown type implicit casting
 with unknown as (
         select '2021' as foo
 )
