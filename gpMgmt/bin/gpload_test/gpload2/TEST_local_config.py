@@ -146,3 +146,14 @@ def test_100_gpload_transform():
                       format='text',
                       table='prices',
                       mode='insert')
+
+@prepare_before_test_2(num=101)
+def test_101_gpload_test_port_range():
+    "101 gpload header reuse table MPP:31557"
+    copy_data('external_file_101.txt','data_file.txt')
+    write_config_file(input_port=None,port_range='[8082,8090]', mode='insert',reuse_tables='true',fast_match='false', file='data_file.txt',config='config/config_file1', table='testheaderreuse', delimiter="','", format='csv', quote="'\x22'", encoding='LATIN1', log_errors=True, error_limit='1000', header='true', truncate=True, match_columns=False)
+    write_config_file(input_port=None,port_range='[8082,8090]', mode='insert',reuse_tables='true',fast_match='false', file='data_file.txt',config='config/config_file2', table='testheaderreuse', delimiter="','", format='csv', quote="'\x22'", encoding='LATIN1', log_errors=True, error_limit='1000', truncate=True, match_columns=False)
+    f = open(mkpath('query101.sql'),'w')
+    f.write("\! gpload -f "+mkpath('config/config_file1')+ "\n")
+    f.write("\! gpload -f "+mkpath('config/config_file2')+ "\n")
+    f.close()

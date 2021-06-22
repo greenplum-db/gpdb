@@ -2129,7 +2129,7 @@ class gpload:
 
         sql+= """and pgext.fmttype = %s
                  and pgext.writable = false
-                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip())))
 
         if limitStr:
             sql += "and pgext.rejectlimit = %s " % limitStr
@@ -2216,7 +2216,7 @@ class gpload:
 
         sql+= """and pgext.fmttype = %s
                  and pgext.writable = false
-                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip())))
 
         if limitStr:
             sql += "and pgext.rejectlimit = %s " % limitStr

@@ -23,6 +23,8 @@ DROP TABLE IF EXISTS chinese表;
 DROP TABLE
 DROP TABLE IF EXISTS testtruncate;
 DROP TABLE
+DROP TABLE IF EXISTS testheaderreuse;
+DROP TABLE
 reset client_min_messages;
 RESET
 CREATE TABLE texttable (
@@ -56,5 +58,10 @@ CREATE TABLE testtruncate (
 CREATE TABLE
 INSERT INTO testtruncate VALUES('ttt','ttgt','shpits', '2011-06-01 12:30:30',16,732,834567,45.67,789.123,7.12345,156.456178);
 INSERT 0 1
-CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber)
+CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber);
+CREATE TABLE
+CREATE TABLE testheaderreuse (
+            field1            integer not null,
+            field2            text,
+            field3            text) DISTRIBUTED randomly;
 CREATE TABLE

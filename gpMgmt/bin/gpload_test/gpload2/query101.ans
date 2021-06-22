@@ -1,0 +1,20 @@
+NOTICE:  HEADER means that each one of the data files has a header row
+NOTICE:  HEADER means that each one of the data files has a header row
+2021-06-22 01:19:18|INFO|gpload session started 2021-06-22 01:19:18
+2021-06-22 01:19:18|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-06-22 01:19:18|INFO|started gpfdist -p 8082 -P 8090 -f "/home/zhaorui/workspace/greenplum_test/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-22 01:19:18|INFO|did not find an external table to reuse. creating ext_gpload_reusable_8a558d4a_d332_11eb_b595_000c29e26586
+2021-06-22 01:19:18|INFO|running time: 0.10 seconds
+2021-06-22 01:19:18|INFO|rows Inserted          = 1
+2021-06-22 01:19:18|INFO|rows Updated           = 0
+2021-06-22 01:19:18|INFO|data formatting errors = 0
+2021-06-22 01:19:18|INFO|gpload succeeded
+2021-06-22 01:19:18|INFO|gpload session started 2021-06-22 01:19:18
+2021-06-22 01:19:19|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-06-22 01:19:19|INFO|started gpfdist -p 8082 -P 8090 -f "/home/zhaorui/workspace/greenplum_test/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-22 01:19:19|INFO|did not find an external table to reuse. creating ext_gpload_reusable_8a7806ea_d332_11eb_a2b1_000c29e26586
+2021-06-22 01:19:19|INFO|running time: 0.11 seconds
+2021-06-22 01:19:19|INFO|rows Inserted          = 2
+2021-06-22 01:19:19|INFO|rows Updated           = 0
+2021-06-22 01:19:19|INFO|data formatting errors = 0
+2021-06-22 01:19:19|INFO|gpload succeeded
