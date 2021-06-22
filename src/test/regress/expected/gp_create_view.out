@@ -147,5 +147,3 @@ SELECT * FROM unknown_v2;
  12-13-2020
 (1 row)
 
-DROP VIEW unknown_v2;
-DROP VIEW unknown_v1;

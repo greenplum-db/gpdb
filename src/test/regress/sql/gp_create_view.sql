@@ -77,5 +77,3 @@ CREATE VIEW unknown_v1 AS SELECT '2020-12-13'::unknown AS field_unknown;
 CREATE VIEW unknown_v2 AS SELECT field_unknown::date FROM unknown_v1;
 \d+ unknown_v2
 SELECT * FROM unknown_v2;
-DROP VIEW unknown_v2;
-DROP VIEW unknown_v1;
