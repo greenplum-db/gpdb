@@ -54,6 +54,15 @@ UNION ALL
 )
 SELECT n, n IS OF (text) as is_text FROM t;
 
+-- In a perfect world, this would work and resolve the literal as int ...
+-- but for now, we have to be content with resolving to text too soon.
+WITH RECURSIVE t(n) AS (
+    SELECT '7'
+UNION ALL
+    SELECT n+1 FROM t WHERE n < 10
+)
+SELECT n, n IS OF (int) AS is_int FROM t;
+
 --
 -- Some examples with a tree
 --
