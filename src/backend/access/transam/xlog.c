@@ -12883,6 +12883,11 @@ wait_to_avoid_large_repl_lag(void)
 	 * temporarily to avoid blocking the write transactions, but we also
 	 * flow-control the new xlog to ensure it does not slow down catchup too
 	 * much.
+	 *
+	 * It is possible that wal state is streaming but syncrep is off. This
+	 * could happen if mirror has been down or mirror is streaming but fts has
+	 * not probed yet. For the later scenario we could throttle also but we
+	 * are not making the logic more complex given the window is small.
 	 */
 	if (wal_bytes_written > throttle_size &&
 		!IS_QUERY_DISPATCHER() &&
@@ -12899,7 +12904,7 @@ wait_to_avoid_large_repl_lag(void)
 
 		Assert (ori_lag >= 0);
 
-		while(true && !XLogRecPtrIsInvalid(ori_min_lsn))
+		while(!XLogRecPtrIsInvalid(ori_min_lsn))
 		{
 			/* sleep for 5ms. */
 			pg_usleep(5 * 1000);

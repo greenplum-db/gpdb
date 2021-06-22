@@ -78,7 +78,7 @@ test_HandleFtsWalRepProbePrimary(void **state)
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
 	expect_any(GetMirrorStatus, ready_for_syncrep);
-	will_assign_value(GetMirrorStatus, ready_for_syncrep, false);
+	will_assign_value(GetMirrorStatus, ready_for_syncrep, (bool) false);
 	will_be_called(GetMirrorStatus);
 
 	/* mirror being up does not mean SyncRep should be enabled. */
