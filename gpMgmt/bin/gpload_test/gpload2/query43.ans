@@ -1,0 +1,18 @@
+2021-06-22 17:00:02|INFO|gpload session started 2021-06-22 17:00:02
+2021-06-22 17:00:02|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-06-22 17:00:02|INFO|started gpfdist -p 8081 -P 8082 -f "/home/zhaorui/workspace/greenplum/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-22 17:00:02|INFO|did not find an external table to reuse. creating ext_gpload_reusable_3b05572e_d338_11eb_a04f_000c29b81d26
+2021-06-22 17:00:02|INFO|running time: 0.07 seconds
+2021-06-22 17:00:02|INFO|rows Inserted          = 1
+2021-06-22 17:00:02|INFO|rows Updated           = 0
+2021-06-22 17:00:02|INFO|data formatting errors = 0
+2021-06-22 17:00:02|INFO|gpload succeeded
+2021-06-22 17:00:02|INFO|gpload session started 2021-06-22 17:00:02
+2021-06-22 17:00:02|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-06-22 17:00:02|INFO|started gpfdist -p 8081 -P 8082 -f "/home/zhaorui/workspace/greenplum/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-22 17:00:02|INFO|did not find an external table to reuse. creating ext_gpload_reusable_3b1e43b0_d338_11eb_a5ee_000c29b81d26
+2021-06-22 17:00:02|INFO|running time: 0.06 seconds
+2021-06-22 17:00:02|INFO|rows Inserted          = 2
+2021-06-22 17:00:02|INFO|rows Updated           = 0
+2021-06-22 17:00:02|INFO|data formatting errors = 0
+2021-06-22 17:00:02|INFO|gpload succeeded
