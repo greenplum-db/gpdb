@@ -554,16 +554,20 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 		return false;
 	}
 
+	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+
 	/*
 	 * Double-check that we are actually holding a lock of the type we want to
 	 * Release.
 	 */
 	if (!(proclock->holdMask & LOCKBIT_ON(lockmode)) || proclock->nLocks <= 0)
 	{
-		LWLockRelease(partitionLock);
 		elog(DEBUG1, "Resource queue %d: proclock not held", locktag->locktag_field1);
 		RemoveLocalLock(locallock);
+
 		ResCleanUpLock(lock, proclock, hashcode, false);
+		LWLockRelease(ResQueueLock);
+		LWLockRelease(partitionLock);
 
 		return false;
 	}
@@ -574,8 +578,6 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	MemSet(&portalTag, 0, sizeof(ResPortalTag));
 	portalTag.pid = MyProc->pid;
 	portalTag.portalId = resPortalId;
-
-	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
 	incrementSet = ResIncrementFind(&portalTag);
 	if (!incrementSet)
