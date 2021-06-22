@@ -302,7 +302,7 @@ class GpMirrorListToBuild:
             self.__logger.info("Updating mirrors")
 
             if len(rewindInfo) != 0:
-                self.__logger.info("Running pg_rewind on required mirrors")
+                self.__logger.info("Running pg_rewind on failed segments")
                 rewindFailedSegments = self.run_pg_rewind(rewindInfo)
 
                 # Do not start mirrors that failed pg_rewind
@@ -447,6 +447,8 @@ class GpMirrorListToBuild:
                     cmd.run(validateAfter=True)
                     cmd.cmdStr = cmd_str
                     results = cmd.get_results().stdout.rstrip()
+                    if not results:
+                        results = "skipping pg_rewind on mirror as standby.signal is present"
                 except ExecutionError:
                     lines = cmd.get_results().stderr.splitlines()
                     if lines:
