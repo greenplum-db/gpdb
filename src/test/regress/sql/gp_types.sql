@@ -127,7 +127,7 @@ SELECT * FROM dml_timestamptz ORDER BY 1;
 UPDATE dml_timestamptz SET a = '4714-01-27 BC'::timestamptz;
 SELECT * FROM dml_timestamptz ORDER BY 1;
 
--- test unknown type casting
+-- test unknown type implicit casting
 with unknown as (
         select '2021' as foo
 )

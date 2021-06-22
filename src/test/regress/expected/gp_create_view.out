@@ -136,7 +136,10 @@ SELECT pg_get_viewdef('view_with_array_op_expr');
   SELECT ('{1}'::integer[] = '{2}'::integer[]);
 (1 row)
 
--- Coerce unknown-type literals to type text
+-- Coerce unknown-type literals to type cstring implicitly
+-- we are checking to see if a cstring explicit cast is not erroneously
+-- generated when the view is created, a explicit one could not be
+-- loaded/created because it's against the Postgres policy.
 CREATE VIEW unknown_v1 AS SELECT '2020-12-13'::unknown AS field_unknown;
 WARNING:  column "field_unknown" has type "unknown"
 DETAIL:  Proceeding with relation creation anyway.
