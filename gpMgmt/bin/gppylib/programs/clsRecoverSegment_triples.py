@@ -1,6 +1,7 @@
 import abc
 from typing import List
 
+from gppylib.commands import base, unix
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
@@ -84,10 +85,11 @@ class RecoveryTriplet:
 
 
 class RecoveryTripletRequest:
-    def __init__(self, failed, failover_host=None, failover_port=None, failover_datadir=None, is_new_host=False):
+    def __init__(self, failed, failover_address=None, failover_port=None, failover_datadir=None, is_new_host=False):
         self.failed = failed
 
-        self.failover_host = failover_host
+        self.failover_hostname = '' # failover_hostname is infered/resolved from failover_address
+        self.failover_address = failover_address
         self.failover_port = failover_port
         self.failover_datadir = failover_datadir
         self.failover_to_new_host = is_new_host
@@ -132,6 +134,18 @@ class RecoveryTriplets(abc.ABC):
     def getInterfaceHostnameWarnings(self):
         return self.interfaceHostnameWarnings
 
+    def resolve_hostname(self, requests: List[RecoveryTripletRequest]):
+    # TODO: resolve the hostnames in parallel
+        for req in requests:
+            try:
+                cmd = unix.Hostname('lookup hostname', ctxt=base.REMOTE, remoteHost=req.failover_address)
+                cmd.run(validateAfter=True)
+                req.failover_hostname = cmd.get_hostname()
+            except:
+                print("Failed to resolve the hostname for address='%s'" % req.failover_address)
+                print("Use address instead")
+                req.failover_hostname = req.failover_address
+
     # TODO: the returned RecoveryTriplet(s) reflect (failed, live, failover) with failover reflecting the recovery
     # information of the new segment(that which will replace failed).  This is what is acted upon by
     # pg_rewind/pg_basebackup.  But as an artifact of the implementation, the caller's original gparray is mutated to
@@ -141,13 +155,14 @@ class RecoveryTriplets(abc.ABC):
     def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest]) -> List[RecoveryTriplet]:
         triplets = []
 
+        self.resolve_hostname(requests)
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
         for req in requests:
             # TODO: These 2 cases have different behavior which might be confusing to the user.
             # "<failed_address>|<failed_port>|<failed_data_dir> <failed_address>|<failed_port>|<failed_data_dir>" does full recovery
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
             failover = None
-            if req.failover_host:
+            if req.failover_address:
 
                 # these two lines make it so that failover points to the object that is registered in gparray
                 #   as the failed segment(!).
@@ -155,8 +170,8 @@ class RecoveryTriplets(abc.ABC):
                 req.failed = failover.copy()
 
                 # now update values in failover segment
-                failover.setSegmentAddress(req.failover_host)
-                failover.setSegmentHostName(req.failover_host)
+                failover.setSegmentAddress(req.failover_address)
+                failover.setSegmentHostName(req.failover_hostname)
                 failover.setSegmentPort(int(req.failover_port))
                 failover.setSegmentDataDirectory(req.failover_datadir)
                 failover.unreachable = False if req.failover_to_new_host else failover.unreachable

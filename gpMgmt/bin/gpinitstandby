@@ -113,8 +113,8 @@ def parseargs():
 
     # Standby initialization options section
     optgrp = OptionGroup(parser, 'Standby initialization options')
-    optgrp.add_option('-s', '--standby-host', type='string', dest='standby_host',
-                      help='hostname of system to create standby coordinator on')
+    optgrp.add_option('-s', '--standby-address', '--standby-host', type='string', dest='standby_address',
+                      help='address of system to create standby coordinator on')
     optgrp.add_option('-P', '--standby-port', type='int', dest='standby_port',
                       help='port of system to create standby coordinator on')
     optgrp.add_option('-S', '--standby-datadir', type='string', dest='standby_datadir',
@@ -139,6 +139,10 @@ def parseargs():
     # Parse the command line arguments
     (options, args) = parser.parse_args()
 
+# We only accept the standby address, the hostname is resolved below,
+# Keeping standby_hostname here is for convenience and consistency.
+    setattr(options, 'standby_hostname', 'localhost')
+
     if options.help:
         parser.print_help()
         parser.exit(0, None)
@@ -152,7 +156,7 @@ def parseargs():
         parser.exit(2, None)
 
     # -s and -n are exclusive
-    if options.standby_host and options.no_update:
+    if options.standby_address and options.no_update:
         logger.error('Options -s and -n cannot be specified together.')
         parser.exit(2, None)
 
@@ -162,27 +166,36 @@ def parseargs():
         parser.exit(2, None)
 
     # -s and -r are exclusive
-    if options.standby_host and options.remove:
+    if options.standby_address and options.remove:
         logger.error('Options -s and -r cannot be specified together.')
         parser.exit(2, None)
 
     # we either need to delete or create or start
-    if not options.remove and not options.standby_host and not options.no_update:
+    if not options.remove and not options.standby_address and not options.no_update:
         logger.error('No action provided in the options.')
         parser.print_help()
         parser.exit(2, None)
 
     # check that new standby host is up
-    if options.standby_host:
+    if options.standby_address:
         try:
-            gp.Ping.local('check new standby up', options.standby_host)
+            resolve_hostname(options)
         except:
-            logger.error('Unable to ping new standby host %s' % options.standby_host)
+            logger.error('Unable to resolve new standby host %s' % options.standby_address)
             parser.exit(2, None)
 
     return options, args
-   
-   
+
+def resolve_hostname(options):
+    cmd = unix.Hostname('lookup hostname', ctxt=base.REMOTE, remoteHost=options.standby_address)
+    cmd.run(validateAfter=True)
+    hostname = cmd.get_hostname()
+    if not hostname:
+        raise Exception("can't resolve address to hostname: '%s' => '%s'" %
+                        (options.standby_address, options.standby_hostname))
+
+    options.standby_hostname = hostname
+
 #-------------------------------------------------------------------------
 def print_summary(options, array, standby_datadir, unreachable_hosts=[]):
     """Display summary of gpinitstandby operations."""
@@ -202,9 +215,13 @@ def print_summary(options, array, standby_datadir, unreachable_hosts=[]):
     if options.remove:
         logger.info('Greenplum standby coordinator hostname       = %s' \
                         % array.standbyCoordinator.getSegmentHostName())
+        logger.info('Greenplum standby coordinator address        = %s' \
+                        % array.standbyCoordinator.getSegmentAddress())
     else:
         logger.info('Greenplum standby coordinator hostname       = %s' \
-                        % options.standby_host)
+                        % options.standby_hostname)
+        logger.info('Greenplum standby coordinator address        = %s' \
+                        % options.standby_address)
 
     if array.standbyCoordinator:
         standby_port = array.standbyCoordinator.getSegmentPort()
@@ -399,7 +416,7 @@ def create_standby(options):
         # initialize a standby.
         try:
             logger.info('Syncing Greenplum Database extensions to standby')
-            SyncPackages(options.standby_host).run()
+            SyncPackages(options.standby_hostname).run()
         except Exception as e:
             logger.warning('Syncing of Greenplum Database extensions has failed.')
             logger.warning('Please run gppkg --clean after successful standby initialization.')
@@ -413,7 +430,7 @@ def create_standby(options):
         logger.info('Updating pg_hba.conf file...')
         update_pg_hba_conf(options, array)
         logger.debug('Updating pg_hba.conf file on segments...')
-        update_pg_hba_conf_on_segments(array, options.standby_host, options.hba_hostnames, unreachable_hosts)
+        update_pg_hba_conf_on_segments(array, options.standby_hostname, options.hba_hostnames, unreachable_hosts)
         logger.info('pg_hba.conf files updated successfully.')
 
         copy_coordinator_datadir_to_standby(options, array, standby_datadir)
@@ -506,10 +523,10 @@ def update_pg_hba_conf(options, array):
     try:
         coordinator_data_dir = array.coordinator.getSegmentDataDirectory()
         pg_hba_path = os.path.join(coordinator_data_dir, 'pg_hba.conf')
-        standby_ips = gp.IfAddrs.list_addrs(options.standby_host)
+        standby_ips = gp.IfAddrs.list_addrs(options.standby_hostname)
         # IfAddrs as called doesn't return local address, but if standby
         # will be on the same host, we should add it too.
-        if array.coordinator.getSegmentHostName() == options.standby_host:
+        if array.coordinator.getSegmentHostName() == options.standby_hostname:
             standby_ips.append('127.0.0.1')
         current_user = unix.UserId.local('get userid')
         
@@ -540,7 +557,7 @@ def update_pg_hba_conf(options, array):
                 address = ip + cidr_suffix
                 add_entry_to_new_section(['host', 'all', current_user, address, 'trust'])
         else:
-            add_entry_to_new_section(['host', 'all', current_user, options.standby_host, 'trust'])
+            add_entry_to_new_section(['host', 'all', current_user, options.standby_address, 'trust'])
 
         # new replication requires 'replication' string in database
         # column to allow walsender connections.  We still keep 'all'
@@ -551,13 +568,13 @@ def update_pg_hba_conf(options, array):
         # Add samehost replication to support single-host development.
         add_entry_to_new_section(['host', 'replication', current_user, 'samehost', 'trust'])
         if not options.hba_hostnames:
-            if_addrs = gp.IfAddrs.list_addrs(options.standby_host)
+            if_addrs = gp.IfAddrs.list_addrs(options.standby_address)
             for ip in if_addrs:
                 cidr_suffix = '/128' if ':' in ip else '/32'  # MPP-15889
                 address = ip + cidr_suffix
                 add_entry_to_new_section(['host', 'replication', current_user, address, 'trust'])
         else:
-            add_entry_to_new_section(['host', 'replication', current_user, options.standby_host, 'trust'])
+            add_entry_to_new_section(['host', 'replication', current_user, options.standby_address, 'trust'])
 
         # insert new section
         pg_hba_conf[index:index] = new_section
@@ -606,19 +623,19 @@ def validate_standby_init(options, array, standby_datadir):
     # make sure we have top level dir
     base_dir = os.path.dirname(os.path.normpath(standby_datadir))
     if not unix.FileDirExists.remote('check for parent of data dir',
-                                     options.standby_host,
+                                     options.standby_address,
                                      base_dir):
-        logger.error('Parent directory %s does not exist on host %s' %(base_dir, options.standby_host))
+        logger.error('Parent directory %s does not exist on host %s' %(base_dir, options.standby_address))
         logger.error('This directory must be created before running gpactivatestandby')
         raise GpInitStandbyException('Parent directory %s does not exist' % base_dir)
 
     # check that coordinator data dir does not exist on new host unless we are just re-syncing
-    logger.info('Checking for data directory %s on %s' % (standby_datadir, options.standby_host))
-    if unix.FileDirExists.remote('check for data dir', options.standby_host, standby_datadir):
-        logger.error('Data directory already exists on host %s' % options.standby_host)
+    logger.info('Checking for data directory %s on %s' % (standby_datadir, options.standby_hostname))
+    if unix.FileDirExists.remote('check for data dir', options.standby_hostname, standby_datadir):
+        logger.error('Data directory already exists on host %s' % options.standby_hostname)
         if array.standbyCoordinator:
             logger.error('If you want to just start the stopped standby, use the -n option')
-        if options.standby_host == array.coordinator.hostname:
+        if options.standby_hostname == array.coordinator.hostname:
             logger.error(
                 'If you want to initialize a new standby on the same host as '
                 'the coordinator (not recommended), use -S and -P to specify a new '
@@ -627,7 +644,7 @@ def validate_standby_init(options, array, standby_datadir):
         raise GpInitStandbyException('coordinator data directory exists')
 
     # disallow to create the same host/port
-    if (options.standby_host == array.coordinator.hostname and
+    if (options.standby_hostname == array.coordinator.hostname and
             (not options.standby_port or
                 options.standby_port == array.coordinator.port)):
         raise GpInitStandbyException('cannot create standby on the same host and port')
@@ -664,8 +681,8 @@ def add_standby_to_catalog(options, standby_datadir):
     
         logger.info('Adding standby coordinator to catalog...')
     
-        sql = get_add_standby_sql(options.standby_host,
-                                  options.standby_host,
+        sql = get_add_standby_sql(options.standby_hostname,
+                                  options.standby_address,
                                   standby_datadir,
                                   options.standby_port)
     
@@ -715,10 +732,10 @@ def copy_coordinator_datadir_to_standby(options, array, standby_datadir):
     # map the per-dbid directories to the new dbid.
     
     cmd = PgBaseBackup(pgdata=standby_datadir,
-                       host=array.coordinator.getSegmentHostName(),
+                       host=array.coordinator.getSegmentAddress(),
                        port=str(array.coordinator.getSegmentPort()),
                        ctxt=base.REMOTE,
-                       remoteHost=options.standby_host,
+                       remoteHost=options.standby_hostname,
                        forceoverwrite=True,
                        target_gp_dbid=array.standbyCoordinator.dbid)
     try:
@@ -814,7 +831,7 @@ try:
         check_and_start_standby()
     else:
         create_standby(options)
-        logger.info('Successfully created standby coordinator on %s' % options.standby_host)
+        logger.info('Successfully created standby coordinator on %s' % options.standby_hostname)
 
 except KeyboardInterrupt:
     logger.error('User canceled')
