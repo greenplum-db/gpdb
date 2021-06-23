@@ -169,9 +169,9 @@ class GpMirrorListToBuild:
         targetSegment is of type gparray.Segment.  All progressFiles should have
         the same timeStamp.
         """
-        def __init__(self, targetSegment, sourceHostname, sourcePort, timeStamp):
+        def __init__(self, targetSegment, sourceAddress, sourcePort, timeStamp):
             self.targetSegment = targetSegment
-            self.sourceHostname = sourceHostname
+            self.sourceAddress = sourceAddress
             self.sourcePort = sourcePort
             self.progressFile = '%s/pg_rewind.%s.dbid%s.out' % (gplog.get_logger_dir(),
                                                                 timeStamp,
@@ -285,7 +285,7 @@ class GpMirrorListToBuild:
             if not toRecover.isFullSynchronization() \
                and seg.getSegmentRole() == gparray.ROLE_MIRROR:
                 rewindInfo[seg.getSegmentDbId()] = GpMirrorListToBuild.RewindSegmentInfo(
-                    seg, primarySeg.getSegmentHostName(), primarySeg.getSegmentPort(),
+                    seg, primarySeg.getSegmentAddress(), primarySeg.getSegmentPort(),
                     timeStamp)
 
             # The change in configuration to of the mirror to down requires that
@@ -345,8 +345,8 @@ class GpMirrorListToBuild:
         for rewindSeg in rewindInfo.values():
             # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
             # pg_rewind wants that to make incremental recovery successful finally.
-            self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (rewindSeg.sourceHostname, rewindSeg.sourcePort))
-            dburl = dbconn.DbURL(hostname=rewindSeg.sourceHostname,
+            self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (rewindSeg.sourceAddress, rewindSeg.sourcePort))
+            dburl = dbconn.DbURL(hostname=rewindSeg.sourceAddress,
                                  port=rewindSeg.sourcePort,
                                  dbname='template1')
             conn = dbconn.connect(dburl, utility=True)
@@ -368,9 +368,9 @@ class GpMirrorListToBuild:
             # object.
             cmd = gp.SegmentRewind('rewind dbid: %s' %
                                    rewindSeg.targetSegment.getSegmentDbId(),
-                                   rewindSeg.targetSegment.getSegmentHostName(),
+                                   rewindSeg.targetSegment.getSegmentAddress(),
                                    rewindSeg.targetSegment.getSegmentDataDirectory(),
-                                   rewindSeg.sourceHostname,
+                                   rewindSeg.sourceAddress,
                                    rewindSeg.sourcePort,
                                    rewindSeg.progressFile,
                                    verbose=True)
