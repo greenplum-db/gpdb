@@ -966,9 +966,9 @@ class ConfigureNewSegment(Command):
             isTargetReusedLocation = isTargetReusedLocationArr and isTargetReusedLocationArr[segIndex]
             # only a mirror segment has these two attributes
             # added on the fly, by callers
-            primaryHostname = getattr(seg, 'primaryHostname', "")
+            primaryAddress = getattr(seg, 'primaryAddress', "")
             primarySegmentPort = getattr(seg, 'primarySegmentPort', "-1")
-            if primaryHostname == "":
+            if primaryAddress == "":
                 isPrimarySegment =  "true" if seg.isSegmentPrimary(current_role=True) else "false"
                 isTargetReusedLocationString = "true" if isTargetReusedLocation else "false"
             else:
@@ -982,7 +982,7 @@ class ConfigureNewSegment(Command):
                                                           isTargetReusedLocationString,
                                                           seg.getSegmentDbId(),
                                                           seg.getSegmentContentId(),
-                                                          primaryHostname,
+                                                          primaryAddress,
                                                           primarySegmentPort,
                                                           progressFile
             )

@@ -696,7 +696,7 @@ def copy_master_datadir_to_standby(options, array, standby_datadir):
     # map the per-dbid directories to the new dbid.
     
     cmd = PgBaseBackup(pgdata=standby_datadir,
-                       host=array.master.getSegmentHostName(),
+                       host=array.master.getSegmentAddress(),
                        port=str(array.master.getSegmentPort()),
                        ctxt=base.REMOTE,
                        remoteHost=options.standby_host,

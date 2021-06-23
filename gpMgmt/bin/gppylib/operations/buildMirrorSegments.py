@@ -552,7 +552,7 @@ class GpMirrorListToBuild:
         for directive in directives:
             srcSegment = directive.getSrcSegment()
             destSegment = directive.getDestSegment()
-            destSegment.primaryHostname = srcSegment.getSegmentHostName()
+            destSegment.primaryAddress = srcSegment.getSegmentAddress()
             destSegment.primarySegmentPort = srcSegment.getSegmentPort()
             destSegment.progressFile = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
                                                                            timeStamp,
