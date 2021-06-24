@@ -2004,3 +2004,30 @@ INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(230132, 400, 'f')
 INFO:  analyzing "public.foo_1_prt_1"
 INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(230129, 400, 'f');
 reset optimizer_analyze_root_partition;
+-- Test merging of stats after the last partition is analyzed. Merging should
+-- be done for root without taking a sample from root if one of the column
+-- statistics collection is turned off
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c gp_hyperloglog_estimator) PARTITION BY RANGE (b) (START (1) END (3) EVERY (1));
+SET gp_autostats_mode=none;
+ALTER TABLE foo ALTER COLUMN c SET STATISTICS 0;
+INSERT INTO foo SELECT i,i%2+1, NULL FROM generate_series(1,100)i;
+ANALYZE VERBOSE foo_1_prt_1;
+INFO:  analyzing "public.foo_1_prt_1"
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows()
+ANALYZE VERBOSE foo_1_prt_2;
+INFO:  analyzing "public.foo_1_prt_2"
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows()
+INFO:  analyzing "public.foo" inheritance tree
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+-------------+---------+-----------+------------+------------------+-------------------+------------------
+ foo         | a       |         0 |         -1 |                  |                   | {1,26,50,74,100}
+ foo_1_prt_1 | a       |         0 |         -1 |                  |                   | {2,26,50,74,100}
+ foo_1_prt_2 | a       |         0 |         -1 |                  |                   | {1,25,49,73,99}
+ foo         | b       |         0 |          2 | {1,2}            | {0.5,0.5}         | 
+ foo_1_prt_1 | b       |         0 |          1 | {1}              | {1}               | 
+ foo_1_prt_2 | b       |         0 |          1 | {2}              | {1}               | 
+(6 rows)
+
+RESET gp_autostats_mode;

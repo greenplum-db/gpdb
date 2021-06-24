@@ -1174,7 +1174,7 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 			Form_pg_attribute att = TupleDescAttr(tupdesc, i);
 			char       *attname;
 
-			if (att->attisdropped)
+			if (att->attisdropped || att->attstattarget == 0)
 				continue;
 
 			attname = pstrdup(NameStr(att->attname));
