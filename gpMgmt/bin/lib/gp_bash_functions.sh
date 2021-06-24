@@ -30,6 +30,7 @@ if [ ${#GPPATH[@]} -eq 0 ];then
 	exit 1
 fi
 
+WORKDIR=`dirname $0`
 #GP_UNIQUE_COMMAND is used to identify the binary directory
 GP_UNIQUE_COMMAND=gpstart
 
@@ -674,12 +675,7 @@ GET_CIDRADDR () {
     # assuming argument is an ip address, return the address
     # with a /32 or /128 cidr suffix based on whether or not the
     # address contains a :
-
-    if [ `echo $1 | grep -c :` -gt 0 ]; then
-	echo $1/128
-    else
-	echo $1/32
-    fi
+    $GPHOME/bin/lib/ifaddr.py "$1"
 }
 
 BUILD_COORDINATOR_PG_HBA_FILE () {
@@ -699,24 +695,19 @@ BUILD_COORDINATOR_PG_HBA_FILE () {
 
             for ADDR in "${COORDINATOR_IP_ADDRESS_ALL[@]}"
             do
-                # MPP-15889
-                CIDRADDR=$(GET_CIDRADDR $ADDR)
-                $ECHO "host     all         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
+                $ECHO "host     all         $USER_NAME         $(GET_CIDRADDR $ADDR)       trust" >> ${GP_DIR}/$PG_HBA
 
             done
             for ADDR in "${STANDBY_IP_ADDRESS_ALL[@]}"
             do
-                # MPP-15889
-                CIDRADDR=$(GET_CIDRADDR $ADDR)
-                $ECHO "host     all         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
+                $ECHO "host     all         $USER_NAME         $(GET_CIDRADDR $ADDR)       trust" >> ${GP_DIR}/$PG_HBA
             done
 
             # Add all local IPV6 addresses
             for ADDR in "${COORDINATOR_IPV6_LOCAL_ADDRESS_ALL[@]}"
             do
                 # MPP-15889
-                CIDRADDR=$(GET_CIDRADDR $ADDR)
-                $ECHO "host     all         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
+                $ECHO "host     all         $USER_NAME         $(GET_CIDRADDR $ADDR)       trust" >> ${GP_DIR}/$PG_HBA
             done
         else
             $ECHO "host     all         $USER_NAME         localhost    trust" >> ${GP_DIR}/$PG_HBA
@@ -735,8 +726,7 @@ BUILD_COORDINATOR_PG_HBA_FILE () {
             fi
             for ADDR in "${COORDINATOR_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}"
             do
-                CIDRADDR=$(GET_CIDRADDR $ADDR)
-                $ECHO "host     replication $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
+                $ECHO "host     replication $USER_NAME         $(GET_CIDRADDR $ADDR)       trust" >> ${GP_DIR}/$PG_HBA
             done
         else
             $ECHO "host     replication $USER_NAME         $COORDINATOR_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
