@@ -1,3 +1,8 @@
+-- start_matchsubs
+-- m/oid=\d+/
+-- s/oid=\d+/oid=XXX/
+-- end_matchsubs
+
 -- start_ignore
 DROP DATABASE IF EXISTS incrementalanalyze;
 CREATE DATABASE incrementalanalyze;
@@ -2635,3 +2640,18 @@ CREATE TABLE foo_900_numeric_cols
 -- end_ignore
 INSERT INTO foo_900_numeric_cols SELECT i,i FROM generate_series(1,100)i;
 ANALYZE foo_900_numeric_cols;
+
+-- Test merging of stats after the last partition is analyzed. Merging should
+-- be done for root without taking a sample from root if one of the column
+-- statistics collection is turned off
+-- start_ignore
+DROP TABLE IF EXISTS has_attstattarget_zero_column;
+CREATE TABLE has_attstattarget_zero_column(a int, b int, c xml) PARTITION BY RANGE (b) (START (1) END (3) EVERY (1));
+-- end_ignore
+SET gp_autostats_mode=none;
+ALTER TABLE has_attstattarget_zero_column ALTER COLUMN c SET STATISTICS 0;
+INSERT INTO has_attstattarget_zero_column SELECT i,i%2+1, ('<foo>' || (i%4)::text || '</foo>')::xml FROM generate_series(1,100)i;
+ANALYZE VERBOSE has_attstattarget_zero_column_1_prt_1;
+ANALYZE VERBOSE has_attstattarget_zero_column_1_prt_2;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'has_attstattarget_zero_column%' ORDER BY attname,tablename;
+RESET gp_autostats_mode;

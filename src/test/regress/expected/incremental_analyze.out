@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/oid=\d+/
+-- s/oid=\d+/oid=XXX/
+-- end_matchsubs
 -- Test ANALYZE for different data types
 -- Case 1: Partitions have MCVs but after merge, none of the partition MCVs 
 -- qualify as a global MCV for the root and they are used to create the
@@ -2046,3 +2050,34 @@ INSERT INTO t900c SELECT i%130, i%8, 'something'||i::text FROM generate_series(1
 ANALYZE t900c;
 INSERT INTO foo_900_numeric_cols SELECT i,i FROM generate_series(1,100)i;
 ANALYZE foo_900_numeric_cols;
+-- Test merging of stats after the last partition is analyzed. Merging should
+-- be done for root without taking a sample from root if one of the column
+-- statistics collection is turned off
+-- start_ignore
+DROP TABLE IF EXISTS has_attstattarget_zero_column;
+CREATE TABLE has_attstattarget_zero_column(a int, b int, c xml) PARTITION BY RANGE (b) (START (1) END (3) EVERY (1));
+-- end_ignore
+SET gp_autostats_mode=none;
+ALTER TABLE has_attstattarget_zero_column ALTER COLUMN c SET STATISTICS 0;
+INSERT INTO has_attstattarget_zero_column SELECT i,i%2+1, ('<foo>' || (i%4)::text || '</foo>')::xml FROM generate_series(1,100)i;
+ANALYZE VERBOSE has_attstattarget_zero_column_1_prt_1;
+INFO:  analyzing "public.has_attstattarget_zero_column_1_prt_1"
+INFO:  Executing SQL: select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=89416
+INFO:  Executing SQL: select Ta.a , Ta.b  from public.has_attstattarget_zero_column_1_prt_1 as Ta  limit 1200
+ANALYZE VERBOSE has_attstattarget_zero_column_1_prt_2;
+INFO:  analyzing "public.has_attstattarget_zero_column_1_prt_2"
+INFO:  Executing SQL: select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=89424
+INFO:  Executing SQL: select Ta.a , Ta.b  from public.has_attstattarget_zero_column_1_prt_2 as Ta  limit 1200
+INFO:  analyzing "public.has_attstattarget_zero_column"
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'has_attstattarget_zero_column%' ORDER BY attname,tablename;
+               tablename               | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+---------------------------------------+---------+-----------+------------+------------------+-------------------+------------------
+ has_attstattarget_zero_column         | a       |         0 |         -1 |                  |                   | {1,26,50,74,100}
+ has_attstattarget_zero_column_1_prt_1 | a       |         0 |         -1 |                  |                   | {2,26,50,74,100}
+ has_attstattarget_zero_column_1_prt_2 | a       |         0 |         -1 |                  |                   | {1,25,49,73,99}
+ has_attstattarget_zero_column         | b       |         0 |          2 | {1,2}            | {0.5,0.5}         | 
+ has_attstattarget_zero_column_1_prt_1 | b       |         0 |          1 | {1}              | {1}               | 
+ has_attstattarget_zero_column_1_prt_2 | b       |         0 |          1 | {2}              | {1}               | 
+(6 rows)
+
+RESET gp_autostats_mode;
