@@ -34,6 +34,7 @@ else
     exit 2
 fi
 
+MKDIR=mkdir
 #******************************************************************************
 # Script Specific Variables
 #******************************************************************************
@@ -380,6 +381,7 @@ CHK_PARAMS () {
 		# Check that we have write access to the proposed master data directory
 		W_DIR=$MASTER_DIRECTORY
 		LOG_MSG "[INFO]:-Checking write access to $W_DIR on master host"
+		$MKDIR -p ${W_DIR}
 		$TOUCH ${W_DIR}/tmp_file_test
 		RETVAL=$?
 		if [ $RETVAL -ne 0 ];then
@@ -808,6 +810,7 @@ CHK_QES () {
         # Check that we can write to the QE directory
         W_DIR=`$DIRNAME $GP_DIR`
         LOG_MSG "[INFO]:-Checking write access to $W_DIR on $GP_HOSTADDRESS"
+        $TRUSTED_SHELL $GP_HOSTADDRESS "$MKDIR -p ${W_DIR}"
         $TRUSTED_SHELL $GP_HOSTADDRESS "$TOUCH ${W_DIR}/tmp_file_test"
         RETVAL=$?
         if [ $RETVAL -ne 0 ];then
@@ -833,6 +836,7 @@ CHK_QES () {
             # Check that we can write to the QE directory
             W_DIR=`$DIRNAME $GP_DIR`
             LOG_MSG "[INFO]:-Checking write access to $W_DIR on $GP_HOSTADDRESS"
+            $TRUSTED_SHELL $GP_HOSTADDRESS "$MKDIR -p ${W_DIR}"
             $TRUSTED_SHELL $GP_HOSTADDRESS "$TOUCH ${W_DIR}/tmp_file_test"
             RETVAL=$?
             if [ $RETVAL -ne 0 ];then
@@ -880,6 +884,7 @@ CHK_SEG () {
 	# Check that we can write to the QE directory
     W_DIR=`$DIRNAME $GP_DIR`
     LOG_MSG "[INFO]:-Checking write access to $W_DIR on $GP_HOSTADDRESS"
+    $TRUSTED_SHELL $GP_HOSTADDRESS "$MKDIR -p ${W_DIR}"
     $TRUSTED_SHELL $GP_HOSTADDRESS "$TOUCH ${W_DIR}/tmp_file_test"
     RETVAL=$?
     if [ $RETVAL -ne 0 ];then
@@ -1698,7 +1703,7 @@ READ_INPUT_CONFIG () {
 
     # always use the new 6-field format to allow uniform handling of the QD
     QD_PRIMARY_ARRAY="$GP_HOSTNAME"~"$GP_HOSTADDRESS"~"$GP_PORT"~"$GP_DIR"~"$GP_DBID"~"$GP_CONTENT"
-    MASTER_HOSTNAME=$GP_HOSTADDRESS
+    MASTER_HOSTNAME=$GP_HOSTNAME
     MASTER_DIRECTORY=`$DIRNAME $GP_DIR`
     MASTER_PORT=$GP_PORT
     SEG_PREFIX=`$BASENAME $GP_DIR -1`
