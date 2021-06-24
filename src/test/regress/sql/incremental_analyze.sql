@@ -811,3 +811,15 @@ analyze verbose rootpartition foo;
 -- ensure relpages is correctly set after analyzing
 analyze foo_1_prt_2;
 select reltuples, relpages from pg_class where relname ='foo_1_prt_2';
+-- Test merging of stats after the last partition is analyzed. Merging should
+-- be done for root without taking a sample from root if one of the column
+-- statistics collection is turned off
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c gp_hyperloglog_estimator) PARTITION BY RANGE (b) (START (1) END (3) EVERY (1));
+SET gp_autostats_mode=none;
+ALTER TABLE foo ALTER COLUMN c SET STATISTICS 0;
+INSERT INTO foo SELECT i,i%2+1, NULL FROM generate_series(1,100)i;
+ANALYZE VERBOSE foo_1_prt_1;
+ANALYZE VERBOSE foo_1_prt_2;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+RESET gp_autostats_mode;
