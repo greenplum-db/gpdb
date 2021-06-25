@@ -6,6 +6,7 @@ except:
     from subprocess import Popen, PIPE
 from utils import run_gpcommand
 
+from gppylib.gparray import GpArray
 from gppylib.commands.base import Command
 from gppylib.db import dbconn
 
@@ -15,6 +16,10 @@ class Gpexpand:
         self.working_directory = working_directory
         self.context = context
 
+    def get_gp_array(self):
+        dburl = dbconn.DbURL(dbname=self.database)
+        gparray = GpArray.initFromCatalog(dburl, utility=True)
+        return gparray
 
     def do_interview(self, hosts=None, num_of_segments=1, directory_pairs=None, has_mirrors=False):
         """
@@ -45,6 +50,12 @@ class Gpexpand:
 
         # Would you like to initiate a new System Expansion Yy|Nn (default=N):
         p1.stdin.write("y\n")
+        
+        gparray = self.get_gp_array()
+        # Are you sure you want to continue with this gpexpand session?
+        standard, message = gparray.isStandardArray()
+        if not standard:
+            p1.stdin.write("y\n")
 
         # **Enter a blank line to only add segments to existing hosts**[]:
         p1.stdin.write("%s\n" % (",".join(hosts) if hosts else ""))

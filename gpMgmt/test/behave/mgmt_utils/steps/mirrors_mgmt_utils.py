@@ -66,7 +66,7 @@ def _write_datadir_config_for_three_mirrors():
 def add_three_mirrors_with_args(context, args):
     datadir_config = _write_datadir_config_for_three_mirrors()
     mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
-    cmd_str = 'gpaddmirrors -o %s -m %s' % (mirror_config_output_file, datadir_config)
+    cmd_str = 'gpaddmirrors -a -o %s -m %s' % (mirror_config_output_file, datadir_config)
     Command('generate mirror_config file', cmd_str).run(validateAfter=True)
     cmd = 'gpaddmirrors -a -v -i %s %s' % (mirror_config_output_file, args)
     run_gpcommand(context, command=cmd)
@@ -322,7 +322,7 @@ def impl(context, file_type):
     segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
     mirror = segments[0].mirrorDB
 
-    valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+    valid_config = '%s|%s|%s' % (mirror.getSegmentAddress(),
                                  mirror.getSegmentPort(),
                                  mirror.getSegmentDataDirectory())
 
@@ -335,21 +335,21 @@ def impl(context, file_type):
         contents = '%s %s' % (valid_config, badhost_config)
     elif file_type == 'samedir':
         valid_config_with_same_dir = '%s|%s|%s' % (
-            mirror.getSegmentHostName(),
+            mirror.getSegmentAddress(),
             mirror.getSegmentPort() + 1000,
             mirror.getSegmentDataDirectory()
         )
         contents = '%s %s' % (valid_config, valid_config_with_same_dir)
     elif file_type == 'identicalAttributes':
         valid_config_with_identical_attributes = '%s|%s|%s' % (
-            mirror.getSegmentHostName(),
+            mirror.getSegmentAddress(),
             mirror.getSegmentPort(),
             mirror.getSegmentDataDirectory()
         )
         contents = '%s %s' % (valid_config, valid_config_with_identical_attributes)
     elif file_type == 'good':
         valid_config_with_different_dir = '%s|%s|%s' % (
-            mirror.getSegmentHostName(),
+            mirror.getSegmentAddress(),
             mirror.getSegmentPort(),
             context.mirror_context.working_directory[0]
         )
@@ -369,11 +369,11 @@ def impl(context, num):
     for i in range(int(num)):
         mirror = segments[i].mirrorDB
 
-        valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+        valid_config = '%s|%s|%s' % (mirror.getSegmentAddress(),
                                      mirror.getSegmentPort(),
                                      mirror.getSegmentDataDirectory())
         valid_config_with_different_dir = '%s|%s|%s' % (
-            mirror.getSegmentHostName(),
+            mirror.getSegmentAddress(),
             mirror.getSegmentPort(),
             context.mirror_context.working_directory[i]
         )
