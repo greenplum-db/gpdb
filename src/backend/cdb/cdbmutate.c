@@ -529,31 +529,38 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 				if (GpPolicyIsReplicated(query->intoPolicy))
 				{
+					bool needBroadcast = true;
 					/*
 					 * CdbLocusType_SegmentGeneral is only used by replicated
-					 * table right now, so if both input and target are
-					 * replicated table, no need to add a motion
+					 * table right now, so if both input and target are replicated
+					 * table, no need to add a motion.
+					 * And if plan's data are available on all segment as
+					 * CdbLocusType_General, no motion needed.
+					 * The above two cases have an exception if the plan contains volatile
+					 * target list or havingQual, we can not run it on every segments.
 					 */
+
 					if (plan->flow->flotype == FLOW_SINGLETON &&
-						plan->flow->locustype == CdbLocusType_SegmentGeneral)
+						(plan->flow->locustype == CdbLocusType_General ||
+						 plan->flow->locustype == CdbLocusType_SegmentGeneral))
 					{
-						/* do nothing */
+						if (contain_volatile_functions((Node *) query->targetList) ||
+							contain_volatile_functions(query->havingQual))
+						{
+							plan->flow->locustype = CdbLocusType_SingleQE;
+						}
+						else
+							needBroadcast = plan->flow->numsegments == numsegments ? false : true;
 					}
 
-					/*
-					 * plan's data are available on all segment, no motion
-					 * needed
-					 */
-					if (plan->flow->flotype == FLOW_SINGLETON &&
-						plan->flow->locustype == CdbLocusType_General)
+					if (needBroadcast)
 					{
-						/* do nothing */
+						if (!broadcastPlan(plan, false, false, numsegments))
+							ereport(ERROR,
+									(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+									 errmsg("cannot parallelize that SELECT INTO yet")));
 					}
 
-					if (!broadcastPlan(plan, false, false, numsegments))
-						ereport(ERROR,
-								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								 errmsg("cannot parallelize that SELECT INTO yet")));
 				}
 				else
 				{
