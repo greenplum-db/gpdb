@@ -221,6 +221,11 @@ check_node_deprecated_columns_walker(Node *node, DeprecatedColumnsWalkerContext 
 	{
 		/*
 		 * Recurse into (sub)queries to search for deprecated columns.
+		 *
+		 * Pass QTW_IGNORE_JOINALIASES to avoid unnecessarily recursing into a
+		 * join RTE's joinaliasvars, since we already recurse into the query's
+		 * jointree expression. This is sufficient to handle joins with
+		 * deprecated columns in the ON/USING clauses, along with NATURAL JOINs.
 		 */
 		bool	retval;
 		Query	*query = (Query *) node;
@@ -228,7 +233,7 @@ check_node_deprecated_columns_walker(Node *node, DeprecatedColumnsWalkerContext 
 		retval = query_tree_walker(query,
 								 check_node_deprecated_columns_walker,
 								 context,
-								 0);
+								 QTW_IGNORE_JOINALIASES);
 		context->rtableStack = list_delete_first(context->rtableStack);
 		return retval;
 	}
