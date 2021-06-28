@@ -10,7 +10,7 @@
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gpaddmirrors</b> [<b>-p</b> <varname>port_offset</varname>] [<b>-m</b> <varname>datadir_config_file </varname>[<b>-a</b>]] [<b>-s</b>] 
-   [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
+   [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-b</b> <varname>segment_batch_size</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
    [<b>-v</b>] [<b>--hba-hostnames</b> <varname>boolean</varname>] 
 
 <b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-a</b>] [<b>-d</b> <varname>coordinator_data_directory</varname>]
