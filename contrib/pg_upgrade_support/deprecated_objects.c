@@ -133,11 +133,11 @@ static const DeprecatedColumnDynamic deprecated_columns_dynamic[] = {
 	{ "gp_resgroup_config", 7 }, /* gp_toolkit.gp_resgroup_config.proposed_memory_limit */
 	{ "gp_resgroup_config", 9 }, /* gp_toolkit.gp_resgroup_config.proposed_memory_shared_quota */
 	{ "gp_resgroup_config", 11 }, /* gp_toolkit.gp_resgroup_config.proposed_memory_spill_ratio */
-	{ "gp-workfile_entries", 6 }, /* gp_toolkit.workfile_entries.current_query */
-	{ "gp-workfile_entries", 13 }, /* gp_toolkit.workfile_entries.directory */
-	{ "gp-workfile_entries", 2 }, /* gp_toolkit.workfile_entries.procpid */
-	{ "gp-workfile_entries", 14 }, /* gp_toolkit.workfile_entries.state */
-	{ "gp-workfile_entries", 10 }, /* gp_toolkit.workfile_entries.workmem */
+	{ "gp_workfile_entries", 6 }, /* gp_toolkit.workfile_entries.current_query */
+	{ "gp_workfile_entries", 13 }, /* gp_toolkit.workfile_entries.directory */
+	{ "gp_workfile_entries", 2 }, /* gp_toolkit.workfile_entries.procpid */
+	{ "gp_workfile_entries", 14 }, /* gp_toolkit.workfile_entries.state */
+	{ "gp_workfile_entries", 10 }, /* gp_toolkit.workfile_entries.workmem */
 	{ "gp_workfile_usage_per_query", 6 }, /* gp_toolkit.gp_workfile_usage_per_query.current_query */
 	{ "gp_workfile_usage_per_query", 2 }, /* gp_toolkit.gp_workfile_usage_per_query.procpid */
 	{ "gp_workfile_usage_per_query", 8 } /* gp_toolkit.gp_workfile_usage_per_query.state */
