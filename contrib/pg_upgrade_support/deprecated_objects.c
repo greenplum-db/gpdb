@@ -11,6 +11,7 @@
 #include "catalog/namespace.h"
 #include "optimizer/walkers.h"
 #include "utils/lsyscache.h"
+#include "utils/syscache.h"
 
 #include "deprecated_objects.h"
 
@@ -60,7 +61,9 @@ static bool is_deprecated_table(Oid reloid)
 			return true;
 	}
 
-	gp_toolkit_oid = LookupExplicitNamespace("gp_toolkit");
+	gp_toolkit_oid = GetSysCacheOid(NAMESPACENAME,
+									CStringGetDatum("gp_toolkit"),
+									0, 0, 0);
 	if (OidIsValid(gp_toolkit_oid))
 	{
 		for (int i = 0; i < num_deprecated_tables_dynamic; i++)
@@ -155,7 +158,9 @@ static bool is_deprecated_column(Oid reloid, int attnum)
 			return true;
 	}
 
-	gp_toolkit_oid = LookupExplicitNamespace("gp_toolkit");
+	gp_toolkit_oid = GetSysCacheOid(NAMESPACENAME,
+												  CStringGetDatum("gp_toolkit"),
+												  0, 0, 0);
 	if (OidIsValid(gp_toolkit_oid))
 	{
 		for (int i = 0; i < num_deprecated_columns_dynamic; i++)
