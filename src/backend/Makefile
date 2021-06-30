@@ -72,7 +72,11 @@ ifneq ($(PORTNAME), win32)
 ifneq ($(PORTNAME), aix)
 
 postgres: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(call expand_subsys,$^) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) -o $@
+ifeq ($(OSS_FUZZ),ON)
+	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) $(filter-out main/main.o,$(call expand_subsys,$^)) $(LDFLAGS) $(LDFLAGS_EX) -o /out/fuzzer -lpthread
+else
+	$(CXX) $(CXXFLAGS) $(filter-out parser/fuzzer.o,$(call expand_subsys,$^)) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) -o $@
+endif
 
 endif
 endif
