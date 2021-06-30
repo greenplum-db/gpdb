@@ -4046,7 +4046,6 @@ AlterTableGetLockLevel(List *cmds)
 				break;
 
 				/* GPDB additions */
-			case AT_ExpandTable:
 			case AT_SetDistributedBy:
 			case AT_PartAdd:
 			case AT_PartAddForSplit:
@@ -4062,7 +4061,11 @@ AlterTableGetLockLevel(List *cmds)
 				cmd_lockmode = AccessExclusiveLock;
 				break;
 
-			default:			/* oops */
+            case AT_ExpandTable:
+                cmd_lockmode = ExclusiveLock;
+                break;
+
+            default:			/* oops */
 				elog(ERROR, "unrecognized alter table type: %d",
 					 (int) cmd->subtype);
 				break;
@@ -4696,10 +4699,10 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				{
 					case PART_STATUS_NONE:
 					case PART_STATUS_ROOT:
+                    case PART_STATUS_LEAF:
 						break;
 
-					case PART_STATUS_INTERIOR:
-					case PART_STATUS_LEAF:
+				    case PART_STATUS_INTERIOR:
 						ereport(ERROR,
 								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 								 errmsg("cannot expand leaf or interior partition \"%s\"",
@@ -15131,6 +15134,8 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 	 * that we've closed the relation here.
 	 */
 	heap_close(rel, NoLock);
+    rel = heap_open(relid, AccessExclusiveLock);
+    heap_close(rel, NoLock);
 	rel = NULL;
 	tmprelid = RangeVarGetRelid(tmprv, NoLock, false);
 	swap_relation_files(relid, tmprelid,
