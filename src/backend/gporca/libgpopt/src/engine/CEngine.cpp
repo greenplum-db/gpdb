@@ -2092,9 +2092,21 @@ CEngine::FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 	BOOL fOrderReqd = !GPOS_FTRACE(EopttraceDisableSort) &&
 					  !prpp->Peo()->PosRequired()->IsEmpty();
 
+	// CPhysicalLeftOuterIndexNLJoin requires the inner child to be any
+	// distribution but random. The OR makes an exception in this case.
+	// This should be generalized when more physical operators require
+	// this pattern. We need an explicit check for CPhysicalLeftOuterIndexNLJoin
+	// when there are no motions, therefore we need to handle this exceptional
+	// case here.
+	//
+	// Similar exceptions should be OR'd into fDistirbutionReqdException to
+	// force checking EpetDistribution on the physical operation
+	BOOL fDistributionReqdException =
+		popPhysical->Eopid() == COperator::EopPhysicalLeftOuterIndexNLJoin;
 	BOOL fDistributionReqd =
-		!GPOS_FTRACE(EopttraceDisableMotions) &&
-		(CDistributionSpec::EdtAny != prpp->Ped()->PdsRequired()->Edt());
+		(!GPOS_FTRACE(EopttraceDisableMotions) &&
+		 (CDistributionSpec::EdtAny != prpp->Ped()->PdsRequired()->Edt())) ||
+		fDistributionReqdException;
 
 	BOOL fRewindabilityReqd = !GPOS_FTRACE(EopttraceDisableSpool) &&
 							  (prpp->Per()->PrsRequired()->IsCheckRequired());

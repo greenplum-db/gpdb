@@ -52,6 +52,29 @@ CPhysicalLeftOuterIndexNLJoin::Matches(COperator *pop) const
 	return false;
 }
 
+CEnfdProp::EPropEnforcingType
+CPhysicalLeftOuterIndexNLJoin::EpetDistribution(
+	CExpressionHandle &exprhdl,			 // exprhdl
+	const CEnfdDistribution *ped) const	 // ped
+{
+	GPOS_ASSERT(NULL != ped);
+
+	// outer index nested loop join cannot have the inner child be random
+	if (exprhdl.Pdpplan(1)->Pds()->Edt() == CDistributionSpec::EdtRandom)
+	{
+		return CEnfdProp::EpetProhibited;
+	}
+
+	// get distribution delivered by the physical node
+	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
+	if (ped->FCompatible(pds))
+	{
+		// required distribution is already provided
+		return CEnfdProp::EpetUnnecessary;
+	}
+
+	return CEnfdProp::EpetRequired;
+}
 
 CDistributionSpec *
 CPhysicalLeftOuterIndexNLJoin::PdsRequired(CMemoryPool * /*mp*/,
@@ -84,6 +107,11 @@ CPhysicalLeftOuterIndexNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		// inner (index-scan side) is requested for Any distribution,
 		// we allow outer references on the inner child of the join since it needs
 		// to refer to columns in join's outer child
+		//
+		// this distribution is intentionally invalid so we can reject invalid
+		// plans in EpetDistribution. there is a special case in CEnfdDistribution
+		// where fDistributionReqd is false if the distribution spec is any *or* the
+		// Eopid is CPhysicalLeftOuterIndexNLJoin (this case)
 		return GPOS_NEW(mp) CEnfdDistribution(
 			GPOS_NEW(mp)
 				CDistributionSpecAny(this->Eopid(), true /*fAllowOuterRefs*/),
@@ -144,15 +172,12 @@ CPhysicalLeftOuterIndexNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		return GPOS_NEW(mp) CEnfdDistribution(pdshashed, dmatch);
 	}
 
-	// shouldn't come here!
-	GPOS_RAISE(
-		gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
-		GPOS_WSZ_LIT("Left outer index nestloop join broadcasting outer side"));
 	// otherwise, require outer child to be replicated
+	// this will end up generating an invalid plan, but we reject it in EpetDistribution
 	return GPOS_NEW(mp) CEnfdDistribution(
 		GPOS_NEW(mp)
-			CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated),
-		dmatch);
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated),
+		CEnfdDistribution::EdmSatisfy);
 }
 
 
