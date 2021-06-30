@@ -9,6 +9,7 @@ Feature: Tests for gpaddmirrors
           And the segments are synchronized
          Then verify the database has mirrors
           And the tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
          When user stops all primary processes
           And user can start transactions
@@ -25,6 +26,7 @@ Feature: Tests for gpaddmirrors
         And the segments are synchronized
         And verify the database has mirrors
         And the tablespace is valid
+        And check if the addresses of wal replication are correct for all pairs
         And user stops all primary processes
         And user can start transactions
         And the tablespace is valid
@@ -49,6 +51,7 @@ Feature: Tests for gpaddmirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -68,16 +71,19 @@ Feature: Tests for gpaddmirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         Given a preferred primary has failed
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         When primary and mirror switch to non-preferred roles
         When the user runs "gprecoverseg -a -r"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -95,16 +101,19 @@ Feature: Tests for gpaddmirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         Given a preferred primary has failed
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         When primary and mirror switch to non-preferred roles
         When the user runs "gprecoverseg -a -r"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -114,6 +123,7 @@ Feature: Tests for gpaddmirrors
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors
         Then verify the database has mirrors
+        And check if the addresses of wal replication are correct for all pairs
         And save the gparray to context
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
@@ -121,6 +131,7 @@ Feature: Tests for gpaddmirrors
         Then gpinitstandby should return a return code of 0
         And gpaddmirrors adds mirrors
         Then mirror hostlist matches the one saved in context
+        And check if the addresses of wal replication are correct for all pairs
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -194,6 +205,7 @@ Feature: Tests for gpaddmirrors
           And a tablespace is created with data
          When gpaddmirrors adds mirrors
          Then verify the database has mirrors
+          And check if the addresses of wal replication are correct for all pairs
 
          When an FTS probe is triggered
           And the segments are synchronized

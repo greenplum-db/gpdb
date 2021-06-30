@@ -3,6 +3,7 @@ Feature: gprecoverseg tests
 
     Scenario: incremental recovery works with tablespaces
         Given the database is running
+          And check if the addresses of wal replication are correct for all pairs
           And a tablespace is created with data
           And user stops all primary processes
           And user can start transactions
@@ -10,6 +11,7 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And the tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
         Given another tablespace is created with data
          When the user runs "gprecoverseg -ra"
@@ -17,9 +19,11 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
     Scenario: full recovery works with tablespaces
         Given the database is running
+          And check if the addresses of wal replication are correct for all pairs
           And a tablespace is created with data
           And user stops all primary processes
           And user can start transactions
@@ -27,21 +31,26 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And the tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
         Given another tablespace is created with data
+          And check if the addresses of wal replication are correct for all pairs
          When the user runs "gprecoverseg -ra"
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
     Scenario Outline: full recovery limits number of parallel processes correctly
         Given a standard local demo cluster is created
+        And check if the addresses of wal replication are correct for all pairs
         And 2 gprecoverseg directory under '/tmp/recoverseg' with mode '0700' is created
         And a good gprecoverseg input file is created for moving 2 mirrors
         When the user runs gprecoverseg with input file and additional args "-a -F -v <args>"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
+        And check if the addresses of wal replication are correct for all pairs
         And check if gprecoverseg ran "$GPHOME/bin/lib/gpconfigurenewsegment" 2 times with args "-b <segHost_workers>"
         And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
         And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
@@ -55,13 +64,16 @@ Feature: gprecoverseg tests
 
     Scenario Outline: Rebalance correctly limits the number of concurrent processes
       Given the database is running
+      And check if the addresses of wal replication are correct for all pairs
       And user stops all primary processes
       And user can start transactions
       And the user runs "gprecoverseg -a -v <args>"
       And gprecoverseg should return a return code of 0
       And the segments are synchronized
+      And check if the addresses of wal replication are correct for all pairs
       When the user runs "gprecoverseg -ra -v <args>"
       Then gprecoverseg should return a return code of 0
+      And check if the addresses of wal replication are correct for all pairs
       And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
@@ -74,26 +86,31 @@ Feature: gprecoverseg tests
 
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
+        And check if the addresses of wal replication are correct for all pairs
         And user stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
+        And check if the addresses of wal replication are correct for all pairs
         And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
+        And check if the addresses of wal replication are correct for all pairs
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
     Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And user stops all mirror processes
         When user can start transactions
         And the user runs "gprecoverseg -F -a -s"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for each mirror
+        And check if the addresses of wal replication are correct for all pairs
         And gpAdminLogs directory has no "pg_basebackup*" files
         And all the segments are running
         And the segments are synchronized
@@ -102,12 +119,14 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And user stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a -s"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each primary
         And gpAdminLogs directory has no "pg_rewind*" files
+        And check if the addresses of wal replication are correct for all pairs
         And all the segments are running
         And the segments are synchronized
         And the cluster is rebalanced
@@ -116,12 +135,14 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And user stops all mirror processes
         When user can start transactions
         And the user runs "gprecoverseg -F -a --no-progress"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
         And gpAdminLogs directory has no "pg_basebackup*" files
+        And check if the addresses of wal replication are correct for all pairs
         And all the segments are running
         And the segments are synchronized
 
@@ -129,6 +150,7 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
         And user stops all primary processes
@@ -145,6 +167,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
@@ -153,6 +176,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
         And the "primary" segment information is saved
+        And check if the addresses of wal replication are correct for all pairs
         When the postmaster.pid file on "primary" segment is saved
         And user stops all primary processes
         When user can start transactions
@@ -163,27 +187,32 @@ Feature: gprecoverseg tests
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: pg_isready functions on recovered segments
         Given the database is running
           And all the segments are running
           And the segments are synchronized
+          And check if the addresses of wal replication are correct for all pairs
          When user stops all primary processes
           And user can start transactions
 
          When the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
+          And check if the addresses of wal replication are correct for all pairs
 
          When the user runs "gprecoverseg -ar"
          Then gprecoverseg should return a return code of 0
           And all the segments are running
           And the segments are synchronized
+          And check if the addresses of wal replication are correct for all pairs
           And pg_isready reports all primaries are accepting connections
 
     Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
@@ -206,6 +235,7 @@ Feature: gprecoverseg tests
       Given the database is running
       And all the segments are running
       And the segments are synchronized
+      And check if the addresses of wal replication are correct for all pairs
 
       And the primary on content 0 is stopped
       And user can start transactions
@@ -234,6 +264,7 @@ Feature: gprecoverseg tests
 
       And the user runs psql with "-c 'DROP TABLE foo'" against database "postgres"
       And the cluster is returned to a good state
+      And check if the addresses of wal replication are correct for all pairs
 
       Examples:
         | scenario    | args |
@@ -248,6 +279,7 @@ Feature: gprecoverseg tests
         Given the database is running
         Given database "gptest" exists
         And the information of a "mirror" segment on a remote host is saved
+        And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
@@ -255,6 +287,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
         And the "primary" segment information is saved
+        And check if the addresses of wal replication are correct for all pairs
         When the postmaster.pid file on "primary" segment is saved
         And user stops all primary processes
         When user can start transactions
@@ -266,10 +299,12 @@ Feature: gprecoverseg tests
         And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
@@ -278,6 +313,7 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the information of a "mirror" segment on a remote host is saved
         When user kills a "mirror" process with the saved information
         And user can start transactions
@@ -287,12 +323,14 @@ Feature: gprecoverseg tests
         And gprecoverseg should not print "Running pg_rewind on failed segments" to stdout
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: gprecoverseg with -i and -o option
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the information of a "mirror" segment on a remote host is saved
         When user kills a "mirror" process with the saved information
         And user can start transactions
@@ -300,17 +338,20 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -o failedSegmentFile"
         Then gprecoverseg should return a return code of 0
         Then gprecoverseg should print "Configuration file output to failedSegmentFile successfully" to stdout
+        And check if the addresses of wal replication are correct for all pairs
         When the user runs "gprecoverseg -i failedSegmentFile -a"
         Then gprecoverseg should return a return code of 0
         Then gprecoverseg should print "1 segment\(s\) to recover" to stdout
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: gprecoverseg should not throw exception for empty input file
         Given the database is running
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the information of a "mirror" segment on a remote host is saved
         When user kills a "mirror" process with the saved information
         And user can start transactions
@@ -319,9 +360,11 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -i /tmp/empty_file -a"
         Then gprecoverseg should return a return code of 0
         Then gprecoverseg should print "No segments to recover" to stdout
+        And check if the addresses of wal replication are correct for all pairs
         When the user runs "gprecoverseg -a -F"
         Then all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
@@ -330,6 +373,7 @@ Feature: gprecoverseg tests
         # cause a full recovery AFTER a failure on a remote primary
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And the information of a "mirror" segment on a remote host is saved
         And the information of the corresponding primary segment on a remote host is saved
         When user kills a "primary" process with the saved information
@@ -338,11 +382,13 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
+        And check if the addresses of wal replication are correct for all pairs
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         # validate the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved
 
@@ -356,6 +402,7 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And the tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
         Given another tablespace is created with data
          When the user runs "gprecoverseg -ra"
@@ -363,6 +410,7 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: full recovery works with tablespaces on a multi-host environment
@@ -374,6 +422,7 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And the tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
         Given another tablespace is created with data
          When the user runs "gprecoverseg -ra"
@@ -381,6 +430,7 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
   @concourse_cluster
   Scenario: moving mirror to a different host must work
@@ -394,6 +444,7 @@ Feature: gprecoverseg tests
        Then the saved "mirror" segment is marked down in config
        When the user runs "gprecoverseg -a -p mdw"
        Then gprecoverseg should return a return code of 0
+        And check if the addresses of wal replication are correct for all pairs
        When user kills a "primary" process with the saved information
         And user can start transactions
        Then the saved "primary" segment is marked down in config
@@ -401,10 +452,12 @@ Feature: gprecoverseg tests
        Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
        When the user runs "gprecoverseg -ra"
        Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
 
   @concourse_cluster
   Scenario: recovering a host with tablespaces succeeds
@@ -436,11 +489,13 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -a -p sdw1"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
+        And check if the addresses of wal replication are correct for all pairs
         And user can start transactions
         And the user runs "gprecoverseg -ra"
         And gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
         And user can start transactions
 
         # verify the data
