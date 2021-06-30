@@ -502,7 +502,7 @@ pg_relation_size_oid(PG_FUNCTION_ARGS)
 
 		initStringInfo(&buffer);
 
-		appendStringInfo(&buffer, "select sum(pg_relation_size('%s.%s'))::int8 from gp_dist_random('gp_id');", quote_identifier(schemaName), quote_identifier(relName));
+		appendStringInfo(&buffer, "select sum(pg_relation_size(%u))::int8 from gp_dist_random('gp_id');", relOid);
 
 		size += get_size_from_segDBs(buffer.data);
 	}

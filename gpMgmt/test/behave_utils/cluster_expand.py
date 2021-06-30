@@ -81,7 +81,7 @@ class Gpexpand:
         else:
             flags = ""
 
-        run_gpcommand(self.context, "gpexpand %s" % flags)
+        run_gpcommand(self.context, "gpexpand -D %s %s" % (self.database, flags))
 
 
 if __name__ == '__main__':
