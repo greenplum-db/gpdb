@@ -24,7 +24,7 @@ from behave import given, when, then
 from datetime import datetime, timedelta
 from os import path
 
-from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
+from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR, STATUS_DOWN
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp
 from gppylib.commands.unix import findCmdInPath, Scp
@@ -3234,3 +3234,38 @@ def impl(context, content, desired_state):
 
     if len(rows) == 0:
         raise Exception("Expected content %s to be %s." % (content, desired_state))
+
+@then('check if the addresses of wal replication are correct for all pairs')
+@when('check if the addresses of wal replication are correct for all pairs')
+@given('check if the addresses of wal replication are correct for all pairs')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL(dbname='template1'))
+    if not gparray.hasMirrors:
+        return
+
+    def check_pair(p, m):
+        try:
+            cmdStr = "grep primary_conninfo %s/recovery.conf" % m.getSegmentDataDirectory()
+            cmd = Command("get primary_conninfo", cmdStr, ctxt=REMOTE, remoteHost=m.getSegmentAddress())
+            cmd.run(validateAfter=True)
+            conninfo = cmd.get_results().stdout.strip()
+        except:
+            if m.getSegmentStatus() == STATUS_DOWN:
+                return
+            raise
+
+        t = conninfo.split('host=')
+        if len(t) != 2:
+            raise Exception("invalid primary_conninfo='%s'" % conninfo)
+        host = t[1].split()[0].strip()
+        if host != p.getSegmentAddress():
+            raise Exception("wal address is '%s', but the primary address is '%s'" % (host, p.getSegmentAddress()))
+
+    for segs in gparray.segmentPairs:
+        p, m = segs.primaryDB, segs.mirrorDB
+        if m is None:
+            continue
+        if p is None:
+            raise Exception("primary is None")
+        check_pair(p, m)
+

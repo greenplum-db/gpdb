@@ -32,6 +32,7 @@ Feature: Tests for gpmovemirrors
         And all the segments are running
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: gpmovemirrors can change the port of mirrors within a single host
         Given a standard local demo cluster is created
@@ -43,6 +44,7 @@ Feature: Tests for gpmovemirrors
         And all the segments are running
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: gpmovemirrors gives a warning when passed identical attributes for new and old mirrors
         Given a standard local demo cluster is created
@@ -55,6 +57,7 @@ Feature: Tests for gpmovemirrors
         And all the segments are running
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: tablespaces work
         Given a standard local demo cluster is created
@@ -128,6 +131,7 @@ Feature: Tests for gpmovemirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: gpmovemirrors can change from spread mirroring to group mirroring
@@ -164,6 +168,7 @@ Feature: Tests for gpmovemirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check if the addresses of wal replication are correct for all pairs
 
     @concourse_cluster
     Scenario: tablespaces work on a multi-host environment
@@ -181,6 +186,7 @@ Feature: Tests for gpmovemirrors
           And the segments are synchronized
           And verify that mirrors are recognized after a restart
           And the tablespace is valid
+          And check if the addresses of wal replication are correct for all pairs
 
          When user stops all primary processes
           And user can start transactions

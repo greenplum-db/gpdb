@@ -8,6 +8,7 @@ Feature: gpinitsystem tests
         And gpconfig should print "Values on all segments are consistent" to stdout
         And gpconfig should print "Master  value: on" to stdout
         And gpconfig should print "Segment value: on" to stdout
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: gpinitsystem creates a cluster with data_checksums off
         Given the database is initialized with checksum "off"
@@ -16,6 +17,7 @@ Feature: gpinitsystem tests
         And gpconfig should print "Values on all segments are consistent" to stdout
         And gpconfig should print "Master  value: off" to stdout
         And gpconfig should print "Segment value: off" to stdout
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: gpinitsystem creates a cluster with a legacy input initialization file
         Given a working directory of the test as '/tmp/gpinitsystem'
