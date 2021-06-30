@@ -109,14 +109,14 @@ typedef struct AOCSScanDescData
 
 	/* synthetic system attributes */
 	ItemPointerData cdb_fake_ctid;
-	int64 total_row;
-	int64 cur_seg_row;
+	int64 total_row;	/* row count behind current position among all scanned segments */
+	int64 cur_seg_row;	/* row count behind current position in a current segment */
 
 	/*
 	 * Only used by `analyze`
 	 */
-	int64		nextTupleId;
-	int64		targetTupleId;
+	int64		analyze_block_size;
+	int64		rows_to_scan;	/* row count left to scan during analyze */
 
 	/*
 	 * Part of the struct to be used only inside aocsam.c
@@ -298,8 +298,11 @@ extern AOCSScanDesc aocs_beginrangescan(Relation relation, Snapshot snapshot,
 
 extern void aocs_rescan(AOCSScanDesc scan);
 extern void aocs_endscan(AOCSScanDesc scan);
+extern void aocs_initscan(AOCSScanDesc scan);
 
 extern bool aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot);
+extern int open_next_scan_seg(AOCSScanDesc scan);
+extern void close_cur_scan_seg(AOCSScanDesc scan);
 extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno);
 extern void aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupleId);
 static inline void aocs_insert(AOCSInsertDesc idesc, TupleTableSlot *slot)

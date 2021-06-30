@@ -1050,12 +1050,204 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	appendonly_insert_finish(aoInsertDesc);
 }
 
+/* Loop over an ordered sequence of appendonly segments in a scan to find a target row. */
+static bool
+appendonly_analyze_find_segment(AppendOnlyScanDesc scan, int64 targetrow)
+{
+	AppendOnlyExecutorReadBlock	*readblock;
+	FileSegInfo	*seginfo;
+	int64	rows_prev_segments; /* row count from prevoius segments (except current segment) */
+
+	readblock = &scan->executorReadBlock;
+
+	/* Need to open a new segment file. */
+	if (scan->aos_need_new_segfile)
+	{
+		if (!SetNextFileSegForRead(scan))
+			return false;
+		readblock->segmentRowsScanned = 0;
+	}
+
+	/* No more segments left. */
+	if (scan->aos_done_all_segfiles)
+	{
+		elog(DEBUG2, "No more segments left.");
+		return false;
+	}
+
+	if (readblock->totalRowsScanned > targetrow)
+	{
+		elog(ERROR, "Analyze block inconsistency: total rows scanned %lu, target row %lu",
+			readblock->totalRowsScanned, targetrow);
+	}
+
+	/* Look up for the target row in a current segment. */
+	seginfo = scan->aos_segfile_arr[scan->aos_segfiles_processed - 1];
+	rows_prev_segments = readblock->totalRowsScanned - readblock->segmentRowsScanned;
+	if (targetrow <= rows_prev_segments + seginfo->total_tupcount)
+	{
+		return true;
+	}
+
+	/* Look up for the target row among other segments. */
+	while (true)
+	{
+		readblock->totalRowsScanned += seginfo->total_tupcount - readblock->segmentRowsScanned;
+
+		scan->aos_need_new_segfile = true;
+		CloseScannedFileSeg(scan);
+		elog(DEBUG2, "Skipping current segment: segno %d", readblock->segmentFileNum);
+		if (!getNextBlock(scan))
+		{
+			elog(DEBUG3, "No more varblocks left in a current segment.");
+			return false;
+		}
+
+		/* Skip a segment until it contains the target row. */
+		seginfo = scan->aos_segfile_arr[scan->aos_segfiles_processed - 1];
+		if (readblock->totalRowsScanned + seginfo->total_tupcount >= targetrow)
+		{
+			break;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * AO table on a physical level is a collection of segments,
+ * each constructed from a variable sized blocks. This approach is
+ * not suitable for algorithm S from Knuth used by acquire_sample_rows().
+ * To overcome this limitation we treat AO table as a collection of
+ * segment files with a global sequence of rows among them.
+ *
+ * For example:
+ * - segno 1 with 100 rows - global positions 0-99
+ * - segno 2 with 200 rows - global positions 100-299
+ *
+ * This global sequence of rows is divided on some arbitrary number of
+ * "logical" analyze blocks fitting BlockNumber (uint32). These blocks
+ * are not interconnected with variable sized physical blocks of segment
+ * files - it is simply a range of global row positions. So block sampling
+ * by algorithm S from Knuth gives us the starting global position of a
+ * target block (the size of the block is fixed and known). We get a benefit
+ * of this schema when the number of blocks is more that 300 * statistics
+ * target. So if we are lucky enough there would be several physical variable
+ * sized blocks between logical blocks and we can just read their headers
+ * without data decompression.
+ */
 static bool
 appendonly_scan_analyze_next_block(TableScanDesc scan, BlockNumber blockno,
 							   BufferAccessStrategy bstrategy)
 {
+	int64 targetrow;
+	int64 varblockFirstRow;	/* var block row position with respect to previous segments */
+	int64 varblockRemainingRows;
+	FileSegInfo *seginfo;
+	AppendOnlyExecutorReadBlock *readblock;
+	TupleTableSlot *slot;
+	bool found;
+	Snapshot snapshot;
+	FileSegTotals *fileSegTotals;
+	int64 totalRemainingRows;
+
 	AppendOnlyScanDesc aoscan = (AppendOnlyScanDesc) scan;
-	aoscan->targetTupleId = blockno;
+
+	/* Convert block number to a target row in an ordered sequence of appendonly segments. */
+	targetrow = blockno * aoscan->analyze_block_size;
+
+	/* This should never happen */
+	if (targetrow > INT64_MAX)
+	{
+		elog(ERROR, "Target row is out on range");
+	}
+
+	/* Find a segment with a target row (skip other ones without scan and increment counters) */
+	if (!appendonly_analyze_find_segment(aoscan, targetrow))
+	{
+		elog(DEBUG3, "No segment exists for the target row %lu", targetrow);
+		return false;
+	}
+
+	/* Calculate rows to scan in a current block. */
+	readblock = &aoscan->executorReadBlock;
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
+	fileSegTotals = GetSegFilesTotals(aoscan->rs_base.rs_rd, snapshot);
+	UnregisterSnapshot(snapshot);
+	totalRemainingRows = fileSegTotals->totaltuples - readblock->totalRowsScanned;
+	readblock->rows_to_scan = aoscan->analyze_block_size < totalRemainingRows ?
+								aoscan->analyze_block_size :
+								totalRemainingRows;
+
+	/* Check the target row in a current varblock. */
+	found = false;
+	varblockFirstRow = readblock->totalRowsScanned - readblock->currentItemCount;
+	seginfo = aoscan->aos_segfile_arr[aoscan->aos_segfiles_processed - 1];
+	if (varblockFirstRow + readblock->rowCount >= targetrow)
+	{
+		elog(DEBUG2, "Target row %lu have been found in varblock (first row [header value %lu / order count %lu], header offset %lu) of size %d (segno %d). Rows scanned: total %lu, segment %lu, varblock %d",
+			targetrow, readblock->blockFirstRowNum, varblockFirstRow, readblock->headerOffsetInFile, readblock->rowCount,
+			seginfo->segno, readblock->totalRowsScanned, readblock->segmentRowsScanned, readblock->currentItemCount);
+		found = true;
+	}
+
+	/* Check other varblock headers for the target row. */
+	if (!found)
+	{
+		/* Store remaining rows in a varblock for the first step in a skip loop. */
+		varblockRemainingRows = readblock->rowCount - readblock->currentItemCount;
+
+		/* Iterate over varblock headers in a current segment. */
+		while(AppendOnlyExecutorReadBlock_GetBlockInfo(&aoscan->storageRead, &aoscan->executorReadBlock))
+		{
+			/* Increment counters. */
+			elog(DEBUG2, "Incrementing total (%lu) and segment (%lu) scanned rows with %lu",
+				readblock->totalRowsScanned, readblock->segmentRowsScanned,
+				varblockRemainingRows);
+			readblock->totalRowsScanned += varblockRemainingRows;
+			readblock->segmentRowsScanned += varblockRemainingRows;
+			readblock->currentItemCount = 0;
+
+			/* Does current header have enough rows to reach the target row? */
+			if (readblock->totalRowsScanned + readblock->rowCount >= targetrow)
+			{
+				/* Read current block data. */
+				AppendOnlyExecutorReadBlock_GetContents(readblock);
+				varblockFirstRow = readblock->totalRowsScanned - readblock->currentItemCount;
+				elog(DEBUG2, "Target row %lu have been found in varblock (first row [header value %lu / order count %lu], header offset %lu) of size %d (segno %d). Rows scanned: total %lu, segment %lu, varblock %d",
+					targetrow, readblock->blockFirstRowNum, varblockFirstRow, readblock->headerOffsetInFile, readblock->rowCount,
+					seginfo->segno, readblock->totalRowsScanned, readblock->segmentRowsScanned, readblock->currentItemCount);
+				found = true;
+				break;
+			}
+
+			/* Store remaining rows in a varblock for the next loop iteration. */
+			varblockRemainingRows = readblock->rowCount - readblock->currentItemCount;
+
+			/* Skip current block without decompression. */
+			elog(DEBUG2, "Target row %lu can't be found in varblock (first row [header value %lu / order count %lu], header offset %lu) of size %d (segno %d) - skipping. Rows scanned: total %lu, segment %lu, varblock %d",
+				targetrow, readblock->blockFirstRowNum, varblockFirstRow, readblock->headerOffsetInFile, readblock->rowCount,
+				seginfo->segno, readblock->totalRowsScanned, readblock->segmentRowsScanned, readblock->currentItemCount);
+			AppendOnlyExecutionReadBlock_FinishedScanBlock(readblock);
+			AppendOnlyStorageRead_SkipCurrentBlock(&aoscan->storageRead);
+		}
+
+		if (!found)
+		{
+			elog(DEBUG2, "Target row  %lu can't be found among varblocks.", targetrow);
+			return false;
+		}
+	}
+
+	/* Set block reader position to the target row. */
+	slot = table_slot_create(aoscan->aos_rd, NULL);
+	while (readblock->totalRowsScanned < targetrow)
+	{
+		appendonly_getnextslot(scan, ForwardScanDirection, slot);
+		elog(DEBUG3, "Move scan position to the target row %lu. Rows scanned: total %lu, segment %lu, varblock %d",
+			targetrow, readblock->totalRowsScanned, readblock->segmentRowsScanned, readblock->currentItemCount);
+	}
+	ExecDropSingleTupleTableSlot(slot);
 
 	return true;
 }
@@ -1065,30 +1257,35 @@ appendonly_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
 							   double *liverows, double *deadrows,
 							   TupleTableSlot *slot)
 {
+	bool ret;
+	AOTupleId *tupleId;
 	AppendOnlyScanDesc aoscan = (AppendOnlyScanDesc) scan;
-	bool		ret = false;
 
-	/* skip several tuples if they are not sampling target */
-	while (!aoscan->aos_done_all_segfiles
-		   && aoscan->targetTupleId > aoscan->nextTupleId)
-	{
-		appendonly_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
-	}
+	elog(DEBUG3, "Remaining rows to scan %lu. Varblock first row: %lu",
+		aoscan->executorReadBlock.rows_to_scan, aoscan->executorReadBlock.blockFirstRowNum);
 
-	if (!aoscan->aos_done_all_segfiles
-		&& aoscan->targetTupleId == aoscan->nextTupleId)
+	/* Inner loop over all tuples of the analyze block. */
+	while (--aoscan->executorReadBlock.rows_to_scan >= 0)
 	{
 		ret = appendonly_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
-
 		if (ret)
+		{
+			tupleId = (AOTupleId *) &slot->tts_tid;
+			elog(DEBUG3, "Row number %lu", AOTupleIdGet_rowNum(tupleId));
 			*liverows += 1;
+
+			return true;
+		}
 		else
+		{
+			elog(DEBUG3, "Dead row");
 			*deadrows += 1; /* if return an invisible tuple */
+
+			continue;
+		}
 	}
 
-	return ret;
+	return false;
 }
 
 static double

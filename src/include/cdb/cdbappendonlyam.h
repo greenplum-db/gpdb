@@ -48,10 +48,13 @@
 
 #define DEFAULT_COMPRESS_LEVEL				 (0)
 #define MIN_APPENDONLY_BLOCK_SIZE			 (8 * 1024)
-#define DEFAULT_APPENDONLY_BLOCK_SIZE		(32 * 1024)
+#define DEFAULT_APPENDONLY_BLOCK_SIZE		 (32 * 1024)
 #define MAX_APPENDONLY_BLOCK_SIZE			 (2 * 1024 * 1024)
 #define DEFAULT_VARBLOCK_TEMPSPACE_LEN   	 (4 * 1024)
 #define DEFAULT_FS_SAFE_WRITE_SIZE			 (0)
+#define APPENDONLY_ROW_MAX					 (1UL << (sizeof(AOTupleId) * 8)) - 1
+#define APPENDONLY_ANALYZE_BLOCK_MAX		 (1UL << (sizeof(BlockNumber) * 8)) - 1
+#define	APPENDONLY_ANALYZE_BLOCK_SIZE		 (APPENDONLY_ROW_MAX / APPENDONLY_ANALYZE_BLOCK_MAX) + 1
 
 /*
  * AppendOnlyInsertDescData is used for inserting data into append-only
@@ -130,14 +133,15 @@ typedef struct AppendOnlyExecutorReadBlock
 
 	int				segmentFileNum;
 
-	int64			totalRowsScannned;
+	int64			totalRowsScanned;	/* row count behind current position among all scanned segments */
+	int64			segmentRowsScanned; /* row count behind current position in a current segment */
 
-	int64			blockFirstRowNum;
+	int64			blockFirstRowNum;	/* var block first row number from info */
 	int64			headerOffsetInFile;
 	uint8			*dataBuffer;
 	int32			dataLen;
 	int 			executorBlockKind;
-	int 			rowCount;
+	int 			rowCount;			/* var block row number from info */
 	bool			isLarge;
 	bool			isCompressed;
 
@@ -147,8 +151,10 @@ typedef struct AppendOnlyExecutorReadBlock
 	int32			largeContentBufferLen;
 
 	VarBlockReader  varBlockReader;
-	int				readerItemCount;
-	int				currentItemCount;
+	int				readerItemCount;	/* var block row number from the content */
+	int				currentItemCount;	/* var block scan counter */
+
+	int64			rows_to_scan;		/* row count left to scan during analyze */
 	
 	uint8			*singleRow;
 	int32			singleRowLen;
@@ -228,8 +234,7 @@ typedef struct AppendOnlyScanDescData
 	/*
 	 * Only used by `analyze`
 	 */
-	int64		nextTupleId;
-	int64		targetTupleId;
+	int64		analyze_block_size;
 
 	/* For Bitmap scan */
 	int			rs_cindex;		/* current tuple's index in tbmres->offsets */
@@ -358,6 +363,13 @@ typedef struct IndexFetchAppendOnlyData
  * ----------------
  */
 
+extern void CloseScannedFileSeg(AppendOnlyScanDesc scan);
+extern bool SetNextFileSegForRead(AppendOnlyScanDesc scan);
+extern bool getNextBlock(AppendOnlyScanDesc scan);
+extern bool AppendOnlyExecutorReadBlock_GetBlockInfo(AppendOnlyStorageRead *storageRead,
+										 AppendOnlyExecutorReadBlock *executorReadBlock);
+extern void AppendOnlyExecutorReadBlock_GetContents(AppendOnlyExecutorReadBlock *executorReadBlock);
+extern void AppendOnlyExecutionReadBlock_FinishedScanBlock(AppendOnlyExecutorReadBlock *executorReadBlock);
 extern AppendOnlyScanDesc appendonly_beginrangescan(Relation relation, 
 		Snapshot snapshot,
 		Snapshot appendOnlyMetaDataSnapshot, 

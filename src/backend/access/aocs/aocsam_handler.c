@@ -515,13 +515,31 @@ aoco_beginscan(Relation relation,
                uint32 flags)
 {
 	AOCSScanDesc	aoscan;
+	AttrNumber		natts;
+	AttrNumber		attr;
+	bool			*proj;
 
 	/* Parallel scan not supported for AO_COLUMN tables */
 	Assert(pscan == NULL);
 
+	/* At the moment we project all columns for analyze scan. */
+	if ((flags & SO_TYPE_ANALYZE) != 0)
+	{
+		natts = RelationGetNumberOfAttributes(relation);
+		proj = palloc(sizeof(bool *) * natts);
+		for (attr = 0; attr < natts; attr++)
+		{
+			proj[attr] = true;
+		}
+	}
+	else
+	{
+		proj = NULL;
+	}
+
 	aoscan = aocs_beginscan(relation,
 							snapshot,
-							NULL,
+							proj,
 							flags);
 
 	return (TableScanDesc) aoscan;
@@ -1219,12 +1237,228 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	aocs_insert_finish(idesc);
 }
 
+/* Loop over an ordered sequence of appendonly segments in a scan to find a target row. */
+static bool
+aoco_analyze_find_segment(AOCSScanDesc scan, int64 targetrow)
+{
+	AOCSFileSegInfo *seginfo;
+	int	segno;
+	int64	rows_prev_segments; /* row count from prevoius segments (except current segment) */
+
+	/* Need to open a new segment file. */
+	if (scan->cur_seg < 0)
+	{
+		if (open_next_scan_seg(scan) < 0)
+		{
+			elog(DEBUG2, "Failed to open a new segment.");
+			scan->cur_seg = -1;
+			return false;
+		}
+		scan->cur_seg_row = 0;
+	}
+
+	/* No more segments left. */
+	if (scan->cur_seg >= scan->total_seg)
+	{
+		elog(DEBUG2, "No more segments left.");
+		return false;
+	}
+
+	if (scan->total_row > targetrow)
+	{
+		elog(ERROR, "Analyze block inconsistency: total rows scanned %lu, target row %lu",
+			scan->total_row, targetrow);
+	}
+
+	/* Look up for the target row in a current segment. */
+	seginfo = scan->seginfo[scan->cur_seg];
+	rows_prev_segments = scan->total_row - scan->cur_seg_row;
+	if (targetrow <= rows_prev_segments + seginfo->total_tupcount)
+	{
+		return true;
+	}
+
+	/* Look up for the target row among other segments */
+	while (true)
+	{
+		scan->total_row += seginfo->total_tupcount - scan->cur_seg_row;
+		scan->cur_seg_row = 0;
+
+		close_cur_scan_seg(scan);
+		elog(DEBUG2, "Skipping current segment: segno %d", scan->cur_seg);
+		segno = open_next_scan_seg(scan);
+		if ((segno < 0) || (segno >= scan->total_seg))
+		{
+			elog(DEBUG3, "No more varblocks left in a current segment.");
+			return false;
+		}
+
+		/* Skip a segment if it doesn't contain the target row. */
+		seginfo = scan->seginfo[scan->cur_seg];
+		if (scan->total_row + seginfo->total_tupcount >= targetrow)
+		{
+			break;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * AOC table's column on a physical level is a collection of segments,
+ * each constructed from a variable sized blocks. This approach is
+ * not suitable for algorithm S from Knuth used by acquire_sample_rows().
+ * To overcome this limitation we treat AOC table as a collection of
+ * segment files with a global sequence of rows among them.
+ *
+ * For example:
+ * - segno 1 with 100 rows - global positions 0-99
+ * - segno 2 with 200 rows - global positions 100-299
+ *
+ * This global sequence of rows is divided on some arbitrary number of
+ * "logical" analyze blocks fitting BlockNumber (uint32). These blocks
+ * are not interconnected with variable sized physical blocks of segment
+ * files - it is simply a range of global row positions. So block sampling
+ * by algorithm S from Knuth gives us the starting global position of a
+ * target block (the size of the block is fixed and known). We get a benefit
+ * of this schema when the number of blocks is more that 300 * statistics
+ * target. So if we are lucky enough there would be several physical variable
+ * sized blocks between logical blocks and we can just read their headers
+ * without data decompression.
+ */
 static bool
 aoco_scan_analyze_next_block(TableScanDesc scan, BlockNumber blockno,
                                    BufferAccessStrategy bstrategy)
 {
+	AttrNumber proj;
+	int64 targetrow;
+	int64 varblockFirstRow;	/* var block row position with respect to previous segments */
+	int64 varblockRemainingRows;
+	AOCSFileSegInfo *seginfo;
+	DatumStreamRead *ds;
+	TupleTableSlot *slot;
+	bool found;
+	Snapshot snapshot;
+	FileSegTotals *fileSegTotals;
+	int64 totalRemainingRows;
+
 	AOCSScanDesc aoscan = (AOCSScanDesc) scan;
-	aoscan->targetTupleId = blockno;
+
+	/* Convert block number to a target row in an ordered sequence of appendonly segments. */
+	targetrow = blockno * aoscan->analyze_block_size;
+
+	/* This should never happen */
+	if (targetrow > INT64_MAX)
+	{
+		elog(ERROR, "Target row is out on range");
+	}
+
+	/* Initialize AOC scan. */
+	if (aoscan->columnScanInfo.relationTupleDesc == NULL)
+	{
+		aoscan->columnScanInfo.relationTupleDesc = RelationGetDescr(aoscan->rs_base.rs_rd);
+		PinTupleDesc(aoscan->columnScanInfo.relationTupleDesc);
+		aocs_initscan(aoscan);
+	}
+
+	/* Find a segment with a target row (skip other ones without scan and increment counters) */
+	if (!aoco_analyze_find_segment(aoscan, targetrow))
+	{
+		elog(DEBUG3, "No segment exists for the target row %lu", targetrow);
+		return false;
+	}
+
+	/* Calculate rows to scan in a current block. */
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
+	fileSegTotals = GetAOCSSSegFilesTotals(aoscan->rs_base.rs_rd, snapshot);
+	UnregisterSnapshot(snapshot);
+	totalRemainingRows = fileSegTotals->totaltuples - aoscan->total_row;
+	aoscan->rows_to_scan = aoscan->analyze_block_size < totalRemainingRows ?
+								aoscan->analyze_block_size :
+								totalRemainingRows;
+
+	/* Look for a target row in all scanned projections. */
+	for (proj = 0; proj < aoscan->columnScanInfo.num_proj_atts; proj++)
+	{
+		AttrNumber attno;
+
+		attno = aoscan->columnScanInfo.proj_atts[proj];
+		ds = aoscan->columnScanInfo.ds[attno];
+
+		/* Check the target row in a current varblock. */
+		found = false;
+		varblockFirstRow = aoscan->total_row - DatumStreamBlockRead_Nth(&ds->blockRead);
+		seginfo = aoscan->seginfo[aoscan->cur_seg];
+		if (varblockFirstRow + ds->blockRowCount >= targetrow)
+		{
+			elog(DEBUG2, "Target row %lu have been found in varblock (first row [header value %lu / order count %lu], header offset %lu) of size %d (projection %d, segno %d). Rows scanned: total %lu, segment %lu, varblock %d",
+				targetrow, ds->blockFirstRowNum, varblockFirstRow, ds->blockFileOffset, ds->blockRowCount, attno,
+				seginfo->segno, aoscan->total_row, aoscan->cur_seg_row, DatumStreamBlockRead_Nth(&ds->blockRead));
+			found = true;
+		}
+
+		/* Check other varblock headers for the target row. */
+		if (!found)
+		{
+			/* Store remaining rows in a varblock for the first step in a skip loop. */
+			varblockRemainingRows = ds->blockRowCount - DatumStreamBlockRead_Nth(&ds->blockRead);
+
+			/* Iterate over varblock headers in a current segment. */
+			while (datumstreamread_block_info(ds))
+			{
+				/* Increment counters. */
+				elog(DEBUG2, "Incrementing total (%lu) and segment (%lu) scanned rows with %lu",
+					aoscan->total_row, aoscan->cur_seg_row, varblockRemainingRows);
+				aoscan->total_row += varblockRemainingRows;
+				aoscan->cur_seg_row += varblockRemainingRows;
+				ds->blockRead.nth = 0;
+
+				/* Does current header have enough rows to reach the target row? */
+				if (aoscan->total_row + ds->blockRowCount >= targetrow)
+				{
+					/* Read current block data. */
+					datumstreamread_block_content(ds);
+					varblockFirstRow = aoscan->total_row - DatumStreamBlockRead_Nth(&ds->blockRead);
+					elog(DEBUG2, "Target row %lu have been found in varblock (first row [header value %lu / order count %lu], header offset %lu) of size %d (projection %d, segno %d). Rows scanned: total %lu, segment %lu, varblock %d",
+						targetrow, ds->blockFirstRowNum, varblockFirstRow, ds->blockFileOffset, ds->blockRowCount, attno,
+						seginfo->segno, aoscan->total_row, aoscan->cur_seg_row, DatumStreamBlockRead_Nth(&ds->blockRead));
+					found = true;
+					break;
+				}
+
+				/* Store remaining rows in a varblock for the next loop iteration. */
+				varblockRemainingRows = ds->blockRowCount - DatumStreamBlockRead_Nth(&ds->blockRead);
+
+				/* Skip current block without decompression. */
+				elog(DEBUG2, "Target row %lu can't be found in varblock (first row [header value %lu / order count %lu], header offset %lu) of size %d (projection %d, segno %d) - skipping. Rows scanned: total %lu, segment %lu, varblock %d",
+					targetrow, ds->blockFirstRowNum, varblockFirstRow, ds->blockFileOffset, ds->blockRowCount, attno,
+					seginfo->segno, aoscan->total_row, aoscan->cur_seg_row, DatumStreamBlockRead_Nth(&ds->blockRead));
+				AppendOnlyStorageRead_SkipCurrentBlock(&ds->ao_read);
+			}
+
+			if (!found)
+			{
+				elog(DEBUG2, "Target row  %lu can't be found among varblocks in projection %d.",
+					targetrow, attno);
+				return false;
+			}
+		}
+
+		if (!found)
+		{
+			elog(ERROR, "Target row can't be found among varblock headers");
+		}
+	}
+
+	/* Set block reader position to the target row. */
+	slot = table_slot_create(aoscan->rs_base.rs_rd, NULL);
+	while (aoscan->total_row < targetrow)
+	{
+		aoco_getnextslot(scan, ForwardScanDirection, slot);
+		elog(DEBUG3, "Move scan position to the target row %lu. Rows scanned: total %lu, segment %lu",
+			targetrow, aoscan->total_row, aoscan->cur_seg_row);
+	}
+	ExecDropSingleTupleTableSlot(slot);
 
 	return true;
 }
@@ -1234,28 +1468,39 @@ aoco_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
                                    double *liverows, double *deadrows,
                                    TupleTableSlot *slot)
 {
+	bool ret;
+	AOTupleId *tupleId;
 	AOCSScanDesc aoscan = (AOCSScanDesc) scan;
-	bool		ret = false;
 
-	/* skip several tuples if they are not sampling target */
-	while (aoscan->targetTupleId > aoscan->nextTupleId)
-	{
-		aoco_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
-	}
+	elog(DEBUG3, "Remaining rows to scan %lu", aoscan->rows_to_scan);
 
-	if (aoscan->targetTupleId == aoscan->nextTupleId)
+	/* Inner loop over all tuples of the analyze block. */
+	while (--aoscan->rows_to_scan >= 0)
 	{
 		ret = aoco_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
-
 		if (ret)
+		{
+			if (aoscan->rows_to_scan < 0)
+			{
+				return false;
+			}
+
+			tupleId = (AOTupleId *) &slot->tts_tid;
+			elog(DEBUG3, "Row number %lu", AOTupleIdGet_rowNum(tupleId));
 			*liverows += 1;
+
+			return true;
+		}
 		else
+		{
+			elog(DEBUG3, "Dead row");
 			*deadrows += 1; /* if return an invisible tuple */
+
+			continue;
+		}
 	}
 
-	return ret;
+	return false;
 }
 
 static double

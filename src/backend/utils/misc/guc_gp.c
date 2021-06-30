@@ -137,6 +137,7 @@ bool        Test_print_prefetch_joinqual = false;
 bool		Test_copy_qd_qe_split = false;
 bool		gp_permit_relation_node_change = false;
 int			gp_max_local_distributed_cache = 1024;
+int			gp_appendonly_analyze_block_size = 0;
 bool		gp_appendonly_verify_block_checksums = true;
 bool		gp_appendonly_verify_write_block = false;
 bool		gp_appendonly_compaction = true;
@@ -2969,6 +2970,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_plan_size,
 		0, 0, MAX_KILOBYTES,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_appendonly_analyze_block_size", PGC_USERSET, APPENDONLY_TABLES,
+			gettext_noop("AO/AOC relation logical block size we try to use during analyze."
+						 "We can use a larger block size if the resulting block number is too big."),
+			NULL
+		},
+		&gp_appendonly_analyze_block_size,
+		100, 1, APPENDONLY_ANALYZE_BLOCK_SIZE > INT_MAX ? INT_MAX : (int) APPENDONLY_ANALYZE_BLOCK_SIZE,
 		NULL, NULL, NULL
 	},
 

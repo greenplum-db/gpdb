@@ -288,7 +288,7 @@ close_ds_write(DatumStreamWrite **ds, int nvp)
  * GPDB_12_MERGE_FIXME: Find a better name to match what this function is
  * actually doing
  */
-static void
+void
 aocs_initscan(AOCSScanDesc scan)
 {
 	MemoryContext	oldCtx;
@@ -322,13 +322,15 @@ aocs_initscan(AOCSScanDesc scan)
 
 	scan->cur_seg = -1;
 	scan->cur_seg_row = 0;
+	scan->total_row = 0;
+	scan->rows_to_scan = 0;
 
 	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
 	pgstat_count_heap_scan(scan->rs_base.rs_rd);
 }
 
-static int
+int
 open_next_scan_seg(AOCSScanDesc scan)
 {
 	while (++scan->cur_seg < scan->total_seg)
@@ -426,7 +428,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 	return -1;
 }
 
-static void
+void
 close_cur_scan_seg(AOCSScanDesc scan)
 {
 	if (scan->cur_seg < 0)
@@ -539,6 +541,9 @@ aocs_beginscan_internal(Relation relation,
 	scan->seginfo = seginfo;
 	scan->total_seg = total_seg;
 	scan->columnScanInfo.scanCtx = CurrentMemoryContext;
+
+	/* block size for analyze scan */
+	scan->analyze_block_size = gp_appendonly_analyze_block_size;
 
 	/* relationTupleDesc will be inited by the slot when needed */
 	scan->columnScanInfo.relationTupleDesc = NULL;
@@ -812,6 +817,7 @@ ReadNext:
 			}
 		}
 
+		scan->total_row++;
 		scan->cur_seg_row++;
 		if (rowNum == INT64CONST(-1))
 		{

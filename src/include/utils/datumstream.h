@@ -315,6 +315,7 @@ extern void datumstreamread_rewind_block(DatumStreamRead * datumStream);
 extern bool datumstreamread_find_block(DatumStreamRead * datumStream,
 						   DatumStreamFetchDesc datumStreamFetchDesc,
 						   int64 rowNum);
+extern bool datumstreamread_block_info(DatumStreamRead * acc);
 extern void *datumstreamread_get_upgrade_space(DatumStreamRead *datumStream,
 											   size_t len);
 
