@@ -453,6 +453,8 @@ class GpDB:
             cmd.run(validateAfter = True)
             MakeDirectory.local("gpexpand make directory to hold file spaces", fullPathFsDir)
             for oid in self.__filespaces:
+                if oid == SYSTEM_FILESPACE:
+                    continue
                 MakeDirectory.local("gpexpand make directory to hold file space oid: " + str(oid), fullPathFsDir)
                 dir = self.__filespaces[oid]
                 destDir = fullPathFsDir + "/" + str(oid)
