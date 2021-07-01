@@ -38,25 +38,31 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 0
 
-    Scenario: gpinitsystem creates a backout file when user terminated
+    Scenario Outline: gpinitsystem creates a backout file when process terminated
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted
         When the user asynchronously runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile" and the process is saved
-        And the user asynchronously sets up to end bin/gpinitsystem process in 15 seconds
+        And the user asynchronously sets up to end <terminated_process> process in 15 seconds
         And the user waits 20 second
         Then gpintsystem logs should contain lines about running backout script
         And the user runs the gpinitsystem backout script
+        And all files in gpAdminLogs directory are deleted
         And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
-        Then gpinitsystem should return a return code of 0
-        
-    Scenario: gpinitsystem creates a backout file when user terminated gpcreateseg
+        And gpinitsystem should return a return code of 0
+        And gpintsystem logs should not contain lines about running backout script
+
+    Examples:
+        | terminated_process |
+        | bin/gpinitsystem   |
+        | gpcreateseg        |
+
+    Scenario: gpinitsystem does not create or need backout file when user terminated very early
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted
         When the user asynchronously runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile" and the process is saved
-        And the user asynchronously sets up to end gpcreateseg process in 15 seconds
-        And the user waits 20 second
-        Then gpintsystem logs should contain lines about running backout script
-        And the user runs the gpinitsystem backout script
+        And the user asynchronously sets up to end bin/gpinitsystem process in 0 seconds
+        And the user waits 10 second
+        Then gpintsystem logs should not contain lines about running backout script
         And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
 

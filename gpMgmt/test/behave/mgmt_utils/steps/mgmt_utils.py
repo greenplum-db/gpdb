@@ -861,14 +861,20 @@ def impl(context, options):
     context.execute_steps('''Then the user runs command "gpactivatestandby -a %s" from standby coordinator''' % options)
     context.standby_was_activated = True
 
-@then('gpintsystem logs should contain lines about running backout script')
-def impl(context):
+@then('gpintsystem logs {should_contain} lines about running backout script')
+def impl(context, should_contain):
     string_to_find = 'Run command bash .*backout_gpinitsystem.* on coordinator to remove these changes$'
     command = "egrep '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
     run_command(context, command)
-    if has_exception(context):
-        raise context.exception
-    context.gpinit_backout_command = re.search('Run command(.*)on coordinator', context.stdout_message).group(1)
+    if should_contain == "should contain":
+        if has_exception(context):
+            raise context.exception
+        context.gpinit_backout_command = re.search('Run command(.*)on coordinator', context.stdout_message).group(1)
+    elif should_contain == "should not contain":
+        if not has_exception(context):
+            raise Exception("Logs contain lines about running backout script")
+    else:
+        raise Exception("Incorrect step name, only use 'should contain' and 'should not contain'")
 
 @then('the user runs the gpinitsystem backout script')
 def impl(context):
@@ -2101,6 +2107,7 @@ def impl(context, location):
         ])
 
 @given('all files in gpAdminLogs directory are deleted')
+@then('all files in gpAdminLogs directory are deleted')
 def impl(context):
     log_dir = _get_gpAdminLogs_directory()
     files_found = glob.glob('%s/*' % (log_dir))
