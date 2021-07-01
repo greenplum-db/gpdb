@@ -91,22 +91,24 @@ function include_dependencies() {
 
 	header_search_path=( /usr/local/include/ /usr/include/ )
 	vendored_headers=(zstd*.h uv.h uv )
-
+	pkgconfigs=(libzstd.pc libuv.pc quicklz.pc)
 	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0} libxerces-c{,-3.1}.so)
 
 	if [[ -d /opt/gcc-6.4.0 ]]; then
-		vendored_libs+=(libstdc++.so.6{,.0.22,*.pyc,*.pyo})
+		vendored_libs+=(libstdc++.so.6{,.0.22})
 		library_search_path+=( /opt/gcc-6.4.0/lib64 )
 	fi
 
 	library_search_path+=( $(cat /etc/ld.so.conf.d/*.conf | grep -v '#') )
 	library_search_path+=( /lib64 /usr/lib64 /lib /usr/lib)
 
+
 	# Vendor shared libraries - follow symlinks
 	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]] ; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done;
 	# Vendor headers - follow symlinks
 	for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]] ; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
-
+	# vendor pkgconfig files
+	for path in "${library_search_path[@]}"; do if [[ -d "${path}/pkgconfig" ]]; then for pkg in "${pkgconfigs[@]}"; do find -L "$path"/pkgconfig/ -name "$pkg" -exec cp -avn '{}' "${GREENPLUM_INSTALL_DIR}/lib/pkgconfig" \;; done; fi; done
 }
 
 function export_gpdb() {
@@ -118,9 +120,9 @@ function export_gpdb() {
 	server_build="${GPDB_ARTIFACTS_DIR}/server-build-${server_version}-${BLD_ARCH}${RC_BUILD_TYPE_GCS}.tar.gz"
 
 	pushd ${GREENPLUM_INSTALL_DIR}
-	source greenplum_path.sh
-	python -m compileall -q -x test .
 	chmod -R 755 .
+	# Remove python bytecode
+	find . -type f \( -iname \*.pyc -o -iname \*.pyo \) -delete
 	tar -czf "${TARBALL}" ./*
 	popd
 
