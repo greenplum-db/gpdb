@@ -113,7 +113,6 @@ typedef struct
  *
  *  SSL Params
  *	extssl_protocol  CURL_SSLVERSION_TLSv1 				
- *  extssl_cipher 	 TLS_RSA_WITH_AES_128_CBC_SHA
  *  extssl_verifycert 	1
  *  extssl_verifyhost 	2
  *  extssl_no_verifycert 	0
@@ -127,7 +126,6 @@ typedef struct
  */
 
 const static int extssl_protocol  = CURL_SSLVERSION_TLSv1;
-const char* extssl_cipher = "AES128-SHA";
 const static int extssl_verifycert = 1;
 const static int extssl_verifyhost = 2;
 const static int extssl_no_verifycert = 0;
@@ -1346,9 +1344,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		/* set host verification */
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_VERIFYHOST,
 				(long)(verify_gpfdists_cert ? extssl_verifyhost : extssl_no_verifyhost));
-
-		/* set ciphersuite */
-		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_CIPHER_LIST, extssl_cipher);
 
 		/* set protocol */
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLVERSION, extssl_protocol);
