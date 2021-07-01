@@ -784,7 +784,7 @@ static int fstream_add_eol(int eol_type, char *buff, int bytesread)
 }
 static char *find_nc_in_text_buffer(char *p, char *q, int nc)
 {
-	char*	last_record_loc = 0;
+	char*	last_record_loc = NULL;
 	while (p < q)
 	{
 		int ch = *p++;
