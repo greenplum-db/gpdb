@@ -781,13 +781,6 @@ workfile_fill_sharedcache(void)
 			success = false;
 			break;
 		}
-		if (crt_entry >= gp_workfile_max_entries - 2)
-		{
-			/* Pause between adding extra ones so we can test from other sessions */
-			elog(LOG, "Added %d entries out of %d, pausing for 30 seconds before proceeding", crt_entry + 1, n_entries);
-			sleep(30);
-		}
-
 	}
 
 	unit_test_result(success);
