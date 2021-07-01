@@ -2987,8 +2987,8 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 		inner_scan_frac = 2.0 / (semifactors->match_count + 1.0);
 
 		startup_cost += hash_qual_cost.startup;
-		run_cost += hash_qual_cost.per_tuple * outer_matched_rows *
-			clamp_row_est(inner_path_rows * innerbucketsize * inner_scan_frac) * 0.5;
+		/* run_cost += hash_qual_cost.per_tuple * outer_matched_rows *
+			clamp_row_est(inner_path_rows * innerbucketsize * inner_scan_frac) * 0.5; */
 
 		/*
 		 * For unmatched outer-rel rows, the picture is quite a lot different.
@@ -3003,9 +3003,9 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 		 * effective cost per bucket entry is one-tenth what it is for
 		 * matchable tuples.
 		 */
-		run_cost += hash_qual_cost.per_tuple *
+		/* run_cost += hash_qual_cost.per_tuple *
 			(outer_path_rows - outer_matched_rows) *
-			clamp_row_est(inner_path_rows / virtualbuckets) * 0.05;
+			clamp_row_est(inner_path_rows / virtualbuckets) * 0.05; */
 
 		/* Get # of tuples that will pass the basic join */
 		if (path->jpath.jointype == JOIN_SEMI)
@@ -3026,8 +3026,8 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 		 * allow for that.
 		 */
 		startup_cost += hash_qual_cost.startup;
-		run_cost += hash_qual_cost.per_tuple * outer_path_rows *
-			clamp_row_est(inner_path_rows * innerbucketsize) * 0.5;
+		/* run_cost += hash_qual_cost.per_tuple * outer_path_rows *
+			clamp_row_est(inner_path_rows * innerbucketsize) * 0.5; */
 
 		/*
 		 * Get approx # tuples passing the hashquals.  We use
