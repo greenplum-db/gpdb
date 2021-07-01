@@ -987,9 +987,6 @@ PostmasterMain(int argc, char *argv[])
 		ExitPostmaster(1);
 	}
 
-	/* If gp_role is not set, use utility role instead.*/
-	if (Gp_role == GP_ROLE_UNDEFINED)
-		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_OVERRIDE);
 
 	/*
 	 * Locate the proper configuration files and data directory, and read
@@ -998,6 +995,7 @@ PostmasterMain(int argc, char *argv[])
 	if (!SelectConfigFiles(userDoption, progname))
 		ExitPostmaster(2);
 
+	set_default_gp_role();
 	/*
 	 * CDB/MPP/GPDB: Set the processor affinity (may be a no-op on
 	 * some platforms). The port number is nice to use because we know
@@ -1073,30 +1071,6 @@ PostmasterMain(int argc, char *argv[])
 	if (max_wal_senders > 0 && wal_level == WAL_LEVEL_MINIMAL)
 		ereport(ERROR,
 				(errmsg("WAL streaming (max_wal_senders > 0) requires wal_level \"replica\" or \"logical\"")));
-
-    if ( GpIdentity.dbid == -1 && Gp_role == GP_ROLE_UTILITY)
-    {
-        /**
-         * okay in utility mode! -- when starting the master in utility mode to fetch the configuration contents,
-         *  we don't actually know the dbid.
-         */
-    }
-	else if ( GpIdentity.dbid < 0 )
-	{
-	    ereport(FATAL,
-            (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-             errmsg("dbid (from -b option) is not specified or is invalid.  This value must be >= 0, or >= -1 in utility mode.  "
-             "The dbid value to pass can be determined from this server's entry in the segment configuration; it may be -1 if running in utility mode.")));
-	}
-
-    if ( GpIdentity.segindex < -1 ) /* -1 is okay -- that means the master */
-	{
-	    ereport(FATAL,
-            (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-             errmsg("contentid (from -C option) is not specified or is invalid.  This value must be >= -1.  "
-             "The contentid value to pass can be determined this server's entry in the segment configuration; it may be -1 for a master, or in utility mode."
-             )));
-	}
 
 	/*
 	 * Other one-time internal sanity checks can go here, if they are fast.

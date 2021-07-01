@@ -574,6 +574,64 @@ is_secondary_instance(const char *pg_data)
 	return rc == 0;
 }
 
+static bool
+gp_is_coordinator(const char *pg_data)
+{
+	const char *p;
+	FILE *file;
+	char conf_file[1024];
+	char line[1024];
+	int n;
+	bool result = false;
+
+	p = strstr(post_opts, "gp_role=");
+	if (p != NULL)
+	{
+		/* gp_role is explicitly passed from the command line */
+		if (strstr(p, "gp_role=dispatch") != NULL)
+			return !is_secondary_instance(pg_data);
+		return false;
+	}
+	if (is_secondary_instance(pg_data))
+		return false;
+
+	/*
+	 * gp_role isn't passed to the command line,
+	 * check the gp_contentid in postgresql.conf
+	 */
+	snprintf(conf_file, sizeof(conf_file), "%s/postgresql.conf", pg_data);
+	file = fopen(conf_file, "r");
+	if (file == NULL)
+	{
+		write_stderr(_("can't open file '%s'\n"), conf_file);
+		exit(1);
+	}
+
+#define SKIP_SPACES(pc)  do { while(*pc == ' ' || *pc == '\t') pc++; }while(0)
+	n = strlen("gp_contentid");
+	while(fgets(line, sizeof(line), file))
+	{
+		p = line;
+		SKIP_SPACES(p);
+		if (memcmp(p, "gp_contentid", n) == 0)
+		{
+			p += n;
+			if (isalnum(*p) || *p == '_')
+				continue;
+			p = strchr(p, '=');
+			if (p)
+			{
+				p++;
+				SKIP_SPACES(p);
+			}
+			result = p && atoi(p) == -1;
+			break;
+		}
+	}
+	fclose(file);
+	return result;
+}
+
 /*
  * Wait for the postmaster to become ready.
  *
@@ -592,11 +650,10 @@ static WaitPMResult
 wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint)
 {
 	int			i;
-	bool		is_coordinator;
+	bool		gpdb_distributed_coordinator;
 
-	/* check if starting GPDB coordinator in distributed mode */
-	is_coordinator = strstr(post_opts, "gp_role=dispatch") != NULL
-                        && !is_secondary_instance(pg_data);
+	/* check if starting GPDB master in distributed mode */
+	gpdb_distributed_coordinator = gp_is_coordinator(pg_data);
 
 	for (i = 0; i < wait_seconds * WAITS_PER_SEC; i++)
 	{
@@ -642,7 +699,8 @@ wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint)
 				 * The READY status for coordinator is `dtmready`, while the READY
 				 * status is really ready for other nodes.
 				 */
-				if (strcmp(pmstatus, is_coordinator ? PM_STATUS_DTM_RECOVERED : PM_STATUS_READY) == 0 ||
+				if (strcmp(pmstatus, gpdb_distributed_coordinator
+									 ? PM_STATUS_DTM_RECOVERED : PM_STATUS_READY) == 0 ||
 					strcmp(pmstatus, PM_STATUS_STANDBY) == 0)
 				{
 					/* postmaster is done starting up */

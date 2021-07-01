@@ -39,8 +39,7 @@ else
 close $conf;
 my $ctlcmd = [
 	'pg_ctl', 'start', '-D', "$tempdir/data", '-l',
-	"$TestLib::log_path/001_start_stop_server.log"
-	,'-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1',
+	"$TestLib::log_path/001_start_stop_server.log",
 ];
 if ($Config{osname} ne 'msys')
 {
@@ -96,7 +95,7 @@ SKIP:
 
 	command_ok(
 		[ 'pg_ctl', 'start', '-D', "$tempdir/data", '-l', $logFileName,
-		  '-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1 -c log_file_mode=0640',
+		  '-o', '-c log_file_mode=0640',
 		],
 		'start server to check group permissions');
 
@@ -117,8 +116,7 @@ if (not $windows_os)
 
 	# launch the server with the env command as a wrapper
 	command_ok([ 'pg_ctl', 'start', '-D', "$tempdir/data", '-w',
-			'--wrapper=env', "--wrapper-args=$keypair",
-			'-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1' ],
+			'--wrapper=env', "--wrapper-args=$keypair"],
 		'pg_ctl start --wrapper');
 
 	# read the pid

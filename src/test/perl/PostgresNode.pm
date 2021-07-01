@@ -485,6 +485,13 @@ sub init
 	# Individual tests can override this.
 	print $conf "logging_collector = off\n";
 
+	# We require that both gp_dbid and gp_contentid are properly initialized
+	# or uninitialized. Initializing only one of them is unexpected.
+	# gp_dbid is set below in internal.auto.conf, we should set gp_contentid.
+	# Because the server instance is always start in utility mode, setting
+	# gp_contentid to 0 look good.
+	print $conf "gp_contentid = 0\n";
+
 	# If a setting tends to affect whether tests pass or fail, print it after
 	# TEMP_CONFIG.  Otherwise, print it before TEMP_CONFIG, thereby permitting
 	# overrides.  Settings that merely improve performance or ease debugging
