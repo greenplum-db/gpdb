@@ -698,7 +698,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		CommitTransactionCommand();
 		return;
 	}
-
+	SIMPLE_FAULT_INJECTOR("vacuum_hold_lock");
 	/*
 	 * Check permissions.
 	 *

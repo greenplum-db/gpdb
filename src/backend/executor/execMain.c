@@ -1739,18 +1739,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			resultRelationOid = getrelid(resultRelationIndex, rangeTable);
 			if (operation == CMD_UPDATE || operation == CMD_DELETE)
 			{
-				/*
-				 * On QD, the lock on the table has already been taken during parsing, so if it's a child
-				 * partition, we don't need to take a lock. If there a deadlock GDD will come in place
-				 * and resolve the deadlock. ORCA Update / Delete plans only contains the root relation, so
-				 * no locks on leaf partition are taken here. The below changes makes planner as well to not
-				 * take locks on leaf partitions with GDD on.
-				 * Note: With GDD off, ORCA and planner both will acquire locks on the leaf partitions.
-				 */
-				if (Gp_role == GP_ROLE_DISPATCH && rel_is_child_partition(resultRelationOid) && gp_enable_global_deadlock_detector)
-				{
-					lockmode = NoLock;
-				}
 				resultRelation = CdbOpenRelation(resultRelationOid, lockmode, NULL);
 			}
 			else
@@ -1812,50 +1800,10 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			if (containRoot)
 			{
 				/*
-				 * For partition tables, if GDD is off, any DML statement on root
-				 * partition, must acquire locks on the leaf partitions to avoid
-				 * deadlocks.
-				 *
-				 * Without locking the partition relations on QD when INSERT
-				 * with Planner the following dead lock scenario may happen
-				 * between INSERT and AppendOnly VACUUM drop phase on the
-				 * partition table:
-				 *
-				 * 1. AO VACUUM drop on QD: acquired AccessExclusiveLock
-				 * 2. INSERT on QE: acquired RowExclusiveLock
-				 * 3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
-				 * 4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
-				 *
-				 * 2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks
-				 * until 3 and 4 proceed. Hence INSERT needs to Lock the partition
-				 * tables on QD here (before 2) to prevent this dead lock.
-				 *
-				 * Deadlock can also occur in case of DELETE as below
-				 * Session1: BEGIN; delete from foo_1_prt_1 WHERE c = 999999; => Holds
-				 * Exclusive lock on foo_1_prt_1 on QD and marks the tuple c updated by the
-				 * current transaction;
-				 * Session2: BEGIN; delete from foo WHERE c = 1; => Holds Exclusive lock
-				 * on foo on QD and marks the tuple c = 1 updated by current transaction
-				 * Session1: DELETE FROM foo_1_prt_1 WHERE c = 1; => This wait, as Session
-				 * 2 has already taken the lock, Session1 will wait to acquire the
-				 * transaction lock.
-				 * Session2: DELETE FROM foo WHERE c = 999999; => This waits, as Session 1
-				 * has already taken the lock, Session 2 will wait to acquire the
-				 * transaction lock.
-				 * This will cause a deadlock.
-				 * Similar scenario apply for UPDATE as well.
+				 * We already get all the locks in the parse-analyze stage.
+				 * So we don't need to acquire any locks here.
 				 */
-				lockmode = NoLock;
-				if ((operation == CMD_DELETE || operation == CMD_INSERT || operation == CMD_UPDATE) &&
-					!gp_enable_global_deadlock_detector &&
-					rel_is_partitioned(relid))
-				{
-					if (operation == CMD_INSERT)
-						lockmode = RowExclusiveLock;
-					else
-						lockmode = ExclusiveLock;
-				}
-				all_relids = find_all_inheritors(relid, lockmode, NULL);
+				all_relids = find_all_inheritors(relid, NoLock, NULL);
 			}
 			else
 			{

@@ -267,3 +267,6 @@ test: distributed_transactions
 
 # Test for distributed commit array overflow during replay on standby
 test: standby_replay_dtx_info
+
+# Test for concurrent vacuum with delete
+test: concurrent_vacuum_with_delete

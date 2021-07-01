@@ -51,6 +51,7 @@
 
 #include "access/transam.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_inherits_fn.h"
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "nodes/nodeFuncs.h"
@@ -67,8 +68,10 @@
 #include "utils/resowner_private.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
+#include "utils/faultinjector.h"
 
 #include "cdb/cdbutil.h"
+#include "cdb/cdbpartition.h"
 
 /*
  * We must skip "overhead" operations that involve database access when the
@@ -1661,9 +1664,61 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 				else
 					lockmode = AccessShareLock;
 				if (acquire)
+				{
 					LockRelationOid(rte->relid, lockmode);
+
+					/* If the relation is partitioned, we should acquire corresponding locks on
+					 * each leaf partition before entering InitPlan. The snapshot will acquire before
+					 * the InitPlan, so if we wait the locks for a while in the InitPlan. When we
+					 * get all locks, the snapshot maybe become invalid. So we must acquire lock
+					 * before entering InitPlan to keep the snapshot valid.
+					 * 
+					 * We need to maintain the consistency of the locks of the parent table and the child table.
+					 * Only one situation is special, when the command is to insert, and gdd don't open, the dead 
+					 * lock will happen.
+					 * for example:
+					 * Without locking the partition relations on QD when INSERT with Planner the 
+					 * following dead lock scenario may happen between INSERT and AppendOnly VACUUM 
+					 * drop phase on the partition table:
+					 * 
+					 * 1. AO VACUUM drop on QD: acquired AccessExclusiveLock
+					 * 2. INSERT on QE: acquired RowExclusiveLock
+					 * 3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
+					 * 4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
+					 * 
+					 * 2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks until 3 and 4 proceed. 
+					 * Hence INSERT needs to Lock the partition tables on QD here (before 2) to prevent 
+					 * this dead lock.
+					 * 
+					 * This will cause a deadlock. But if gdd have already opened, gdd will solve the 
+					 * dead lock. So it is safe to not get locks for partitions.
+					 * 
+					 * But for the update and delete, we must acquire locks whether the gdd opens or not.
+					 */
+					SIMPLE_FAULT_INJECTOR("cache_wait_lock");
+					if (rel_is_partitioned(rte->relid) && ((parsetree->commandType == CMD_INSERT
+					&& !gp_enable_global_deadlock_detector) || parsetree->commandType == CMD_UPDATE
+					|| parsetree->commandType == CMD_DELETE))
+						find_all_inheritors(rte->relid, lockmode, NULL);
+				}
 				else
+				{
 					UnlockRelationOid(rte->relid, lockmode);
+
+					/*
+					 * If we need to release lock, we also need release leaf patition lock.
+					 */
+					if (rel_is_partitioned(rte->relid) && ((parsetree->commandType == CMD_INSERT 
+					&& !gp_enable_global_deadlock_detector) || parsetree->commandType == CMD_UPDATE 
+					|| parsetree->commandType == CMD_DELETE))
+					{
+						ListCell   *child;
+						List       *children;
+						children = find_all_inheritors(rte->relid, NoLock, NULL);
+						for (child = lnext(list_head(child)); child != NULL; child = lnext(child))
+							UnlockRelationOid(lfirst_oid(child), lockmode);
+					}
+				}
 				break;
 
 			case RTE_SUBQUERY:

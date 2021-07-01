@@ -18,6 +18,7 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/heap.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_operator.h"
@@ -43,6 +44,7 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/rel.h"
+#include "utils/faultinjector.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpartition.h"
@@ -328,6 +330,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	 * parserOpenTable upgrades the lock to Exclusive mode for distributed
 	 * tables.
 	 */
+	bool lockUpgraded = false;
 	if (pstate->p_is_insert && !pstate->p_is_update)
 	{
 		setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
@@ -336,8 +339,59 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	}
 	else
 	{
+		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, &lockUpgraded);
+	}
 
-		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, NULL);
+
+	/* If the relation is partitioned, we should acquire corresponding locks on
+	 * each leaf partition before entering InitPlan. The snapshot will acquire before
+	 * the InitPlan, so if we wait the locks for a while in the InitPlan. When we
+	 * get all locks, the snapshot maybe become invalid. So we must acquire lock
+	 * before entering InitPlan to keep the snapshot valid.
+	 * 
+	 * If lockUpgraded is true, we need to get ExclusiveLock. When lockUpgreded is 
+	 * true, meaning that the parent table has got the ExclusiveLock, so we need 
+	 * to keep the lock consistent. If lockUpgraded is false, we just need to get
+	 * RowExclusiveLock. Only one situation is special, when the command is to insert,
+	 * and gdd don't open, the dead lock will happen.
+	 * for example:
+	 * Without locking the partition relations on QD when INSERT with Planner the 
+	 * following dead lock scenario may happen between INSERT and AppendOnly VACUUM 
+	 * drop phase on the partition table:
+	 * 
+	 * 1. AO VACUUM drop on QD: acquired AccessExclusiveLock
+	 * 2. INSERT on QE: acquired RowExclusiveLock
+	 * 3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
+	 * 4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
+	 * 
+	 * 2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks until 3 and 4 proceed. 
+	 * Hence INSERT needs to Lock the partition tables on QD here (before 2) to prevent 
+	 * this dead lock.
+	 * 
+	 * This will cause a deadlock. But if gdd have already opened, gdd will solve the 
+	 * dead lock. So it is safe to not get locks for partitions.
+	 * 
+	 * But for the update and delete, we must acquire locks whether the gdd opens or not.
+	 */
+
+	Oid relid = pstate->p_target_relation->rd_id;
+	SIMPLE_FAULT_INJECTOR("parse_wait_lock");
+	if (rel_is_partitioned(relid))
+	{
+		LOCKMODE lockmode;
+		if (lockUpgraded)
+		{
+			lockmode = ExclusiveLock;
+		}
+		else if (pstate->p_is_insert && gp_enable_global_deadlock_detector)
+		{
+			lockmode = NoLock;
+		}
+		else
+		{
+			lockmode = RowExclusiveLock;
+		}
+		find_all_inheritors(relid, lockmode, NULL);
 	}
 
 	/*
