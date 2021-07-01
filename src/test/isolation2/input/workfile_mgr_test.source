@@ -29,6 +29,32 @@ RETURNS TABLE(segid int4, prefix text, size int8, operation text, slice int4, se
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
 LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
 
+-- Wait for at the most 1 min for backends to remove transient
+-- workfile sets as part of exit processing and then report long lived
+-- workfile sets.
+create or replace function report_workfile_entries()
+returns table(segid int4, prefix text, size int8, operation text, slice int4, numfiles int4) as $$
+declare
+    iterations int; /* in func */
+    cnt int; /* in func */
+begin
+    iterations := 120; /* wait at the most 1 min */
+    select count(*) into cnt from gp_workfile_mgr_cache_entries() w
+    where w.prefix not like 'long_live_workset%'; /* in func */
+
+    while (iterations > 0) and (cnt > 0)
+    loop
+        select count(*) into cnt from gp_workfile_mgr_cache_entries() w
+        where w.prefix not like 'long_live_workset%'; /* in func */
+        perform pg_sleep(0.5); /* sleep for half a second */
+	iterations := iterations - 1; /* in func */
+    end loop; /* in func */
+    return query select w.segid, w.prefix, w.size, w.operation, w.slice, w.numfiles
+                 from gp_workfile_mgr_cache_entries() w; /* in func */
+end; /* in func */
+$$
+language plpgsql volatile execute on all segments;
+
 -- start_ignore
 !\retcode gpconfig -c gp_workfile_max_entries -v 32 --skipvalidation;
 !\retcode gpstop -ari;
@@ -78,6 +104,10 @@ LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
 
 -- for workset lives across transaction, e.g. with hold cursor, proc exit will cleanup the workset
 3q:
--- sleep a while in case the session 3 slow exit cause the inter_xact_workset workfile_set not cleaned
-4: select * from pg_sleep(1);
-4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+
+-- The "q:" step does not wait for the backend process to exit.  So
+-- wait at the most 1 min so that only the long lived sessions are
+-- reported.  If we don't wait thte test sometimes fails because
+-- "inter_xact_workset" entries show up in the output of
+-- gp_workfile_mgr_cache_entries().
+4: select * from report_workfile_entries();
