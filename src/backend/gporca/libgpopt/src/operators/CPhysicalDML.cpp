@@ -268,7 +268,7 @@ CPhysicalDML::PdsRequired(CMemoryPool *mp,
 		// data inserted
 		if (CLogicalDML::EdmlInsert == m_edmlop)
 		{
-			return GPOS_NEW(mp) CDistributionSpecStrictRandom();
+			return GPOS_NEW(mp) CDistributionSpecStrictRandom(false);
 		}
 		return GPOS_NEW(mp) CDistributionSpecRouted(m_pcrSegmentId);
 	}

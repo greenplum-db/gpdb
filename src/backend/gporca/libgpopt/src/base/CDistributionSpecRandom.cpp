@@ -41,6 +41,11 @@ CDistributionSpecRandom::CDistributionSpecRandom()
 	}
 }
 
+CDistributionSpecRandom::CDistributionSpecRandom(BOOL is_duplicatee_sensitive)
+	: m_is_duplicate_sensitive(is_duplicatee_sensitive)
+{
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDistributionSpecRandom::Matches
@@ -166,7 +171,8 @@ CDistributionSpecRandom::AppendEnforcers(CMemoryPool *mp,
 	{
 		// the motion added in this enforcer will translate to
 		// a redistribute motion
-		random_dist_spec = GPOS_NEW(mp) CDistributionSpecStrictRandom();
+		random_dist_spec =
+			GPOS_NEW(mp) CDistributionSpecStrictRandom(IsDuplicateSensitive());
 	}
 
 	// add a distribution enforcer

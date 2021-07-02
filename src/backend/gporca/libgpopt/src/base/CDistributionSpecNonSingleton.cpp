@@ -103,7 +103,7 @@ CDistributionSpecNonSingleton::AppendEnforcers(CMemoryPool *mp,
 
 	// add a random distribution enforcer
 	CDistributionSpecStrictRandom *pdsrandom =
-		GPOS_NEW(mp) CDistributionSpecStrictRandom();
+		GPOS_NEW(mp) CDistributionSpecStrictRandom(true);
 	pexpr->AddRef();
 	CExpression *pexprMotion = GPOS_NEW(mp) CExpression(
 		mp, GPOS_NEW(mp) CPhysicalMotionRandom(mp, pdsrandom), pexpr);
