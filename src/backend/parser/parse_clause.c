@@ -380,18 +380,13 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	{
 		LOCKMODE lockmode;
 		if (lockUpgraded)
-		{
 			lockmode = ExclusiveLock;
-		}
 		else if (pstate->p_is_insert && gp_enable_global_deadlock_detector)
-		{
 			lockmode = NoLock;
-		}
 		else
-		{
 			lockmode = RowExclusiveLock;
-		}
-		find_all_inheritors(relid, lockmode, NULL);
+
+		(void) find_all_inheritors(relid, lockmode, NULL);
 	}
 
 	/*

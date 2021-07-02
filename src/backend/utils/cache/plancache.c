@@ -605,6 +605,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 	 */
 	if (plansource->is_valid && intoClause == NULL)
 	{
+		SIMPLE_FAULT_INJECTOR("wait_for_cached_plan_invalid");
 		AcquirePlannerLocks(plansource->query_list, true);
 
 		/*
@@ -1712,11 +1713,18 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					&& !gp_enable_global_deadlock_detector) || parsetree->commandType == CMD_UPDATE 
 					|| parsetree->commandType == CMD_DELETE))
 					{
-						ListCell   *child;
-						List       *children;
+						ListCell   *lc;
+						List       *children = NIL;
 						children = find_all_inheritors(rte->relid, NoLock, NULL);
-						for (child = lnext(list_head(child)); child != NULL; child = lnext(child))
-							UnlockRelationOid(lfirst_oid(child), lockmode);
+
+						foreach(lc, children)
+						{
+							Oid child_oid = lfirst_oid(lc);
+							/* find_all_inheritors will also contain the root table's Oid */
+							if (child_oid == rte->relid)
+								continue;
+							UnlockRelationOid(child_oid, lockmode);
+						}
 					}
 				}
 				break;
