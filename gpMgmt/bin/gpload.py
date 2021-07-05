@@ -2516,7 +2516,7 @@ class gpload:
         sql += "(%s)" % ','.join(map(lambda a:'%s %s' % (a[0], a[1]), from_cols))
 
         sql += "location(%s) "%locationStr
-        sql += "format%s "% quote(formatType)
+        sql += "format %s "% quote(formatType)
         if len(self.formatOpts) > 0:
             sql += "(%s) "% self.formatOpts
         if encodingStr:

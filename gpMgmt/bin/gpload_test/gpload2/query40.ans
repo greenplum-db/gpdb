@@ -3,7 +3,7 @@
 2021-06-03 14:29:18|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
 2021-06-03 14:29:18|INFO|did not find an external table to reuse. creating ext_gpload_reusable_062a3284_c435_11eb_8755_0050569e5d5e
 2021-06-03 14:29:18|ERROR|could not run SQL "create external table ext_gpload_reusable_062a3284_c435_11eb_8755_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file.txt') format'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
                                                                  ^
 
 2021-06-03 14:29:18|INFO|rows Inserted          = 0
@@ -15,7 +15,7 @@ LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8'
 2021-06-03 14:29:18|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
 2021-06-03 14:29:18|INFO|did not find an external table to reuse. creating ext_gpload_reusable_063d781c_c435_11eb_b9e0_0050569e5d5e
 2021-06-03 14:29:18|ERROR|could not run SQL "create external table ext_gpload_reusable_063d781c_c435_11eb_b9e0_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file.txt') format'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
                                                                  ^
 
 2021-06-03 14:29:18|INFO|rows Inserted          = 0
@@ -28,7 +28,7 @@ LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8'
 2021-06-03 14:29:18|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
 2021-06-03 14:29:18|INFO|did not find an external table to reuse. creating ext_gpload_reusable_0650a284_c435_11eb_8089_0050569e5d5e
 2021-06-03 14:29:18|ERROR|could not run SQL "create external table ext_gpload_reusable_0650a284_c435_11eb_8089_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file2.txt') format'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
                                                                  ^
 
 2021-06-03 14:29:18|INFO|rows Inserted          = 0
@@ -48,7 +48,7 @@ LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8'
 2021-06-03 14:29:18|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
 2021-06-03 14:29:18|INFO|did not find an external table to reuse. creating ext_gpload_reusable_06769016_c435_11eb_9988_0050569e5d5e
 2021-06-03 14:29:18|ERROR|could not run SQL "create external table ext_gpload_reusable_06769016_c435_11eb_9988_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file2.txt') format'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ...t'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
                                                                  ^
 
 2021-06-03 14:29:18|INFO|rows Inserted          = 0
