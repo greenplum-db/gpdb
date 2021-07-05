@@ -5045,6 +5045,10 @@ PLy_elog(int elevel, const char *fmt,...)
 			pfree(xmsg);
 		if (tbmsg)
 			pfree(tbmsg);
+		if (hint)
+			pfree(hint);
+		if (query)
+			pfree(query);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -5055,6 +5059,10 @@ PLy_elog(int elevel, const char *fmt,...)
 		pfree(xmsg);
 	if (tbmsg)
 		pfree(tbmsg);
+	if (hint)
+		pfree(hint);
+	if (query)
+		pfree(query);
 }
 
 /*
@@ -5070,7 +5078,22 @@ PLy_get_spi_error_data(PyObject *exc, int* sqlerrcode, char **detail, char **hin
 		goto cleanup;
 
 	if (!PyArg_ParseTuple(spidata, "izzzi", sqlerrcode, detail, hint, query, position))
-		goto cleanup;
+	{
+		ereport(LOG, (errcode(*sqlerrcode),
+					  errmsg("PyArg_ParseTuple(): failed to get error details")));
+	}
+	/*
+	 * Currently, it's safe to access these pointers.
+	 * Copy these error details to avoid using dangling memory pointers.
+	 * The returned strings may be freed by python that will cause invalid pointer
+	 * reference, i.e. segment fault.
+	 */
+	if (*detail)
+		*detail = pstrdup(*detail);
+	if (*hint)
+		*hint = pstrdup(*hint);
+	if (*query)
+		*query = pstrdup(*query);
 
 cleanup:
 	PyErr_Clear();
