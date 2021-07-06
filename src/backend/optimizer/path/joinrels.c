@@ -24,6 +24,7 @@
 #include "partitioning/partbounds.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/selfuncs.h"
 
 
 static void make_rels_by_clause_joins(PlannerInfo *root,
@@ -37,6 +38,10 @@ static bool has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel);
 static bool restriction_is_constant_false(List *restrictlist,
 										  RelOptInfo *joinrel,
 										  bool only_pushed_down);
+static RelOptInfo *make_join_rel_common(PlannerInfo *root, RelOptInfo *rel1,
+										RelOptInfo *rel2,
+										RelAggInfo *agg_info,
+										RelOptInfo *rel_agg_input);
 static void populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1,
 										RelOptInfo *rel2, RelOptInfo *joinrel,
 										SpecialJoinInfo *sjinfo, List *restrictlist);
@@ -654,21 +659,20 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 	return true;
 }
 
-
 /*
- * make_join_rel
- *	   Find or create a join RelOptInfo that represents the join of
- *	   the two given rels, and add to it path information for paths
- *	   created with the two rels as outer and inner rel.
- *	   (The join rel may already contain paths generated from other
- *	   pairs of rels that add up to the same set of base rels.)
+ * make_join_rel_common
+ *     The workhorse of make_join_rel().
  *
- * NB: will return NULL if attempted join is not valid.  This can happen
- * when working with outer joins, or with IN or EXISTS clauses that have been
- * turned into joins.
+ *	'agg_info' contains the reltarget of grouped relation and everything we
+ *	need to aggregate the join result. If NULL, then the join relation should
+ *	not be grouped.
+ *
+ *	'rel_agg_input' describes the AggPath input relation if the join output
+ *	should be aggregated. If NULL is passed, do not aggregate the join output.
  */
-RelOptInfo *
-make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
+static RelOptInfo *
+make_join_rel_common(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
+					 RelAggInfo *agg_info, RelOptInfo *rel_agg_input)
 {
 	Relids		joinrelids;
 	SpecialJoinInfo *sjinfo;
@@ -737,7 +741,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	 * goes with this particular joining.
 	 */
 	joinrel = build_join_rel(root, joinrelids, rel1, rel2, sjinfo,
-							 &restrictlist);
+							 &restrictlist, agg_info);
 
 	/*
 	 * If we've already proven this join is empty, we needn't consider any
@@ -750,12 +754,173 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	}
 
 	/* Add paths to the join relation. */
-	populate_joinrel_with_paths(root, rel1, rel2, joinrel, sjinfo,
-								restrictlist);
+	if (rel_agg_input == NULL)
+	{
+		/*
+		 * Simply join the input relations, whether both are plain or one of
+		 * them is grouped.
+		 */
+		populate_joinrel_with_paths(root, rel1, rel2, joinrel, sjinfo,
+									restrictlist);
+	}
+	else
+	{
+		/* The join relation is grouped. */
+		Assert(agg_info != NULL);
+
+		/*
+		 * Apply partial aggregation to the paths of rel_agg_input and add the
+		 * resulting paths to joinrel.
+		 */
+		generate_grouping_paths(root, joinrel, rel_agg_input, agg_info);
+	}
 
 	bms_free(joinrelids);
 
 	return joinrel;
+}
+
+/*
+ * make_join_rel_combined
+ *     Join grouped relation to non-grouped one.
+ */
+static void
+make_join_rel_combined(PlannerInfo *root, RelOptInfo *rel1,
+					   RelOptInfo *rel2,
+					   RelAggInfo *agg_info)
+{
+	RelOptInfo *rel1_grouped;
+	RelOptInfo *rel2_grouped;
+	bool		rel1_grouped_useful = false;
+	bool		rel2_grouped_useful = false;
+
+	/* Retrieve the grouped relations. */
+	rel1_grouped = find_grouped_rel(root, rel1->relids, NULL);
+	rel2_grouped = find_grouped_rel(root, rel2->relids, NULL);
+
+	/*
+	 * Dummy rel may indicate a join relation that is able to generate grouped
+	 * paths as such (i.e. it has valid agg_info), but for which the path
+	 * actually could not be created (e.g. only AGG_HASHED strategy was
+	 * possible but work_mem was not sufficient for hash table).
+	 */
+	rel1_grouped_useful = rel1_grouped != NULL && !IS_DUMMY_REL(rel1_grouped);
+	rel2_grouped_useful = rel2_grouped != NULL && !IS_DUMMY_REL(rel2_grouped);
+
+	/* Nothing to do if there's no grouped relation. */
+	if (!rel1_grouped_useful && !rel2_grouped_useful)
+		return;
+
+	/*
+	 * At maximum one input rel can be grouped (here we don't care if any rel
+	 * is eventually dummy, the existence of grouped rel indicates that
+	 * aggregates can be pushed down to it). If both were grouped, then
+	 * grouping of one side would change the occurrence of the other side's
+	 * aggregate transient states on the input of the final aggregation. This
+	 * can be handled by adjusting the transient states, but it's not worth
+	 * the effort because it's hard to find a use case for this kind of join.
+	 *
+	 * XXX If the join of two grouped rels is implemented someday, note that
+	 * both rels can have aggregates, so it'd be hard to join grouped rel to
+	 * non-grouped here: 1) such a "mixed join" would require a special
+	 * target, 2) both AGGSPLIT_FINAL_DESERIAL and AGGSPLIT_SIMPLE aggregates
+	 * could appear in the target of the final aggregation node, originating
+	 * from the grouped and the non-grouped input rel respectively.
+	 */
+	if (rel1_grouped && rel2_grouped)
+		return;
+
+	if (rel1_grouped_useful)
+		make_join_rel_common(root, rel1_grouped, rel2, agg_info, NULL);
+	else if (rel2_grouped_useful)
+		make_join_rel_common(root, rel1, rel2_grouped, agg_info, NULL);
+}
+
+/*
+ * make_join_rel
+ *	   Find or create a join RelOptInfo that represents the join of
+ *	   the two given rels, and add to it path information for paths
+ *	   created with the two rels as outer and inner rel.
+ *	   (The join rel may already contain paths generated from other
+ *	   pairs of rels that add up to the same set of base rels.)
+ *
+ *	   In addition to creating an ordinary join relation, try to create a
+ *	   grouped one. There are two strategies to achieve that: join a grouped
+ *	   relation to plain one, or join two plain relations and apply partial
+ *	   aggregation to the result.
+ *
+ * NB: will return NULL if attempted join is not valid.  This can happen when
+ * working with outer joins, or with IN or EXISTS clauses that have been
+ * turned into joins. Besides that, NULL is also returned if caller is
+ * interested in a grouped relation but it could not be created.
+ *
+ * Only the plain relation is returned; if grouped relation exists, it can be
+ * retrieved using find_grouped_rel().
+ */
+RelOptInfo *
+make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
+{
+	Relids		joinrelids;
+	RelAggInfo *agg_info = NULL;
+	RelOptInfo *joinrel,
+			   *joinrel_plain;
+
+	/* 1) form the plain join. */
+	joinrel = make_join_rel_common(root, rel1, rel2, NULL, NULL);
+	joinrel_plain = joinrel;
+
+	if (joinrel_plain == NULL)
+		return joinrel_plain;
+
+	/*
+	 * We're done if there are no grouping expressions nor aggregates.
+	 */
+	if (root->grouped_var_list == NIL)
+		return joinrel_plain;
+
+	joinrelids = bms_union(rel1->relids, rel2->relids);
+	joinrel = find_grouped_rel(root, joinrelids, &agg_info);
+
+	if (joinrel != NULL)
+	{
+		/*
+		 * If the same grouped joinrel was already formed, just with the base
+		 * rels divided between rel1 and rel2 in a different way, the matching
+		 * agg_info should already be there.
+		 */
+		Assert(agg_info != NULL);
+	}
+	else
+	{
+		/*
+		 * agg_info must be created from scratch.
+		 */
+		agg_info = create_rel_agg_info(root, joinrel_plain);
+
+		/* Cannot we build grouped join? */
+		if (agg_info == NULL)
+			return joinrel_plain;
+
+		/*
+		 * The number of aggregate input rows is simply the number of rows of
+		 * the non-grouped relation, which should have been estimated by now.
+		 */
+		agg_info->input_rows = joinrel_plain->rows;
+	}
+
+	/*
+	 * 2) join two plain rels and aggregate the join paths. Aggregate
+	 * push-down only makes sense if the join is not the top-level one.
+	 */
+	if (bms_nonempty_difference(root->all_baserels, joinrelids))
+		make_join_rel_common(root, rel1, rel2, agg_info, joinrel_plain);
+
+	/*
+	 * 3) combine plain and grouped relations.
+	 */
+	make_join_rel_combined(root, rel1, rel2, agg_info);
+
+	return joinrel_plain;
 }
 
 /*

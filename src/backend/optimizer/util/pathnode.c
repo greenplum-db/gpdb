@@ -4596,6 +4596,147 @@ create_tup_split_path(PlannerInfo *root,
 }
 
 /*
+ * Apply AGG_SORTED aggregation path to subpath if it's suitably sorted.
+ *
+ * NULL is returned if sorting of subpath output is not suitable.
+ */
+AggPath *
+create_agg_sorted_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
+					   RelAggInfo *agg_info)
+{
+	Node	   *agg_exprs;
+	AggSplit	aggsplit;
+	AggClauseCosts agg_costs;
+	PathTarget *target;
+	double		dNumGroups;
+	ListCell   *lc1;
+	List	   *key_subset = NIL;
+	AggPath    *result = NULL;
+
+	aggsplit = AGGSPLIT_INITIAL_SERIAL;
+	agg_exprs = (Node *) agg_info->agg_exprs;
+	target = agg_info->target;
+
+	if (subpath->pathkeys == NIL)
+		return NULL;
+
+	if (!grouping_is_sortable(root->parse->groupClause))
+		return NULL;
+
+	/*
+	 * Find all query pathkeys that our relation does affect.
+	 */
+	foreach(lc1, root->group_pathkeys)
+	{
+		PathKey    *gkey = castNode(PathKey, lfirst(lc1));
+		ListCell   *lc2;
+
+		foreach(lc2, subpath->pathkeys)
+		{
+			PathKey    *skey = castNode(PathKey, lfirst(lc2));
+
+			if (skey == gkey)
+			{
+				key_subset = lappend(key_subset, gkey);
+				break;
+			}
+		}
+	}
+
+	if (key_subset == NIL)
+		return NULL;
+
+	/* Check if AGG_SORTED is useful for the whole query.  */
+	if (!pathkeys_contained_in(key_subset, subpath->pathkeys))
+		return NULL;
+
+	MemSet(&agg_costs, 0, sizeof(AggClauseCosts));
+	get_agg_clause_costs(root, (Node *) agg_exprs, aggsplit, &agg_costs);
+
+	Assert(agg_info->group_exprs != NIL);
+	dNumGroups = estimate_num_groups(root, agg_info->group_exprs,
+									 subpath->rows, NULL);
+
+	/*
+	 * qual is NIL because the HAVING clause cannot be evaluated until the
+	 * final value of the aggregate is known.
+	 */
+	result = create_agg_path(root, rel, subpath, target,
+							 AGG_SORTED, aggsplit, false,
+							 agg_info->group_clauses,
+							 NIL,
+							 &agg_costs,
+							 dNumGroups);
+
+	/* The agg path should require no fewer parameters than the plain one. */
+	result->path.param_info = subpath->param_info;
+
+	return result;
+}
+
+/*
+ * Apply AGG_HASHED aggregation to subpath.
+ */
+AggPath *
+create_agg_hashed_path(PlannerInfo *root, RelOptInfo *rel,
+					   Path *subpath, RelAggInfo *agg_info)
+{
+	bool		can_hash;
+	Node	   *agg_exprs;
+	AggSplit	aggsplit;
+	AggClauseCosts agg_costs;
+	PathTarget *target;
+	double		dNumGroups;
+	double		hashaggtablesize;
+	Query	   *parse = root->parse;
+	AggPath    *result = NULL;
+
+	/* Do not try to create hash table for each parameter value. */
+	Assert(subpath->param_info == NULL);
+
+	aggsplit = AGGSPLIT_INITIAL_SERIAL;
+	agg_exprs = (Node *) agg_info->agg_exprs;
+	target = agg_info->target;
+
+	MemSet(&agg_costs, 0, sizeof(AggClauseCosts));
+	get_agg_clause_costs(root, agg_exprs, aggsplit, &agg_costs);
+
+	can_hash = (parse->groupClause != NIL &&
+				parse->groupingSets == NIL &&
+				agg_costs.numOrderedAggs == 0 &&
+				grouping_is_hashable(parse->groupClause));
+
+	if (can_hash)
+	{
+		Assert(agg_info->group_exprs != NIL);
+		dNumGroups = estimate_num_groups(root, agg_info->group_exprs,
+										 subpath->rows, NULL);
+
+		hashaggtablesize = estimate_hashagg_tablesize(subpath, &agg_costs,
+													  dNumGroups);
+
+		if (hashaggtablesize < work_mem * 1024L)
+		{
+			/*
+			 * qual is NIL because the HAVING clause cannot be evaluated until
+			 * the final value of the aggregate is known.
+			 */
+			result = create_agg_path(root, rel, subpath,
+									 target,
+									 AGG_HASHED,
+									 aggsplit,
+									 false,
+									 agg_info->group_clauses,
+									 NIL,
+									 &agg_costs,
+									 dNumGroups);
+		}
+	}
+
+	return result;
+}
+
+/*
  * create_groupingsets_path
  *	  Creates a pathnode that represents performing GROUPING SETS aggregation
  *

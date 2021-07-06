@@ -6009,11 +6009,11 @@ set_pathtarget_cost_width(PlannerInfo *root, PathTarget *target)
 	foreach(lc, target->exprs)
 	{
 		Node	   *node = (Node *) lfirst(lc);
+		int32		item_width;
 
 		if (IsA(node, Var))
 		{
 			Var		   *var = (Var *) node;
-			int32		item_width;
 
 			/* We should not see any upper-level Vars here */
 			Assert(var->varlevelsup == 0);
@@ -6041,6 +6041,20 @@ set_pathtarget_cost_width(PlannerInfo *root, PathTarget *target)
 			 * No cached data available, so estimate using just the type info.
 			 */
 			item_width = get_typavgwidth(var->vartype, var->vartypmod);
+			Assert(item_width > 0);
+			tuple_width += item_width;
+		}
+		else if (IsA(node, Aggref))
+		{
+			/*
+			 * If the target is evaluated by AggPath, it'll care of cost
+			 * estimate. If the target is above AggPath (typically target of a
+			 * join relation that contains grouped relation), the cost of
+			 * Aggref should not be accounted for again.
+			 *
+			 * On the other hand, width is always needed.
+			 */
+			item_width = get_typavgwidth(exprType(node), exprTypmod(node));
 			Assert(item_width > 0);
 			tuple_width += item_width;
 		}

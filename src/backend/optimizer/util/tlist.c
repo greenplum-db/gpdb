@@ -1042,6 +1042,37 @@ apply_pathtarget_labeling_to_tlist(List *tlist, PathTarget *target)
 }
 
 /*
+ * Return sortgroupref if expr can be used as the grouping expression in an
+ * AggPath at relation or join level, or 0 if it can't.
+ *
+ * gvis a list of a list of GroupedVarInfo's available for the query,
+ * including those derived using equivalence classes.
+ */
+Index
+get_expression_sortgroupref(Expr *expr, List *gvis)
+{
+	ListCell   *lc;
+
+	foreach(lc, gvis)
+	{
+		GroupedVarInfo *gvi = lfirst_node(GroupedVarInfo, lc);
+
+		if (IsA(gvi->gvexpr, Aggref))
+			continue;
+
+		if (equal(gvi->gvexpr, expr))
+		{
+			Assert(gvi->sortgroupref > 0);
+
+			return gvi->sortgroupref;
+		}
+	}
+
+	/* The expression cannot be used as grouping key. */
+	return 0;
+}
+
+/*
  * split_pathtarget_at_srfs
  *		Split given PathTarget into multiple levels to position SRFs safely
  *

@@ -2670,6 +2670,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 	WRITE_BITMAPSET_FIELD(all_baserels);
 	WRITE_BITMAPSET_FIELD(nullable_baserels);
 	WRITE_NODE_FIELD(join_rel_list);
+	WRITE_NODE_FIELD(agg_info_list);
 	WRITE_INT_FIELD(join_cur_level);
 	WRITE_NODE_FIELD(init_plans);
 	WRITE_NODE_FIELD(cte_plan_ids);
@@ -2683,6 +2684,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 	WRITE_NODE_FIELD(append_rel_list);
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_NODE_FIELD(placeholder_list);
+	WRITE_NODE_FIELD(grouped_var_list);
 	WRITE_NODE_FIELD(fkey_list);
 	WRITE_NODE_FIELD(query_pathkeys);
 	WRITE_NODE_FIELD(group_pathkeys);
@@ -2690,6 +2692,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 	WRITE_NODE_FIELD(distinct_pathkeys);
 	WRITE_NODE_FIELD(sort_pathkeys);
 	WRITE_NODE_FIELD(processed_tlist);
+	WRITE_INT_FIELD(max_sortgroupref);
 	WRITE_NODE_FIELD(minmax_aggs);
 	WRITE_FLOAT_FIELD(total_table_pages, "%.0f");
 	WRITE_FLOAT_FIELD(tuple_fraction, "%.4f");
@@ -2760,6 +2763,14 @@ _outRelOptInfo(StringInfo str, const RelOptInfo *node)
 	WRITE_NODE_FIELD(partitioned_child_rels);
 }
 #endif /* COMPILING_BINARY_FUNCS */
+
+static void
+_outRelInfoList(StringInfo str, const RelInfoList *node)
+{
+	WRITE_NODE_TYPE("RELOPTINFOLIST");
+
+	WRITE_NODE_FIELD(items);
+}
 
 static void
 _outIndexOptInfo(StringInfo str, const IndexOptInfo *node)
@@ -2916,6 +2927,20 @@ _outParamPathInfo(StringInfo str, const ParamPathInfo *node)
 #endif /* COMPILING_BINARY_FUNCS */
 
 static void
+_outRelAggInfo(StringInfo str, const RelAggInfo *node)
+{
+	WRITE_NODE_TYPE("RELAGGINFO");
+
+	WRITE_BITMAPSET_FIELD(relids);
+	WRITE_NODE_FIELD(target);
+	WRITE_NODE_FIELD(agg_input);
+	WRITE_FLOAT_FIELD(input_rows, "%.0f");
+	WRITE_NODE_FIELD(group_clauses);
+	WRITE_NODE_FIELD(group_exprs);
+	WRITE_NODE_FIELD(agg_exprs);
+}
+
+static void
 _outRestrictInfo(StringInfo str, const RestrictInfo *node)
 {
 	WRITE_NODE_TYPE("RESTRICTINFO");
@@ -3014,6 +3039,17 @@ _outPlaceHolderInfo(StringInfo str, const PlaceHolderInfo *node)
 	WRITE_BITMAPSET_FIELD(ph_lateral);
 	WRITE_BITMAPSET_FIELD(ph_needed);
 	WRITE_INT_FIELD(ph_width);
+}
+
+static void
+_outGroupedVarInfo(StringInfo str, const GroupedVarInfo *node)
+{
+	WRITE_NODE_TYPE("GROUPEDVARINFO");
+
+	WRITE_NODE_FIELD(gvexpr);
+	WRITE_NODE_FIELD(agg_partial);
+	WRITE_UINT_FIELD(sortgroupref);
+	WRITE_BITMAPSET_FIELD(gv_eval_at);
 }
 
 static void
@@ -5904,6 +5940,9 @@ outNode(StringInfo str, const void *obj)
 			case T_RelOptInfo:
 				_outRelOptInfo(str, obj);
 				break;
+			case T_RelInfoList:
+				_outRelInfoList(str, obj);
+				break;
 			case T_IndexOptInfo:
 				_outIndexOptInfo(str, obj);
 				break;
@@ -5928,6 +5967,9 @@ outNode(StringInfo str, const void *obj)
 			case T_ParamPathInfo:
 				_outParamPathInfo(str, obj);
 				break;
+			case T_RelAggInfo:
+				_outRelAggInfo(str, obj);
+				break;
 			case T_RestrictInfo:
 				_outRestrictInfo(str, obj);
 				break;
@@ -5945,6 +5987,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_PlaceHolderInfo:
 				_outPlaceHolderInfo(str, obj);
+				break;
+			case T_GroupedVarInfo:
+				_outGroupedVarInfo(str, obj);
 				break;
 			case T_MinMaxAggInfo:
 				_outMinMaxAggInfo(str, obj);

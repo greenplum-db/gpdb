@@ -84,6 +84,7 @@ join_search_hook_type join_search_hook = NULL;
 
 static void set_base_rel_consider_startup(PlannerInfo *root);
 static void set_base_rel_sizes(PlannerInfo *root);
+static void setup_base_grouped_rels(PlannerInfo *root);
 static void set_base_rel_pathlists(PlannerInfo *root);
 static void set_rel_size(PlannerInfo *root, RelOptInfo *rel,
 						 Index rti, RangeTblEntry *rte);
@@ -138,6 +139,9 @@ static void set_result_pathlist(PlannerInfo *root, RelOptInfo *rel,
 								RangeTblEntry *rte);
 static void set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel,
 								   RangeTblEntry *rte);
+static void add_grouped_path(PlannerInfo *root, RelOptInfo *rel,
+							 Path *subpath, AggStrategy aggstrategy,
+							 RelAggInfo *agg_info, bool partial);
 static RelOptInfo *make_rel_from_joinlist(PlannerInfo *root, List *joinlist);
 static Query *push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 				   RangeTblEntry *rte, Index rti, Query *subquery);
@@ -204,6 +208,13 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 	 * Compute size estimates and consider_parallel flags for each base rel.
 	 */
 	set_base_rel_sizes(root);
+
+	/*
+	 * Now that the sizes are known, we can estimate the sizes of the grouped
+	 * relations.
+	 */
+	if (root->grouped_var_list)
+		setup_base_grouped_rels(root);
 
 	/*
 	 * We should now have size estimates for every actual table involved in
@@ -342,6 +353,48 @@ set_base_rel_sizes(PlannerInfo *root)
 			set_rel_consider_parallel(root, rel, rte);
 
 		set_rel_size(root, rel, rti, rte);
+	}
+}
+
+/*
+ * setup_based_grouped_rels
+ *	  For each "plain" relation build a grouped relation if aggregate pushdown
+ *    is possible and if this relation is suitable for partial aggregation.
+ */
+static void
+setup_base_grouped_rels(PlannerInfo *root)
+{
+	Index		rti;
+
+	for (rti = 1; rti < root->simple_rel_array_size; rti++)
+	{
+		RelOptInfo *brel = root->simple_rel_array[rti];
+		RelOptInfo *rel_grouped;
+		RelAggInfo *agg_info;
+
+		/* there may be empty slots corresponding to non-baserel RTEs */
+		if (brel == NULL)
+			continue;
+
+		Assert(brel->relid == rti); /* sanity check on array */
+
+		/*
+		 * The aggregate push-down feature only makes sense if there are
+		 * multiple base rels in the query.
+		 */
+		if (!bms_nonempty_difference(root->all_baserels, brel->relids))
+			continue;
+
+		/* ignore RTEs that are "other rels" */
+		if (brel->reloptkind != RELOPT_BASEREL)
+			continue;
+
+		rel_grouped = build_simple_grouped_rel(root, brel->relid, &agg_info);
+		if (rel_grouped)
+		{
+			/* Make the relation available for joining. */
+			add_grouped_rel(root, rel_grouped, agg_info);
+		}
 	}
 }
 
@@ -712,8 +765,21 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 				}
 				else
 				{
+					RelOptInfo *rel_grouped;
+					RelAggInfo *agg_info;
+
 					/* Plain relation */
 					set_plain_rel_pathlist(root, rel, rte);
+
+					/* Add paths to the grouped relation if one exists. */
+					rel_grouped = find_grouped_rel(root, rel->relids,
+												   &agg_info);
+					if (rel_grouped)
+					{
+						generate_grouping_paths(root, rel_grouped, rel,
+												agg_info);
+						set_cheapest(rel_grouped);
+					}
 				}
 				break;
 			case RTE_SUBQUERY:
@@ -3271,6 +3337,118 @@ generate_gather_paths(PlannerInfo *root, RelOptInfo *rel, bool override_rows)
 }
 
 /*
+ * generate_grouping_paths
+ * 		Create partially aggregated paths and add them to grouped relation.
+ *
+ * "rel_plain" is base or join relation whose paths are not grouped.
+ */
+void
+generate_grouping_paths(PlannerInfo *root, RelOptInfo *rel_grouped,
+						RelOptInfo *rel_plain, RelAggInfo *agg_info)
+{
+	ListCell   *lc;
+	Path	   *path;
+
+	if (IS_DUMMY_REL(rel_plain))
+	{
+		mark_dummy_rel(root, rel_grouped);
+		return;
+	}
+
+	foreach(lc, rel_plain->pathlist)
+	{
+		path = (Path *) lfirst(lc);
+
+		/*
+		 * Since the path originates from the non-grouped relation which is
+		 * not aware of the aggregate push-down, we must ensure that it
+		 * provides the correct input for aggregation.
+		 */
+		path = (Path *) create_projection_path_with_quals(root,
+														  rel_grouped,
+														  path,
+														  agg_info->agg_input,
+														  NIL,
+														  true);
+
+		/*
+		 * add_grouped_path() will check whether the path has suitable
+		 * pathkeys.
+		 */
+		add_grouped_path(root, rel_grouped, path, AGG_SORTED, agg_info,
+						 false);
+
+		/*
+		 * Repeated creation of hash table (for new parameter values) should
+		 * be possible, does not sound like a good idea in terms of
+		 * efficiency.
+		 */
+		if (path->param_info == NULL)
+			add_grouped_path(root, rel_grouped, path, AGG_HASHED, agg_info,
+							 false);
+	}
+
+	/* Could not generate any grouped paths? */
+	if (rel_grouped->pathlist == NIL)
+	{
+		mark_dummy_rel(root, rel_grouped);
+		return;
+	}
+
+	/*
+	 * Almost the same for partial paths.
+	 *
+	 * The difference is that parameterized paths are never created, see
+	 * add_partial_path() for explanation.
+	 */
+	foreach(lc, rel_plain->partial_pathlist)
+	{
+		path = (Path *) lfirst(lc);
+
+		if (path->param_info != NULL)
+			continue;
+
+		path = (Path *) create_projection_path(root, rel_grouped, path,
+											   agg_info->agg_input);
+
+		add_grouped_path(root, rel_grouped, path, AGG_SORTED, agg_info,
+						 true);
+		add_grouped_path(root, rel_grouped, path, AGG_HASHED, agg_info,
+						 true);
+	}
+}
+
+/*
+ * Apply partial aggregation to a subpath and add the AggPath to the pathlist.
+ */
+static void
+add_grouped_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
+				 AggStrategy aggstrategy, RelAggInfo *agg_info,
+				 bool partial)
+{
+	Path	   *agg_path;
+
+
+	if (aggstrategy == AGG_HASHED)
+		agg_path = (Path *) create_agg_hashed_path(root, rel, subpath,
+												   agg_info);
+	else if (aggstrategy == AGG_SORTED)
+		agg_path = (Path *) create_agg_sorted_path(root, rel, subpath,
+												   agg_info);
+	else
+		elog(ERROR, "unexpected strategy %d", aggstrategy);
+
+	/* Add the grouped path to the list of grouped base paths. */
+	if (agg_path != NULL)
+	{
+		if (!partial)
+			add_path(rel, (Path *) agg_path);
+		else
+			add_partial_path(rel, (Path *) agg_path);
+	}
+}
+
+/*
  * make_rel_from_joinlist
  *	  Build access paths using a "joinlist" to guide the join path search.
  *
@@ -3420,6 +3598,7 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels)
 
 	for (lev = 2; lev <= levels_needed; lev++)
 	{
+		RelOptInfo *rel_grouped;
 		ListCell   *lc;
 
 		/*
@@ -3460,6 +3639,11 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels)
 
 			/* Find and save the cheapest paths for this rel */
 			set_cheapest(rel);
+
+			/* The same for grouped relation if one exists. */
+			rel_grouped = find_grouped_rel(root, rel->relids, NULL);
+			if (rel_grouped)
+				set_cheapest(rel_grouped);
 
 #ifdef OPTIMIZER_DEBUG
 			debug_print_rel(root, rel);

@@ -174,6 +174,7 @@
 		"gp_eager_two_phase_agg",
 		"gp_enable_agg_distinct",
 		"gp_enable_agg_distinct_pruning",
+		"gp_enable_agg_pushdown",
 		"gp_enable_direct_dispatch",
 		"gp_enable_explain_allstat",
 		"gp_enable_fast_sri",

@@ -2543,6 +2543,136 @@ is_redundant_derived_clause(RestrictInfo *rinfo, List *clauselist)
 }
 
 /*
+ * translate_expression_to_rels
+ *		If the appropriate equivalence classes exist, replace vars in
+ *		gvi->gvexpr with vars whose varno is equal to relid. Return NULL if
+ *		translation is not possible or needed.
+ *
+ * Note: Currently we only translate Var expressions. This is subject to
+ * change as the aggregate push-down feature gets enhanced.
+ */
+GroupedVarInfo *
+translate_expression_to_rel(PlannerInfo *root, GroupedVarInfo *gvi,
+							Index relid)
+{
+	Var		   *var;
+	ListCell   *l1;
+	bool		found_orig = false;
+	Var		   *var_translated = NULL;
+	GroupedVarInfo *result;
+
+	/* Can't do anything w/o equivalence classes. */
+	if (root->eq_classes == NIL)
+		return NULL;
+
+	var = castNode(Var, gvi->gvexpr);
+
+	/*
+	 * Do we need to translate the var?
+	 */
+	if (var->varno == relid)
+		return NULL;
+
+	/*
+	 * Find the replacement var.
+	 */
+	foreach(l1, root->eq_classes)
+	{
+		EquivalenceClass *ec = lfirst_node(EquivalenceClass, l1);
+		ListCell   *l2;
+
+		/* TODO Check if any other EC kind should be ignored. */
+		if (ec->ec_has_volatile || ec->ec_below_outer_join || ec->ec_broken)
+			continue;
+
+		/* Single-element EC can hardly help in translations. */
+		if (list_length(ec->ec_members) == 1)
+			continue;
+
+		/*
+		 * Collect all vars of this EC and their varnos.
+		 *
+		 * ec->ec_relids does not help because we're only interested in a
+		 * subset of EC members.
+		 */
+		foreach(l2, ec->ec_members)
+		{
+			EquivalenceMember *em = lfirst_node(EquivalenceMember, l2);
+			Var		   *ec_var;
+
+			/*
+			 * The grouping expressions derived here are used to evaluate
+			 * possibility to push aggregation down to RELOPT_BASEREL or
+			 * RELOPT_JOINREL relations, and to construct reltargets for the
+			 * grouped rels. We're not interested at the moment whether the
+			 * relations do have children.
+			 */
+			if (em->em_is_child)
+				continue;
+
+			if (!IsA(em->em_expr, Var))
+				continue;
+
+			ec_var = castNode(Var, em->em_expr);
+			if (equal(ec_var, var))
+				found_orig = true;
+			else if (ec_var->varno == relid)
+				var_translated = ec_var;
+
+			if (found_orig && var_translated)
+			{
+				/*
+				 * The replacement Var must have the same data type, otherwise
+				 * the values are not guaranteed to be grouped in the same way
+				 * as values of the original Var.
+				 */
+				if (ec_var->vartype != var->vartype)
+					return NULL;
+
+				break;
+			}
+		}
+
+		if (found_orig)
+		{
+			/*
+			 * The same expression probably does not exist in multiple ECs.
+			 */
+			if (var_translated == NULL)
+			{
+				/*
+				 * Failed to translate the expression.
+				 */
+				return NULL;
+			}
+			else
+			{
+				/* Success. */
+				break;
+			}
+		}
+		else
+		{
+			/*
+			 * Vars of the requested relid can be in the next ECs too.
+			 */
+			var_translated = NULL;
+		}
+	}
+
+	if (!found_orig)
+		return NULL;
+
+	result = makeNode(GroupedVarInfo);
+	memcpy(result, gvi, sizeof(GroupedVarInfo));
+
+	result->gv_eval_at = bms_make_singleton(relid);
+	result->gvexpr = (Expr *) var_translated;
+
+	return result;
+}
+
+/*
  * is_redundant_with_indexclauses
  *		Test whether rinfo is redundant with any clause in the IndexClause
  *		list.  Here, for convenience, we test both simple identity and

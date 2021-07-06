@@ -110,6 +110,7 @@ extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
 extern void add_vars_to_targetlist_x(PlannerInfo *root, List *vars,
 									 Relids where_needed, bool create_new_ph,
 									 bool force);
+extern void setup_aggregate_pushdown(PlannerInfo *root);
 extern void find_lateral_references(PlannerInfo *root);
 extern void create_lateral_join_info(PlannerInfo *root);
 extern List *deconstruct_jointree(PlannerInfo *root);

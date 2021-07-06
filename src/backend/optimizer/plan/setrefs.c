@@ -2943,6 +2943,39 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
 		/* No referent found for Var */
 		elog(ERROR, "variable not found in subplan target lists");
 	}
+	if (IsA(node, Aggref))
+	{
+		Aggref	   *aggref = castNode(Aggref, node);
+
+		/*
+		 * The upper plan targetlist can contain Aggref whose value has
+		 * already been evaluated by the subplan. However this can only happen
+		 * with specific value of aggsplit.
+		 */
+		if (aggref->aggsplit == AGGSPLIT_INITIAL_SERIAL)
+		{
+			/* See if the Aggref has bubbled up from a lower plan node */
+			if (context->outer_itlist && context->outer_itlist->has_non_vars)
+			{
+				newvar = search_indexed_tlist_for_non_var((Expr *) node,
+														  context->outer_itlist,
+														  OUTER_VAR);
+				if (newvar)
+					return (Node *) newvar;
+			}
+			if (context->inner_itlist && context->inner_itlist->has_non_vars)
+			{
+				newvar = search_indexed_tlist_for_non_var((Expr *) node,
+														  context->inner_itlist,
+														  INNER_VAR);
+				if (newvar)
+					return (Node *) newvar;
+			}
+		}
+
+		/* No referent found for Aggref */
+		elog(ERROR, "Aggref not found in subplan target lists");
+	}
 	if (IsA(node, PlaceHolderVar))
 	{
 		PlaceHolderVar *phv = (PlaceHolderVar *) node;

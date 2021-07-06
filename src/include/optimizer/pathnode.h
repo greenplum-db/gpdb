@@ -254,6 +254,14 @@ extern TupleSplitPath *create_tup_split_path(PlannerInfo *root,
                                              PathTarget *target,
                                              List *groupClause,
 											 List *dqa_expr_lst);
+extern AggPath *create_agg_sorted_path(PlannerInfo *root,
+									   RelOptInfo *rel,
+									   Path *subpath,
+									   RelAggInfo *agg_info);
+extern AggPath *create_agg_hashed_path(PlannerInfo *root,
+									   RelOptInfo *rel,
+									   Path *subpath,
+									   RelAggInfo *agg_info);
 extern GroupingSetsPath *create_groupingsets_path(PlannerInfo *root,
 												  RelOptInfo *rel,
 												  Path *subpath,
@@ -327,14 +335,21 @@ extern void setup_append_rel_array(PlannerInfo *root);
 extern void expand_planner_arrays(PlannerInfo *root, int add_size);
 extern RelOptInfo *build_simple_rel(PlannerInfo *root, int relid,
 									RelOptInfo *parent);
+extern RelOptInfo *build_simple_grouped_rel(PlannerInfo *root, int relid,
+											RelAggInfo **agg_info_p);
 extern RelOptInfo *find_base_rel(PlannerInfo *root, int relid);
 extern RelOptInfo *find_join_rel(PlannerInfo *root, Relids relids);
+extern void add_grouped_rel(PlannerInfo *root, RelOptInfo *rel,
+							RelAggInfo *agg_info);
+extern RelOptInfo *find_grouped_rel(PlannerInfo *root, Relids relids,
+									RelAggInfo **agg_info_p);
 extern RelOptInfo *build_join_rel(PlannerInfo *root,
 								  Relids joinrelids,
 								  RelOptInfo *outer_rel,
 								  RelOptInfo *inner_rel,
 								  SpecialJoinInfo *sjinfo,
-								  List **restrictlist_ptr);
+								  List **restrictlist_ptr,
+								  RelAggInfo *agg_info);
 extern Relids min_join_parameterization(PlannerInfo *root,
 										Relids joinrelids,
 										RelOptInfo *outer_rel,
@@ -361,5 +376,5 @@ extern RelOptInfo *build_child_join_rel(PlannerInfo *root,
 										RelOptInfo *outer_rel, RelOptInfo *inner_rel,
 										RelOptInfo *parent_joinrel, List *restrictlist,
 										SpecialJoinInfo *sjinfo, JoinType jointype);
-
+extern RelAggInfo *create_rel_agg_info(PlannerInfo *root, RelOptInfo *rel);
 #endif							/* PATHNODE_H */

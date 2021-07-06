@@ -551,6 +551,8 @@ extern bool gp_enable_agg_distinct;
  */
 extern bool gp_enable_dqa_pruning;
 
+extern bool gp_enable_agg_pushdown;
+
 /* May Greenplum apply Unique operator (and possibly a Sort) in parallel prior
  * to the collocation motion for a Unique operator?  The idea is to reduce
  * the number of rows moving over the interconnect.

@@ -62,8 +62,10 @@ extern void split_pathtarget_at_srfs(PlannerInfo *root,
 									 PathTarget *target, PathTarget *input_target,
 									 List **targets, List **targets_contain_srfs);
 
+/* TODO Find the best location for this one. */
+extern Index get_expression_sortgroupref(Expr *expr, List *gvis);
+
 /* Convenience macro to get a PathTarget with valid cost/width fields */
 #define create_pathtarget(root, tlist) \
 	set_pathtarget_cost_width(root, make_pathtarget_from_tlist(tlist))
-
 #endif							/* TLIST_H */

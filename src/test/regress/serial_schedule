@@ -141,6 +141,7 @@ test: amutils
 test: stats_ext
 test: select_parallel
 test: write_parallel
+test: agg_pushdown
 test: publication
 test: subscription
 test: select_views

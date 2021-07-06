@@ -19,27 +19,39 @@
 #include <limits.h>
 
 #include "miscadmin.h"
+#include "catalog/pg_class_d.h"
+#include "catalog/pg_constraint.h"
 #include "optimizer/appendinfo.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/inherit.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/placeholder.h"
 #include "optimizer/plancat.h"
+#include "optimizer/planner.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/tlist.h"
 #include "partitioning/partbounds.h"
 #include "utils/hsearch.h"
+#include "parser/parse_oper.h"
+#include "utils/hsearch.h"
+#include "utils/selfuncs.h"
+#include "utils/lsyscache.h"
 
 #include "access/sysattr.h"
 #include "cdb/cdbutil.h"
 
-typedef struct JoinHashEntry
+/*
+ * An entry of a hash table that we use to make lookup for RelOptInfo
+ * structures more efficient.
+ */
+typedef struct RelInfoEntry
 {
-	Relids		join_relids;	/* hash key --- MUST BE FIRST */
-	RelOptInfo *join_rel;
-} JoinHashEntry;
+	Relids		relids;			/* hash key --- MUST BE FIRST */
+	void	   *data;
+} RelInfoEntry;
 
 static void build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel,
 					RelOptInfo *input_rel);
@@ -67,6 +79,11 @@ static void build_child_join_reltarget(PlannerInfo *root,
 									   RelOptInfo *childrel,
 									   int nappinfos,
 									   AppendRelInfo **appinfos);
+static bool init_grouping_targets(PlannerInfo *root, RelOptInfo *rel,
+								  PathTarget *target, PathTarget *agg_input,
+								  List *gvis, List **group_exprs_extra_p);
+static bool is_var_in_aggref_only(PlannerInfo *root, Var *var);
+static bool is_var_needed_by_join(PlannerInfo *root, Var *var, RelOptInfo *rel);
 
 
 /*
@@ -382,6 +399,109 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptInfo *parent)
 }
 
 /*
+ * build_simple_grouped_rel
+ *	  Construct a new RelOptInfo for a grouped base relation out of an
+ *	  existing non-grouped relation. On success, pointer to the corresponding
+ *	  RelAggInfo is stored in *agg_info_p in addition to returning the grouped
+ *	  relation.
+ */
+RelOptInfo *
+build_simple_grouped_rel(PlannerInfo *root, int relid,
+						 RelAggInfo **agg_info_p)
+{
+	RangeTblEntry *rte;
+	RelOptInfo *rel_plain,
+			   *rel_grouped;
+	RelAggInfo *agg_info;
+
+	/* Isn't there any grouping expression to be pushed down? */
+	if (root->grouped_var_list == NIL)
+		return NULL;
+
+	rel_plain = root->simple_rel_array[relid];
+
+	/* Caller should only pass rti that represents base relation. */
+	Assert(rel_plain != NULL);
+
+	/*
+	 * Not all RTE kinds are supported when grouping is considered.
+	 *
+	 * TODO Consider relaxing some of these restrictions.
+	 */
+	rte = root->simple_rte_array[rel_plain->relid];
+	if (rte->rtekind != RTE_RELATION ||
+		rte->relkind == RELKIND_FOREIGN_TABLE ||
+		rte->tablesample != NULL)
+		return NULL;
+
+	/*
+	 * Grouped append relation is not supported yet.
+	 */
+	if (rte->inh)
+		return NULL;
+
+	/*
+	 * Currently we do not support child relations ("other rels").
+	 */
+	if (rel_plain->reloptkind != RELOPT_BASEREL)
+		return NULL;
+
+	/*
+	 * Prepare the information we need for aggregation of the rel contents.
+	 */
+	agg_info = create_rel_agg_info(root, rel_plain);
+	if (agg_info == NULL)
+		return NULL;
+
+	/*
+	 * TODO Consider if 1) a flat copy is o.k., 2) it's safer in terms of
+	 * adding new fields to RelOptInfo) to copy everything and then reset some
+	 * fields, or to zero the structure and copy individual fields.
+	 */
+	rel_grouped = makeNode(RelOptInfo);
+	memcpy(rel_grouped, rel_plain, sizeof(RelOptInfo));
+
+	/*
+	 * Note on consider_startup: while the AGG_HASHED strategy needs the whole
+	 * relation, AGG_SORTED does not. Therefore we do not force
+	 * consider_startup to false.
+	 */
+
+	/*
+	 * Set the appropriate target for grouped paths.
+	 *
+	 * reltarget should match the target of partially aggregated paths.
+	 */
+	rel_grouped->reltarget = agg_info->target;
+
+	/*
+	 * Grouped paths must not be mixed with the plain ones.
+	 */
+	rel_grouped->pathlist = NIL;
+	rel_grouped->partial_pathlist = NIL;
+	rel_grouped->cheapest_startup_path = NULL;
+	rel_grouped->cheapest_total_path = NULL;
+	rel_grouped->cheapest_unique_path = NULL;
+	rel_grouped->cheapest_parameterized_paths = NIL;
+
+	/*
+	 * The number of aggregation input rows is simply the number of rows of
+	 * the non-grouped relation, which should have been estimated by now.
+	 */
+	agg_info->input_rows = rel_plain->rows;
+
+	/*
+	 * The number of output rows is supposedly different (lower) due to
+	 * grouping.
+	 */
+	rel_grouped->rows = estimate_num_groups(root, agg_info->group_exprs,
+											agg_info->input_rows, NULL);
+
+	*agg_info_p = agg_info;
+	return rel_grouped;
+}
+
+/*
  * find_base_rel
  *	  Find a base or other relation entry, which must already exist.
  */
@@ -405,11 +525,11 @@ find_base_rel(PlannerInfo *root, int relid)
 }
 
 /*
- * build_join_rel_hash
- *	  Construct the auxiliary hash table for join relations.
+ * build_rel_hash
+ *	  Construct the auxiliary hash table for relation specific data.
  */
 static void
-build_join_rel_hash(PlannerInfo *root)
+build_rel_hash(RelInfoList *list)
 {
 	HTAB	   *hashtab;
 	HASHCTL		hash_ctl;
@@ -418,31 +538,96 @@ build_join_rel_hash(PlannerInfo *root)
 	/* Create the hash table */
 	MemSet(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = sizeof(Relids);
-	hash_ctl.entrysize = sizeof(JoinHashEntry);
+	hash_ctl.entrysize = sizeof(RelInfoEntry);
 	hash_ctl.hash = bitmap_hash;
 	hash_ctl.match = bitmap_match;
 	hash_ctl.hcxt = CurrentMemoryContext;
-	hashtab = hash_create("JoinRelHashTable",
+	hashtab = hash_create("RelHashTable",
 						  256L,
 						  &hash_ctl,
 						  HASH_ELEM | HASH_FUNCTION | HASH_COMPARE | HASH_CONTEXT);
 
 	/* Insert all the already-existing joinrels */
-	foreach(l, root->join_rel_list)
+	foreach(l, list->items)
 	{
-		RelOptInfo *rel = (RelOptInfo *) lfirst(l);
-		JoinHashEntry *hentry;
+		void	   *item = lfirst(l);
+		RelInfoEntry *hentry;
 		bool		found;
+		Relids		relids;
 
-		hentry = (JoinHashEntry *) hash_search(hashtab,
-											   &(rel->relids),
-											   HASH_ENTER,
-											   &found);
+		Assert(IsA(item, RelOptInfo));
+		relids = ((RelOptInfo *) item)->relids;
+
+		hentry = (RelInfoEntry *) hash_search(hashtab,
+											  &relids,
+											  HASH_ENTER,
+											  &found);
 		Assert(!found);
-		hentry->join_rel = rel;
+		hentry->data = item;
 	}
 
-	root->join_rel_hash = hashtab;
+	list->hash = hashtab;
+}
+
+/*
+ * find_rel_info
+ *	  Find a base or join relation entry.
+ */
+static void *
+find_rel_info(RelInfoList *list, Relids relids)
+{
+	if (list == NULL)
+		return NULL;
+
+	/*
+	 * Switch to using hash lookup when list grows "too long".  The threshold
+	 * is arbitrary and is known only here.
+	 */
+	if (!list->hash && list_length(list->items) > 32)
+		build_rel_hash(list);
+
+	/*
+	 * Use either hashtable lookup or linear search, as appropriate.
+	 *
+	 * Note: the seemingly redundant hashkey variable is used to avoid taking
+	 * the address of relids; unless the compiler is exceedingly smart, doing
+	 * so would force relids out of a register and thus probably slow down the
+	 * list-search case.
+	 */
+	if (list->hash)
+	{
+		Relids		hashkey = relids;
+		RelInfoEntry *hentry;
+
+		hentry = (RelInfoEntry *) hash_search(list->hash,
+											  &hashkey,
+											  HASH_FIND,
+											  NULL);
+		if (hentry)
+			return hentry->data;
+	}
+	else
+	{
+		ListCell   *l;
+
+		foreach(l, list->items)
+		{
+			void	   *item = lfirst(l);
+			Relids		item_relids = NULL;
+
+			Assert(IsA(item, RelOptInfo) || IsA(item, RelAggInfo));
+
+			if (IsA(item, RelOptInfo))
+				item_relids = ((RelOptInfo *) item)->relids;
+			else if (IsA(item, RelAggInfo))
+				item_relids = ((RelAggInfo *) item)->relids;
+
+			if (bms_equal(item_relids, relids))
+				return item;
+		}
+	}
+
+	return NULL;
 }
 
 /*
@@ -453,47 +638,109 @@ build_join_rel_hash(PlannerInfo *root)
 RelOptInfo *
 find_join_rel(PlannerInfo *root, Relids relids)
 {
-	/*
-	 * Switch to using hash lookup when list grows "too long".  The threshold
-	 * is arbitrary and is known only here.
-	 */
-	if (!root->join_rel_hash && list_length(root->join_rel_list) > 32)
-		build_join_rel_hash(root);
+	return (RelOptInfo *) find_rel_info(root->join_rel_list, relids);
+}
 
-	/*
-	 * Use either hashtable lookup or linear search, as appropriate.
-	 *
-	 * Note: the seemingly redundant hashkey variable is used to avoid taking
-	 * the address of relids; unless the compiler is exceedingly smart, doing
-	 * so would force relids out of a register and thus probably slow down the
-	 * list-search case.
-	 */
-	if (root->join_rel_hash)
+/*
+ * add_rel_info
+ *		Add relation specific info to a list, and also add it to the auxiliary
+ *		hashtable if there is one.
+ */
+static void
+add_rel_info(RelInfoList *list, void *data)
+{
+	Assert(IsA(data, RelOptInfo) || IsA(data, RelAggInfo));
+
+	/* GEQO requires us to append the new joinrel to the end of the list! */
+	list->items = lappend(list->items, data);
+
+	/* store it into the auxiliary hashtable if there is one. */
+	if (list->hash)
 	{
-		Relids		hashkey = relids;
-		JoinHashEntry *hentry;
+		Relids		relids;
+		RelInfoEntry *hentry;
+		bool		found;
 
-		hentry = (JoinHashEntry *) hash_search(root->join_rel_hash,
-											   &hashkey,
-											   HASH_FIND,
-											   NULL);
-		if (hentry)
-			return hentry->join_rel;
+		if (IsA(data, RelOptInfo))
+			relids = ((RelOptInfo *) data)->relids;
+		else if (IsA(data, RelAggInfo))
+			relids = ((RelAggInfo *) data)->relids;
+
+		hentry = (RelInfoEntry *) hash_search(list->hash,
+											  &relids,
+											  HASH_ENTER,
+											  &found);
+		Assert(!found);
+		hentry->data = data;
 	}
-	else
+}
+
+/*
+ * add_join_rel
+ *		Add given join relation to the list of join relations in the given
+ *		PlannerInfo.
+ */
+static void
+add_join_rel(PlannerInfo *root, RelOptInfo *joinrel)
+{
+	add_rel_info(root->join_rel_list, joinrel);
+}
+
+/*
+ * add_grouped_rel
+ *		Add grouped base or join relation to the list of grouped relations in
+ *		the given PlannerInfo. Also add the corresponding RelAggInfo to
+ *		agg_info_list.
+ */
+void
+add_grouped_rel(PlannerInfo *root, RelOptInfo *rel, RelAggInfo *agg_info)
+{
+	add_rel_info(&root->upper_rels[UPPERREL_PARTIAL_GROUP_AGG], rel);
+	add_rel_info(root->agg_info_list, agg_info);
+}
+
+/*
+ * find_grouped_rel
+ *	  Returns grouped relation entry (base or join relation) corresponding to
+ *	  'relids' or NULL if none exists.
+ *
+ * If agg_info_p is a valid pointer, then pointer to RelAggInfo that
+ * corresponds to the relation returned is assigned to *agg_info_p.
+ *
+ * The call fetch_upper_rel(root, UPPERREL_PARTIAL_GROUP_AGG, ...) should
+ * return the same relation if it exists, however the behavior is different if
+ * the relation is not there. find_grouped_rel() should be used in
+ * query_planner() and subroutines.
+ */
+RelOptInfo *
+find_grouped_rel(PlannerInfo *root, Relids relids, RelAggInfo **agg_info_p)
+{
+	RelOptInfo *rel;
+
+	rel = (RelOptInfo *) find_rel_info(&root->upper_rels[UPPERREL_PARTIAL_GROUP_AGG],
+									   relids);
+	if (rel == NULL)
 	{
-		ListCell   *l;
+		if (agg_info_p)
+			*agg_info_p = NULL;
 
-		foreach(l, root->join_rel_list)
-		{
-			RelOptInfo *rel = (RelOptInfo *) lfirst(l);
-
-			if (bms_equal(rel->relids, relids))
-				return rel;
-		}
+		return NULL;
 	}
 
-	return NULL;
+	/* Is caller interested in RelAggInfo? */
+	if (agg_info_p)
+	{
+		RelAggInfo *agg_info;
+
+		agg_info = (RelAggInfo *) find_rel_info(root->agg_info_list, relids);
+
+		/* The relation exists, so the agg_info should be there too. */
+		Assert(agg_info != NULL);
+
+		*agg_info_p = agg_info;
+	}
+
+	return rel;
 }
 
 /*
@@ -553,32 +800,6 @@ set_foreign_rel_properties(RelOptInfo *joinrel, RelOptInfo *outer_rel,
 }
 
 /*
- * add_join_rel
- *		Add given join relation to the list of join relations in the given
- *		PlannerInfo. Also add it to the auxiliary hashtable if there is one.
- */
-static void
-add_join_rel(PlannerInfo *root, RelOptInfo *joinrel)
-{
-	/* GEQO requires us to append the new joinrel to the end of the list! */
-	root->join_rel_list = lappend(root->join_rel_list, joinrel);
-
-	/* store it into the auxiliary hashtable if there is one. */
-	if (root->join_rel_hash)
-	{
-		JoinHashEntry *hentry;
-		bool		found;
-
-		hentry = (JoinHashEntry *) hash_search(root->join_rel_hash,
-											   &(joinrel->relids),
-											   HASH_ENTER,
-											   &found);
-		Assert(!found);
-		hentry->join_rel = joinrel;
-	}
-}
-
-/*
  * build_join_rel
  *	  Returns relation entry corresponding to the union of two given rels,
  *	  creating a new relation entry if none already exists.
@@ -590,6 +811,7 @@ add_join_rel(PlannerInfo *root, RelOptInfo *joinrel)
  * 'restrictlist_ptr': result variable.  If not NULL, *restrictlist_ptr
  *		receives the list of RestrictInfo nodes that apply to this
  *		particular pair of joinable relations.
+ * 'agg_info' indicates that grouped join relation should be created.
  *
  * restrictlist_ptr makes the routine's API a little grotty, but it saves
  * duplicated calculation of the restrictlist...
@@ -600,10 +822,12 @@ build_join_rel(PlannerInfo *root,
 			   RelOptInfo *outer_rel,
 			   RelOptInfo *inner_rel,
 			   SpecialJoinInfo *sjinfo,
-			   List **restrictlist_ptr)
+			   List **restrictlist_ptr,
+			   RelAggInfo *agg_info)
 {
 	RelOptInfo *joinrel;
 	List	   *restrictlist;
+	bool		grouped = agg_info != NULL;
 
 	/* This function should be used only for join between parents. */
 	Assert(!IS_OTHER_REL(outer_rel) && !IS_OTHER_REL(inner_rel));
@@ -611,7 +835,8 @@ build_join_rel(PlannerInfo *root,
 	/*
 	 * See if we already have a joinrel for this set of base rels.
 	 */
-	joinrel = find_join_rel(root, joinrelids);
+	joinrel = !grouped ? find_join_rel(root, joinrelids) :
+		find_grouped_rel(root, joinrelids, NULL);
 
 	if (joinrel)
 	{
@@ -705,9 +930,21 @@ build_join_rel(PlannerInfo *root,
 	 * and inner rels we first try to build it from.  But the contents should
 	 * be the same regardless.
 	 */
-	build_joinrel_tlist(root, joinrel, outer_rel);
-	build_joinrel_tlist(root, joinrel, inner_rel);
-	add_placeholders_to_joinrel(root, joinrel, outer_rel, inner_rel);
+	if (!grouped)
+	{
+		joinrel->reltarget = create_empty_pathtarget();
+		build_joinrel_tlist(root, joinrel, outer_rel);
+		build_joinrel_tlist(root, joinrel, inner_rel);
+		add_placeholders_to_joinrel(root, joinrel, outer_rel, inner_rel);
+	}
+	else
+	{
+		/*
+		 * The target for grouped join should already have its cost and width
+		 * computed, see create_rel_agg_info().
+		 */
+		joinrel->reltarget = agg_info->target;
+	}
 
 	/*
 	 * add_placeholders_to_joinrel also took care of adding the ph_lateral
@@ -746,14 +983,30 @@ build_join_rel(PlannerInfo *root,
 	joinrel->has_eclass_joins = has_relevant_eclass_joinclause(root, joinrel);
 
 	/* Store the partition information. */
-	build_joinrel_partition_info(joinrel, outer_rel, inner_rel, restrictlist,
-								 sjinfo->jointype);
+	if (!grouped)
+		build_joinrel_partition_info(joinrel, outer_rel, inner_rel,
+									 restrictlist, sjinfo->jointype);
 
 	/*
 	 * Set estimates of the joinrel's size.
 	 */
-	set_joinrel_size_estimates(root, joinrel, outer_rel, inner_rel,
-							   sjinfo, restrictlist);
+	if (!grouped)
+		set_joinrel_size_estimates(root, joinrel, outer_rel, inner_rel,
+								   sjinfo, restrictlist);
+	else
+	{
+		/*
+		 * Grouping essentially changes the number of rows.
+		 *
+		 * XXX We do not distinguish whether two plain rels are joined and the
+		 * result is aggregated, or the aggregation has been already applied
+		 * to one of the input rels. Is this worth extra effort, e.g.
+		 * maintaining a separate RelOptInfo for each case (one difficulty
+		 * that would introduce is construction of AppendPath)?
+		 */
+		joinrel->rows = estimate_num_groups(root, agg_info->group_exprs,
+											agg_info->input_rows, NULL);
+	}
 
 	/*
 	 * Set the consider_parallel flag if this joinrel could potentially be
@@ -775,20 +1028,28 @@ build_join_rel(PlannerInfo *root,
 		joinrel->consider_parallel = true;
 
 	/* Add the joinrel to the PlannerInfo. */
-	add_join_rel(root, joinrel);
+	if (!grouped)
+		add_join_rel(root, joinrel);
+	else
+		add_grouped_rel(root, joinrel, agg_info);
 
 	/*
-	 * Also, if dynamic-programming join search is active, add the new joinrel
-	 * to the appropriate sublist.  Note: you might think the Assert on number
-	 * of members should be for equality, but some of the level 1 rels might
-	 * have been joinrels already, so we can only assert <=.
+	 * Also, if dynamic-programming join search is active, add the new
+	 * joinrelset to the appropriate sublist.  Note: you might think the
+	 * Assert on number of members should be for equality, but some of the
+	 * level 1 rels might have been joinrels already, so we can only assert
+	 * <=.
+	 *
+	 * Do noting for grouped relation as it's stored aside from
+	 * join_rel_level.
 	 */
-	if (root->join_rel_level)
+	if (root->join_rel_level && !grouped)
 	{
 		Assert(root->join_cur_level > 0);
-		Assert(root->join_cur_level <= bms_num_members(joinrel->relids));
+		Assert(root->join_cur_level <= bms_num_members(joinrelids));
 		root->join_rel_level[root->join_cur_level] =
-			lappend(root->join_rel_level[root->join_cur_level], joinrel);
+			lappend(root->join_rel_level[root->join_cur_level],
+					joinrel);
 	}
 
 	return joinrel;
@@ -1209,22 +1470,14 @@ subbuild_joinrel_joinlist(RelOptInfo *joinrel,
 RelOptInfo *
 fetch_upper_rel(PlannerInfo *root, UpperRelationKind kind, Relids relids)
 {
+	RelInfoList *list = &root->upper_rels[kind];
 	RelOptInfo *upperrel;
-	ListCell   *lc;
-
-	/*
-	 * For the moment, our indexing data structure is just a List for each
-	 * relation kind.  If we ever get so many of one kind that this stops
-	 * working well, we can improve it.  No code outside this function should
-	 * assume anything about how to find a particular upperrel.
-	 */
 
 	/* If we already made this upperrel for the query, return it */
-	foreach(lc, root->upper_rels[kind])
+	if (list)
 	{
-		upperrel = (RelOptInfo *) lfirst(lc);
-
-		if (bms_equal(upperrel->relids, relids))
+		upperrel = find_rel_info(list, relids);
+		if (upperrel)
 			return upperrel;
 	}
 
@@ -1243,7 +1496,7 @@ fetch_upper_rel(PlannerInfo *root, UpperRelationKind kind, Relids relids)
 	upperrel->cheapest_unique_path = NULL;
 	upperrel->cheapest_parameterized_paths = NIL;
 
-	root->upper_rels[kind] = lappend(root->upper_rels[kind], upperrel);
+	add_rel_info(&root->upper_rels[kind], upperrel);
 
 	return upperrel;
 }
@@ -1835,4 +2088,624 @@ build_child_join_reltarget(PlannerInfo *root,
 	childrel->reltarget->cost.startup = parentrel->reltarget->cost.startup;
 	childrel->reltarget->cost.per_tuple = parentrel->reltarget->cost.per_tuple;
 	childrel->reltarget->width = parentrel->reltarget->width;
+}
+
+/*
+ * Check if the relation can produce grouped paths and return the information
+ * it'll need for it. The passed relation is the non-grouped one which has the
+ * reltarget already constructed.
+ */
+RelAggInfo *
+create_rel_agg_info(PlannerInfo *root, RelOptInfo *rel)
+{
+	List	   *gvis;
+	List	   *aggregates = NIL;
+	bool		found_other_rel_agg;
+	ListCell   *lc;
+	RelAggInfo *result;
+	PathTarget *agg_input;
+	PathTarget *target = NULL;
+	List	   *grp_exprs_extra = NIL;
+	List	   *group_clauses_final;
+	int			i;
+
+	/*
+	 * The function shouldn't have been called if there's no opportunity for
+	 * aggregation push-down.
+	 */
+	Assert(root->grouped_var_list != NIL);
+
+	/*
+	 * The current implementation of aggregation push-down cannot handle
+	 * PlaceHolderVar (PHV).
+	 *
+	 * If we knew that the PHV should be evaluated in this target (and of
+	 * course, if its expression matched some Aggref argument), we'd just let
+	 * init_grouping_targets add that Aggref. On the other hand, if we knew
+	 * that the PHV is evaluated below the current rel, we could ignore it
+	 * because the referencing Aggref would take care of propagation of the
+	 * value to upper joins.
+	 *
+	 * The problem is that the same PHV can be evaluated in the target of the
+	 * current rel or in that of lower rel --- depending on the input paths.
+	 * For example, consider rel->relids = {A, B, C} and if ph_eval_at = {B,
+	 * C}. Path "A JOIN (B JOIN C)" implies that the PHV is evaluated by the
+	 * "(B JOIN C)", while path "(A JOIN B) JOIN C" evaluates the PHV itself.
+	 */
+	foreach(lc, rel->reltarget->exprs)
+	{
+		Expr	   *expr = lfirst(lc);
+
+		if (IsA(expr, PlaceHolderVar))
+			return NULL;
+	}
+
+	if (IS_SIMPLE_REL(rel))
+	{
+		RangeTblEntry *rte = root->simple_rte_array[rel->relid];;
+
+		/*
+		 * rtekind != RTE_RELATION case is not supported yet.
+		 */
+		if (rte->rtekind != RTE_RELATION)
+			return NULL;
+	}
+
+	/* Caller should only pass base relations or joins. */
+	Assert(rel->reloptkind == RELOPT_BASEREL ||
+		   rel->reloptkind == RELOPT_JOINREL);
+
+	/*
+	 * If any outer join can set the attribute value to NULL, the Agg plan
+	 * would receive different input at the base rel level.
+	 *
+	 * XXX For RELOPT_JOINREL, do not return if all the joins that can set any
+	 * entry of the grouped target (do we need to postpone this check until
+	 * the grouped target is available, and init_grouping_targets take care?)
+	 * of this rel to NULL are provably below rel. (It's ok if rel is one of
+	 * these joins.)
+	 */
+	if (bms_overlap(rel->relids, root->nullable_baserels))
+		return NULL;
+
+	/*
+	 * Use equivalence classes to generate additional grouping expressions for
+	 * the current rel. Without these we might not be able to apply
+	 * aggregation to the relation result set.
+	 *
+	 * It's important that create_grouping_expr_grouped_var_infos has
+	 * processed the explicit grouping columns by now. If the grouping clause
+	 * contains multiple expressions belonging to the same EC, the original
+	 * (i.e. not derived) one should be preferred when we build grouping
+	 * target for a relation. Otherwise we have a problem when trying to match
+	 * target entries to grouping clauses during plan creation, see
+	 * get_grouping_expression().
+	 */
+	gvis = list_copy(root->grouped_var_list);
+	foreach(lc, root->grouped_var_list)
+	{
+		GroupedVarInfo *gvi = lfirst_node(GroupedVarInfo, lc);
+		int			relid = -1;
+
+		/* Only interested in grouping expressions. */
+		if (IsA(gvi->gvexpr, Aggref))
+			continue;
+
+		while ((relid = bms_next_member(rel->relids, relid)) >= 0)
+		{
+			GroupedVarInfo *gvi_trans;
+
+			gvi_trans = translate_expression_to_rel(root, gvi, relid);
+			if (gvi_trans != NULL)
+				gvis = lappend(gvis, gvi_trans);
+		}
+	}
+
+	/*
+	 * Check if some aggregates or grouping expressions can be evaluated in
+	 * this relation's target, and collect all vars referenced by these
+	 * aggregates / grouping expressions;
+	 */
+	found_other_rel_agg = false;
+	foreach(lc, gvis)
+	{
+		GroupedVarInfo *gvi = lfirst_node(GroupedVarInfo, lc);
+
+		/*
+		 * The subset includes gv_eval_at uninitialized, which includes
+		 * Aggref.aggstar.
+		 */
+		if (bms_is_subset(gvi->gv_eval_at, rel->relids))
+		{
+			/*
+			 * init_grouping_targets will handle plain Var grouping
+			 * expressions because it needs to look them up in
+			 * grouped_var_list anyway.
+			 */
+			if (IsA(gvi->gvexpr, Var))
+				continue;
+
+			/*
+			 * Currently, GroupedVarInfo only handles Vars and Aggrefs.
+			 */
+			Assert(IsA(gvi->gvexpr, Aggref));
+
+			gvi->agg_partial = (Aggref *) copyObject(gvi->gvexpr);
+			mark_partial_aggref(gvi->agg_partial, AGGSPLIT_INITIAL_SERIAL);
+
+			/*
+			 * Accept the aggregate.
+			 */
+			aggregates = lappend(aggregates, gvi);
+		}
+		else if (IsA(gvi->gvexpr, Aggref))
+		{
+			/*
+			 * Remember that there is at least one aggregate expression that
+			 * needs something else than this rel.
+			 */
+			found_other_rel_agg = true;
+
+			/*
+			 * This condition effectively terminates creation of the
+			 * RelAggInfo, so there's no reason to check the next
+			 * GroupedVarInfo.
+			 */
+			break;
+		}
+	}
+
+	/*
+	 * Grouping makes little sense w/o aggregate function and w/o grouping
+	 * expressions.
+	 */
+	if (aggregates == NIL)
+	{
+		list_free(gvis);
+		return NULL;
+	}
+
+	/*
+	 * Give up if some other aggregate(s) need relations other than the
+	 * current one.
+	 *
+	 * If the aggregate needs the current rel plus anything else, then the
+	 * problem is that grouping of the current relation could make some input
+	 * variables unavailable for the "higher aggregate", and it'd also
+	 * decrease the number of input rows the "higher aggregate" receives.
+	 *
+	 * If the aggregate does not even need the current rel, then neither the
+	 * current rel nor anything else should be grouped because we do not
+	 * support join of two grouped relations.
+	 */
+	if (found_other_rel_agg)
+	{
+		list_free(gvis);
+		return NULL;
+	}
+
+	/*
+	 * Create target for grouped paths as well as one for the input paths of
+	 * the aggregation paths.
+	 */
+	target = create_empty_pathtarget();
+	agg_input = create_empty_pathtarget();
+
+	/*
+	 * Cannot suitable targets for the aggregation push-down be derived?
+	 */
+	if (!init_grouping_targets(root, rel, target, agg_input, gvis,
+							   &grp_exprs_extra))
+	{
+		list_free(gvis);
+		return NULL;
+	}
+
+	list_free(gvis);
+
+	/*
+	 * Aggregation push-down makes no sense w/o grouping expressions.
+	 */
+	if ((list_length(target->exprs) + list_length(grp_exprs_extra)) == 0)
+		return NULL;
+
+	group_clauses_final = root->parse->groupClause;
+
+	/*
+	 * If the aggregation target should have extra grouping expressions (in
+	 * order to emit input vars for join conditions), add them now. This step
+	 * includes assignment of tleSortGroupRef's which we can generate now.
+	 */
+	if (list_length(grp_exprs_extra) > 0)
+	{
+		Index		sortgroupref;
+
+		/*
+		 * We'll have to add some clauses, but query group clause must be
+		 * preserved.
+		 */
+		group_clauses_final = list_copy(group_clauses_final);
+
+		/*
+		 * Always start at root->max_sortgroupref. The extra grouping
+		 * expressions aren't used during the final aggregation, so the
+		 * sortgroupref values don't need to be unique across the query. Thus
+		 * we don't have to increase root->max_sortgroupref, which makes
+		 * recognition of the extra grouping expressions pretty easy.
+		 */
+		sortgroupref = root->max_sortgroupref;
+
+		/*
+		 * Generate the SortGroupClause's and add the expressions to the
+		 * target.
+		 */
+		foreach(lc, grp_exprs_extra)
+		{
+			Var		   *var = lfirst_node(Var, lc);
+			SortGroupClause *cl = makeNode(SortGroupClause);
+
+			/*
+			 * Initialize the SortGroupClause.
+			 *
+			 * As the final aggregation will not use this grouping expression,
+			 * we don't care whether sortop is < or >. The value of
+			 * nulls_first should not matter for the same reason.
+			 */
+			cl->tleSortGroupRef = ++sortgroupref;
+			get_sort_group_operators(var->vartype,
+									 false, true, false,
+									 &cl->sortop, &cl->eqop, NULL,
+									 &cl->hashable);
+			group_clauses_final = lappend(group_clauses_final, cl);
+			add_column_to_pathtarget(target, (Expr *) var,
+									 cl->tleSortGroupRef);
+
+			/*
+			 * The aggregation input target must emit this var too.
+			 */
+			add_column_to_pathtarget(agg_input, (Expr *) var,
+									 cl->tleSortGroupRef);
+		}
+	}
+
+	/*
+	 * Add aggregates to the grouping target.
+	 */
+	foreach(lc, aggregates)
+	{
+		GroupedVarInfo *gvi;
+
+		gvi = lfirst_node(GroupedVarInfo, lc);
+		add_column_to_pathtarget(target, (Expr *) gvi->agg_partial,
+								 gvi->sortgroupref);
+	}
+
+	/*
+	 * Build a list of grouping expressions and a list of the corresponding
+	 * SortGroupClauses.
+	 */
+	i = 0;
+	result = makeNode(RelAggInfo);
+	foreach(lc, target->exprs)
+	{
+		Index		sortgroupref = 0;
+		SortGroupClause *cl;
+		Expr	   *texpr;
+
+		texpr = (Expr *) lfirst(lc);
+
+		if (IsA(texpr, Aggref))
+		{
+			/*
+			 * Once we see Aggref, no grouping expressions should follow.
+			 */
+			break;
+		}
+
+		/*
+		 * Find the clause by sortgroupref.
+		 */
+		sortgroupref = target->sortgrouprefs[i++];
+
+		/*
+		 * Besides being an aggregate, the target expression should have no
+		 * other reason then being a column of a relation functionally
+		 * dependent on the GROUP BY clause. So it's not actually a grouping
+		 * column.
+		 */
+		if (sortgroupref == 0)
+			continue;
+
+		/*
+		 * group_clause_final contains the "local" clauses, so this search
+		 * should succeed.
+		 */
+		cl = get_sortgroupref_clause(sortgroupref, group_clauses_final);
+
+		result->group_clauses = list_append_unique(result->group_clauses,
+												   cl);
+
+		/*
+		 * Add only unique clauses because of joins (both sides of a join can
+		 * point at the same grouping clause). XXX Is it worth adding a bool
+		 * argument indicating that we're dealing with join right now?
+		 */
+		result->group_exprs = list_append_unique(result->group_exprs,
+												 texpr);
+	}
+
+	/*
+	 * Since neither target nor agg_input is supposed to be identical to the
+	 * source reltarget, compute the width and cost again.
+	 *
+	 * target does not yet contain aggregates, but these will be accounted by
+	 * AggPath.
+	 */
+	set_pathtarget_cost_width(root, target);
+	set_pathtarget_cost_width(root, agg_input);
+
+	result->relids = bms_copy(rel->relids);
+	result->target = target;
+	result->agg_input = agg_input;
+
+	/* Finally collect the aggregates. */
+	while (lc != NULL)
+	{
+		Aggref	   *aggref = lfirst_node(Aggref, lc);
+
+		/*
+		 * Partial aggregation is what the grouped paths should do.
+		 */
+		result->agg_exprs = lappend(result->agg_exprs, aggref);
+		lc = lnext(lc);
+	}
+
+	/* The "input_rows" field should be set by caller. */
+	return result;
+}
+
+/*
+ * Initialize target for grouped paths (target) as well as a target for paths
+ * that generate input for aggregation (agg_input).
+ *
+ * group_exprs_extra_p receives a list of Var nodes for which we need to
+ * construct SortGroupClause. Those vars will then be used as additional
+ * grouping expressions, for the sake of join clauses.
+ *
+ * gvis a list of GroupedVarInfo's possibly useful for rel.
+ *
+ * Return true iff the targets could be initialized.
+ */
+static bool
+init_grouping_targets(PlannerInfo *root, RelOptInfo *rel,
+					  PathTarget *target, PathTarget *agg_input,
+					  List *gvis, List **group_exprs_extra_p)
+{
+	ListCell   *lc;
+	List	   *possibly_dependent = NIL;
+	Var		   *tvar;
+
+	foreach(lc, rel->reltarget->exprs)
+	{
+		Index		sortgroupref;
+
+		/*
+		 * Given that PlaceHolderVar currently prevents us from doing
+		 * aggregation push-down, the source target cannot contain anything
+		 * more complex than a Var.
+		 */
+		tvar = lfirst_node(Var, lc);
+
+		sortgroupref = get_expression_sortgroupref((Expr *) tvar, gvis);
+		if (sortgroupref > 0)
+		{
+			/*
+			 * If the target expression can be used as the grouping key, we
+			 * don't have to worry whether it can be emitted by the AggPath
+			 * pushed down to relation / join.
+			 */
+			add_column_to_pathtarget(target, (Expr *) tvar, sortgroupref);
+
+			/*
+			 * As for agg_input, add the original expression but set
+			 * sortgroupref in addition.
+			 */
+			add_column_to_pathtarget(agg_input, (Expr *) tvar, sortgroupref);
+		}
+		else
+		{
+			if (is_var_needed_by_join(root, tvar, rel))
+			{
+				/*
+				 * The variable is needed for a join, however it's neither in
+				 * the GROUP BY clause nor can it be derived from it using EC.
+				 * (Otherwise it would have to be added to the targets above.)
+				 * We need to construct special SortGroupClause for that
+				 * variable.
+				 *
+				 * Note that its tleSortGroupRef needs to be unique within
+				 * agg_input, so we need to postpone creation of the
+				 * SortGroupClause's until we're done with the iteration of
+				 * rel->reltarget->exprs. Also it makes sense for the caller
+				 * to do some more check before it starts to create those
+				 * SortGroupClause's.
+				 */
+				*group_exprs_extra_p = lappend(*group_exprs_extra_p, tvar);
+			}
+			else if (is_var_in_aggref_only(root, tvar))
+			{
+				/*
+				 * Another reason we might need this variable is that some
+				 * aggregate pushed down to this relation references it. In such a
+				 * case, add that var to agg_input, but not to "target". However,
+				 * if the aggregate is not the only reason for the var to be in
+				 * the target, some more checks need to be performed below.
+				 */
+				add_new_column_to_pathtarget(agg_input, (Expr *) tvar);
+			}
+			else
+			{
+				/*
+				 * The Var can be functionally dependent on another expression
+				 * of the target, but we cannot check until the other
+				 * expressions are in the target.
+				 */
+				possibly_dependent = lappend(possibly_dependent, tvar);
+			}
+		}
+	}
+
+	/*
+	 * Now we can check whether the expression is functionally dependent on
+	 * another one.
+	 */
+	foreach(lc, possibly_dependent)
+	{
+		List	   *deps = NIL;
+		RangeTblEntry *rte;
+
+		tvar = lfirst_node(Var, lc);
+		rte = root->simple_rte_array[tvar->varno];
+
+		/*
+		 * Check if the Var can be in the grouping key even though it's not
+		 * mentioned by the GROUP BY clause (and could not be derived using
+		 * ECs).
+		 */
+		if (check_functional_grouping(rte->relid, tvar->varno,
+									  tvar->varlevelsup,
+									  target->exprs, &deps))
+		{
+			/*
+			 * The var shouldn't be actually used for grouping key evaluation
+			 * (instead, the one this depends on will be), so sortgroupref
+			 * should not be important.
+			 */
+			add_new_column_to_pathtarget(target, (Expr *) tvar);
+			add_new_column_to_pathtarget(agg_input, (Expr *) tvar);
+		}
+		else
+		{
+			/*
+			 * As long as the query is semantically correct, arriving here
+			 * means that the var is referenced by a generic grouping
+			 * expression but not referenced by any join.
+			 *
+			 * If the aggregate push-down will support generic grouping
+			 * expression sin the future, create_rel_agg_info() will have to
+			 * add this variable to "agg_input" target and also add the whole
+			 * generic expression to "target".
+			 */
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * Check whether given variable appears in Aggref(s) which we consider usable
+ * at relation / join level, and only in the Aggref(s).
+ */
+static bool
+is_var_in_aggref_only(PlannerInfo *root, Var *var)
+{
+	ListCell   *lc;
+	bool		found = false;
+
+	foreach(lc, root->grouped_var_list)
+	{
+		GroupedVarInfo *gvi = lfirst_node(GroupedVarInfo, lc);
+		ListCell   *lc2;
+		List	   *vars;
+
+		if (!IsA(gvi->gvexpr, Aggref))
+			continue;
+
+		if (!bms_is_member(var->varno, gvi->gv_eval_at))
+			continue;
+
+		/*
+		 * XXX Consider some sort of caching.
+		 */
+		vars = pull_var_clause((Node *) gvi->gvexpr, PVC_RECURSE_AGGREGATES);
+		foreach(lc2, vars)
+		{
+			Var		   *v = lfirst_node(Var, lc2);
+
+			if (equal(v, var))
+			{
+				found = true;
+				break;
+			}
+
+		}
+		list_free(vars);
+
+		if (found)
+			break;
+	}
+
+	/* No aggregate references the Var? */
+	if (!found)
+		return false;
+
+	/* Does the Var appear in the target outside aggregates? */
+	found = false;
+	foreach(lc, root->processed_tlist)
+	{
+		TargetEntry *te = lfirst_node(TargetEntry, lc);
+
+		if (IsA(te->expr, Aggref))
+			continue;
+
+		if (equal(te->expr, var))
+			return false;
+
+	}
+
+	/* The Var is in aggregate(s) and only there. */
+	return true;
+}
+
+/*
+ * Check if given variable is needed by joins above the current rel?
+ *
+ * Consider pushing the aggregate avg(b.y) down to relation "b" for the
+ * following query:
+ *
+ *    SELECT a.i, avg(b.y)
+ *    FROM a JOIN b ON b.j = a.i
+ *    GROUP BY a.i;
+ *
+ * If we aggregate the "b" relation alone, the column "b.j" needs to be used
+ * as the grouping key because otherwise it cannot find its way to the input
+ * of the join expression.
+ */
+static bool
+is_var_needed_by_join(PlannerInfo *root, Var *var, RelOptInfo *rel)
+{
+	Relids		relids_no_top;
+	int			ndx;
+	RelOptInfo *baserel;
+
+	/*
+	 * The relids we're not interested in do include 0, which is the top-level
+	 * targetlist. The only reason for relids to contain 0 should be that
+	 * arg_var is referenced either by aggregate or by grouping expression,
+	 * but right now we're interested in the *other* reasons. (As soon
+	 * aggregation is pushed down, the aggregates in the query targetlist no
+	 * longer need direct reference to arg_var anyway.)
+	 */
+
+	relids_no_top = bms_copy(rel->relids);
+	bms_add_member(relids_no_top, 0);
+
+	baserel = find_base_rel(root, var->varno);
+	ndx = var->varattno - baserel->min_attr;
+	if (bms_nonempty_difference(baserel->attr_needed[ndx],
+								relids_no_top))
+		return true;
+
+	return false;
 }
