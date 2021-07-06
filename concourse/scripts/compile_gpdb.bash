@@ -109,9 +109,9 @@ function export_gpdb() {
 	server_build="${GPDB_ARTIFACTS_DIR}/server-build-${server_version}-${BLD_ARCH}${RC_BUILD_TYPE_GCS}.tar.gz"
 
 	pushd ${GREENPLUM_INSTALL_DIR}
-	source greenplum_path.sh
-	python3 -m compileall -q -x test .
 	chmod -R 755 .
+	# Remove python bytecode
+	find . -type f \( -iname \*.pyc -o -iname \*.pyo \) -delete
 	tar -czf "${TARBALL}" ./*
 	popd
 
