@@ -1282,6 +1282,12 @@ create_merge_append_path(PlannerInfo *root,
 		pathnode->limit_tuples = -1.0;
 
 	/*
+	 * Add Motions to the child nodes as needed, and determine the locus
+	 * of the MergeAppend itself.
+	 */
+	set_append_path_locus(root, (Path *) pathnode, rel, pathkeys);
+
+	/*
 	 * Add up the sizes and costs of the input paths.
 	 */
 	pathnode->path.rows = 0;
@@ -1326,8 +1332,6 @@ create_merge_append_path(PlannerInfo *root,
 					  pathkeys, list_length(subpaths),
 					  input_startup_cost, input_total_cost,
 					  rel->tuples);
-
-	set_append_path_locus(root, (Path *) pathnode, rel, pathkeys);
 
 	return pathnode;
 }
@@ -1696,6 +1700,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	ListCell   *lc;
 	CdbPathLocus locus;
 	bool		add_motion = false;
+	double		numsegments;
 
 	/* Caller made a mistake if subpath isn't cheapest_total ... */
 	Assert(subpath == rel->cheapest_total_path);
@@ -1889,6 +1894,11 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	else
 		locus = subpath->locus;
 
+	if (CdbPathLocus_IsPartitioned(locus))
+		numsegments = CdbPathLocus_NumSegments(locus);
+	else
+		numsegments = 1;
+
 	/*
 	 * If we get here, we can unique-ify using at least one of sorting and
 	 * hashing.  Start building the result Path object.
@@ -1929,7 +1939,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		if (add_motion)
 			goto no_unique_path;
 		pathnode->umethod = UNIQUE_PATH_NOOP;
-		pathnode->path.rows = rel->rows;
+		pathnode->path.rows = rel->rows/ numsegments;
 		pathnode->path.startup_cost = subpath->startup_cost;
 		pathnode->path.total_cost = subpath->total_cost;
 		pathnode->path.pathkeys = subpath->pathkeys;
@@ -1965,7 +1975,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 			if (add_motion)
 				goto no_unique_path;
 			pathnode->umethod = UNIQUE_PATH_NOOP;
-			pathnode->path.rows = rel->rows;
+			pathnode->path.rows = rel->rows / numsegments;
 			pathnode->path.startup_cost = subpath->startup_cost;
 			pathnode->path.total_cost = subpath->total_cost;
 			pathnode->path.pathkeys = subpath->pathkeys;
@@ -1992,7 +2002,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		 */
 		cost_sort(&sort_path, root, NIL,
 				  subpath->total_cost,
-				  rel->rows,
+				  rel->rows / numsegments,
 				  rel->width,
 				  0.0,
 				  work_mem,
@@ -2004,7 +2014,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		 * probably this is an overestimate.)  This should agree with
 		 * make_unique.
 		 */
-		sort_path.total_cost += cpu_operator_cost * rel->rows * numCols;
+		sort_path.total_cost += cpu_operator_cost * (rel->rows / numsegments) * numCols;
 	}
 
 	if (all_hash)
@@ -2023,7 +2033,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 					 numCols, pathnode->path.rows / planner_segment_count(NULL),
 					 subpath->startup_cost,
 					 subpath->total_cost,
-					 rel->rows,
+					 rel->rows / numsegments,
 					 0, /* input_width */
 					 0, /* hash_batches */
 					 0, /* hashentry_width */
@@ -2179,6 +2189,7 @@ create_unique_rowid_path(PlannerInfo *root,
 	int			numCols;
 	bool		all_btree;
 	bool		all_hash;
+	double		numsegments;
 
     Assert(!bms_is_empty(distinct_relids));
 
@@ -2193,6 +2204,11 @@ create_unique_rowid_path(PlannerInfo *root,
 	all_hash = true;
 
 	locus = subpath->locus;
+
+	if (CdbPathLocus_IsPartitioned(locus))
+		numsegments = CdbPathLocus_NumSegments(locus);
+	else
+		numsegments = 1;
 
 	/*
 	 * Start building the result Path object.
@@ -2225,7 +2241,7 @@ create_unique_rowid_path(PlannerInfo *root,
 	 * it's going to be two columns.
 	 */
 	numCols	= 2;
-	((Path*)pathnode)->rows = rel->rows;
+	((Path*)pathnode)->rows = rel->rows / numsegments;
 
 	if (all_btree)
 	{
@@ -2234,7 +2250,7 @@ create_unique_rowid_path(PlannerInfo *root,
 		 */
 		cost_sort(&sort_path, root, NIL,
 				  subpath->total_cost,
-				  rel->rows,
+				  rel->rows / numsegments,
 				  rel->width,
 				  0, work_mem,
 				  -1.0);
@@ -2245,7 +2261,7 @@ create_unique_rowid_path(PlannerInfo *root,
 		 * probably this is an overestimate.)  This should agree with
 		 * make_unique.
 		 */
-		sort_path.total_cost += cpu_operator_cost * rel->rows * numCols;
+		sort_path.total_cost += cpu_operator_cost * (rel->rows / numsegments) * numCols;
 	}
 
 	if (all_hash)
@@ -2264,7 +2280,7 @@ create_unique_rowid_path(PlannerInfo *root,
 					 numCols, ((Path*)pathnode)->rows / planner_segment_count(NULL),
 					 subpath->startup_cost,
 					 subpath->total_cost,
-					 rel->rows,
+					 rel->rows / numsegments,
 					 0, /* input_width */
 					 0, /* hash_batches */
 					 0, /* hashentry_width */

@@ -510,18 +510,18 @@ analyze t1;
 -- Function Scan
 explain
 select count(*) from pg_backend_pid() b(a) where b.a % 100000 in (select a from t1);
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=1611.83..1611.84 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1611.76..1611.81 rows=1 width=8)
-         ->  Aggregate  (cost=1611.76..1611.77 rows=1 width=8)
-               ->  HashAggregate  (cost=1611.56..1611.72 rows=6 width=6)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=537.33..537.34 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=537.27..537.32 rows=1 width=8)
+         ->  Aggregate  (cost=537.27..537.28 rows=1 width=8)
+               ->  HashAggregate  (cost=537.20..537.25 rows=6 width=6)
                      Group Key: b.ctid
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.02..1611.52 rows=6 width=6)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.02..537.19 rows=6 width=6)
                            Hash Key: b.ctid
-                           ->  Hash Join  (cost=0.02..1611.19 rows=6 width=6)
+                           ->  Hash Join  (cost=0.02..537.08 rows=6 width=6)
                                  Hash Cond: (t1.a = (b.a % 100000))
-                                 ->  Seq Scan on t1  (cost=0.00..1111.00 rows=33334 width=4)
+                                 ->  Seq Scan on t1  (cost=0.00..370.33 rows=33333 width=4)
                                  ->  Hash  (cost=0.01..0.01 rows=1 width=10)
                                        ->  Function Scan on b  (cost=0.00..0.01 rows=1 width=10)
  Optimizer: Postgres query optimizer
@@ -540,20 +540,20 @@ select string_agg('(' || g || ')', ', ') as lots_of_values from generate_series(
 \gset
 explain
 select count(*) from ( values :lots_of_values ) as b(a) where b.a % 100000 in (select a from t1);
-                                                     QUERY PLAN                                                     
---------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=5001.06..5001.07 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=5001.00..5001.05 rows=1 width=8)
-         ->  Aggregate  (cost=5001.00..5001.01 rows=1 width=8)
-               ->  HashAggregate  (cost=4588.50..4918.50 rows=11000 width=6)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=2437.06..2437.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=2437.00..2437.05 rows=1 width=8)
+         ->  Aggregate  (cost=2437.00..2437.01 rows=1 width=8)
+               ->  HashAggregate  (cost=2299.50..2409.50 rows=11000 width=6)
                      Group Key: "*VALUES*".ctid
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=2361.00..4506.00 rows=11000 width=6)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=787.00..2272.00 rows=11000 width=6)
                            Hash Key: "*VALUES*".ctid
-                           ->  Hash Join  (cost=2361.00..3846.00 rows=11000 width=6)
+                           ->  Hash Join  (cost=787.00..2052.00 rows=11000 width=6)
                                  Hash Cond: (("*VALUES*".column1 % 100000) = t1.a)
-                                 ->  Values Scan on "*VALUES*"  (cost=0.00..825.00 rows=22000 width=10)
-                                 ->  Hash  (cost=1111.00..1111.00 rows=33334 width=4)
-                                       ->  Seq Scan on t1  (cost=0.00..1111.00 rows=33334 width=4)
+                                 ->  Values Scan on "*VALUES*"  (cost=0.00..825.00 rows=66000 width=10)
+                                 ->  Hash  (cost=370.33..370.33 rows=33333 width=4)
+                                       ->  Seq Scan on t1  (cost=0.00..370.33 rows=33333 width=4)
  Optimizer: Postgres query optimizer
 (13 rows)
 

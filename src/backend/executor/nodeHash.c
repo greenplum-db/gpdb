@@ -459,12 +459,6 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 	int			nbuckets;
 	int			i;
 
-	/* num tuples is a global number. We should be receiving only part of that */
-	if (Gp_role == GP_ROLE_EXECUTE)
-	{
-		ntuples = ntuples / getgpsegmentCount();
-	}
-
 	/* Force a plausible relation size if no info */
 	if (ntuples <= 0.0)
 		ntuples = 1000.0;

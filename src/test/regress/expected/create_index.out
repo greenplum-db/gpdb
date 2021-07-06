@@ -2959,16 +2959,12 @@ SELECT * FROM tenk1
 -----------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Heap Scan on tenk1
-         Recheck Cond: (((thousand = 42) AND (tenthous = 1)) OR ((thousand = 42) AND (tenthous = 3)) OR ((thousand = 42) AND (tenthous = 42)))
-         ->  BitmapOr
-               ->  Bitmap Index Scan on tenk1_thous_tenthous
-                     Index Cond: ((thousand = 42) AND (tenthous = 1))
-               ->  Bitmap Index Scan on tenk1_thous_tenthous
-                     Index Cond: ((thousand = 42) AND (tenthous = 3))
-               ->  Bitmap Index Scan on tenk1_thous_tenthous
-                     Index Cond: ((thousand = 42) AND (tenthous = 42))
+         Recheck Cond: (thousand = 42)
+         Filter: ((tenthous = 1) OR (tenthous = 3) OR (tenthous = 42))
+         ->  Bitmap Index Scan on tenk1_thous_tenthous
+               Index Cond: (thousand = 42)
  Optimizer: Postgres query optimizer
-(11 rows)
+(7 rows)
 
 SELECT * FROM tenk1
   WHERE thousand = 42 AND (tenthous = 1 OR tenthous = 3 OR tenthous = 42);
@@ -3124,8 +3120,8 @@ explain (costs off)
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using tenk1_thous_tenthous on tenk1
-         Index Cond: ((thousand = 1) AND (tenthous = 1001))
+   ->  Seq Scan on tenk1
+         Filter: ((thousand = 1) AND (tenthous = 1001))
  Optimizer: Postgres query optimizer
 (4 rows)
 

@@ -3070,27 +3070,27 @@ ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = r
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice5; segments: 3)
-   ->  Hash Left Join
-         Hash Cond: (member_subgroup.subgroup_name = (region.county_name)::text)
-         Join Filter: (member_group."group_id" = ANY ('{12,13,14,15}'::integer[]))
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)
-               Hash Key: member_subgroup.subgroup_name
-               ->  Hash Join
-                     Hash Cond: (member."group_id" = member_group."group_id")
-                     ->  Seq Scan on member
-                     ->  Hash
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                 ->  Hash Join
-                                       Hash Cond: (member_group."group_id" = member_subgroup."group_id")
-                                       ->  Seq Scan on member_group
-                                       ->  Hash
-                                             ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                                   Hash Key: member_subgroup."group_id"
-                                                   ->  Seq Scan on member_subgroup
+   ->  Hash Join
+         Hash Cond: (member."group_id" = member_group."group_id")
+         ->  Seq Scan on member
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                     Hash Key: region.county_name
-                     ->  Seq Scan on region
+               ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                     ->  Hash Right Join
+                           Hash Cond: ((region.county_name)::text = member_subgroup.subgroup_name)
+                           Join Filter: (member_group."group_id" = ANY ('{12,13,14,15}'::integer[]))
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: region.county_name
+                                 ->  Seq Scan on region
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Hash Key: member_subgroup.subgroup_name
+                                       ->  Hash Join
+                                             Hash Cond: (member_group."group_id" = member_subgroup."group_id")
+                                             ->  Seq Scan on member_group
+                                             ->  Hash
+                                                   ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                                         Hash Key: member_subgroup."group_id"
+                                                         ->  Seq Scan on member_subgroup
  Optimizer: Postgres query optimizer
 (23 rows)
 
@@ -3148,11 +3148,10 @@ explain select * from nlj1, nlj2 where nlj1.a = nlj2.a;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.10 rows=4 width=16)
    ->  Nested Loop  (cost=0.00..4.10 rows=2 width=16)
          Join Filter: (nlj1.a = nlj2.a)
-         ->  Seq Scan on nlj1  (cost=0.00..2.02 rows=1 width=8)
-         ->  Materialize  (cost=0.00..2.03 rows=1 width=8)
-               ->  Seq Scan on nlj2  (cost=0.00..2.02 rows=1 width=8)
+         ->  Seq Scan on nlj1  (cost=0.00..1.01 rows=1 width=8)
+         ->  Seq Scan on nlj2  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
-(7 rows)
+(6 rows)
 
 select * from nlj1, nlj2 where nlj1.a = nlj2.a;
  a | b | a | b 
@@ -3181,15 +3180,15 @@ select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
 (2 rows)
 
 explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..4.16 rows=4 width=12)
-   ->  Nested Loop  (cost=0.00..4.16 rows=2 width=12)
-         ->  Seq Scan on nlj2  (cost=0.00..2.02 rows=1 width=4)
-         ->  Materialize  (cost=0.00..2.08 rows=1 width=8)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.06 rows=1 width=8)
-                     ->  Seq Scan on nlj1  (cost=0.00..2.02 rows=1 width=8)
-                           Filter: (NOT (a IS DISTINCT FROM NULL::integer))
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.10 rows=1 width=12)
+   ->  Nested Loop  (cost=0.00..2.10 rows=1 width=12)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
+               ->  Seq Scan on nlj2  (cost=0.00..1.01 rows=1 width=4)
+         ->  Materialize  (cost=0.00..1.02 rows=1 width=8)
+               ->  Seq Scan on nlj1  (cost=0.00..1.01 rows=1 width=8)
+                     Filter: (NOT (a IS DISTINCT FROM NULL::integer))
  Optimizer: Postgres query optimizer
 (8 rows)
 
@@ -3287,22 +3286,20 @@ set enable_nestloop=on;
 -- Motion node from rescanning! That Materialize node is rescanned, when the
 -- executor parameter 'b.i' changes.
 explain (costs off) select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
    ->  Nested Loop
-         ->  Broadcast Motion 3:3  (slice1; segments: 3)
-               ->  Seq Scan on b
+         Join Filter: ((a.i + b.i) = c.j)
+         ->  Seq Scan on c
          ->  Materialize
-               ->  Nested Loop
-                     Join Filter: (b.i = a.i)
-                     ->  Materialize
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                 ->  Seq Scan on a
-                     ->  Index Only Scan using c_i_j_idx on c
-                           Index Cond: (j = (a.i + b.i))
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Nested Loop
+                           Join Filter: (a.i = b.i)
+                           ->  Seq Scan on a
+                           ->  Seq Scan on b
  Optimizer: Postgres query optimizer
-(14 rows)
+(11 rows)
 
 select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
  i | i | i | j 
@@ -3321,18 +3318,18 @@ alter table b add column mt_col mytype_prefetch_params;
 explain select a.*, b.i, c.* from a, b, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j;
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.19..765906.72 rows=24 width=16)
-   ->  Nested Loop  (cost=0.19..765906.26 rows=8 width=16)
-         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=1 width=36)
-               ->  Seq Scan on b  (cost=0.00..1.01 rows=1 width=36)
-         ->  Materialize  (cost=0.19..255301.72 rows=2 width=12)
-               ->  Nested Loop  (cost=0.19..255301.70 rows=2 width=12)
-                     Join Filter: (((b.mt_col).x > a.i) OR (b.i = a.i))
-                     ->  Materialize  (cost=0.00..1.06 rows=1 width=4)
-                           ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.05 rows=1 width=4)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..227115.64 rows=8 width=16)
+   ->  Nested Loop  (cost=0.00..227115.64 rows=8 width=16)
+         Join Filter: ((a.i + b.i) = c.j)
+         ->  Seq Scan on c  (cost=0.00..33334.33 rows=3333333 width=8)
+         ->  Materialize  (cost=0.00..2.17 rows=3 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.16 rows=3 width=8)
+                     ->  Nested Loop  (cost=0.00..2.11 rows=1 width=8)
+                           Join Filter: (((b.mt_col).x > a.i) OR (b.i = a.i))
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
                                  ->  Seq Scan on a  (cost=0.00..1.01 rows=1 width=4)
-                     ->  Index Only Scan using c_i_j_idx on c  (cost=0.19..85100.20 rows=1 width=8)
-                           Index Cond: (j = (a.i + b.i))
+                           ->  Materialize  (cost=0.00..1.01 rows=1 width=36)
+                                 ->  Seq Scan on b  (cost=0.00..1.01 rows=1 width=36)
  Optimizer: Postgres query optimizer
 (13 rows)
 
@@ -3408,17 +3405,17 @@ EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0';
 -- datatype is compatible with the distribution key, the other's is not. We can
 -- redistribute based on the compatible constant.
 EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0' AND b = float4 '3.0';
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.21..5.49 rows=5 width=8)
-   ->  Hash Join  (cost=2.21..5.39 rows=2 width=8)
-         Hash Cond: (gp_float1.a = gp_float2.c)
-         ->  Seq Scan on gp_float1  (cost=0.00..3.11 rows=2 width=8)
-               Filter: (b = '3'::double precision)
-         ->  Hash  (cost=2.15..2.15 rows=2 width=4)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=2 width=4)
-                     Hash Key: gp_float2.c, '3'::real
-                     ->  Seq Scan on gp_float2  (cost=0.00..2.05 rows=2 width=4)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.06..2.13 rows=2 width=8)
+   ->  Hash Join  (cost=1.06..2.13 rows=2 width=8)
+         Hash Cond: (gp_float2.c = gp_float1.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=2 width=4)
+               Hash Key: gp_float2.c, 3::real
+               ->  Seq Scan on gp_float2  (cost=0.00..1.02 rows=2 width=4)
+         ->  Hash  (cost=1.04..1.04 rows=2 width=8)
+               ->  Seq Scan on gp_float1  (cost=0.00..1.04 rows=2 width=8)
+                     Filter: (b = 3::double precision)
  Optimizer: Postgres query optimizer
 (10 rows)
 

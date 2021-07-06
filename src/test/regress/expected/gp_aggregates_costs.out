@@ -19,16 +19,18 @@ explain select avg(b) from cost_agg_t1 group by c;
 (9 rows)
 
 explain select avg(b) from cost_agg_t2 group by c;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=36345.00..40165.46 rows=305637 width=36)
-   ->  HashAggregate  (cost=36345.00..40165.46 rows=101879 width=36)
-         Group Key: c
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..31345.00 rows=333334 width=8)
-               Hash Key: c
-               ->  Seq Scan on cost_agg_t2  (cost=0.00..11345.00 rows=333334 width=8)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=15923.03..17153.60 rows=98445 width=36)
+   ->  HashAggregate  (cost=15923.03..17153.60 rows=98445 width=36)
+         Group Key: cost_agg_t2.c
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=5449.00..12615.44 rows=220506 width=36)
+               Hash Key: cost_agg_t2.c
+               ->  HashAggregate  (cost=5449.00..8205.32 rows=220506 width=36)
+                     Group Key: cost_agg_t2.c
+                     ->  Seq Scan on cost_agg_t2  (cost=0.00..3782.33 rows=333333 width=8)
  Optimizer: Postgres query optimizer
-(7 rows)
+(9 rows)
 
 insert into cost_agg_t2 select i, random() * 99999,1 from generate_series(1, 200000) i;
 analyze cost_agg_t2;

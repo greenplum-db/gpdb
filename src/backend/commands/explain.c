@@ -1204,55 +1204,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	char       *skip_outer_msg = NULL;
 	int			motion_recv;
 	int			motion_snd;
-	float		scaleFactor = 1.0; /* we will divide planner estimates by this factor to produce
-									  per-segment estimates */
 	Slice		*parentSlice = NULL;
 
 	/* Remember who called us. */
 	parentplanstate = es->parentPlanState;
 	es->parentPlanState = planstate;
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		/*
-		 * Estimates will have to be scaled down to be per-segment (except in a
-		 * few cases).
-		 */
-		if ((plan->directDispatch).isDirectDispatch)
-		{
-			scaleFactor = 1.0;
-		}
-		else if (plan->flow != NULL && CdbPathLocus_IsBottleneck(*(plan->flow)))
-		{
-			/*
-			 * Data is unified in one place (singleQE or QD), or executed on a
-			 * single segment.  We scale up estimates to make it global.  We
-			 * will later amend this for Motion nodes.
-			 */
-			scaleFactor = 1.0;
-		}
-		else if (plan->flow != NULL && CdbPathLocus_IsSegmentGeneral(*(plan->flow)))
-		{
-			/* Replicated table has full data on every segment */
-			scaleFactor = 1.0;
-		}
-		else if (plan->flow != NULL && es->pstmt->planGen == PLANGEN_PLANNER)
-		{
-			/*
-			 * The plan node is executed on multiple nodes, so scale down the
-			 * number of rows seen by each segment
-			 */
-			scaleFactor = CdbPathLocus_NumSegments(*(plan->flow));
-		}
-		else
-		{
-			/*
-			 * The plan node is executed on multiple nodes, so scale down the
-			 * number of rows seen by each segment
-			 */
-			scaleFactor = getgpsegmentCount();
-		}
-	}
 
 	/*
 	 * If this is a Motion node, we're descending into a new slice.
@@ -1465,9 +1421,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				motion_snd = es->currentSlice->gangSize;
 				motion_recv = (parentSlice == NULL ? 1 : parentSlice->gangSize);
 
-				/* scale the number of rows by the number of segments sending data */
-				scaleFactor = motion_snd;
-
 				switch (pMotion->motionType)
 				{
 					case MOTIONTYPE_HASH:
@@ -1481,13 +1434,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						else if (plan->lefttree->flow->locustype == CdbLocusType_Replicated)
 						{
 							sname = "Explicit Gather Motion";
-							scaleFactor = 1;
 							motion_recv = 1;
 						}
 						else
 						{
 							sname = "Gather Motion";
-							scaleFactor = 1;
 							motion_recv = 1;
 						}
 						break;
@@ -1827,15 +1778,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 	}
 
-	Assert(scaleFactor > 0.0);
-
 	if (es->costs)
 	{
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			appendStringInfo(es->str, "  (cost=%.2f..%.2f rows=%.0f width=%d)",
 							 plan->startup_cost, plan->total_cost,
-							 ceil(plan->plan_rows / scaleFactor), plan->plan_width);
+							 plan->plan_rows , plan->plan_width);
 		}
 		else
 		{

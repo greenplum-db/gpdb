@@ -951,16 +951,16 @@ select * from (
   select a from generate_series(1, 10)a
 ) t_subquery_general
 join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=65.00..27369.76 rows=192600 width=8)
-   ->  Hash Join  (cost=65.00..27369.76 rows=64200 width=8)
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=65.00..9167.25 rows=64200 width=8)
+   ->  Hash Join  (cost=65.00..9167.25 rows=64200 width=8)
          Hash Cond: (t_randomly_dist_table.c = a.a)
-         ->  Seq Scan on t_randomly_dist_table  (cost=0.00..1063.00 rows=32100 width=4)
-         ->  Hash  (cost=40.00..40.00 rows=667 width=4)
-               ->  Append  (cost=0.00..20.00 rows=667 width=4)
-                     ->  Function Scan on generate_series a  (cost=0.00..10.00 rows=334 width=4)
-                     ->  Function Scan on generate_series a_1  (cost=0.00..10.00 rows=334 width=4)
+         ->  Seq Scan on t_randomly_dist_table  (cost=0.00..355.00 rows=32100 width=4)
+         ->  Hash  (cost=40.00..40.00 rows=2000 width=4)
+               ->  Append  (cost=0.00..20.00 rows=2000 width=4)
+                     ->  Function Scan on generate_series a  (cost=0.00..10.00 rows=1000 width=4)
+                     ->  Function Scan on generate_series a_1  (cost=0.00..10.00 rows=1000 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 

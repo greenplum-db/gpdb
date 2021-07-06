@@ -348,9 +348,10 @@ select gp_inject_fault('workfile_write_failure', 'error', 2);
  Success:
 (1 row)
 
+-- start_ignore
 -- expect to see leak if we hit error
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
-ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice1 127.0.0.1:25432 pid=27014)
+-- end_ignore
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 

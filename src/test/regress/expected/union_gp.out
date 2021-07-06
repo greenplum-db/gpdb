@@ -236,22 +236,20 @@ union
 explain (SELECT 'test1' as branch, id FROM test1 LIMIT 1)
 union
 (SELECT 'test2' as branch, id FROM test2);
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Unique  (cost=1.06..1.07 rows=2 width=4)
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ HashAggregate  (cost=1.06..1.08 rows=2 width=36)
    Group Key: "outer".branch, "*SELECT* 1".id
-   ->  Sort  (cost=1.06..1.06 rows=2 width=4)
-         Sort Key (Distinct): "outer".branch, "*SELECT* 1".id
-         ->  Append  (cost=0.00..1.05 rows=2 width=4)
-               ->  Gather Motion 1:1  (slice2; segments: 1)  (cost=0.00..1.04 rows=1 width=4)
-                     ->  Subquery Scan on "*SELECT* 1"  (cost=0.00..1.04 rows=1 width=4)
-                           ->  Limit  (cost=0.00..1.03 rows=1 width=4)
-                                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                                       ->  Limit  (cost=0.00..1.01 rows=1 width=4)
-                                             ->  Seq Scan on test1  (cost=0.00..1.01 rows=1 width=4)
-               ->  External Scan on test2  (cost=0.00..0.00 rows=1 width=4)
+   ->  Append  (cost=0.00..1.05 rows=2 width=4)
+         ->  Gather Motion 1:1  (slice2; segments: 1)  (cost=0.00..1.04 rows=1 width=4)
+               ->  Subquery Scan on "*SELECT* 1"  (cost=0.00..1.04 rows=1 width=4)
+                     ->  Limit  (cost=0.00..1.03 rows=1 width=4)
+                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                 ->  Limit  (cost=0.00..1.01 rows=1 width=4)
+                                       ->  Seq Scan on test1  (cost=0.00..1.01 rows=1 width=4)
+         ->  External Scan on test2  (cost=0.00..0.00 rows=1 width=4)
  Optimizer: Postgres query optimizer
-(13 rows)
+(11 rows)
 
 --
 -- Test pulling up distribution key expression, when the different branches

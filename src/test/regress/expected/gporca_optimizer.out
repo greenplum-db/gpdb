@@ -11914,16 +11914,16 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                    QUERY PLAN                                                    
 -----------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=8.50..8.51 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=8.44..8.49 rows=1 width=8)
-         ->  Aggregate  (cost=8.44..8.45 rows=1 width=8)
-               ->  Hash Join  (cost=4.12..8.31 rows=17 width=0)
-                     Hash Cond: (n.a = x.a)
-                     ->  Seq Scan on noexp_hash n  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=3.50..3.50 rows=17 width=4)
-                           ->  Redistribute Motion 2:3  (slice1; segments: 2)  (cost=0.00..3.50 rows=25 width=4)
-                                 Hash Key: x.a
-                                 ->  Seq Scan on gpexp_hash x  (cost=0.00..2.50 rows=25 width=4)
+ Aggregate  (cost=3.42..3.43 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=3.36..3.40 rows=1 width=8)
+         ->  Aggregate  (cost=3.36..3.37 rows=1 width=8)
+               ->  Hash Join  (cost=1.71..3.30 rows=25 width=0)
+                     Hash Cond: (x.a = n.a)
+                     ->  Seq Scan on gpexp_hash x  (cost=0.00..1.25 rows=25 width=4)
+                     ->  Hash  (cost=1.50..1.50 rows=17 width=4)
+                           ->  Redistribute Motion 3:2  (slice1; segments: 3)  (cost=0.00..1.50 rows=17 width=4)
+                                 Hash Key: n.a
+                                 ->  Seq Scan on noexp_hash n  (cost=0.00..1.17 rows=17 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -12027,14 +12027,14 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Unknown error: Partially Distributed Data
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Aggregate  (cost=5.49..5.50 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=5.44..5.48 rows=1 width=8)
-         ->  Aggregate  (cost=5.44..5.45 rows=1 width=8)
-               ->  Hash Join  (cost=2.12..5.31 rows=25 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on gpexp_hash h  (cost=0.00..2.50 rows=25 width=4)
-                     ->  Hash  (cost=1.50..1.50 rows=17 width=4)
-                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+ Aggregate  (cost=3.61..3.62 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3.56..3.60 rows=1 width=8)
+         ->  Aggregate  (cost=3.56..3.57 rows=1 width=8)
+               ->  Hash Join  (cost=1.56..3.50 rows=25 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.25..1.25 rows=25 width=4)
+                           ->  Seq Scan on gpexp_hash h  (cost=0.00..1.25 rows=25 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -12049,18 +12049,18 @@ DETAIL:  Unknown error: Partially Distributed Data
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Unknown error: Partially Distributed Data
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=7.50..7.51 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=7.44..7.49 rows=1 width=8)
-         ->  Aggregate  (cost=7.44..7.45 rows=1 width=8)
-               ->  Hash Join  (cost=3.12..7.31 rows=17 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on noexp_hash h  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=2.50..2.50 rows=17 width=4)
-                           ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2.50 rows=50 width=4)
-                                 Hash Key: r.a
-                                 ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=4.33..4.34 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=4.27..4.32 rows=1 width=8)
+         ->  Aggregate  (cost=4.27..4.28 rows=1 width=8)
+               ->  Hash Join  (cost=1.38..4.23 rows=17 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2.50 rows=50 width=4)
+                           Hash Key: r.a
+                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.17..1.17 rows=17 width=4)
+                           ->  Seq Scan on noexp_hash h  (cost=0.00..1.17 rows=17 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -12101,16 +12101,16 @@ explain select * from part1, part2 where part1.b = part2.b limit 5;
                                                                QUERY PLAN                                                                
 -----------------------------------------------------------------------------------------------------------------------------------------
  Limit  (cost=0.00..862.14 rows=5 width=16)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.14 rows=5 width=16)
-         ->  Limit  (cost=0.00..862.13 rows=2 width=16)
-               ->  Hash Join  (cost=0.00..862.13 rows=334 width=16)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.14 rows=5 width=16)
+         ->  Limit  (cost=0.00..862.13 rows=5 width=16)
+               ->  Hash Join  (cost=0.00..862.13 rows=1000 width=16)
                      Hash Cond: (part1.b = part2.b)
-                     ->  Dynamic Seq Scan on part1 (dynamic scan id: 1)  (cost=0.00..431.01 rows=334 width=8)
-                     ->  Hash  (cost=100.00..100.00 rows=34 width=4)
-                           ->  Partition Selector for part1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=100 width=8)
-                                       ->  Sequence  (cost=0.00..431.00 rows=34 width=8)
-                                             ->  Partition Selector for part2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                     ->  Dynamic Seq Scan on part1 (dynamic scan id: 1)  (cost=0.00..431.01 rows=1000 width=8)
+                     ->  Hash  (cost=100.00..100.00 rows=100 width=4)
+                           ->  Partition Selector for part1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=100 width=4)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=300 width=8)
+                                       ->  Sequence  (cost=0.00..431.00 rows=100 width=8)
+                                             ->  Partition Selector for part2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=100 width=4)
                                                    Partitions selected: 4 (out of 4)
                                              ->  Dynamic Seq Scan on part2 (dynamic scan id: 2)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
@@ -12382,8 +12382,8 @@ SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
 WHERE L1.lid = META.LOAD_ID;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-                                                        QUERY PLAN                                                        
---------------------------------------------------------------------------------------------------------------------------
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..0.00 rows=0 width=0)
    Output: c, lid
    ->  Result  (cost=0.00..431.10 rows=1 width=8)
@@ -12399,10 +12399,10 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
                            ->  Hash Join  (cost=0.00..431.08 rows=1 width=8)
                                  Output: c, lid
                                  Hash Cond: (t55.lid = pg_catalog.int4in(unknownout("outer".load_id), 23::oid, (-1)))
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=334 width=8)
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=1000 width=8)
                                        Output: c, lid
                                        Hash Key: lid
-                                       ->  Seq Scan on orca.t55  (cost=0.00..431.01 rows=334 width=8)
+                                       ->  Seq Scan on orca.t55  (cost=0.00..431.01 rows=1000 width=8)
                                              Output: c, lid
                                  ->  Hash  (cost=0.00..0.00 rows=1 width=8)
                                        Output: load_id
@@ -12738,8 +12738,8 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
          ->  Seq Scan on tcorr1  (cost=0.00..431.00 rows=1 width=8)
    SubPlan 1  (slice0)
-     ->  Result  (cost=0.00..1324032.70 rows=1 width=8)
-           ->  Nested Loop Left Join  (cost=0.00..1324032.70 rows=1 width=8)
+     ->  Result  (cost=0.00..1324032.70 rows=3 width=8)
+           ->  Nested Loop Left Join  (cost=0.00..1324032.70 rows=3 width=8)
                  Join Filter: (tcorr1_1.a = tcorr2.a)
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
@@ -12854,8 +12854,8 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
          ->  Seq Scan on tcorr1  (cost=0.00..431.00 rows=1 width=8)
    SubPlan 1  (slice0)
-     ->  Result  (cost=0.00..1324032.70 rows=1 width=8)
-           ->  Nested Loop Left Join  (cost=0.00..1324032.70 rows=1 width=8)
+     ->  Result  (cost=0.00..1324032.70 rows=3 width=8)
+           ->  Nested Loop Left Join  (cost=0.00..1324032.70 rows=3 width=8)
                  Join Filter: (tcorr1_1.a = tcorr2.a)
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
@@ -13705,37 +13705,37 @@ where first_id in (select first_id from mat_w)
 and first_id in (select first_id from mat_w);
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1680.99 rows=10 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1680.99 rows=9 width=4)
    Output: material_test2.first_id
-   ->  Sequence  (cost=0.00..1680.99 rows=4 width=4)
+   ->  Sequence  (cost=0.00..1680.99 rows=9 width=4)
          Output: material_test2.first_id
-         ->  Shared Scan (share slice:id 1:0)  (cost=0.00..387.98 rows=4 width=1)
+         ->  Shared Scan (share slice:id 1:0)  (cost=0.00..387.98 rows=9 width=1)
                Output: share0_ref1.first_id
-               ->  Materialize  (cost=0.00..387.98 rows=4 width=1)
+               ->  Materialize  (cost=0.00..387.98 rows=9 width=1)
                      Output: material_test.first_id, material_test.second_id
-                     ->  Bitmap Heap Scan on orca.material_test  (cost=0.00..387.98 rows=4 width=4)
+                     ->  Bitmap Heap Scan on orca.material_test  (cost=0.00..387.98 rows=9 width=4)
                            Output: material_test.first_id, material_test.second_id
                            Recheck Cond: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
                            ->  Bitmap Index Scan on material_test_idx  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
-         ->  Hash Semi Join  (cost=0.00..1293.01 rows=4 width=4)
+         ->  Hash Semi Join  (cost=0.00..1293.01 rows=9 width=4)
                Output: material_test2.first_id
                Hash Cond: (material_test2.first_id = share0_ref2.first_id)
-               ->  Hash Semi Join  (cost=0.00..862.01 rows=4 width=4)
+               ->  Hash Semi Join  (cost=0.00..862.01 rows=9 width=4)
                      Output: material_test2.first_id
                      Hash Cond: (material_test2.first_id = share0_ref3.first_id)
-                     ->  Seq Scan on orca.material_test2  (cost=0.00..431.00 rows=37 width=4)
+                     ->  Seq Scan on orca.material_test2  (cost=0.00..431.00 rows=110 width=4)
                            Output: material_test2.first_id
-                     ->  Hash  (cost=431.00..431.00 rows=4 width=4)
+                     ->  Hash  (cost=431.00..431.00 rows=9 width=4)
                            Output: share0_ref3.first_id
-                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=4 width=4)
+                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=9 width=4)
                                  Output: share0_ref3.first_id
-               ->  Hash  (cost=431.00..431.00 rows=4 width=4)
+               ->  Hash  (cost=431.00..431.00 rows=9 width=4)
                      Output: share0_ref2.first_id
-                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=4 width=4)
+                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=9 width=4)
                            Output: share0_ref2.first_id
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: enable_seqscan=on, optimizer=on
+ Settings: optimizer=on
 (31 rows)
 
 with mat_w as (

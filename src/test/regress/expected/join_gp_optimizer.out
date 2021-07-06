@@ -963,16 +963,16 @@ select * from (
   select a from generate_series(1, 10)a
 ) t_subquery_general
 join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.15 rows=1 width=8)
    ->  Hash Join  (cost=0.00..431.15 rows=1 width=8)
          Hash Cond: (generate_series.generate_series = t_randomly_dist_table.c)
-         ->  Append  (cost=0.00..0.03 rows=667 width=4)
-               ->  Result  (cost=0.00..0.01 rows=334 width=4)
-                     ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
-               ->  Result  (cost=0.00..0.01 rows=334 width=4)
-                     ->  Function Scan on generate_series generate_series_1  (cost=0.00..0.00 rows=334 width=4)
+         ->  Append  (cost=0.00..0.03 rows=2000 width=4)
+               ->  Result  (cost=0.00..0.01 rows=1000 width=4)
+                     ->  Function Scan on generate_series  (cost=0.00..0.00 rows=1000 width=4)
+               ->  Result  (cost=0.00..0.01 rows=1000 width=4)
+                     ->  Function Scan on generate_series generate_series_1  (cost=0.00..0.00 rows=1000 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                      Hash Key: t_randomly_dist_table.c

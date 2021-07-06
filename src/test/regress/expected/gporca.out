@@ -3485,13 +3485,13 @@ select * from orca.r left outer join orca.s on (r.a=s.c and r.b<s.d) where s.d i
 explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
                                             QUERY PLAN                                            
 --------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000030.55 rows=31 width=16)
-   ->  Nested Loop  (cost=10000000000.00..10000000030.55 rows=11 width=16)
-         Join Filter: NOT r.a IS DISTINCT FROM s.c
-         ->  Seq Scan on s  (cost=0.00..2.30 rows=10 width=8)
-         ->  Materialize  (cost=0.00..4.30 rows=20 width=8)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.00 rows=20 width=8)
-                     ->  Seq Scan on r  (cost=0.00..3.20 rows=7 width=8)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000005.46 rows=10 width=16)
+   ->  Nested Loop  (cost=10000000000.00..10000000005.46 rows=10 width=16)
+         Join Filter: (NOT (r.a IS DISTINCT FROM s.c))
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.33 rows=20 width=8)
+               ->  Seq Scan on r  (cost=0.00..1.07 rows=7 width=8)
+         ->  Materialize  (cost=0.00..1.15 rows=10 width=8)
+               ->  Seq Scan on s  (cost=0.00..1.10 rows=10 width=8)
  Optimizer: Postgres query optimizer
 (8 rows)
 
@@ -11786,16 +11786,16 @@ from noexp_hash, gpexp_hash;
 explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
                                                    QUERY PLAN                                                    
 -----------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=8.50..8.51 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=8.44..8.49 rows=1 width=8)
-         ->  Aggregate  (cost=8.44..8.45 rows=1 width=8)
-               ->  Hash Join  (cost=4.12..8.31 rows=17 width=0)
-                     Hash Cond: (n.a = x.a)
-                     ->  Seq Scan on noexp_hash n  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=3.50..3.50 rows=17 width=4)
-                           ->  Redistribute Motion 2:3  (slice1; segments: 2)  (cost=0.00..3.50 rows=25 width=4)
-                                 Hash Key: x.a
-                                 ->  Seq Scan on gpexp_hash x  (cost=0.00..2.50 rows=25 width=4)
+ Aggregate  (cost=3.42..3.43 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=3.36..3.40 rows=1 width=8)
+         ->  Aggregate  (cost=3.36..3.37 rows=1 width=8)
+               ->  Hash Join  (cost=1.71..3.30 rows=25 width=0)
+                     Hash Cond: (x.a = n.a)
+                     ->  Seq Scan on gpexp_hash x  (cost=0.00..1.25 rows=25 width=4)
+                     ->  Hash  (cost=1.50..1.50 rows=17 width=4)
+                           ->  Redistribute Motion 3:2  (slice1; segments: 3)  (cost=0.00..1.50 rows=17 width=4)
+                                 Hash Key: n.a
+                                 ->  Seq Scan on noexp_hash n  (cost=0.00..1.17 rows=17 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -11875,14 +11875,14 @@ insert into gpexp_repl values (20, 20);
 explain select count(*) from gpexp_hash h join gpexp_repl r on h.a=r.a;
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Aggregate  (cost=5.49..5.50 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=5.44..5.48 rows=1 width=8)
-         ->  Aggregate  (cost=5.44..5.45 rows=1 width=8)
-               ->  Hash Join  (cost=2.12..5.31 rows=25 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on gpexp_hash h  (cost=0.00..2.50 rows=25 width=4)
-                     ->  Hash  (cost=1.50..1.50 rows=17 width=4)
-                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+ Aggregate  (cost=3.61..3.62 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3.56..3.60 rows=1 width=8)
+         ->  Aggregate  (cost=3.56..3.57 rows=1 width=8)
+               ->  Hash Join  (cost=1.56..3.50 rows=25 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.25..1.25 rows=25 width=4)
+                           ->  Seq Scan on gpexp_hash h  (cost=0.00..1.25 rows=25 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -11893,18 +11893,18 @@ select count(*) as expect_20 from gpexp_hash h join gpexp_repl r on h.a=r.a;
 (1 row)
 
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=7.50..7.51 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=7.44..7.49 rows=1 width=8)
-         ->  Aggregate  (cost=7.44..7.45 rows=1 width=8)
-               ->  Hash Join  (cost=3.12..7.31 rows=17 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on noexp_hash h  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=2.50..2.50 rows=17 width=4)
-                           ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2.50 rows=50 width=4)
-                                 Hash Key: r.a
-                                 ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=4.33..4.34 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=4.27..4.32 rows=1 width=8)
+         ->  Aggregate  (cost=4.27..4.28 rows=1 width=8)
+               ->  Hash Join  (cost=1.38..4.23 rows=17 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2.50 rows=50 width=4)
+                           Hash Key: r.a
+                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.17..1.17 rows=17 width=4)
+                           ->  Seq Scan on noexp_hash h  (cost=0.00..1.17 rows=17 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -12010,15 +12010,15 @@ INSERT INTO atab_old_hash VALUES (-1), (0), (1);
 INSERT INTO btab_old_hash VALUES (-1), (0), (1), (2);
 -- Test simple join using the new operator(s) before creating the opclass/opfamily
 EXPLAIN SELECT a, b FROM atab_old_hash INNER JOIN btab_old_hash ON a |=| b;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=3.09..6.45 rows=6 width=8)
-   ->  Hash Join  (cost=3.09..6.45 rows=2 width=8)
-         Hash Cond: (atab_old_hash.a |=| btab_old_hash.b)
-         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
-               ->  Seq Scan on atab_old_hash  (cost=0.00..2.03 rows=1 width=4)
-         ->  Hash  (cost=3.04..3.04 rows=2 width=4)
-               ->  Seq Scan on btab_old_hash  (cost=0.00..3.04 rows=2 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.09..2.29 rows=2 width=8)
+   ->  Hash Join  (cost=1.09..2.29 rows=2 width=8)
+         Hash Cond: (btab_old_hash.b |=| atab_old_hash.a)
+         ->  Seq Scan on btab_old_hash  (cost=0.00..1.01 rows=1 width=4)
+         ->  Hash  (cost=1.05..1.05 rows=3 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
+                     ->  Seq Scan on atab_old_hash  (cost=0.00..1.01 rows=1 width=4)
  Optimizer: Postgres query optimizer
 (8 rows)
 
@@ -12155,16 +12155,16 @@ EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b
          Hash Cond: (foo2.b = foo3.b)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=2.04..4.16 rows=2 width=4)
                Hash Key: foo2.b
-               ->  Hash Join  (cost=2.04..4.10 rows=2 width=4)
-                     Hash Cond: (foo1.a = foo2.a)
-                     ->  Seq Scan on foo1  (cost=0.00..2.02 rows=1 width=4)
-                     ->  Hash  (cost=2.02..2.02 rows=1 width=8)
-                           ->  Seq Scan on foo2  (cost=0.00..2.02 rows=1 width=8)
-                                 Filter: (c = 3)
-         ->  Hash  (cost=2.06..2.06 rows=1 width=4)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.06 rows=1 width=4)
+               ->  Hash Join  (cost=1.02..2.05 rows=1 width=4)
+                     Hash Cond: (foo2.a = foo1.a)
+                     ->  Seq Scan on foo2  (cost=0.00..1.01 rows=1 width=8)
+                           Filter: (c = 3)
+                     ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+                           ->  Seq Scan on foo1  (cost=0.00..1.01 rows=1 width=4)
+         ->  Hash  (cost=1.03..1.03 rows=1 width=4)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
                      Hash Key: foo3.b
-                     ->  Seq Scan on foo3  (cost=0.00..2.02 rows=1 width=4)
+                     ->  Seq Scan on foo3  (cost=0.00..1.01 rows=1 width=4)
  Optimizer: Postgres query optimizer
 (16 rows)
 
@@ -12202,13 +12202,13 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
- HashAggregate  (cost=19.43..19.52 rows=3 width=8)
+ HashAggregate  (cost=6.50..6.59 rows=9 width=8)
    Output: l1.c, l1.lid
    Group Key: l1.c, l1.lid
-   ->  Hash Join  (cost=0.03..19.38 rows=4 width=8)
+   ->  Hash Join  (cost=0.03..6.48 rows=3 width=8)
          Output: l1.c, l1.lid
          Hash Cond: (l1.lid = (meta.load_id)::integer)
-         ->  Seq Scan on orca.t55 l1  (cost=0.00..13.00 rows=334 width=8)
+         ->  Seq Scan on orca.t55 l1  (cost=0.00..4.33 rows=333 width=8)
                Output: l1.c, l1.lid
          ->  Hash  (cost=0.02..0.02 rows=1 width=32)
                Output: meta.load_id
@@ -12488,18 +12488,18 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
                                                          QUERY PLAN                                                         
 ----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=10000000003.32..10000000003.35 rows=4 width=18)
-   ->  HashAggregate  (cost=10000000003.32..10000000003.35 rows=2 width=18)
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=10000000003.20..10000000003.21 rows=1 width=18)
+   ->  HashAggregate  (cost=10000000003.20..10000000003.21 rows=1 width=18)
          Group Key: "out".ctid, "out".gp_segment_id
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=10000000001.02..10000000003.30 rows=2 width=18)
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=10000000001.02..10000000003.20 rows=1 width=18)
                Hash Key: "out".ctid
-               ->  Nested Loop  (cost=10000000001.02..10000000003.23 rows=2 width=18)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=18)
+               ->  Nested Loop  (cost=10000000001.02..10000000003.17 rows=1 width=18)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=18)
                            ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=18)
-                     ->  Materialize  (cost=1.02..2.14 rows=1 width=4)
-                           ->  Subquery Scan on "ANY_subquery"  (cost=1.02..2.13 rows=1 width=4)
+                     ->  Materialize  (cost=1.02..2.09 rows=1 width=4)
+                           ->  Subquery Scan on "ANY_subquery"  (cost=1.02..2.08 rows=1 width=4)
                                  Filter: ("out".b = "ANY_subquery"."coalesce")
-                                 ->  Hash Right Join  (cost=1.02..2.09 rows=2 width=4)
+                                 ->  Hash Right Join  (cost=1.02..2.07 rows=1 width=4)
                                        Hash Cond: ((tcorr2.a + "out".a) = tcorr1.a)
                                        ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
                                              Hash Key: (tcorr2.a + "out".a)
@@ -12579,18 +12579,18 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
                                                          QUERY PLAN                                                         
 ----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=10000000003.32..10000000003.35 rows=4 width=18)
-   ->  HashAggregate  (cost=10000000003.32..10000000003.35 rows=2 width=18)
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=10000000003.20..10000000003.21 rows=1 width=18)
+   ->  HashAggregate  (cost=10000000003.20..10000000003.21 rows=1 width=18)
          Group Key: "out".ctid, "out".gp_segment_id
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=10000000001.02..10000000003.30 rows=2 width=18)
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=10000000001.02..10000000003.20 rows=1 width=18)
                Hash Key: "out".ctid
-               ->  Nested Loop  (cost=10000000001.02..10000000003.23 rows=2 width=18)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=18)
+               ->  Nested Loop  (cost=10000000001.02..10000000003.17 rows=1 width=18)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=18)
                            ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=18)
-                     ->  Materialize  (cost=1.02..2.14 rows=1 width=4)
-                           ->  Subquery Scan on "ANY_subquery"  (cost=1.02..2.13 rows=1 width=4)
+                     ->  Materialize  (cost=1.02..2.09 rows=1 width=4)
+                           ->  Subquery Scan on "ANY_subquery"  (cost=1.02..2.08 rows=1 width=4)
                                  Filter: ("out".b = "ANY_subquery"."coalesce")
-                                 ->  Hash Right Join  (cost=1.02..2.09 rows=2 width=4)
+                                 ->  Hash Right Join  (cost=1.02..2.07 rows=1 width=4)
                                        Hash Cond: ((tcorr2.a + "out".a) = tcorr1.a)
                                        ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
                                              Hash Key: (tcorr2.a + "out".a)
@@ -12789,15 +12789,13 @@ select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tbtree.a = foo.a)
-         ->  Bitmap Heap Scan on tbtree
-               Recheck Cond: (a < 5000)
-               ->  Bitmap Index Scan on tbtreexa
-                     Index Cond: (a < 5000)
+         ->  Seq Scan on tbtree
+               Filter: (a < 5000)
          ->  Hash
                ->  Seq Scan on foo
                      Filter: (a < 5000)
  Optimizer: Postgres query optimizer
-(11 rows)
+(9 rows)
 
 select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
   a   |  b   |  c   |  a   |  b   |  c   
@@ -12970,14 +12968,12 @@ select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a
          ->  HashAggregate
                Group Key: tbtree.a
                Filter: (count(*) < 2)
-               ->  Bitmap Heap Scan on tbtree
-                     Recheck Cond: (a < 5000)
-                     ->  Bitmap Index Scan on tbtreexa
-                           Index Cond: (a < 5000)
+               ->  Seq Scan on tbtree
+                     Filter: (a < 5000)
          ->  Hash
                ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
-(13 rows)
+(11 rows)
 
 select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
   a   |  b   |  c   |  a   | cnt 
@@ -13063,14 +13059,12 @@ select * from foo join (select a, count(*) + cnt1 as cnt2 from (select a, count(
                      Filter: (count(*) < 2)
                      ->  HashAggregate
                            Group Key: tbtree.a
-                           ->  Bitmap Heap Scan on tbtree
-                                 Recheck Cond: (a < 5000)
-                                 ->  Bitmap Index Scan on tbtreexa
-                                       Index Cond: (a < 5000)
+                           ->  Seq Scan on tbtree
+                                 Filter: (a < 5000)
          ->  Hash
                ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
-(16 rows)
+(14 rows)
 
 select * from foo join (select a, count(*) + cnt1 as cnt2 from (select a, count(*) as cnt1 from tbtree group by a) grby1
                                                                 where grby1.a < 5000 group by a, cnt1 having count(*) < 2) proj_sel_grby_sel
@@ -13129,19 +13123,17 @@ select * from foo join (select b, count(*) as cnt from tbtree group by b) grby o
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Join
-         Hash Cond: ((count((count(*)))) = foo.a)
+         Hash Cond: ((count(*)) = foo.a)
          ->  HashAggregate
                Group Key: tbtree.b
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
                      Hash Key: tbtree.b
-                     ->  HashAggregate
-                           Group Key: tbtree.b
-                           ->  Seq Scan on tbtree
+                     ->  Seq Scan on tbtree
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
-(14 rows)
+(12 rows)
 
 -- 17 group by columns don't intersect - no index scan
 explain (costs off)
@@ -13162,13 +13154,11 @@ select * from foo join (select min_a, count(*) as cnt from (select min(a) as min
                                        Group Key: tbitmap.b
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                              Hash Key: tbitmap.b
-                                             ->  HashAggregate
-                                                   Group Key: tbitmap.b
-                                                   ->  Seq Scan on tbitmap
+                                             ->  Seq Scan on tbitmap
          ->  Hash
                ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
-(20 rows)
+(18 rows)
 
 reset optimizer_join_order;
 reset optimizer_enable_hashjoin;
@@ -13447,29 +13437,29 @@ where first_id in (select first_id from mat_w)
 and first_id in (select first_id from mat_w);
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.36..5.01 rows=39 width=4)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.12..1.67 rows=13 width=4)
    Output: material_test2.first_id
-   ->  Seq Scan on orca.material_test2  (cost=0.36..5.01 rows=13 width=4)
+   ->  Seq Scan on orca.material_test2  (cost=0.12..1.67 rows=13 width=4)
          Output: material_test2.first_id
          Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2))
          SubPlan 1  (slice3; segments: 3)
-           ->  Materialize  (cost=4.69..4.94 rows=3 width=4)
+           ->  Materialize  (cost=1.56..1.78 rows=3 width=4)
                  Output: share0_ref1.first_id
-                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=4.69..4.90 rows=3 width=4)
+                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=1.56..1.77 rows=3 width=4)
                        Output: share0_ref1.first_id
-                       ->  Shared Scan (share slice:id 1:0)  (cost=4.69..4.90 rows=3 width=4)
+                       ->  Shared Scan (share slice:id 1:0)  (cost=1.56..1.77 rows=3 width=4)
                              Output: share0_ref1.first_id
-                             ->  Materialize  (cost=0.00..4.69 rows=3 width=4)
+                             ->  Materialize  (cost=0.00..1.56 rows=3 width=4)
                                    Output: material_test.first_id
-                                   ->  Seq Scan on orca.material_test  (cost=0.00..4.65 rows=3 width=4)
+                                   ->  Seq Scan on orca.material_test  (cost=0.00..1.55 rows=3 width=4)
                                          Output: material_test.first_id
                                          Filter: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
          SubPlan 2  (slice3; segments: 3)
-           ->  Materialize  (cost=4.69..4.94 rows=3 width=4)
+           ->  Materialize  (cost=1.56..1.78 rows=3 width=4)
                  Output: share0_ref2.first_id
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=4.69..4.90 rows=3 width=4)
+                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.56..1.77 rows=3 width=4)
                        Output: share0_ref2.first_id
-                       ->  Shared Scan (share slice:id 2:0)  (cost=4.69..4.90 rows=3 width=4)
+                       ->  Shared Scan (share slice:id 2:0)  (cost=1.56..1.77 rows=3 width=4)
                              Output: share0_ref2.first_id
  Optimizer: Postgres query optimizer
  Settings: enable_seqscan=on, optimizer=off

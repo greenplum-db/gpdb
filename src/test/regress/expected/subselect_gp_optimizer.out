@@ -1552,22 +1552,22 @@ EXPLAIN SELECT * FROM tenk1 a, tenk1 b
 WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=974.00..1636.00 rows=10000 width=488)
-   ->  Hash Join  (cost=974.00..1636.00 rows=3334 width=488)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=356.67..573.33 rows=3333 width=488)
+   ->  Hash Join  (cost=356.67..573.33 rows=3333 width=488)
          Hash Cond: (c.unique2 = b.unique2)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=462.00..986.50 rows=3334 width=248)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=185.00..355.83 rows=3333 width=248)
                Hash Key: c.unique2
-               ->  Hash Join  (cost=462.00..786.50 rows=3334 width=248)
-                     Hash Cond: (a.unique1 = c.unique1)
-                     ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=244)
-                     ->  Hash  (cost=337.00..337.00 rows=3334 width=8)
-                           ->  HashAggregate  (cost=237.00..337.00 rows=3334 width=8)
-                                 Group Key: c.unique1, c.unique2
-                                 ->  Seq Scan on tenk1 c  (cost=0.00..187.00 rows=3334 width=8)
-         ->  Hash  (cost=387.00..387.00 rows=3334 width=244)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..387.00 rows=3334 width=244)
+               ->  Hash Join  (cost=185.00..289.17 rows=3333 width=248)
+                     Hash Cond: (c.unique1 = a.unique1)
+                     ->  HashAggregate  (cost=80.00..180.00 rows=10000 width=8)
+                           Group Key: c.unique1, c.unique2
+                           ->  Seq Scan on tenk1 c  (cost=0.00..63.33 rows=3333 width=8)
+                     ->  Hash  (cost=63.33..63.33 rows=3333 width=244)
+                           ->  Seq Scan on tenk1 a  (cost=0.00..63.33 rows=3333 width=244)
+         ->  Hash  (cost=130.00..130.00 rows=3333 width=244)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..130.00 rows=3333 width=244)
                      Hash Key: b.unique2
-                     ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=244)
+                     ->  Seq Scan on tenk1 b  (cost=0.00..63.33 rows=3333 width=244)
  Optimizer: Postgres query optimizer
 (17 rows)
 

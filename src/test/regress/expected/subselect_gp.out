@@ -1580,15 +1580,15 @@ WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
          Hash Cond: (c.unique2 = b.unique2)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=462.00..986.50 rows=3334 width=248)
                Hash Key: c.unique2
-               ->  Hash Join  (cost=462.00..786.50 rows=3334 width=248)
-                     Hash Cond: (a.unique1 = c.unique1)
-                     ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=244)
-                     ->  Hash  (cost=337.00..337.00 rows=3334 width=8)
-                           ->  HashAggregate  (cost=237.00..337.00 rows=3334 width=8)
-                                 Group Key: c.unique1, c.unique2
-                                 ->  Seq Scan on tenk1 c  (cost=0.00..187.00 rows=3334 width=8)
-         ->  Hash  (cost=387.00..387.00 rows=3334 width=244)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..387.00 rows=3334 width=244)
+               ->  Hash Join  (cost=185.00..289.17 rows=3333 width=248)
+                     Hash Cond: (c.unique1 = a.unique1)
+                     ->  HashAggregate  (cost=80.00..180.00 rows=10000 width=8)
+                           Group Key: c.unique1, c.unique2
+                           ->  Seq Scan on tenk1 c  (cost=0.00..63.33 rows=3333 width=8)
+                     ->  Hash  (cost=63.33..63.33 rows=3333 width=244)
+                           ->  Seq Scan on tenk1 a  (cost=0.00..63.33 rows=3333 width=244)
+         ->  Hash  (cost=130.00..130.00 rows=3333 width=244)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..130.00 rows=3333 width=244)
                      Hash Key: b.unique2
                      ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=244)
  Optimizer: Postgres query optimizer
@@ -1827,21 +1827,21 @@ ANALYZE dedup_test1;
 ANALYZE dedup_test2;
 ANALYZE dedup_test3;
 EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=3.24..5.37 rows=4 width=16)
-   ->  Hash Join  (cost=3.24..5.37 rows=2 width=16)
-         Hash Cond: (dedup_test1.a = dedup_test2.e)
-         ->  Hash Join  (cost=1.15..3.24 rows=2 width=12)
-               Hash Cond: (dedup_test1.a = dedup_test3_1_prt_1.a)
-               ->  Seq Scan on dedup_test1  (cost=0.00..2.04 rows=2 width=8)
-               ->  Hash  (cost=1.14..1.14 rows=1 width=4)
-                     ->  HashAggregate  (cost=1.12..1.14 rows=1 width=4)
-                           Group Key: dedup_test3_1_prt_1.a
-                           ->  Append  (cost=0.00..1.10 rows=4 width=4)
-                                 ->  Seq Scan on dedup_test3_1_prt_1  (cost=0.00..1.10 rows=4 width=4)
-         ->  Hash  (cost=2.04..2.04 rows=2 width=8)
-               ->  Seq Scan on dedup_test2  (cost=0.00..2.04 rows=2 width=8)
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.10..3.13 rows=1 width=16)
+   ->  Hash Join  (cost=2.10..3.13 rows=1 width=16)
+         Hash Cond: (dedup_test2.e = dedup_test1.a)
+         ->  Seq Scan on dedup_test2  (cost=0.00..1.01 rows=1 width=8)
+         ->  Hash  (cost=2.09..2.09 rows=1 width=12)
+               ->  Hash Join  (cost=1.06..2.09 rows=1 width=12)
+                     Hash Cond: (dedup_test1.a = dedup_test3_1_prt_1.a)
+                     ->  Seq Scan on dedup_test1  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Hash  (cost=1.05..1.05 rows=1 width=4)
+                           ->  HashAggregate  (cost=1.04..1.05 rows=1 width=4)
+                                 Group Key: dedup_test3_1_prt_1.a
+                                 ->  Append  (cost=0.00..1.03 rows=3 width=4)
+                                       ->  Seq Scan on dedup_test3_1_prt_1  (cost=0.00..1.03 rows=3 width=4)
  Optimizer: Postgres query optimizer
 (14 rows)
 

@@ -3320,18 +3320,18 @@ alter table b add column mt_col mytype_prefetch_params;
 explain select a.*, b.i, c.* from a, b, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j;
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.19..765906.72 rows=24 width=16)
-   ->  Nested Loop  (cost=0.19..765906.26 rows=8 width=16)
-         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=1 width=36)
-               ->  Seq Scan on b  (cost=0.00..1.01 rows=1 width=36)
-         ->  Materialize  (cost=0.19..255301.72 rows=2 width=12)
-               ->  Nested Loop  (cost=0.19..255301.70 rows=2 width=12)
-                     Join Filter: (((b.mt_col).x > a.i) OR (b.i = a.i))
-                     ->  Materialize  (cost=0.00..1.06 rows=1 width=4)
-                           ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.05 rows=1 width=4)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..227115.64 rows=8 width=16)
+   ->  Nested Loop  (cost=0.00..227115.64 rows=8 width=16)
+         Join Filter: ((a.i + b.i) = c.j)
+         ->  Seq Scan on c  (cost=0.00..33334.33 rows=3333333 width=8)
+         ->  Materialize  (cost=0.00..2.17 rows=3 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.16 rows=3 width=8)
+                     ->  Nested Loop  (cost=0.00..2.11 rows=1 width=8)
+                           Join Filter: (((b.mt_col).x > a.i) OR (b.i = a.i))
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
                                  ->  Seq Scan on a  (cost=0.00..1.01 rows=1 width=4)
-                     ->  Index Only Scan using c_i_j_idx on c  (cost=0.19..85100.20 rows=1 width=8)
-                           Index Cond: (j = (a.i + b.i))
+                           ->  Materialize  (cost=0.00..1.01 rows=1 width=36)
+                                 ->  Seq Scan on b  (cost=0.00..1.01 rows=1 width=36)
  Optimizer: Postgres query optimizer
 (13 rows)
 
@@ -3407,17 +3407,17 @@ EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0';
 -- datatype is compatible with the distribution key, the other's is not. We can
 -- redistribute based on the compatible constant.
 EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0' AND b = float4 '3.0';
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.21..5.49 rows=5 width=8)
-   ->  Hash Join  (cost=2.21..5.39 rows=2 width=8)
-         Hash Cond: (gp_float1.a = gp_float2.c)
-         ->  Seq Scan on gp_float1  (cost=0.00..3.11 rows=2 width=8)
-               Filter: (b = '3'::double precision)
-         ->  Hash  (cost=2.15..2.15 rows=2 width=4)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=2 width=4)
-                     Hash Key: gp_float2.c, '3'::real
-                     ->  Seq Scan on gp_float2  (cost=0.00..2.05 rows=2 width=4)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.06..2.13 rows=2 width=8)
+   ->  Hash Join  (cost=1.06..2.13 rows=2 width=8)
+         Hash Cond: (gp_float2.c = gp_float1.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=2 width=4)
+               Hash Key: gp_float2.c, 3::real
+               ->  Seq Scan on gp_float2  (cost=0.00..1.02 rows=2 width=4)
+         ->  Hash  (cost=1.04..1.04 rows=2 width=8)
+               ->  Seq Scan on gp_float1  (cost=0.00..1.04 rows=2 width=8)
+                     Filter: (b = 3::double precision)
  Optimizer: Postgres query optimizer
 (10 rows)
 

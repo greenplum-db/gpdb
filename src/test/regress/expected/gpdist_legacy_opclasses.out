@@ -258,12 +258,12 @@ explain (costs off) select * from modern_int a inner join legacy_domain_over_int
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: ((b.id)::integer = a.id)
-         ->  Seq Scan on legacy_domain_over_int b
+         Hash Cond: (a.id = (b.id)::integer)
+         ->  Seq Scan on modern_int a
          ->  Hash
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: a.id
-                     ->  Seq Scan on modern_int a
+                     Hash Key: b.id
+                     ->  Seq Scan on legacy_domain_over_int b
  Optimizer: Postgres query optimizer
 (9 rows)
 

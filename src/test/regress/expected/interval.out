@@ -258,12 +258,9 @@ SELECT f1 FROM INTERVAL_TBL_OF r1 ORDER BY f1;
 ---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: f1
-   ->  Sort
-         Sort Key: f1
-         ->  Bitmap Heap Scan on interval_tbl_of r1
-               ->  Bitmap Index Scan on interval_tbl_of_f1_idx
+   ->  Index Only Scan using interval_tbl_of_f1_idx on interval_tbl_of r1
  Optimizer: Postgres query optimizer
-(7 rows)
+(4 rows)
 
 SELECT f1 FROM INTERVAL_TBL_OF r1 ORDER BY f1;
                     f1                     

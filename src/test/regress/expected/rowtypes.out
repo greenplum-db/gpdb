@@ -244,10 +244,12 @@ order by thousand, tenthous;
 -----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: thousand, tenthous
-   ->  Index Only Scan using tenk1_thous_tenthous on tenk1
-         Index Cond: (ROW(thousand, tenthous) >= ROW(997, 5000))
+   ->  Sort
+         Sort Key: thousand, tenthous
+         ->  Seq Scan on tenk1
+               Filter: (ROW(thousand, tenthous) >= ROW(997, 5000))
  Optimizer: Postgres query optimizer
-(5 rows)
+(7 rows)
 
 select thousand, tenthous from tenk1
 where (thousand, tenthous) >= (997, 5000)

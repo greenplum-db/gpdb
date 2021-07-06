@@ -1082,19 +1082,20 @@ select gp_debug_reset_create_table_default_numsegments();
 (13 rows)
 
 :explain select * from t1 a join t2 b using (c1, c2);
-                                                                      QUERY PLAN                                                                      
-------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice2; segments: 1)  (cost=3299.50..1268319.05 rows=5056 width=24) (actual time=2.173..2.173 rows=0 loops=2)
-   ->  Hash Join  (cost=3299.50..1268319.05 rows=1686 width=24) (actual time=0.000..4.084 rows=0 loops=1)
-         Hash Cond: a.c1 = b.c1 AND a.c2 = b.c2
-         ->  Seq Scan on t1 a  (cost=0.00..811.00 rows=23700 width=16) (never executed)
-         ->  Hash  (cost=2233.00..2233.00 rows=23700 width=16) (actual time=0.000..2.287 rows=0 loops=1)
-               ->  Redistribute Motion 2:1  (slice1; segments: 2)  (cost=0.00..2233.00 rows=23700 width=16) (actual time=0.000..2.286 rows=0 loops=1)
-                     Hash Key: b.c1, b.c2
-                     ->  Seq Scan on t2 b  (cost=0.00..811.00 rows=23700 width=16) (actual time=0.000..0.013 rows=0 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 4170K bytes avg x 3 workers, 4170K bytes max (seg0).
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice2; segments: 2)  (cost=1.04..2.08 rows=2 width=24) (actual time=18.338..18.338 rows=0 loops=1)
+   ->  Hash Join  (cost=1.04..2.08 rows=2 width=24) (never executed)
+         Hash Cond: ((b.c1 = a.c1) AND (b.c2 = a.c2))
+         ->  Seq Scan on t2 b  (cost=0.00..1.01 rows=1 width=16) (never executed)
+         ->  Hash  (cost=1.03..1.03 rows=1 width=16) (never executed)
+               ->  Redistribute Motion 1:2  (slice1; segments: 1)  (cost=0.00..1.03 rows=1 width=16) (never executed)
+                     Hash Key: a.c1, a.c2
+                     ->  Seq Scan on t1 a  (cost=0.00..1.01 rows=1 width=16) (never executed)
+ Planning time: 1.429 ms
+   (slice0)    Executor memory: 127K bytes.
+   (slice1)    Executor memory: 42K bytes (seg0).
+   (slice2)    Executor memory: 4176K bytes avg x 2 workers, 4176K bytes max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 5.340 ms
@@ -2365,19 +2366,20 @@ select gp_debug_reset_create_table_default_numsegments();
 (13 rows)
 
 :explain select * from t1 a left join t2 b using (c1, c2);
-                                                                      QUERY PLAN                                                                      
-------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice2; segments: 1)  (cost=3299.50..1268979.50 rows=71100 width=24) (actual time=1.793..1.793 rows=0 loops=2)
-   ->  Hash Left Join  (cost=3299.50..1268979.50 rows=23700 width=24) (actual time=0.000..3.120 rows=0 loops=1)
-         Hash Cond: a.c1 = b.c1 AND a.c2 = b.c2
-         ->  Seq Scan on t1 a  (cost=0.00..811.00 rows=23700 width=16) (actual time=0.000..0.017 rows=0 loops=1)
-         ->  Hash  (cost=2233.00..2233.00 rows=23700 width=16) (actual time=0.000..1.196 rows=0 loops=1)
-               ->  Redistribute Motion 2:1  (slice1; segments: 2)  (cost=0.00..2233.00 rows=23700 width=16) (actual time=0.000..1.195 rows=0 loops=1)
-                     Hash Key: b.c1, b.c2
-                     ->  Seq Scan on t2 b  (cost=0.00..811.00 rows=23700 width=16) (actual time=0.000..0.011 rows=0 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 4182K bytes avg x 3 workers, 4182K bytes max (seg0).
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice2; segments: 2)  (cost=1.04..2.08 rows=2 width=24) (actual time=18.070..18.070 rows=0 loops=1)
+   ->  Hash Right Join  (cost=1.04..2.08 rows=2 width=24) (never executed)
+         Hash Cond: ((b.c1 = a.c1) AND (b.c2 = a.c2))
+         ->  Seq Scan on t2 b  (cost=0.00..1.01 rows=1 width=16) (never executed)
+         ->  Hash  (cost=1.03..1.03 rows=1 width=16) (never executed)
+               ->  Redistribute Motion 1:2  (slice1; segments: 1)  (cost=0.00..1.03 rows=1 width=16) (never executed)
+                     Hash Key: a.c1, a.c2
+                     ->  Seq Scan on t1 a  (cost=0.00..1.01 rows=1 width=16) (never executed)
+ Planning time: 1.202 ms
+   (slice0)    Executor memory: 127K bytes.
+   (slice1)    Executor memory: 42K bytes (seg0).
+   (slice2)    Executor memory: 4176K bytes avg x 2 workers, 4176K bytes max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 4.268 ms

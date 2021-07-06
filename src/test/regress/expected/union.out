@@ -496,19 +496,17 @@ explain (costs off)
                              QUERY PLAN                              
 ---------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
-   ->  Unique
+   ->  HashAggregate
          Group Key: ((t1.a || t1.b))
-         ->  Sort
-               Sort Key (Distinct): ((t1.a || t1.b))
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: ((t1.a || t1.b))
-                     ->  Append
-                           ->  Index Scan using t1_ab_idx on t1
-                                 Index Cond: ((a || b) = 'ab'::text)
-                           ->  Index Only Scan using t2_pkey on t2
-                                 Index Cond: (ab = 'ab'::text)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: ((t1.a || t1.b))
+               ->  Append
+                     ->  Index Scan using t1_ab_idx on t1
+                           Index Cond: ((a || b) = 'ab'::text)
+                     ->  Index Only Scan using t2_pkey on t2
+                           Index Cond: (ab = 'ab'::text)
  Optimizer: Postgres query optimizer
-(13 rows)
+(11 rows)
 
 --
 -- Test that ORDER BY for UNION ALL can be pushed down to inheritance
@@ -613,18 +611,16 @@ SELECT * FROM
    UNION
    SELECT 2 AS t, 4 AS x) ss
 WHERE x < 4;
-                    QUERY PLAN                     
----------------------------------------------------
- Unique
+              QUERY PLAN              
+--------------------------------------
+ HashAggregate
    Group Key: "outer".t, "outer".x
-   ->  Sort
-         Sort Key (Distinct): "outer".t, "outer".x
-         ->  Append
-               ->  Result
-               ->  Result
-                     One-Time Filter: false
+   ->  Append
+         ->  Result
+         ->  Result
+               One-Time Filter: false
  Optimizer: Postgres query optimizer
-(9 rows)
+(7 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, 2 AS x
@@ -676,21 +672,19 @@ SELECT * FROM
    UNION
    SELECT 2 AS t, 4 AS x) ss
 WHERE x > 3;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Subquery Scan on ss
    Filter: (ss.x > 3)
-   ->  Unique
+   ->  HashAggregate
          Group Key: "outer".t, ((($0 * 3::double precision))::integer)
-         ->  Sort
-               Sort Key (Distinct): "outer".t, ((($0 * 3::double precision))::integer)
-               ->  Append
-                     ->  Result
-                           InitPlan 1 (returns $0)
-                             ->  Result
-                     ->  Result
+         ->  Append
+               ->  Result
+                     InitPlan 1 (returns $0)
+                       ->  Result
+               ->  Result
  Optimizer: Postgres query optimizer
-(12 rows)
+(10 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, (random()*3)::int AS x

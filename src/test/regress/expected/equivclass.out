@@ -265,20 +265,20 @@ explain (costs off)
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Nested Loop
          Join Filter: (((ss0.ff + 1)) = ec1.f1)
-         ->  Append
-               ->  Subquery Scan on ss0
-                     ->  Append
-                           ->  Seq Scan on ec1 ec1_1
-                                 Filter: (((ff + 2) + 1) = 42::bigint)
-                           ->  Seq Scan on ec1 ec1_2
-                                 Filter: (((ff + 3) + 1) = 42::bigint)
-               ->  Seq Scan on ec1 ec1_3
-                     Filter: ((ff + 4) = 42::bigint)
+         ->  Broadcast Motion 1:3  (slice1; segments: 1)
+               ->  Index Scan using ec1_pkey on ec1
+                     Index Cond: ((ff = 42::bigint) AND (ff = 42::bigint))
+                     Filter: (ff = f1)
          ->  Materialize
-               ->  Broadcast Motion 1:3  (slice1; segments: 1)
-                     ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: ((ff = 42::bigint) AND (ff = 42::bigint))
-                           Filter: (ff = f1)
+               ->  Append
+                     ->  Subquery Scan on ss0
+                           ->  Append
+                                 ->  Seq Scan on ec1 ec1_1
+                                       Filter: (((ff + 2) + 1) = 42::bigint)
+                                 ->  Seq Scan on ec1 ec1_2
+                                       Filter: (((ff + 3) + 1) = 42::bigint)
+                     ->  Seq Scan on ec1 ec1_3
+                           Filter: ((ff + 4) = 42::bigint)
  Optimizer: Postgres query optimizer
 (18 rows)
 

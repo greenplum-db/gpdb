@@ -244,8 +244,10 @@ create table foo (c int, d int);
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
 select gp_inject_fault('workfile_write_failure', 'error', 2);
 
+-- start_ignore
 -- expect to see leak if we hit error
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
+-- end_ignore
 
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;

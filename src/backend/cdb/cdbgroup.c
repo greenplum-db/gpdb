@@ -1444,7 +1444,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 										groupColIdx,
 										groupOperators,
 										groupNumberPerSegment(numGroups,
-															  result_plan->plan_rows,
+															  result_plan->plan_rows * planner_segment_count(NULL),
 															  planner_segment_count(NULL)),
 										0,	/* num_nullcols */
 										0,	/* input_grouping */
@@ -2174,7 +2174,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 									inputGroupColIdx,
 									inputGroupOperators,
 									groupNumberPerSegment(numGroups,
-														  result_plan->plan_rows,
+														  result_plan->plan_rows * planner_segment_count(NULL),
 														  planner_segment_count(NULL)),
 									0, /* num_nullcols */
 									0, /* input_grouping */
@@ -5059,7 +5059,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 	double		input_rows;
 
 	cost_common_agg(root, ctx, info, &input_dummy);
-	input_rows = input_dummy.plan_rows;
+	input_rows = input_dummy.plan_rows * planner_segment_count(NULL);
 
 	is_sorted = pathkeys_contained_in(root->group_pathkeys, info->input_path->pathkeys);
 
@@ -5547,7 +5547,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	bool can_hash_dqa_arg = true;
 	bool		use_hashed_preliminary = false;
 
-	group_num_persegment_1phase = groupNumberPerSegment(darg_rows, input_rows,
+	group_num_persegment_1phase = groupNumberPerSegment(darg_rows, input_rows * planner_segment_count(NULL),
 														planner_segment_count(NULL));
 
 	Cost		sort_input = incremental_sort_cost(input_rows, input_width,

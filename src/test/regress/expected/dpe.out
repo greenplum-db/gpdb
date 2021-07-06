@@ -1226,25 +1226,22 @@ set enable_hashjoin=off;
 set enable_seqscan=on;
 set enable_nestloop=on;
 explain select * from t, pt where a = b;
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..8.69 rows=5 width=16)
-   ->  Nested Loop  (cost=0.00..8.69 rows=2 width=16)
-         Join Filter: t.a = dpe_single.pt.b
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.15 rows=2 width=8)
-               Hash Key: t.a
-               ->  Seq Scan on t  (cost=0.00..3.05 rows=2 width=8)
-         ->  Materialize  (cost=0.00..5.17 rows=2 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..5.15 rows=2 width=8)
-                     Hash Key: dpe_single.pt.b
-                     ->  Append  (cost=0.00..5.05 rows=2 width=8)
-                           ->  Seq Scan on pt_1_prt_1  (cost=0.00..1.01 rows=1 width=8)
-                           ->  Seq Scan on pt_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
-                           ->  Seq Scan on pt_1_prt_3  (cost=0.00..1.01 rows=1 width=8)
-                           ->  Seq Scan on pt_1_prt_4  (cost=0.00..1.01 rows=1 width=8)
-                           ->  Seq Scan on pt_1_prt_5  (cost=0.00..1.01 rows=1 width=8)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..6.49 rows=2 width=16)
+   ->  Nested Loop  (cost=0.00..6.49 rows=2 width=16)
+         Join Filter: (t.a = pt_1_prt_1.b)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=5 width=8)
+               ->  Seq Scan on t  (cost=0.00..1.02 rows=2 width=8)
+         ->  Materialize  (cost=0.00..5.08 rows=5 width=8)
+               ->  Append  (cost=0.00..5.05 rows=5 width=8)
+                     ->  Seq Scan on pt_1_prt_1  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on pt_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on pt_1_prt_3  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on pt_1_prt_4  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on pt_1_prt_5  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
-(16 rows)
+(13 rows)
 
 select * from t, pt where a = b;
  id | a | id | b 
@@ -1283,33 +1280,20 @@ insert into pt select i from generate_series(0,4) i;
 analyze t;
 analyze pt;
 explain select * from t, pt where a = b;
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.22 rows=4 width=8)
-   ->  Nested Loop  (cost=0.00..6.22 rows=2 width=8)
-         Join Filter: t.a = pt_1_prt_1.b
-         ->  Append  (cost=0.00..5.05 rows=2 width=4)
-               ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_1  (cost=0.00..1.01 rows=1 width=4)
-               ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_2  (cost=0.00..1.01 rows=1 width=4)
-               ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_3  (cost=0.00..1.01 rows=1 width=4)
-               ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_4  (cost=0.00..1.01 rows=1 width=4)
-               ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_5  (cost=0.00..1.01 rows=1 width=4)
-         ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.02 rows=1 width=4)
-                     Filter: t.a
-                     ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=4)
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.12 rows=1 width=8)
+   ->  Nested Loop  (cost=0.00..6.12 rows=1 width=8)
+         Join Filter: (t.a = pt_1_prt_1.b)
+         ->  Seq Scan on t  (cost=0.00..1.01 rows=1 width=4)
+         ->  Append  (cost=0.00..5.05 rows=5 width=4)
+               ->  Seq Scan on pt_1_prt_1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Seq Scan on pt_1_prt_2  (cost=0.00..1.01 rows=1 width=4)
+               ->  Seq Scan on pt_1_prt_3  (cost=0.00..1.01 rows=1 width=4)
+               ->  Seq Scan on pt_1_prt_4  (cost=0.00..1.01 rows=1 width=4)
+               ->  Seq Scan on pt_1_prt_5  (cost=0.00..1.01 rows=1 width=4)
  Optimizer: Postgres query optimizer
-(24 rows)
+(11 rows)
 
 select * from t, pt where a = b;
  a | b 
@@ -2265,24 +2249,24 @@ analyze b;
 analyze c;
 set gp_dynamic_partition_pruning = off;
 explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=6.78..35.85 rows=5 width=20)
-   ->  Hash Join  (cost=6.78..35.85 rows=2 width=20)
-         Hash Cond: a.t = b.t
-         ->  Hash Join  (cost=3.45..32.39 rows=7 width=14)
-               Hash Cond: a.id = c.id
-               ->  Append  (cost=0.00..24.99 rows=333 width=8)
-                     ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..5.00 rows=67 width=7)
-                     ->  Seq Scan on apart_1_prt_2 a_1  (cost=0.00..5.00 rows=67 width=8)
-                     ->  Seq Scan on apart_1_prt_3 a_2  (cost=0.00..5.00 rows=67 width=8)
-                     ->  Seq Scan on apart_1_prt_4 a_3  (cost=0.00..5.00 rows=67 width=8)
-                     ->  Seq Scan on apart_1_prt_5 a_4  (cost=0.00..4.99 rows=67 width=8)
-               ->  Hash  (cost=3.20..3.20 rows=7 width=6)
-                     ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
-         ->  Hash  (cost=3.20..3.20 rows=4 width=6)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=4 width=6)
-                     ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=2.30..11.93 rows=1 width=20)
+   ->  Hash Join  (cost=2.30..11.93 rows=1 width=20)
+         Hash Cond: (a.id = c.id)
+         ->  Hash Join  (cost=1.15..10.76 rows=3 width=14)
+               Hash Cond: (a.t = b.t)
+               ->  Append  (cost=0.00..8.33 rows=333 width=8)
+                     ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..1.67 rows=67 width=7)
+                     ->  Seq Scan on apart_1_prt_2 a_1  (cost=0.00..1.67 rows=67 width=8)
+                     ->  Seq Scan on apart_1_prt_3 a_2  (cost=0.00..1.67 rows=67 width=8)
+                     ->  Seq Scan on apart_1_prt_4 a_3  (cost=0.00..1.67 rows=67 width=8)
+                     ->  Seq Scan on apart_1_prt_5 a_4  (cost=0.00..1.66 rows=66 width=8)
+               ->  Hash  (cost=1.08..1.08 rows=5 width=6)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=5 width=6)
+                           ->  Seq Scan on b  (cost=0.00..1.02 rows=2 width=6)
+         ->  Hash  (cost=1.07..1.07 rows=7 width=6)
+               ->  Seq Scan on c  (cost=0.00..1.07 rows=7 width=6)
  Optimizer: Postgres query optimizer
 (17 rows)
 
@@ -2298,36 +2282,36 @@ select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 
 set gp_dynamic_partition_pruning = on;
 explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=6.78..35.85 rows=5 width=20)
-   ->  Hash Join  (cost=6.78..35.85 rows=2 width=20)
-         Hash Cond: a.t = b.t
-         ->  Hash Join  (cost=3.45..32.39 rows=7 width=14)
-               Hash Cond: a.id = c.id
-               ->  Append  (cost=0.00..24.99 rows=333 width=8)
-                     ->  Result  (cost=0.00..5.00 rows=67 width=7)
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=2.30..11.93 rows=1 width=20)
+   ->  Hash Join  (cost=2.30..11.93 rows=1 width=20)
+         Hash Cond: (a.id = c.id)
+         ->  Hash Join  (cost=1.15..10.76 rows=3 width=14)
+               Hash Cond: (a.t = b.t)
+               ->  Append  (cost=0.00..8.33 rows=333 width=8)
+                     ->  Result  (cost=0.00..1.67 rows=67 width=7)
                            One-Time Filter: PartSelected
-                           ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..5.00 rows=67 width=7)
-                     ->  Result  (cost=0.00..5.00 rows=67 width=8)
+                           ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..1.67 rows=67 width=7)
+                     ->  Result  (cost=0.00..1.67 rows=67 width=8)
                            One-Time Filter: PartSelected
-                           ->  Seq Scan on apart_1_prt_2 a_1  (cost=0.00..5.00 rows=67 width=8)
-                     ->  Result  (cost=0.00..5.00 rows=67 width=8)
+                           ->  Seq Scan on apart_1_prt_2 a_1  (cost=0.00..1.67 rows=67 width=8)
+                     ->  Result  (cost=0.00..1.67 rows=67 width=8)
                            One-Time Filter: PartSelected
-                           ->  Seq Scan on apart_1_prt_3 a_2  (cost=0.00..5.00 rows=67 width=8)
-                     ->  Result  (cost=0.00..5.00 rows=67 width=8)
+                           ->  Seq Scan on apart_1_prt_3 a_2  (cost=0.00..1.67 rows=67 width=8)
+                     ->  Result  (cost=0.00..1.67 rows=67 width=8)
                            One-Time Filter: PartSelected
-                           ->  Seq Scan on apart_1_prt_4 a_3  (cost=0.00..5.00 rows=67 width=8)
-                     ->  Result  (cost=0.00..4.99 rows=67 width=8)
+                           ->  Seq Scan on apart_1_prt_4 a_3  (cost=0.00..1.67 rows=67 width=8)
+                     ->  Result  (cost=0.00..1.66 rows=66 width=8)
                            One-Time Filter: PartSelected
-                           ->  Seq Scan on apart_1_prt_5 a_4  (cost=0.00..4.99 rows=67 width=8)
-               ->  Hash  (cost=3.20..3.20 rows=7 width=6)
-                     ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..3.20 rows=7 width=6)
-                           Filter: c.id
-                           ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
-         ->  Hash  (cost=3.20..3.20 rows=4 width=6)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=4 width=6)
-                     ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
+                           ->  Seq Scan on apart_1_prt_5 a_4  (cost=0.00..1.66 rows=66 width=8)
+               ->  Hash  (cost=1.08..1.08 rows=5 width=6)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=5 width=6)
+                           ->  Seq Scan on b  (cost=0.00..1.02 rows=2 width=6)
+         ->  Hash  (cost=1.07..1.07 rows=7 width=6)
+               ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..1.07 rows=7 width=6)
+                     Filter: c.id
+                     ->  Seq Scan on c  (cost=0.00..1.07 rows=7 width=6)
  Optimizer: Postgres query optimizer
 (29 rows)
 

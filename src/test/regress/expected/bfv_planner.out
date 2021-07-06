@@ -425,16 +425,16 @@ t_hashdist,
 (select a from generate_series(1, 10) a) x,
 (select a from generate_series(1, 10) a) y
 where x.a + y.a > random();
-                             QUERY PLAN                              
----------------------------------------------------------------------
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
  Nested Loop
-   ->  Nested Loop
-         Join Filter: (((a.a + a_1.a))::double precision > random())
-         ->  Function Scan on generate_series a
-         ->  Function Scan on generate_series a_1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t_hashdist
    ->  Materialize
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on t_hashdist
+         ->  Nested Loop
+               Join Filter: (((a.a + a_1.a))::double precision > random())
+               ->  Function Scan on generate_series a
+               ->  Function Scan on generate_series a_1
  Optimizer: Postgres query optimizer
 (9 rows)
 

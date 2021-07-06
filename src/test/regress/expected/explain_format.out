@@ -123,9 +123,9 @@ QUERY PLAN
     Slice: 3
     Segments: 3
     Gang Type: "primary reader"
-    Startup Cost: 4626.75
-    Total Cost: 9520.88
-    Plan Rows: 77900
+    Startup Cost: 1543.58
+    Total Cost: 3174.96
+    Plan Rows: 25967
     Plan Width: 84
     Plans: 
       - Node Type: "Hash Join"
@@ -134,9 +134,9 @@ QUERY PLAN
         Segments: 3
         Gang Type: "primary reader"
         Join Type: "Left"
-        Startup Cost: 4626.75
-        Total Cost: 9520.88
-        Plan Rows: 77900
+        Startup Cost: 1543.58
+        Total Cost: 3174.96
+        Plan Rows: 25967
         Plan Width: 84
         Hash Cond: "(boxes.location_id = box_locations.id)"
         Plans: 
@@ -147,9 +147,9 @@ QUERY PLAN
             Slice: 2
             Segments: 3
             Gang Type: "primary reader"
-            Startup Cost: 3410.75
-            Total Cost: 7233.75
-            Plan Rows: 77900
+            Startup Cost: 1137.58
+            Total Cost: 2411.92
+            Plan Rows: 25967
             Plan Width: 48
             Hash Key: "boxes.location_id"
             Plans: 
@@ -159,9 +159,9 @@ QUERY PLAN
                 Segments: 3
                 Gang Type: "primary reader"
                 Join Type: "Right"
-                Startup Cost: 3410.75
-                Total Cost: 5675.75
-                Plan Rows: 77900
+                Startup Cost: 1137.58
+                Total Cost: 1892.58
+                Plan Rows: 25967
                 Plan Width: 48
                 Hash Cond: "(apples.id = boxes.apple_id)"
                 Plans: 
@@ -173,17 +173,17 @@ QUERY PLAN
                     Relation Name: "apples"
                     Alias: "apples"
                     Startup Cost: 0.00
-                    Total Cost: 1111.00
-                    Plan Rows: 100000
+                    Total Cost: 370.33
+                    Plan Rows: 33333
                     Plan Width: 36
                   - Node Type: "Hash"
                     Parent Relationship: "Inner"
                     Slice: 2
                     Segments: 3
                     Gang Type: "primary reader"
-                    Startup Cost: 2437.00
-                    Total Cost: 2437.00
-                    Plan Rows: 77900
+                    Startup Cost: 813.00
+                    Total Cost: 813.00
+                    Plan Rows: 25967
                     Plan Width: 12
                     Plans: 
                       - Node Type: "Redistribute Motion"
@@ -194,8 +194,8 @@ QUERY PLAN
                         Segments: 3
                         Gang Type: "primary reader"
                         Startup Cost: 0.00
-                        Total Cost: 2437.00
-                        Plan Rows: 77900
+                        Total Cost: 813.00
+                        Plan Rows: 25967
                         Plan Width: 12
                         Hash Key: "boxes.apple_id"
                         Plans: 
@@ -207,17 +207,17 @@ QUERY PLAN
                             Relation Name: "boxes"
                             Alias: "boxes"
                             Startup Cost: 0.00
-                            Total Cost: 879.00
-                            Plan Rows: 77900
+                            Total Cost: 293.67
+                            Plan Rows: 25967
                             Plan Width: 12
           - Node Type: "Hash"
             Parent Relationship: "Inner"
             Slice: 3
             Segments: 3
             Gang Type: "primary reader"
-            Startup Cost: 596.00
-            Total Cost: 596.00
-            Plan Rows: 49600
+            Startup Cost: 199.33
+            Total Cost: 199.33
+            Plan Rows: 16533
             Plan Width: 36
             Plans: 
               - Node Type: "Seq Scan"
@@ -228,8 +228,8 @@ QUERY PLAN
                 Relation Name: "box_locations"
                 Alias: "box_locations"
                 Startup Cost: 0.00
-                Total Cost: 596.00
-                Plan Rows: 49600
+                Total Cost: 199.33
+                Plan Rows: 16533
                 Plan Width: 36
   Settings: 
     Optimizer: "Postgres query optimizer"
@@ -245,9 +245,9 @@ QUERY PLAN
     Slice: 3
     Segments: 3
     Gang Type: "primary reader"
-    Startup Cost: 4626.75
-    Total Cost: 9520.88
-    Plan Rows: 77900
+    Startup Cost: 1543.58
+    Total Cost: 3174.96
+    Plan Rows: 25967
     Plan Width: 84
     Actual Startup Time: 7.816
     Actual Total Time: 7.816
@@ -260,9 +260,9 @@ QUERY PLAN
         Segments: 3
         Gang Type: "primary reader"
         Join Type: "Left"
-        Startup Cost: 4626.75
-        Total Cost: 9520.88
-        Plan Rows: 77900
+        Startup Cost: 1543.58
+        Total Cost: 3174.96
+        Plan Rows: 25967
         Plan Width: 84
         Actual Startup Time: 0.000
         Actual Total Time: 0.000
@@ -277,9 +277,9 @@ QUERY PLAN
             Slice: 2
             Segments: 3
             Gang Type: "primary reader"
-            Startup Cost: 3410.75
-            Total Cost: 7233.75
-            Plan Rows: 77900
+            Startup Cost: 1137.58
+            Total Cost: 2411.92
+            Plan Rows: 25967
             Plan Width: 48
             Actual Startup Time: 0.000
             Actual Total Time: 0.000
@@ -293,9 +293,9 @@ QUERY PLAN
                 Segments: 3
                 Gang Type: "primary reader"
                 Join Type: "Right"
-                Startup Cost: 3410.75
-                Total Cost: 5675.75
-                Plan Rows: 77900
+                Startup Cost: 1137.58
+                Total Cost: 1892.58
+                Plan Rows: 25967
                 Plan Width: 48
                 Actual Startup Time: 0.000
                 Actual Total Time: 0.000
@@ -311,8 +311,8 @@ QUERY PLAN
                     Relation Name: "apples"
                     Alias: "apples"
                     Startup Cost: 0.00
-                    Total Cost: 1111.00
-                    Plan Rows: 100000
+                    Total Cost: 370.33
+                    Plan Rows: 33333
                     Plan Width: 36
                     Actual Startup Time: 0.000
                     Actual Total Time: 0.000
@@ -323,9 +323,9 @@ QUERY PLAN
                     Slice: 2
                     Segments: 3
                     Gang Type: "primary reader"
-                    Startup Cost: 2437.00
-                    Total Cost: 2437.00
-                    Plan Rows: 77900
+                    Startup Cost: 813.00
+                    Total Cost: 813.00
+                    Plan Rows: 25967
                     Plan Width: 12
                     Actual Startup Time: 0.000
                     Actual Total Time: 0.000
@@ -340,8 +340,8 @@ QUERY PLAN
                         Segments: 3
                         Gang Type: "primary reader"
                         Startup Cost: 0.00
-                        Total Cost: 2437.00
-                        Plan Rows: 77900
+                        Total Cost: 813.00
+                        Plan Rows: 25967
                         Plan Width: 12
                         Actual Startup Time: 0.000
                         Actual Total Time: 0.000
@@ -357,8 +357,8 @@ QUERY PLAN
                             Relation Name: "boxes"
                             Alias: "boxes"
                             Startup Cost: 0.00
-                            Total Cost: 879.00
-                            Plan Rows: 77900
+                            Total Cost: 293.67
+                            Plan Rows: 25967
                             Plan Width: 12
                             Actual Startup Time: 0.000
                             Actual Total Time: 0.000
@@ -369,9 +369,9 @@ QUERY PLAN
             Slice: 3
             Segments: 3
             Gang Type: "primary reader"
-            Startup Cost: 596.00
-            Total Cost: 596.00
-            Plan Rows: 49600
+            Startup Cost: 199.33
+            Total Cost: 199.33
+            Plan Rows: 16533
             Plan Width: 36
             Actual Startup Time: 0.000
             Actual Total Time: 0.000
@@ -386,8 +386,8 @@ QUERY PLAN
                 Relation Name: "box_locations"
                 Alias: "box_locations"
                 Startup Cost: 0.00
-                Total Cost: 596.00
-                Plan Rows: 49600
+                Total Cost: 199.33
+                Plan Rows: 16533
                 Plan Width: 36
                 Actual Startup Time: 0.000
                 Actual Total Time: 0.000
@@ -536,9 +536,9 @@ QUERY PLAN
       "Slice": 2,
       "Segments": 3,
       "Gang Type": "primary reader",
-      "Startup Cost": 8994.54,
-      "Total Cost": 10427.66,
-      "Plan Rows": 35550,
+      "Startup Cost": 2027.24,
+      "Total Cost": 2505.62,
+      "Plan Rows": 11850,
       "Plan Width": 4,
       "Plans": [
         {
@@ -548,9 +548,9 @@ QUERY PLAN
           "Segments": 3,
           "Gang Type": "primary reader",
           "Join Type": "Inner",
-          "Startup Cost": 8994.54,
-          "Total Cost": 10427.66,
-          "Plan Rows": 35550,
+          "Startup Cost": 2027.24,
+          "Total Cost": 2505.62,
+          "Plan Rows": 11850,
           "Plan Width": 4,
           "Hash Cond": "(subselect_tbl.f1 = subselect_tbl_1.f2)",
           "Plans": [
@@ -563,8 +563,8 @@ QUERY PLAN
               "Relation Name": "subselect_tbl",
               "Alias": "subselect_tbl",
               "Startup Cost": 0.00,
-              "Total Cost": 811.00,
-              "Plan Rows": 71100,
+              "Total Cost": 271.00,
+              "Plan Rows": 23700,
               "Plan Width": 4
             },
             {
@@ -573,8 +573,8 @@ QUERY PLAN
               "Slice": 2,
               "Segments": 3,
               "Gang Type": "primary reader",
-              "Startup Cost": 8982.04,
-              "Total Cost": 8982.04,
+              "Startup Cost": 2021.41,
+              "Total Cost": 2021.41,
               "Plan Rows": 1000,
               "Plan Width": 8,
               "Plans": [
@@ -585,8 +585,8 @@ QUERY PLAN
                   "Slice": 2,
                   "Segments": 3,
                   "Gang Type": "primary reader",
-                  "Startup Cost": 8972.04,
-                  "Total Cost": 8982.04,
+                  "Startup Cost": 2011.41,
+                  "Total Cost": 2021.41,
                   "Plan Rows": 1000,
                   "Plan Width": 8,
                   "Group Key": ["subselect_tbl_1.f2"],
@@ -598,9 +598,9 @@ QUERY PLAN
                       "Segments": 3,
                       "Gang Type": "primary reader",
                       "Join Type": "Semi",
-                      "Startup Cost": 1699.75,
-                      "Total Cost": 8883.16,
-                      "Plan Rows": 35550,
+                      "Startup Cost": 567.25,
+                      "Total Cost": 1981.78,
+                      "Plan Rows": 11850,
                       "Plan Width": 8,
                       "Hash Cond": "(subselect_tbl_1.f2 = subselect_tbl_2.f1)",
                       "Plans": [
@@ -613,8 +613,8 @@ QUERY PLAN
                           "Segments": 3,
                           "Gang Type": "primary reader",
                           "Startup Cost": 0.00,
-                          "Total Cost": 2233.00,
-                          "Plan Rows": 71100,
+                          "Total Cost": 745.00,
+                          "Plan Rows": 23700,
                           "Plan Width": 4,
                           "Hash Key": "subselect_tbl_1.f2",
                           "Plans": [
@@ -627,8 +627,8 @@ QUERY PLAN
                               "Relation Name": "subselect_tbl",
                               "Alias": "subselect_tbl_1",
                               "Startup Cost": 0.00,
-                              "Total Cost": 811.00,
-                              "Plan Rows": 71100,
+                              "Total Cost": 271.00,
+                              "Plan Rows": 23700,
                               "Plan Width": 4
                             }
                           ]
@@ -639,9 +639,9 @@ QUERY PLAN
                           "Slice": 2,
                           "Segments": 3,
                           "Gang Type": "primary reader",
-                          "Startup Cost": 811.00,
-                          "Total Cost": 811.00,
-                          "Plan Rows": 71100,
+                          "Startup Cost": 271.00,
+                          "Total Cost": 271.00,
+                          "Plan Rows": 23700,
                           "Plan Width": 4,
                           "Plans": [
                             {
@@ -653,8 +653,8 @@ QUERY PLAN
                               "Relation Name": "subselect_tbl",
                               "Alias": "subselect_tbl_2",
                               "Startup Cost": 0.00,
-                              "Total Cost": 811.00,
-                              "Plan Rows": 71100,
+                              "Total Cost": 271.00,
+                              "Plan Rows": 23700,
                               "Plan Width": 4
                             }
                           ]
@@ -738,9 +738,9 @@ QUERY PLAN
       "Slice": 1,
       "Segments": 3,
       "Gang Type": "primary reader",
-      "Startup Cost": 2118.50,
-      "Total Cost": 4984.75,
-      "Plan Rows": 71100,
+      "Startup Cost": 715.83,
+      "Total Cost": 1672.58,
+      "Plan Rows": 23700,
       "Plan Width": 16,
       "Output": ["subselect_tbl.f1", "subselect_tbl.f2", "subselect_tbl.f3"],
       "Plans": [
@@ -751,9 +751,9 @@ QUERY PLAN
           "Segments": 3,
           "Gang Type": "primary reader",
           "Join Type": "Inner",
-          "Startup Cost": 2118.50,
-          "Total Cost": 4984.75,
-          "Plan Rows": 71100,
+          "Startup Cost": 715.83,
+          "Total Cost": 1672.58,
+          "Plan Rows": 23700,
           "Plan Width": 16,
           "Output": ["subselect_tbl.f1", "subselect_tbl.f2", "subselect_tbl.f3"],
           "Hash Cond": "(subselect_tbl.f1 = subselect_tbl_1.f1)",
@@ -765,8 +765,8 @@ QUERY PLAN
               "Segments": 3,
               "Gang Type": "primary reader",
               "Startup Cost": 0.00,
-              "Total Cost": 1622.00,
-              "Plan Rows": 142200,
+              "Total Cost": 542.00,
+              "Plan Rows": 47400,
               "Plan Width": 16,
               "Plans": [
                 {
@@ -779,8 +779,8 @@ QUERY PLAN
                   "Schema": "explaintest",
                   "Alias": "subselect_tbl",
                   "Startup Cost": 0.00,
-                  "Total Cost": 811.00,
-                  "Plan Rows": 71100,
+                  "Total Cost": 271.00,
+                  "Plan Rows": 23700,
                   "Plan Width": 16,
                   "Output": ["subselect_tbl.f1", "subselect_tbl.f2", "subselect_tbl.f3"]
                 },
@@ -794,8 +794,8 @@ QUERY PLAN
                   "Schema": "explaintest",
                   "Alias": "subselect_tbl_child",
                   "Startup Cost": 0.00,
-                  "Total Cost": 811.00,
-                  "Plan Rows": 71100,
+                  "Total Cost": 271.00,
+                  "Plan Rows": 23700,
                   "Plan Width": 16,
                   "Output": ["subselect_tbl_child.f1", "subselect_tbl_child.f2", "subselect_tbl_child.f3"]
                 }
@@ -807,8 +807,8 @@ QUERY PLAN
               "Slice": 1,
               "Segments": 3,
               "Gang Type": "primary reader",
-              "Startup Cost": 2106.00,
-              "Total Cost": 2106.00,
+              "Startup Cost": 710.00,
+              "Total Cost": 710.00,
               "Plan Rows": 1000,
               "Plan Width": 4,
               "Output": ["subselect_tbl_1.f1"],
@@ -820,8 +820,8 @@ QUERY PLAN
                   "Slice": 1,
                   "Segments": 3,
                   "Gang Type": "primary reader",
-                  "Startup Cost": 2096.00,
-                  "Total Cost": 2106.00,
+                  "Startup Cost": 700.00,
+                  "Total Cost": 710.00,
                   "Plan Rows": 1000,
                   "Plan Width": 4,
                   "Output": ["subselect_tbl_1.f1"],
@@ -834,8 +834,8 @@ QUERY PLAN
                       "Segments": 3,
                       "Gang Type": "primary reader",
                       "Startup Cost": 0.00,
-                      "Total Cost": 1977.50,
-                      "Plan Rows": 47400,
+                      "Total Cost": 660.50,
+                      "Plan Rows": 15800,
                       "Plan Width": 4,
                       "Plans": [
                         {
@@ -848,8 +848,8 @@ QUERY PLAN
                           "Schema": "explaintest",
                           "Alias": "subselect_tbl_1",
                           "Startup Cost": 0.00,
-                          "Total Cost": 988.75,
-                          "Plan Rows": 23700,
+                          "Total Cost": 330.25,
+                          "Plan Rows": 7900,
                           "Plan Width": 4,
                           "Output": ["subselect_tbl_1.f1"],
                           "Filter": "(subselect_tbl_1.f2 >= 19)"
@@ -864,8 +864,8 @@ QUERY PLAN
                           "Schema": "explaintest",
                           "Alias": "subselect_tbl_child_1",
                           "Startup Cost": 0.00,
-                          "Total Cost": 988.75,
-                          "Plan Rows": 23700,
+                          "Total Cost": 330.25,
+                          "Plan Rows": 7900,
                           "Plan Width": 4,
                           "Output": ["subselect_tbl_child_1.f1"],
                           "Filter": "(subselect_tbl_child_1.f2 >= 19)"
