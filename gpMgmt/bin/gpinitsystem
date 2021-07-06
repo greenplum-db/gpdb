@@ -348,7 +348,7 @@ CHK_PARAMS () {
 
 		# Make sure that this script is running on the QD host
 		if [ $MASTER_HOSTNAME != `$HOSTNAME` ]; then
-			LOG_MSG "[WARN]:-Master hostname $MASTER_HOSTNAME does not match hostname output" 1
+			LOG_MSG "[INFO]:-Master hostname $MASTER_HOSTNAME does not match hostname output" 1
 			LOG_MSG "[INFO]:-Checking to see if $MASTER_HOSTNAME can be resolved on this host" 1
 			$TRUSTED_SHELL $MASTER_HOSTNAME "$TOUCH $TMP_HOSTNAME_FILE"
 			if [ -f $TMP_HOSTNAME_FILE ];then
