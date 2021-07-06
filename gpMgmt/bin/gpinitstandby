@@ -114,7 +114,7 @@ def parseargs():
     # Standby initialization options section
     optgrp = OptionGroup(parser, 'Standby initialization options')
     optgrp.add_option('-s', '--standby-host', '--standby-address', type='string', dest='standby_address',
-                      help='hostname of system to create standby master on')
+                      help='address of system to create standby master on')
     optgrp.add_option('-P', '--standby-port', type='int', dest='standby_port',
                       help='port of system to create standby master on')
     optgrp.add_option('-S', '--standby-datadir', type='string', dest='standby_datadir',
@@ -139,7 +139,7 @@ def parseargs():
     # Parse the command line arguments
     (options, args) = parser.parse_args()
 
-# We only accept the standby internal address, the hostname is resolved below,
+# We only accept the standby address, the hostname is resolved below,
 # Keeping standby_hostname here is for convenience and consistency.
     setattr(options, 'standby_hostname', 'localhost')
 
@@ -399,7 +399,7 @@ def create_standby(options):
         # initialize a standby.
         try:
             logger.info('Syncing Greenplum Database extensions to standby')
-            SyncPackages(options.standby_address).run()
+            SyncPackages(options.standby_hostname).run()
         except Exception, e:
             logger.warning('Syncing of Greenplum Database extensions has failed.')
             logger.warning('Please run gppkg --clean after successful standby initialization.')
