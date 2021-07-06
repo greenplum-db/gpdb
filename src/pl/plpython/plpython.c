@@ -5079,21 +5079,27 @@ PLy_get_spi_error_data(PyObject *exc, int* sqlerrcode, char **detail, char **hin
 
 	if (!PyArg_ParseTuple(spidata, "izzzi", sqlerrcode, detail, hint, query, position))
 	{
-		ereport(LOG, (errcode(*sqlerrcode),
+		*detail = NULL;
+		*hint = NULL;
+		*query = NULL;
+		ereport(LOG, (errcode(ERRCODE_INTERNAL_ERROR),
 					  errmsg("PyArg_ParseTuple(): failed to get error details")));
 	}
-	/*
-	 * Currently, it's safe to access these pointers.
-	 * Copy these error details to avoid using dangling memory pointers.
-	 * The returned strings may be freed by python that will cause invalid pointer
-	 * reference, i.e. segment fault.
-	 */
-	if (*detail)
-		*detail = pstrdup(*detail);
-	if (*hint)
-		*hint = pstrdup(*hint);
-	if (*query)
-		*query = pstrdup(*query);
+	else
+	{
+		/*
+		 * Currently, it's safe to access these pointers.
+		 * Copy these error details to avoid using dangling memory pointers.
+		 * The returned strings may be freed by python that will cause invalid pointer
+		 * reference, i.e. segment fault.
+		 */
+		if (*detail)
+			*detail = pstrdup(*detail);
+		if (*hint)
+			*hint = pstrdup(*hint);
+		if (*query)
+			*query = pstrdup(*query);
+	}
 
 cleanup:
 	PyErr_Clear();
