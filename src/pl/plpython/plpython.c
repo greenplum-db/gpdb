@@ -351,7 +351,6 @@ static char *PLy_procedure_name(PLyProcedure *);
 static void
 PLy_elog(int, const char *,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
-static void PLy_get_spi_sqlerrcode(PyObject *exc, int *sqlerrcode);
 static void PLy_get_spi_error_data(PyObject *exc, int *sqlerrcode, char **detail, char **hint, char **query, int *position);
 static void PLy_traceback(PyObject *e, PyObject *v, PyObject *tb,
 			  char **xmsg, char **tbmsg, int *tb_depth);
@@ -5068,30 +5067,6 @@ PLy_elog(int elevel, const char *fmt,...)
 }
 
 /*
- * Extract error code from SPIError's sqlstate attribute.
- */
-static void
-PLy_get_spi_sqlerrcode(PyObject *exc, int *sqlerrcode)
-{
-	PyObject   *sqlstate;
-	char	   *buffer;
-
-	sqlstate = PyObject_GetAttrString(exc, "sqlstate");
-	if (sqlstate == NULL)
-		return;
-
-	buffer = PyString_AsString(sqlstate);
-	if (strlen(buffer) == 5 &&
-		strspn(buffer, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") == 5)
-	{
-		*sqlerrcode = MAKE_SQLSTATE(buffer[0], buffer[1], buffer[2],
-					    buffer[3], buffer[4]);
-	}
-
-	Py_DECREF(sqlstate);
-}
-
-/*
  * Extract the error data from a SPIError
  */
 static void
@@ -5104,14 +5079,6 @@ PLy_get_spi_error_data(PyObject *exc, int* sqlerrcode, char **detail, char **hin
 	if (spidata != NULL)
 	{
 		PyArg_ParseTuple(spidata, "izzzi", sqlerrcode, detail, hint, query, position);
-	}
-	else
-	{
-		/*
-		 * If there's no spidata, at least set the sqlerrcode. This can happen
-		 * if someone explicitly raises a SPI exception from Python code.
-		 */
-		PLy_get_spi_sqlerrcode(exc, sqlerrcode);
 	}
 
 	Py_XDECREF(spidata);
