@@ -38,7 +38,6 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 0
 
-    @wip
     Scenario Outline: gpinitsystem creates a backout file when process terminated
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted

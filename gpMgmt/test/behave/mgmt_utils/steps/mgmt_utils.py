@@ -888,7 +888,6 @@ def impl(context):
     if has_exception(context):
         raise context.exception
 
-
 @when('the user runs command "{command}" from standby coordinator')
 @then('the user runs command "{command}" from standby coordinator')
 def impl(context, command):
