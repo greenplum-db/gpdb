@@ -14,7 +14,6 @@
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalMotionRandom.h"
@@ -31,18 +30,8 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDistributionSpecRandom::CDistributionSpecRandom()
-{
-	if (COptCtxt::PoctxtFromTLS()->FDMLQuery())
-	{
-		// set duplicate sensitive flag to enforce Hash-Distribution of
-		// Const Tables in DML queries
-		MarkDuplicateSensitive();
-	}
-}
-
-CDistributionSpecRandom::CDistributionSpecRandom(BOOL is_duplicatee_sensitive)
-	: m_is_duplicate_sensitive(is_duplicatee_sensitive)
+CDistributionSpecRandom::CDistributionSpecRandom(BOOL is_duplicate_sensitive)
+	: m_is_duplicate_sensitive(is_duplicate_sensitive)
 {
 }
 

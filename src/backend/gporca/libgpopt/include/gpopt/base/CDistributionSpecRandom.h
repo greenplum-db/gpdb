@@ -15,6 +15,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpec.h"
+#include "gpopt/base/COptCtxt.h"
 
 namespace gpopt
 {
@@ -46,9 +47,8 @@ protected:
 
 public:
 	//ctor
-	CDistributionSpecRandom();
-
-	CDistributionSpecRandom(BOOL is_duplicate_sensitive);
+	CDistributionSpecRandom(
+		BOOL is_duplicate_sensitive = COptCtxt::PoctxtFromTLS()->FDMLQuery());
 
 	// accessor
 	EDistributionType
@@ -68,15 +68,6 @@ public:
 	IsDuplicateSensitive() const
 	{
 		return m_is_duplicate_sensitive;
-	}
-
-	// mark distribution as unsatisfiable by Singleton
-	void
-	MarkDuplicateSensitive()
-	{
-		GPOS_ASSERT(!m_is_duplicate_sensitive);
-
-		m_is_duplicate_sensitive = true;
 	}
 
 	// does Singleton spec satisfy current distribution?
