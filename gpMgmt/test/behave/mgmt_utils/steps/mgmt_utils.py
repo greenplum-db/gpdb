@@ -370,6 +370,11 @@ def impl(context, process_name, secs):
     run_async_command(context, command)
 
 
+@when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in gpinitsystem logs')
+def impl(context, process_name, log_msg):
+    command = "while sleep 3; do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; then ps ux | grep %s |awk '{print $2}' | xargs kill ;break 2; fi; done" % (log_msg, process_name)
+    run_async_command(context, command)
+
 @given('the user asynchronously runs "{command}" and the process is saved')
 @when('the user asynchronously runs "{command}" and the process is saved')
 @then('the user asynchronously runs "{command}" and the process is saved')

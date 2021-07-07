@@ -38,12 +38,13 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 0
 
+    @wip
     Scenario Outline: gpinitsystem creates a backout file when process terminated
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted
         When the user asynchronously runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile" and the process is saved
-        And the user asynchronously sets up to end <terminated_process> process in 15 seconds
-        And the user waits 20 second
+        And the user asynchronously sets up to end <terminated_process> process when "Waiting for parallel processes" is printed in gpinitsystem logs
+        And the user waits 30 second
         Then gpintsystem logs should contain lines about running backout script
         And the user runs the gpinitsystem backout script
         And all files in gpAdminLogs directory are deleted
