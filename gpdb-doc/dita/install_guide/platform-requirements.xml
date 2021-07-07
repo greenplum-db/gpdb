@@ -127,12 +127,14 @@
         <note type="important">SSL <ph otherprops="pivotal">is supported </ph><ph
             otherprops="oss-only">can be used </ph>only on the Greenplum Database master host
           system. It cannot be used on the segment host systems.</note>
-        <note type="important">For all Greenplum Database host systems running RHEL or CentOS,
-          SELinux must either be <codeph>Disabled</codeph> or,  if it is set to
-            <codeph>Enforcing</codeph> mode, you must ensure that all Greenplum processes and
-          directories are unconfined. Firewall software should also be either disabled or configured
-          to allow communication between Greenplum hosts. See <xref
-            href="prep_os.xml#topic_sqj_lt1_nfb" format="dita"/>.</note>
+        <note type="important">For all Greenplum Database host systems, if SELinux is enabled in
+            <codeph>Enforcing</codeph> mode then the Greenplum process and users can operate
+          successfully in the default <codeph>Unconfined</codeph> context. If increased confinement
+          is required, then you must configure SELinux contexts, policies, and domains based on your
+          security requirements, and test your configuration to ensure there is no functionality or
+          performance impact to Greenplum Database. Similarly, you should either disable or
+          configure firewall software as needed to allow communication between Greenplum hosts. See
+            <xref href="prep_os.xml#topic_sqj_lt1_nfb" format="dita"/>.</note>
       </body>
     </topic>
     <topic id="topic_xbl_mkx_zgb">

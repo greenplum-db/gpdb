@@ -62,9 +62,9 @@
     <title>Disable or Configure SELinux</title>
     <body>
       <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be
-          <codeph>Disabled</codeph> or, if it is set to <codeph>Enforcing</codeph> mode, you must
-        ensure that Greenplum processes, directories, and the gpadmin user run unconfined. </p>
-      <p>To disable SELinux:<ol id="ol_ysm_5t1_nfb">
+          <codeph>Disabled</codeph> or configured to allow unconfined access to Greenplum processes,
+        directories, and the gpadmin user. </p>
+      <p>If you choose to disable SELinux:<ol id="ol_ysm_5t1_nfb">
           <li>As the root user, check the status of
             SELinux:<codeblock># sestatus
 SELinuxstatus: disabled</codeblock></li>
@@ -80,34 +80,14 @@ SELinuxstatus: disabled</codeblock></li>
           <li>Reboot the system to apply any changes that you made and verify that SELinux is
             disabled.</li>
         </ol></p>
-      <p>If you run SELinux in <codeph>Enforcing</codeph> mode, ensure that Greenplum software runs
-          unconfined:<ol id="ol_g4q_tvy_nnb">
-          <li>The default SELinux configuration uses the <codeph>Targeted</codeph> policy, where
-            only specific, targeted processes run in a confined domain. For
-              example:<codeblock>$ cat /etc/selinux/config
-SELINUX=enforcing
-SELINUXTYPE=targeted
-</codeblock><p>In
-              this default configuration, ensure that you do not target any files or directories
-              under <codeph>/usr/local</codeph> that would confine Greenplum processes from running.
-              After installation, you can confirm that the <codeph>postgres</codeph> process is
-              unconfied:<codeblock>$ ps -eZ | grep postgres
-unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 9074 ? 00:00:00 postgres
-</codeblock>
-            </p></li>
-          <li>The <codeph>gpadmin</codeph> SElinux user must also be unconfined to ensure Greenplum
-            operation. You can verify this with the <codeph>semanage</codeph> utility. For
-            example:<codeblock>$ semanage login -l
-Login Name           SELinux User         MLS/MCS Range        Service
-
-__default__          unconfined_u         s0-s0:c0.c1023       *
-root                 unconfined_u         s0-s0:c0.c1023       *
-...
-gpadmin              gpadmin              s0-s0:c0.c1023       *
-</codeblock></li>
-        </ol></p>
-      <p>See the SELinux documentation for your distribution for more information about configuring
-        SELinux and SELinux users.</p>
+      <p>If you choose to enable SELinux in <codeph>Enforcing</codeph> mode, then Greenplum
+        processes and users can operate successfully in the default <codeph>Unconfined</codeph>
+        context. If you require increased SELinux confinement for Greenplum processes and users, you
+        must test your configuration to ensure that there are no functionality or performance
+        impacts to Greenplum Database. See the <xref
+          href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/selinux_users_and_administrators_guide/index"
+          format="html" scope="external">SELinux User's and Administrator's Guide</xref> for
+        detailed information about configuring SELinux and SELinux users.</p>
     </body>
   </topic>
   <topic id="topic_et2_y22_4nb">
