@@ -598,6 +598,44 @@ select x.aa/100 aaa, x.c, y.c from cte1 x join cte1 y on x.aa=y.aa;
 
 select from t2_ncols union select * from t2_ncols;
 
+-- Issue https://github.com/greenplum-db/gpdb/issues/12031, extra junk tagrget entry added
+-- on the Subquery Scan node when we compare the hashExprs and the targetlist of the scan plan.
+-- And if it appears under the Append node, with Motion node on top of the Subquery Scan node,
+-- it'll cause the mismatch of the target lists for these nodes, generate wrong result.
+-- The plan looks like:
+-- Motion
+-- --> Append
+-- -----> Subplan1
+-- -----> Subplan2
+-- So remove the unnecessary call of `add_to_flat_tlist_junk` in `create_scan_plan` and `create_join_plan`.
+CREATE TABLE junkt1 (model character varying(16), last_build_date timestamp) DISTRIBUTED BY (model);
+-- Note the model in junkt1 and junkt2 has different varying value, this cause add junk
+-- target entry before
+CREATE TABLE junkt2(model character varying(12), last_build_date timestamp) DISTRIBUTED BY (model);
+create table junkt3 (model2 text);
+
+insert into junkt3 values ('WF2598042001');
+insert into junkt1 values('WF2598042001','2020/3/6 3:43:08 PM');
+
+set optimizer = off;
+explain (costs off, verbose) select b.model2, f.model, f.last_build_date::date + case when f.model~'^.F.+$' then interval '5year' else interval '1year' end <= '2021-07-08'
+	from junkt3 b
+	join junkt1 f on f.model = b.model2
+union all
+select b.model2, f.model, f.last_build_date::date + interval '1year' <= '2021-07-08'
+	from junkt3 b
+	join junkt2 f on f.model = b.model2;
+
+select b.model2, f.model, f.last_build_date::date + case when f.model~'^.F.+$' then interval '5year' else interval '1year' end <= '2021-07-08'
+	from junkt3 b
+	join junkt1 f on f.model = b.model2
+union all
+select b.model2, f.model, f.last_build_date::date + interval '1year' <= '2021-07-08'
+	from junkt3 b
+	join junkt2 f on f.model = b.model2;
+
+reset optimizer;
+
 --
 -- Clean up
 --
@@ -608,3 +646,6 @@ DROP TABLE IF EXISTS T_random CASCADE;
 DROP VIEW IF EXISTS v1_ncols CASCADE;
 DROP TABLE IF EXISTS t1_ncols CASCADE;
 DROP TABLE IF EXISTS t2_ncols CASCADE;
+DROP TABLE IF EXISTS junkt1 CASCADE;
+DROP TABLE IF EXISTS junkt2 CASCADE;
+DROP TABLE IF EXISTS junkt3 CASCADE;

@@ -527,15 +527,6 @@ create_scan_plan(PlannerInfo *root, Path *best_path)
 										   : NULL,
 										   plan);
 
-	/**
-	 * If plan has a flow node, ensure all entries of hashExpr
-	 * are in the targetlist.
-	 */
-	if (plan->flow && plan->flow->hashExprs)
-	{
-		plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */ );
-	}
-
 	/*
 	 * If there are any pseudoconstant clauses attached to this node, insert a
 	 * gating Result node that evaluates the pseudoconstants as one-time
@@ -816,15 +807,6 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 			best_path->path.parent ? best_path->path.parent->relids
 					: NULL,
 					  plan);
-
-	/**
-	 * If plan has a flow node, ensure all entries of hashExpr
-	 * are in the targetlist.
-	 */
-	if (plan->flow && plan->flow->hashExprs)
-	{
-		plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */ );
-	}
 
 	/*
 	 * We may set prefetch_joinqual to true if there is
