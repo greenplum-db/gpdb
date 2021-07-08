@@ -597,7 +597,7 @@ location('gpfdist://@hostname@:7070/exttab1/mpp12839*.data' )
 format 'text' (delimiter E'\177' null '' newline 'crlf')
 segment reject limit 100 rows;
 select * from ext_mpp12839; -- should not reach reject limit
-NOTICE:  found 6 data formatting errors (6 or more input rows), rejected related input data
+NOTICE:  found 7 data formatting errors (7 or more input rows), rejected related input data
  userguid | action_time | action_type | object_id | general_param | plu_id | page_name | browser | platform | filtering_data | is_new_user | dummy 
 ----------+-------------+-------------+-----------+---------------+--------+-----------+---------+----------+----------------+-------------+-------
 (0 rows)
@@ -788,30 +788,99 @@ drop external table external_sreh_bad_data_text;
 -- sreh 2 custom format with bad data.
 drop external table if exists external_sreh_bad_data;
 NOTICE:  foreign table "external_sreh_bad_data" does not exist, skipping
-create external table external_sreh_bad_data(name text) location('gpfdist://@hostname@:7070/exttab1/bad_data.tbl') format 'custom' (formatter='fixedwidth_in', name='5') log errors segment reject limit 3;
+create external table external_sreh_bad_data(name text) location('gpfdist://@hostname@:7070/exttab1/bad_data.tbl') format 'custom' (formatter='fixedwidth_in', name='4') log errors segment reject limit 3;
 select * from external_sreh_bad_data;
-NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
- name  
--------
- AAABB
-(1 row)
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ name 
+------
+(0 rows)
 
 select rawbytes from gp_read_error_log('external_sreh_bad_data');
-  rawbytes  
-------------
+   rawbytes   
+--------------
+ \x4141414242
  \x31003132
-(1 row)
+(2 rows)
 
 drop external table external_sreh_bad_data;
 -- start_ignore
 select * from exttab1_gpfdist_stop;
-      x     
+      x      
 -------------
  stopping...
 (1 row)
 
 -- end_ignore
 -- End Test external table sreh output in gp_read_error_log() print rawbytes with \0 in it.
+-- Test external table end of line and header
+-- 1. File protocol with header and eol 'CRLF' and the file content is like 'xxx\nxx\r\ndata'
+DROP EXTERNAL TABLE IF EXISTS file_with_header_and_eof;
+NOTICE:  foreign table "file_with_header_and_eof" does not exist, skipping
+CREATE EXTERNAL TABLE file_with_header_and_eof(name text)
+location ('file://@hostname@@abs_srcdir@/data/exttab1/file_with_header_crlf_eof.tbl')
+FORMAT 'text' (HEADER NEWLINE 'CRLF');
+NOTICE:  HEADER means that each one of the data files has a header row
+select * from file_with_header_and_eof;
+NOTICE:  HEADER means that each one of the data files has a header row
+ name 
+------
+ data
+(1 row)
+
+drop external table file_with_header_and_eof;
+-- 2. File protocol read multi-files which may not contain eol at the end (not concatenate to the next file)or empty file(not return empty line but ignore)
+DROP EXTERNAL TABLE IF EXISTS file_with_multifiles;
+NOTICE:  foreign table "file_with_multifiles" does not exist, skipping
+CREATE EXTERNAL TABLE file_with_multifiles(name text)
+location ('file://@hostname@@abs_srcdir@/data/exttab1/missing_eol*.data')
+FORMAT 'text' (NEWLINE 'LF');
+select * from file_with_multifiles order by name;
+            name            
+----------------------------
+ 
+ 2nd file 1line
+ 2nd file 2line without eol
+ 4th file normal eol
+(4 rows)
+
+drop external table file_with_multifiles;
+-- 3. Gpfdist protocol read multi-files same as 2.
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from exttab1_gpfdist_start;
+      x      
+-------------
+ starting...
+(1 row)
+
+-- end_ignore
+drop external table if exists gpfdist_with_multifiles;
+NOTICE:  foreign table "gpfdist_with_multifiles" does not exist, skipping
+create external table gpfdist_with_multifiles(name text) location('gpfdist://@hostname@:7070/exttab1/missing_eol*.data') format 'text' (NEWLINE 'LF');
+select * from gpfdist_with_multifiles order by name;
+            name            
+----------------------------
+ 
+ 2nd file 1line
+ 2nd file 2line without eol
+ 4th file normal eol
+(4 rows)
+
+drop external table gpfdist_with_multifiles;
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+-- end_ignore
+-- Test external table end of line and header
 drop external table ext_whois;
 drop external table exttab1_gpfdist_start;
 drop external table gpfdist_csv_start;

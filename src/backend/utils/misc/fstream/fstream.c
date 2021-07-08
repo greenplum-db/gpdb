@@ -47,6 +47,7 @@ struct fstream_t
 	int 			buffer_cur_size; /* number of bytes in buffer currently */
 	const char*		ferror; 		 /* error string */
 	struct fstream_options options;
+	char 			last_char[2]; /* store last 2 char in last line */
 };
 
 /*
@@ -611,6 +612,8 @@ fstream_open(const char *path, const struct fstream_options *options,
 
 	fs->line_number = 1;
 	fs->skip_header_line = options->header;
+	fs->last_char[0] = -1;
+	fs->last_char[1] = -1;
 
 	return fs;
 }
@@ -650,6 +653,8 @@ static int nextFile(fstream_t*fs)
 	fs->foff = 0;
 	fs->line_number = 1;
 	fs->fidx++;
+	fs->last_char[0] = -1;
+	fs->last_char[1] = -1;
 
 	if (fs->fidx < fs->glob.gl_pathc)
 	{
@@ -699,6 +704,143 @@ char* format_error(char* c1, char* c2)
 	return err_msg;
 }
 
+#define set_line_delim(eol_type) \
+{ \
+	switch(eol_type) \
+	{ \
+		case EOL_CRNL: \
+			line_delim_string = "\r\n"; \
+			line_delim_len = 2; \
+			break; \
+		case EOL_CR: \
+			line_delim_string = "\r"; \
+			line_delim_len = 1; \
+			break; \
+		case EOL_NL: \
+		default: \
+			line_delim_string = "\n"; \
+			line_delim_len = 1; \
+			break; \
+	} \
+}
+static void record_last_char_inline(fstream_t *fs, const char *buffer, int current_size)
+{
+	assert(current_size > 0);
+	if(current_size == 1) {
+		fs->last_char[1] = buffer[current_size-1];
+		fs->last_char[0] = -1;
+	} else {
+		fs->last_char[1] = buffer[current_size-1];
+		fs->last_char[0] = buffer[current_size-2];
+	}
+}
+static bool has_complete_eol(int eol_type, char *buff, int bytesread)
+{
+	char eol1, eol2; /* last 1 char and last second char */
+	assert(bytesread > 0);
+
+	if(bytesread == 1 && EOL_CRNL == eol_type) {
+		return false;
+	}
+	switch (eol_type) {
+		case EOL_CRNL:
+			eol1 = '\n';
+			eol2 = '\r';
+			break;
+		case EOL_CR:
+			eol1 = '\r';
+			break;
+		case EOL_NL:
+		default:
+			eol1 = '\n';
+			break;
+	}
+	if (EOL_CRNL == eol_type) {
+		return buff[bytesread-1] == eol1 && buff[bytesread-2] == eol2;
+	} else {
+		return buff[bytesread-1] == eol1;
+	}
+}
+static int fstream_add_eol(int eol_type, char *buff, int bytesread)
+{
+	int ret;
+	switch (eol_type) {
+		case EOL_CRNL:
+			buff[bytesread] = '\r';
+			buff[bytesread+1] = '\n';
+			ret = 2;
+			break;
+		case EOL_CR:
+			buff[bytesread] = '\r';
+			ret = 1;
+			break;
+		case EOL_NL:
+		default:
+			buff[bytesread] = '\n';
+			ret = 1;
+			break;
+	}
+	return ret;
+}
+static char *find_nc_in_text_buffer(char *p, char *q, int nc)
+{
+	char*	last_record_loc = NULL;
+	while (p < q)
+	{
+		int ch = *p++;
+
+		if (ch == nc)
+		{
+			last_record_loc = p;
+			break;
+		}
+	}
+
+	return last_record_loc;
+}
+/* Find a line delimiter if any, return true if found one */
+static bool find_line_delimiter_known(fstream_t *fs, char *buff, int size)
+{
+	char *cr_pos = NULL, *lf_pos = NULL;
+	if (fs->options.is_csv)
+	{
+		cr_pos = scan_csv_records_cr_or_lf(buff, buff+size, 1, fs, '\r');
+		if(cr_pos != NULL)
+		{
+			fs->line_number--;
+		}
+
+		lf_pos = scan_csv_records_cr_or_lf(buff, buff+size, 1, fs, '\n');
+		if(lf_pos != NULL)
+		{
+			fs->line_number--;
+		}
+	}
+	else
+	{
+		cr_pos = find_nc_in_text_buffer(buff, buff+size, '\r');
+		lf_pos = find_nc_in_text_buffer(buff, buff+size, '\n');
+	}
+	if(cr_pos == NULL && lf_pos == NULL)
+		return false;
+	if (cr_pos != NULL && lf_pos == NULL)
+		fs->options.eol_type = EOL_CR;
+	else if (cr_pos == NULL && lf_pos != NULL)
+		fs->options.eol_type = EOL_NL;
+	else
+	{
+		if(cr_pos < lf_pos)
+		{
+			if(cr_pos + 1 == lf_pos)
+				fs->options.eol_type = EOL_CRNL;
+			else
+				fs->options.eol_type = EOL_CR;
+		}
+		else
+			fs->options.eol_type = EOL_NL;
+	}
+	return true;
+}
 /*
  * fstream_read
  *
@@ -717,9 +859,17 @@ int fstream_read(fstream_t *fs,
 {
 	int buffer_capacity = fs->options.bufsize;
 	static char err_buf[FILE_ERROR_SZ] = {0};
+	char *line_delim_string = NULL;
+	int line_delim_len = 0;
+	char last_char[2] = {-1, -1};
 	
 	if (fs->ferror)
 		return -1;
+
+	/* For file protocol, the line_delim_str and line_delim_length is set to
+	 * ("" , -1), so the header handling should not return the correct result
+	 * when the format is not csv, so we adjust them from the beginning */
+	set_line_delim(fs->options.eol_type);
 
 	for (;;)
 	{
@@ -739,7 +889,7 @@ int fstream_read(fstream_t *fs,
 			char* 	q = p + fs->buffer_cur_size;
 			size_t 	len = 0;
 
-		    assert(fs->buffer_cur_size < buffer_capacity);
+			assert(fs->buffer_cur_size < buffer_capacity);
 
 			/*
 			 * read data from the source file and fill up the file stream buffer
@@ -752,6 +902,9 @@ int fstream_read(fstream_t *fs,
 				fs->ferror = format_error("cannot read file - ", fs->glob.gl_pathv[fs->fidx]);
 				return -1;
 			}
+			/* Make another chance to detect any eol for EOL_UNKNOW type before parsing*/
+			if ((fs->options.eol_type == EOL_UNKNOWN) && find_line_delimiter_known(fs, q, bytesread))
+				set_line_delim(fs->options.eol_type);
 
 			/* update the buffer size according to new byte count we just read */
 			fs->buffer_cur_size += bytesread;
@@ -764,19 +917,8 @@ int fstream_read(fstream_t *fs,
 			}
 			else
 			{
-				if (line_delim_length > 0)
-				{
-					/* text header with defined EOL */
-					p = find_first_eol_delim (p, q, line_delim_str, line_delim_length);
-
-				}
-				else
-				{
-					/* text header with \n as delimiter (by default) */
-					for (; p < q && *p != '\n'; p++)
-						;
-				}
-
+				/* text header with defined EOL */
+				p = find_first_eol_delim (p, q, line_delim_string, line_delim_len);
 				p = (p < q) ? p + 1 : 0;
 				fs->line_number++;
 			}
@@ -816,6 +958,7 @@ int fstream_read(fstream_t *fs,
 		{
 			char	*p;
 			ssize_t total_bytes = fs->buffer_cur_size;
+			int size_less = size - 1; /* Make room for the CRLF eol */
 			
 			assert(size >= buffer_capacity);
 
@@ -830,8 +973,8 @@ int fstream_read(fstream_t *fs,
 				memcpy(dest, fs->buffer, total_bytes);
 			}
 
-			/* read more data from source file into destination buffer */
-			bytesread2 = gfile_read(&fs->fd, (char*) dest + total_bytes, size - total_bytes);
+			/* read more data from source file into destination buffer and make room for eol */
+			bytesread2 = gfile_read(&fs->fd, (char*) dest + total_bytes, size_less - total_bytes);
 
 			if (bytesread2 < 0)
 			{
@@ -839,7 +982,11 @@ int fstream_read(fstream_t *fs,
 				return -1;
 			}
 
-			if (bytesread2 < size - total_bytes)
+			/* Make another chance to detect any eol for EOL_UNKNOW type before parsing*/
+			if ((fs->options.eol_type == EOL_UNKNOWN) && find_line_delimiter_known(fs, (char*)dest + total_bytes, bytesread2))
+				set_line_delim(fs->options.eol_type);
+
+			if (bytesread2 < size_less - total_bytes)
 			{
 				/*
 				 * We didn't read as much as we asked for. Check why.
@@ -862,6 +1009,10 @@ int fstream_read(fstream_t *fs,
 				 * bytes read to buffer earlier, if next file was found but
 				 * could not open return -1
 				 */
+				if(!has_complete_eol(fs->options.eol_type, dest, bytesread2 + total_bytes)) {
+					bytesread2 += fstream_add_eol(fs->options.eol_type,
+								   dest, bytesread2 + total_bytes);
+				}
 				return nextFile(fs) ? -1 : total_bytes + bytesread2;
 			}
 
@@ -875,7 +1026,7 @@ int fstream_read(fstream_t *fs,
 			if (fs->options.is_csv)
 			{
 				/* CSV: go slow, scan byte-by-byte for record boundary */
-				p = scan_csv_records(dest, (char*)dest + size, 0, fs);
+				p = scan_csv_records(dest, (char*)dest + size_less, 0, fs);
 			}
 			else
 			{
@@ -884,16 +1035,7 @@ int fstream_read(fstream_t *fs,
 				 * record boundary.
 				 * find the last end of line delimiter from the back
 				 */
-				if (line_delim_length > 0)
-				{
-					p = find_last_eol_delim((char*)dest, size, line_delim_str, line_delim_length);
-				}
-				else
-				{
-					for (p = (char*)dest + size; (char*)dest <= --p && *p != '\n';)
-						;
-				}
-
+				p = find_last_eol_delim((char*)dest, size_less, line_delim_string, line_delim_len);
 				p = (char*)dest <= p ? p + 1 : 0;
 				fs->line_number = 0;
 			}
@@ -901,7 +1043,7 @@ int fstream_read(fstream_t *fs,
 			/*
 			 * could we not find even one complete row in this buffer? error.
 			 */
-			if (!p || (char*)dest + size >= p + buffer_capacity)
+			if (!p || (char*)dest + size_less  >= p + buffer_capacity)
 			{
 #ifdef WIN32
 				snprintf(err_buf, sizeof(err_buf)-1, "line too long in file %s near (%ld bytes)",
@@ -916,7 +1058,7 @@ int fstream_read(fstream_t *fs,
 			}
 
 			/* copy the result chunk of data into our buffer and we're done */
-			fs->buffer_cur_size = (char*)dest + size - p;
+			fs->buffer_cur_size = (char*)dest + size_less - p;
 			memcpy(fs->buffer, p, fs->buffer_cur_size);
 			fs->foff += p - (char*)dest;
 
@@ -958,16 +1100,30 @@ int fstream_read(fstream_t *fs,
 			return -1;
 		}
 
+		/* Make another chance to detect any eol for EOL_UNKNOW type before parsing*/
+		if ((fs->options.eol_type == EOL_UNKNOWN) && find_line_delimiter_known(fs, dest, bytesread))
+			set_line_delim(fs->options.eol_type);
+
 		if (bytesread)
 		{
 			updateCurFileState(fs, fo);
 			fs->foff += bytesread;
 			fs->line_number = 0;
+			record_last_char_inline(fs, dest, bytesread);
 			return bytesread;
 		}
 
+		last_char[0] = fs->last_char[0];
+		last_char[1] = fs->last_char[1];
 		if (nextFile(fs))
 			return -1;
+		/* We don't add eol if the file is empty */
+		if(last_char[0] == -1 && last_char[1] == -1) continue;
+		/* Add eol if last eol is not valid and size is large enough to hold eol */
+		if(!has_complete_eol(fs->options.eol_type, last_char,
+			sizeof(last_char)) && (size >= line_delim_len)) {
+			return fstream_add_eol(fs->options.eol_type, dest, 0);
+		}
 	}
 }
 
