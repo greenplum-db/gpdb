@@ -569,6 +569,117 @@ explain (costs off) select * from t_hashdist cross join (select * from generate_
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
+-- CTAS on general locus into replicated table
+create temp SEQUENCE test_seq;
+explain (costs off) create table t_rep as select nextval('test_seq') from (select generate_series(1, 10)) t1 distributed replicated;
+              QUERY PLAN               
+---------------------------------------
+ Result
+   ->  Broadcast Motion 1:3  (slice1)
+         ->  Result
+               ->  ProjectSet
+                     ->  Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+create table t_rep1 as select nextval('test_seq') from (select generate_series(1, 10)) t1 distributed replicated;
+select count(*) from gp_dist_random('t_rep1');
+ count 
+-------
+    30
+(1 row)
+
+select count(distinct nextval) from gp_dist_random('t_rep1');
+ count 
+-------
+    10
+(1 row)
+
+drop table t_rep1;
+-- CTAS on general locus into replicated table with HAVING
+explain (costs off) create table t_rep as select i from generate_series(5, 15) as i group by i having i < nextval('test_seq') distributed replicated;
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Result
+   ->  Broadcast Motion 3:3  (slice1; segments: 3)
+         ->  Result
+               Filter: (generate_series < nextval('test_seq'::regclass))
+               ->  HashAggregate
+                     Group Key: generate_series
+                     ->  Result
+                           ->  Function Scan on generate_series
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+create table t_rep2 as select i from generate_series(5, 15) as i group by i having i < nextval('test_seq') distributed replicated;
+select count(*) from gp_dist_random('t_rep2');
+ count 
+-------
+    33
+(1 row)
+
+select count(distinct i) from gp_dist_random('t_rep2');
+ count 
+-------
+    11
+(1 row)
+
+drop table t_rep2;
+-- CTAS on general locus into replicated table with GROUP BY
+explain (costs off) create table t_rep as select i > nextval('test_seq') from generate_series(5, 15) as i group by i > nextval('test_seq') distributed replicated;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Result
+   ->  Broadcast Motion 3:3  (slice1; segments: 3)
+         ->  GroupAggregate
+               Group Key: ((generate_series > nextval('test_seq'::regclass)))
+               ->  Sort
+                     Sort Key: ((generate_series > nextval('test_seq'::regclass)))
+                     ->  Redistribute Motion 1:3  (slice2)
+                           Hash Key: ((generate_series > nextval('test_seq'::regclass)))
+                           ->  Function Scan on generate_series
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+create table t_rep3 as select i > nextval('test_seq') as a from generate_series(5, 15) as i group by i > nextval('test_seq') distributed replicated;
+select count(*) from gp_dist_random('t_rep3');
+ count 
+-------
+     3
+(1 row)
+
+select count(distinct a) from gp_dist_random('t_rep3');
+ count 
+-------
+     1
+(1 row)
+
+drop table t_rep3;
+-- CTAS on replicated table into replicated table
+create table rep_tbl as select t1 from generate_series(1, 10) t1 distributed replicated;
+explain (costs off) create table t_rep as select nextval('test_seq') from rep_tbl distributed replicated;
+                    QUERY PLAN                     
+---------------------------------------------------
+ Result
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Seq Scan on rep_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+create table t_rep4 as select nextval('test_seq') from rep_tbl distributed replicated;
+select count(*) from gp_dist_random('t_rep4');
+ count 
+-------
+    30
+(1 row)
+
+select count(distinct nextval) from gp_dist_random('t_rep4');
+ count 
+-------
+    10
+(1 row)
+
+drop table rep_tbl, t_rep4;
 --
 -- Test append different numsegments tables work well
 -- See Github issue: https://github.com/greenplum-db/gpdb/issues/12146

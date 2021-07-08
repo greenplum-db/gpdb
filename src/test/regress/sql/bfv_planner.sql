@@ -315,6 +315,36 @@ explain (costs off) select * from t_hashdist cross join (select a, count(1) as s
 -- limit
 explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;
 
+-- CTAS on general locus into replicated table
+create temp SEQUENCE test_seq;
+explain (costs off) create table t_rep as select nextval('test_seq') from (select generate_series(1, 10)) t1 distributed replicated;
+create table t_rep1 as select nextval('test_seq') from (select generate_series(1, 10)) t1 distributed replicated;
+select count(*) from gp_dist_random('t_rep1');
+select count(distinct nextval) from gp_dist_random('t_rep1');
+drop table t_rep1;
+
+-- CTAS on general locus into replicated table with HAVING
+explain (costs off) create table t_rep as select i from generate_series(5, 15) as i group by i having i < nextval('test_seq') distributed replicated;
+create table t_rep2 as select i from generate_series(5, 15) as i group by i having i < nextval('test_seq') distributed replicated;
+select count(*) from gp_dist_random('t_rep2');
+select count(distinct i) from gp_dist_random('t_rep2');
+drop table t_rep2;
+
+-- CTAS on general locus into replicated table with GROUP BY
+explain (costs off) create table t_rep as select i > nextval('test_seq') from generate_series(5, 15) as i group by i > nextval('test_seq') distributed replicated;
+create table t_rep3 as select i > nextval('test_seq') as a from generate_series(5, 15) as i group by i > nextval('test_seq') distributed replicated;
+select count(*) from gp_dist_random('t_rep3');
+select count(distinct a) from gp_dist_random('t_rep3');
+drop table t_rep3;
+
+-- CTAS on replicated table into replicated table
+create table rep_tbl as select t1 from generate_series(1, 10) t1 distributed replicated;
+explain (costs off) create table t_rep as select nextval('test_seq') from rep_tbl distributed replicated;
+create table t_rep4 as select nextval('test_seq') from rep_tbl distributed replicated;
+select count(*) from gp_dist_random('t_rep4');
+select count(distinct nextval) from gp_dist_random('t_rep4');
+drop table rep_tbl, t_rep4;
+
 --
 -- Test append different numsegments tables work well
 -- See Github issue: https://github.com/greenplum-db/gpdb/issues/12146
