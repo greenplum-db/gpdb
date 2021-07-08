@@ -110,7 +110,7 @@
           <pd>The password of the user connecting to Greenplum Database.</pd>
         </plentry>
         <plentry>
-          <pt>-R <varname>test_name | 'test_name1, test_name2...'</varname>
+          <pt>-R <varname>test_name | 'test_name1,test_name2 [, ...]'</varname>
           </pt>
           <pd>Specify one or more tests to run. Specify multiple tests as a comma-delimited list of
             test names enclosed in quotes. </pd>
@@ -156,7 +156,7 @@
           </pd>
         </plentry>
         <plentry>
-          <pt>-s <codeph>test_name | 'test_name1, test_name2...'</codeph></pt>
+          <pt>-s <codeph>test_name | 'test_name1, test_name2 [, ...]'</codeph></pt>
           <pd>Specify one ore more tests to skip. Specify multiple tests as a comma-delimited list
             of test names enclosed in quotes.</pd>
         </plentry>
