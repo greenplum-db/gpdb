@@ -24,7 +24,7 @@ from behave import given, when, then
 from datetime import datetime, timedelta
 from os import path
 
-from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR, STATUS_DOWN
+from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp
 from gppylib.commands.unix import findCmdInPath, Scp
@@ -3250,7 +3250,7 @@ def impl(context):
             cmd.run(validateAfter=True)
             conninfo = cmd.get_results().stdout.strip()
         except:
-            if m.getSegmentStatus() == STATUS_DOWN:
+            if m.isSegmentDown():
                 return
             raise
 
