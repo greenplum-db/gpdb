@@ -438,7 +438,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	struct pollfd	*pollRead;
 	bool		io_errors = false;
 	StringInfoData io_err_msg;
-	Bitmapset	   *oidMap = NULL;
+	List           *oidList = NULL;
 	int				nest_level;
 
 	initStringInfo(&io_err_msg);
@@ -564,7 +564,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 					first_error = cdbdisp_get_PQerror(res);
 			}
 
-			pgstat_combine_one_qe_result(&oidMap, res, nest_level, q->segindex);
+			pgstat_combine_one_qe_result(&oidList, res, nest_level, q->segindex);
 
 			if (q->conn->wrote_xlog)
 			{

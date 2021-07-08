@@ -1602,7 +1602,7 @@ extern void pgstat_send_bgwriter(void);
 struct CdbDispatchResults;
 struct pg_result;
 extern void pgstat_send_qd_tabstats(void);								/* GPDB */
-extern void pgstat_combine_one_qe_result(Bitmapset **oidMap,			/* GPDB */
+extern void pgstat_combine_one_qe_result(List **oidList,           /* GPDB */
 										 struct pg_result *pgresult,
 										 int nest_level,
 										 int32 segindex);

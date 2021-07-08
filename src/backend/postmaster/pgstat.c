@@ -4668,7 +4668,7 @@ pgstat_send_qd_tabstats(void)
  * segindex - the QE segment index for the current pgresult, for logging purpose
  */
 void
-pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
+pgstat_combine_one_qe_result(List **oidList, struct pg_result *pgresult,
 							 int nest_level, int32 segindex)
 {
 	int						arrayLen;
@@ -4704,7 +4704,7 @@ pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
 			pgstat_info->trans->nest_level != nest_level)
 			add_tabstat_xact_level(pgstat_info, nest_level);
 		trans = pgstat_info->trans;
-		if (bms_is_member(records[i].table_stat.t_id, *oidMap))
+		if (list_member_oid(*oidList, records[i].table_stat.t_id))
 		{
 			/*
 			 * Same table pgstat from different QE;
@@ -4726,7 +4726,7 @@ pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
 			 * it already contians the previous count collected from previous
 			 * statement.
 			 */
-			*oidMap = bms_add_member(*oidMap, records[i].table_stat.t_id);
+			*oidList = lappend_oid(*oidList, records[i].table_stat.t_id);
 			trans->tuples_inserted = records[i].table_stat.tuples_inserted;
 			trans->tuples_updated = records[i].table_stat.tuples_updated;
 			trans->tuples_deleted = records[i].table_stat.tuples_deleted;
@@ -4769,7 +4769,7 @@ pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
 	CdbDispatchResult	   *dispatchResult;
 	CdbDispatchResult	   *resultEnd;
 	struct pg_result	   *pgresult;
-	Bitmapset			   *oidMap = NULL;
+	List                   *oidList = NULL;
 	int						nest_level;
 
 	if (!pgstat_track_counts)
@@ -4785,7 +4785,7 @@ pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
 		if (pgresult && !dispatchResult->errcode && pgresult->extraslen > 0 &&
 			pgresult->extraType == PGExtraTypeTableStats)
 		{
-			pgstat_combine_one_qe_result(&oidMap, pgresult, nest_level,
+			pgstat_combine_one_qe_result(&oidList, pgresult, nest_level,
 										 dispatchResult->segdbDesc->segindex);
 		}
 	}
