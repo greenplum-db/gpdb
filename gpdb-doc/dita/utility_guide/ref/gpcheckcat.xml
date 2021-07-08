@@ -14,11 +14,12 @@
   <b>Options:</b>
      <b>-g</b> <varname>dir</varname>
      <b>-p</b> <varname>port</varname>
+     <b>-s</b> <varname>test_name | 'test_name1, test_name2...'</varname>  
      <b>-P</b> <varname>password</varname>
      <b>-U</b> <varname>user_name</varname>
      <b>-S</b> {none | only}
      <b>-O</b>
-     <b>-R</b> <varname>test_name</varname> 
+     <b>-R</b> <varname>test_name | 'test_name1, test_name2...'</varname>
      <b>-C</b> <varname>catalog_name</varname>
      <b>-B</b> <varname>parallel_processes</varname>
      <b>-v</b>
@@ -109,10 +110,11 @@
           <pd>The password of the user connecting to Greenplum Database.</pd>
         </plentry>
         <plentry>
-          <pt>-R <varname>test_name</varname>
+          <pt>-R <varname>test_name | 'test_name1, test_name2...'</varname>
           </pt>
-          <pd>Specify a test to run. Some tests can be run only when Greenplum Database is in
-            restricted mode.</pd>
+          <pd>Specify one or more tests to run. Specify multiple tests as a comma-delimited list of
+            test names enclosed in quotes. </pd>
+          <pd>Some tests can be run only when Greenplum Database is in restricted mode.</pd>
           <pd>These are the tests that can be performed: <p><codeph>acl</codeph> - Cross consistency
               check for access control privileges</p>
             <p><codeph>aoseg_table</codeph> - Check that the vertical partition
@@ -154,11 +156,16 @@
           </pd>
         </plentry>
         <plentry>
+          <pt>-s <codeph>test_name | 'test_name1, test_name2...'</codeph></pt>
+          <pd>Specify one ore more tests to skip. Specify multiple tests as a comma-delimited list
+            of test names enclosed in quotes.</pd>
+        </plentry>
+        <plentry>
           <pt>-S {none | only}</pt>
           <pd>Specify this option to control the testing of catalog tables that are shared across
             all databases in the Greenplum Database installation, such as <i>pg_database</i>. </pd>
           <pd>The value <codeph>none</codeph> disables testing of shared catalog tables. The value
-              <codeph>only</codeph> tests only the shared catalog tables.</pd>
+              <codeph>only</codeph> tests only the shared catalog tables. </pd>
         </plentry>
         <plentry>
           <pt>-U <varname>user_name</varname></pt>
