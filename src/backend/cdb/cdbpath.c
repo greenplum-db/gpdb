@@ -2342,7 +2342,8 @@ create_motion_path_for_insert(PlannerInfo *root, GpPolicy *policy,
 	{
 		/* try to optimize insert with no motion introduced into */
 		if (optimizer_replicated_table_insert &&
-			!contain_volatile_functions((Node *)subpath->pathtarget->exprs))
+			!contain_volatile_functions((Node *)subpath->pathtarget->exprs) &&
+			!contain_volatile_functions((Node *)root->parse->havingQual))
 		{
 			/*
 			 * CdbLocusType_SegmentGeneral is only used by replicated table

@@ -416,6 +416,11 @@ explain (costs off) insert into t_replicate_volatile select random(), a, a from 
 create sequence seq_for_insert_replicated_table;
 explain (costs off) insert into t_replicate_volatile select nextval('seq_for_insert_replicated_table');
 explain (costs off) select a from t_replicate_volatile union all select * from nextval('seq_for_insert_replicated_table');
+
+-- CTAS
+explain (costs off) create table rpt_ctas as select random() from generate_series(1, 10) distributed replicated;
+explain (costs off) create table rpt_ctas as select a from generate_series(1, 10) a group by a having sum(a) > random() distributed replicated;
+
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;

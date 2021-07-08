@@ -79,6 +79,7 @@
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbutil.h"
 #include "optimizer/tlist.h"
+#include "optimizer/optimizer.h" /* for contain_volatile_functions() */
 
 /*
  * decorate_subplans_with_motions_context holds state for the recursive
@@ -499,7 +500,9 @@ cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path, PlanSlice *topslice
 
 		query->intoPolicy = targetPolicy;
 
-		if (GpPolicyIsReplicated(targetPolicy))
+		if (GpPolicyIsReplicated(targetPolicy) &&
+			!contain_volatile_functions((Node*) query->targetList) &&
+			!contain_volatile_functions((Node*) query->havingQual))
 		{
 			CdbPathLocus replicatedLocus;
 

@@ -920,19 +920,41 @@ explain (costs off) select a from t_replicate_volatile union all select * from n
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
+-- CTAS
+explain (costs off) create table rpt_ctas as select random() from generate_series(1, 10) distributed replicated;
+QUERY PLAN
+___________
+ Result
+   ->  Broadcast Motion 1:3  (slice1)
+         ->  Function Scan on generate_series
+GP_IGNORE:(4 rows)
+
+explain (costs off) create table rpt_ctas as select a from generate_series(1, 10) a group by a having sum(a) > random() distributed replicated;
+QUERY PLAN
+___________
+ Result
+   ->  Broadcast Motion 3:3  (slice1; segments: 3)
+         ->  Result
+               Filter: (((sum(generate_series)))::double precision > random())
+               ->  HashAggregate
+                     Group Key: generate_series
+                     ->  Result
+                           ->  Function Scan on generate_series
+GP_IGNORE:(9 rows)
+
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
-ERROR:  could not devise a plan (cdbpath.c:2577)
+ERROR:  could not devise a plan (cdbpath.c:2578)
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2577)
+ERROR:  could not devise a plan (cdbpath.c:2578)
 explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2577)
+ERROR:  could not devise a plan (cdbpath.c:2578)
 explain (costs off) delete from t_replicate_volatile where a < random();
-ERROR:  could not devise a plan (cdbpath.c:2577)
+ERROR:  could not devise a plan (cdbpath.c:2578)
 explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
-ERROR:  could not devise a plan (cdbpath.c:2577)
+ERROR:  could not devise a plan (cdbpath.c:2578)
 explain (costs off) update t_replicate_volatile set a = random();
-ERROR:  could not devise a plan. (cdbpath.c:2440)
+ERROR:  could not devise a plan. (cdbpath.c:2441)
 -- limit
 explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit random();
                                    QUERY PLAN                                    
