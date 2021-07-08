@@ -764,10 +764,10 @@ CHK_QES () {
         else
             $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
             LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
-            BACKOUT_APPEND "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\""
-            BACKOUT_APPEND "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\""
-            BACKOUT_APPEND "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\""
-            BACKOUT_APPEND "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\""
+            $ECHO "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+            $ECHO "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\"" >> $BACKOUT_FILE
+            $ECHO "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+            $ECHO "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\"" >> $BACKOUT_FILE
         fi
 
     done
@@ -793,10 +793,10 @@ CHK_QES () {
             else
                 $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
                 LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
-                BACKOUT_APPEND "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\""
-                BACKOUT_APPEND "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\""
-                BACKOUT_APPEND "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\""
-                BACKOUT_APPEND "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\""
+                $ECHO "$ECHO \"Stopping segment instance on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+                $ECHO "$TRUSTED_SHELL $GP_HOSTADDRESS \"if [ -f $GP_DIR/postmaster.pid ]; then  ${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop; fi\"" >> $BACKOUT_FILE
+                $ECHO "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\"" >> $BACKOUT_FILE
+                $ECHO "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\"" >> $BACKOUT_FILE
             fi
         done
     else

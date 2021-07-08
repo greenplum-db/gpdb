@@ -895,17 +895,6 @@ RUN_COMMAND_REMOTE () {
 		return $RETVAL
 }
 
-BACKOUT_APPEND () {
-    LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		COMMAND=$1
-		if [ ! -f $BACKOUT_FILE ]; then
-				$ECHO $COMMAND > $BACKOUT_FILE
-		else
-				$ECHO $COMMAND >> $BACKOUT_FILE
-		fi
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 BACKOUT_COMMAND () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		COMMAND=$1
