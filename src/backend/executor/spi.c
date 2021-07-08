@@ -1128,7 +1128,7 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	/*
 	 * Prepare to copy stuff into the portal's memory context.  We do all this
 	 * copying first, because it could possibly fail (out-of-memory) and we
-	 * don't want a failure to occur between RevalidateCachedPlan and
+	 * don't want a failure to occur between RevalidateCachedPlanWithParams and
 	 * PortalDefineQuery; that would result in leaking our plancache refcount.
 	 */
 	oldcontext = MemoryContextSwitchTo(PortalGetHeapMemory(portal));
@@ -1178,7 +1178,7 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	if (plan->saved)
 	{
 		/* Replan if needed, and increment plan refcount for portal */
-		cplan = RevalidateCachedPlan(plansource, false);
+		cplan = RevalidateCachedPlanWithParams(plansource, false, paramLI, NULL);
 		stmt_list = cplan->stmt_list;
 	}
 	else
@@ -1249,8 +1249,8 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	 * If told to be read-only, we'd better check for read-only queries. This
 	 * can't be done earlier because we need to look at the finished, planned
 	 * queries.  (In particular, we don't want to do it between
-	 * RevalidateCachedPlan and PortalDefineQuery, because throwing an error
-	 * between those steps would result in leaking our plancache refcount.)
+	 * RevalidateCachedPlanWithParams and PortalDefineQuery, because throwing an
+	 * error between those steps would result in leaking our plancache refcount.)
 	 */
 	if (read_only)
 	{
@@ -1422,7 +1422,6 @@ bool
 SPI_is_cursor_plan(SPIPlanPtr plan)
 {
 	CachedPlanSource *plansource;
-	CachedPlan *cplan;
 
 	if (plan == NULL || plan->magic != _SPI_PLAN_MAGIC)
 	{
@@ -1437,19 +1436,6 @@ SPI_is_cursor_plan(SPIPlanPtr plan)
 	}
 	plansource = (CachedPlanSource *) linitial(plan->plancache_list);
 
-	/* Need _SPI_begin_call in case replanning invokes SPI-using functions */
-	SPI_result = _SPI_begin_call(false);
-	if (SPI_result < 0)
-		return false;
-
-	if (plan->saved)
-	{
-		/* Make sure the plan is up to date */
-		cplan = RevalidateCachedPlan(plansource, true);
-		ReleaseCachedPlan(cplan, true);
-	}
-
-	_SPI_end_call(false);
 	SPI_result = 0;
 
 	/* Does it return tuples? */
@@ -1805,7 +1791,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			if (plan->saved)
 			{
 				/* Replan if needed, and increment plan refcount locally */
-				cplan = RevalidateCachedPlan(plansource, true);
+				cplan = RevalidateCachedPlanWithParams(plansource, true, paramLI, NULL);
 				stmt_list = cplan->stmt_list;
 			}
 			else
