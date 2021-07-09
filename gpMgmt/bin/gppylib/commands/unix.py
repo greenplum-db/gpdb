@@ -112,9 +112,9 @@ kill -9 all the processes associated with that segment.
 If pid is -1, then the postmaster is already stopped, 
 so we check for any leftover processes for that segment 
 and kill -9 those processes
-E.g postgres: port 45002, logger process
-    postgres: port 45002, sweeper process
-    postgres: port 45002, checkpoint process
+E.g postgres: 45002, logger process
+    postgres: 45002, sweeper process
+    postgres: 45002, checkpoint process
 """
 
 
@@ -129,7 +129,7 @@ def kill_9_segment_processes(datadir, port, pid):
         pid_list = [pid]
 
     cmd = Command('get a list of processes to kill -9',
-                  cmdStr='ps ux | grep "[p]ostgres:\s*port\s*%s" | awk \'{print $2}\'' % (port))
+                  cmdStr='ps ux | grep "[p]ostgres:\s*%s" | awk \'{print $2}\'' % (port))
 
     try:
         cmd.run(validateAfter=True)
