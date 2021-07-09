@@ -268,6 +268,12 @@ CPhysicalDML::PdsRequired(CMemoryPool *mp,
 		// data inserted
 		if (CLogicalDML::EdmlInsert == m_edmlop)
 		{
+			// In order to prevent skewed insert from a replicated table into
+			// random distributed table we must ensure that a redistribute
+			// motion is not translated into a result hash filter.
+			// Setting `is_duplicate_sensitive` to false ensures that translator
+			// will not perform such a translation.
+			// See TranslateDXLDuplicateSensitiveMotion()
 			return GPOS_NEW(mp) CDistributionSpecStrictRandom(false);
 		}
 		return GPOS_NEW(mp) CDistributionSpecRouted(m_pcrSegmentId);

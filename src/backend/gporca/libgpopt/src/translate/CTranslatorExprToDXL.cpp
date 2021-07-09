@@ -4639,7 +4639,7 @@ CTranslatorExprToDXL::PdxlnMotion(CExpression *pexprMotion,
 
 		case COperator::EopPhysicalMotionRandom:
 			fDuplicateHazardMotion &=
-				dynamic_cast<const CPhysicalMotionRandom *>(pexprMotion->Pop())
+				CPhysicalMotionRandom::PopConvert(pexprMotion->Pop())
 					->IsDuplicateSensitive();
 			motion = GPOS_NEW(m_mp)
 				CDXLPhysicalRandomMotion(m_mp, fDuplicateHazardMotion);

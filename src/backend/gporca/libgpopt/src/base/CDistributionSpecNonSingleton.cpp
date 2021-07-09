@@ -102,6 +102,13 @@ CDistributionSpecNonSingleton::AppendEnforcers(CMemoryPool *mp,
 	}
 
 	// add a random distribution enforcer
+	// Setting `is_duplicate_sensitive` to true allows translator to consider
+	// transforming a redistribute motion into a result hash filter. This
+	// enforcer should allow that translation even if top operator is not DML
+	// operator (e.g. CLogicalUnionAll).
+	// See:
+	//     TranslateDXLDuplicateSensitiveMotion()
+	//     Union-Distributed-Table-With-Const-Table.mdp
 	CDistributionSpecStrictRandom *pdsrandom =
 		GPOS_NEW(mp) CDistributionSpecStrictRandom(true);
 	pexpr->AddRef();
