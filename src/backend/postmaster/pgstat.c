@@ -4769,7 +4769,7 @@ pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
 	CdbDispatchResult	   *dispatchResult;
 	CdbDispatchResult	   *resultEnd;
 	struct pg_result	   *pgresult;
-	List                   *oidList = NULL;
+	List                   *oidList = NIL;
 	int						nest_level;
 
 	if (!pgstat_track_counts)

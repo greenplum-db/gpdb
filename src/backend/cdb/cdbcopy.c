@@ -438,7 +438,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	struct pollfd	*pollRead;
 	bool		io_errors = false;
 	StringInfoData io_err_msg;
-	List           *oidList = NULL;
+	List           *oidList = NIL;
 	int				nest_level;
 
 	initStringInfo(&io_err_msg);
