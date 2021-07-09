@@ -154,11 +154,13 @@ CDistributionSpecRandom::AppendEnforcers(CMemoryPool *mp,
 		CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 	CDistributionSpecRandom *random_dist_spec = nullptr;
 
-	if (expr_dist_spec->Edt() == CDistributionSpec::EdtUniversal)
+	if (expr_dist_spec->Edt() == CDistributionSpec::EdtUniversal ||
+		expr_dist_spec->Edt() == CDistributionSpec::EdtStrictReplicated ||
+		expr_dist_spec->Edt() == CDistributionSpec::EdtTaintedReplicated)
 	{
 		// the motion node is enforced on top of a child
-		// deriving universal spec, this motion node will be
-		// translated to a result node with hash filter to remove
+		// deriving universal spec or replicated distribution, this motion node
+		// will be translated to a result node with hash filter to remove
 		// duplicates
 		random_dist_spec = GPOS_NEW(mp) CDistributionSpecRandom();
 	}
