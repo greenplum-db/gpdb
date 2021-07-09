@@ -54,7 +54,7 @@ CREATE TABLE t_slot_size_limit(a int, fname text);
    FROM gp_segment_configuration WHERE content=-1 AND role='p';
 -- This transaction is prepared on segments but not committed yet.  We
 -- advance WAL beyond max_slot_wal_keep_size in the next few steps.
--- Checkpointer should retain WAL upto this prepare LSN, otherwise we
+-- Checkpointer should retain WAL up to this prepare LSN, otherwise we
 -- will never be able to finish this transaction.  Recording two-phase
 -- commit state like this in WAL records in Greenplum specific
 -- behavior.  In newer Greenplum versions and PostgreSQL, two-phase

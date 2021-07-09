@@ -1173,7 +1173,7 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 {
 	struct sysinfo info;
 	if (sysinfo(&info) < 0)
-		elog(ERROR, "can't get memory infomation: %s", strerror(errno));
+		elog(ERROR, "can't get memory information: %s", strerror(errno));
 	*ram = info.totalram;
 	*swap = info.totalswap;
 }
@@ -1352,7 +1352,7 @@ getCfsPeriodUs(ResGroupCompType comp)
 	/*
 	 * calculate cpu rate limit of system.
 	 *
-	 * Ideally the cpu quota is calculated from parent infomation:
+	 * Ideally the cpu quota is calculated from parent information:
 	 *
 	 * system_cfs_quota_us := parent.cfs_period_us * ncores.
 	 *
