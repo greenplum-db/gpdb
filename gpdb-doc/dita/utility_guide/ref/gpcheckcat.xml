@@ -14,12 +14,12 @@
   <b>Options:</b>
      <b>-g</b> <varname>dir</varname>
      <b>-p</b> <varname>port</varname>
-     <b>-s</b> <varname>test_name | 'test_name1, test_name2...'</varname>  
+     <b>-s</b> <varname>test_name | 'test_name1, test_name2 [, ...]'</varname>  
      <b>-P</b> <varname>password</varname>
      <b>-U</b> <varname>user_name</varname>
      <b>-S</b> {none | only}
      <b>-O</b>
-     <b>-R</b> <varname>test_name | 'test_name1, test_name2...'</varname>
+     <b>-R</b> <varname>test_name | 'test_name1, test_name2 [, ...]'</varname>
      <b>-C</b> <varname>catalog_name</varname>
      <b>-B</b> <varname>parallel_processes</varname>
      <b>-v</b>
