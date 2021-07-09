@@ -182,3 +182,65 @@ SELECT v1.B
   v1.B, v1.C
   HAVING ( v1.B= ( SELECT v2.B FROM multiagg_expr_group_view v2 WHERE v1.C = v2.C));
 
+-- Test 3 stage aggregate with an expression contains subplan as the group key
+create table agg_a (id int, a int, b int, c numeric(10, 0));
+create table agg_b (id int, a int, b int, c int);
+insert into agg_a values (1, 1, 1, 100);
+insert into agg_b values (1, 1, 1, 1);
+
+-- The below issue is planner only.
+-- The subplan in the group key expression and the type cast "bb.v::text" under select
+-- will cause the vars(b.a, b.b) showed in the expression appear in first agg's target list.
+-- And grps_tlist for MppGroupContext will contains these vars with the group expression,
+-- but normal case only contains group expression in grps_tlist.
+-- We used to sure that there could only be one target entry(the expression here) in grps_tlist
+-- for a group, but current case also contains b.a and b.b.
+-- When we build the 3 stage agg and try to split the Aggref and find or add target list into
+-- different Aggref stages with function `split_aggref`, it'll match to wrong Vars in
+-- `AGGSTAGE_INTERMEDIATE` and `AGGSTAGE_FINAL` stage.
+-- For the below query, it used to do the avg on b.b for the `AGGSTAGE_INTERMEDIATE` and
+-- `AGGSTAGE_FINAL` stage and cause a crash since the type expected here should be numeric, but
+-- get a int value when executing numeric_avg_deserialize.
+
+set enable_groupagg = false;
+set optimizer_enable_groupagg = false; -- to force orca generate same plan
+explain (costs off, verbose)
+SELECT bb.v::text, count(distinct a.a), avg(a.c)	-- note the type cast
+FROM agg_a a
+Join ( SELECT b.b,
+			(CASE WHEN b.a >= (SELECT b.b - 2)		-- note the subplan here
+				THEN b.a ELSE b.b END) as v
+		FROM agg_b b) as bb
+ON a.a = bb.b
+GROUP BY bb.v;
+
+SELECT bb.v::text, count(distinct a.a), avg(a.c)	-- note the type cast
+FROM agg_a a
+Join ( SELECT b.b,
+			(CASE WHEN b.a >= (SELECT b.b - 2)		-- note the subplan here
+				THEN b.a ELSE b.b END) as v
+		FROM agg_b b) as bb
+ON a.a = bb.b
+GROUP BY bb.v;
+
+-- with multi dqa
+explain (costs off, verbose)
+SELECT bb.v::text, count(distinct a.a), count(distinct a.b), avg(a.c)	-- note the type cast
+FROM agg_a a
+Join ( SELECT b.b,
+			(CASE WHEN b.a >= (SELECT b.b - 2)		-- note the subplan here
+				THEN b.a ELSE b.b END) as v
+		FROM agg_b b) as bb
+ON a.a = bb.b
+GROUP BY bb.v;
+
+SELECT bb.v::text, count(distinct a.a), count(distinct a.b), avg(a.c)	-- note the type cast
+FROM agg_a a
+Join ( SELECT b.b,
+			(CASE WHEN b.a >= (SELECT b.b - 2)		-- note the subplan here
+				THEN b.a ELSE b.b END) as v
+		FROM agg_b b) as bb
+ON a.a = bb.b
+GROUP BY bb.v;
+reset optimizer_enable_groupagg;
+reset enable_groupagg;
