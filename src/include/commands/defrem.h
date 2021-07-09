@@ -38,7 +38,7 @@ extern void DefineIndex(RangeVar *heapRelation,
 			IndexStmt *stmt /* MPP */);
 extern void RemoveIndex(RangeVar *relation, DropBehavior behavior);
 extern void ReindexIndex(ReindexStmt *stmt);
-extern void ReindexTable(ReindexStmt *stmt);
+extern void ReindexTable(ReindexStmt *stmt, bool isTopLevel);
 extern void ReindexDatabase(ReindexStmt *stmt);
 extern char *makeObjectName(const char *name1, const char *name2,
 			   const char *label);

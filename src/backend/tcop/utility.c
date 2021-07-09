@@ -1752,7 +1752,7 @@ ProcessUtility(Node *parsetree,
 						ReindexIndex(stmt);
 						break;
 					case OBJECT_TABLE:
-						ReindexTable(stmt);
+						ReindexTable(stmt, isTopLevel);
 						break;
 					case OBJECT_DATABASE:
 

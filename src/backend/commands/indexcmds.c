@@ -1710,7 +1710,7 @@ ReindexRelationList(List *relids)
  *		Recreate all indexes of a table (and of its toast table, if any)
  */
 void
-ReindexTable(ReindexStmt *stmt)
+ReindexTable(ReindexStmt *stmt, bool isTopLevel)
 {
 	Oid			relid;
 	MemoryContext	private_context, oldcontext;
@@ -1757,6 +1757,45 @@ ReindexTable(ReindexStmt *stmt)
 	relids = lappend_oid(relids, relid);
 	relids = list_concat_unique_oid(relids, prels);
 	MemoryContextSwitchTo(oldcontext);
+
+	if (list_length(relids) == 1)
+	{
+		bool result;
+
+		MemoryContextDelete(private_context);
+		result = reindex_relation(relid, true);
+		if (!result)
+			ereport(NOTICE,
+			        (errmsg("table \"%s\" has no indexes to reindex",
+			                stmt->relation->relname)));
+
+		if (result && Gp_role == GP_ROLE_DISPATCH)
+		{
+			ReindexStmt    *qestmt;
+			qestmt = makeNode(ReindexStmt);
+			qestmt->relid = relid;
+			qestmt->kind = OBJECT_TABLE;
+
+			CdbDispatchUtilityStatement((Node *) qestmt,
+			                            DF_CANCEL_ON_ERROR |
+				                            DF_WITH_SNAPSHOT |
+				                            DF_NEED_TWO_PHASE,
+			                            GetAssignedOidsForDispatch(),
+			                            NULL);
+		}
+
+		return;
+	}
+
+	/*
+	 * We cannot run REINDEX TABLE on partitioned table inside a user
+	 * transaction block; if we were inside a transaction, then our commit-
+	 * and start-transaction-command calls would not have the intended effect!
+	 * For example, if it gets called under pl language, it'll mess up
+	 * pl language's transaction management which may cause panic.
+	 */
+	PreventTransactionChain(isTopLevel,
+	                        "REINDEX TABLE <partitioned_table>");
 
 	/* various checks on each partition */
 	foreach (lc, relids)
