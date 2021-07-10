@@ -207,7 +207,7 @@ options:
             value is 10MB and the minimum value is 5MB (or 5242880B). Use this parameter along with
             the <codeph>--jobs </codeph>flag and the <codeph>backup_max_concurrent_requests</codeph>
             parameter to fine tune your backups. Set the chunksize based on your individual segment
-            file size. S3 supports upto 10,000 max total partitions for a single file upload. </pd>
+            file size. S3 supports up to 10,000 max total partitions for a single file upload. </pd>
         </plentry>
         <plentry>
           <pt>restore_max_concurrent_requests</pt>

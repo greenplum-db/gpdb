@@ -725,7 +725,7 @@ workfile_mgr_close_set(workfile_set *work_set)
 			WorkFileUsagePerQuery *perquery = work_set->perquery;
 
 			ereport(WARNING,
-					(errmsg("workfile_set %s still contains files for unknow reason.", work_set->prefix),
+					(errmsg("workfile_set %s still contains files for unknown reason.", work_set->prefix),
 					 errprintstack(true)));
 
 			if (!perquery->active)
