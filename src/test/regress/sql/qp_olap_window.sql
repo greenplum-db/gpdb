@@ -10567,8 +10567,8 @@ FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_ve
 WINDOW win1 as (order by ow_sale.ord, ow_sale.cn asc,ow_sale.vn asc rows unbounded preceding ); -- mvd 1,3->2; 
 
 -- CORR() function with ONLY order by having rows based framing clause in combination with other functions --
-
-SELECT ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(CORR(floor(ow_sale.pn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
+-- Note the +2 below. This is to get rid of inconsistent output because some zero float values are printed as -.000 on some platforms.
+SELECT ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(CORR(floor(ow_sale.pn),floor(ow_sale.cn)) OVER(win1),0)+2,'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn+ow_sale.qty) as int),cast (floor(ow_sale.prc+ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.vn)) OVER(win2),0),'99999999.9999999'),
@@ -10618,7 +10618,8 @@ WINDOW win1 as (order by ow_sale.ord, ow_sale.pn desc,ow_sale.cn desc rows betwe
 
 -- CORR() function with ONLY order by having rows based framing clause in combination with other functions --
 
-SELECT ow_sale.qty, TO_CHAR(COALESCE(CORR(floor(ow_sale.pn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn,
+-- Note the +2 below. This is to get rid of inconsistent output because some zero float values are printed as -.000 on some platforms.
+SELECT ow_sale.qty, TO_CHAR(COALESCE(CORR(floor(ow_sale.pn),floor(ow_sale.cn)) OVER(win1),0)+2,'99999999.9999999'),ow_sale.cn,ow_sale.pn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(RANK() OVER(order by ow_sale.vn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),

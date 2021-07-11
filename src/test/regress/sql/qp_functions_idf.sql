@@ -29,7 +29,9 @@ random() * 9 + i  as b,
 i as c from generate_series(1, 100)i;
 
 SET datestyle = "ISO, DMY";
+SET extra_float_digits to 0;
 -- end_ignore
+
 
 --TIMESTAMPTZ
 
