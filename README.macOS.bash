@@ -69,6 +69,7 @@ sudo chown $USER:admin /usr/local/gpdb
 cat >> ~/.bashrc << EOF
 ulimit -n 65536 65536  # Increases the number of open files
 export PGHOST="$(hostname)"
+export LC_CTYPE="en_US.UTF-8"
 EOF
 
 cat << EOF
