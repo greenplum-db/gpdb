@@ -171,7 +171,8 @@ def create_pipeline(args):
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
         'test_trigger': test_trigger,
-        'use_ICW_workers': args.use_ICW_workers
+        'use_ICW_workers': args.use_ICW_workers,
+        'build_test_rc_rpm': args.build_test_rc_rpm
     }
 
     pipeline_yml = render_template(args.template_filename, context)
@@ -236,6 +237,7 @@ def header(args):
   Test sections ............ : %s
   test_trigger ............. : %s
   use_ICW_workers .......... : %s
+  build_test_rc_rpm ........ : %s
 ======================================================================
 ''' % (args.pipeline_target,
        args.output_filepath,
@@ -243,7 +245,8 @@ def header(args):
        args.os_types,
        args.test_sections,
        args.test_trigger_false,
-       args.use_ICW_workers
+       args.use_ICW_workers,
+       args.build_test_rc_rpm
        )
 
 
@@ -368,7 +371,21 @@ def main():
         help='Set use_ICW_workers to "true".'
     )
 
+    parser.add_argument(
+        '--build-test-rc',
+        action='store_true',
+        dest='build_test_rc_rpm',
+        default=False,
+        help='Generate a release candidate RPM. Useful for testing branches against'
+             'products that consume RC RPMs such as gpupgrade. Use prod'
+             'configuration to build prod RCs.'
+    )
+
     args = parser.parse_args()
+
+    if args.pipeline_target == 'prod' and args.build_test_rc_rpm:
+        raise Exception('Cannot specify a prod pipeline when building a test'
+                        'RC. Please specify one or the other.')
 
     validate_target(args.pipeline_target)
 
