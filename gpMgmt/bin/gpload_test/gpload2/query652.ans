@@ -1,0 +1,11 @@
+2021-01-04 19:52:14|INFO|gpload session started 2021-01-04 19:52:14
+2021-01-04 19:52:14|INFO|setting schema 'public' for table 'texttable_652'
+2021-01-04 19:52:14|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-04 19:52:14|ERROR|could not execute SQL in sql:before "INSERT INTO test_652 VALUES(1)": ERROR:  relation "test_652" does not exist
+LINE 1: INSERT INTO test_652 VALUES(1)
+                    ^
+
+2021-01-04 19:52:14|INFO|rows Inserted          = 0
+2021-01-04 19:52:14|INFO|rows Updated           = 0
+2021-01-04 19:52:14|INFO|data formatting errors = 0
+2021-01-04 19:52:14|INFO|gpload failed

@@ -1,0 +1,21 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS mapping_test;
+DROP TABLE
+CREATE TABLE mapping_test(s1 text, s2 text, s3 text, s4 int) DISTRIBUTED BY (s1);
+CREATE TABLE
+2021-01-07 16:26:29|INFO|gpload session started 2021-01-07 16:26:29
+2021-01-07 16:26:29|INFO|setting schema 'public' for table 'mapping_test'
+2021-01-07 16:26:29|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_mapping_01.txt" -t 30
+2021-01-07 16:26:29|INFO|did not find an external table to reuse. creating ext_gpload_reusable_0a560766_50c2_11eb_a931_7085c2381836
+2021-01-07 16:26:29|INFO|running time: 0.14 seconds
+2021-01-07 16:26:29|INFO|rows Inserted          = 2
+2021-01-07 16:26:29|INFO|rows Updated           = 0
+2021-01-07 16:26:29|INFO|data formatting errors = 0
+2021-01-07 16:26:29|INFO|gpload succeeded
+SELECT * FROM mapping_test;
+    s1     | s2 | s3 | s4 
+-----------+----+----+----
+ const_str |    |    |   
+ const_str |    |    |   
+(2 rows)
+

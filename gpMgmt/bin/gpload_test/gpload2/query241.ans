@@ -1,0 +1,11 @@
+2021-01-04 16:30:12|INFO|gpload session started 2021-01-04 16:30:12
+2021-01-04 16:30:12|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:30:12|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-01-04 16:30:12|INFO|did not find an external table to reuse. creating ext_gpload_reusable_0ff6e3e6_4e67_11eb_9d70_00505698d059
+2021-01-04 16:30:12|ERROR|ERROR:  character with byte sequence 0xad 0xe5 in encoding "GBK" has no equivalent in encoding "UTF8"  (seg1 slice1 10.152.8.113:7003 pid=20453)
+CONTEXT:  External table ext_gpload_reusable_0ff6e3e6_4e67_11eb_9d70_00505698d059, line 1 of file gpfdist://*:pathto/data_file.txt
+ encountered while running INSERT INTO public."texttable" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7" FROM ext_gpload_reusable_0ff6e3e6_4e67_11eb_9d70_00505698d059
+2021-01-04 16:30:12|INFO|rows Inserted          = 0
+2021-01-04 16:30:12|INFO|rows Updated           = 0
+2021-01-04 16:30:12|INFO|data formatting errors = 0
+2021-01-04 16:30:12|INFO|gpload failed

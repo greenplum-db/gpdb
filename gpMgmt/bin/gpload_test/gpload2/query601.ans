@@ -1,0 +1,13 @@
+2021-01-04 14:26:32|INFO|gpload session started 2021-01-04 14:26:32
+2021-01-04 14:26:32|INFO|setting schema 'public' for table 'testtruncate'
+2021-01-04 14:26:32|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-01-04 14:26:32|INFO|running time: 0.09 seconds
+2021-01-04 14:26:32|INFO|rows Inserted          = 16
+2021-01-04 14:26:32|INFO|rows Updated           = 0
+2021-01-04 14:26:32|INFO|data formatting errors = 0
+2021-01-04 14:26:32|INFO|gpload succeeded
+ count
+-------
+    16
+(1 row)
+

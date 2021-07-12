@@ -1,0 +1,7 @@
+2021-01-04 11:15:44|INFO|gpload session started 2021-01-04 11:15:44
+2021-01-04 11:15:44|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 11:15:44|ERROR|no more ports available for gpfdist
+2021-01-04 11:15:44|INFO|rows Inserted          = 0
+2021-01-04 11:15:44|INFO|rows Updated           = 0
+2021-01-04 11:15:44|INFO|data formatting errors = 0
+2021-01-04 11:15:44|INFO|gpload failed

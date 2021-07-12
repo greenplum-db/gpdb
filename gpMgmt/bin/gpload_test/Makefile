@@ -19,7 +19,7 @@ GPTest.pm:
 .PHONY: installcheck
 installcheck: gpdiff.pl gpstringsubs.pl
 	@cd gpload && ./TEST.py
-	@cd gpload2 && ./TEST.py
-
+	@export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/:/usr/lib64/python2.7/site-packages/:/usr/local/greenplum-db-devel/lib/python\
+	&& cd gpload2 && python -m pytest TEST_local_*
 clean distclean:
 	rm -f gpdiff.pl atmsort.pm explain.pm GPTest.pm gpstringsubs.pl

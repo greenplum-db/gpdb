@@ -1,0 +1,18 @@
+2021-06-21 17:06:07|INFO|gpload session started 2021-06-21 17:06:07
+2021-06-21 17:06:07|INFO|setting schema 'public' for table 'texttable2'
+2021-06-21 17:06:07|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2021-06-21 17:06:08|ERROR|ERROR:  http response code 400 from gpfdist (gpfdist://*:pathto/data_file.csv): HTTP/1.0 400 bad request, csvopt doesn't match the format  (seg0 slice1 *:6002 pid=28680)
+ encountered while running INSERT INTO public."texttable2" ("s1","s2") SELECT "s1","s2" FROM ext_gpload_table
+2021-06-21 17:06:08|INFO|rows Inserted          = 0
+2021-06-21 17:06:08|INFO|rows Updated           = 0
+2021-06-21 17:06:08|INFO|data formatting errors = 0
+2021-06-21 17:06:08|INFO|gpload failed
+2021-06-21 17:06:08|INFO|gpload session started 2021-06-21 17:06:08
+2021-06-21 17:06:08|INFO|setting schema 'public' for table 'texttable2'
+2021-06-21 17:06:08|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2021-06-21 17:06:10|ERROR|ERROR:  http response code 400 from gpfdist (gpfdist://*:pathto/data_file.csv): HTTP/1.0 400 bad request, csvopt doesn't match the format  (seg0 slice1 *:6002 pid=28731)
+ encountered while running INSERT INTO public."texttable2" ("s1","s2") SELECT "s1","s2" FROM ext_gpload_table
+2021-06-21 17:06:10|INFO|rows Inserted          = 0
+2021-06-21 17:06:10|INFO|rows Updated           = 0
+2021-06-21 17:06:10|INFO|data formatting errors = 0
+2021-06-21 17:06:10|INFO|gpload failed

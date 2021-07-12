@@ -1,21 +1,18 @@
-2021-05-19 15:50:13|INFO|gpload session started 2021-05-19 15:50:13
-2021-05-19 15:50:13|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-19 15:50:13|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-19 15:50:13|INFO|reusing external table ext_gpload_reusable_d74b616e_b876_11eb_a2da_0050569ea4ff
-2021-05-19 15:50:13|INFO|running time: 0.04 seconds
-2021-05-19 15:50:13|INFO|rows Inserted          = 8
-2021-05-19 15:50:13|INFO|rows Updated           = 0
-2021-05-19 15:50:13|INFO|data formatting errors = 0
-2021-05-19 15:50:13|INFO|gpload succeeded
-2021-05-19 15:50:13|INFO|gpload session started 2021-05-19 15:50:13
-2021-05-19 15:50:13|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-19 15:50:13|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-19 15:50:13|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d7d192d4_b876_11eb_82a7_0050569ea4ff
-2021-05-19 15:50:13|ERROR|could not run SQL "create external table ext_gpload_reusable_d7d192d4_b876_11eb_82a7_0050569ea4ff("Field1" bigint,"Field#2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
-                                                                 ^
-
-2021-05-19 15:50:13|INFO|rows Inserted          = 0
-2021-05-19 15:50:13|INFO|rows Updated           = 0
-2021-05-19 15:50:13|INFO|data formatting errors = 0
-2021-05-19 15:50:13|INFO|gpload failed
+2020-12-01 15:47:53|INFO|gpload session started 2020-12-01 15:47:53
+2020-12-01 15:47:53|ERROR|could not connect to database: could not connect to server: Connection refused
+	Is the server running on host "*" and accepting
+	TCP/IP connections on port 9999?
+. Is the Greenplum Database running on port 9999?
+2020-12-01 15:47:53|INFO|rows Inserted          = 0
+2020-12-01 15:47:53|INFO|rows Updated           = 0
+2020-12-01 15:47:53|INFO|data formatting errors = 0
+2020-12-01 15:47:53|INFO|gpload failed
+2020-12-01 15:47:53|INFO|gpload session started 2020-12-01 15:47:53
+2020-12-01 15:47:53|ERROR|could not connect to database: could not connect to server: Connection refused
+	Is the server running on host "*" and accepting
+	TCP/IP connections on port 9999?
+. Is the Greenplum Database running on port 9999?
+2020-12-01 15:47:53|INFO|rows Inserted          = 0
+2020-12-01 15:47:53|INFO|rows Updated           = 0
+2020-12-01 15:47:53|INFO|data formatting errors = 0
+2020-12-01 15:47:53|INFO|gpload failed

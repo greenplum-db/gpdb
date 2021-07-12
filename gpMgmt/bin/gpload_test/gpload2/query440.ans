@@ -1,0 +1,125 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS "s_\_c";
+DROP TABLE
+CREATE TABLE "s_\_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 18:15:33|INFO|gpload session started 2021-01-05 18:15:33
+2021-01-05 18:15:33|INFO|setting schema 'public' for table 's_\_c'
+2021-01-05 18:15:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 18:15:33|INFO|did not find an external table to reuse. creating ext_gpload_reusable_f1f60876_4f3e_11eb_989c_7085c2381836
+2021-01-05 18:15:33|INFO|running time: 0.12 seconds
+2021-01-05 18:15:33|INFO|rows Inserted          = 1
+2021-01-05 18:15:33|INFO|rows Updated           = 0
+2021-01-05 18:15:33|INFO|data formatting errors = 0
+2021-01-05 18:15:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_$_c";
+DROP TABLE
+CREATE TABLE "s_$_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 18:15:33|INFO|gpload session started 2021-01-05 18:15:33
+2021-01-05 18:15:33|INFO|setting schema 'public' for table 's_$_c'
+2021-01-05 18:15:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 18:15:33|INFO|reusing external table ext_gpload_reusable_f1f60876_4f3e_11eb_989c_7085c2381836
+2021-01-05 18:15:33|INFO|running time: 0.12 seconds
+2021-01-05 18:15:33|INFO|rows Inserted          = 1
+2021-01-05 18:15:33|INFO|rows Updated           = 0
+2021-01-05 18:15:33|INFO|data formatting errors = 0
+2021-01-05 18:15:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_#_c";
+DROP TABLE
+CREATE TABLE "s_#_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 18:15:33|INFO|gpload session started 2021-01-05 18:15:33
+2021-01-05 18:15:33|INFO|setting schema 'public' for table 's_#_c'
+2021-01-05 18:15:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 18:15:33|INFO|reusing external table ext_gpload_reusable_f1f60876_4f3e_11eb_989c_7085c2381836
+2021-01-05 18:15:33|INFO|running time: 0.13 seconds
+2021-01-05 18:15:33|INFO|rows Inserted          = 1
+2021-01-05 18:15:33|INFO|rows Updated           = 0
+2021-01-05 18:15:33|INFO|data formatting errors = 0
+2021-01-05 18:15:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_,_c";
+DROP TABLE
+CREATE TABLE "s_,_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 18:15:33|INFO|gpload session started 2021-01-05 18:15:33
+2021-01-05 18:15:33|INFO|setting schema 'public' for table 's_,_c'
+2021-01-05 18:15:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 18:15:33|INFO|reusing external table ext_gpload_reusable_f1f60876_4f3e_11eb_989c_7085c2381836
+2021-01-05 18:15:33|INFO|running time: 0.13 seconds
+2021-01-05 18:15:33|INFO|rows Inserted          = 1
+2021-01-05 18:15:33|INFO|rows Updated           = 0
+2021-01-05 18:15:33|INFO|data formatting errors = 0
+2021-01-05 18:15:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_(_c";
+NOTICE:  table "s_(_c" does not exist, skipping
+DROP TABLE
+CREATE TABLE "s_(_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 15:47:43|INFO|gpload session started 2021-01-05 15:47:43
+2021-01-05 15:47:43|INFO|setting schema 'public' for table 's_(_c'
+2021-01-05 15:47:43|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 15:47:43|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 15:47:43|INFO|running time: 0.11 seconds
+2021-01-05 15:47:43|INFO|rows Inserted          = 1
+2021-01-05 15:47:43|INFO|rows Updated           = 0
+2021-01-05 15:47:43|INFO|data formatting errors = 0
+2021-01-05 15:47:43|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_""_c";
+NOTICE:  table "s_"_c" does not exist, skipping
+DROP TABLE
+CREATE TABLE "s_""_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 15:47:43|INFO|gpload session started 2021-01-05 15:47:43
+2021-01-05 15:47:43|INFO|setting schema 'public' for table 's_"_c'
+2021-01-05 15:47:43|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 15:47:43|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 15:47:43|INFO|running time: 0.14 seconds
+2021-01-05 15:47:43|INFO|rows Inserted          = 1
+2021-01-05 15:47:43|INFO|rows Updated           = 0
+2021-01-05 15:47:43|INFO|data formatting errors = 0
+2021-01-05 15:47:43|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_._c";
+NOTICE:  table "s_._c" does not exist, skipping
+DROP TABLE
+CREATE TABLE "s_._c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 15:47:43|INFO|gpload session started 2021-01-05 15:47:43
+2021-01-05 15:47:43|INFO|setting schema 'public' for table 's_._c'
+2021-01-05 15:47:43|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 15:47:43|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 15:47:43|INFO|running time: 0.13 seconds
+2021-01-05 15:47:43|INFO|rows Inserted          = 1
+2021-01-05 15:47:43|INFO|rows Updated           = 0
+2021-01-05 15:47:43|INFO|data formatting errors = 0
+2021-01-05 15:47:43|INFO|gpload succeeded
+DROP TABLE IF EXISTS "s_/_c";
+NOTICE:  table "s_/_c" does not exist, skipping
+DROP TABLE
+CREATE TABLE "s_/_c"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 15:47:44|INFO|gpload session started 2021-01-05 15:47:44
+2021-01-05 15:47:44|INFO|setting schema 'public' for table 's_/_c'
+2021-01-05 15:47:44|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 15:47:44|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 15:47:44|INFO|running time: 0.14 seconds
+2021-01-05 15:47:44|INFO|rows Inserted          = 1
+2021-01-05 15:47:44|INFO|rows Updated           = 0
+2021-01-05 15:47:44|INFO|data formatting errors = 0
+2021-01-05 15:47:44|INFO|gpload succeeded

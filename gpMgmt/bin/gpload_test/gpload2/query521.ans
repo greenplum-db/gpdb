@@ -1,0 +1,17 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS mapping_test;
+DROP TABLE
+CREATE TABLE mapping_test(s1 text, s2 text, s3 text, s4 int) DISTRIBUTED BY (s1);
+CREATE TABLE
+2021-01-07 16:25:16|INFO|gpload session started 2021-01-07 16:25:16
+2021-01-07 16:25:16|INFO|setting schema 'public' for table 'mapping_test'
+2021-01-07 16:25:16|ERROR|n1 in mapping is not in table mapping_test
+2021-01-07 16:25:16|INFO|rows Inserted          = 0
+2021-01-07 16:25:16|INFO|rows Updated           = 0
+2021-01-07 16:25:16|INFO|data formatting errors = 0
+2021-01-07 16:25:16|INFO|gpload failed
+SELECT * FROM mapping_test;
+ s1 | s2 | s3 | s4 
+----+----+----+----
+(0 rows)
+

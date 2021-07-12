@@ -1,0 +1,9 @@
+2020-12-18 16:54:31|INFO|gpload session started 2020-12-18 16:54:31
+2020-12-18 16:54:31|INFO|setting schema 'public' for table 'texttable2'
+2020-12-18 16:54:31|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-18 16:54:31|WARN|A gpload control file processing warning occurred. escape must be single ASCII character, you can also use unprintable characters(for example: '\x1c' / E'\x1c' or '\u001c' / E'\u001c' 
+2020-12-18 16:54:31|ERROR|A gpload control file processing error occurred. Invalid option, gpload quit immediately
+2020-12-18 16:54:31|INFO|rows Inserted          = 0
+2020-12-18 16:54:31|INFO|rows Updated           = 0
+2020-12-18 16:54:31|INFO|data formatting errors = 0
+2020-12-18 16:54:31|INFO|gpload failed

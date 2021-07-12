@@ -1,0 +1,6 @@
+2021-01-05 17:08:40|INFO|gpload session started 2021-01-05 17:08:40
+2021-01-05 17:08:40|ERROR|table non_exist_schema.table does not exist in database reuse_gptest
+2021-01-05 17:08:40|INFO|rows Inserted          = 0
+2021-01-05 17:08:40|INFO|rows Updated           = 0
+2021-01-05 17:08:40|INFO|data formatting errors = 0
+2021-01-05 17:08:40|INFO|gpload failed

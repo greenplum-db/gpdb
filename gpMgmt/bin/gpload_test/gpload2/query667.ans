@@ -1,0 +1,26 @@
+2021-06-02 16:22:09|INFO|gpload session started 2021-06-02 16:22:09
+2021-06-02 16:22:09|INFO|setting schema 'public' for table 'texttable_667'
+2021-06-02 16:22:09|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-06-02 16:22:09|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_08aff1d5e0be087569323178726e90f6
+2021-06-02 16:22:09|INFO|did not find an external table to reuse. creating ext_gpload_reusable_9fdeaab4_c37b_11eb_8e19_0050569ea4ff
+2021-06-02 16:22:09|ERROR|could not execute SQL in sql:after "INSERT INTO test_667_after VALUES('a')": ERROR:  invalid input syntax for integer: "a"
+LINE 1: INSERT INTO test_667_after VALUES('a')
+                                          ^
+
+2021-06-02 16:22:09|INFO|rows Inserted          = 16
+2021-06-02 16:22:09|INFO|rows Updated           = 0
+2021-06-02 16:22:09|INFO|data formatting errors = 0
+2021-06-02 16:22:09|INFO|gpload failed
+ c1 
+----
+(0 rows)
+
+ c1 
+----
+(0 rows)
+
+ count 
+-------
+     0
+(1 row)
+
