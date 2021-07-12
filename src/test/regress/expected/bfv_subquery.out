@@ -512,10 +512,10 @@ explain
 select count(*) from pg_backend_pid() b(a) where b.a % 100000 in (select a from t1);
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=1611.83..1611.84 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1611.76..1611.81 rows=1 width=8)
-         ->  Aggregate  (cost=1611.76..1611.77 rows=1 width=8)
-               ->  HashAggregate  (cost=1611.56..1611.72 rows=6 width=6)
+ Aggregate  (cost=1612.15..1612.16 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1612.08..1612.13 rows=1 width=8)
+         ->  Aggregate  (cost=1612.08..1612.09 rows=1 width=8)
+               ->  HashAggregate  (cost=1611.56..1612.04 rows=6 width=6)
                      Group Key: b.ctid
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.02..1611.52 rows=6 width=6)
                            Hash Key: b.ctid
@@ -542,10 +542,10 @@ explain
 select count(*) from ( values :lots_of_values ) as b(a) where b.a % 100000 in (select a from t1);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=5001.06..5001.07 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=5001.00..5001.05 rows=1 width=8)
-         ->  Aggregate  (cost=5001.00..5001.01 rows=1 width=8)
-               ->  HashAggregate  (cost=4588.50..4918.50 rows=11000 width=6)
+ Aggregate  (cost=5661.06..5661.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=5661.00..5661.05 rows=1 width=8)
+         ->  Aggregate  (cost=5661.00..5661.01 rows=1 width=8)
+               ->  HashAggregate  (cost=4588.50..5578.50 rows=11000 width=6)
                      Group Key: "*VALUES*".ctid
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=2361.00..4506.00 rows=11000 width=6)
                            Hash Key: "*VALUES*".ctid

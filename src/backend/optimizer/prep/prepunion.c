@@ -989,7 +989,7 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 	 * make actual Paths for these steps.
 	 */
 	cost_agg(&hashed_p, root, AGG_HASHED, NULL,
-			 numGroupCols, dNumGroups,
+			 numGroupCols, dNumGroups / planner_segment_count(NULL),
 			 input_plan->startup_cost, input_plan->total_cost,
 			 input_plan->plan_rows,
 			 hashentrysize, /* input_width */
