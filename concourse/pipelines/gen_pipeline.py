@@ -341,7 +341,7 @@ def main():
             'AA',
             'Extensions'
         ],
-        default=['ICW'],
+        default=[],
         nargs='+',
         help='Select tests sections to run'
     )

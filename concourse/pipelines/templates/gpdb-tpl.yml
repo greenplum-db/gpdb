@@ -495,7 +495,7 @@ resources:
     tag: latest
 
 {% endif %}
-{% if "centos7" in os_types or "CLI" in test_sections %}
+{% if test_sections and ("centos7" in os_types or "CLI" in test_sections) %}
 - name: gpdb7-centos7-test
   type: registry-image
   source:
