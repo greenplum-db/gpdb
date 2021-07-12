@@ -1867,12 +1867,13 @@ generate_list_subplans(PlannerInfo *root, int num_subplans,
 
 	for(group_no = 0; group_no < num_subplans; ++group_no)
 	{
-		/* GPDB_93_MERGE_FIXME: Check whether we could just use
-		 * context->current_pathkeys for the function's caller
-		 * since the list includes duplicates.
+		/*
+		 * compare_pathkeys() assumes the pathkeys are canonical, and
+		 * checks them for equality by simple pointer comparison. So we
+		 * use context->current_pathkeys for the function's caller.
 		 */
 		context->pathkeys = lappend(context->pathkeys,
-									copyObject(context->current_pathkeys));
+									context->current_pathkeys);
 	}
 
 	return subplans;

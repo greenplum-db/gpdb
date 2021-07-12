@@ -133,6 +133,20 @@ select '' ,'' ,count(distinct(a)) from foo_gset_const group by rollup(1,2) ;
 select '' ,'' ,count(distinct(a)) from foo_gset_const group by rollup(1,2) ;
 drop table foo_gset_const;
 
+
+--
+-- GROUPING SETS with DQA should not have unnecessary sort nodes
+--
+create table foo_gset_dqa(i int, j int);
+insert into foo_gset_dqa values(1,1);
+insert into foo_gset_dqa values(2,1);
+
+explain (costs off)
+select i, j, count(distinct j) from foo_gset_dqa GROUP BY grouping sets((i), (j));
+select i, j, count(distinct j) from foo_gset_dqa GROUP BY grouping sets((i), (j));
+
+drop table foo_gset_dqa;
+
 --
 -- Reset settings
 --
