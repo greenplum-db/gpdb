@@ -18,7 +18,6 @@ try:
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment
     from gppylib.operations.package import SyncPackages
     from gppylib.commands.pg import PgBaseBackup
-    from gppylib.gphostcache import GpInterfaceToHostNameCache
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -187,17 +186,12 @@ def parseargs():
     return options, args
 
 def resolve_hostname(options):
-    pool = base.WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
-    try:
-        cache = GpInterfaceToHostNameCache(pool, [options.standby_address], [None])
-        hostname = cache.getHostName(options.standby_address)
-        if not hostname:
-            raise Exception("can't resolve address to hostname: '%s' => '%s'" %
-                            (options.standby_address, options.standby_hostname))
-
-        options.standby_hostname = hostname
-    finally:
-        pool.haltWork()
+    cmd = unix.Hostname('lookup hostname', ctxt=base.REMOTE, remoteHost=options.standby_address)
+    cmd.run(validateAfter=True)
+    hostname = cmd.get_hostname()
+    if not hostname:
+        raise Exception("can't resolve address to hostname: '%s'" % options.standby_address)
+    options.standby_hostname = hostname
 
 #-------------------------------------------------------------------------
 def print_summary(options, array, standby_datadir):
