@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-	<topicref href="../../6-15/homenav.html" scope="external"
-		navtitle="Greenplum Database 6.15 Documentation" format="html" otherprops="oss-only"/>
-	<topicref href="../../6-15/homenav.html" scope="external"
-		navtitle="Tanzu Greenplum 6.15 Documentation" format="html" otherprops="pivotal"/>
+	<topicref href="../../7-0/homenav.html" scope="external"
+		navtitle="Greenplum Database® 7.0 Beta Documentation" format="html" otherprops="oss-only"/>
+	<topicref href="../../7-0/homenav.html" scope="external"
+		navtitle="Tanzu Greenplum® 7.0 Beta Documentation" format="html" otherprops="pivotal"/>
 	<topicref href="ref_guide.xml">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>
@@ -173,6 +173,7 @@
 			<topicref href="datatype-textsearch.xml"/>
 			<topicref href="datatype-range.xml"/>
 		</topicref>
+		<topicref href="deprecated-objects.xml" id="depr_objects"/>
 		<topicref href="function-summary.xml" id="func_summary"/>
 		<topicref href="modules/modules.ditamap" format="ditamap"/>
 		<topicref href="character_sets.xml" id="character_sets"/>
@@ -285,7 +286,6 @@
 			</topicref>
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>
-		<topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
 		<topicref href="extensions/serverapi.ditamap" format="ditamap"/>
 		<topicref href="misc.ditamap" format="ditamap"/>
 	</topicref>
