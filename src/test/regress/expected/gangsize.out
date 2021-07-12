@@ -1,3 +1,10 @@
+-- start_ignore
+-- GPDB_12_MERGE_FIXME
+-- Running this with ORCA in CI produces cache lookup failures. We suspect the
+-- cause of this is in the collect_tabstat and this isn't an issue with
+-- gangsize, but this test does expose a legitimate issue that needs to be
+-- fixed. For now, we disable ORCA for this test until this can be debugged.
+-- end_ignore
 set optimizer=off;
 set allow_system_table_mods = true;
 create temp table random_2_0 (a int, b int, c int, d int) distributed randomly;
@@ -131,88 +138,106 @@ abort;
 insert into random_2_0 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 begin;
 insert into random_2_0 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 insert into replicate_2_1 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 begin;
 insert into replicate_2_1 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 insert into hash_3_3_2 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 begin;
 insert into hash_3_3_2 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into replicate_3_3 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 begin;
 insert into replicate_3_3 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into hash_2_3_4 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 begin;
 insert into hash_2_3_4 select * from gangsize_input_data where gp_segment_id = 0;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 --Update
 update random_2_0 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 begin;
 update random_2_0 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 update random_2_0 set a = 1 from hash_3_3_2 where hash_3_3_2.b = random_2_0.c;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 begin;
 update random_2_0 set a = 1 from hash_3_3_2 where hash_3_3_2.b = random_2_0.c;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 update replicate_2_1 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 begin;
 update replicate_2_1 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 -- Delete
 delete from hash_2_3_4 where a in (1, 2, 3);
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 begin;
 delete from hash_2_3_4 where a = 4 or a = 5;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1
 -- add test for table expand
 begin;
@@ -220,17 +245,20 @@ alter table random_2_0 expand table;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
 abort;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 begin;
 alter table replicate_2_1 expand table;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
 abort;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 begin;
 alter table hash_2_3_4 expand table;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
 abort;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 reset optimizer;

@@ -9,44 +9,52 @@ set test_print_direct_dispatch_info=on;
 set gp_autostats_mode = 'None';
 -- composite keys
 create table dd_multicol_1(a int, b int) distributed by (a,b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table dd_multicol_2(a int, b int) distributed by (b,a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_multicol_1 select g, g%2 from generate_series(1, 100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_multicol_1 values(null, null);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into dd_multicol_1 values(1, null);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into dd_multicol_1 values(null, 1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 analyze dd_multicol_1;
 insert into dd_multicol_2 select g, g%2 from generate_series(1, 100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_multicol_2 values(null, null);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into dd_multicol_2 values(1, null);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into dd_multicol_2 values(null, 1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- composite distr key
 select * from dd_multicol_1 where a in (1,3) and b in (1,2);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -83,9 +91,9 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a | b 
 ---+---
    |  
-   | 1
  1 | 1
  1 |  
+   | 1
 (4 rows)
 
 select * from dd_multicol_1 where (a is null or a=1) and b=2;
@@ -253,24 +261,24 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a  | b 
 ----+---
  83 | 1
- 93 | 1
- 97 | 1
- 81 | 1
  87 | 1
+ 89 | 1
+ 93 | 1
+ 99 | 1
+ 81 | 1
+ 85 | 1
  91 | 1
  95 | 1
- 85 | 1
- 89 | 1
- 99 | 1
+ 97 | 1
 (10 rows)
 
 select * from dd_multicol_1 where a<=5 and b>0;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a | b 
 ---+---
- 1 | 1
  5 | 1
  3 | 1
+ 1 | 1
 (3 rows)
 
 reset optimizer_force_multistage_agg;

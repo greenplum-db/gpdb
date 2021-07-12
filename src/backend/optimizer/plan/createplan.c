@@ -200,6 +200,7 @@ static void copy_generic_path_info(Plan *dest, Path *src);
 static void copy_plan_costsize(Plan *dest, Plan *src);
 static void label_sort_with_costsize(PlannerInfo *root, Sort *plan,
 									 double limit_tuples);
+static void adjust_reptable_scan_slice_segment(PlanSlice *ps);
 static SeqScan *make_seqscan(List *qptlist, List *qpqual, Index scanrelid);
 static SampleScan *make_samplescan(List *qptlist, List *qpqual, Index scanrelid,
 								   TableSampleClause *tsc);
@@ -3121,6 +3122,7 @@ create_motion_plan(PlannerInfo *root, CdbMotionPath *path)
 			sendSlice->gangType = GANGTYPE_SINGLETON_READER;
 			sendSlice->numsegments = subpath->locus.numsegments;
 			sendSlice->segindex = gp_session_id % subpath->locus.numsegments;
+			adjust_reptable_scan_slice_segment(sendSlice);
 			break;
 
 		case CdbLocusType_Replicated:
@@ -6161,6 +6163,63 @@ label_sort_with_costsize(PlannerInfo *root, Sort *plan, double limit_tuples)
 	plan->plan.plan_width = lefttree->plan_width;
 	plan->plan.parallel_aware = false;
 	plan->plan.parallel_safe = lefttree->parallel_safe;
+}
+
+/*
+ * For replicated table scan slice, instead of choosing the segment to execute
+ * the slice based on the gp_session_id, we choose the one that already in the
+ * dtxSegments or readOnlySegments list, in this way, we can void create a
+ * new connection to segment, and reduce the potential commit messages.
+ */
+static void
+adjust_reptable_scan_slice_segment(PlanSlice *ps)
+{
+	MemoryContext oldContext;
+	ListCell *cell;
+	int segindex = -1;
+
+	Assert(MyTmGxactLocal != NULL);
+
+	if (list_length(MyTmGxactLocal->dtxSegments) == 0 &&
+		list_length(MyTmGxactLocal->readOnlySegments) == 0)
+		return;
+
+	oldContext = MemoryContextSwitchTo(TopTransactionContext);
+
+	if (list_length(MyTmGxactLocal->dtxSegments) != 0)
+	{
+		/*
+		 * Need to check if the segindex is within the numsegments,
+		 * since UDF gp_debug_set_create_table_default_numsegments
+		 * can change the number of segments to distribute the table.
+		 */
+		foreach(cell, MyTmGxactLocal->dtxSegments)
+		{
+			segindex = lfirst_int(cell);
+			if (segindex < ps->numsegments)
+			{
+				ps->segindex = segindex;
+				break;
+			}
+		}
+	}
+	else if (list_length(MyTmGxactLocal->readOnlySegments) != 0)
+	{
+		/* check if the segindex is within the numsegments */
+		foreach(cell, MyTmGxactLocal->readOnlySegments)
+		{
+			segindex = lfirst_int(cell);
+			if (segindex < ps->numsegments)
+			{
+				ps->segindex = segindex;
+				break;
+			}
+		}
+	}
+
+	Assert(ps->segindex >= 0);
+
+	MemoryContextSwitchTo(oldContext);
 }
 
 /*****************************************************************************

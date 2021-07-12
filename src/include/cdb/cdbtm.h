@@ -232,8 +232,15 @@ typedef struct TMGXACTLOCAL
 
 	bool						writerGangLost;
 
+	/* Useed to record segments which has persisted WAL during a dtx */
 	Bitmapset					*dtxSegmentsMap;
 	List						*dtxSegments;
+	/*
+	 * Used to record segments which are read only during a dtx,
+	 * and those segments don't need prepare phase.
+	 */
+	Bitmapset					*readOnlySegmentsMap;
+	List						*readOnlySegments;
 	List						*waitGxids;
 }	TMGXACTLOCAL;
 
@@ -343,7 +350,8 @@ extern void markCurrentGxactWriterGangLost(void);
 
 extern bool currentGxactWriterGangLost(void);
 
-extern void addToGxactDtxSegments(struct Gang* gp);
+extern void addToGxactDtxSegments(int segindex);
+extern void addToGxactReadOnlySegments(int segindex);
 extern bool CurrentDtxIsRollingback(void);
 
 extern pid_t DtxRecoveryPID(void);

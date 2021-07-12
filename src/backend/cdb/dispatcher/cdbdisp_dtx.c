@@ -97,7 +97,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	/*
 	 * Dispatch the command.
 	 */
-	ds = cdbdisp_makeDispatcherState(false);
+	ds = cdbdisp_makeDispatcherState(false, true);
 
 	queryText = buildGpDtxProtocolCommand(&dtxProtocolParms, &queryTextLen);
 
@@ -109,7 +109,6 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	cdbdisp_makeDispatchParams(ds, 1, queryText, queryTextLen);
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
-	addToGxactDtxSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
 

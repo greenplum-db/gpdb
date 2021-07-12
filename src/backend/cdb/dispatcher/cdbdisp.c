@@ -277,7 +277,7 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
  * Call cdbdisp_destroyDispatcherState to free it.
  */
 CdbDispatcherState *
-cdbdisp_makeDispatcherState(bool isExtendedQuery)
+cdbdisp_makeDispatcherState(bool isExtendedQuery, bool isDtx)
 {
 	dispatcher_handle_t *handle;
 
@@ -305,6 +305,7 @@ cdbdisp_makeDispatcherState(bool isExtendedQuery)
 	handle->dispatcherState->allocatedGangs = NIL;
 	handle->dispatcherState->largestGangSize = 0;
 	handle->dispatcherState->destroyIdleReaderGang = false;
+	handle->dispatcherState->isDtx = isDtx;
 
 	return handle->dispatcherState;
 }
@@ -598,7 +599,7 @@ segmentsToContentStr(List *segments)
 	int size = list_length(segments);
 
 	if (size == 0)
-		return "ALL contents";
+		return "No contents";
 	else if (size == 1)
 		return "SINGLE content";
 	else if (size < getgpsegmentCount())

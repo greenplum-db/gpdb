@@ -15,7 +15,11 @@
 1: set vacuum_freeze_min_age = 0;
 -- Check the age of the table just before vacuum (use BETWEEN to mask minor
 -- differences that might happen if e.g. autovacuum kicks in)
-1: select age(relfrozenxid) between 6 and 9, regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
+-- Actually, the table's data is all put on seg1, and when orca is used, update will dispatch
+-- to all segments, but only one will write data. With the optimization of skipping prepare phase
+-- for read only segments, the other two segments won't assign transaction id when executing UPDATE.
+-- So we should change the gp_segment_id to 1 here.
+1: select age(relfrozenxid) between 6 and 9, regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 1;
 
 -- Hold AccessShareLock to make AO VACUUM skip drop phase
 2: begin;

@@ -44,7 +44,7 @@ test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp li
 test: gpcopy
 
 test: orca_static_pruning orca_groupingsets_fallbacks
-test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format olap_plans misc_jiras gp_copy_dtx
+test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format olap_plans misc_jiras gp_copy_dtx dtx_involved_segments
 # below test(s) inject faults so each of them need to be in a separate group
 test: guc_gp
 test: toast

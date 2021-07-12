@@ -49,6 +49,11 @@ typedef struct CdbDispatcherState
 	bool isGangDestroying;
 #endif
 	bool destroyIdleReaderGang;
+	/*
+	 * This flag is used to tell processResults whether a segment needs to
+	 * put into dtxSegments or readOnlySegments list.
+	 */
+	bool isDtx;
 } CdbDispatcherState;
 
 typedef struct DispatcherInternalFuncs
@@ -164,7 +169,7 @@ cdbdisp_cancelDispatch(CdbDispatcherState *ds);
  *
  * Call cdbdisp_destroyDispatcherState to free it.
  */
-CdbDispatcherState * cdbdisp_makeDispatcherState(bool isExtendedQuery);
+CdbDispatcherState * cdbdisp_makeDispatcherState(bool isExtendedQuery, bool isDtx);
 
 /*
  * Free memory in CdbDispatcherState

@@ -117,7 +117,7 @@ static void dispatchCommand(CdbDispatchResult *dispatchResult,
 static void checkDispatchResult(CdbDispatcherState *ds,
 					bool wait);
 
-static bool processResults(CdbDispatchResult *dispatchResult);
+static bool processResults(CdbDispatchResult *dispatchResult, bool isDtx);
 
 static void
 			signalQEs(CdbDispatchCmdAsync *pParms);
@@ -129,7 +129,7 @@ static void
 			handlePollError(CdbDispatchCmdAsync *pParms);
 
 static void
-			handlePollSuccess(CdbDispatchCmdAsync *pParms, struct pollfd *fds);
+			handlePollSuccess(CdbDispatchCmdAsync *pParms, struct pollfd *fds, bool isDtx);
 
 /*
  * Check dispatch result.
@@ -549,7 +549,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 		}
 		/* We have data waiting on one or more of the connections. */
 		else
-			handlePollSuccess(pParms, fds);
+			handlePollSuccess(pParms, fds, ds->isDtx);
 	}
 
 	pfree(fds);
@@ -656,7 +656,8 @@ handlePollError(CdbDispatchCmdAsync *pParms)
  */
 static void
 handlePollSuccess(CdbDispatchCmdAsync *pParms,
-				  struct pollfd *fds)
+				  struct pollfd *fds,
+				  bool isDtx)
 {
 	int			currentFdNumber = 0;
 	int			i = 0;
@@ -696,7 +697,7 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 		/*
 		 * Receive and process results from this QE.
 		 */
-		finished = processResults(dispatchResult);
+		finished = processResults(dispatchResult, isDtx);
 
 		/*
 		 * Are we through with this QE now?
@@ -848,7 +849,7 @@ send_sequence_response(PGconn *conn, Oid oid, int64 last, int64 cached, int64 in
  * Return false if there'er still more data expected.
  */
 static bool
-processResults(CdbDispatchResult *dispatchResult)
+processResults(CdbDispatchResult *dispatchResult, bool isDtx)
 {
 	SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 	char	   *msg;
@@ -918,6 +919,8 @@ processResults(CdbDispatchResult *dispatchResult)
 		if (segdbDesc->conn->wrote_xlog)
 		{
 			MarkTopTransactionWriteXLogOnExecutor();
+			if (isDtx)
+				addToGxactDtxSegments(segdbDesc->segindex);
 
 			/*
 			 * Reset the worte_xlog here. Since if the received pgresult not process
@@ -926,6 +929,11 @@ processResults(CdbDispatchResult *dispatchResult)
 			 * always mark current top transaction has wrote xlog on executor.
 			 */
 			segdbDesc->conn->wrote_xlog = false;
+		}
+		else
+		{
+			if (isDtx)
+				addToGxactReadOnlySegments(segdbDesc->segindex);
 		}
 
 		/*

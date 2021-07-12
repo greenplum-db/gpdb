@@ -312,7 +312,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, DF_NONE);
 
-	ds = cdbdisp_makeDispatcherState(false);
+	ds = cdbdisp_makeDispatcherState(false, isDtxExplicitBegin());
 
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
@@ -330,12 +330,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 		cdbdisp_dispatchToGang(ds, rg, -1);
 	}
-	addToGxactDtxSegments(primaryGang);
-
-	/*
-	 * No need for two-phase commit, so no need to call
-	 * addToGxactDtxSegments.
-	 */
 
 	cdbdisp_waitDispatchFinish(ds);
 
@@ -459,11 +453,17 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	ErrorData *qeError = NULL;
 	char *queryText;
 	int queryTextLength;
+	bool isDtx = false;
+
+	if (isDtxExplicitBegin() || (flags & DF_NEED_TWO_PHASE))
+		isDtx = true;
 
 	/*
-	 * Dispatch the command.
+	 * Dispatch the command, if this is a explicit begin dtx or the
+	 * flag is marked as DF_NEED_TWO_PHASE, we need to put the involved
+	 * segments into dtxSegments or readOnlySegments list.
 	 */
-	ds = cdbdisp_makeDispatcherState(false);
+	ds = cdbdisp_makeDispatcherState(false, isDtx);
 
 	/*
 	 * Reader gangs use local snapshot to access catalog, as a result, it will
@@ -494,9 +494,6 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	cdbdisp_makeDispatchParams (ds, 1, queryText, queryTextLength);
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
-
-	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
-		addToGxactDtxSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
 
@@ -1057,7 +1054,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 
 	rootIdx = RootSliceIndex(estate);
 
-	ds = cdbdisp_makeDispatcherState(queryDesc->extended_query);
+	ds = cdbdisp_makeDispatcherState(queryDesc->extended_query, true);
 
 	/*
 	 * Since we intend to execute the plan, inventory the slice tree,
@@ -1158,8 +1155,6 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		SIMPLE_FAULT_INJECTOR("before_one_slice_dispatched");
 
 		cdbdisp_dispatchToGang(ds, primaryGang, si);
-		if (planRequiresTxn || isDtxExplicitBegin())
-			addToGxactDtxSegments(primaryGang);
 
 		SIMPLE_FAULT_INJECTOR("after_one_slice_dispatched");
 	}
@@ -1316,7 +1311,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	/*
 	 * Dispatch the command.
 	 */
-	ds = cdbdisp_makeDispatcherState(false);
+	ds = cdbdisp_makeDispatcherState(false, needTwoPhase);
 
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
@@ -1330,8 +1325,6 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	cdbdisp_makeDispatchParams (ds, 1, queryText, queryTextLength);
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
-	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
-		addToGxactDtxSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
 

@@ -569,6 +569,14 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			if (q->conn->wrote_xlog)
 			{
 				MarkTopTransactionWriteXLogOnExecutor();
+				/*
+				 * Here is a little different from processResults, COPY command
+				 * must use dtx, no need to judge if this is a dtx. Besides,
+				 * addToGxactReadOnlySegments can also be avoided, because cdbCopyStart
+				 * will call processResults, which will add the related segments to
+				 * readOnlySegments list.
+				 */
+				addToGxactDtxSegments(q->segindex);
 
 				/*
 				* Reset the worte_xlog here. Since if the received pgresult not process

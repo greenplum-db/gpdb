@@ -8,24 +8,33 @@ set test_print_direct_dispatch_info=on;
 set gp_autostats_mode = 'None';
 -- create table with distribution on a single table
 create table dd_singlecol_1(a int, b int) distributed by (a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_1 select g, g%15 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_1 values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_1;
 -- ctas tests
 create table dd_ctas_1 as select * from dd_singlecol_1 where a=1 distributed by (a);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table dd_ctas_2  as select * from dd_singlecol_1 where a is NULL distributed by (a);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from dd_ctas_1;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -42,10 +51,14 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (1 row)
 
 drop table dd_ctas_1;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_ctas_2;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- direct dispatch and queries having with clause
 with cte as (select * from dd_singlecol_1 where a=1) select * from cte;
@@ -90,9 +103,9 @@ select * from dd_singlecol_1 where a in (10,11,12);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a  | b  
 ----+----
+ 12 | 12
  10 | 10
  11 | 11
- 12 | 12
 (3 rows)
 
 select * from dd_singlecol_1 where a=10 or a=11 or a=12;
@@ -108,8 +121,8 @@ select * from dd_singlecol_1 where a is null or a=1;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a | b 
 ---+---
- 1 | 1
    |  
+ 1 | 1
 (2 rows)
 
 -- projections and disjunction
@@ -117,8 +130,8 @@ select b from dd_singlecol_1 where a=1 or a=2;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  b 
 ---
- 1
  2
+ 1
 (2 rows)
 
 -- single column distr key, values hash to the same segment
@@ -163,23 +176,28 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- partitioned tables
 create table dd_part_singlecol(a int, b int, c int) distributed by (a) partition by range (b) 
 (start(1) end(100) every (20), default partition extra);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_part_singlecol select g, g*2, g*3 from generate_series(1,49) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_part_singlecol values (NULL, NULL);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- disjunction with partitioned tables
 select * from dd_part_singlecol where a in (10,11,12);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a  | b  | c  
 ----+----+----
+ 12 | 24 | 36
  10 | 20 | 30
  11 | 22 | 33
- 12 | 24 | 36
 (3 rows)
 
 select * from dd_part_singlecol where a=10 or a=11 or a=12;
@@ -283,33 +301,49 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 
 -- indexes
 create table dd_singlecol_idx(a int, b int, c int) distributed by (a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_idx_b on dd_singlecol_idx(b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_idx_bc on dd_singlecol_idx(b,c);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_idx values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 create table dd_singlecol_idx2(a int, b int, c int) distributed by (a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_idx_a on dd_singlecol_idx2(a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_idx2 select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_idx2 values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_idx;
 analyze dd_singlecol_idx2;
@@ -344,20 +378,29 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 
 -- create table with bitmap indexes
 create table dd_singlecol_bitmap_idx(a int, b int, c int) distributed by (a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_bitmap_idx_b on dd_singlecol_bitmap_idx using bitmap (b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_bitmap_idx_c on dd_singlecol_bitmap_idx using bitmap (c);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_bitmap_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_bitmap_idx values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_bitmap_idx;
 -- disjunction with bitmap index scans
@@ -422,17 +465,24 @@ create table dd_singlecol_part_bitmap_idx(a int, b int, c int)
 distributed by (a)
 partition by range (b) 
 (start(1) end(100) every (20), default partition extra);;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_part_bitmap_idx_b on dd_singlecol_part_bitmap_idx using bitmap(b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_bitmap_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_bitmap_idx values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_part_bitmap_idx;
 -- bitmap indexes on partitioned tables
@@ -465,20 +515,26 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 
 -- multi column index
 create table dd_multicol_idx(a int, b int, c int) distributed by (a,b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index mc_idx_b on dd_multicol_idx(c);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_multicol_idx
 select g, g%5, g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_multicol_idx values(null, null);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 analyze dd_multicol_idx;
 select count(*) from dd_multicol_idx;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -572,33 +628,47 @@ create table dd_singlecol_part_idx(a int, b int, c int)
 distributed by (a)
 partition by range (b) 
 (start(1) end(100) every (20), default partition extra);;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_part_idx_b on dd_singlecol_part_idx(b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 create table dd_singlecol_part_idx2(a int, b int, c int) 
 distributed by (a)
 partition by range (b) 
 (start(1) end(100) every (20), default partition extra);;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_part_idx_a on dd_singlecol_part_idx2(a);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx2 select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx2 values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_part_idx;
 analyze dd_singlecol_part_idx2;
@@ -625,23 +695,33 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 create table dd_singlecol_2(a int, b int) distributed by (b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table dd_singlecol_dropped(a int, b int, c int) distributed by (b);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 alter table dd_singlecol_dropped drop column a;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_2
 select g, g%10 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_dropped
 select g, g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- aggregates
 select count(*) from dd_singlecol_1;
@@ -891,23 +971,23 @@ select * from dd_singlecol_1 where a>1 and a<5;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a | b 
 ---+---
- 4 | 4
- 3 | 3
  2 | 2
+ 3 | 3
+ 4 | 4
 (3 rows)
 
 select * from dd_singlecol_1 where a=1 or b=5;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a  | b 
 ----+---
- 50 | 5
-  5 | 5
+  1 | 1
  20 | 5
  35 | 5
- 80 | 5
+ 50 | 5
  95 | 5
-  1 | 1
+  5 | 5
  65 | 5
+ 80 | 5
 (8 rows)
 
 -- group by and sort
@@ -929,12 +1009,16 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 
 -- randomly distributed tables
 create table dd_random(a int, b int) distributed randomly;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_random select g, g%15 from generate_series(1, 100) g;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- non hash distributed tables
 select * from dd_random  where a=1;
@@ -945,42 +1029,66 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (1 row)
 
 drop table dd_singlecol_1;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_ctas_1;
 ERROR:  table "dd_ctas_1" does not exist
 drop table dd_ctas_2;
 ERROR:  table "dd_ctas_2" does not exist
 drop table dd_part_singlecol;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_idx;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_idx2;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_bitmap_idx;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_part_bitmap_idx;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_multicol_idx;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_part_idx;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_part_idx2;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_2;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_singlecol_dropped;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table dd_random;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2

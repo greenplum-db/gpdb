@@ -64,6 +64,7 @@ fetch c0;
 (0 rows)
 
 End;
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 reset test_print_direct_dispatch_info;
 -- ----------------------------------------------------------------------
@@ -95,8 +96,8 @@ update key_value_table set value=300 where key =200;
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback to s;
 commit;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 2 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 2 0 1
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 Begin;
 SELECT * FROM key_value_table WHERE key = 200 FOR UPDATE;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -109,7 +110,8 @@ savepoint s;
 update key_value_table set value=200 where key =300;
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 2 0 1
+INFO:  Distributed transaction has No contents persisted WAL
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 savepoint s;
 ERROR:  SAVEPOINT can only be used in transaction blocks
 abort;
@@ -160,27 +162,35 @@ insert into boolean values ('f', 1);
 set test_print_direct_dispatch_info=on;
 insert into boolean values ('t', 2);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table boolean set distributed by (b);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into boolean values ('t', 1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table boolean set distributed randomly;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into boolean values ('t', 1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 alter table boolean set distributed by (boo, b);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from boolean where boo='t' and b=2;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -201,22 +211,29 @@ insert into date values ('2001-11-11',234.23234);
 set test_print_direct_dispatch_info=on;
 insert into date values ('2001-11-12',234.2323);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table date set distributed by (dp1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into date values ('2001-11-13',234.23234);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into date values ('2001-11-14',234.2323);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table date set distributed by (date1, dp1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from date where date1='2001-11-12' and dp1=234.2323;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -237,22 +254,29 @@ insert into interval values ('23',2345);
 set test_print_direct_dispatch_info=on;
 insert into interval values ('2',234);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table interval set distributed by (num);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into interval values ('24',234);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into interval values ('26',2343);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table interval set distributed by (num,interval1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from interval where interval1='23' and num=2345;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -271,17 +295,22 @@ insert into real values (23, 4);
 set test_print_direct_dispatch_info=on;
 insert into real values (23, 4);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 Alter table real set distributed by (si1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into real values (21, 3);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into real values (21, 2);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from real where real.si1=3;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -293,7 +322,9 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 Alter table real set distributed by (si1,real1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from real where real1=21 and si1=3;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -312,14 +343,18 @@ insert into bytea values ('d','0.0.0.0');
 set test_print_direct_dispatch_info=on;
 insert into bytea values ('d','0.0.0.1');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table bytea set distributed by (cidr1,bytea1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into bytea values ('e','0.0.1.0');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from bytea where bytea1='d' and cidr1='0.0.0.1';
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -338,22 +373,29 @@ insert into inetmac values ('0.0.0.0','AA:AA:AA:AA:AA:AA');
 set test_print_direct_dispatch_info=on;
 insert into inetmac values ('0.0.0.0','AC:AA:AA:AA:AA:AA');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table inetmac set distributed by (macaddr1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into inetmac values ('0.0.0.2','AA:AA:AA:AA:AA:AC');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table inetmac set distributed by (macaddr1,inet1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into inetmac values ('0.0.0.2','AA:AA:AA:AA:AA:AC');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from inetmac where inet1='0.0.0.0' and macaddr1 ='AA:AA:AA:AA:AA:AA';
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -373,22 +415,29 @@ insert into time2 values ('00:00:00+1359', 'abcg');
 set test_print_direct_dispatch_info=on;
 insert into time2 values ('00:00:00+1359', 'abcf');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table time2 set distributed by (text1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into time2 values ('00:00:00+1352', 'abce');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table time2 set distributed by (text1,time2);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into time2 values ('00:00:00+1352', 'abcd');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from time2 where time2='00:00:00+1359' and text1='abcg';
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -408,22 +457,29 @@ insert into timestamp values ('2004-12-13 01:51:15','2004-12-13 01:51:15+1359');
 set test_print_direct_dispatch_info=on;
 insert into timestamp values ('2004-12-13 01:51:15','2004-12-13 01:51:15+1359');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table timestamp set distributed by (time2);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into timestamp values ('2004-12-13 01:51:25','2004-12-12 01:51:15+1359');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table timestamp set distributed by (time2, timestamp1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into timestamp values ('2004-12-13 01:51:25','2004-12-12 01:51:15+1359');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from timestamp where timestamp1='2004-12-13 01:51:25' and time2 ='2004-12-12 01:51:15+1359';
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -442,22 +498,29 @@ insert into bit1 values ('0', 23);
 set test_print_direct_dispatch_info=on;
 insert into bit1 values ('1', 23);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table bit1 set distributed by (b);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into bit1 values ('0', 24);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 alter table bit1 set distributed by (b,a);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into bit1 values ('0', 24);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from bit1 where a='0' and b =24;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -482,7 +545,9 @@ set test_print_direct_dispatch_info=on;
 insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 6) i;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select count(*) from mpp7638 where a =1;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -494,27 +559,27 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 explain select count(*) from mpp7638 where a =1;
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=8900.38..8900.39 rows=1 width=8)
-   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=8900.35..8900.38 rows=1 width=8)
-         ->  Partial Aggregate  (cost=8900.35..8900.36 rows=1 width=8)
-               ->  Append  (cost=0.00..8898.75 rows=214 width=0)
-                     ->  Seq Scan on mpp7638_1_prt_1  (cost=0.00..988.75 rows=24 width=0)
+ Finalize Aggregate  (cost=2973.91..2973.92 rows=1 width=8)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=2973.85..2973.90 rows=3 width=8)
+         ->  Partial Aggregate  (cost=2973.85..2973.86 rows=1 width=8)
+               ->  Append  (cost=0.00..2973.32 rows=213 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_1  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_2  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_2  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_3  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_3  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_4  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_4  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_5  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_5  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_6  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_6  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_7  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_7  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_8  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_8  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..988.75 rows=24 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..330.25 rows=24 width=0)
                            Filter: (a = 1)
  Optimizer: Postgres query optimizer
 (23 rows)
@@ -538,7 +603,9 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from mpp7638 where a=1 and b=2 and c=3;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -566,27 +633,37 @@ CREATE INDEX id3 ON range_table USING BITMAP (id);
 set test_print_direct_dispatch_info=on;
 INSERT INTO range_table(id) VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 DROP INDEX id3;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 CREATE INDEX id3 ON range_table USING BITMAP (id);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 INSERT INTO range_table(id) VALUES (2);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO range_table(id) VALUES (3);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO range_table(id) VALUES (4);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO range_table(id) VALUES (5);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO range_table(id) VALUES (5);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from range_table where id =1;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -640,20 +717,23 @@ distributed by (key);
 insert into mpp7620 values (200, 'horse');
 -- enable printing of printing info
 set test_print_direct_dispatch_info=on;
-Create table zoompp7620 as select * from mpp7620 where key=200;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'key' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+Create table zoompp7620 as select * from mpp7620 where key=200 distributed by (key);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into mpp7620 values (200, 200);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into zoompp7620 select * from mpp7620 where key=200;
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select key from mpp7620 where mpp7620.key=200;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -672,33 +752,31 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (2 rows)
 
 explain select * from (select * from mpp7620 where key=200) ss where key =200; 
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1.01 rows=1 width=10)
-   ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=10)
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..123.87 rows=22 width=122)
+   ->  Seq Scan on mpp7620  (cost=0.00..123.58 rows=7 width=122)
          Filter: (key = 200)
- Planning time: 0.436 ms
  Optimizer: Postgres query optimizer
-(5 rows)
+(4 rows)
 
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
-                         QUERY PLAN                          
--------------------------------------------------------------
- Insert on zoompp7620  (cost=0.00..1.01 rows=1 width=4)
-   ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=4)
-         Filter: key = 200
- Optimizer status: Postgres query optimizer
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Insert on zoompp7620  (cost=0.00..123.58 rows=7 width=36)
+   ->  Seq Scan on mpp7620  (cost=0.00..123.58 rows=7 width=36)
+         Filter: (key = 200)
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 explain select key from mpp7620 where mpp7620.key=200;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1.01 rows=1 width=4)
-   ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=4)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..123.87 rows=22 width=4)
+   ->  Seq Scan on mpp7620  (cost=0.00..123.58 rows=7 width=4)
          Filter: (key = 200)
- Planning time: 0.321 ms
  Optimizer: Postgres query optimizer
-(5 rows)
+(4 rows)
 
 reset test_print_direct_dispatch_info;
 -- ----------------------------------------------------------------------
@@ -715,7 +793,9 @@ insert into table_a (a3,a2,a0,a1) values (1,2,3,4);
 set test_print_direct_dispatch_info=on;
 --Check to see distributed vs distributed randomly
 alter table table_a set distributed randomly;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select max(a0) from table_a where a0=3;
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
@@ -727,23 +807,24 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 alter table table_a set distributed by (a0);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 explain select * from table_a where a0=3;
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1.01 rows=1 width=16)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1.03 rows=1 width=16)
    ->  Seq Scan on table_a  (cost=0.00..1.01 rows=1 width=16)
          Filter: (a0 = 3)
- Planning time: 0.457 ms
  Optimizer: Postgres query optimizer
-(5 rows)
+(4 rows)
 
 explain select a0 from table_a where a0 in (select max(a1) from table_a);
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.08..2.20 rows=4 width=4)
-   ->  Hash Join  (cost=1.08..2.13 rows=2 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.08..2.15 rows=3 width=4)
+   ->  Hash Join  (cost=1.08..2.11 rows=1 width=4)
          Hash Cond: (table_a.a0 = (max(table_a_1.a1)))
          ->  Seq Scan on table_a  (cost=0.00..1.01 rows=1 width=4)
          ->  Hash  (cost=1.07..1.07 rows=1 width=4)
@@ -780,8 +861,8 @@ INFO:  (slice 2) Dispatch command to SINGLE content
 explain select a0 from table_a where a0 in (select max(a1) from table_a where a0=1);
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.09..2.20 rows=4 width=4)
-   ->  Hash Join  (cost=1.09..2.13 rows=2 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.09..2.16 rows=3 width=4)
+   ->  Hash Join  (cost=1.09..2.11 rows=1 width=4)
          Hash Cond: (table_a.a0 = (max(table_a_1.a1)))
          ->  Seq Scan on table_a  (cost=0.00..1.01 rows=1 width=4)
          ->  Hash  (cost=1.07..1.07 rows=1 width=4)
@@ -807,17 +888,17 @@ select rank from ( select rank() over ( order by dist_key asc ) as rank , * from
 (1 row)
 
 explain select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Subquery Scan on a  (cost=7.32..10.32 rows=1 width=8)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Subquery Scan on a  (cost=2446.06..6033.56 rows=86 width=8)
    Filter: (10 = a.dist_key)
-   ->  WindowAgg  (cost=7.32..9.07 rows=100 width=8)
+   ->  WindowAgg  (cost=2446.06..4957.31 rows=86100 width=16)
          Order By: foo_direct_dispatch.dist_key
-         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7.32..7.57 rows=100 width=8)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2446.06..3665.81 rows=86100 width=4)
                Merge Key: foo_direct_dispatch.dist_key
-               ->  Sort  (cost=7.32..7.57 rows=34 width=8)
+               ->  Sort  (cost=2446.06..2517.81 rows=28700 width=4)
                      Sort Key: foo_direct_dispatch.dist_key
-                     ->  Seq Scan on foo_direct_dispatch  (cost=0.00..4.00 rows=34 width=8)
+                     ->  Seq Scan on foo_direct_dispatch  (cost=0.00..321.00 rows=28700 width=4)
  Optimizer: Postgres query optimizer
 (10 rows)
 

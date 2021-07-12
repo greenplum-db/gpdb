@@ -37,6 +37,7 @@ set test_print_direct_dispatch_info=on;
 -- DO direct dispatch
 insert into direct_test values (100, 'cow');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- verify
 select * from direct_test order by key, value;
@@ -51,8 +52,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 update direct_test set value = 'horse' where key = 100;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- verify
 select * from direct_test order by key, value;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -66,8 +67,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 delete from direct_test where key = 100;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- verify
 select * from direct_test order by key, value;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -79,6 +80,7 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- DO direct dispatch
 insert into direct_test values (NULL, 'cow');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- verify
 select * from direct_test order by key, value;
@@ -92,12 +94,13 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- DO direct dispatch
 delete from direct_test where key is null;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Same single-row insert as above, but with DEFAULT instead of an explicit values.
 -- DO direct dispatch
 insert into direct_test values (default, 'cow');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- verify
 select * from direct_test order by key, value;
@@ -112,8 +115,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 insert into direct_test_two_column values (100, 101, 'cow');
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- verify
 select * from direct_test_two_column order by key1, key2, value;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -127,8 +130,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 update direct_test_two_column set value = 'horse' where key1 = 100 and key2 = 101;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- verify
 select * from direct_test_two_column order by key1, key2, value;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -141,8 +144,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- DO direct dispatch
 delete from direct_test_two_column where key1 = 100 and key2 = 101;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- verify
 select * from direct_test_two_column order by key1, key2, value;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -154,9 +157,11 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- DO direct dispatch
 insert into direct_test (key, value) values ('123',123123);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test (key, value) values (sqrt(100*10*10),123123);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 --
 -- should get 100 and 123 as the values
@@ -171,8 +176,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 
 delete from direct_test where value = '123123';
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 --------------------------------------------------------------------------------
 -- Multiple row update, where clause lists multiple values which hash differently so no direct dispatch
 --
@@ -181,15 +186,19 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 --
 update direct_test set value = 'pig' where key in (1,2,3,4,5);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 update direct_test_two_column set value = 'pig' where key1 = 100 and key2 in (1,2,3,4);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101,102,103,104) and key2 in (1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101) and key2 in (1,2);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Multiple row update, where clause lists values which all hash to same segment
 -- DO direct dispatch
@@ -203,6 +212,7 @@ begin;
 insert into direct_test values (1,100);
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback;
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to SINGLE content
 begin;
 insert into direct_test values (1,100);
@@ -212,7 +222,8 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 insert into direct_test values (3,100);
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to PARTIAL contents: 1 0
+INFO:  Distributed transaction has PARTIAL contents: 0 1  persisted WAL
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to PARTIAL contents: 0 1
 -------------------
 -- MPP-7634: bitmap index scan
 --
@@ -237,6 +248,7 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 --
 insert into direct_test_partition values (1,'2008-01-02',1,'usa');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from direct_test_partition where trans_id =1;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -262,16 +274,18 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 prepare test_insert (int) as insert into direct_test values ($1,100);
 execute test_insert(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 execute test_insert(2);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select * from direct_test;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  key | value 
 -----+-------
-   2 | 100
      | cow
+   2 | 100
    1 | 100
 (3 rows)
 
@@ -279,15 +293,15 @@ prepare test_update (int) as update direct_test set value = 'boo' where key = $1
 -- Known_opt_diff: MPP-21346
 execute test_update(2);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 select * from direct_test;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  key | value 
 -----+-------
      | cow
-   1 | 100
    2 | boo
+   1 | 100
 (3 rows)
 
 ------------------------
@@ -350,6 +364,7 @@ update direct_dispatch_bar set id2 = 1 where id1 = 1 and exists (select * from d
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- init plan to see how transaction escalation happens
 -- Known_opt_diff: MPP-21346
@@ -358,6 +373,7 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
@@ -365,6 +381,7 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
@@ -372,27 +389,36 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction has No contents persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- tests with subplans (MPP-22019)
 CREATE TABLE MPP_22019_a ( i INT, j INT) DISTRIBUTED BY (i);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 INSERT INTO MPP_22019_a (
  SELECT i, i * i FROM generate_series(1, 10) AS i);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 CREATE TABLE MPP_22019_b (i INT, j INT) DISTRIBUTED BY (i);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 INSERT INTO MPP_22019_b (SELECT i, i * i FROM generate_series(1, 10) AS i);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1765376.88 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1765376.88 rows=1 width=8)
    ->  Result  (cost=0.00..1765376.88 rows=1 width=8)
          Filter: (SubPlan 1)
          ->  Hash Join  (cost=0.00..862.00 rows=1 width=12)
@@ -406,9 +432,9 @@ EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHER
            ->  Result  (cost=0.00..431.00 rows=1 width=4)
                  Filter: (mpp_22019_a_1.j = mpp_22019_b.j)
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
-                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                              ->  Seq Scan on mpp_22019_a mpp_22019_a_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
 
 SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
@@ -430,133 +456,160 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 --
 -- Simple table.
 create table ddtesttab (i int, j int, k int8) distributed by (k);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create sequence ddtestseq cache 1;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 drop table ddtesttab;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- Partitioned table, with mixed distribution keys.
 create table ddtesttab (i int, j int, k int8) distributed by (i) partition by
 range(k)
 (start(1) end(20) every(10));
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- One partition is randomly distributed, while others are distributed by key.
 alter table ddtesttab_1_prt_2 set distributed randomly;
 ERROR:  can't set the distribution policy of "ddtesttab_1_prt_2"
 HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into ddtesttab values (1, 1, 5);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 drop table ddtesttab;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop sequence ddtestseq;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- Test prepare statement will choose custom plan instead of generic plan when
 -- considering no direct dispatch cost.
 create table test_prepare(i int, j int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- insert case
 prepare p1 as insert into test_prepare values($1, 1);
 execute p1(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 execute p1(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 execute p1(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 execute p1(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 execute p1(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- the first 5 execute will always use custom plan, focus on the 6th one.
 execute p1(1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- update case
 prepare p2 as update test_prepare set j =2 where i =$1;
 execute p2(1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 execute p2(1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 execute p2(1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 execute p2(1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 execute p2(1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 execute p2(1);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction has SINGLE content persisted WAL
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- select case
 prepare p3 as select * from test_prepare where i =$1;
 execute p3(1);
@@ -632,17 +685,23 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (6 rows)
 
 drop table test_prepare;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- test direct dispatch via gp_segment_id qual
 create table t_test_dd_via_segid(id int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into t_test_dd_via_segid select * from generate_series(1, 6);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
                 QUERY PLAN                
@@ -726,9 +785,9 @@ select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_se
 INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 2
  gp_segment_id | id 
 ---------------+----
-             1 |  1
              2 |  5
              2 |  6
+             1 |  1
 (3 rows)
 
 explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
@@ -750,9 +809,9 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  gp_segment_id | gp_segment_id | id | id 
 ---------------+---------------+----+----
-             1 |             1 |  1 |  1
              2 |             0 |  5 |  2
              2 |             0 |  6 |  2
+             1 |             1 |  1 |  1
 (3 rows)
 
 explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
@@ -772,20 +831,24 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  gp_segment_id | count 
 ---------------+-------
              0 |     3
-             1 |     1
              2 |     2
+             1 |     1
 (3 rows)
 
 -- test direct dispatch via SQLValueFunction and FuncExpr for single row insertion.
 create table t_sql_value_function1 (a int, b date);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table t_sql_value_function2 (a date);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 explain (costs off) insert into t_sql_value_function1 values(1, current_timestamp);
               QUERY PLAN               
@@ -799,6 +862,7 @@ explain (costs off) insert into t_sql_value_function1 values(1, current_timestam
 
 insert into t_sql_value_function1 values(1, current_timestamp);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 explain (costs off) insert into t_sql_value_function2 values(current_timestamp);
               QUERY PLAN               
@@ -812,6 +876,7 @@ explain (costs off) insert into t_sql_value_function2 values(current_timestamp);
 
 insert into t_sql_value_function2 values(current_timestamp);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 explain (costs off) insert into t_sql_value_function1 values(2, now());
               QUERY PLAN               
@@ -825,6 +890,7 @@ explain (costs off) insert into t_sql_value_function1 values(2, now());
 
 insert into t_sql_value_function1 values(2, now());
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 explain (costs off) insert into t_sql_value_function2 values(now());
               QUERY PLAN               
@@ -838,6 +904,7 @@ explain (costs off) insert into t_sql_value_function2 values(now());
 
 insert into t_sql_value_function2 values(now());
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- cleanup
 set test_print_direct_dispatch_info=off;

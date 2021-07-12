@@ -9,100 +9,148 @@ set test_print_direct_dispatch_info=on;
 set gp_autostats_mode = 'None';
 -- test direct dispatch for different data types
 CREATE TABLE direct_test_type_int2 (id int2) DISTRIBUTED BY (id);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 CREATE TABLE direct_test_type_int4 (id int4) DISTRIBUTED BY (id);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 CREATE TABLE direct_test_type_int8 (id int8) DISTRIBUTED BY (id);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_real (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (real1);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_smallint (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (smallint1);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_boolean2 (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_double (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (double1);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_date (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (date1);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_numeric (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (numeric1);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bit (x bit) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bpchar (x bpchar) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bytea (x bytea) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_cidr (x cidr) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_inet (x inet) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_macaddr (x macaddr) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_varbit (x varbit) distributed by (x);
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 INSERT INTO direct_test_type_int2 VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO direct_test_type_int4 VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO direct_test_type_int8 VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_boolean2 values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_bit values('1');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_bpchar values('abs');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_bytea values('greenplum');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_cidr values('68.44.55.111');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_inet values('68.44.55.111');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_varbit values('0101010');
 INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction has SINGLE content persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- @author antovl
 -- @created 2014-11-07 12:00:00 
@@ -373,51 +421,83 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (0 rows)
 
 drop table direct_test_type_real;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_smallint;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_double;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_date;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_numeric;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_int2;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_int4;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_int8;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bit;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bpchar;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bytea;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_cidr;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_inet;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_macaddr;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_varbit;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_boolean2;
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction has ALL contents: 0 1 2  persisted WAL
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 reset test_print_direct_dispatch_info;
