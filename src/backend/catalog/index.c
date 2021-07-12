@@ -420,6 +420,14 @@ ConstructTupleDescriptor(Relation heapRelation,
 			memcpy(to, from, ATTRIBUTE_FIXED_PART_SIZE);
 
 			/*
+			 * Set the attribute name as specified by caller.
+			 */
+			if (colnames_item == NULL)		/* shouldn't happen */
+				elog(ERROR, "too few entries in colnames list");
+			namestrcpy(&to->attname, (const char *) lfirst(colnames_item));
+			colnames_item = lnext(colnames_item);
+
+			/*
 			 * Fix the stuff that should not be the same as the underlying
 			 * attr
 			 */
@@ -439,6 +447,14 @@ ConstructTupleDescriptor(Relation heapRelation,
 			Node	   *indexkey;
 
 			MemSet(to, 0, ATTRIBUTE_FIXED_PART_SIZE);
+
+			/*
+			 * Set the attribute name as specified by caller.
+			 */
+			if (colnames_item == NULL)		/* shouldn't happen */
+				elog(ERROR, "too few entries in colnames list");
+			namestrcpy(&to->attname, (const char *) lfirst(colnames_item));
+			colnames_item = lnext(colnames_item);
 
 			if (indexpr_item == NULL)	/* shouldn't happen */
 				elog(ERROR, "too few entries in indexprs list");
@@ -491,14 +507,6 @@ ConstructTupleDescriptor(Relation heapRelation,
 		 * later.
 		 */
 		to->attrelid = InvalidOid;
-
-		/*
-		 * Set the attribute name as specified by caller.
-		 */
-		if (colnames_item == NULL)		/* shouldn't happen */
-			elog(ERROR, "too few entries in colnames list");
-		namestrcpy(&to->attname, (const char *) lfirst(colnames_item));
-		colnames_item = lnext(colnames_item);
 
 		/*
 		 * Check the opclass and index AM to see if either provides a keytype
@@ -1520,6 +1528,15 @@ index_drop(Oid indexId, bool concurrent)
 	LOCKMODE	lockmode;
 
 	/*
+	 * A temporary relation uses a non-concurrent DROP.  Other backends can't
+	 * access a temporary relation, so there's no harm in grabbing a stronger
+	 * lock (see comments in RemoveRelations), and a non-concurrent DROP is
+	 * more efficient.
+	 */
+	Assert(get_rel_persistence(indexId) != RELPERSISTENCE_TEMP ||
+		   !concurrent);
+
+	/*
 	 * To drop an index safely, we must grab exclusive lock on its parent
 	 * table.  Exclusive lock on the index alone is insufficient because
 	 * another backend might be about to execute a query on the parent table.
@@ -1972,6 +1989,61 @@ CompareIndexInfo(IndexInfo *info1, IndexInfo *info2,
 		return false;
 
 	return true;
+}
+
+/* ----------------
+ *		BuildDummyIndexInfo
+ *			Construct a dummy IndexInfo record for an open index
+ *
+ * This differs from the real BuildIndexInfo in that it will never run any
+ * user-defined code that might exist in index expressions or predicates.
+ * Instead of the real index expressions, we return null constants that have
+ * the right types/typmods/collations.  Predicates and exclusion clauses are
+ * just ignored.  This is sufficient for the purpose of truncating an index,
+ * since we will not need to actually evaluate the expressions or predicates;
+ * the only thing that's likely to be done with the data is construction of
+ * a tupdesc describing the index's rowtype.
+ * ----------------
+ */
+IndexInfo *
+BuildDummyIndexInfo(Relation index)
+{
+	IndexInfo  *ii = makeNode(IndexInfo);
+	Form_pg_index indexStruct = index->rd_index;
+	int			i;
+	int			numKeys;
+
+	/* check the number of keys, and copy attr numbers into the IndexInfo */
+	numKeys = indexStruct->indnatts;
+	if (numKeys < 1 || numKeys > INDEX_MAX_KEYS)
+		elog(ERROR, "invalid indnatts %d for index %u",
+			 numKeys, RelationGetRelid(index));
+	ii->ii_NumIndexAttrs = numKeys;
+	for (i = 0; i < numKeys; i++)
+		ii->ii_KeyAttrNumbers[i] = indexStruct->indkey.values[i];
+
+	/* fetch dummy expressions for expressional indexes */
+	ii->ii_Expressions = RelationGetDummyIndexExpressions(index);
+	ii->ii_ExpressionsState = NIL;
+
+	/* pretend there is no predicate */
+	ii->ii_Predicate = NIL;
+	ii->ii_PredicateState = NULL;
+
+	/* We ignore the exclusion constraint if any */
+	ii->ii_ExclusionOps = NULL;
+	ii->ii_ExclusionProcs = NULL;
+	ii->ii_ExclusionStrats = NULL;
+
+	/* other info */
+	ii->ii_Unique = indexStruct->indisunique;
+	ii->ii_ReadyForInserts = IndexIsReady(indexStruct);
+
+	/* initialize index-build state to default */
+	ii->ii_Concurrent = false;
+	ii->ii_BrokenHotChain = false;
+
+	return ii;
 }
 
 /* ----------------

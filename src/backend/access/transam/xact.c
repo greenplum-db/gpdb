@@ -2677,18 +2677,19 @@ CommitTransaction(void)
 	AtEOXact_LargeObject(true);
 
 	/*
+	 * Insert notifications sent by NOTIFY commands into the queue.  This
+	 * should be late in the pre-commit sequence to minimize time spent
+	 * holding the notify-insertion lock.  However, this could result in
+	 * creating a snapshot, so we must do it before serializable cleanup.
+	 */
+	PreCommit_Notify();
+
+	/*
 	 * Mark serializable transaction as complete for predicate locking
 	 * purposes.  This should be done as late as we can put it and still allow
 	 * errors to be raised for failure patterns found at commit.
 	 */
 	PreCommit_CheckForSerializationFailure();
-
-	/*
-	 * Insert notifications sent by NOTIFY commands into the queue.  This
-	 * should be late in the pre-commit sequence to minimize time spent
-	 * holding the notify-insertion lock.
-	 */
-	PreCommit_Notify();
 
 	/*
 	 * Prepare all QE.
@@ -2968,14 +2969,14 @@ PrepareTransaction(void)
 	/* close large objects before lower-level cleanup */
 	AtEOXact_LargeObject(true);
 
+	/* NOTIFY requires no work at this point */
+
 	/*
 	 * Mark serializable transaction as complete for predicate locking
 	 * purposes.  This should be done as late as we can put it and still allow
 	 * errors to be raised for failure patterns found at commit.
 	 */
 	PreCommit_CheckForSerializationFailure();
-
-	/* NOTIFY will be handled below */
 
 	/*
 	 * In Postgres, MyXactAccessedTempRel is used to error out if PREPARE TRANSACTION
