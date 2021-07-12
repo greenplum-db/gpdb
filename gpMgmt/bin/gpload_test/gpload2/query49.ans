@@ -1,0 +1,14 @@
+2021-05-28 10:41:38|INFO|gpload session started 2021-05-28 10:41:38
+2021-05-28 10:41:38|ERROR|could not connect to database: FATAL:  database "notexistdb" does not exist
+. Is the Greenplum Database running on port 6000?
+2021-05-28 10:41:38|INFO|rows Inserted          = 0
+2021-05-28 10:41:38|INFO|rows Updated           = 0
+2021-05-28 10:41:38|INFO|data formatting errors = 0
+2021-05-28 10:41:38|INFO|gpload failed
+2021-05-28 10:41:38|INFO|gpload session started 2021-05-28 10:41:38
+2021-05-28 10:41:38|ERROR|could not connect to database: FATAL:  database "notexistdb" does not exist
+. Is the Greenplum Database running on port 6000?
+2021-05-28 10:41:38|INFO|rows Inserted          = 0
+2021-05-28 10:41:38|INFO|rows Updated           = 0
+2021-05-28 10:41:38|INFO|data formatting errors = 0
+2021-05-28 10:41:38|INFO|gpload failed

@@ -1,0 +1,8 @@
+2021-01-05 17:09:31|INFO|gpload session started 2021-01-05 17:09:31
+2021-01-05 17:09:31|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-05 17:09:31|INFO|reusing external table ext_gpload_reusable_3653d0a2_4f35_11eb_8508_7085c2381836
+2021-01-05 17:09:31|INFO|running time: 0.12 seconds
+2021-01-05 17:09:31|INFO|rows Inserted          = 16
+2021-01-05 17:09:31|INFO|rows Updated           = 0
+2021-01-05 17:09:31|INFO|data formatting errors = 0
+2021-01-05 17:09:31|INFO|gpload succeeded

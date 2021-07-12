@@ -1,0 +1,6 @@
+---
+VERSION: 1.0.0.1
+TRANSFORMATIONS:
+  prices_input:
+    TYPE: input
+    COMMAND: data/transform/input_transform.py %filename%

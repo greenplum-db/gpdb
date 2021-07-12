@@ -1,0 +1,12 @@
+2021-01-11 18:03:26|INFO|gpload session started 2021-01-11 18:03:26
+2021-01-11 18:03:26|INFO|setting schema 'public' for table 'texttable_662'
+2021-01-11 18:03:26|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-11 18:03:26|INFO|did not find an external table to reuse. creating ext_gpload_reusable_3f87f84c_53f4_11eb_8b61_005056983e1a
+2021-01-11 18:03:26|ERROR|could not execute SQL in sql:after "INSERT INTO test_662 VALUES(1)": ERROR:  relation "test_662" does not exist
+LINE 1: INSERT INTO test_662 VALUES(1)
+                    ^
+
+2021-01-11 18:03:26|INFO|rows Inserted          = 16
+2021-01-11 18:03:26|INFO|rows Updated           = 0
+2021-01-11 18:03:26|INFO|data formatting errors = 0
+2021-01-11 18:03:26|INFO|gpload failed

@@ -1,3 +1,4 @@
+OS := $(shell cat /etc/redhat-release)
 top_builddir=../../..
 include $(top_builddir)/src/Makefile.global
 
@@ -17,9 +18,19 @@ GPTest.pm:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/GPTest.pm
 
 .PHONY: installcheck
+	
+ifeq "$(findstring ubuntu, $(TEST_OS))" "ubuntu"
+installcheck: gpdiff.pl gpstringsubs.pl
+	@echo "skip gpload test for ubuntu"
+else ifeq "$(findstring CentOS release 6., $(OS))" "centos6"
+installcheck: gpdiff.pl gpstringsubs.pl
+	@echo "skip gpload test for centos6"
+else
 installcheck: gpdiff.pl gpstringsubs.pl
 	@cd gpload && ./TEST.py
-	@cd gpload2 && ./TEST.py
+	@export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/:/usr/lib64/python2.7/site-packages/:/usr/local/greenplum-db-devel/lib/python\
+	&& cd gpload2 && python -m pytest TEST_local_*
+endif
 
 clean distclean:
 	rm -f gpdiff.pl atmsort.pm explain.pm GPTest.pm gpstringsubs.pl

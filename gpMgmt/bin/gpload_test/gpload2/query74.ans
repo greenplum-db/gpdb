@@ -1,0 +1,23 @@
+2021-06-21 16:22:33|INFO|gpload session started 2021-06-21 16:22:33
+2021-06-21 16:22:33|INFO|setting schema 'public' for table 'chinese表'
+2021-06-21 16:22:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-21 16:22:33|INFO|reusing external table ext_gpload_reusable_d3399c46_d269_11eb_9789_0050569ea4ff
+2021-06-21 16:22:33|INFO|running time: 0.04 seconds
+2021-06-21 16:22:33|INFO|rows Inserted          = 8
+2021-06-21 16:22:33|INFO|rows Updated           = 0
+2021-06-21 16:22:33|INFO|data formatting errors = 0
+2021-06-21 16:22:33|INFO|gpload succeeded
+2021-06-21 16:22:33|INFO|gpload session started 2021-06-21 16:22:33
+2021-06-21 16:22:33|INFO|setting schema 'public' for table 'chinese表'
+2021-06-21 16:22:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-21 16:22:33|INFO|reusing external table ext_gpload_reusable_d3399c46_d269_11eb_9789_0050569ea4ff
+2021-06-21 16:22:33|INFO|running time: 0.04 seconds
+2021-06-21 16:22:33|INFO|rows Inserted          = 8
+2021-06-21 16:22:33|INFO|rows Updated           = 0
+2021-06-21 16:22:33|INFO|data formatting errors = 0
+2021-06-21 16:22:33|INFO|gpload succeeded
+ count 
+-------
+    24
+(1 row)
+

@@ -1,0 +1,9 @@
+2020-12-15 09:14:16|INFO|gpload session started 2020-12-15 09:14:16
+2020-12-15 09:14:16|INFO|setting schema 'public' for table 'prices'
+2020-12-15 09:14:16|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/transform/prices.xml" -t 30 -c data/transform/transform_config.yaml
+2020-12-15 09:14:16|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e791f064_3eb5_11eb_891c_66affcff6d8c
+2020-12-15 09:14:17|INFO|running time: 1.22 seconds
+2020-12-15 09:14:17|INFO|rows Inserted          = 3
+2020-12-15 09:14:17|INFO|rows Updated           = 0
+2020-12-15 09:14:17|INFO|data formatting errors = 0
+2020-12-15 09:14:17|INFO|gpload succeeded
