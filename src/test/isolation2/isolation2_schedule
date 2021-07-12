@@ -61,6 +61,9 @@ test: misc
 
 test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue bitmap_index_ao_sparse
 
+# Test deadlock situation when waiting on a resource queue lock
+test: resource_queue_deadlock
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 test: gp_terminate_mpp_backends

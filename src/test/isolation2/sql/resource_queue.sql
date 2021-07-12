@@ -24,7 +24,7 @@
 
 -- Check pg_stat_activity and pg_locks again.
 0:SELECT wait_event_type, wait_event from pg_stat_activity where query = 'EXECUTE fooplan;';
-0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue';
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
 
 1:END;
 
