@@ -117,8 +117,8 @@
       <p>Following are some issues that are known to cause errors when restoring a Greenplum 4.3 or
         5 backup to Greenplum 6. Keep a list of any changes you make to the Greenplum 4.3 or 5
         database to enable migration so that you can fix them in Greenplum 6 after restoring the
-        backup. This issues can also occur during an upgrade from Greenplum 5 to 6, when using <xref
-          href="https://gpdb.docs.pivotal.io/upgrade/latest/index.html" format="html"
+        backup. These issues can also occur during an upgrade from Greenplum 5 to 6, while using
+          <xref href="https://gpdb.docs.pivotal.io/upgrade/latest/index.html" format="html"
           scope="external">Greenplum Upgrade</xref>. </p>
       <ul>
         <li>If you have configured PXF in your Greenplum Database 5 installation, review <xref
