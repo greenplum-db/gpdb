@@ -2567,7 +2567,7 @@ jobs:
         trigger: [[ test_trigger ]]
         passed: [gate_advanced_analytics_start]
       - get: gpdb6-centos6-build
-      - get: gpdb6-centos7-test
+      - get: gpdb6-centos7-build
   - in_parallel:
     - task: build_madlib_gppkg_from_source_centos6
       file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
@@ -2582,7 +2582,7 @@ jobs:
         CMAKE_BUILD_TYPE: Release
     - task: build_madlib_gppkg_from_source_centos7
       file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
-      image: gpdb6-centos7-test
+      image: gpdb6-centos7-build
       input_mapping:
         bin_gpdb: bin_gpdb_centos7
       output_mapping:

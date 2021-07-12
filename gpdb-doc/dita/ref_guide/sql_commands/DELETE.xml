@@ -124,7 +124,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a
                         Boolean condition.</pd>
                     <pd>The <codeph>DELETE...WHERE CURRENT OF</codeph> cursor statement can only be
-                        executed on the server, for example in an interactive psql session or a
+                        run on the server, for example in an interactive psql session or a
                         script. Language extensions such as PL/pgSQL do not have support for
                         updatable cursors. </pd>
                     <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
@@ -154,12 +154,12 @@ name = 'Hannah';</codeblock>
             <p>What is essentially happening here is a join between <codeph>rank</codeph> and
                     <codeph>names</codeph>, with all successfully joined rows being marked for
                 deletion. This syntax is not standard. However, this join style is usually easier to
-                write and faster to execute than a more standard sub-select style, such as:</p>
+                write and faster to run than a more standard sub-select style, such as:</p>
             <codeblock>DELETE FROM rank WHERE id IN (SELECT id FROM names WHERE name 
 = 'Hannah');</codeblock>
             <p>Execution of <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on
                 a specific partition (child table) of a partitioned table is not supported. Instead,
-                these commands must be executed on the root partitioned table, the table created
+                these commands must be run on the root partitioned table, the table created
                 with the <codeph>CREATE TABLE</codeph> command.</p>
             <p>For a partitioned table, all the child tables are locked during the
                     <codeph>DELETE</codeph> operation when the Global Deadlock Detector is not

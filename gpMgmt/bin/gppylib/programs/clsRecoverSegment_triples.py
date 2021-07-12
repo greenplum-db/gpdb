@@ -1,6 +1,5 @@
 import abc
 
-from gppylib.commands import unix
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
@@ -8,7 +7,7 @@ from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
 
 
-class RecoverTriplet:
+class RecoveryTriplet:
     """
     Represents the segments needed to perform a recovery on a given segment.
     failed   = acting mirror that needs to be recovered
@@ -25,12 +24,16 @@ class RecoverTriplet:
         return "Failed: {0} Live: {1} Failover: {2}".format(self.failed, self.live, self.failover)
 
     def __eq__(self, other):
+        if not isinstance(other, RecoveryTriplet):
+            return NotImplemented
+
         return self.failed == other.failed and self.live == other.live and self.failover == other.failover
 
     @staticmethod
     def validate(failed, live, failover):
 
-        checkNotNone("liveSegment", live)
+        msg = "liveSegment" if not failed else "No peer found for dbid {}. liveSegment".format(failed.getSegmentDbId())
+        checkNotNone(msg, live)
 
         if failed is None and failover is None:
             raise Exception("internal error: insufficient information to recover a mirror")
@@ -79,228 +82,231 @@ class RecoverTriplet:
             assert failed.getSegmentDbId() == failover.getSegmentDbId()
 
 
-class MirrorBuilderFactory:
-    @staticmethod
-    def instance(gpArray, config_file=None, new_hosts=[], logger=None):
-        """
+class RecoveryTripletRequest:
+    def __init__(self, failed, failover_host=None, failover_port=None, failover_datadir=None, is_new_host=False):
+        self.failed = failed
 
+        self.failover_host = failover_host
+        self.failover_port = failover_port
+        self.failover_datadir = failover_datadir
+        self.failover_to_new_host = is_new_host
+
+
+# TODO: gparray is mutated for all triplets, even if we skip recovery for them(if they are unreachable)
+class RecoveryTripletsFactory:
+    @staticmethod
+    def instance(gpArray, config_file=None, new_hosts=[]):
+        """
         :param gpArray: The variable gpArray may get mutated when the getMirrorTriples function is called on this instance.
-        :param config_file:
-        :param new_hosts:
-        :param logger:
+        :param config_file: user passed in config file, if any
+        :param new_hosts: user passed in new hosts, if any
         :return:
         """
         if config_file:
-            return ConfigFileMirrorBuilder(gpArray, config_file)
+            return RecoveryTripletsUserConfigFile(gpArray, config_file)
+        else:
+            if not new_hosts:
+                return RecoveryTripletsInplace(gpArray)
+            else:
+                return RecoveryTripletsNewHosts(gpArray, new_hosts)
 
-        return GpArrayMirrorBuilder(gpArray, new_hosts, logger)
 
 
-class MirrorBuilder:
+class RecoveryTriplets:
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, gpArray):
         """
-
         :param gpArray: Needs to be a shallow copy since we may return a mutated gpArray
         """
         self.gpArray = gpArray
-        self.recoveryTriples = []
         self.interfaceHostnameWarnings = []
 
-    def getInterfaceHostnameWarnings(self):
-        return self.interfaceHostnameWarnings
-
     @abc.abstractmethod
-    def getMirrorTriples(self):
+    def getTriplets(self):
         """
-
-        :return: Returns a list of tuples that describes the following
-        Failed Segment:
-        Live Segment
-        Failover Segment
         This function ignores the status (i.e. u or d) of the segment because this function is used by gpaddmirrors,
         gpmovemirrors and gprecoverseg. For gpaddmirrors and gpmovemirrors, the segment to be moved should not
         be marked as down whereas for gprecoverseg the segment to be recovered needs to marked as down.
         """
         pass
 
+    def getInterfaceHostnameWarnings(self):
+        return self.interfaceHostnameWarnings
 
-class GpArrayMirrorBuilder(MirrorBuilder):
-    def __init__(self, gpArray, newHosts, logger):
-        super(GpArrayMirrorBuilder, self).__init__(gpArray)
-        self.newHosts = []
-        if newHosts:
-            self.newHosts = newHosts[:]
-        self.logger = logger
+    # TODO: the returned RecoveryTriplet(s) reflect (failed, live, failover) with failover reflecting the recovery
+    # information of the new segment(that which will replace failed).  This is what is acted upon by
+    # pg_rewind/pg_basebackup.  But as an artifact of the implementation, the caller's original gparray is mutated to
+    # reflect this failover segment.  This is how we implement the `-o` option.
+    # The returned RecoveryTriplets specify the recovery that needs to be done, but the gparray is mutated to reflect
+    # the state as if that recovery had already completed.
+    def _convert_requests_to_triplets(self, requests):
+        triplets = []
+
+        dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
+        for req in requests:
+            # TODO: These 2 cases have different behavior which might be confusing to the user.
+            # "<failed_address>|<failed_port>|<failed_data_dir> <failed_address>|<failed_port>|<failed_data_dir>" does full recovery
+            # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
+            failover = None
+            if req.failover_host:
+
+                # these two lines make it so that failover points to the object that is registered in gparray
+                #   as the failed segment(!).
+                failover = req.failed
+                req.failed = failover.copy()
+
+                # now update values in failover segment
+                failover.setSegmentAddress(req.failover_host)
+                failover.setSegmentHostName(req.failover_host)
+                failover.setSegmentPort(int(req.failover_port))
+                failover.setSegmentDataDirectory(req.failover_datadir)
+                failover.unreachable = False if req.failover_to_new_host else failover.unreachable
+
+            # this must come AFTER the if check above because failedSegment can be adjusted to
+            #   point to a different object
+            if req.failed.unreachable and not req.failover_to_new_host:
+                continue
+
+            peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
+
+            triplets.append(RecoveryTriplet(req.failed, peer, failover))
+
+        return triplets
 
 
-    def getMirrorTriples(self):
-        segments = self.gpArray.getSegDbList()
+class RecoveryTripletsInplace(RecoveryTriplets):
+    def __init__(self, gpArray):
+        super(RecoveryTripletsInplace, self).__init__(gpArray)
 
-        failedSegments = [seg for seg in segments if seg.isSegmentDown()]
-        peersForFailedSegments = _findAndValidatePeersForFailedSegments(self.gpArray, failedSegments)
+    def getTriplets(self):
+        requests = []
 
-        # Dictionaries used for building mapping to new hosts
-        recoverAddressMap = {}
-        recoverHostMap = {}
+        # TODO: only get failed mirrors explicitly here? gp_segment_configuration should
+        # guarantee this but what if we are called on a failed cluster(primary and mirror both down).
+        failedSegments = [seg for seg in self.gpArray.getSegDbList() if seg.isSegmentDown()]
+        for failedSeg in failedSegments:
+            req = RecoveryTripletRequest(failedSeg)
+            requests.append(req)
 
-        recoverHostIdx = 0
+        return self._convert_requests_to_triplets(requests)
 
-        if self.newHosts and len(self.newHosts) > 0:
-            for seg in failedSegments:
-                segAddress = seg.getSegmentAddress()
-                segHostname = seg.getSegmentHostName()
 
-                # Haven't seen this hostname before so we put it on a new host
-                if segHostname not in recoverHostMap:
-                    try:
-                        recoverHostMap[segHostname] = self.newHosts[recoverHostIdx]
-                    except:
-                        # TODO only catch IndexError
-                        raise Exception('Not enough new recovery hosts given for recovery.')
-                    recoverHostIdx += 1
+class RecoveryTripletsNewHosts(RecoveryTriplets):
+    def __init__(self, gpArray, newHosts):
+        super(RecoveryTripletsNewHosts, self).__init__(gpArray)
+        self.newHosts = [] if not newHosts else newHosts[:]
+        self.portAssigner = self._PortAssigner(gpArray)
 
-                destAddress = recoverHostMap[segHostname]
-                destHostname = recoverHostMap[segHostname]
+    #TODO improvement: skip unreachable new hosts and choose from the rest; right now we fail
+    # if the first new host is unreachable even if there is an unused one later in the list.
+    # NOTE: (add to gprecoverseg doc) this assigns host in some order; figure out if that is
+    #  stable and document it.
+    def getTriplets(self):
+        def _check_new_hosts():
+            if len(self.newHosts) > len(failedSegments):
+                self.interfaceHostnameWarnings.append("The following recovery hosts were not needed:")
+                for h in self.newHosts[len(failedSegments):]:
+                    self.interfaceHostnameWarnings.append("\t%s" % h)
 
-                # Save off the new host/address for this address.
-                recoverAddressMap[segAddress] = (destHostname, destAddress)
+            if len(self.newHosts) < len(failedSegments):
+                raise Exception('Not enough new recovery hosts given for recovery.')
 
-            new_recovery_hosts = [destHostname for (destHostname, destAddress) in recoverAddressMap.values()]
-            unreachable_hosts = get_unreachable_segment_hosts(new_recovery_hosts, len(new_recovery_hosts))
+            unreachable_hosts = get_unreachable_segment_hosts(self.newHosts[:len(failedSegments)], len(failedSegments))
             if unreachable_hosts:
                 raise ExceptionNoStackTraceNeeded("Cannot recover. The following recovery target hosts are "
                                                   "unreachable: %s" % unreachable_hosts)
 
-            for key in list(recoverAddressMap.keys()):
-                (newHostname, newAddress) = recoverAddressMap[key]
-                try:
-                    unix.Ping.local("ping new address", newAddress)
-                except:
-                    # new address created is invalid, so instead use same hostname for address
-                    self.logger.info("Ping of %s failed, Using %s for both hostname and address.", newAddress,
-                                     newHostname)
-                    newAddress = newHostname
-                recoverAddressMap[key] = (newHostname, newAddress)
+        failedSegments = GpArray.getSegmentsByHostName([seg for seg in self.gpArray.getSegDbList() if seg.isSegmentDown()])
+        _check_new_hosts()
 
-            if len(self.newHosts) != recoverHostIdx:
-                self.interfaceHostnameWarnings.append("The following recovery hosts were not needed:")
-                for h in self.newHosts[recoverHostIdx:]:
-                    self.interfaceHostnameWarnings.append("\t%s" % h)
+        requests = []
+        for failedHost, failoverHost in zip(sorted(failedSegments.keys()), self.newHosts):
+            for failed in failedSegments[failedHost]:
+                failoverPort = self.portAssigner.findAndReservePort(failoverHost, failoverHost)
+                req = RecoveryTripletRequest(failed, failoverHost, failoverPort, failed.getSegmentDataDirectory(), True)
+                requests.append(req)
 
-        portAssigner = _PortAssigner(self.gpArray)
+        return self._convert_requests_to_triplets(requests)
 
-        for i in range(len(failedSegments)):
+    class _PortAssigner:
+        """
+        Used to assign new ports to segments on a host
 
-            failoverSegment = None
-            failedSegment = failedSegments[i]
-            liveSegment = peersForFailedSegments[i]
+        Note that this could be improved so that we re-use ports for segments that are being recovered but this
+          does not seem necessary.
 
-            if self.newHosts and len(self.newHosts) > 0:
-                (newRecoverHost, newRecoverAddress) = recoverAddressMap[failedSegment.getSegmentAddress()]
-                # these two lines make it so that failoverSegment points to the object that is registered in gparray
-                failoverSegment = failedSegment
-                failedSegment = failoverSegment.copy()
-                failoverSegment.unreachable = False  # recover to a new host; it is reachable as checked above.
-                failoverSegment.setSegmentHostName(newRecoverHost)
-                failoverSegment.setSegmentAddress(newRecoverAddress)
-                port = portAssigner.findAndReservePort(newRecoverHost, newRecoverAddress)
-                failoverSegment.setSegmentPort(port)
+        """
+
+        MAX_PORT_EXCLUSIVE = 65536
+
+        def __init__(self, gpArray):
+            #
+            # determine port information for recovering to a new host --
+            #   we need to know the ports that are in use and the valid range of ports
+            #
+            segments = gpArray.getDbList()
+            ports = [seg.getSegmentPort() for seg in segments if seg.isSegmentQE()]
+            if len(ports) > 0:
+                self.__minPort = min(ports)
             else:
-                # we are recovering to the same host("in place") and hence
-                # cannot recover if the failed segment is unreachable.
-                # This is equivalent to failoverSegment.unreachable that we should be doing here but
-                # due to how the code is factored failoverSegment is None here.
-                if failedSegment.unreachable:
-                    continue
+                raise Exception("No segment ports found in array.")
+            self.__usedPortsByHostName = {}
 
-            self.recoveryTriples.append(RecoverTriplet(failedSegment, liveSegment, failoverSegment))
+            byHost = GpArray.getSegmentsByHostName(segments)
+            for hostName, segments in byHost.items():
+                usedPorts = self.__usedPortsByHostName[hostName] = {}
+                for seg in segments:
+                    usedPorts[seg.getSegmentPort()] = True
 
-        return self.recoveryTriples
+        def findAndReservePort(self, hostName, address):
+            """
+            Find a port not used by any postmaster process.
+            When found, add an entry:  usedPorts[port] = True   and return the port found
+            Otherwise raise an exception labeled with the given address
+            """
+            if hostName not in self.__usedPortsByHostName:
+                self.__usedPortsByHostName[hostName] = {}
+            usedPorts = self.__usedPortsByHostName[hostName]
+
+            minPort = self.__minPort
+            for port in range(minPort, RecoveryTripletsNewHosts._PortAssigner.MAX_PORT_EXCLUSIVE):
+                if port not in usedPorts:
+                    usedPorts[port] = True
+                    return port
+            raise Exception("Unable to assign port on %s" % address)
 
 
-class ConfigFileMirrorBuilder(MirrorBuilder):
+class RecoveryTripletsUserConfigFile(RecoveryTriplets):
     def __init__(self, gpArray, config_file):
-        super(ConfigFileMirrorBuilder, self).__init__(gpArray)
+        super(RecoveryTripletsUserConfigFile, self).__init__(gpArray)
         self.config_file = config_file
         self.rows = self._parseConfigFile(self.config_file)
 
-    def getMirrorTriples(self):
-        failedSegments = []
-        failoverSegments = []
-        for row in self.rows:
-            # find the failed segment
-            failedAddress = row['failedAddress']
-            failedPort = row['failedPort']
-            failedDataDirectory = normalizeAndValidateInputPath(row['failedDataDirectory'],
-                                                                "config file", row['lineno'])
-            failedSegment = None
+    def getTriplets(self):
+        def _find_failed_from_row():
+            failed = None
             for segment in self.gpArray.getDbList():
-                if (segment.getSegmentAddress() == failedAddress
-                        and str(segment.getSegmentPort()) == failedPort
-                        and segment.getSegmentDataDirectory() == failedDataDirectory):
+                if (segment.getSegmentAddress() == row['failedAddress']
+                        and str(segment.getSegmentPort()) == row['failedPort']
+                        and segment.getSegmentDataDirectory() == row['failedDataDirectory']):
+                    failed = segment
+                    break
 
-                    if failedSegment is not None:
-                        # this could be an assertion -- configuration should not allow multiple entries!
-                        raise Exception(("A segment to recover was found twice in configuration.  "
-                                         "This segment is described by address|port|directory '%s|%s|%s' "
-                                         "on the input line: %s") %
-                                        (failedAddress, failedPort, failedDataDirectory, row['lineno']))
-                    failedSegment = segment
-
-            if failedSegment is None:
+            if failed is None:
                 raise Exception("A segment to recover was not found in configuration.  " \
-                                "This segment is described by address|port|directory '%s|%s|%s' on the input line: %s" %
-                                (failedAddress, failedPort, failedDataDirectory, row['lineno']))
+                                "This segment is described by address|port|directory '%s|%s|%s'" %
+                                (row['failedAddress'], row['failedPort'], row['failedDataDirectory']))
 
-            # TODO: These 2 cases have different behavior which might be confusing to the user.
-            # "<failed_address>|<port>|<data_dir> <recovery_address>|<port>|<data_dir>" does full recovery
-            # "<failed_address>|<port>|<data_dir>" does incremental recovery
-            failoverSegment = None
-            if "newAddress" in row:
-                """
-                When the second set was passed, the caller is going to tell us to where we need to failover, so
-                  build a failover segment
-                """
-                # these two lines make it so that failoverSegment points to the object that is registered in gparray
-                failoverSegment = failedSegment
-                failedSegment = failoverSegment.copy()
+            return failed
 
-                address = row["newAddress"]
-                try:
-                    port = int(row["newPort"])
-                except ValueError:
-                    raise Exception('Config file format error, invalid number value in line: %s' % (row['lineno']))
+        requests = []
+        for row in self.rows:
+            req = RecoveryTripletRequest(_find_failed_from_row(), row.get('newAddress'), row.get('newPort'), row.get('newDataDirectory'))
+            requests.append(req)
 
-                dataDirectory = normalizeAndValidateInputPath(row["newDataDirectory"], "config file",
-                                                              row['lineno'])
-                # TODO: hostname probably should not be address, but to do so, "hostname" should be added to gpaddmirrors config file
-                # TODO: This appears identical to __getMirrorsToBuildFromConfigFilein clsAddMirrors
-                hostName = address
+        return self._convert_requests_to_triplets(requests)
 
-                # now update values in failover segment
-                failoverSegment.setSegmentAddress(address)
-                failoverSegment.setSegmentHostName(hostName)
-                failoverSegment.setSegmentPort(port)
-                failoverSegment.setSegmentDataDirectory(dataDirectory)
-
-            # this must come AFTER the if check above because failedSegment can be adjusted to
-            #   point to a different object
-            failedSegments.append(failedSegment)
-            failoverSegments.append(failoverSegment)
-
-        peersForFailedSegments = _findAndValidatePeersForFailedSegments(self.gpArray, failedSegments)
-
-        for index, failedSegment in enumerate(failedSegments):
-            peerForFailedSegment = peersForFailedSegments[index]
-
-            if failedSegment.unreachable:
-                continue
-
-            self.recoveryTriples.append(RecoverTriplet(failedSegment, peerForFailedSegment, failoverSegments[index]))
-
-        return self.recoveryTriples
 
     @staticmethod
     def _parseConfigFile(config_file):
@@ -324,6 +330,8 @@ class ConfigFileMirrorBuilder(MirrorBuilder):
                     raise ExceptionNoStackTraceNeeded(msg)
                 address, port, datadir = parts
                 check_values(lineno, address=address, port=port, datadir=datadir)
+                datadir = normalizeAndValidateInputPath(datadir, f.name, lineno)
+
                 row = {
                     'failedAddress': address,
                     'failedPort': port,
@@ -338,6 +346,8 @@ class ConfigFileMirrorBuilder(MirrorBuilder):
                         raise ExceptionNoStackTraceNeeded(msg)
                     address2, port2, datadir2 = parts2
                     check_values(lineno, address=address2, port=port2, datadir=datadir2)
+                    datadir2 = normalizeAndValidateInputPath(datadir2, f.name, lineno)
+
                     row.update({
                         'newAddress': address2,
                         'newPort': port2,
@@ -346,14 +356,14 @@ class ConfigFileMirrorBuilder(MirrorBuilder):
 
                 rows.append(row)
 
-        ConfigFileMirrorBuilder._validate(rows)
+        RecoveryTripletsUserConfigFile._validate(rows)
 
         return rows
 
     @staticmethod
     def _validate(rows):
         """
-        Runs checks for making sure all the rows are consistent
+        Runs checks for making sure all the rows are consistent with each other.
         :param rows:
         :return:
         """
@@ -377,78 +387,14 @@ class ConfigFileMirrorBuilder(MirrorBuilder):
                           'Cannot recover segment {2} with data directory {3} in place if it is used as a recovery segment.' \
                         .format(new[address+datadir], lineno, address, datadir)
                     raise ExceptionNoStackTraceNeeded(msg)
+            else:
+                address2, port2, datadir2 = row['newAddress'], row['newPort'], row['newDataDirectory']
 
-                continue
+                if address2+datadir2 in new:
+                    msg = 'config file lines {0} and {1} conflict: ' \
+                          'Cannot recover to the same segment {2} and data directory {3} twice.' \
+                        .format(new[address2+datadir2], lineno, address2, datadir2)
+                    raise ExceptionNoStackTraceNeeded(msg)
 
-            address2, port2, datadir2 = row['newAddress'], row['newPort'], row['newDataDirectory']
+                new[address2+datadir2] = lineno
 
-            if address2+datadir2 in new:
-                msg = 'config file lines {0} and {1} conflict: ' \
-                      'Cannot recover to the same segment {2} and data directory {3} twice.' \
-                    .format(new[address2+datadir2], lineno, address2, datadir2)
-                raise ExceptionNoStackTraceNeeded(msg)
-
-            new[address2+datadir2] = lineno
-
-
-def _findAndValidatePeersForFailedSegments(gpArray, failedSegments):
-    dbIdToPeerMap = gpArray.getDbIdToPeerMap()
-    peersForFailedSegments = [dbIdToPeerMap.get(seg.getSegmentDbId()) for seg in failedSegments]
-
-    for i in range(len(failedSegments)):
-        peer = peersForFailedSegments[i]
-        if peer is None:
-            raise Exception("No peer found for dbid %s" % failedSegments[i].getSegmentDbId())
-        elif peer.isSegmentDown():
-            raise Exception(
-                "Both segments for content %s are down; Try restarting Greenplum DB and running the program again." %
-                (peer.getSegmentContentId()))
-    return peersForFailedSegments
-
-class _PortAssigner:
-    """
-    Used to assign new ports to segments on a host
-
-    Note that this could be improved so that we re-use ports for segments that are being recovered but this
-      does not seem necessary.
-
-    """
-
-    MAX_PORT_EXCLUSIVE = 65536
-
-    def __init__(self, gpArray):
-        #
-        # determine port information for recovering to a new host --
-        #   we need to know the ports that are in use and the valid range of ports
-        #
-        segments = gpArray.getDbList()
-        ports = [seg.getSegmentPort() for seg in segments if seg.isSegmentQE()]
-        if len(ports) > 0:
-            self.__minPort = min(ports)
-        else:
-            raise Exception("No segment ports found in array.")
-        self.__usedPortsByHostName = {}
-
-        byHost = GpArray.getSegmentsByHostName(segments)
-
-        for hostName, segments in byHost.iteritems():
-            usedPorts = self.__usedPortsByHostName[hostName] = {}
-            for seg in segments:
-                usedPorts[seg.getSegmentPort()] = True
-
-    def findAndReservePort(self, hostName, address):
-        """
-        Find a port not used by any postmaster process.
-        When found, add an entry:  usedPorts[port] = True   and return the port found
-        Otherwise raise an exception labeled with the given address
-        """
-        if hostName not in self.__usedPortsByHostName:
-            self.__usedPortsByHostName[hostName] = {}
-        usedPorts = self.__usedPortsByHostName[hostName]
-
-        minPort = self.__minPort
-        for port in range(minPort, _PortAssigner.MAX_PORT_EXCLUSIVE):
-            if port not in usedPorts:
-                usedPorts[port] = True
-                return port
-        raise Exception("Unable to assign port on %s" % address)

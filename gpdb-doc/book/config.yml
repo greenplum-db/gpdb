@@ -6,19 +6,19 @@ sections:
 - repository:
     name: markdown
     at_path: common
-  directory: 6-16/common
+  directory: 6-17/common
   subnav_template: gpdb-landing-subnav
 
 - repository:
     name: markdown
     at_path: pxf
-  directory: 6-16/pxf
+  directory: 6-17/pxf
   subnav_template: pxf-subnav
 
 - repository:
     name: markdown
     at_path: cloud
-  directory: 6-16/cloud
+  directory: 6-17/cloud
   subnav_template: cloud-subnav
 
 
@@ -26,7 +26,7 @@ dita_sections:
 - repository:
     name: dita
     at_path: install_guide
-  directory: 6-16/install_guide
+  directory: 6-17/install_guide
   ditamap_location: install_guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
@@ -34,7 +34,7 @@ dita_sections:
 - repository:
     name: dita
     at_path: analytics
-  directory: 6-16/analytics
+  directory: 6-17/analytics
   ditamap_location: analytics.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
@@ -42,35 +42,35 @@ dita_sections:
 - repository:
     name: dita
     at_path: admin_guide
-  directory: 6-16/admin_guide
+  directory: 6-17/admin_guide
   ditamap_location: admin_guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: security-guide
-  directory: 6-16/security-guide
+  directory: 6-17/security-guide
   ditamap_location: security-guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: best_practices
-  directory: 6-16/best_practices
+  directory: 6-17/best_practices
   ditamap_location: best-practices.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: utility_guide
-  directory: 6-16/utility_guide
+  directory: 6-17/utility_guide
   ditamap_location: utility_guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: ref_guide
-  directory: 6-16/ref_guide
+  directory: 6-17/ref_guide
   ditamap_location: ref_guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 

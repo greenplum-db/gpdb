@@ -48,7 +48,7 @@
       <p><codeph>gpmapreduce</codeph> is the Greenplum MapReduce program. You configure a
         Greenplum MapReduce job via a YAML-formatted configuration file that you pass to
         the program for execution by the Greenplum Database parallel engine. The
-        Greenplum Database system distributes the input data, executes the program
+        Greenplum Database system distributes the input data, runs the program
         across a set of machines, handles machine failures, and manages the required
         inter-machine communication.</p>
     </section>

@@ -87,8 +87,8 @@
           statement enclosed in a <codeph>TABLE()</codeph> function. You can specify a distribution
           policy for the table by adding <codeph>SCATTER RANDOMLY</codeph>, or a <codeph>SCATTER
             BY</codeph> clause with a column list to specify the distribution key. </p>
-        <p>The <codeph>SELECT</codeph> statement is executed when the function is called and the
-          result rows are distributed to segments so that each segment executes the function with a
+        <p>The <codeph>SELECT</codeph> statement is run when the function is called and the
+          result rows are distributed to segments so that each segment runs the function with a
           subset of the result table.</p>
         <p>For example, this table expression selects three columns from a table named
             <codeph>customer</codeph> and sets the distribution key to the first column:</p>

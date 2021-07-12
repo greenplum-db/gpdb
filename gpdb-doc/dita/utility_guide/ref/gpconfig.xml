@@ -25,6 +25,8 @@
           <codeph>max_connections</codeph> require a different setting on the master than what is
         used for the segments. If you want to set or unset a global or master only parameter, use
         the <codeph>--masteronly</codeph> option.</p>
+      <note>For configuration parameters of vartype <codeph>string</codeph>, you may not pass values
+        enclosed in single quotes to <codeph>gpconfig -c</codeph>.</note>
       <p><codeph>gpconfig</codeph> can only be used to manage certain parameters. For example, you
         cannot use it to set parameters such as <codeph>port</codeph>, which is required to be
         distinct for every segment instance. Use the <codeph>-l</codeph> (list) option to see a

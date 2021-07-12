@@ -462,7 +462,7 @@
                     href="#topic1/TCF" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>
                   functions that comprise the reduction of (<codeph>key</codeph>,
                     <codeph>value</codeph>) pairs to the final result set. There are also several
-                  predefined <codeph>REDUCE</codeph> jobs you can execute, which all operate over a
+                  predefined <codeph>REDUCE</codeph> jobs you can run, which all operate over a
                   column named <codeph>value</codeph>:<p><codeph>IDENTITY</codeph> - returns (key,
                     value) pairs unchanged</p><p><codeph>SUM</codeph> - calculates the sum of
                     numeric data </p><p><codeph>AVG</codeph> - calculates the average of numeric
@@ -515,7 +515,7 @@
                 <pd>Optional. A <codeph>TASK</codeph> defines a complete end-to-end
                     <codeph>INPUT</codeph>/<codeph>MAP</codeph>/<codeph>REDUCE</codeph> stage within
                   a Greenplum MapReduce job pipeline. It is similar to <xref href="#topic1/EXECUTE"
-                    format="dita">EXECUTE</xref> except it is not immediately executed. A task
+                    format="dita">EXECUTE</xref> except it is not immediately run. A task
                   object can be called as <xref href="#topic1/INPUT" format="dita">INPUT</xref> to
                   further processing stages.<parml>
                     <plentry>

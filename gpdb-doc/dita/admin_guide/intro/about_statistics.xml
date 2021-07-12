@@ -36,7 +36,7 @@
     <title>System Statistics</title>
     <body>
       <section><title>Table Size</title><p>The query planner seeks to minimize the disk I/O and
-          network traffic required to execute a query, using estimates of the number of rows that
+          network traffic required to run a query, using estimates of the number of rows that
           must be processed and the number of disk pages the query must access. The data from which
           these estimates are derived are the <codeph>pg_class</codeph> system table columns
             <codeph>reltuples</codeph> and <codeph>relpages</codeph>, which contain the number of
@@ -383,7 +383,7 @@
           on a child leaf partition of the partitioned table and the other child leaf partitions
           have statistics. If the parameter is <codeph>off</codeph>, you must run <codeph>ANALYZE
             ROOTPARTITION</codeph> to collect root partition statistics.</p><p>If you do
-          not intend to execute queries on partitioned tables with GPORCA (setting the server
+          not intend to run queries on partitioned tables with GPORCA (setting the server
           configuration parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#optimizer"
               >optimizer</xref></codeph> to <codeph>off</codeph>), you can also set the server
@@ -439,15 +439,15 @@
             <li><codeph>none</codeph> disables automatic statistics collection.</li>
             <li><codeph>on_no_stats</codeph> triggers an analyze operation for a table with no
               existing statistics when any of the commands <codeph>CREATE TABLE AS SELECT</codeph>,
-                <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are executed on the table. </li>
+                <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are run on the table. </li>
             <li><codeph>on_change</codeph> triggers an analyze operation when any of the commands
                 <codeph>CREATE TABLE AS SELECT</codeph>, <codeph>UPDATE</codeph>,
                 <codeph>DELETE</codeph>, <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are
-              executed on the table and the number of rows affected exceeds the threshold defined by
+              run on the table and the number of rows affected exceeds the threshold defined by
               the <codeph>gp_autostats_on_change_threshold</codeph> configuration parameter.</li>
           </ul></p>
         <p>The automatic statistics collection mode is set separately for commands that occur within
-          a procedural language function and commands that execute outside of a function:<ul
+          a procedural language function and commands that run outside of a function:<ul
             id="ul_ky4_ncv_mt">
             <li>The <codeph>gp_autostats_mode</codeph> configuration parameter controls automatic
               statistics collection behavior outside of functions and is set to

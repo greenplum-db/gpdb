@@ -24,7 +24,7 @@
                   <li>When Greenplum Database compares XIDs using the modulo calculations, the
                      frozen XID is always smaller, earlier, when compared to any other XID. If a
                      row's XID is not set to the frozen XID and 2<sup>31</sup> new transactions are
-                     executed, the row appears to be executed in the future based on the modulo
+                     run, the row appears to be run in the future based on the modulo
                      calculation. </li>
                   <li>When the row's XID is set to the frozen XID, the original XID can be used,
                      without duplicating the XID. This keeps the number of data rows on disk with
@@ -185,7 +185,7 @@
                </tgroup>
             </table>
             <p>The simple MVCC database works with XID values to determine the state of the table.
-               For example, both these independent transactions execute concurrently.<ul
+               For example, both these independent transactions run concurrently.<ul
                   id="ul_etw_yck_wv">
                   <li><codeph>UPDATE</codeph> command changes the sprocket amount value to
                         <codeph>133</codeph> (xmin value <codeph>5</codeph>)</li>

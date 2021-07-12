@@ -94,7 +94,7 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
         </plentry>
         <plentry>
           <pt>ANALYZE</pt>
-          <pd>Updates statistics used by the planner to determine the most efficient way to execute
+          <pd>Updates statistics used by the planner to determine the most efficient way to run 
             a query.</pd>
         </plentry>
         <plentry>
@@ -115,7 +115,7 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
     </section>
     <section id="section6">
       <title id="er144900">Notes</title>
-      <p><codeph>VACUUM</codeph> cannot be executed inside a transaction block.</p>
+      <p><codeph>VACUUM</codeph> cannot be run inside a transaction block.</p>
       <p>Vacuum active databases frequently (at least nightly), in order to remove expired rows.
         After adding or deleting a large number of rows, running the <codeph>VACUUM ANALYZE</codeph>
         command for the affected table might be useful. This updates the system catalogs with the

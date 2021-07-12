@@ -8,8 +8,8 @@
       using GPORCA or is falling back to the Postgres Planner. </shortdesc>
   </abstract>
   <body>
-    <p>You can examine the <codeph>EXPLAIN</codeph> query plan for the query determine which query
-      optimizer was used by Greenplum Database to execute the query:<ul
+    <p>You can examine the <codeph>EXPLAIN</codeph> query plan for the query to determine which query
+      optimizer was used by Greenplum Database to run the query:<ul
         id="ul_vc2_xbh_1t">
         <li>The optimizer is listed at the end of the query plan. For example, when GPORCA generates
           the query plan, the query plan ends with:<codeblock> Optimizer: Pivotal Optimizer (GPORCA)</codeblock><p>When Greenplum
@@ -71,7 +71,7 @@
         the Postgres Planner from GPORCA. </p>
       <p>When this query is run, Greenplum Database falls back to the Postgres Planner.<codeblock>explain select * from pg_class;</codeblock></p>
       <p>A message is added to the log file. The message contains this <codeph>NOTICE</codeph>
-        information that indicates the reason GPORCA did not execute the
+        information that indicates the reason GPORCA did not run the
         query:<codeblock>NOTICE,""Feature not supported: Queries on master-only tables"</codeblock></p>
     </body>
   </topic>

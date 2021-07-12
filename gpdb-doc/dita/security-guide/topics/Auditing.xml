@@ -243,7 +243,7 @@
                 <p> text </p>
               </entry>
               <entry>
-                <p> The slice id (portion of the query plan being executed) </p>
+                <p> The slice id (portion of the query plan being run) </p>
               </entry>
             </row>
             <row>

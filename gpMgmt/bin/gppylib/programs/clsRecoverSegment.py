@@ -30,7 +30,7 @@ from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
-from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
+from gppylib.operations.update_pg_hba_on_segments import update_pg_hba_on_segments
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
@@ -40,7 +40,7 @@ from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
 from gppylib.heapchecksum import HeapChecksum
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
-from gppylib.programs import clsRecoverSegment_triples
+from gppylib.programs.clsRecoverSegment_triples import RecoveryTripletsFactory
 
 logger = gplog.get_default_logger()
 
@@ -120,24 +120,12 @@ class GpRecoverSegmentProgram:
             lines.append(output_str)
         writeLinesToFile(fileName, lines)
 
-    def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
-        if segs_persistent_mirroring_disabled:
-            self.logger.warn('Segments with dbid %s not recovered; persistent mirroring state is disabled.' %
-                             (', '.join(str(seg_id) for seg_id in segs_persistent_mirroring_disabled)))
-
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
-            segs_with_persistent_mirroring_disabled = []
-            self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
-
-            instance = clsRecoverSegment_triples.MirrorBuilderFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts,
-                                                     self.logger)
-            segs = []
-            for t in instance.getMirrorTriples():
-                segs.append(GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization))
-
+            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts)
+            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization) for t in instance.getTriplets()]
             return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                        self.__options.parallelDegree,
                                        instance.getInterfaceHostnameWarnings(),
@@ -365,7 +353,7 @@ class GpRecoverSegmentProgram:
                 self.syncPackages(new_hosts)
 
             contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
-            config_primaries_for_replication(gpArray, self.__options.hba_hostnames, contentsToUpdate)
+            update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.parallelDegree, contentsToUpdate)
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 

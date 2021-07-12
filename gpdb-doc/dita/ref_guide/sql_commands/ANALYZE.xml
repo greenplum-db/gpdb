@@ -22,8 +22,8 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           href="#topic1/section5" format="dita">Notes</xref>.</p>
       <p>With no parameter, <codeph>ANALYZE</codeph> collects statistics for every table in the
         current database. You can specify a table name to collect statistics for a single table. You
-        can specify a set of column names, in which case the statistics only for those columns are
-        collected.</p>
+        can specify a set of column names in a specific table, in which case the statistics only for
+        those columns from that table are collected.</p>
       <p><codeph>ANALYZE</codeph> does not collect statistics on external tables. </p>
       <p>For partitioned tables, <codeph>ANALYZE</codeph> collects additional statistics,
         HyperLogLog (HLL) statistics, on the leaf child partitions. HLL statistics are used are used
@@ -37,7 +37,7 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
             has been exchanged with another table. For more information about updating partitioned
             table statistics, see <xref href="#topic1/section5" format="dita">Notes</xref>.</li>
         </ul></p>
-      <note type="important">If you intend to execute queries on partitioned tables with GPORCA
+      <note type="important">If you intend to run queries on partitioned tables with GPORCA
         enabled (the default), then you must collect statistics on the root partition of the
         partitioned table with the <codeph>ANALYZE</codeph> or <codeph>ANALYZE
           ROOTPARTITION</codeph> command. For information about collecting statistics on partitioned
@@ -105,10 +105,10 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
         </plentry>
         <plentry>
           <pt>VERBOSE</pt>
-          <pd>Enables display of progress messages. Enables display of progress messages. When
-            specified, <codeph>ANALYZE</codeph> emits this information <ul id="ul_phq_1n2_jr">
+          <pd>Enables display of progress messages. When specified, <codeph>ANALYZE</codeph> emits
+            this information <ul id="ul_phq_1n2_jr">
               <li>The table that is being processed.</li>
-              <li>The query that is executed to generate the sample table.</li>
+              <li>The query that is run to generate the sample table.</li>
               <li>The column for which statistics is being computed.</li>
               <li>The queries that are issued to collect the different statistics for a single
                 column.</li>
@@ -266,9 +266,8 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
       <title>See Also</title>
       <p><codeph><xref href="ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./EXPLAIN.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./VACUUM.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph>analyzedb</codeph> utility in the <cite>Greenplum Database Utility
-        Guide</cite>.</p>
+            <codeph><xref href="./VACUUM.xml#topic1" type="topic" format="dita"/></codeph>, 
+        <codeph><xref href="../../utility_guide/ref/analyzedb.xml#topic1" type="topic" format="dita"/></codeph>.</p>
     </section>
   </body>
 </topic>

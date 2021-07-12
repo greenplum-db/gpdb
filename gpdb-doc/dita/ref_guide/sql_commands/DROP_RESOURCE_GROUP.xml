@@ -17,7 +17,7 @@
       <p>To drop a role resource group, the group cannot be assigned to any roles, nor can it have
         any statements pending or running in the group. If you drop a resource group that you
         created for an external component, the behavior is determined by the external component. For
-        example, dropping a resource group that you assigned to a PL/Container runtime kills running
+        example, dropping a resource group that you assigned to a PL/Container runtime stops running
         containers in the group. </p>
       <p>You cannot drop the pre-defined <codeph>admin_group</codeph> and
           <codeph>default_group</codeph> resource groups.</p>

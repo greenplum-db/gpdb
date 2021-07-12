@@ -3,7 +3,7 @@
 <topic id="topic1">
   <title>Considerations when Using GPORCA</title>
   <abstract>
-    <shortdesc> To execute queries optimally with GPORCA, query criteria to consider. </shortdesc>
+    <shortdesc> To run queries optimally with GPORCA, consider the query criteria closely. </shortdesc>
   </abstract>
   <body>
     <p>Ensure the following criteria are met:<ul id="ul_bpd_4rb_kr">
@@ -39,8 +39,8 @@
         to during query optimization.</li>
       <li><codeph>optimizer_parallel_union</codeph> controls the amount of parallelization that
         occurs for queries that contain a <codeph>UNION</codeph> or <codeph>UNION ALL</codeph>
-        clause. When the value is <codeph>on</codeph>, GPORCA can generate a query plan the child
-        operations of a <codeph>UNION</codeph> or <codeph>UNION ALL</codeph> operation execute in
+        clause. When the value is <codeph>on</codeph>, GPORCA can generate a query plan of  the child
+        operations of a <codeph>UNION</codeph> or <codeph>UNION ALL</codeph> operation run in
         parallel on segment instances. </li>
       <li><codeph>optimizer_sort_factor</codeph> controls the cost factor that GPORCA applies to
         sorting operations during query optimization. The cost factor can be adjusted for queries

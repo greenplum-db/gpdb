@@ -698,7 +698,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		CommitTransactionCommand();
 		return;
 	}
-
+	SIMPLE_FAULT_INJECTOR("vacuum_hold_lock");
 	/*
 	 * Check permissions.
 	 *
@@ -1180,7 +1180,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 					for (int i = 1; i <= attr_cnt; i++)
 					{
 						Form_pg_attribute attr = onerel->rd_att->attrs[i-1];
-						if (attr->attisdropped)
+						if (attr->attisdropped || attr->attstattarget == 0)
 							continue;
 						va_root_attnums = lappend_int(va_root_attnums, i);
 					}

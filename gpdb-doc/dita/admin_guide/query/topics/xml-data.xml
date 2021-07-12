@@ -180,7 +180,7 @@ cursor_to_xml(cursor refcursor, count int, nulls boolean,
       <p><codeph>table_to_xml</codeph> maps the content of the named table, passed as parameter
           <codeph>tbl</codeph>. The <codeph>regclass</codeph> type accepts strings identifying
         tables using the usual notation, including optional schema qualifications and double quotes.
-          <codeph>query_to_xml</codeph> executes the query whose text is passed as parameter query
+          <codeph>query_to_xml</codeph> runs the query whose text is passed as parameter query
         and maps the result set. <codeph>cursor_to_xml</codeph> fetches the indicated number of rows
         from the cursor specified by the parameter cursor. This variant is recommended if large
         tables have to be mapped, because the result value is built up in memory by each

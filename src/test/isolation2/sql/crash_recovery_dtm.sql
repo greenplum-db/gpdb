@@ -48,8 +48,14 @@ $$ LANGUAGE plpgsql;
 -- COMMIT PREPARED across restart and instead abort the transaction
 -- after querying in-doubt prepared transactions from segments.
 1: CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- Inject fault to fail the COMMIT PREPARED always on one segment, till fault is not reset
-1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', dbid)
+-- Inject fault to fail the COMMIT PREPARED on one segment.
+-- Temporarily disable retry finish prepared in this session, because
+-- we are not interested in testing the retry logic.  This makes it
+-- suffice to trigger the fault only once.  Otherwise, the fault may
+-- continue to trigger even after PANIC on coordinator, impacting
+-- finish prepared operation during crash recovery.
+1: SET dtx_phase2_retry_count = 0;
+1: SELECT gp_inject_fault('finish_prepared_start_of_function', 'error', dbid)
    from gp_segment_configuration where content=0 and role='p';
 -- Start looping in background, till master panics and closes the session
 3&: SELECT wait_till_master_shutsdown();
@@ -207,7 +213,7 @@ $$ LANGUAGE plpgsql;
 
 -- trigger master panic and wait until master down before running any new query.
 17&: SELECT wait_till_master_shutsdown();
-18: SELECT gp_inject_fault('before_read_command', 'panic', 1);
+18: SELECT gp_inject_fault('exec_simple_query_start', 'panic', current_setting('gp_dbid')::smallint);
 18: SELECT 1;
 16<:
 17<:

@@ -57,7 +57,7 @@
             example:<codeblock>$ gpstop -m</codeblock></li>
           <li id="ki160961">Run the <codeph>gpactivatestandby</codeph> utility from the original
             master host, mdw, that is currently a standby master. For
-              example:<codeblock>$ gpactivatestandby -d $COORDINATOR_DATA_DIRECTORY</codeblock><p>Where
+              example:<codeblock>$ gpactivatestandby -d $MASTER_DATA_DIRECTORY</codeblock><p>Where
               the <codeph>-d</codeph> option specifies the data directory of the host you are
               activating.</p></li>
           <li id="ki165618">After the utility completes, run <codeph>gpstate</codeph> with the

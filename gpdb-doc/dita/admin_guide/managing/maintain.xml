@@ -10,7 +10,7 @@
     <p>Greenplum Database requires that certain tasks be performed regularly to achieve optimal
       performance. The tasks discussed here are required, but database administrators can automate
       them using standard UNIX tools such as <codeph>cron</codeph> scripts. An administrator sets up
-      the appropriate scripts and checks that they execute successfully. See <xref
+      the appropriate scripts and checks that they ran successfully. See <xref
         href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for additional suggested maintenance
       activities you can implement to keep your Greenplum system running optimally.</p>
   </body>
@@ -230,7 +230,7 @@ analyzedb -as pg_catalog -d $DBNAME
           This example runs <cmdname>ANALYZE</cmdname> and then <cmdname>VACUUM</cmdname> on the
             <i>cust_info</i> table.<codeblock>ANALYZE cust_info;
 VACUUM cust_info;</codeblock></p>
-        <note type="important">If you intend to execute queries on partitioned tables with GPORCA
+        <note type="important">If you intend to run queries on partitioned tables with GPORCA
           enabled (the default), you must collect statistics on the partitioned table root partition
           with the <cmdname>ANALYZE</cmdname> command. For information about GPORCA, see <xref
             href="../query/topics/query-piv-opt-overview.xml"/>. </note>

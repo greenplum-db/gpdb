@@ -197,13 +197,13 @@
           </plentry>
           <plentry>
             <pt>-1 | --single-transaction</pt>
-            <pd>Execute the restore as a single transaction. This ensures that either all the
+            <pd>Run the restore as a single transaction. This ensures that either all the
               commands complete successfully, or no changes are applied.</pd>
           </plentry>
           <plentry>
             <pt>--disable-triggers</pt>
             <pd>This option is relevant only when performing a data-only restore. It instructs
-                <codeph>pg_restore</codeph> to execute commands to temporarily disable triggers on
+                <codeph>pg_restore</codeph> to run commands to temporarily disable triggers on
               the target tables while the data is reloaded. Use this if you have triggers on the
               tables that you do not want to invoke during data reload. The commands emitted for
                 <codeph>--disable-triggers</codeph> must be done as superuser. So you should also
@@ -341,8 +341,8 @@ pg_restore -d newdb db.dump</codeblock>
 ;     Format: CUSTOM
 ;     Integer: 4 bytes
 ;     Offset: 8 bytes
-;     Dumped from database version: 8.3.5
-;     Dumped by pg_dump version: 8.3.8
+;     Dumped from database version: 9.4.24
+;     Dumped by pg_dump version: 9.4.24
 ;
 ; Selected TOC Entries:
 ;

@@ -96,10 +96,10 @@ options:
         <li>The API provides arguments that specify the execution scope (master host, segment host,
           or segment instance) for a plugin setup or cleanup command. The scope can be one of these
             values.<ul id="ul_rpk_tzt_k2b">
-            <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
-            <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
+            <li><codeph>master</codeph> - Run the plugin once on the master host.</li>
+            <li><codeph>segment_host</codeph> - Run the plugin once on each of the segment
               hosts.</li>
-            <li><codeph>segment</codeph> - Execute the plugin once for each active segment instance
+            <li><codeph>segment</codeph> - Run the plugin once for each active segment instance
               on the host running the segment instance.</li>
           </ul>The Greenplum Database hosts and segment instances are based on the Greenplum
           Database configuration when the back up started. The values <codeph>segment_host</codeph>

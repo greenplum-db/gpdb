@@ -6,10 +6,10 @@
   <shortdesc>Careful planning will help to ensure a successful Greenplum expansion
     project.</shortdesc>
   <body>
-    <p>The topics in this section help to ensure that you are prepared to execute a system
+    <p>The topics in this section help to ensure that you are prepared to perform a system
       expansion.</p>
     <ul id="ul_gdc_hp5_mr">
-      <li><xref href="#topic4" format="dita"/> is a checklist you can use to prepare for and execute
+      <li><xref href="#topic4" format="dita"/> is a checklist you can use to prepare for and perform
         the system expansion process. </li>
       <li><xref href="#topic5" format="dita"/> covers planning for acquiring and setting up the new
         hardware. </li>
@@ -50,7 +50,7 @@
                   <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_gr2_s1m_2r"/>
                 </entry>
-                <entry>Devise and execute a plan for ordering, building, and networking new hardware
+                <entry>Plan for ordering, building, and networking new hardware
                   platforms, or provisioning cloud resources. </entry>
               </row>
               <row>

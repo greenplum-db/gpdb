@@ -130,14 +130,14 @@
             <entry>Current overall state of this backend. Possible values are:<ul
                 id="ul_c5x_thv_kgb">
                 <li>
-                  <p><codeph>active</codeph>: The backend is executing a query.</p>
+                  <p><codeph>active</codeph>: The backend is running a query.</p>
                 </li>
                 <li>
                   <p><codeph>idle</codeph>: The backend is waiting for a new client command.</p>
                 </li>
                 <li>
                   <p><codeph>idle in transaction</codeph>: The backend is in a transaction, but is
-                    not currently executing a query.</p>
+                    not currently running a query.</p>
                 </li>
                 <li>
                   <p><codeph>idle in transaction (aborted)</codeph>: This state is similar to idle
@@ -145,7 +145,7 @@
                     error.</p>
                 </li>
                 <li>
-                  <p><codeph>fastpath function call</codeph>: The backend is executing a fast-path
+                  <p><codeph>fastpath function call</codeph>: The backend is running a fast-path
                     function.</p>
                 </li>
                 <li>
@@ -159,8 +159,8 @@
             <entry>text</entry>
             <entry/>
             <entry>Text of this backend's most recent query. If <codeph>state</codeph> is active
-              this field shows the currently executing query. In all other states, it shows the last
-              query that was executed.</entry>
+              this field shows the currently running query. In all other states, it shows the last
+              query that was run.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>waiting_reason</codeph></entry>

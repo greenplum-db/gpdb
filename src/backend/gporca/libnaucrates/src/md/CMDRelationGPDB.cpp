@@ -278,6 +278,8 @@ CMDRelationGPDB::NonDroppedColsCount() const
 //		Return the absolute position of the given attribute position excluding
 //		dropped columns
 //
+//		If pos is a dropped column then return gpos::ulong_max.
+//
 //---------------------------------------------------------------------------
 ULONG
 CMDRelationGPDB::NonDroppedColAt(ULONG pos) const
@@ -291,8 +293,7 @@ CMDRelationGPDB::NonDroppedColAt(ULONG pos) const
 
 	ULONG *colid = m_colpos_nondrop_colpos_map->Find(&pos);
 
-	GPOS_ASSERT(NULL != colid);
-	return *colid;
+	return colid ? *colid : gpos::ulong_max;
 }
 
 //---------------------------------------------------------------------------

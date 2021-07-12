@@ -644,7 +644,7 @@ GppcReport(GPPC_ERROR, "Unknown user name: %s", GppcTextGetCString(uname));</cod
             <row>
               <entry colname="col1">SPI_exec()</entry>
               <entry colname="col2">GppcSPIExec()</entry>
-              <entry colname="col3">Execute a SQL statement, returning the number of rows.</entry>
+              <entry colname="col3">Run a SQL statement, returning the number of rows.</entry>
             </row>
             <row>
               <entry colname="col1" morerows="3">SPI_getvalue()</entry>
@@ -673,10 +673,10 @@ GppcReport(GPPC_ERROR, "Unknown user name: %s", GppcTextGetCString(uname));</cod
 GppcSPIExec(...)
 // process the results - GppcSPIGetValue(...), GppcSPIGetDatum(...)
 GppcSPIFinish()</codeblock></p>
-        <p>You use <codeph>GppcSPIExec()</codeph> to execute SQL statements
-          in your GPPC function. When you call this function, you also identify
-          the maximum number of rows to return. The function signature of
-          <codeph>GppcSPIExec()</codeph> is:<codeblock>GppcSPIResult GppcSPIExec(const char *sql_statement, long rcount);</codeblock></p>
+        <p>You use <codeph>GppcSPIExec()</codeph> to run SQL statements in your GPPC function. When
+          you call this function, you also identify the maximum number of rows to return. The
+          function signature of <codeph>GppcSPIExec()</codeph>
+          is:<codeblock>GppcSPIResult GppcSPIExec(const char *sql_statement, long rcount);</codeblock></p>
         <p><codeph>GppcSPIExec()</codeph> returns a <codeph>GppcSPIResult</codeph>
           structure. This structure represents SPI result data. It includes a
           pointer to the data, information about the number of rows processed,
@@ -692,8 +692,8 @@ typedef GppcSPIResultData *GppcSPIResult;</codeblock></p>
         <p>You can set and use the <codeph>current</codeph> field in the
           <codeph>GppcSPIResult</codeph> structure to examine each row of
           the <codeph>tuptable</codeph> result data.</p>
-        <p>The following code excerpt uses the GPPC API to connect to SPI,
-          execute a simple query, loop through query results, and finish
+        <p>The following code excerpt uses the GPPC API to connect to SPI, run a simple query, loop
+          through query results, and finish
           processing:<codeblock>GppcSPIResult   result;
 char            *attname = "id";
 char            *query = "SELECT i, 'foo' || i AS val FROM generate_series(1, 10)i ORDER BY 1";

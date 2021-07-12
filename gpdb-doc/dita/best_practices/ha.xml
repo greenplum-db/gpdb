@@ -248,7 +248,7 @@
         when the system detects a failure and activates a standby for the failed component. In each
         case, the failed component must be replaced or recovered to restore full redundancy. Until
         the failed component is recovered, the active component lacks a standby, and the system may
-        not be executing optimally. For these reasons, it is important to perform recovery
+        not be performing optimally. For these reasons, it is important to perform recovery
         operations promptly. Constant system monitoring ensures that administrators are aware of
         failures that demand their attention. </p>
       <p>The Greenplum Database server <codeph>ftsprobe</codeph> subprocess handles fault detection.
@@ -366,8 +366,8 @@
         <p>Spread mirroring has the least performance impact for a single failed host because each
           host's mirrors are spread across the maximum number of hosts. Load is increased by
             1/<i>Nth</i>, where <i>N</i> is the number of primaries per host. Spread mirroring is,
-          however, the most likely configuration to suffer catastrophic failure if two or more hosts
-          fail simultaneously. </p>
+          however, the most likely configuration to have a catastrophic failure if two or more
+          hosts fail simultaneously. </p>
       </section>
       <section>
         <title>Block Mirroring</title>

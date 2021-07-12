@@ -66,7 +66,7 @@ CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
       <p>It is wise to be conservative about marking casts as implicit. An overabundance of implicit
         casting paths can cause Greenplum Database to choose surprising interpretations of commands,
         or to be unable to resolve commands at all because there are multiple possible
-        interpretations. A good rule of thumb is to make a cast implicitly invokable only for
+        interpretations. A good general rule is to make a cast implicitly invokable only for
         information-preserving transformations between types in the same general type category. For
         example, the cast from <codeph>int2</codeph> to <codeph>int4</codeph> can reasonably be
         implicit, but the cast from <codeph>float8</codeph> to <codeph>int4</codeph> should probably

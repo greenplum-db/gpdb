@@ -2,7 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_tpt_bqw_r4">
   <title>Tuning SQL Queries</title>
-  <shortdesc>The Greenplum Database cost-based optimizer evaluates many strategies for executing a
+  <shortdesc>The Greenplum Database cost-based optimizer evaluates many strategies for running a
     query and chooses the least costly method. </shortdesc>
   <body>
     <p>Like other RDBMS optimizers, the Greenplum optimizer takes into account factors such as the
@@ -25,8 +25,8 @@
     <body>
       <p>The <codeph>EXPLAIN</codeph> and <codeph>EXPLAIN ANALYZE</codeph> statements are useful
         tools to identify opportunities to improve query performance. <codeph>EXPLAIN</codeph>
-        displays the query plan and estimated costs for a query, but does not execute the query.
-          <codeph>EXPLAIN ANALYZE</codeph> executes the query in addition to displaying the query
+        displays the query plan and estimated costs for a query, but does not run the query.
+          <codeph>EXPLAIN ANALYZE</codeph> runs the query in addition to displaying the query
         plan. <codeph>EXPLAIN ANALYZE</codeph> discards any output from the <codeph>SELECT</codeph>
         statement; however, other operations in the statement are performed (for example,
           <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>). To use
@@ -51,7 +51,7 @@
     <title id="explain_plan">How to Read Explain Plans</title>
     <body>
       <p>An explain plan is a report detailing the steps the Greenplum Database optimizer has
-        determined it will follow to execute a query. The plan is a tree of nodes, read from bottom
+        determined it will follow to run a query. The plan is a tree of nodes, read from bottom
         to top, with each node passing its result to the node directly above. Each node represents a
         step in the plan, and one line for each node identifies the operation performed in that
         step&#8212;for example, a scan, join, aggregation, or sort operation. The node also

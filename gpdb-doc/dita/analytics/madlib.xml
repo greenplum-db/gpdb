@@ -73,7 +73,7 @@
         using the R client. Using PivotalR requires that MADlib is installed on the Greenplum
         Database.</p>
       <p>PivotalR allows R users to leverage the scalability and performance of in-database
-        analytics without leaving the R command line. The computational work is executed
+        analytics without leaving the R command line. The computational work is run
         in-database, while the end user benefits from the familiar R interface. Compared with
         respective native R functions, there is an increase in scalability and a decrease in running
         time. Furthermore, data movement, which can take hours for very large data sets, is

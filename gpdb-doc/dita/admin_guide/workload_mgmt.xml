@@ -10,7 +10,7 @@
     <p>Resource queues are one tool to manage the degree of concurrency in a Greenplum Database
       system. Resource queues are database objects that you create with the <codeph>CREATE RESOURCE
         QUEUE</codeph> SQL statement. You can use them to manage the number of active queries that
-      may execute concurrently, the amount of memory each type of query is allocated, and the
+      may run concurrently, the amount of memory each type of query is allocated, and the
       relative priority of queries. Resource queues can also guard against queries that would
       consume too many resources and degrade overall system performance.</p>
     <p>Each database role is associated with a single resource queue; multiple roles can share the
@@ -92,7 +92,7 @@
         <codeph>ACTIVE_STATEMENTS</codeph> setting of 20, no <codeph>MEMORY_LIMIT</codeph>, medium
         <codeph>PRIORITY</codeph>, and no set <codeph>MAX_COST</codeph>. This means that all queries
       are accepted and run immediately, at the same priority and with no memory limitations;
-      however, only twenty queries may execute concurrently. </p>
+      however, only twenty queries may run concurrently. </p>
     <p>The number of concurrent queries a resource queue allows depends on whether the
         <codeph>MEMORY_LIMIT</codeph> parameter is set:</p>
     <ul id="ul_p5p_jxp_wq">
@@ -103,7 +103,7 @@
         resource queue can use is the product of <codeph>statement_mem</codeph> and
           <codeph>ACTIVE_STATEMENTS</codeph>. </li>
       <li>When a <codeph>MEMORY_LIMIT</codeph> is set on a resource queue, the number of queries
-        that the queue can execute concurrently is limited by the queue's available memory. </li>
+        that the queue can run concurrently is limited by the queue's available memory. </li>
     </ul>
     <p>A query admitted to the system is allocated an amount of memory and a query plan tree is
       generated for it. Each node of the tree is an operator, such as a sort or hash join. Each
@@ -129,7 +129,7 @@
         queries and allocates the same amount of memory to each. This is generally not adequate
         resource control for production systems. To ensure that the system meets performance
         expectations, you can define classes of queries and assign them to resource queues
-        configured to execute them with the concurrency, memory, and CPU resources best suited for
+        configured to run them with the concurrency, memory, and CPU resources best suited for
         that class of query.</p>
       <p>The following illustration shows an example resource queue configuration for a Greenplum
         Database system with <codeph>gp_vmem_protect_limit</codeph> set to 8GB:<fig
@@ -195,7 +195,7 @@
         statement limit of 10, each query submitted through the queue is allotted 200MB of memory by
         default. The default memory allotment can be overridden on a per-query basis using the
           <codeph>statement_mem</codeph> server configuration parameter (up to the queue memory
-        limit). Once a query has started executing, it holds its allotted memory in the queue until
+        limit). Once a query has started running, it holds its allotted memory in the queue until
         it completes, even if during execution it actually consumes less than its allotted amount of
         memory.</p>
       <p>You can use the <codeph>statement_mem</codeph> server configuration parameter to override
@@ -255,7 +255,7 @@
     <body>
       <p>The <codeph>PRIORITY</codeph> setting for a resource queue differs from the
           <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> settings, which
-        determine whether a query will be admitted to the queue and eventually executed. The
+        determine whether a query will be admitted to the queue and eventually run. The
           <codeph>PRIORITY</codeph> setting applies to queries after they become active. Active
         queries share available CPU resources as determined by the priority settings for its
         resource queue. When a statement from a high-priority queue enters the group of actively
@@ -356,7 +356,7 @@
               <li id="iz172344"><codeph>gp_resqueue_memory_policy</codeph> - Enables Greenplum
                 Database memory management features. <p>In Greenplum Database<ph> 4.2 and
                   later</ph>, the distribution algorithm <codeph>eager_free</codeph> takes advantage
-                  of the fact that not all operators execute at the same time. The query plan is
+                  of the fact that not all operators run at the same time. The query plan is
                   divided into stages and Greenplum Database eagerly frees memory allocated to a
                   previous stage at the end of that stage's execution, then allocates the eagerly
                   freed memory to the new stage.</p><p><ph>When set to <codeph>none</codeph>, memory
@@ -407,7 +407,7 @@
                   Database cluster has fewer than one segment instance per CPU core on your segment
                   hosts, make sure you adjust this value accordingly. </p><p>Actual CPU core
                   utilization is based on the ability of Greenplum Database to parallelize a query
-                  and the resources required to execute the query. </p><p>Note: Any CPU core that is
+                  and the resources required to run the query. </p><p>Note: Any CPU core that is
                   available to the operating system is included in the number of CPU cores. For
                   example, virtual CPU cores are included in the number of CPU cores.</p></li>
             </ul></li>
@@ -441,7 +441,7 @@
       <title>Creating Queues with an Active Query Limit</title>
       <body>
         <p id="iz152723">Resource queues with an <codeph>ACTIVE_STATEMENTS</codeph> setting limit
-          the number of queries that can be executed by roles assigned to that queue. For example,
+          the number of queries that can be run by roles assigned to that queue. For example,
           to create a resource queue named <i>adhoc</i> with an active query limit of three:</p>
         <p>
           <codeblock>=# CREATE RESOURCE QUEUE adhoc WITH (ACTIVE_STATEMENTS=3);
@@ -720,8 +720,8 @@ MEMORY_LIMIT='2000MB');
       <body>
         <p>In some cases, you may want to clear a waiting statement from a resource queue. For
           example, you may want to remove a query that is waiting in the queue but has not been
-          executed yet. You may also want to stop a query that has been started if it is taking too
-          long to execute, or if it is sitting idle in a transaction and taking up resource queue
+          run yet. You may also want to stop a query that has been started if it is taking too
+          long to run, or if it is sitting idle in a transaction and taking up resource queue
           slots that are needed by other users. To do this, you must first identify the statement
           you want to clear, determine its process id (pid), and then, use
             <codeph>pg_cancel_backend</codeph> with the process id to end that process, as shown
@@ -762,7 +762,7 @@ MEMORY_LIMIT='2000MB');
       <title id="iz164264">Viewing the Priority of Active Statements</title>
       <body>
         <p>The <i>gp_toolkit</i> administrative schema has a view called
-            <i>gp_resq_priority_statement</i>, which lists all statements currently being executed
+            <i>gp_resq_priority_statement</i>, which lists all statements currently being run
           and provides the priority, session ID, and other information.</p>
         <p>This view is only available through the <codeph>gp_toolkit</codeph> administrative
           schema. <ph>See the <i>Greenplum Database Reference Guide</i> for more
@@ -772,7 +772,7 @@ MEMORY_LIMIT='2000MB');
     <topic id="topic29" xml:lang="en">
       <title id="iz166568">Resetting the Priority of an Active Statement</title>
       <body>
-        <p>Superusers can adjust the priority of a statement currently being executed using the
+        <p>Superusers can adjust the priority of a statement currently being run using the
           built-in function <codeph>gp_adjust_priority(session_id, statement_count,
             priority)</codeph>. Using this function, superusers can raise or lower the priority of
           any query. For example:</p>
@@ -794,7 +794,7 @@ MEMORY_LIMIT='2000MB');
           </li>
         </ul>
         <note type="note">The <codeph>gp_adjust_priority()</codeph> function affects only the
-          specified statement. Subsequent statements in the same resource queue are executed using
+          specified statement. Subsequent statements in the same resource queue are run using
           the queue's normally assigned priority.</note>
       </body>
     </topic>

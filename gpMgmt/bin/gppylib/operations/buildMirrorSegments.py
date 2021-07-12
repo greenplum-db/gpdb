@@ -21,7 +21,8 @@ from gppylib.operations.unix import CleanSharedMem
 from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
-from gppylib.programs.clsRecoverSegment_triples import RecoverTriplet
+from gppylib.programs.clsRecoverSegment_triples import RecoveryTriplet
+
 
 logger = gplog.get_default_logger()
 
@@ -71,7 +72,7 @@ class GpMirrorToBuild:
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
         # We need to call this validate function here because addmirrors directly calls GpMirrorToBuild.
-        RecoverTriplet.validate(failedSegment, liveSegment, failoverSegment)
+        RecoveryTriplet.validate(failedSegment, liveSegment, failoverSegment)
 
         self.__failedSegment = failedSegment
         self.__liveSegment = liveSegment
@@ -314,7 +315,7 @@ class GpMirrorListToBuild:
             self.__logger.info("Updating mirrors")
 
             if len(rewindInfo) != 0:
-                self.__logger.info("Running pg_rewind on required mirrors")
+                self.__logger.info("Running pg_rewind on failed segments")
                 rewindFailedSegments = self.run_pg_rewind(rewindInfo)
 
                 # Do not start mirrors that failed pg_rewind
@@ -459,6 +460,8 @@ class GpMirrorListToBuild:
                     cmd.run(validateAfter=True)
                     cmd.cmdStr = cmd_str
                     results = cmd.get_results().stdout.rstrip()
+                    if not results:
+                        results = "skipping pg_rewind on mirror as recovery.conf is present"
                 except ExecutionError:
                     lines = cmd.get_results().stderr.splitlines()
                     if lines:

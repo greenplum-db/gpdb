@@ -16,7 +16,7 @@
         backup and restore utilities. <codeph>gpbackup</codeph>
         utilizes <codeph>ACCESS SHARE</codeph> locks at the individual table level, instead of
           <codeph>EXCLUSIVE</codeph> locks on the <codeph>pg_class</codeph> catalog table. This
-        enables you to execute DML statements during the backup, such as <codeph>CREATE</codeph>,
+        enables you to run DML statements during the backup, such as <codeph>CREATE</codeph>,
           <codeph>ALTER</codeph>,  <codeph>DROP</codeph>, and <codeph>TRUNCATE</codeph> operations,
         as long as those operations do not target the current backup set. </p>
       <p>Backup files created with <codeph>gpbackup</codeph> are designed to provide future

@@ -17,7 +17,7 @@
             <p><codeph>LOCK TABLE</codeph> obtains a table-level lock, waiting if necessary for any
                 conflicting locks to be released. If <codeph>NOWAIT</codeph> is specified,
                     <codeph>LOCK TABLE</codeph> does not wait to acquire the desired lock: if it
-                cannot be acquired immediately, the command is aborted and an error is emitted. Once
+                cannot be acquired immediately, the command is stopped and an error is emitted. Once
                 obtained, the lock is held for the remainder of the current transaction. There is no
                     <codeph>UNLOCK TABLE</codeph> command; locks are always released at transaction
                 end.</p>
@@ -37,7 +37,7 @@
                 furthermore none can begin until you release the lock.</p>
             <p>To achieve a similar effect when running a transaction at the <codeph>REPEATABLE
                     READ</codeph> or <codeph>SERIALIZABLE</codeph> isolation level, you have to
-                execute the <codeph>LOCK TABLE</codeph> statement before executing any
+                run the <codeph>LOCK TABLE</codeph> statement before running any
                     <codeph>SELECT</codeph> or data modification statement. A <codeph>REPEATABLE
                     READ</codeph> or <codeph>SERIALIZABLE</codeph> transaction's view of data will
                 be frozen when its first <codeph>SELECT</codeph> or data modification statement
@@ -161,7 +161,8 @@
                     <pt>NOWAIT</pt>
                     <pd>Specifies that <codeph>LOCK TABLE</codeph> should not wait for any
                         conflicting locks to be released: if the specified lock(s) cannot be
-                        acquired immediately without waiting, the transaction is aborted.</pd>
+                        acquired immediately without waiting, the transaction is cancelled.
+                    </pd>
                 </plentry>
             </parml>
         </section>

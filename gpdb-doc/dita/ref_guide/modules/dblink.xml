@@ -53,7 +53,7 @@ INSERT 0 2</codeblock></p>
       <p>The following procedure identifies the basic steps for configuring and using
           <codeph>dblink</codeph> in Greenplum Database. The examples use
           <codeph>dblink_connect()</codeph> to create a connection to a database and
-          <codeph>dblink()</codeph> to execute an SQL query. </p>
+          <codeph>dblink()</codeph> to run an SQL query. </p>
       <ol id="ol_axw_csm_bdb">
         <li>Begin by creating a sample table to query using the <codeph>dblink</codeph> functions.
           These commands create a small table in the <codeph>postgres</codeph> database, which you
@@ -132,10 +132,10 @@ CREATE EXTENSION</codeblock></li>
           but this should be done with care.</p>
         <note type="warning">If a Greenplum Database system has configured users with an
           authentication method that does not involve a password, then impersonation and subsequent
-          escalation of privileges can occur when a non-superuser executes
+          escalation of privileges can occur when a non-superuser runs
             <codeph>dblink_connect_u()</codeph>. The <codeph>dblink</codeph> connection will appear
           to have originated from the user specified by the function. For example, a non-superuser
-          can execute <codeph>dblink_connect_u()</codeph> and specify a user that is configured with
+          can run <codeph>dblink_connect_u()</codeph> and specify a user that is configured with
             <codeph>trust</codeph> authentication. <p>Also, even if the <codeph>dblink</codeph>
             connection requires a password, it is possible for the password to be supplied from the
             server environment, such as a <codeph>~/.pgpass</codeph> file belonging to the server's
@@ -151,16 +151,14 @@ CREATE EXTENSION</codeblock></li>
             connection.<codeblock>testdb=# GRANT EXECUTE ON FUNCTION dblink_connect_u(text) TO test_user;
 testdb=# GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;</codeblock></li>
           <li>Now <codeph>test_user</codeph> can create a connection to another local database
-            without providing a password, as long as there is a correctly configured entry in
-              <codeph>pg_hba.conf</codeph> for the user and target database. For example,
-              <codeph>test_user</codeph> can log into the <codeph>testdb</codeph> database and
-            execute this command to create a connection named <codeph>testconn</codeph> to the local
-              <codeph>postgres</codeph> database.<codeblock>testdb=> SELECT dblink_connect_u('testconn', 'dbname=postgres user=test_user');</codeblock>
+            without a password. For example, <codeph>test_user</codeph> can log into the
+              <codeph>testdb</codeph> database and run this command to create a connection named
+              <codeph>testconn</codeph> to the local <codeph>postgres</codeph> database.<codeblock>testdb=> SELECT dblink_connect_u('testconn', 'dbname=postgres user=test_user');</codeblock>
             <note>If a <codeph>user</codeph> is not specified, <codeph>dblink_connect_u()</codeph>
               uses the value of the <codeph>PGUSER</codeph> environment variable when Greenplum
               Database was started. If <codeph>PGUSER</codeph> is not set, the default is the system
               user that started Greenplum Database.</note></li>
-          <li><codeph>test_user</codeph> can use the <codeph>dblink()</codeph> function to execute a
+          <li><codeph>test_user</codeph> can use the <codeph>dblink()</codeph> function to run a
             query using a <codeph>dblink</codeph> connection. For example, this command uses the
               <codeph>dblink</codeph> connection named <codeph>testconn</codeph> created in the
             previous step. <codeph>test_user</codeph> must have appropriate access to the

@@ -291,8 +291,8 @@ objects.</p>
       <codeblock>GRANT INSERT ON mytable TO PUBLIC;</codeblock>
       <p>Grant all available privileges to role <codeph>sally</codeph> on the
         view <codeph>topten</codeph>. Note that while the above will indeed
-        grant all privileges if executed by a superuser or the owner of
-          <codeph>topten</codeph>, when executed by someone else it will only
+        grant all privileges if run by a superuser or the owner of
+          <codeph>topten</codeph>, when run by someone else it will only
         grant those permissions for which the granting role has grant
         options.</p>
       <codeblock>GRANT ALL PRIVILEGES ON topten TO sally;</codeblock>

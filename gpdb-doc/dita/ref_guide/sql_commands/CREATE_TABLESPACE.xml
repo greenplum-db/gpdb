@@ -39,7 +39,7 @@
         <plentry>
           <pt>OWNER <varname>username</varname></pt>
           <pd>The name of the user who will own the tablespace. If omitted, defaults to the user
-            executing the command. Only superusers can create tablespaces, but they can assign
+            running the command. Only superusers can create tablespaces, but they can assign
             ownership of tablespaces to non-superusers. </pd>
         </plentry>
         <plentry>
@@ -72,7 +72,7 @@
     <section id="section5">
       <title>Notes</title>
       <p>Tablespaces are only supported on systems that support symbolic links. </p>
-      <p><codeph>CREATE TABLESPACE</codeph> cannot be executed inside a transaction block.</p>
+      <p><codeph>CREATE TABLESPACE</codeph> cannot be run inside a transaction block.</p>
       <p>When creating tablespaces, ensure that file system locations have sufficient I/O speed and
         available disk space.</p>
       <p>
@@ -88,6 +88,11 @@
         segment database IDs and host system file locations for the tablespace with OID
           <codeph>16385</codeph>.<codeblock>SELECT * FROM gp_tablespace_location(16385) </codeblock></p>
     </section>
+    <note>Greenplum Database does not support different tablespace locations for a primary-mirror
+      pair with the same content ID. It is only possible to configure different locations for
+      different content IDs. Do not modify symbolic links under the <codeph>pg_tblspc</codeph>
+      directory so that primary-mirror pairs point to different file locations; this will lead to
+      erroneous behavior.</note>
     <section id="section6">
       <title>Examples</title>
       <p>Create a new tablespace and specify the file system location for the master and all segment

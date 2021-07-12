@@ -99,7 +99,7 @@ if not os.path.exists(d):
     os.mkdir(d)
 
 def write_config_file(mode='insert', reuse_flag='',columns_flag='0', columns=None,mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",
-    escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False, config='config/config_file', match_columns='true', update_columns='n2',
+    escape='',quote='',truncate=False,log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False, config='config/config_file', match_columns='true', update_columns='n2',
     header=None,SQL=None, sql_before=None, sql_after=None):
     f = open(mkpath(config),'w')
     f.write("VERSION: 1.0.0.1")
@@ -204,6 +204,8 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0', columns=Non
         f.write("\n    - SCHEMA: "+externalSchema)
     if preload:
         f.write("\n   PRELOAD:")
+        if truncate:
+            f.write("\n    - TRUNCATE: true")
         f.write("\n    - REUSE_TABLES: "+reuse_flag)
         f.write("\n    - FAST_MATCH: "+fast_match)
         if staging_table:
@@ -490,7 +492,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,47):
+        for num in range(1,48):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -911,6 +913,19 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
         f.close()
         self.doTest(46)
+
+    def test_47_gpload_header(self):
+        "47 gpload header reuse table MPP:31557"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_47.txt','data_file.txt')
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',config='config/config_file1', table='testheaderreuse', delimiter="','", format='csv', quote="'\x22'", encoding='LATIN1', log_errors=True, error_limit='1000', header='true', truncate=True, match_columns='false')
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',config='config/config_file2', table='testheaderreuse', delimiter="','", format='csv', quote="'\x22'", encoding='LATIN1', log_errors=True, error_limit='1000', truncate=True, match_columns='false')
+        f = open(mkpath('query47.sql'),'w')
+        f.write("\! gpload -f "+mkpath('config/config_file1')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.close()
+        self.doTest(47)
 
 
 if __name__ == '__main__':

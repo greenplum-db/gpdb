@@ -101,6 +101,8 @@ pg_stop_backup(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 		 (errmsg("must be superuser or replication role to run a backup"))));
 
+	stoppoint = do_pg_stop_backup(NULL, true, NULL);
+
 	PG_RETURN_LSN(stoppoint);
 }
 

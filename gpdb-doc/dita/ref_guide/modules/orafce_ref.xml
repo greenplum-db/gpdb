@@ -102,7 +102,7 @@ ERROR: Invalid input syntax for integer:<i>"M"
           original <codeph>orafce</codeph> module implementation is
           different than the default format in the Greenplum Database implementation. If
           the following code is
-            executed:<codeblock>CREATE TABLE TEST(date1 date, time1 timestamp, time2 
+            run:<codeblock>CREATE TABLE TEST(date1 date, time1 timestamp, time2 
                   timestamp with time zone);
 INSERT INTO TEST VALUES ('2001-11-11','2001-12-13 
                  01:51:15','2001-12-13 01:51:15 -08:00');
@@ -136,7 +136,7 @@ SELECT DECODE(date1, '2001-11-11', '2001-01-01') FROM TEST;</codeblock><p> The G
         <li>If you use validation scripts, the output may not be exactly the same as
           with the original <codeph>orafce</codeph> module implementation.</li>
         <li>The functions in the Oracle Compatibility Functions <codeph>dbms_pipe</codeph> package
-          execute only on the Greenplum Database master host.</li>
+          run only on the Greenplum Database master host.</li>
         <li>The upgrade scripts in the Orafce project do not work with Greenplum Database.</li>
       </ul>
     </body>

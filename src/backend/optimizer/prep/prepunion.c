@@ -474,7 +474,7 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 			/* do nothing, will set flow correct at the end of the function */
 		}
 		else if (lplan->flow->locustype == CdbLocusType_SegmentGeneral)
-			lplan = (Plan *) make_motion_gather(root, lplan, NIL);
+			lplan = (Plan *) make_motion_gather(root, lplan, NIL, rplan->flow->locustype);
 		else
 		{
 			elog(ERROR,

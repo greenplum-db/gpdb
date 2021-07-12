@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS testSpecialChar;
 DROP TABLE IF EXISTS chinese表;
 DROP TABLE IF EXISTS testtruncate;
 DROP TABLE IF EXISTS prices;
+
 reset client_min_messages;
 CREATE TABLE texttable (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -40,4 +41,3 @@ CREATE TABLE testtruncate (
             n5 numeric, n6 real, n7 double precision) DISTRIBUTED BY (n1);
 INSERT INTO testtruncate VALUES('ttt','ttgt','shpits', '2011-06-01 12:30:30',16,732,834567,45.67,789.123,7.12345,156.456178);
 CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber)
-

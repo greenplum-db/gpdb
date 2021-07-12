@@ -49,7 +49,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                 has been modified since the language was created.
             </p>
             <p><codeph>CREATE LANGUAGE</codeph> effectively associates the language name with
-                handler function(s) that are responsible for executing functions written in that language. For a
+                handler function(s) that are responsible for running functions written in that language. For a
                 function written in a procedural language (a language other than C or SQL), the
                 database server has no built-in knowledge about how to interpret the function's
                 source code. The task is passed to a special handler that knows the details of the
@@ -114,7 +114,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                     <pt>HANDLER <varname>call_handler</varname></pt>
                     <pd>Ignored if the server has an entry for the specified language name in
                             <codeph>pg_pltemplate</codeph>. The name of a previously registered
-                        function that will be called to execute the procedural language functions.
+                        function that will be called to run the procedural language functions.
                         The call handler for a procedural language must be written in a compiled
                         language such as C with version 1 call convention and registered with
                         Greenplum Database as a function taking no arguments and returning the
@@ -123,7 +123,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                 </plentry>
                 <plentry>
                     <pt>INLINE <varname>inline_handler</varname></pt>
-                    <pd>The name of a previously registered function that is called to execute an
+                    <pd>The name of a previously registered function that is called to run an
                         anonymous code block in this language that is created with the <codeph><xref
                                 href="DO.xml#topic1"/></codeph> command. If an
                             <codeph>inline_handler</codeph> function is not specified, the language
@@ -137,7 +137,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                     <pt>VALIDATOR <varname>valfunction</varname></pt>
                     <pd>Ignored if the server has an entry for the specified language name in
                             <codeph>pg_pltemplate</codeph>. The name of a previously registered
-                        function that will be called to execute the procedural language functions.
+                        function that will be called to run the procedural language functions.
                         The call handler for a procedural language must be written in a compiled
                         language such as C with version 1 call convention and registered with
                         Greenplum Database as a function taking no arguments and returning the

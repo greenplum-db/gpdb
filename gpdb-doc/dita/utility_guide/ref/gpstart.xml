@@ -32,17 +32,17 @@
                 file from the <codeph>gpadmin</codeph> user's home directory. The utility will
                 create a new hosts cache file at the next startup.</p>
             <p>As part of the startup process, the utility checks the consistency of heap checksum
-                setting among the Greenplum Database master and segment instances, either enabled or
-                disabled on all instances. If the heap checksum setting is different among the
-                instances, an error is returned and Greenplum Database does not start. The
+                setting among the Greenplum Database master and segment instances, either
+                enabled or disabled on all instances. If the heap checksum setting is different
+                among the instances, an error is returned and Greenplum Database does not start. The
                 validation can be disabled by specifying the option
                     <codeph>--skip-heap-checksum-validation</codeph>. For more information about
                 heap checksums, see <xref
                     href="../../admin_guide/highavail/topics/g-enabling-high-availability-features.xml"
                     format="dita" scope="peer">Enabling High Availability and Data Consistency
-                    Features</xref> in the <cite>Greenplum Database Admininstartor Guide</cite>.</p>
+                    Features</xref> in the <cite>Greenplum Database Administrator Guide</cite>.</p>
             <note>Before you can start a Greenplum Database system, you must have initialized the
-                system using <codeph>gpinitsystem</codeph>. Enabling or disabing heap checksums is
+                system using <codeph>gpinitsystem</codeph>. Enabling or disabling heap checksums is
                 set when you initialize the system and cannot be changed after
                 initialization.</note>
             <p>If the Greenplum Database system is configured with a standby master, and
@@ -155,7 +155,8 @@ Continue only if you are certain that the standby is not acting as the master.</
                 connections):</p>
             <codeblock>gpstart -R</codeblock>
             <p>Start the Greenplum master instance only and connect in utility mode:</p>
-            <codeblock>gpstart -m PGOPTIONS='-c gp_session_role=utility' psql</codeblock>
+            <codeblock>gpstart -m 
+PGOPTIONS='-c gp_role=utility' psql</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>

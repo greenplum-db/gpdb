@@ -2272,7 +2272,21 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 		}
 		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
 
-		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
+		if (gpos::ulong_max == ulPosNonDropped ||
+			ulPosNonDropped >= colref_array->Size())
+		{
+			// GPDB6 and lower assumes that the root and leaf partitions have
+			// the same underlying column structure. That assumption can be
+			// broken when an exchange partition with or without same dropped
+			// columns as root is inserted into the partition table. Further
+			// complicating the matter is that ORCA always uses the root
+			// partition to construct index metadata. If we detect a mismatch
+			// in the index and relation metadata, then we will not consider
+			// index columns.
+			pdrgpcrIndex->Release();
+			return GPOS_NEW(mp) CColRefArray(mp);
+		}
+
 		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
 
 		CColRef *colref = (*colref_array)[ulPosNonDropped];

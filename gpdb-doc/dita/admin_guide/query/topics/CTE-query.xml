@@ -91,7 +91,7 @@ SELECT sum(n) FROM t;
         query output.
         <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
       <p>A recursive <codeph>WITH</codeph> query that contains a <codeph> UNION [ ALL ]</codeph> is
-        executed as follows:</p>
+        run as follows:</p>
       <ol id="ol_a3s_r1s_w1b">
         <li>Evaluate the non-recursive term. For <codeph>UNION</codeph> (but not <codeph>UNION
             ALL</codeph>), discard duplicate rows. Include all remaining rows in the result of the
@@ -214,7 +214,7 @@ SELECT n FROM t LIMIT 100;</codeblock>
           <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph> in a
           <codeph>WITH</codeph> clause. This allows you to perform several different operations in
         the same query. </p>
-      <p>A data-modifying statement in a <codeph>WITH</codeph> clause is executed exactly once, and
+      <p>A data-modifying statement in a <codeph>WITH</codeph> clause is run exactly once, and
         always to completion, independently of whether the primary query reads all (or indeed any)
         of the output. This is different from the rule when using <codeph>SELECT</codeph> in a
           <codeph>WITH</codeph> clause, the execution of a <codeph>SELECT</codeph> continues only as
@@ -250,9 +250,9 @@ SELECT * FROM deleted_rows;</codeblock>
   )
 DELETE FROM parts
   WHERE part IN (SELECT part FROM included_parts);</codeblock>
-      <p>The sub-statements in a <codeph>WITH</codeph> clause are executed concurrently with each
+      <p>The sub-statements in a <codeph>WITH</codeph> clause are run concurrently with each
         other and with the main query. Therefore, when using a data-modifying statement in a
-          <codeph>WITH</codeph>, the statement is executed in a <i>snapshot</i>. The effects of the
+          <codeph>WITH</codeph>, the statement is run in a <i>snapshot</i>. The effects of the
         statement are not visible on the target tables. The <codeph>RETURNING</codeph> data is the
         only way to communicate changes between different <codeph>WITH</codeph> sub-statements and
         the main query. In this example, the outer <codeph>SELECT</codeph> returns the original

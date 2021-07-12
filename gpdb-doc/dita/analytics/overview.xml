@@ -94,7 +94,7 @@
           to your Greenplum Database deployment.</li>
       <li otherprops="Pivotal">Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations,
         including SAS, IBM Cognos, SAP Analytics Solutions, Qlik, Tableau, Apache Zeppelin, and Jupyter.</li>
-      <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an
+      <li>Run deep learning algorithms using popular frameworks like Keras and TensorFlow in an
           MPP relational database, with GPU (Graphical Processing Unit) acceleration.</li>
       <li>Use containers capable of isolating executors from the host OS. Greenplum PL/Container implements
         a trusted language execution engine which permits customized data science workloads or environments created

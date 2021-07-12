@@ -147,7 +147,7 @@ similar.</p></section><section id="section4a"><title>Parameters</title><p>See <c
        <codeph>t1</codeph> that are recorded as being granted by <codeph>g1</codeph>.
        This includes grants made by <codeph>u1</codeph> as well as by other
        members of role <codeph>g1</codeph>.</p>
-    <p>If the role that executes <codeph>REVOKE</codeph> holds privileges
+    <p>If the role that runs <codeph>REVOKE</codeph> holds privileges
       indirectly via more than one role membership path, it is unspecified
       which containing role will be used to perform the command. In such cases
       it is best practice to use <codeph>SET ROLE</codeph> to become the

@@ -25,7 +25,7 @@ except that if the <codeph>AUTHORIZATION</codeph> clause is used, all
 the created objects will be owned by that role.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>schema_name</varname></pt><pd>The name of a schema to be created. If this is omitted, the user name is used as the schema
             name. The name cannot begin with <codeph>pg_</codeph>, as such names are reserved for
             system catalog schemas. </pd></plentry><plentry><pt><varname>user_name</varname></pt><pd>The name of the role who will own the schema. If omitted, defaults
-to the role executing the command. Only superusers may create schemas
+to the role running the command. Only superusers may create schemas
 owned by roles other than themselves.</pd></plentry><plentry><pt><varname>schema_element</varname></pt><pd>An SQL statement defining an object to be created within the schema. Currently, only
               <codeph>CREATE TABLE</codeph>, <codeph>CREATE VIEW</codeph>, <codeph>CREATE
               INDEX</codeph>, <codeph>CREATE SEQUENCE</codeph>, <codeph>CREATE TRIGGER</codeph> and

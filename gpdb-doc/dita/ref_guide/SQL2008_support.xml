@@ -2625,7 +2625,7 @@
           </row>
           <row>
             <entry colname="col1">T211-08</entry>
-            <entry colname="col2">Multiple triggers for the same event are executed in the order in
+            <entry colname="col2">Multiple triggers for the same event are run in the order in
               which they were created in the catalog</entry>
             <entry colname="col3">NO</entry>
             <entry colname="col4">Intentionally omitted</entry>

@@ -87,7 +87,7 @@ FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
         <p>Processing skew results when a disproportionate amount of data flows to, and is processed
           by, one or a few segments. It is often the culprit behind Greenplum Database performance
           and stability issues. It can happen with operations such join, sort, aggregation, and
-          various OLAP operations. Processing skew happens in flight while a query is executing and
+          various OLAP operations. Processing skew happens in flight while a query is running and
           is not as easy to detect as data skew.</p>
         <p>If single segments are failing, that is, not all segments on a host, it may be a
           processing skew issue. Identifying processing skew is currently a manual process. First
@@ -125,10 +125,10 @@ Segment node[sdw6] 1830073754 bytes (1.70439 GB)
 Segment node[sdw7] 1767310099 bytes (1.64594 GB)
 Segment node[sdw8] 1765105802 bytes (1.64388 GB)
 Total 14856967207 bytes (13.8366 GB)</codeblock></p><p>If
-            there is a <i>significant and sustained</i> difference in disk usage, then the queries
-            being executed should be investigated for possible skew (the example output above does
-            not reveal significant skew). In monitoring systems, there will always be some skew, but
-            often it is <i>transient</i> and will be <i>short in duration</i>. </p></li>
+              there is a <i>significant and sustained</i> difference in disk usage, then the queries
+              being run should be investigated for possible skew (the example output above does
+              not reveal significant skew). In monitoring systems, there will always be some skew,
+              but often it is <i>transient</i> and will be <i>short in duration</i>. </p></li>
           <li>If significant and sustained skew appears, the next task is to identify the offending
             query. <p>The command in the previous step sums up the entire node. This time, find the
               actual segment directory. You can do this from the master or by logging into the

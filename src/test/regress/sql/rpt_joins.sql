@@ -450,4 +450,30 @@ insert into t_5628 values (1,1), (2,2);
 explain (costs off) select max(c1) from pg_class left join t_5628 on true;
 select max(c1) from pg_class left join t_5628 on true;
 
+--
+-- regression test for nest loop join of indexed rpt and entry, segment should not fall with segfault; see issue #12228
+--
+create table test_tz(tz interval) distributed replicated;
+insert into test_tz
+select i * '1 hour'::interval
+from generate_series(0,23) i;
+create index test_tz_idx on test_tz(tz);
+
+set optimizer=off;
+set enable_hashjoin=off;
+set enable_seqscan=off;
+
+EXPLAIN (costs off)
+SELECT tzn.name, tst.tz
+FROM test_tz tst
+JOIN pg_timezone_names tzn ON tzn.name = 'UTC' AND tst.tz = tzn.utc_offset;
+
+SELECT tzn.name, tst.tz
+FROM test_tz tst
+JOIN pg_timezone_names tzn ON tzn.name = 'UTC' AND tst.tz = tzn.utc_offset;
+
+reset optimizer;
+reset enable_hashjoin;
+reset enable_seqscan;
+
 drop schema rpt_joins cascade;

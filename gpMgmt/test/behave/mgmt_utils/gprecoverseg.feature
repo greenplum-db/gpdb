@@ -78,7 +78,7 @@ Feature: gprecoverseg tests
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
@@ -138,7 +138,7 @@ Feature: gprecoverseg tests
         And we generate the postmaster.pid file with the background pid on "primary" segment
         And the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
@@ -159,7 +159,7 @@ Feature: gprecoverseg tests
         When user can start transactions
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
-        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
@@ -186,6 +186,20 @@ Feature: gprecoverseg tests
           And all the segments are running
           And the segments are synchronized
           And pg_isready reports all primaries are accepting connections
+
+    Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all mirror processes
+        And user can start transactions
+        When the user runs "gprecoverseg -a -s"
+        And gprecoverseg should print "skipping pg_rewind on mirror as recovery.conf is present" to stdout
+        Then gprecoverseg should return a return code of 0
+        And gpAdminLogs directory has no "pg_rewind*" files
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     @demo_cluster
     @concourse_cluster
@@ -272,7 +286,7 @@ Feature: gprecoverseg tests
         Then the saved "mirror" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should not print "Running pg_rewind on failed segments" to stdout
         And all the segments are running
         And the segments are synchronized
 

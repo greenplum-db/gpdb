@@ -138,7 +138,7 @@ In general, the larger the virtual machine type, the more memory the VM will hav
 ### <a id="az-network"></a>Network
 The Accelerated Networking option offloads CPU cycles for networking to "FPGA-based SmartNICs".  Virtual machine types either support this or do not, but most do support it.  Testing of Greenplum hasn't shown much difference and this is probably because of Azure's preference for TCP over UDP.  Despite this, UDPIFC interconnect is the ideal protocol to use in Azure.
 
-There is an undocumented process in Azure that periodically runs on the host machines on UDP port 65330.  When a query executes using UDP port 65330 and this undocumented process runs, the query will fail after one hour with an interconnect timeout error.  This is fixed by reserving port 65330 so that Greenplum doesn't use it.
+There is an undocumented process in Azure that periodically runs on the host machines on UDP port 65330.  When a query runs using UDP port 65330 and this undocumented process runs, the query will fail after one hour with an interconnect timeout error.  This is fixed by reserving port 65330 so that Greenplum doesn't use it.
 
 ### <a id="az-storage"></a>Storage
 Storage in Azure is either Premium (SSD) or Regular Storage (HDD).  The available sizes are the same and max out at 4TB.  Instance types either do or do not support Premium but, interestingly, the instance types that do support Premium storage, have a _lower_ throughput limit.  For example:

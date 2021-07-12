@@ -3,13 +3,13 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="ef20941">SAVEPOINT</title><body><p id="sql_command_desc">Defines a new savepoint within the current transaction.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SAVEPOINT <varname>savepoint_name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>SAVEPOINT</codeph> establishes a new savepoint within the current
 transaction. </p><p>A savepoint is a special mark inside a transaction that allows all
-commands that are executed after it was established to be rolled back,
+commands that are run after it was established to be rolled back,
 restoring the transaction state to what it was at the time of the savepoint.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>savepoint_name</varname></pt><pd>The name of the new savepoint.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Use <codeph><xref href="ROLLBACK_TO_SAVEPOINT.xml#topic1" type="topic" format="dita"/></codeph>
                 to rollback to a savepoint. Use <codeph><xref href="RELEASE_SAVEPOINT.xml#topic1"
                         type="topic" format="dita"/></codeph> to destroy a savepoint, keeping the
-                effects of commands executed after it was established.</p><p>Savepoints can only be established when inside a transaction block.
+                effects of commands run after it was established.</p><p>Savepoints can only be established when inside a transaction block.
 There can be multiple savepoints defined within a transaction.</p></section><section id="section6"><title>Examples</title><p>To establish a savepoint and later undo the effects of all commands
-executed after it was established:</p><codeblock>BEGIN;
+run after it was established:</p><codeblock>BEGIN;
     INSERT INTO table1 VALUES (1);
     SAVEPOINT my_savepoint;
     INSERT INTO table1 VALUES (2);

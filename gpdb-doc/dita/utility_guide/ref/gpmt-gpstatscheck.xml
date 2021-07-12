@@ -5,7 +5,7 @@
     <p>This tool can be used to verify if all tables involved in a query have optimal statistics.
       When a query is running slower than expected, it is possible that outdated or invalid
       statistics on the tables involved in the query are causing the slowness. This can happen if
-      new data has been loaded into the table but <codeph>analyze</codeph> was never executed, so
+      new data has been loaded into the table but <codeph>analyze</codeph> was never run, so
       the database is using wrong statistics when generating the query plan.</p>
     <section>
       <title>Usage</title>
@@ -31,7 +31,7 @@
     </section>
     <section>
       <title>Examples</title>
-      <p>Execute the query in <codeph>query1.sql</codeph> in database <codeph>Postgres</codeph> and
+      <p>Run the query in <codeph>query1.sql</codeph> in database <codeph>Postgres</codeph> and
         check for missing stats. </p>
       <codeblock>gpmt gpstatscheck -f query1.sql -d postgres</codeblock>
       <p>If invalid statistics are detected the tool will generate a script listing the suggested

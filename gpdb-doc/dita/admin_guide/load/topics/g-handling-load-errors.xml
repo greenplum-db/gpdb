@@ -14,12 +14,11 @@
                 <codeph>SEGMENT REJECT LIMIT </codeph>to set an error threshold, specifying the
             reject limit <codeph>count</codeph> as number of <codeph>ROWS</codeph> (the default) or
             as a <codeph>PERCENT</codeph> of total rows (1-100).</p>
-        <p>The entire external table operation is aborted, and no rows are processed, if the number
-            of error rows reaches the <codeph>SEGMENT REJECT LIMIT</codeph>. The limit of error rows
-            is per-segment, not per entire operation. The operation processes all good rows, and it
-            discards and optionally logs formatting errors for erroneous rows, if the number of
-            error rows does not reach the <codeph>SEGMENT REJECT
-                LIMIT</codeph>.</p>
+        <p>The entire external table operation is cancelled, and no rows are processed, if the
+            number of error rows reaches the <codeph>SEGMENT REJECT LIMIT</codeph>. The limit of
+            error rows is per-segment, not per entire operation. The operation processes all good
+            rows, and it discards and optionally logs formatting errors for erroneous rows, if the
+            number of error rows does not reach the <codeph>SEGMENT REJECT LIMIT</codeph>.</p>
         <p>The <codeph>LOG ERRORS</codeph> clause allows you to keep error rows for further
             examination. For information about the <codeph>LOG ERRORS</codeph> clause, see the
                 <codeph>CREATE EXTERNAL TABLE</codeph> command in the <cite>Greenplum Database

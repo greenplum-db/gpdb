@@ -13,7 +13,7 @@
       transactions add contention to the database, reducing overall transaction throughput. </p>
     <p>Greenplum Database uses the PostgreSQL Multiversion Concurrency Control (MVCC) model to
       manage concurrency for heap tables. With MVCC, each query operates on a snapshot of the
-      database when the query starts. While it executes, a query cannot see changes made by other
+      database when the query starts. While it runs, a query cannot see changes made by other
       concurrent transactions. This ensures that a query sees a consistent view of the database.
       Queries that read rows can never block waiting for transactions that write rows. Conversely,
       queries that write rows cannot be blocked by transactions that read rows. This allows much
@@ -62,7 +62,7 @@
           <codeph>cmax</codeph> columns for any row with a <codeph>SELECT</codeph>
         statement:<codeblock>SELECT xmin, xmax, cmin, cmax, * FROM <varname>tablename</varname>;</codeblock></p>
       <p>Because you run the <codeph>SELECT</codeph> command on the master, the XIDs are the
-        distributed transactions IDs. If you could execute the command in an individual segment
+        distributed transactions IDs. If you could run the command in an individual segment
         database, the <codeph>xmin</codeph> and <codeph>xmax</codeph> values would be the segment's
         local XIDs.</p>
       <note>Greenplum Database distributes all of a replicated table's rows to every segment, so
@@ -77,7 +77,7 @@
       <title>Transaction ID Wraparound</title>
       <p>The MVCC model uses transaction IDs (XIDs) to determine which rows are visible at the
         beginning of a query or transaction. The XID is a 32-bit value, so a database could
-        theoretically execute over four billion transactions before the value overflows and wraps to
+        theoretically run over four billion transactions before the value overflows and wraps to
         zero. However, Greenplum Database uses <i>modulo 2<sup>32</sup></i> arithmetic with XIDs,
         which allows the transaction IDs to wrap around, much as a clock wraps at twelve o'clock.
         For any given XID, there could be about two billion past XIDs and two billion future XIDs.
@@ -115,11 +115,11 @@
             transaction. </li>
           <li><i>Non-repeatable read</i> – a row read twice in a transaction can change because
             another concurrent transaction committed changes after the transaction began. </li>
-          <li><i>Phantom read</i> – a query executed twice in the same transaction can return two
+          <li><i>Phantom read</i> – a query run twice in the same transaction can return two
             different sets of rows because another concurrent transaction added rows.</li>
         </ul></p>
       <p>The SQL standard defines four transaction isolation levels that database systems can
-        support, with the phenomena that are allowed when transactions execute concurrently for each
+        support, with the phenomena that are allowed when transactions run concurrently for each
         level. </p>
       <table frame="all" id="table_gxb_qsz_nt">
         <title>SQL Transaction Isolation Modes</title>
@@ -177,18 +177,18 @@
       <p>With <codeph>READ COMMITTED</codeph> isolation mode the values in a row retrieved twice in
         a transaction can differ if another concurrent transaction has committed changes since the
         transaction began. <codeph>READ COMMITTED</codeph> mode also permits <i>phantom reads</i>,
-        where a query executed twice in the same transaction can return two different sets of
+        where a query run twice in the same transaction can return two different sets of
         rows.</p>
       <p>The <codeph>REPEATABLE READ</codeph> isolation mode prevents non-repeatable reads and
         phantom reads, although the latter is not required by the standard. A transaction that
         attempts to modify data modified by another concurrent transaction is rolled back.
-        Applications that execute transactions in <codeph>REPEATABLE READ</codeph> mode must be
+        Applications that run transactions in <codeph>REPEATABLE READ</codeph> mode must be
         prepared to handle transactions that fail due to serialization errors. If <codeph>REPEATABLE
           READ</codeph> isolation mode is not required by the application, it is better to use
           <codeph>READ COMMITTED</codeph> mode. </p>
       <p><codeph>SERIALIZABLE</codeph> mode, which Greenplum Database does not fully support,
-        guarantees that a set of transactions executed concurrently produces the same result as if
-        the transactions executed sequentially one after the other. If <codeph>SERIALIZABLE</codeph>
+        guarantees that a set of transactions run concurrently produces the same result as if
+        the transactions ran sequentially one after the other. If <codeph>SERIALIZABLE</codeph>
         is specified, Greenplum Database falls back to <codeph>REPEATABLE READ</codeph>. The MVCC
         Snapshot Isolation (SI) model prevents dirty reads, non-repeatable reads, and phantom reads
         without expensive locking, but there are other interactions that can occur between some
@@ -227,7 +227,7 @@ COMMIT;
         space it occupied can be reused. The <codeph>VACUUM</codeph> command marks the space
         used by expired rows for reuse.</p>
       <p>When expired rows accumulate in a table, the disk files must be extended to accommodate new
-        rows. Performance suffers due to the increased disk I/O required to execute queries. This
+        rows. Performance degrades due to the increased disk I/O required to run queries. This
         condition is called <i>bloat</i> and it should be managed by regularly vacuuming tables. </p>
       <p>The <codeph>VACUUM</codeph> command (without <codeph>FULL</codeph>) can run concurrently
         with other queries. It marks the space previously used by the expired rows as free,

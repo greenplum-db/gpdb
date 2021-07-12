@@ -57,14 +57,14 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_proc.oid</entry>
             <entry colname="col4">For noninternal languages this references the language handler,
-              which is a special function that is responsible for executing all functions that are
+              which is a special function that is responsible for running all functions that are
               written in the particular language.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>laninline</codeph></entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">This references a function that is responsible for executing
+            <entry colname="col4">This references a function that is responsible for running
               inline anonymous code blocks (see the <codeph><xref
                   href="../sql_commands/DO.xml#topic1"/></codeph> command). Zero if anonymous blocks
               are not supported.</entry>

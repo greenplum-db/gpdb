@@ -17,7 +17,7 @@
     <title>Unsupported SQL Query Features</title>
     <body>
       <p>Certain query features are not supported with the default GPORCA optimizer. When an
-        unsupported query is executed, Greenplum logs this notice along with the query
+        unsupported query is run, Greenplum logs this notice along with the query
         text:<codeblock>Feature not supported by the Greenplum Query Optimizer: UTILITY command</codeblock></p>
       <p>These features are unsupported when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Prepared statements that have parameterized values.</li>
@@ -51,7 +51,7 @@
               >Configuration Parameter</xref>.</li>
           <li><cmdname>percentile_*</cmdname> window functions (ordered-set aggregate functions).</li>
           <li>Inverse distribution functions.</li>
-          <li>Queries that execute functions that are defined with the <codeph>ON MASTER</codeph> or
+          <li>Queries that run functions that are defined with the <codeph>ON MASTER</codeph> or
               <codeph>ON ALL SEGMENTS</codeph> attribute.</li>
           <li>Queries that contain UNICODE characters in metadata names, such as table names, and
             the characters are not compatible with the host system locale.</li>
@@ -78,7 +78,7 @@
             partition and distribution keys might require additional overhead. </li>
         </ul></p>
       <p>Also, enhanced functionality of the features from previous versions could result in
-        additional time required when GPORCA executes SQL statements with the features. </p>
+        additional time required when GPORCA runs SQL statements with the features. </p>
     </body>
   </topic>
 </topic>

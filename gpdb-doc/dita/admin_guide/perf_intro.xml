@@ -125,7 +125,7 @@
           identify queries or applications that need optimization.</p>
         <p>Many third-party organizations, such as the Transaction Processing Performance Council
           (TPC), provide benchmark tools for the database industry. TPC provides TPC-H, a decision
-          support system that examines large volumes of data, executes queries with a high degree of
+          support system that examines large volumes of data, runs queries with a high degree of
           complexity, and gives answers to critical business questions. For more information about
           TPC-H, go to:</p>
         <p>

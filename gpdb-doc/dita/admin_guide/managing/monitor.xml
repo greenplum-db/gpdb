@@ -279,7 +279,7 @@ Distributed by: (sale_id)
           column in a query on a replicated table.</p>
           <section>
             <title>Avoiding an Extreme Skew Warning</title>
-            <p>You may receive the following warning message while executing a query that performs a
+            <p>You may receive the following warning message while running a query that performs a
               hash join operation:</p>
             <p>
               <codeph>Extreme skew in the innerside of Hashjoin</codeph>
@@ -533,7 +533,7 @@ Distributed by: (sale_id)
       <body>
         <p>The Greenplum Database administrative schema <i>gp_toolkit</i> contains views that
           display information about Greenplum Database workfiles. Greenplum Database creates
-          workfiles on disk if it does not have sufficient memory to execute the query in memory.
+          workfiles on disk if it does not have sufficient memory to run the query in memory.
           This information can be used for troubleshooting and tuning queries. The information in
           the views can also be used to specify the values for the Greenplum Database configuration
           parameters <codeph>gp_workfile_limit_per_query</codeph> and

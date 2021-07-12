@@ -5,12 +5,12 @@
 Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TRIGGER <varname>name</varname> {BEFORE | AFTER} {<varname>event</varname> [OR ...]}
        ON <varname>table</varname> [ FOR [EACH] {ROW | STATEMENT} ]
        EXECUTE PROCEDURE <varname>funcname</varname> ( <varname>arguments</varname> )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TRIGGER</codeph> creates a new trigger. The trigger will
-be associated with the specified table and will execute the specified
+be associated with the specified table and will run the specified
 function when certain events occur. </p><p>Due to the distributed nature of a Greenplum Database system, the
 use of triggers is very limited in Greenplum Database. The function used
 in the trigger must be <codeph>IMMUTABLE</codeph>, meaning it cannot
 use information not directly present in its argument list. The function
-specified in the trigger also cannot execute any SQL or modify distributed
+specified in the trigger also cannot run any SQL or modify distributed
 database objects in any way. Given that triggers are most often used
 to alter tables (for example, update these other rows when this row is
 updated), these limitations offer very little practical use of triggers
@@ -33,12 +33,12 @@ for every row affected by the trigger event, or just once per SQL statement.
 If neither is specified, <codeph>FOR EACH STATEMENT</codeph> is the default.
 A trigger that is marked <codeph>FOR EACH ROW</codeph> is called once
 for every row that the operation modifies. In contrast, a trigger that
-is marked <codeph>FOR EACH STATEMENT</codeph> only executes once for
+is marked <codeph>FOR EACH STATEMENT</codeph> only runs once for
 any given operation, regardless of how many rows it modifies.</pd></plentry><plentry><pt><varname>funcname</varname></pt><pd>A user-supplied function that is declared as <codeph>IMMUTABLE</codeph>,
 taking no arguments, and returning type <codeph>trigger</codeph>, which
-is executed when the trigger fires. This function must not execute SQL
+is run when the trigger fires. This function must not run SQL
 or modify the database in any way. </pd></plentry><plentry><pt><varname>arguments</varname></pt><pd>An optional comma-separated list of arguments to be provided to the
-function when the trigger is executed. The arguments are literal string
+function when the trigger is run. The arguments are literal string
 constants. Simple names and numeric constants may be written here, too,
 but they will all be converted to strings. Please check the description
 of the implementation language of the trigger function about how the
@@ -63,7 +63,7 @@ is handled in a language-specific way.</li><li id="cg152852">Greenplum Database 
 for the triggered action. The standard allows the execution of a number
 of other SQL commands, such as <codeph>CREATE TABLE</codeph> as the triggered
 action. This limitation is not hard to work around by creating a user-defined
-function that executes the desired commands.</li><li id="cg152865">SQL specifies that multiple triggers should be fired in time-of-creation
+function that runs the desired commands.</li><li id="cg152865">SQL specifies that multiple triggers should be fired in time-of-creation
 order. Greenplum Database uses name order, which was judged to be more
 convenient. </li><li id="cg153794">SQL specifies that <codeph>BEFORE DELETE</codeph> triggers on cascaded
 deletes fire after the cascaded <codeph>DELETE</codeph> completes. The

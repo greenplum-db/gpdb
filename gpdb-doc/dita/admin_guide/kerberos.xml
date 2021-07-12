@@ -191,7 +191,7 @@ Valid starting       Expires              Service principal
                 <codeph>klist</codeph> to fail due to version conflicts. The
               solution is to run Kerberos utilities before you source the
                 <codeph>greenplum-db_path.sh</codeph> file or temporarily unset
-              the <codeph>LD_LIBRARY_PATH</codeph> variable when you execute
+              the <codeph>LD_LIBRARY_PATH</codeph> variable when you run
               Kerberos utilities, as shown in the example.</note>         
         </li>
         <li id="nr166158">As a test, log in to the postgres database with the

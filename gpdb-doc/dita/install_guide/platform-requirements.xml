@@ -126,10 +126,14 @@
         <note type="important">SSL <ph otherprops="pivotal">is supported </ph><ph
             otherprops="oss-only">can be used </ph>only on the Greenplum Database master host
           system. It cannot be used on the segment host systems.</note>
-        <note type="important">For all Greenplum Database host systems, SELinux must be disabled.
-          You should also disable firewall software, although firewall software can be enabled if it
-          is required for security purposes. See <xref href="prep_os.xml#topic_sqj_lt1_nfb"
-            format="dita"/>.</note>
+        <note type="important">For all Greenplum Database host systems, if SELinux is enabled in
+            <codeph>Enforcing</codeph> mode then the Greenplum process and users can operate
+          successfully in the default <codeph>Unconfined</codeph> context. If increased confinement
+          is required, then you must configure SELinux contexts, policies, and domains based on your
+          security requirements, and test your configuration to ensure there is no functionality or
+          performance impact to Greenplum Database. Similarly, you should either disable or
+          configure firewall software as needed to allow communication between Greenplum hosts. See
+            <xref href="prep_os.xml#topic_sqj_lt1_nfb" format="dita"/>.</note>
       </body>
     </topic>
     <topic id="topic_xbl_mkx_zgb">
@@ -443,12 +447,12 @@
             <li>Greenplum Informatica Connector v1.0.5 - The Tanzu Greenplum Connector for
               Informatica supports high speed data transfer from an Informatica PowerCenter cluster
               to a Tanzu Greenplum cluster for batch and streaming ETL operations.</li>
-            <li>Progress DataDirect JDBC Drivers v5.1.4.000223 - The Progress DataDirect JDBC
-              drivers are compliant with the Type 4 architecture, but provide advanced features that
-              define them as Type 5 drivers.</li>
-            <li>Progress DataDirect ODBC Drivers v7.1.6 (07.16.0389) - The Progress DataDirect ODBC
-              drivers enable third party applications to connect via a common interface to the
-              Tanzu Greenplum system.</li>
+            <li>Progress DataDirect JDBC Drivers v5.1.4+275, v6.0.0+181 - The Progress DataDirect
+              JDBC drivers are compliant with the Type 4 architecture, but provide advanced features
+              that define them as Type 5 drivers.</li>
+            <li>Progress DataDirect ODBC Drivers v7.1.6+7.16.389 - The Progress DataDirect ODBC
+              drivers enable third party applications to connect via a common interface to the Tanzu
+              Greenplum system.</li>
             <li>R2B X-LOG v5.x and v6.x - Real-time data replication solution that achieves
               high-speed database replication through the use of Redo Log Capturing method.</li>
             <!--            <li>Gemfire-Greenplum Connector - The Pivotal Gemfire-Greenplum Connector supports the

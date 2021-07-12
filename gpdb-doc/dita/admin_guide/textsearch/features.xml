@@ -298,7 +298,7 @@ CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
         OUT <i>nentry</i> integer) returns setof record</codeblock>
       <p><codeph><i>sqlquery</i></codeph> is a text value containing an SQL
         query which must return a single <codeph>tsvector</codeph> column.
-          <codeph>ts_stat</codeph> executes the query and returns statistics
+          <codeph>ts_stat</codeph> runs the query and returns statistics
         about each distinct lexeme (word) contained in the
           <codeph>tsvector</codeph> data. The columns returned are</p>
       <ul id="ul_rwg_ml5_kfb">

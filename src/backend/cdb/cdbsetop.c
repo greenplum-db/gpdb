@@ -296,7 +296,7 @@ copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 Motion *
 make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
-	return make_motion_gather(root, subplan, sortPathKeys);
+	return make_motion_gather(root, subplan, sortPathKeys, CdbLocusType_Entry);
 }
 
 /*
@@ -308,7 +308,7 @@ make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 Motion *
 make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
-	return make_motion_gather(root, subplan, sortPathKeys);
+	return make_motion_gather(root, subplan, sortPathKeys, CdbLocusType_SingleQE);
 }
 
 /*
@@ -318,7 +318,7 @@ make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
  *      subplan.
  */
 Motion *
-make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
+make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys, CdbLocusType targetLocus)
 {
 	Motion	   *motion;
 
@@ -350,14 +350,15 @@ make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 										  sort->sortOperators,
 										  sort->collations,sort->nullsFirst,
 										  false,
-										  subplan->flow->numsegments);
+										  subplan->flow->numsegments,
+										  targetLocus);
 
 		/* throw away the Sort */
 		pfree(sort);
 	}
 	else
 	{
-		motion = make_union_motion(subplan, false, subplan->flow->numsegments);
+		motion = make_union_motion(subplan, false, subplan->flow->numsegments, targetLocus);
 	}
 
 	return motion;
@@ -415,7 +416,7 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 		 * produce a different plan, with Sorts in the segments, and an
 		 * order-preserving gather on the top.)
 		 */
-		return make_motion_gather(root, subplan, NIL);
+		return make_motion_gather(root, subplan, NIL, CdbLocusType_SingleQE);
 	}
 }
 

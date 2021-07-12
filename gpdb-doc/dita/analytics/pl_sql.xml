@@ -83,9 +83,9 @@ END [ label ];</codeblock>
             <codeph>END</codeph> keywords for grouping statements in PL/pgSQL with the database
           commands for transaction control. The PL/pgSQL <codeph>BEGIN</codeph> and
             <codeph>END</codeph> keywords are only for grouping; they do not start or end a
-          transaction. Functions are always executed within a transaction established by an outer
+          transaction. Functions are always run within a transaction established by an outer
           query — they cannot start or commit that transaction, since there would be no context for
-          them to execute in. However, a PL/pgSQL block that contains an <codeph>EXCEPTION</codeph>
+          them to run in. However, a PL/pgSQL block that contains an <codeph>EXCEPTION</codeph>
           clause effectively forms a subtransaction that can be rolled back without affecting the
           outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the
           PostgreSQL documentation on trapping errors at <xref
@@ -130,9 +130,9 @@ END;
 $$ LANGUAGE plpgsql;</codeblock>
       </body>
       <topic id="topic5" xml:lang="en">
-        <title>Executing SQL Commands</title>
+        <title>Running SQL Commands</title>
         <body>
-          <p>You can execute SQL commands with PL/pgSQL statements such as <codeph>EXECUTE</codeph>,
+          <p>You can run SQL commands with PL/pgSQL statements such as <codeph>EXECUTE</codeph>,
               <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about
             the PL/pgSQL statements, see <xref
               href="https://www.postgresql.org/docs/9.4/plpgsql-statements.html"
@@ -149,7 +149,7 @@ $$ LANGUAGE plpgsql;</codeblock>
     <body>
         <p>A PL/pgSQL function’s volatility classification has implications on how Greenplum Database caches plans that reference the function.  Refer to <xref href="../admin_guide/query/topics/functions-operators.xml#topic281">Function Volatility and Plan Caching</xref> in the <cite>Greenplum Database Administrator
               Guide</cite> for information on plan caching considerations for Greenplum Database function volatility categories.</p>
-        <p>When a PL/pgSQL function executes for the first time in a database session, the PL/pgSQL interpreter parses the function’s SQL expressions and commands. The interpreter creates a prepared execution plan as each expression and SQL command is first executed in the function. The PL/pgSQL interpreter reuses the execution plan for a specific expression and SQL command for the life of the database connection. While this reuse substantially reduces the total amount of time required to parse and generate plans, errors in a specific expression or command cannot be detected until run time when that part of the function is executed.</p>
+        <p>When a PL/pgSQL function runs for the first time in a database session, the PL/pgSQL interpreter parses the function’s SQL expressions and commands. The interpreter creates a prepared execution plan as each expression and SQL command is first run in the function. The PL/pgSQL interpreter reuses the execution plan for a specific expression and SQL command for the life of the database connection. While this reuse substantially reduces the total amount of time required to parse and generate plans, errors in a specific expression or command cannot be detected until run time when that part of the function is run.</p>
         <p>Greenplum Database will automatically re-plan a saved query plan if there is any schema change to any relation used in the query, or if any user-defined function used in the query is redefined. This makes the re-use of a prepared plan transparent in most cases.</p>
         <p>The SQL commands that you use in a PL/pgSQL function must refer to the same tables and columns on every execution. You cannot use a parameter as the name of a table or a column in an SQL command.</p>
         <p>PL/pgSQL caches a separate query plan for each combination of actual argument types in which you invoke a polymorphic function to ensure that data type differences do not cause unexpected failures.</p>
@@ -366,7 +366,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;</codeblock>
         </p>
-        <p>Execute  <codeph>add_two_values()</codeph> providing integer input values:</p>
+        <p>Run  <codeph>add_two_values()</codeph> providing integer input values:</p>
         <p>
           <codeblock>SELECT add_two_values(1, 2);
  add_two_values
@@ -389,7 +389,7 @@ $$ LANGUAGE plpgsql;</codeblock>
   <topic id="topic_isw_3sx_cz">
       <title>Example: Anonymous Block</title>
       <body>
-        <p>This example executes the statements in the <codeph>t1_calc()</codeph> function from a previous example as an anonymous block using the
+        <p>This example runs the statements in the <codeph>t1_calc()</codeph> function from a previous example as an anonymous block using the
             <codeph>DO</codeph> command. In the example, the anonymous block retrieves the input
           value from a temporary
           table.<codeblock>CREATE TEMP TABLE list AS VALUES ('test1') DISTRIBUTED RANDOMLY;

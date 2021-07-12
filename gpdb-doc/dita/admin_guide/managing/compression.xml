@@ -25,7 +25,7 @@
           about external tables, see <codeph><xref
               href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml" format="dita"
           /></codeph>.</li>
-        <li>Workfiles (temporary spill files that are created when executing a query that requires
+        <li>Workfiles (temporary spill files that are created when running a query that requires
           more memory than it is allocated) can be compressed. See the server configuration
           parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#gp_workfile_compression"

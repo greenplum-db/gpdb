@@ -177,7 +177,7 @@ sdw3-1</codeblock>
                         directories specified with <codeph>-d</codeph>. <varname>file_size</varname>
                         should equal two times total RAM on the host. If not specified, the default
                         is calculated at two times the total RAM on the host where
-                            <codeph>gpcheckperf</codeph> is executed. This ensures that the test is
+                            <codeph>gpcheckperf</codeph> is run. This ensures that the test is
                         truly testing disk I/O and not using the memory cache. You can specify
                         sizing in KB, MB, or GB.</pd>
                 </plentry>

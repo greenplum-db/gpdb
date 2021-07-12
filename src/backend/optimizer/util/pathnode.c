@@ -1344,10 +1344,17 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	ListCell   *l;
 	CdbLocusType targetlocustype;
 	CdbPathLocus targetlocus;
-	int			numsegments;
+	int			 numsegments;
 	List	   *subpaths;
 	List	  **subpaths_out;
 	List	   *new_subpaths;
+
+	/*
+	 * Init max_numsegments to slient compiler.
+	 * This variable is only used when result
+	 * locus is partitioned.
+	 */
+	int			max_numsegments = -1;
 
 	if (IsA(pathnode, AppendPath))
 		subpaths_out = &((AppendPath *) pathnode)->subpaths;
@@ -1374,6 +1381,9 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	 * figured out later. We treat also all partitioned types the same for now,
 	 * using Strewn to represent them all, and figure out later if we can mark
 	 * it hashed, or if have to leave it strewn.
+	 *
+	 * We will record the max number of segments of each subpath here for later
+	 * use.
 	 */
 	static const struct
 	{
@@ -1437,8 +1447,13 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		if (l == list_head(subpaths))
 		{
 			targetlocustype = subtype;
+			max_numsegments = CdbPathLocus_NumSegments(subpath->locus);
 			continue;
 		}
+
+		max_numsegments = Max(max_numsegments,
+							  CdbPathLocus_NumSegments(subpath->locus));
+
 		for (i = 0; i < lengthof(append_locus_compatibility_table); i++)
 		{
 			if ((append_locus_compatibility_table[i].a == targetlocustype &&
@@ -1540,10 +1555,11 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 				 * subpaths have different distributed policy, mark it as random
 				 * distributed and set the numsegments to the maximum of all
 				 * subpaths to not missing any tuples.
+				 *
+				 * max_numsegments is computed in the first deduction loop,
+				 * even here we use projectdlocus, the numsegments never change.
 				 */
-				CdbPathLocus_MakeStrewn(&targetlocus,
-										Max(CdbPathLocus_NumSegments(targetlocus),
-											CdbPathLocus_NumSegments(projectedlocus)));
+				CdbPathLocus_MakeStrewn(&targetlocus, max_numsegments);
 				break;
 			}
 		}

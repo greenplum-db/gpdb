@@ -125,11 +125,11 @@ Segment 12 - gpfdist 4</screen></p>
       <p>Beware of using <codeph>gpload</codeph> as it can cause catalog bloat by creating and
         dropping external tables. Use <codeph>gpfdist</codeph> instead, since it provides the best
         performance. </p>
-      <p><codeph>gpload</codeph> executes a load using a specification defined in a YAML-formatted
+      <p><codeph>gpload</codeph> runs a load using a specification defined in a YAML-formatted
         control file. It performs the following operations:<ul id="ul_zrl_dnp_y4">
           <li>Invokes <codeph>gpfdist</codeph> processes</li>
           <li>Creates a temporary external table definition based on the source data defined</li>
-          <li>Executes an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
+          <li>Runs an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
               <codeph>MERGE</codeph> operation to load the source data into the target table in the
             database</li>
           <li>Drops the temporary external table</li>
@@ -163,8 +163,8 @@ WHERE relname='myexttable';</codeblock></li>
           Greenplum Database.</li>
         <li>Use the <codeph>SEGMENT REJECT LIMIT</codeph> clause of the <codeph>COPY</codeph>
           statement to set a limit for the number or percentage of rows that can have errors before
-          the <codeph>COPY FROM</codeph> command is aborted. The reject limit is per segment; when
-          any one segment exceeds the limit, the command is aborted and no rows are added. Use the
+          the <codeph>COPY FROM</codeph> command is cancelled. The reject limit is per segment; when
+          any one segment exceeds the limit, the command is cancelled and no rows are added. Use the
             <codeph>LOG ERRORS</codeph> clause to save error rows. If a row has errors in the
           formatting&#8212;for example missing or extra values, or incorrect data
           types&#8212;Greenplum Database stores the error information and row internally. Use the
@@ -175,7 +175,8 @@ WHERE relname='myexttable';</codeblock></li>
           system catalogs, and <codeph>ANALYZE</codeph> on all tables. It is not necessary to run
             <codeph>VACUUM</codeph> on append-optimized tables. If the table is partitioned, you can
           vacuum and analyze just the partitions affected by the data load. These steps clean up any
-          rows from aborted loads, deletes, or updates and update statistics for the table.</li>
+          rows from prematurely ended loads, deletes, or updates and update statistics for the
+          table.</li>
         <li>Recheck for segment skew in the table after loading a large amount of data. You can use
           a query like the following to check for
           skew:<codeblock outputclass="language-sql">SELECT gp_segment_id, count(*) 

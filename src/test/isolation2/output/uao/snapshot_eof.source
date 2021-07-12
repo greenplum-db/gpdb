@@ -1,0 +1,410 @@
+-- @Description Tests segment file logical EOF.
+--
+
+-- start_matchsubs
+--
+-- # create a match/subs expression
+--
+-- m/ERROR:.*server closed the connection unexpectedly/
+-- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
+-- end_matchsubs
+1:CREATE extension if NOT EXISTS gp_inject_fault;
+CREATE
+
+--
+-- Check that VACUUM truncate uses the latest committed segment eof.
+--
+-- Configure fault injection.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+-- Create segment file that requires eof truncate.
+1:SET gp_default_storage_options = "appendonly=true, orientation=@orientation@";
+SET
+1:CREATE TABLE truncate_eof (a int) DISTRIBUTED BY (a);
+CREATE
+1:BEGIN;
+BEGIN
+1:INSERT INTO truncate_eof SELECT generate_series(1, 10);
+INSERT 10
+1:ROLLBACK;
+ROLLBACK
+-- Pause VACUUM after an appendonly metadata snapshot has been acquired
+-- but before segment file has been locked.
+2&:VACUUM truncate_eof;  <waiting ...>
+-- Commit new data in two parallel sessions and move eof.
+-- start_ignore
+1&:COPY truncate_eof FROM PROGRAM 'printf "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"';  <waiting ...>
+-- end_ignore
+3:COPY truncate_eof FROM PROGRAM 'printf "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"';
+COPY 10
+-- Resume VACUUM.
+-- start_ignore
+3:SELECT gp_inject_fault('ao_column_truncate_to_eof', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1<:  <... completed>
+COPY 10
+-- end_ignore
+2<:  <... completed>
+VACUUM
+-- Validate that segment file is not corrupted.
+3:SELECT count(*) FROM truncate_eof;
+ count 
+-------
+ 20    
+(1 row)
+-- Cleanup.
+-- start_ignore
+3:SELECT gp_inject_fault('ao_column_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+3:DROP TABLE truncate_eof;
+DROP
+3:RESET gp_default_storage_options;
+RESET
+
+--
+-- Check that VACUUM truncate uses the latest committed segment eof.
+-- Test with VACUUM in utility mode.
+--
+-- Configure fault injection.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+-- Create segment file that requires eof truncate.
+1:SET gp_default_storage_options = "appendonly=true, orientation=@orientation@";
+SET
+1:CREATE TABLE truncate_eof (a int) DISTRIBUTED RANDOMLY;
+CREATE
+1:INSERT INTO truncate_eof SELECT generate_series(1, 10);
+INSERT 10
+1:BEGIN;
+BEGIN
+1:INSERT INTO truncate_eof SELECT generate_series(1, 30);
+INSERT 30
+1:ROLLBACK;
+ROLLBACK
+-- Pause VACUUM after an appendonly metadata snapshot has been acquired
+-- but before segment file has been locked.
+0U&:VACUUM truncate_eof;  <waiting ...>
+-- Commit new data and move eof.
+1:INSERT INTO truncate_eof SELECT generate_series(1, 10);
+INSERT 10
+-- Resume VACUUM.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+0U<:  <... completed>
+VACUUM
+-- Validate that segment file is not corrupted.
+1:SELECT count(*) FROM truncate_eof;
+ count 
+-------
+ 20    
+(1 row)
+-- Cleanup.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+1:DROP TABLE truncate_eof;
+DROP
+1:RESET gp_default_storage_options;
+RESET
+
+--
+-- Check that VACUUM compaction uses the latest committed segment eof.
+--
+-- Configure fault injection.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_compact', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_compact', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+-- Create segment file that requires compaction.
+1:SET gp_appendonly_compaction_threshold = 10;
+SET
+1:SET gp_default_storage_options = "appendonly=true, orientation=@orientation@";
+SET
+1:CREATE TABLE compact (a int);
+CREATE
+1:INSERT INTO compact SELECT generate_series(1, 100);
+INSERT 100
+1:DELETE FROM compact WHERE a > 1;
+DELETE 99
+1:ANALYZE compact;
+ANALYZE
+-- Pause VACUUM after an appendonly metadata snapshot has been acquired
+-- but before segment file has been locked.
+0U&:VACUUM compact;  <waiting ...>
+-- Commit new data and move eof.
+1:INSERT INTO compact SELECT generate_series(1, 100);
+INSERT 100
+-- Resume VACUUM.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_compact', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+0U<:  <... completed>
+VACUUM
+-- Validate that a new segment file has a correct amount of rows.
+1:SELECT count(*) FROM compact;
+ count 
+-------
+ 101   
+(1 row)
+-- Cleanup.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_compact', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+1:DROP TABLE compact;
+DROP
+1:RESET gp_appendonly_compaction_threshold;
+RESET
+1:RESET gp_default_storage_options;
+RESET
+
+
+--
+-- Check that COPY uses the latest committed segment eof.
+--
+-- Isolation framework doesn't allow us to emulate concurrent utility
+-- mode sessions. So we use 'reserved_segno' fault to make COPY on QD
+-- use the same 0 segment as utility mode does.
+--
+-- Configure fault injection.
+-- start_ignore
+1:SELECT gp_inject_fault('reserved_segno', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_1', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_2', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('reserved_segno', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_1', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_2', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+-- Emulate concurrent segment file modification with COPY command.
+1:SET gp_default_storage_options = "appendonly=true, orientation=@orientation@";
+SET
+1:CREATE TABLE insert_eof(a int) DISTRIBUTED RANDOMLY;
+CREATE
+0U&:COPY insert_eof FROM PROGRAM 'printf "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"';  <waiting ...>
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_1', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+-- end_ignore
+1:COPY insert_eof FROM PROGRAM 'printf "1\n2\n3\n4\n5"';
+COPY 5
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_2', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+-- end_ignore
+0U<:  <... completed>
+COPY 10
+-- Validate that segment file has a correct amount of rows.
+1:SELECT count(*) FROM insert_eof;
+ count 
+-------
+ 15    
+(1 row)
+-- Cleanup.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_insert_init_2', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+1:SELECT gp_inject_fault('reserved_segno', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+-- end_ignore
+1:DROP TABLE insert_eof;
+DROP
+1:RESET gp_default_storage_options;
+RESET
+
+--
+-- Check that we don't have anomalies on concurrent segment file
+-- modifications during prepared phase.
+--
+-- Configure fault injection.
+-- start_ignore
+1:SELECT gp_inject_fault('after_commit_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+-- Emulate concurrent segment file modification.
+1:SET gp_default_storage_options = "appendonly=true, orientation=@orientation@";
+SET
+1:CREATE TABLE insert_eof(a int) DISTRIBUTED RANDOMLY;
+CREATE
+-- start_ignore
+1:SELECT gp_inject_fault('after_commit_prepared', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+1&:INSERT INTO insert_eof SELECT generate_series(1, 10);  <waiting ...>
+-- Validate that segment file has a correct amount of rows.
+2:SELECT count(*) FROM insert_eof;
+ count 
+-------
+ 0     
+(1 row)
+-- start_ignore
+2:SELECT gp_inject_fault('after_commit_prepared', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+1<:  <... completed>
+INSERT 10
+-- Cleanup.
+-- start_ignore
+1:SELECT gp_inject_fault('after_commit_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:               
+(3 rows)
+-- end_ignore
+1:DROP TABLE insert_eof;
+DROP
+1:RESET gp_default_storage_options;
+RESET

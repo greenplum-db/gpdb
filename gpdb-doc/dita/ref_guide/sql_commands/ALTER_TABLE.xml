@@ -309,7 +309,7 @@ where <varname>action</varname> is one of:
                                                 name is provided then the index will be renamed to
                                                 match the constraint name. Otherwise the constraint
                                                 will be named the same as the index.</p><p>After
-                                                this command is executed, the index is "owned" by
+                                                this command is run, the index is "owned" by
                                                 the constraint, in the same way as if the index had
                                                 been built by a regular <codeph>ADD PRIMARY
                                                   KEY</codeph> or <codeph>ADD UNIQUE</codeph>
@@ -322,10 +322,10 @@ where <varname>action</varname> is one of:
                                         issued instead.</li>
                                 <li id="ay137055"><b>DISABLE/ENABLE TRIGGER</b> — Disables or
                                         enables trigger(s) belonging to the table. A disabled
-                                        trigger is still known to the system, but is not executed
+                                        trigger is still known to the system, but is not run 
                                         when its triggering event occurs. For a deferred trigger,
                                         the enable status is checked when the event occurs, not when
-                                        the trigger function is actually executed. One may disable
+                                        the trigger function is actually run. One may disable
                                         or enable a single trigger specified by name, or all
                                         triggers on the table, or only user-created triggers.
                                         Disabling or enabling constraint triggers requires superuser
@@ -814,7 +814,7 @@ where <varname>action</varname> is one of:
                                                   child partitions of the partitioned table.
                                                   Otherwise, queries against the partitioned table
                                                   with the exchanged default partition that are
-                                                  executed by GPORCA might return incorrect
+                                                  run by GPORCA might return incorrect
                                                   results.</note></pd>
                                         <pd><b>WITH TABLE</b>
                                                 <varname>table_name</varname> - The name of the
@@ -1023,7 +1023,7 @@ where <varname>action</varname> is one of:
                                 system <codeph>oid</codeph> column, however, the table is rewritten
                                 immediately.</p>
                         <p>To force immediate reclamation of space occupied by a dropped column, you
-                                can execute one of the forms of <codeph>ALTER TABLE</codeph> that
+                                can run one of the forms of <codeph>ALTER TABLE</codeph> that
                                 performs a rewrite of the whole table. This results in
                                 reconstructing each row with the dropped column replaced by a null
                                 value. </p>
@@ -1096,9 +1096,9 @@ where <varname>action</varname> is one of:
                         <p>Rename an existing table:</p>
                         <codeblock>ALTER TABLE distributors RENAME TO suppliers;</codeblock>
                         <p>Add a not-null constraint to a column:</p>
-                        <p>To rename an existing constraint:</p>
-                        <codeblock>ALTER TABLE distributors RENAME CONSTRAINT zipchk TO zip_check;</codeblock>
                         <codeblock>ALTER TABLE distributors ALTER COLUMN street SET NOT NULL;</codeblock>
+                        <p>Rename an existing constraint:</p>
+                        <codeblock>ALTER TABLE distributors RENAME CONSTRAINT zipchk TO zip_check;</codeblock>
                         <p>Add a check constraint to a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>

@@ -4,7 +4,7 @@
 <topic id="topic72">
    <title>Disabling EXECUTE for Web or Writable External Tables</title>
    <body>
-      <p>There is a security risk associated with allowing external tables to execute OS commands or
+      <p>There is a security risk associated with allowing external tables to run OS commands or
          scripts. To disable the use of <codeph>EXECUTE</codeph> in web and writable external table
          definitions, set the <codeph>gp_external_enable_exec</codeph> server configuration
          parameter to off in your master <filepath>postgresql.conf</filepath> file:</p>

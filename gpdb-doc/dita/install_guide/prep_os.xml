@@ -11,11 +11,11 @@
     <ol>
       <li id="ji162035">Make sure your host systems meet the requirements described in <xref
           href="platform-requirements.xml"/>.</li>
-      <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable SELinux and firewall
+      <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable or configure SELinux.</xref></li>
+      <li><xref href="#topic_et2_y22_4nb" format="dita">Disable or configure firewall
           software.</xref></li>
-      <li id="ji162039">
-        <xref href="#topic3" type="topic" format="dita">Set the required operating system
-          parameters.</xref>
+      <li id="ji162039"><xref href="#topic3" type="topic" format="dita">Set the required operating
+          system parameters.</xref>
       </li>
       <li><xref href="#topic_qst_s5t_wy" type="topic" format="dita">Synchronize system
           clocks.</xref></li>
@@ -59,10 +59,12 @@
     </note>
   </body>
   <topic id="topic_sqj_lt1_nfb">
-    <title>Disabling SELinux and Firewall Software</title>
+    <title>Disable or Configure SELinux</title>
     <body>
-      <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must be disabled.
-        Follow these steps:<ol id="ol_ysm_5t1_nfb">
+      <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be
+          <codeph>Disabled</codeph> or configured to allow unconfined access to Greenplum processes,
+        directories, and the gpadmin user. </p>
+      <p>If you choose to disable SELinux:<ol id="ol_ysm_5t1_nfb">
           <li>As the root user, check the status of
             SELinux:<codeblock># sestatus
 SELinuxstatus: disabled</codeblock></li>
@@ -78,18 +80,30 @@ SELinuxstatus: disabled</codeblock></li>
           <li>Reboot the system to apply any changes that you made and verify that SELinux is
             disabled.</li>
         </ol></p>
-      <p>For information about disabling SELinux, see the SELinux documentation.</p>
+      <p>If you choose to enable SELinux in <codeph>Enforcing</codeph> mode, then Greenplum
+        processes and users can operate successfully in the default <codeph>Unconfined</codeph>
+        context. If you require increased SELinux confinement for Greenplum processes and users, you
+        must test your configuration to ensure that there are no functionality or performance
+        impacts to Greenplum Database. See the <xref
+          href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/selinux_users_and_administrators_guide/index"
+          format="html" scope="external">SELinux User's and Administrator's Guide</xref> for
+        detailed information about configuring SELinux and SELinux users.</p>
+    </body>
+  </topic>
+  <topic id="topic_et2_y22_4nb">
+    <title>Disable or Configure Firewall Software</title>
+    <body>
       <p>You should also disable firewall software such as <codeph>iptables</codeph> (on systems
         such as RHEL 6.x and CentOS 6.x ), <codeph>firewalld</codeph> (on systems such as RHEL 7.x
-        and CentOS 7.x), or <codeph>ufw</codeph> (on Ubuntu systems, disabled by default). </p>
-      <p>If you decide to enable <codeph>iptables</codeph> with Greenplum Database for security
-        purposes, see <xref href="enable_iptables.xml#topic1" format="dita"/>.</p>
-      <p>Follow these steps to disable <codeph>iptables</codeph>: <ol id="ul_wrw_3v1_nfb">
+        and CentOS 7.x), or <codeph>ufw</codeph> (on Ubuntu systems, disabled by default). If
+        firewall software is not disabled, you must instead configure your software to allow
+        required communication between Greenplum hosts.</p>
+      <p>To disable <codeph>iptables</codeph>: <ol id="ul_wrw_3v1_nfb">
           <li>As the root user, check the status of
               <codeph>iptables</codeph>:<codeblock># /sbin/chkconfig --list iptables</codeblock><p>If
                 <codeph>iptables</codeph> is disabled, the command output
             is:</p><codeblock>iptables 0:off 1:off 2:off 3:off 4:off 5:off 6:off</codeblock></li>
-          <li>If necessary, execute this command as root to disable
+          <li>If necessary, run this command as root to disable
               <codeph>iptables</codeph>:<codeblock>/sbin/chkconfig iptables off</codeblock><p>You
               will need to reboot your system after applying the change.</p></li>
           <li>For systems with <codeph>firewalld</codeph>, check the status of
@@ -99,12 +113,15 @@ SELinuxstatus: disabled</codeblock></li>
             is:</p><codeblock>* firewalld.service - firewalld - dynamic firewall daemon
    Loaded: loaded (/usr/lib/systemd/system/firewalld.service; disabled; vendor preset: enabled)
    Active: inactive (dead)</codeblock></li>
-          <li>If necessary, execute these commands as root to disable
+          <li>If necessary, run these commands as root to disable
             <codeph>firewalld</codeph>:<codeblock># systemctl stop firewalld.service
 # systemctl disable firewalld.service</codeblock></li>
         </ol></p>
-      <p>For more information about configuring your firewall software, see the documentation for
-        the firewall or your operating system.</p>
+      <p>If you decide to enable <codeph>iptables</codeph> with Greenplum Database for security
+        purposes, see <xref href="enable_iptables.xml#topic1" format="dita"/> for important
+        considerations and example configurations.</p>
+      <p>See the documentation for the firewall or your operating system for additional
+        information.</p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -290,7 +307,7 @@ vm.dirty_ratio = 10</codeblock></p>
         limits by reading the values from the <codeph>limits.conf</codeph> file and then from the
         override file. For information about PAM and user limits, see the documentation on PAM and
           <codeph>pam_limits</codeph>.</p>
-      <p>Execute the <codeph>ulimit -u</codeph> command on each segment host to display the maximum
+      <p>Run the <codeph>ulimit -u</codeph> command on each segment host to display the maximum
         number of processes that are available to each user. Validate that the return value is
         131072.</p>
     </section>
@@ -391,7 +408,7 @@ vm.dirty_ratio = 10</codeblock></p>
         utility <codeph>grubby</codeph>. This command adds the parameter when run as
         root.<codeblock># grubby --update-kernel=ALL --args="transparent_hugepage=never"</codeblock></p>
       <p>After adding the parameter, reboot the system.</p>
-      <p>For Ubuntu systems, install the <codeph>hugepages</codeph> package and execute this command
+      <p>For Ubuntu systems, install the <codeph>hugepages</codeph> package and run this command
         as root:<codeblock># hugeadm --thp-never</codeblock></p>
       <p>This <cmdname>cat</cmdname> command checks the state of THP. The output indicates that THP
         is

@@ -35,6 +35,10 @@
   SEQUENCE <varname>object_name</varname> |
   SERVER <varname>object_name</varname> |
   TABLESPACE <varname>object_name</varname> |
+  TEXT SEARCH CONFIGURATION <varname>object_name</varname> |
+  TEXT SEARCH DICTIONARY <varname>object_name</varname> |
+  TEXT SEARCH PARSER <varname>object_name</varname> |
+  TEXT SEARCH TEMPLATE <varname>object_name</varname> |
   TRIGGER <varname>trigger_name</varname> ON <varname>table_name</varname> |
   TYPE <varname>object_name</varname> |
   VIEW <varname>object_name</varname> } 

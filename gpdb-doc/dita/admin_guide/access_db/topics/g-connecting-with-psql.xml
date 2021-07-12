@@ -24,7 +24,7 @@
          <codeblock>gpdatabase=&gt;</codeblock>
       </p>
       <p>At the prompt, you may type in SQL commands. A SQL command must end with a
-            <codeph>;</codeph> (semicolon) in order to be sent to the server and executed. For
+            <codeph>;</codeph> (semicolon) in order to be sent to the server and run. For
          example:</p>
       <p>
          <codeblock>=&gt; SELECT * FROM mytable;</codeblock>

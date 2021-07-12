@@ -110,7 +110,7 @@
           <pt> --debug</pt>
           <pd>If specified, sets the logging level to debug. During command execution, debug level
             information is written to the log file and to the command line. The information includes
-            the commands executed by the utility and the duration of each <codeph>ANALYZE</codeph>
+            the commands run by the utility and the duration of each <codeph>ANALYZE</codeph>
             operation.</pd>
         </plentry>
         <plentry>

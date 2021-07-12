@@ -75,7 +75,7 @@
               specify.</li>
           </ul></p>
         <note type="important">If a segment instance hostname is bound to a different IP address at
-          runtime, you must execute <codeph>gpstop -u</codeph> to re-load the
+          runtime, you must run <codeph>gpstop -u</codeph> to re-load the
             <codeph>gp_interconnect_proxy_addresses</codeph> value.</note>
         <p>This is an example PL/Python function that displays or sets the segment instance proxy
           port values for the <codeph>gp_interconnect_proxy_addresses</codeph> parameter. To create

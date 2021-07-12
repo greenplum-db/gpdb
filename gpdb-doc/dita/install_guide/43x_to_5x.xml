@@ -45,7 +45,7 @@ HINT:  No operator matches the given name and argument type(s). You might need t
             updated example casts the <codeph>text</codeph> type to an <codeph>integer</codeph>
             type.<codeblock>SELECT * FROM foo, bar WHERE foo.a = bar.b::int;</codeblock></li>
           <li>Queries that mix the <codeph>text</codeph> type and non-text type columns in function
-            and aggregate arguments. In this example, the query that executes the example function
+            and aggregate arguments. In this example, the query that runs the example function
               <codeph>concat</codeph> returns a cast
             error.<codeblock>CREATE FUNCTION concat(TEXT, TEXT) 
 RETURNS TEXT AS $$ 

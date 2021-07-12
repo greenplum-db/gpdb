@@ -112,7 +112,7 @@ WHERE mid = did AND mid = 12;</codeblock>
           whole document.</p>
       </note>
       <p>Another possibility is to store the documents as simple text files in the file system. In
-        this case, the database can be used to store the full text index and to execute searches,
+        this case, the database can be used to store the full text index and to run searches,
         and some unique identifier can be used to retrieve the document from the file system.
         However, retrieving files from outside the database requires superuser permissions or
         special function support, so this is usually less convenient than keeping all the data

@@ -13680,3 +13680,108 @@ select * from sqall_t1 where a not in (
 (0 rows)
 
 reset optimizer_join_order;
+-- Make sure materialize projects child's tlist, not what is requested
+create table material_test(first_id int, second_id int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'first_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create index material_test_idx on material_test using btree (second_id);
+create table material_test2(first_id int, second_id int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'first_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into material_test select generate_series(1,10), generate_series(1,10);
+insert into material_test2 select generate_series(1,10), generate_series(1,10);
+insert into material_test select generate_series(1,100), generate_series(1,100);
+insert into material_test2 select generate_series(1,100), generate_series(1,100);
+analyze material_test;
+analyze material_test2;
+explain (verbose) with mat_w as (
+select first_id
+from material_test
+where second_id in (1,2,3,4)
+)
+select first_id
+from material_test2
+where first_id in (select first_id from mat_w)
+and first_id in (select first_id from mat_w);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1680.99 rows=10 width=4)
+   Output: material_test2.first_id
+   ->  Sequence  (cost=0.00..1680.99 rows=4 width=4)
+         Output: material_test2.first_id
+         ->  Shared Scan (share slice:id 1:0)  (cost=0.00..387.98 rows=4 width=1)
+               Output: share0_ref1.first_id
+               ->  Materialize  (cost=0.00..387.98 rows=4 width=1)
+                     Output: material_test.first_id, material_test.second_id
+                     ->  Bitmap Heap Scan on orca.material_test  (cost=0.00..387.98 rows=4 width=4)
+                           Output: material_test.first_id, material_test.second_id
+                           Recheck Cond: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
+                           ->  Bitmap Index Scan on material_test_idx  (cost=0.00..0.00 rows=0 width=0)
+                                 Index Cond: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
+         ->  Hash Semi Join  (cost=0.00..1293.01 rows=4 width=4)
+               Output: material_test2.first_id
+               Hash Cond: (material_test2.first_id = share0_ref2.first_id)
+               ->  Hash Semi Join  (cost=0.00..862.01 rows=4 width=4)
+                     Output: material_test2.first_id
+                     Hash Cond: (material_test2.first_id = share0_ref3.first_id)
+                     ->  Seq Scan on orca.material_test2  (cost=0.00..431.00 rows=37 width=4)
+                           Output: material_test2.first_id
+                     ->  Hash  (cost=431.00..431.00 rows=4 width=4)
+                           Output: share0_ref3.first_id
+                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=4 width=4)
+                                 Output: share0_ref3.first_id
+               ->  Hash  (cost=431.00..431.00 rows=4 width=4)
+                     Output: share0_ref2.first_id
+                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=4 width=4)
+                           Output: share0_ref2.first_id
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_seqscan=on, optimizer=on
+(31 rows)
+
+with mat_w as (
+select first_id
+from material_test
+where second_id in (1,2,3,4)
+)
+select first_id
+from material_test2
+where first_id in (select first_id from mat_w)
+and first_id in (select first_id from mat_w);
+ first_id 
+----------
+        2
+        3
+        4
+        2
+        3
+        4
+        1
+        1
+(8 rows)
+
+create table tt_varchar(
+	data character varying
+) distributed by (data);
+insert into tt_varchar values('test');
+create table tt_int(
+	id integer
+) distributed by (id);
+insert into tt_int values(1);
+set optimizer_enforce_subplans = 1;
+-- test collation in subplan testexpr
+select data from tt_varchar where data > any(select id::text from tt_int);
+ data 
+------
+ test
+(1 row)
+
+-- test implicit coerce via io
+CREATE CAST (integer AS text) WITH INOUT AS IMPLICIT;
+select data from tt_varchar where data > any(select id from tt_int);
+ data 
+------
+ test
+(1 row)
+
+DROP CAST (integer AS text);
+reset optimizer_enforce_subplans;

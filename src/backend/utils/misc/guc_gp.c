@@ -4320,8 +4320,9 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"dtx_phase2_retry_count", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Maximum number of retries during two phase commit after which master PANICs."),
-			NULL,
+			gettext_noop("Maximum number of attempts to finish a prepared transaction."),
+			gettext_noop("The coordinator PANICs if a prepared transaction cannot be"
+						 " committed after this number of attempts."),
 			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&dtx_phase2_retry_count,

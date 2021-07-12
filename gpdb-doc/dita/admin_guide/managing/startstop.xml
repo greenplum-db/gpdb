@@ -133,7 +133,7 @@ $ gpstart</codeblock>
         minutes there are still active connections, <codeph>gpstop</codeph> will prompt you to
         either continue waiting in smart mode, stop in fast mode, or stop in immediate mode. To stop
         Greenplum Database immediately, use fast mode. <note type="important">Immediate shut down
-          mode is not recommended. This mode kills all database processes without allowing the
+          mode is not recommended. This mode stops all database processes without allowing the
           database server to complete transaction processing or clean up any temporary or in-process
           work files.</note></context>
       <steps-unordered>

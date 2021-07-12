@@ -12,7 +12,7 @@
       implement the libpq protocol internally. </p>
     <p>Each segment instance also has a client connection port, used solely by the master instance
       to coordinate database operations with the segments. The <codeph>gpstate -p</codeph> command,
-      executed on the Greenplum master, lists the port assignments for the Greenplum master and the
+      run on the Greenplum master, lists the port assignments for the Greenplum master and the
       primary segments and mirrors. For example:
       <codeblock>[gpadmin@mdw ~]$ gpstate -p 
 20190403:02:57:04:011030 gpstate:mdw:gpadmin-[INFO]:-Starting gpstate with args: -p
@@ -156,7 +156,7 @@ MIRROR_PORT_BASE = 7000</codeblock></note>
           <row otherprops="pivotal">
             <entry morerows="2">Greenplum Command Center (GPCC)</entry>
             <entry>TCP 28080, HTTP/HTTPS, WebSocket (WS), Secure WebSocket (WSS)</entry>
-            <entry>The GPCC web server (<codeph>gpccws</codeph> process) executes on the Greenplum Database master
+            <entry>The GPCC web server (<codeph>gpccws</codeph> process) runs on the Greenplum Database master
               host or standby master host. The port number is configured at installation
               time.</entry>
           </row>

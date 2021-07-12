@@ -1,5 +1,5 @@
 test: setup
-
+test: cached_plan
 test: lockmodes
 # Put test prepare_limit near to test lockmodes since both of them reboot the
 # cluster during testing. Usually the 2nd reboot should be faster.
@@ -91,6 +91,9 @@ test: external_table
 # This test validates that for AO we delay fsync to checkpointer on mirror.
 test: fsync_ao
 
+# Test deadlock situation when waiting on a resource queue lock
+test: resource_queue_deadlock
+
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
@@ -129,6 +132,7 @@ test: uao/select_while_vacuum_serializable2_row
 test: uao/selectinsert_while_vacuum_row
 test: uao/selectinsertupdate_while_vacuum_row
 test: uao/selectupdate_while_vacuum_row
+test: uao/snapshot_eof_row
 test: uao/update_while_vacuum_row
 test: uao/vacuum_self_serializable_row
 test: uao/vacuum_self_serializable2_row
@@ -179,6 +183,7 @@ test: uao/select_while_vacuum_serializable2_column
 test: uao/selectinsert_while_vacuum_column
 test: uao/selectinsertupdate_while_vacuum_column
 test: uao/selectupdate_while_vacuum_column
+test: uao/snapshot_eof_column
 test: uao/update_while_vacuum_column
 test: uao/vacuum_self_serializable_column
 test: uao/vacuum_self_serializable2_column
@@ -267,3 +272,6 @@ test: distributed_transactions
 
 # Test for distributed commit array overflow during replay on standby
 test: standby_replay_dtx_info
+
+# Test for concurrent vacuum with delete
+test: concurrent_vacuum_with_delete

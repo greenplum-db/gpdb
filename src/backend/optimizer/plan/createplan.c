@@ -7205,18 +7205,18 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 				 */
 				subplan = prep;
 				motion = make_sorted_union_motion(root, subplan, numSortCols, sortColIdx, sortOperators, collations,
-												  nullsFirst, false, numsegments);
+												  nullsFirst, false, numsegments, path->path.locus.locustype);
 			}
 			else
 			{
 				/* Degenerate ordering... build unordered Union Receive */
-				motion = make_union_motion(subplan, false, numsegments);
+				motion = make_union_motion(subplan, false, numsegments, path->path.locus.locustype);
 			}
 		}
 
 		/* Unordered Union Receive */
 		else
-			motion = make_union_motion(subplan, false, numsegments);
+			motion = make_union_motion(subplan, false, numsegments, path->path.locus.locustype);
 	}
 
 	/* Send all of the tuples to all of the QEs in gang above... */

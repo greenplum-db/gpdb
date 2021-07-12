@@ -121,7 +121,7 @@ db = ...
           </plentry>
           <plentry>
             <pt>connect_query</pt>
-            <pd>Query to be executed after a connection is established, but before allowing the
+            <pd>Query to be run after a connection is established, but before allowing the
               connection to be used by any clients. If the query raises errors, they are logged
               but ignored otherwise.</pd>
           </plentry>
@@ -151,7 +151,7 @@ db = ...
           <plentry>
             <pt>logfile</pt>
             <pd>The location of the log file. The log file is kept open. After log
-              rotation, execute <codeph>kill -HUP pgbouncer</codeph> or run the <codeph>RELOAD;</codeph>
+              rotation, run <codeph>kill -HUP pgbouncer</codeph> or run the <codeph>RELOAD;</codeph>
               command in the PgBouncer Administration Console. <p>Default: not set</p></pd>
           </plentry>
           <plentry>
@@ -363,7 +363,7 @@ db = ...
             <pt>application_name_add_host</pt>
             <pd>Add the client host address and port to the application name setting set on
               connection start. This helps in identifying the source of bad queries. The setting
-              is overwritten without detection if the application executes <codeph>SET
+              is overwritten without detection if the application runs <codeph>SET
                 application_name</codeph> after connecting. <p>Default: 0</p></pd>
           </plentry>
           <plentry>

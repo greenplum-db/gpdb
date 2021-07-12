@@ -18,7 +18,7 @@
       <section>
         <title>Segment Host Memory</title>
         <p>On a Greenplum Database segment host, the available host memory is shared among all the
-          processes executing on the computer, including the operating system, Greenplum Database
+          processes running on the computer, including the operating system, Greenplum Database
           segment instances, and other application processes. Administrators must determine what
           Greenplum Database and non-Greenplum Database processes share the hosts' memory and
           configure the system to use the memory efficiently. It is equally important to monitor
@@ -41,7 +41,7 @@
         <p>The segments (<i>C</i>) each get an equal share of the Greenplum Database Memory
             (<i>B</i>). </p>
         <p>Within a segment, the currently active resource management scheme, <i>Resource Queues</i>
-        or <i>Resource Groups</i>, governs how memory is allocated to execute a SQL statement. These
+        or <i>Resource Groups</i>, governs how memory is allocated to run a SQL statement. These
         constructs allow you to translate business requirements into execution policies in your
         Greenplum Database system and to guard against queries that could degrade performance. For
         an overview of resource groups and resource queues, refer to <xref href="wlmgmt.xml#topic1"
@@ -102,7 +102,7 @@
           segments to run per host and the amount of memory to allocate for each segment. Depending
           on the CPU cores, amount of physical RAM, and workload characteristics, the number of
           segments is usually a value between 4 and 8. With segment mirroring enabled, it is
-          important to allocate memory for the maximum number of primary segments executing on a
+          important to allocate memory for the maximum number of primary segments running on a
           host during a failure. For example, if you use the default grouping mirror configuration,
           a segment host failure doubles the number of acting primaries on the host that has the
           failed host's mirrors. Mirror configurations that spread each host's mirrors over multiple
