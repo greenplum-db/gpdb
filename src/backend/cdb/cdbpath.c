@@ -377,9 +377,11 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	 * materialize nodes on top of motion nodes
 	 */
 
-	/* 
-	 * TODO: Check if subpath require parameters(like in PR #12238) when the following FIXME from regression tests will be resolved.
-	 * FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
+	/*
+	 * TODO: Check if subpath require parameters(like in PR #12238) when the
+	 * following FIXME from regression tests will be resolved. FIXME: A
+	 * process terminates during execution, see
+	 * https://github.com/greenplum-db/gpdb/issues/10791
 	 */
 
 	/* Create CdbMotionPath node. */
