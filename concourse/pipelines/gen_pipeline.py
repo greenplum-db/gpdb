@@ -340,7 +340,7 @@ def main():
             'Extensions',
             'Gpperfmon'
         ],
-        default=['ICW'],
+        default=[],
         nargs='+',
         help='Select tests sections to run'
     )
