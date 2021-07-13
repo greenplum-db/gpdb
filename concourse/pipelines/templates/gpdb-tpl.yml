@@ -2034,7 +2034,13 @@ jobs:
             - -exc
             - |
               gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
+{% if build_test_rc_rpm %}
+              # Uniquely name the rpm using the github username and test branch
+              # to prevent filename collisions on GCS.
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+{% else %}
               cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+{% endif %}
     - in_parallel:
         steps:
           - put: gpdb_rpm_installer_centos7
