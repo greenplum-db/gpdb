@@ -676,21 +676,29 @@ CStatisticsUtils::ExtractUsedColIds(CMemoryPool *mp, CBitSet *colids_bitset,
 //		CStatisticsUtils::UpdateDisjStatistics
 //
 //	@doc:
-//		Given the previously generated histogram, update the intermediate
-//		result of the disjunction
+//		Given the previously generated local histogram, update the intermediate
+//		result of the disjunction.
+//
+//		disjunctive_result_histograms: target histograms map to be updated
+//		local_histogram: local histogram to be integrated into disjunctive_result_histograms
+//		local_rows: input rows of local_histogram before update
+//		input_disjunct_rows: input rows of disjunctive_result_histograms before update
 //
 //---------------------------------------------------------------------------
 void
 CStatisticsUtils::UpdateDisjStatistics(
 	CMemoryPool *mp, CBitSet *dont_update_stats_bitset,
 	CDouble input_disjunct_rows, CDouble local_rows,
-	CHistogram *previous_histogram,
-	UlongToHistogramMap *disjunctive_result_histograms, ULONG colid)
+	CHistogram *local_histogram,
+	UlongToHistogramMap *disjunctive_result_histograms, ULONG colid,
+	BOOL *unioned)
 {
 	GPOS_ASSERT(nullptr != dont_update_stats_bitset);
 	GPOS_ASSERT(nullptr != disjunctive_result_histograms);
+	// did we union the two input histograms?
+	*unioned = false;
 
-	if (nullptr != previous_histogram && gpos::ulong_max != colid &&
+	if (nullptr != local_histogram && gpos::ulong_max != colid &&
 		!dont_update_stats_bitset->Get(colid))
 	{
 		// 1. the filter is on the same column because gpos::ulong_max != colid
@@ -704,20 +712,21 @@ CStatisticsUtils::UpdateDisjStatistics(
 			// histogram for this column
 			CDouble output_rows(0.0);
 			CHistogram *new_histogram =
-				previous_histogram->MakeUnionHistogramNormalize(
-					input_disjunct_rows, result_histogram, local_rows,
+				local_histogram->MakeUnionHistogramNormalize(
+					local_rows, result_histogram, input_disjunct_rows,
 					&output_rows);
+			*unioned = true;
 
-			GPOS_DELETE(previous_histogram);
-			previous_histogram = new_histogram;
+			GPOS_DELETE(local_histogram);
+			local_histogram = new_histogram;
 		}
 
-		AddHistogram(mp, colid, previous_histogram,
-					 disjunctive_result_histograms, true /*fReplaceOldEntries*/
+		AddHistogram(mp, colid, local_histogram, disjunctive_result_histograms,
+					 true /*fReplaceOldEntries*/
 		);
 	}
 
-	GPOS_DELETE(previous_histogram);
+	GPOS_DELETE(local_histogram);
 }
 
 //---------------------------------------------------------------------------
@@ -868,17 +877,17 @@ CStatisticsUtils::PrintHistogramMap(IOstream &os,
 //
 //---------------------------------------------------------------------------
 UlongToHistogramMap *
-CStatisticsUtils::MergeHistogramMapsForDisjPreds(CMemoryPool *mp,
-												 CBitSet *non_updatable_cols,
-												 UlongToHistogramMap *hmap1,
-												 UlongToHistogramMap *hmap2,
-												 CDouble rows1, CDouble rows2)
+CStatisticsUtils::MergeHistogramMapsForDisjPreds(
+	CMemoryPool *mp, CBitSet *non_updatable_cols, UlongToHistogramMap *hmap1,
+	UlongToHistogramMap *hmap2, CDouble rows1, CDouble rows2, BOOL *merged)
 {
 	GPOS_ASSERT(nullptr != non_updatable_cols);
 	GPOS_ASSERT(nullptr != hmap1);
 	GPOS_ASSERT(nullptr != hmap2);
 
 	CDouble output_rows(CStatistics::MinRows.Get());
+	// did we merge two histograms from both maps into one histogram?
+	*merged = false;
 
 	UlongToHistogramMap *merged_hmap = GPOS_NEW(mp) UlongToHistogramMap(mp);
 
@@ -917,6 +926,7 @@ CStatisticsUtils::MergeHistogramMapsForDisjPreds(CMemoryPool *mp,
 					CHistogram *normalized_union_histogram =
 						histogram1->MakeUnionHistogramNormalize(
 							rows1, histogram2, rows2, &output_rows);
+					*merged = true;
 
 					AddHistogram(mp, colid, normalized_union_histogram,
 								 merged_hmap, true /* fReplaceOld */);
