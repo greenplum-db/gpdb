@@ -139,7 +139,8 @@ def create_pipeline():
         'test_sections': ARGS.test_sections,
         'pipeline_type': ARGS.pipeline_type,
         'stagger_sections': stagger_sections,
-        'test_trigger': test_trigger
+        'test_trigger': test_trigger,
+        'build_test_rc_rpm': ARGS.build_test_rc_rpm
     }
 
     pipeline_yml = render_template(ARGS.template_filename, context)
@@ -165,6 +166,7 @@ def how_to_use_generated_pipeline_message():
     msg += '  OS Types ................. : %s\n' % ARGS.os_types
     msg += '  Test sections ............ : %s\n' % ARGS.test_sections
     msg += '  test_trigger ............. : %s\n' % ARGS.test_trigger_false
+    msg += '  build_test_rc_rpm ........ : %s\n' % ARGS.build_test_rc_rpm
     msg += '======================================================================\n\n'
     if ARGS.pipeline_type == 'prod':
         pipeline_name = '5X_STABLE'
@@ -245,6 +247,16 @@ if __name__ == "__main__":
                         default=os.getlogin(),
                         help='Developer userid to use for pipeline file name.')
 
+    PARSER.add_argument(
+        '--build-test-rc',
+        action='store_true',
+        dest='build_test_rc_rpm',
+        default=False,
+        help='Generate a release candidate RPM. Useful for testing branches against'
+             'products that consume RC RPMs such as gpupgrade. Use prod'
+             'configuration to build prod RCs.'
+    )
+
     ARGS = PARSER.parse_args()
 
     ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
@@ -252,6 +264,10 @@ if __name__ == "__main__":
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
         ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep', 'AA']
+
+    if ARGS.pipeline_type == 'prod' and ARGS.build_test_rc_rpm:
+        raise Exception('Cannot specify a prod pipeline when building a test'
+                        'RC. Please specify one or the other.')
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite
     # the production pipeline

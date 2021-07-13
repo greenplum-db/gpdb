@@ -145,13 +145,15 @@ groups:
   - gate_filerep_end
 {% endif %}
 
-{% if pipeline_type == "prod" %}
+{% if pipeline_type == "prod" or build_test_rc_rpm %}
 ## ======================================================================
 
 - name: Release
   jobs:
+{% if pipeline_type == "prod" %}
   - gate_release_candidate_start
   - Release_Candidate
+{% endif %}
   - Build_Release_Candidate_RPMs
 
 {% endif %}
@@ -512,15 +514,6 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: release_candidates/bin_gpdb_centos6/gpdb5/bin_gpdb.tar.gz
 
-- name: gpdb_rpm_installer_centos6
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{gpdb-stable-builds-bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: release_candidates/gpdb_rpm_installer_centos6/gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
-
 - name: bin_gpdb_centos7_rc
   type: s3
   source:
@@ -529,15 +522,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: release_candidates/bin_gpdb_centos7/gpdb5/bin_gpdb.tar.gz
-
-- name: gpdb_rpm_installer_centos7
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{gpdb-stable-builds-bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: release_candidates/gpdb_rpm_installer_centos7/gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
 
 - name: bin_gpdb_sles11_rc
   type: s3
@@ -548,14 +532,35 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: release_candidates/bin_gpdb_sles11/gpdb5/bin_gpdb.tar.gz
 
+{% endif %}
+
+{% if pipeline_type == "prod" or build_test_rc_rpm %}
+- name: gpdb_rpm_installer_centos6
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: release_candidates/gpdb_rpm_installer_centos6/gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
+
+- name: gpdb_rpm_installer_centos7
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: release_candidates/gpdb_rpm_installer_centos7/gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
+
 - name: greenplum-database-release
   type: git
   icon: git
   source:
     branch: main
     uri: https://github.com/greenplum-db/greenplum-database-release.git
-
 {% endif %}
+
 - name: binary_swap_gpdb_centos6
   type: s3
   source:
@@ -3148,7 +3153,7 @@ jobs:
 {% endfor %}
 
 {% endif %}
-{% if pipeline_type == "prod" %}
+{% if pipeline_type == "prod" or build_test_rc_rpm %}
 ## ======================================================================
 ##  ____      _
 ## |  _ \ ___| | ___  __ _ ___  ___
@@ -3157,6 +3162,7 @@ jobs:
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
 
+{% if pipeline_type == "prod" %}
 - name: gate_release_candidate_start
   plan:
   - in_parallel:
@@ -3266,7 +3272,7 @@ jobs:
   - put: bin_gpdb_sles11_rc
     params:
       file: bin_gpdb_sles11/bin_gpdb.tar.gz
-
+{% endif %}
 
 - name: Build_Release_Candidate_RPMs
   plan:
@@ -3274,13 +3280,19 @@ jobs:
         steps:
           - get: gpdb_src
             trigger: true
+{% if not build_test_rc_rpm %}
             passed: [gate_release_candidate_start]
+{% endif %}
           - get: bin_gpdb_centos6
             trigger: true
+{% if not build_test_rc_rpm %}
             passed: [gate_release_candidate_start]
+{% endif %}
           - get: bin_gpdb_centos7
             trigger: true
+{% if not build_test_rc_rpm %}
             passed: [gate_release_candidate_start]
+{% endif %}
           - get: centos-gpdb-dev-6
           - get: centos-gpdb-dev-7
           - get: greenplum-database-release
