@@ -1802,8 +1802,12 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 	 * change a nonzero-rows result to zero rows or vice versa.  (Furthermore,
 	 * since our parsetree representation of these clauses depends on the
 	 * targetlist, we'd better throw them away if we drop the targetlist.)
+	 *
+	 * Note: Greenplum tries to simplify Aggs too, it could be here still with
+	 * the aggregations, so don't throw away the targetlist rashly.
 	 */
-	query->targetList = NIL;
+	if (!query->hasAggs)
+		query->targetList = NIL;
 
 	/*
 	 * Delete GROUP BY if no aggregates.

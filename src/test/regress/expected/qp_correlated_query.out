@@ -1303,16 +1303,21 @@ select C.j from C where not exists (select rank() over (order by B.i) from B  wh
 (4 rows)
 
 explain select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=3.20..6.31 rows=4 width=8)
-   ->  Hash Anti Join  (cost=3.20..6.31 rows=2 width=8)
-         Hash Cond: (a.i = c.i)
-         ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=8)
-         ->  Hash  (cost=3.09..3.09 rows=3 width=4)
-               ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.05 rows=2 width=8)
+   ->  Seq Scan on a  (cost=0.00..1.02 rows=1 width=8)
+         Filter: (NOT (SubPlan 1))
+         SubPlan 1
+           ->  GroupAggregate  (cost=0.00..1.34 rows=1 width=12)
+                 Group Key: a.i
+                 ->  Result  (cost=0.00..1.28 rows=9 width=8)
+                       Filter: (c.i = a.i)
+                       ->  Materialize  (cost=0.00..1.19 rows=9 width=4)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.15 rows=9 width=4)
+                                   ->  Seq Scan on c  (cost=0.00..1.03 rows=3 width=4)
  Optimizer: Postgres query optimizer
-(7 rows)
+(12 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
  i  | j 
