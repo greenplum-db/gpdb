@@ -3328,12 +3328,38 @@ jobs:
               GPDB_LICENSE: Pivotal Software EULA
               GPDB_URL: https://docs.greenplum.org
               GPDB_RELEASE: 1
+    - task: rename_rc_artifacts
+      image: centos-gpdb-dev-7
+      config:
+        platform: linux
+        inputs:
+          - name: gpdb_src
+          - name: gpdb_rpm_centos6
+          - name: gpdb_rpm_centos7
+        outputs:
+          - name: renamed_gpdb_rpm_centos6
+          - name: renamed_gpdb_rpm_centos7
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+              gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
+{% if build_test_rc_rpm %}
+              # Uniquely name the rpm using the github username and test branch
+              # to prevent filename collisions on GCS.
+              cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel6-x86_64.rpm
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel7-x86_64.rpm
+{% else %}
+              cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-${gpdb_semver}-rhel6-x86_64.rpm
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64.rpm
+{% endif %}
     - in_parallel:
         steps:
           - put: gpdb_rpm_installer_centos6
             params:
-              file: gpdb_rpm_centos6/*.rpm
+              file: renamed_gpdb_rpm_centos6/*.rpm
           - put: gpdb_rpm_installer_centos7
             params:
-              file: gpdb_rpm_centos7/*.rpm
+              file: renamed_gpdb_rpm_centos7/*.rpm
 {% endif %}
