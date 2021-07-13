@@ -57,4 +57,6 @@ CATALOG(pg_foreign_data_wrapper,2328,ForeignDataWrapperRelationId)
  */
 typedef FormData_pg_foreign_data_wrapper *Form_pg_foreign_data_wrapper;
 
+#define PXF_FDW_NAME "pxf_fdw"
+
 #endif							/* PG_FOREIGN_DATA_WRAPPER_H */

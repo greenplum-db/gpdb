@@ -125,3 +125,4 @@
 		"wal_debug",
 		"work_mem",
 		"gp_resgroup_debug_wait_queue",
+		"foreign_distribution_enforce_policy",

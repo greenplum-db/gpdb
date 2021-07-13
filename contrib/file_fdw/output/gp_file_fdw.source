@@ -42,13 +42,75 @@ CREATE FOREIGN TABLE text_csv_any_from_server (
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv');
 SELECT * FROM text_csv_any_from_server;
 ERROR:  file_fdw does not support mpp_execute option 'any'
+-- test distributed by feature
+\! rm -f /tmp/ft_*.csv
+CREATE FOREIGN TABLE ft_hash(id int)
+SERVER file_server OPTIONS(format 'csv', filename '/tmp/ft_<SEGID>.csv')
+DISTRIBUTED BY (id);
+-- test insert function of file_fdw
+INSERT INTO ft_hash SELECT generate_series(1, 100000);
+SELECT COUNT(*), gp_segment_id FROM ft_hash
+GROUP BY (gp_segment_id);
+ count | gp_segment_id 
+-------+---------------
+ 33211 |             2
+ 33462 |             0
+ 33327 |             1
+(3 rows)
+
+CREATE TABLE heap_hash(id int) DISTRIBUTED BY(id);
+CREATE TABLE heap_rand(id int) DISTRIBUTED RANDOMLY;
+-- no motion node
+EXPLAIN INSERT INTO heap_hash SELECT * FROM ft_hash;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Insert on heap_hash  (cost=0.00..973.00 rows=9630 width=4)
+   ->  Foreign Scan on ft_hash  (cost=0.00..973.00 rows=9630 width=4)
+         Foreign File: /tmp/ft_<SEGID>.csv
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- redistribute motion
+EXPLAIN INSERT INTO ft_hash SELECT * FROM heap_rand;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Insert on ft_hash  (cost=0.00..997.00 rows=32100 width=4)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..997.00 rows=32100 width=4)
+         Hash Key: heap_rand.id
+         ->  Seq Scan on heap_rand  (cost=0.00..355.00 rows=32100 width=4)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+-- test foreign_distribution_enforce_policy guc 
+-- first exchange data for seg0 and seg1
+\! mv /tmp/ft_0.csv /tmp/ft_tmp.csv
+\! mv /tmp/ft_1.csv /tmp/ft_0.csv
+\! mv /tmp/ft_tmp.csv /tmp/ft_1.csv
+-- error immediately
+SET foreign_distribution_enforce_policy TO error_immedately;
+SELECT COUNT(*) FROM ft_hash;
+ERROR:  Foreign scan returns tuple for segment A, current segment B  (seg0 slice1 127.0.0.1:7002 pid=353964)
+-- notice once
+SET foreign_distribution_enforce_policy TO notice_once;
+SELECT COUNT(*) FROM ft_hash;
+NOTICE:  Foreign scan returns tuple for segment A, current segment B  (seg0 slice1 127.0.0.1:7002 pid=353964)
+NOTICE:  Foreign scan returns tuple for segment A, current segment B  (seg1 slice1 127.0.0.1:7003 pid=353965)
+NOTICE:  Foreign scan returns tuple for segment A, current segment B  (seg2 slice1 127.0.0.1:7004 pid=353966)
+ count 
+-------
+ 33211
+(1 row)
+
 -- cleanup
 RESET ROLE;
 DROP EXTENSION file_fdw CASCADE;
-NOTICE:  drop cascades to 5 other objects
+NOTICE:  drop cascades to 6 other objects
 DETAIL:  drop cascades to server file_server
 drop cascades to user mapping for file_fdw_superuser on server file_server
 drop cascades to foreign table text_csv_any
 drop cascades to foreign table text_csv_all
 drop cascades to foreign table text_csv_any_from_server
+drop cascades to foreign table ft_hash
+DROP TABLE heap_hash;
+DROP TABLE heap_rand;
 DROP ROLE file_fdw_superuser;

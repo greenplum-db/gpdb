@@ -27,10 +27,24 @@
 #include "foreign/fdwapi.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "cdb/cdbhash.h"
+#include "cdb/cdbvars.h"
+
+/* Whether or not enforce distribution policy for a foreign scan. */
+int foreign_distribution_enforce_policy = FOREIGN_DISTRIBUTION_POLICY_ERROR_IMMEDIATELY;
+static bool wrong_segment_noticed = false;
 
 static TupleTableSlot *ForeignNext(ForeignScanState *node);
 static bool ForeignRecheck(ForeignScanState *node, TupleTableSlot *slot);
 
+/*
+ * Global static variables for optimization purpose.
+ * Initializing these variables includes memory allocation, not suitable in ForeignNext().
+ * Init once in ExecInitForeignScan() and clear them in ExecEndForeignScan().
+ * We can also put these in ForeignScanState struct, but since it's also accessible in
+ * FDW handlers, there's risk of ABI compatibility.
+ */
+static CdbHash* hash_checker;
 
 /* ----------------------------------------------------------------
  *		ForeignNext
@@ -45,14 +59,69 @@ ForeignNext(ForeignScanState *node)
 	ForeignScan *plan = (ForeignScan *) node->ss.ps.plan;
 	ExprContext *econtext = node->ss.ps.ps_ExprContext;
 	MemoryContext oldcontext;
+	GpPolicy *policy;
+	unsigned int target_segment;
 
-	/* Call the Iterate function in short-lived context */
-	oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
-	if (plan->operation != CMD_SELECT)
-		slot = node->fdwroutine->IterateDirectModify(node);
-	else
-		slot = node->fdwroutine->IterateForeignScan(node);
-	MemoryContextSwitchTo(oldcontext);
+	while(true)
+	{
+		/* Call the Iterate function in short-lived context */
+		oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
+		if (plan->operation != CMD_SELECT)
+			slot = node->fdwroutine->IterateDirectModify(node);
+		else
+			slot = node->fdwroutine->IterateForeignScan(node);
+		MemoryContextSwitchTo(oldcontext);
+
+		if (Gp_role == GP_ROLE_EXECUTE && /* No need to check for master only FDW. */
+			!TupIsNull(slot) && /* NULL slot means end of scan. */
+			hash_checker != NULL) /* hash_checker will be initialized if relation is hash distributed */
+		{
+			policy = node->ss.ss_currentRelation->rd_cdbpolicy;
+			cdbhashinit(hash_checker);
+
+			/* Add every attribute in the distribution policy to the hash */
+			for (int i = 0; i < policy->nattrs; i++)
+			{
+				int			attnum = policy->attrs[i];
+				bool		isNull;
+				Datum		attr;
+
+				attr = slot_getattr(slot, attnum, &isNull);
+
+				cdbhash(hash_checker, i + 1, attr, isNull);
+			}
+
+			target_segment = cdbhashreduce(hash_checker);
+
+			if (target_segment != GpIdentity.segindex)
+			{
+				/* Wrong segment. */
+				if (foreign_distribution_enforce_policy == FOREIGN_DISTRIBUTION_POLICY_ERROR_IMMEDIATELY)
+				{
+					ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
+						errmsg("Foreign scan returns tuple for segment %d, current segment %d", target_segment, GpIdentity.segindex)));
+				}
+				else
+				{
+					/* DISTRIBUTION_POLICY_NOTICE_ONCE */
+					if (!wrong_segment_noticed)
+					{
+						elog(NOTICE, "Foreign scan returns tuple for segment %d, current segment %d", target_segment, GpIdentity.segindex);
+						wrong_segment_noticed = true;
+					}
+					/* Skip this tuple and scan again */
+					ExecClearTuple(slot);
+					continue;
+				}
+			}
+		}
+		/* Normal route for following conditions. No need to scan again.
+		 * 1. Foreign scan completed (empty tuple).
+		 * 2. Foreign table is not hash distributed.
+		 * 3. Tuple belongs to current segment.
+		 */
+		break;
+	}
 
 	/*
 	 * Insert valid value into tableoid, the only actually-useful system
@@ -158,6 +227,11 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 		currentRelation = ExecOpenScanRelation(estate, scanrelid, eflags);
 		scanstate->ss.ss_currentRelation = currentRelation;
 		fdwroutine = GetFdwRoutineForRelation(currentRelation, true);
+		if (GpPolicyIsHashPartitioned(currentRelation->rd_cdbpolicy))
+			hash_checker = makeCdbHashForRelation(currentRelation);
+		else
+			hash_checker = NULL;
+		wrong_segment_noticed = false;
 	}
 	else
 	{
@@ -241,6 +315,7 @@ void
 ExecEndForeignScan(ForeignScanState *node)
 {
 	ForeignScan *plan = (ForeignScan *) node->ss.ps.plan;
+	hash_checker = NULL;
 
 	/* Let the FDW shut down */
 	if (plan->operation != CMD_SELECT)

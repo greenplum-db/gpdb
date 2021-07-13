@@ -38,7 +38,41 @@ CREATE FOREIGN TABLE text_csv_any_from_server (
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv');
 SELECT * FROM text_csv_any_from_server;
 
+-- test distributed by feature
+\! rm -f /tmp/ft_*.csv
+CREATE FOREIGN TABLE ft_hash(id int)
+SERVER file_server OPTIONS(format 'csv', filename '/tmp/ft_<SEGID>.csv')
+DISTRIBUTED BY (id);
+
+-- test insert function of file_fdw
+INSERT INTO ft_hash SELECT generate_series(1, 100000);
+SELECT COUNT(*), gp_segment_id FROM ft_hash
+GROUP BY (gp_segment_id);
+
+CREATE TABLE heap_hash(id int) DISTRIBUTED BY(id);
+CREATE TABLE heap_rand(id int) DISTRIBUTED RANDOMLY;
+-- no motion node
+EXPLAIN INSERT INTO heap_hash SELECT * FROM ft_hash;
+-- redistribute motion
+EXPLAIN INSERT INTO ft_hash SELECT * FROM heap_rand;
+
+-- test foreign_distribution_enforce_policy guc 
+-- first exchange data for seg0 and seg1
+\! mv /tmp/ft_0.csv /tmp/ft_tmp.csv
+\! mv /tmp/ft_1.csv /tmp/ft_0.csv
+\! mv /tmp/ft_tmp.csv /tmp/ft_1.csv
+
+-- error immediately
+SET foreign_distribution_enforce_policy TO error_immedately;
+SELECT COUNT(*) FROM ft_hash;
+
+-- notice once
+SET foreign_distribution_enforce_policy TO notice_once;
+SELECT COUNT(*) FROM ft_hash;
+
 -- cleanup
 RESET ROLE;
 DROP EXTENSION file_fdw CASCADE;
+DROP TABLE heap_hash;
+DROP TABLE heap_rand;
 DROP ROLE file_fdw_superuser;

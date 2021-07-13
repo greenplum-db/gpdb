@@ -19,5 +19,9 @@ m/^ Settings:.*/
 # The following regex is intended to cover all permutations of the above set
 # of messages.
 m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
-
 -- end_matchignore
+
+-- start_matchsubs
+m/Foreign scan returns tuple for segment ., current segment ./
+s/Foreign scan returns tuple for segment ., current segment ./Foreign scan returns tuple for segment A, current segment B/
+-- end_matchsubs

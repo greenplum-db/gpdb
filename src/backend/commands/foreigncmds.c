@@ -42,6 +42,7 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
+#include "nodes/makefuncs.h"
 
 #include "catalog/oid_dispatch.h"
 
@@ -1548,6 +1549,21 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid, bool skip_permission
 	ForeignDataWrapper *fdw;
 	ForeignServer *server;
 
+	if (stmt->distributedBy != NULL && stmt->distributedBy->ptype == POLICYTYPE_PARTITIONED && strcmp(stmt->servername, GP_EXTTABLE_SERVER_NAME) != 0)
+	{
+		/* Create foreign table with a partitioned distribution policy, either hash or random,
+		 * implies "all segments" mpp_execute option, except for external tables.*/
+		char mpp_execute = SeparateOutMppExecute(&stmt->options);
+		if (mpp_execute != FTEXECLOCATION_ALL_SEGMENTS && mpp_execute != FTEXECLOCATION_NOT_DEFINED && Gp_role == GP_ROLE_DISPATCH)
+		{
+			/* If mpp_execute is specified as "any", "master" or "coordinator", notice user about option override. */
+			elog(NOTICE, "Hash or random distribution implies mpp_execute option \"all segments\", override existing option");
+		}
+
+		Node *val = (Node *) makeString("all segments");
+		stmt->options = lappend(stmt->options, makeDefElem("mpp_execute", val, -1));
+	}
+
 	/*
 	 * Advance command counter to ensure the pg_attribute tuple is visible;
 	 * the tuple might be updated to add constraints in previous step.
@@ -1574,6 +1590,10 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid, bool skip_permission
 	}
 
 	fdw = GetForeignDataWrapper(server->fdwid);
+	if (stmt->distributedBy != NULL && strstr(fdw->fdwname, PXF_FDW_NAME) != NULL)
+	{
+		ereport(ERROR, (errcode(ERRCODE_FDW_ERROR), errmsg("%s doesn't support DISTRIBUTED BY clause", PXF_FDW_NAME)));
+	}
 
 	/*
 	 * Insert tuple into pg_foreign_table.

@@ -37,6 +37,8 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/sampling.h"
+#include "utils/lsyscache.h"
+#include "cdb/cdbvars.h"
 
 PG_MODULE_MAGIC;
 
@@ -141,6 +143,20 @@ static bool fileAnalyzeForeignTable(Relation relation,
 static bool fileIsForeignScanParallelSafe(PlannerInfo *root, RelOptInfo *rel,
 										  RangeTblEntry *rte);
 
+static void fileBeginForeignModify(ModifyTableState *mtstate,
+								   ResultRelInfo *rinfo,
+								   List *fdw_private,
+								   int subplan_index,
+								   int eflags);
+static void fileBeginForeignInsert(ModifyTableState *mtstate, ResultRelInfo *rinfo);
+static void fileEndForeignModify(EState *estate, ResultRelInfo *rinfo);
+static void fileEndForeignInsert(EState *estate, ResultRelInfo *rinfo);
+
+static TupleTableSlot *fileExecForeignInsert(EState *estate,
+											 ResultRelInfo *rinfo,
+											 TupleTableSlot *slot,
+											 TupleTableSlot *planSlot);
+
 /*
  * Helper functions
  */
@@ -162,7 +178,6 @@ static int	file_acquire_sample_rows(Relation onerel, int elevel,
 									 HeapTuple *rows, int targrows,
 									 double *totalrows, double *totaldeadrows);
 
-
 /*
  * Foreign-data wrapper handler function: return a struct with pointers
  * to my callback routines.
@@ -183,6 +198,16 @@ file_fdw_handler(PG_FUNCTION_ARGS)
 	fdwroutine->AnalyzeForeignTable = fileAnalyzeForeignTable;
 	fdwroutine->IsForeignScanParallelSafe = fileIsForeignScanParallelSafe;
 
+	/* We only support INSERT function here.
+	 * fileBeginForeignModify and fileBeginForeignInsert are same, but different SQL will
+	 * invoke different FDW interface. INSERT INTO requires BeginForeignModify, while COPY
+	 * requires BeginForeignInsert.
+	 */
+	fdwroutine->BeginForeignModify = fileBeginForeignModify;
+	fdwroutine->BeginForeignInsert = fileBeginForeignInsert;
+	fdwroutine->EndForeignModify = fileEndForeignModify;
+	fdwroutine->EndForeignInsert = fileEndForeignInsert;
+	fdwroutine->ExecForeignInsert = fileExecForeignInsert;
 	PG_RETURN_POINTER(fdwroutine);
 }
 
@@ -578,8 +603,7 @@ fileGetForeignPaths(PlannerInfo *root,
 	 * it could still have required parameterization due to LATERAL refs in
 	 * its tlist.
 	 */
-	add_path(baserel, (Path *)
-			 create_foreignscan_path(root, baserel,
+	ForeignPath* pathnode = create_foreignscan_path(root, baserel,
 									 NULL,	/* default pathtarget */
 									 baserel->rows,
 									 startup_cost,
@@ -587,7 +611,10 @@ fileGetForeignPaths(PlannerInfo *root,
 									 NIL,	/* no pathkeys */
 									 baserel->lateral_relids,
 									 NULL,	/* no extra plan */
-									 coptions));
+									 coptions);
+	pathnode->path.locus = cdbpathlocus_from_baserel(root, baserel);
+	pathnode->path.motionHazard = false;
+	add_path(baserel, (Path *)pathnode);
 
 	/*
 	 * If data file was sorted, and we knew it somehow, we could insert
@@ -686,6 +713,14 @@ fileBeginForeignScan(ForeignScanState *node, int eflags)
 	/* Fetch options of foreign table */
 	fileGetOptions(RelationGetRelid(node->ss.ss_currentRelation),
 				   &filename, &is_program, &options);
+
+	/* If the table has distribution policy that's not entry, e.g. hash or random,
+	 * it's executed on QE so return early on QD. */
+	GpPolicy* policy = GpPolicyFetch(RelationGetRelid(node->ss.ss_currentRelation));
+	if (policy->ptype != POLICYTYPE_ENTRY && Gp_role == GP_ROLE_DISPATCH)
+	{
+		return;
+	}
 
 	/* Add any options from the plan (currently only convert_selectively) */
 	options = list_concat(options, plan->fdw_private);
@@ -807,6 +842,11 @@ fileAnalyzeForeignTable(Relation relation,
 	bool		is_program;
 	List	   *options;
 	struct stat stat_buf;
+
+	/* Not supported if hash or random distributed */
+	GpPolicy* policy = GpPolicyFetch(RelationGetRelid(relation));
+	if (policy->ptype != POLICYTYPE_ENTRY)
+		return false;
 
 	/* Fetch options of foreign table */
 	fileGetOptions(RelationGetRelid(relation), &filename, &is_program, &options);
@@ -1245,4 +1285,114 @@ file_acquire_sample_rows(Relation onerel, int elevel,
 					*totalrows, numrows)));
 
 	return numrows;
+}
+
+typedef struct
+{
+	FILE *file;
+	CopyState cstate;
+} fileModifyState;
+
+static void fileBeginForeignModify(ModifyTableState *mtstate,
+								   ResultRelInfo *rinfo,
+								   List *fdw_private,
+								   int subplan_index,
+								   int eflags)
+{
+	fileBeginForeignInsert(mtstate, rinfo);
+}
+
+static void fileBeginForeignInsert(ModifyTableState *mtstate, ResultRelInfo *rinfo)
+{
+	if (mtstate->operation != CMD_INSERT) return;
+	GpPolicy* policy = GpPolicyFetch(RelationGetRelid(rinfo->ri_RelationDesc));
+	if (policy->ptype != POLICYTYPE_ENTRY && Gp_role == GP_ROLE_DISPATCH)
+		return;
+	fileModifyState *state = palloc(sizeof(fileModifyState));
+	char *filename;
+	bool is_program;
+	List *options;
+	/* Fetch options of foreign table */
+	fileGetOptions(RelationGetRelid(rinfo->ri_RelationDesc),
+				   &filename, &is_program, &options);
+
+	char segid_buf[8];
+	snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
+	StringInfoData filepath;
+	initStringInfo(&filepath);
+	appendStringInfoString(&filepath, filename);
+	replaceStringInfoString(&filepath, "<SEGID>", segid_buf);
+
+	FILE* file = AllocateFile(filepath.data, PG_BINARY_A);
+	if (file == NULL)
+	{
+		elog(ERROR, "can't open file %s for write", filepath.data);
+	}
+
+	/* Leverage existing parallel COPY functions */
+	CopyState cstate = BeginCopyToForeignTable(rinfo->ri_RelationDesc, options);
+	TupleDesc tupDesc = RelationGetDescr(cstate->rel);
+	int num_phys_attrs = tupDesc->natts;
+	cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
+	ListCell *cur;
+	foreach(cur, cstate->attnumlist)
+	{
+		int			attnum = lfirst_int(cur);
+		Form_pg_attribute attr = TupleDescAttr(tupDesc, attnum - 1);
+		Oid			out_func_oid;
+		bool		isvarlena;
+
+		if (cstate->binary)
+			getTypeBinaryOutputInfo(attr->atttypid,
+									&out_func_oid,
+									&isvarlena);
+		else
+			getTypeOutputInfo(attr->atttypid,
+							  &out_func_oid,
+							  &isvarlena);
+		fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
+	}
+	cstate->fe_msgbuf = makeStringInfo();
+	cstate->rowcontext = AllocSetContextCreate(CurrentMemoryContext,
+											   "fileFdwTableMemCxt",
+											   ALLOCSET_DEFAULT_MINSIZE,
+											   ALLOCSET_DEFAULT_INITSIZE,
+											   ALLOCSET_DEFAULT_MAXSIZE);
+
+	state->cstate = cstate;
+	state->file = file;
+	rinfo->ri_FdwState = state;
+}
+
+static void fileEndForeignModify(EState *estate, ResultRelInfo *rinfo)
+{
+	fileEndForeignInsert(estate, rinfo);
+}
+
+static void fileEndForeignInsert(EState *estate, ResultRelInfo *rinfo)
+{
+	GpPolicy* policy = GpPolicyFetch(RelationGetRelid(rinfo->ri_RelationDesc));
+	if (policy->ptype != POLICYTYPE_ENTRY && Gp_role == GP_ROLE_DISPATCH)
+		return;
+	fileModifyState *state = (fileModifyState*)rinfo->ri_FdwState;
+	if (state == NULL) return;
+	FreeFile(state->file);
+	MemoryContextDelete(state->cstate->rowcontext);
+	pfree(state->cstate);
+}
+
+static TupleTableSlot *fileExecForeignInsert(EState *estate,
+											 ResultRelInfo *rinfo,
+											 TupleTableSlot *slot,
+											 TupleTableSlot *planSlot)
+{
+	fileModifyState *state = (fileModifyState*)rinfo->ri_FdwState;
+	CopyState cstate = state->cstate;
+	CopyOneRowTo(cstate, slot);
+	CopySendEndOfRow(cstate);
+	fwrite(cstate->fe_msgbuf->data, cstate->fe_msgbuf->len, 1, state->file);
+	cstate->fe_msgbuf->len = 0;
+	cstate->fe_msgbuf->data[0] = '\0';
+
+	return slot;
 }

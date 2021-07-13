@@ -638,7 +638,11 @@ heap_getsysattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
 {
 	Datum		result;
 
-	Assert(tup);
+	/* GpSegmentIdAttributeNumber doesn't need information in tup.
+	 * Skip the check to allow getting GpSegmentIdAttributeNumber
+	 * from tuples returned by foreign tables. */
+	if (attnum != GpSegmentIdAttributeNumber)
+		Assert(tup);
 
 	/* Currently, no sys attribute ever reads as NULL. */
 	*isnull = false;

@@ -126,16 +126,10 @@ DEALLOCATE st;
 SELECT tableoid::regclass, b FROM agg_csv;
 
 -- updates aren't supported
-INSERT INTO agg_csv VALUES(1,2.0);
 UPDATE agg_csv SET a = 1;
 DELETE FROM agg_csv WHERE a = 100;
 -- but this should be allowed
 SELECT * FROM agg_csv FOR UPDATE;
-
--- copy from isn't supported either
-COPY agg_csv FROM STDIN;
-12	3.4
-\.
 
 -- constraint exclusion tests
 \t on
@@ -172,14 +166,13 @@ CREATE TABLE p2 partition of pt for values in (2);
 SELECT tableoid::regclass, * FROM pt;
 SELECT tableoid::regclass, * FROM p1;
 SELECT tableoid::regclass, * FROM p2;
-COPY pt FROM '@abs_srcdir@/data/list2.bad' with (format 'csv', delimiter ','); -- ERROR
+
 COPY pt FROM '@abs_srcdir@/data/list2.csv' with (format 'csv', delimiter ',');
 SELECT tableoid::regclass, * FROM pt;
 SELECT tableoid::regclass, * FROM p1;
 SELECT tableoid::regclass, * FROM p2;
-INSERT INTO pt VALUES (1, 'xyzzy'); -- ERROR
+
 INSERT INTO pt VALUES (2, 'xyzzy');
-UPDATE pt set a = 1 where a = 2; -- ERROR
 SELECT tableoid::regclass, * FROM pt;
 SELECT tableoid::regclass, * FROM p1;
 SELECT tableoid::regclass, * FROM p2;

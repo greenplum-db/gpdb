@@ -15,6 +15,8 @@
   [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
         <p>where <varname>column_constraint</varname> is:</p><codeblock>
 [ CONSTRAINT <varname>constraint_name</varname> ]
+[ DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] )
+       | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
 { NOT NULL |
   NULL |
   DEFAULT <varname>default_expr</varname> }</codeblock>

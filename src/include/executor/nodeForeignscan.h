@@ -31,4 +31,12 @@ extern void ExecForeignScanInitializeWorker(ForeignScanState *node,
 											ParallelWorkerContext *pwcxt);
 extern void ExecShutdownForeignScan(ForeignScanState *node);
 
+typedef enum ForeignScanEnforceDistributionPolicy
+{
+	FOREIGN_DISTRIBUTION_POLICY_ERROR_IMMEDIATELY,
+	FOREIGN_DISTRIBUTION_POLICY_NOTICE_ONCE,
+} ForeignScanEnforceDistributionPolicy;
+
+extern int foreign_distribution_enforce_policy;
+
 #endif							/* NODEFOREIGNSCAN_H */

@@ -26,3 +26,68 @@ CREATE FOREIGN TABLE ft3 (
 CREATE FOREIGN TABLE ft4 (
 	c1 int
 ) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'all segments');
+CREATE FOREIGN TABLE ft5 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'all segments')
+DISTRIBUTED BY (c1);
+\d+ ft5
+                                       Foreign table "public.ft5"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ c1     | integer |           |          |         |             | plain   |              | 
+Server: s0
+FDW options: (delimiter ',', mpp_execute 'all segments')
+Distributed by: (c1)
+
+-- Hash distribution implies mpp_execute 'all segments'
+CREATE FOREIGN TABLE ft6 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',')
+DISTRIBUTED BY (c1);
+\d+ ft6
+                                       Foreign table "public.ft6"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ c1     | integer |           |          |         |             | plain   |              | 
+Server: s0
+FDW options: (delimiter ',', mpp_execute 'all segments')
+Distributed by: (c1)
+
+-- Hash distribution implies mpp_execute 'all segments', override 'any'
+CREATE FOREIGN TABLE ft7 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'any')
+DISTRIBUTED BY (c1);
+NOTICE:  Hash or random distribution implies mpp_execute option "all segments", override existing option
+\d+ ft7
+                                       Foreign table "public.ft7"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ c1     | integer |           |          |         |             | plain   |              | 
+Server: s0
+FDW options: (delimiter ',', mpp_execute 'all segments')
+Distributed by: (c1)
+
+-- Hash distribution implies mpp_execute 'all segments', override 'master'
+CREATE FOREIGN TABLE ft8 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'master')
+DISTRIBUTED BY (c1);
+NOTICE:  Hash or random distribution implies mpp_execute option "all segments", override existing option
+\d+ ft8
+                                       Foreign table "public.ft8"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ c1     | integer |           |          |         |             | plain   |              | 
+Server: s0
+FDW options: (delimiter ',', mpp_execute 'all segments')
+Distributed by: (c1)
+
+-- Distribution policy for pxf_fdw is disabled
+CREATE FOREIGN DATA WRAPPER pxf_fdw;
+CREATE SERVER s1 FOREIGN DATA WRAPPER pxf_fdw;
+CREATE FOREIGN TABLE ft9 (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'all segments')
+DISTRIBUTED BY (c1);
+ERROR:  pxf_fdw doesn't support DISTRIBUTED BY clause

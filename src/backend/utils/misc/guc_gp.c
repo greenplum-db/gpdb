@@ -52,6 +52,7 @@
 #include "utils/resource_manager.h"
 #include "utils/varlena.h"
 #include "utils/vmem_tracker.h"
+#include "executor/nodeForeignscan.h"
 
 /*
  * These constants are copied from guc.c. They should not bitrot when we
@@ -526,6 +527,12 @@ static const struct config_enum_entry optimizer_join_order_options[] = {
 	{"greedy", JOIN_ORDER_GREEDY_SEARCH},
 	{"exhaustive", JOIN_ORDER_EXHAUSTIVE_SEARCH},
 	{"exhaustive2", JOIN_ORDER_EXHAUSTIVE2_SEARCH},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry distribution_enforce_policy_options[] = {
+	{"error_immedately", FOREIGN_DISTRIBUTION_POLICY_ERROR_IMMEDIATELY},
+	{"notice_once", FOREIGN_DISTRIBUTION_POLICY_NOTICE_ONCE},
 	{NULL, 0}
 };
 
@@ -4523,6 +4530,17 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&optimizer_join_order,
 		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"foreign_distribution_enforce_policy", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Set distribution enforcement policy for foreign table."),
+			gettext_noop("Valid values are error_immedately, notice_once"),
+			GUC_NOT_IN_SAMPLE
+		},
+		&foreign_distribution_enforce_policy,
+		FOREIGN_DISTRIBUTION_POLICY_ERROR_IMMEDIATELY, distribution_enforce_policy_options,
 		NULL, NULL, NULL
 	},
 
