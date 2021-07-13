@@ -7550,7 +7550,8 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 		return pdrgpi;
 	}
 
-	if (CUtils::FDuplicateHazardMotion(pexprMotion))
+	if (CUtils::FDuplicateHazardMotion(pexprMotion) ||
+		CDistributionSpec::EdtTaintedReplicated == pds->Edt())
 	{
 		// if Motion is duplicate-hazard, we have to read from one input segment
 		// to avoid generating duplicate values
