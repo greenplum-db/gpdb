@@ -522,8 +522,12 @@ def killProc(proc):
 
 
 def spawnNetperfTestBetween(x, y, netperf_path, netserver_port, sec=5):
-    cmd = ('%s -H %s -p %d -t TCP_STREAM -l %s -f M -P 0 '
-           % (netperf_path, y, netserver_port, sec))
+    if GV.opt['--netclient'] == 'netperf' and GV.opt['--netserver'] == 'netserver':
+        cmd = ('%s -H %s -p %d -t TCP_STREAM -l %s -f M -P 0 '
+               % (netperf_path, y, netserver_port, sec))
+    else:
+        cmd = ('%s -H %s -p %d -l %s -P 0 '
+               % (netperf_path, y, netserver_port, sec))
     c = ['ssh', '-o', 'BatchMode yes',
          '-o', 'StrictHostKeyChecking no',
          x, cmd]
