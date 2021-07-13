@@ -25,6 +25,7 @@
 #include "access/url.h"
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"
@@ -893,6 +894,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_retrieve_conn", PGC_BACKEND, GP_WORKER_IDENTITY,
+			gettext_noop("Specify this is a connection for parallel cursor retrieve"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_NO_RESET_ALL
+		},
+		&am_cursor_retrieve_handler,
+		false,
+		NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_cost_hashjoin_chainwalk", PGC_USERSET, QUERY_TUNING_COST,

@@ -24,6 +24,8 @@
 #include "executor/execUtils.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
+#include "libpq/libpq.h"
+#include "libpq/pqformat.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbsreh.h"
@@ -91,6 +93,28 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
 {
 	if (pDispatchFuncs->waitDispatchFinish != NULL)
 		(pDispatchFuncs->waitDispatchFinish) (ds);
+}
+
+/*
+ * cdbdisp_checkDispatchAckMessage:
+ *
+ * On QD, check if any expected acknowledge messages from QEs have arrived.
+ * In some cases, QD needs to check or wait the expected acknowledge messages
+ * from QEs, e.g. when define a parallel retrieve cursor, so that QD can
+ * know if QEs run as expected.
+ *
+ * message: specifies the expected ACK message to check.
+ * wait: if true, this function will wait until required ACK messages
+ *       have been received from all dispatched QEs.
+ */
+bool
+cdbdisp_checkDispatchAckMessage(struct CdbDispatcherState *ds,
+							   const char *message, bool wait)
+{
+	if (pDispatchFuncs == NULL || pDispatchFuncs->checkAckMessage == NULL)
+		return false;
+
+	return (pDispatchFuncs->checkAckMessage) (ds, message, wait);
 }
 
 /*

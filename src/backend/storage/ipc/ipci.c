@@ -68,6 +68,7 @@
 #include "executor/spi.h"
 #include "utils/workfile_mgr.h"
 #include "utils/session_state.h"
+#include "cdb/cdbendpoint.h"
 #include "replication/gp_replication.h"
 
 /* GUCs */
@@ -219,6 +220,9 @@ CreateSharedMemoryAndSemaphores(int port)
 
 		/* size of expand version */
 		size = add_size(size, GpExpandVersionShmemSize());
+
+		/* size of token and endpoint shared memory */
+		size = add_size(size, EndpointShmemSize());
 
 		elog(DEBUG3, "invoking IpcMemoryCreate(size=%zu)", size);
 
@@ -382,6 +386,10 @@ CreateSharedMemoryAndSemaphores(int port)
 	/* Initialize dynamic shared memory facilities. */
 	if (!IsUnderPostmaster)
 		dsm_postmaster_startup(shim);
+
+	/* Initialize shared memory for parallel retrieve cursor */
+	if (!IsUnderPostmaster)
+		EndpointShmemInit();
 
 	/*
 	 * Now give loadable modules a chance to set up their shmem allocations

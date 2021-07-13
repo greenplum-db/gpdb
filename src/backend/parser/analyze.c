@@ -55,6 +55,7 @@
 #include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
+#include "cdb/cdbendpoint.h"
 #include "catalog/gp_distribution_policy.h"
 #include "commands/defrem.h"
 #include "access/htup_details.h"
@@ -257,6 +258,13 @@ static Query *
 transformOptionalSelectInto(ParseState *pstate, Node *parseTree)
 {
 	Query *q;
+
+	if (am_cursor_retrieve_handler != IsA(parseTree, RetrieveStmt))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("This is %s a retrieve connection, but query is %sRETRIEVE.",
+					   am_cursor_retrieve_handler ? "" : "not ",
+					   IsA(parseTree, RetrieveStmt) ? "" : "not ")));
 
 	if (IsA(parseTree, SelectStmt))
 	{
@@ -2916,6 +2924,18 @@ transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
 		query->commandType != CMD_SELECT)
 		elog(ERROR, "unexpected non-SELECT command in DECLARE CURSOR");
 
+	/* Can not support holdable or scrollable PARALLEL RETRIEVE CURSOR at present */
+	if ((stmt->options & CURSOR_OPT_HOLD) && (stmt->options & CURSOR_OPT_PARALLEL_RETRIEVE))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("DECLARE PARALLEL RETRIEVE CURSOR WITH HOLD ... is not supported"),
+				 errdetail("Holdable cursors can not be parallel")));
+
+	if ((stmt->options & CURSOR_OPT_SCROLL) && (stmt->options & CURSOR_OPT_PARALLEL_RETRIEVE))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("SCROLL is not allowed for the PARALLEL RETRIEVE CURSORs"),
+				 errdetail("Scrollable cursors can not be parallel")));
 	/*
 	 * We also disallow data-modifying WITH in a cursor.  (This could be
 	 * allowed, but the semantics of when the updates occur might be

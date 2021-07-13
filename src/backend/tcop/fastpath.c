@@ -33,6 +33,8 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
+#include "cdb/cdbvars.h"
+
 
 /*
  * Formerly, this code attempted to cache the function and type info

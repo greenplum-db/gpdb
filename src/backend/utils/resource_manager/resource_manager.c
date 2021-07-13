@@ -67,7 +67,7 @@ InitResManager(void)
 			 (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
 			 IsUnderPostmaster &&
 			 !amAuxiliaryBgWorker() &&
-			 !am_walsender && !am_ftshandler && !IsFaultHandler)
+			 !am_walsender && !am_ftshandler && !am_faulthandler)
 	{
 		/*
 		 * InitResManager() is called under PostgresMain(), so resource group is not

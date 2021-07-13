@@ -296,6 +296,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 		CreateMatViewStmt RefreshMatViewStmt CreateAmStmt
 		CreatePublicationStmt AlterPublicationStmt
 		CreateSubscriptionStmt AlterSubscriptionStmt DropSubscriptionStmt
+		RetrieveStmt
 
 /* GPDB-specific commands */
 %type <node>	AlterTypeStmt AlterQueueStmt AlterResourceGroupStmt
@@ -724,7 +725,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	DETACH DICTIONARY DISABLE_P DISCARD DISTINCT DO DOCUMENT_P DOMAIN_P
 	DOUBLE_P DROP
 
-	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ESCAPE EVENT EXCEPT
+	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENDPOINT ENUM_P ESCAPE EVENT EXCEPT
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
 	EXTENSION EXTERNAL EXTRACT
 
@@ -767,7 +768,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	RANGE READ REAL REASSIGN RECHECK RECURSIVE REF REFERENCES REFERENCING
 	REFRESH REINDEX RELATIVE_P RELEASE RENAME REPEATABLE REPLACE REPLICA
-	RESET RESTART RESTRICT RETURNING RETURNS REVOKE RIGHT ROLE ROLLBACK ROLLUP
+	RESET RESTART RESTRICT RETRIEVE RETURNING RETURNS REVOKE RIGHT ROLE ROLLBACK ROLLUP
 	ROUTINE ROUTINES ROW ROWS RULE
 
 	SAVEPOINT SCHEMA SCHEMAS SCROLL SEARCH SECOND_P SECURITY SELECT SEQUENCE SEQUENCES
@@ -970,6 +971,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc ENCODING
 			%nonassoc ENCRYPTED
 			%nonassoc END_P
+			%nonassoc ENDPOINT
 			%nonassoc ENUM_P
 			%nonassoc ERRORS
 			%nonassoc EVERY
@@ -1057,6 +1059,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc OVERCOMMIT
 			%nonassoc OWNED
 			%nonassoc OWNER
+			%nonassoc PARALLEL
 			%nonassoc PARTIAL
 			%nonassoc PARTITIONS
 			%nonassoc PASSWORD
@@ -1089,6 +1092,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc RESOURCE
 			%nonassoc RESTART
 			%nonassoc RESTRICT
+			%nonassoc RETRIEVE
 			%nonassoc RETURNS
 			%nonassoc REVOKE
 			%nonassoc ROLE
@@ -1398,6 +1402,7 @@ stmt :
 			| VariableSetStmt
 			| VariableShowStmt
 			| ViewStmt
+			| RetrieveStmt
 			| /*EMPTY*/
 				{ $$ = NULL; }
 		;
@@ -13822,6 +13827,7 @@ cursor_options: /*EMPTY*/					{ $$ = 0; }
 			| cursor_options SCROLL			{ $$ = $1 | CURSOR_OPT_SCROLL; }
 			| cursor_options BINARY			{ $$ = $1 | CURSOR_OPT_BINARY; }
 			| cursor_options INSENSITIVE	{ $$ = $1 | CURSOR_OPT_INSENSITIVE; }
+			| cursor_options PARALLEL RETRIEVE	{ $$ = $1 | CURSOR_OPT_PARALLEL_RETRIEVE; }
 		;
 
 opt_hold: /* EMPTY */						{ $$ = 0; }
@@ -13876,6 +13882,24 @@ opt_hold: /* EMPTY */						{ $$ = 0; }
 
 SelectStmt: select_no_parens			%prec UMINUS
 			| select_with_parens		%prec UMINUS
+		;
+
+RetrieveStmt:
+			RETRIEVE SignedIconst FROM ENDPOINT name
+				{
+					RetrieveStmt *n = makeNode(RetrieveStmt);
+					n->endpoint_name = $5;
+					n->count = $2;
+					$$ = (Node *)n;
+				}
+			| RETRIEVE ALL FROM ENDPOINT name
+				{
+					RetrieveStmt *n = makeNode(RetrieveStmt);
+					n->endpoint_name = $5;
+					n->count = -1;
+					n->is_all = true;
+					$$ = (Node *)n;
+				}
 		;
 
 select_with_parens:
@@ -17937,6 +17961,7 @@ unreserved_keyword:
 			| ENABLE_P
 			| ENCODING
 			| ENCRYPTED
+			| ENDPOINT
 			| ENUM_P
 			| ERRORS
 			| ESCAPE
@@ -18100,6 +18125,7 @@ unreserved_keyword:
 			| RESOURCE
 			| RESTART
 			| RESTRICT
+			| RETRIEVE
 			| RETURNS
 			| REVOKE
 			| ROLE
@@ -18285,6 +18311,7 @@ PartitionIdentKeyword: ABORT_P
 			| ENABLE_P
 			| ENCODING
 			| ENCRYPTED
+			| ENDPOINT
 			| ERRORS
 			| ENUM_P
 			| ESCAPE
@@ -18368,6 +18395,7 @@ PartitionIdentKeyword: ABORT_P
 			| OVERCOMMIT
 			| OWNED
 			| OWNER
+			| PARALLEL
 			| PARTIAL
 			| PARTITIONS
 			| PASSWORD

@@ -31,6 +31,7 @@
 #ifndef PRIO_MAX
 #define PRIO_MAX 20
 #endif
+
 /*
  * Parameters gp_role
  *
@@ -685,6 +686,8 @@ extern int  gp_debug_linger;
 
 #define UNSET_SLICE_ID -1
 extern int	currentSliceId;
+/* The root slice->sliceIndex of the main plan is always 0. */
+#define IS_ROOT_SLICE_FOR_MAIN_PLAN(slice) (slice->sliceIndex == 0)
 
 extern int cdb_total_plans;
 /* Enable ading the cost for walking the chain in the hash join. */
@@ -734,5 +737,14 @@ extern bool gp_create_table_random_default_distribution;
 
 /* Functions in guc_gp.c to lookup values in enum GUCs */
 extern const char * lookup_autostats_mode_by_value(GpAutoStatsModeValue val);
+
+/* notification condition name of next value, used in PGnotify */
+#define CDB_NOTIFY_NEXTVAL "nextval"
+
+/*
+ * notification condition name of endpoint ack information. Used in PGnotify
+ * for parallel retrieve cursor.
+ */
+#define CDB_NOTIFY_ENDPOINT_ACK "ack_notify"
 
 #endif   /* CDBVARS_H */

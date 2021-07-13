@@ -159,7 +159,7 @@ libpqrcv_connect(const char *conninfo, bool logical, const char *appname,
 		vals[i] = GetDatabaseEncodingName();
 	}
 	keys[++i] = GPCONN_TYPE;
-	vals[i] = GPCONN_TYPE_INTERNAL;
+	vals[i] = GPCONN_TYPE_DEFAULT;
 	keys[++i] = NULL;
 	vals[i] = NULL;
 

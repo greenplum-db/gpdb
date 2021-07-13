@@ -56,6 +56,7 @@ main(int argc, char **argv)
 		exit_nicely(conn);
 	}
 
+	PQexec(conn, "drop table if exists t_extended_protocol_test;");
 	PQexec(conn, "create table t_extended_protocol_test(c int) distributed randomly;");
 	PQexec(conn, "insert into t_extended_protocol_test select * from generate_series(1, 10);");
 

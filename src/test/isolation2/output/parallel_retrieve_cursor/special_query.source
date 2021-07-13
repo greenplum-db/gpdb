@@ -1,0 +1,96 @@
+-- @Description Tests create parallel for some special query
+--
+
+--------- Test1: test for PARALLEL RETRIEVE CURSOR on select transient record types
+DROP TABLE IF EXISTS t1;
+DROP
+CREATE TABLE t1 AS SELECT generate_series(1, 10) AS x DISTRIBUTED by (x);
+CREATE 10
+
+CREATE OR REPLACE FUNCTION make_record(n int) RETURNS RECORD LANGUAGE plpgsql AS ' BEGIN RETURN CASE n WHEN 1 THEN ROW(1) WHEN 2 THEN ROW(1, 2) WHEN 3 THEN ROW(1, 2, 3) WHEN 4 THEN ROW(1, 2, 3, 4) ELSE ROW(1, 2, 3, 4, 5) END; END; ';
+CREATE
+
+SELECT make_record(x) FROM t1;
+ make_record 
+-------------
+ (1)         
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+ (1,2)       
+ (1,2,3)     
+ (1,2,3,4)   
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(10 rows)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+
+1: SELECT * FROM gp_check_parallel_retrieve_cursor('c1');
+ finished 
+----------
+ f        
+(1 row)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1');  <waiting ...>
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  Retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2)       
+ (1,2,3)     
+ (1,2,3,4)   
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(5 rows)
+
+ make_record 
+-------------
+ (1)         
+(1 row)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(4 rows)
+
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+1: CLOSE c1;
+CLOSE

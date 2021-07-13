@@ -216,6 +216,10 @@ typedef struct PortalData
  */
 #define PortalIsValid(p) PointerIsValid(p)
 
+/*
+ * Is Portal a parallel retrieve cursor.
+ */
+#define PortalIsParallelRetrieveCursor(portal) ((portal)->cursorOptions & CURSOR_OPT_PARALLEL_RETRIEVE)
 
 /* Prototypes for functions in utils/mmgr/portalmem.c */
 extern void EnablePortalManager(void);

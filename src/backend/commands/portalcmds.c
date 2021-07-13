@@ -35,6 +35,7 @@
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
 
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "postmaster/backoff.h"
@@ -188,6 +189,9 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 
+	if (PortalIsParallelRetrieveCursor(portal))
+		WaitEndpointsReady(portal->queryDesc->estate);
+
 	/*
 	 * We're done; the query won't actually be run until PerformPortalFetch is
 	 * called.
@@ -230,6 +234,24 @@ PerformPortalFetch(FetchStmt *stmt,
 				(errcode(ERRCODE_UNDEFINED_CURSOR),
 				 errmsg("cursor \"%s\" does not exist", stmt->portalname)));
 		return;					/* keep compiler happy */
+	}
+
+	if (PortalIsParallelRetrieveCursor(portal))
+	{
+		if (stmt->ismove)
+		{
+			ereport(ERROR,
+			        (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				        errmsg("The 'MOVE' statement for PARALLEL RETRIEVE CURSOR is not supported."),
+				        errhint("The 'PARALLEL RETRIEVE CURSOR' doesnot support SCROLLABLE option.")));
+		}
+		else
+		{
+			ereport(ERROR,
+			        (errcode(ERRCODE_SYNTAX_ERROR),
+				        errmsg("Cannot specify 'FETCH' for PARALLEL RETRIEVE CURSOR."),
+				        errhint("Using 'RETRIEVE' statement on endpoint instead.")));
+		}
 	}
 
 	/* Adjust dest if needed.  MOVE wants destination DestNone */
