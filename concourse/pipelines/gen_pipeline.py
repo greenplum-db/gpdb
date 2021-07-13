@@ -232,7 +232,7 @@ if __name__ == "__main__":
                         action='store',
                         dest='test_sections',
                         choices=['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep', 'AA'],
-                        default=['ICW'],
+                        default=[],
                         nargs='+',
                         help='Select tests sections to run')
 
