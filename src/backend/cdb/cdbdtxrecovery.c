@@ -456,7 +456,7 @@ ReplayRedoFromUtilityMode(void)
 	}
 
 	elogif(Debug_print_full_dtm, LOG,
-		   "Succesfully opened DTM redo file %s for reading", path);
+		   "Successfully opened DTM redo file %s for reading", path);
 
 	while (true)
 	{
@@ -542,7 +542,7 @@ UtilityModeFindOrCreateDtmRedoFile(void)
 
 	redoFileOffset = lseek(redoFileFD, 0, SEEK_END);
 	elogif(Debug_print_full_dtm, LOG,
-		   "Succesfully opened DTM redo file %s (end offset %d)",
+		   "Successfully opened DTM redo file %s (end offset %d)",
 		   path, redoFileOffset);
 }
 

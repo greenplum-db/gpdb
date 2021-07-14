@@ -78,7 +78,7 @@ ubuntu*)
 	mv ${BUILDROOT}/${PACKAGENAME} ${CWDIR}/data/
 ;;
 *)
-	echo "unkown OS <$OS>" >&2
+	echo "unknown OS <$OS>" >&2
 	env
 	exit 1;
 ;;
@@ -94,7 +94,7 @@ ubuntu*)
 	cp ${CWDIR}/data/sample*.deb ${DESTINATION_GPPKG_PATH}/
 ;;
 *)
-	echo "unkown OS <$OS>" >&2
+	echo "unknown OS <$OS>" >&2
 	exit 1;
 ;;
 esac

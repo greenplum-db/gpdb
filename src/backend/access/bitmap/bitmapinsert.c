@@ -39,7 +39,7 @@
 /*
  * BMTIDLOVBuffer represents those bitmap vectors whose LOV item would be
  * stored on the specified lov_block. The array bufs stores the TIDs for
- * a distinct vector (see above). The index of the array we're upto tell
+ * a distinct vector (see above). The index of the array we're up to tell
  * us the offset number of the LOV item on the lov_block.
  */
 

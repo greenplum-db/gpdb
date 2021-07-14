@@ -1832,7 +1832,7 @@ def removeFastSequence(db):
               """
         curs = db.query(qry)
         for row in curs.dictresult():
-            seg = row['dbid']  # dbid of targetted segment
+            seg = row['dbid']  # dbid of targeted segment
             name = 'gp_fastsequence tuple'  # for comment purposes
             table = 'gp_fastsequence'  # table name
             cols = {'objid': row['objid']}  # column name and value

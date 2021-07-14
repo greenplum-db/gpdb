@@ -1827,7 +1827,7 @@ WaitXLogInsertionsToFinish(XLogRecPtr upto)
 	 * Loop through all the locks, sleeping on any in-progress insert older
 	 * than 'upto'.
 	 *
-	 * finishedUpto is our return value, indicating the point upto which all
+	 * finishedUpto is our return value, indicating the point up to which all
 	 * the WAL insertions have been finished. Initialize it to the head of
 	 * reserved WAL, and as we iterate through the insertion locks, back it
 	 * out for any insertion that's still in progress.
@@ -2214,7 +2214,7 @@ XLogCheckBuffer(XLogRecData *rdata, bool holdsExclusiveLock,
 
 /*
  * Initialize XLOG buffers, writing out old buffers if they still contain
- * unwritten data, upto the page containing 'upto'. Or if 'opportunistic' is
+ * unwritten data, up to the page containing 'upto'. Or if 'opportunistic' is
  * true, initialize as many pages as we can without having to write out
  * unwritten data. Any new pages are initialized to zeros, with pages headers
  * initialized properly.

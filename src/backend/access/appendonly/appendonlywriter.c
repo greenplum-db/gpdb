@@ -620,7 +620,7 @@ usedByConcurrentTransaction(AOSegfileStatus *segfilestat, int segno)
 							  latestWriteXid))
 	{
 		ereportif(Debug_appendonly_print_segfile_choice, LOG,
-				  (errmsg("usedByConcurrentTransaction: current distributed transaction id %u preceeds latestWriterXid %x of segno %d, so it is considered concurrent",
+				  (errmsg("usedByConcurrentTransaction: current distributed transaction id %u precedes latestWriterXid %x of segno %d, so it is considered concurrent",
 						  getDistributedTransactionId(),
 						  latestWriteXid,
 						  segno)));
@@ -1444,7 +1444,7 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 
 	elogif(Debug_appendonly_print_segfile_choice, LOG,
 		   "Get awaiting drop state from segments: "
-		   "releation %s (%d)",
+		   "relation %s (%d)",
 		   RelationGetRelationName(parentrel),
 		   RelationGetRelid(parentrel));
 
@@ -1523,7 +1523,7 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 						awaiting_drop[segno] = true;
 						elogif(Debug_appendonly_print_segfile_choice, LOG,
 							   "Found awaiting drop segment file: "
-							   "releation %s (%d), segno = %d",
+							   "relation %s (%d), segno = %d",
 							   RelationGetRelationName(parentrel),
 							   RelationGetRelid(parentrel),
 							   segno);

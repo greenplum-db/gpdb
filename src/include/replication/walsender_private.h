@@ -58,7 +58,7 @@ typedef struct WalSnd
 	bool		caughtup_within_range;
 
 	/*
-	 * xlog location upto which xlog seg file cleanup for this walsender
+	 * xlog location up to which xlog seg file cleanup for this walsender
 	 * is allowed.
 	 * In case of backup mode, it is the starting xlog ptr and
 	 * in case of actual xlog replication to a standby it is the
@@ -122,7 +122,7 @@ typedef struct
 	bool		sync_standbys_defined;
 
 	/*
-	 * xlog location upto which xlog seg file cleanup is allowed.
+	 * xlog location up to which xlog seg file cleanup is allowed.
 	 * Checkpoint creation cleans old non-required xlog files. We have to
 	 * preserve old files in case where the backup dump is large and the
 	 * old xlog seg files are not yet dumped out OR in case the walsender

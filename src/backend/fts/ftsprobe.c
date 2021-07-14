@@ -1146,7 +1146,7 @@ processResponse(fts_context *context)
 			case FTS_PROMOTE_SUCCESS:
 				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 					   "FTS mirror (content=%d, dbid=%d) promotion "
-					   "triggerred successfully",
+					   "triggered successfully",
 					   primary->config->segindex, primary->config->dbid);
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
