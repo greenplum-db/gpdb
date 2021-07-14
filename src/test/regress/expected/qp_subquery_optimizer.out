@@ -584,18 +584,18 @@ select t1.a, t2.b from t1 inner join t2 on  (t1.a=t2.a) where ((t1.a,t2.b) not i
 explain select t1.a, t2.b from t1, t2 where t1.a=t2.a or ((t1.a,t2.b) not in (select i1.a,i1.b from i1));
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=1.01..3.66 rows=4 width=8)
-   ->  Nested Loop  (cost=1.01..3.66 rows=2 width=8)
-         Join Filter: t1.a = t2.a OR (NOT ((subplan)))
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=10000000001.01..10000000003.14 rows=4 width=8)
+   ->  Nested Loop  (cost=10000000001.01..10000000003.14 rows=2 width=8)
+         Join Filter: ((t1.a = t2.a) OR (NOT (hashed SubPlan 1)))
          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=4)
                ->  Seq Scan on t1  (cost=0.00..1.01 rows=1 width=4)
-         ->  Materialize  (cost=1.01..1.02 rows=1 width=8)
+         ->  Materialize  (cost=0.00..1.01 rows=1 width=8)
                ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=8)
-         SubPlan 1
-           ->  Materialize  (cost=1.01..1.02 rows=1 width=8)
+         SubPlan 1  (slice3; segments: 3)
+           ->  Materialize  (cost=0.00..1.01 rows=1 width=8)
                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.01 rows=1 width=8)
                        ->  Seq Scan on i1  (cost=0.00..1.01 rows=1 width=8)
- Optimizer status: Postgres query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 --
@@ -1079,26 +1079,27 @@ explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- d
  Delete  (cost=0.00..862.04 rows=1 width=1)
    ->  Result  (cost=0.00..862.00 rows=1 width=22)
          ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
-               Hash Cond: tabdel1.a = tabdel3.a
+               Hash Cond: (tabdel1.a = tabdel3.a)
                ->  Seq Scan on tabdel1  (cost=0.00..431.00 rows=1 width=18)
                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                            ->  Seq Scan on tabdel3  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
 explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Delete on tabdel2  (cost=0.00..862.03 rows=1 width=1)
-   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
-         Hash Cond: (tabdel2_1.a = tabdel4.a)
-         ->  Seq Scan on tabdel2 tabdel2_1  (cost=0.00..431.00 rows=1 width=18)
-         ->  Hash  (cost=431.00..431.00 rows=3 width=4)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
-                     ->  Seq Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.04 rows=1 width=1)
+   ->  Result  (cost=0.00..862.00 rows=1 width=22)
+         ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
+               Hash Cond: (tabdel2.a = tabdel4.a)
+               ->  Seq Scan on tabdel2  (cost=0.00..431.00 rows=1 width=18)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Seq Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(9 rows)
 
 delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 
 select * from TabDel2;
