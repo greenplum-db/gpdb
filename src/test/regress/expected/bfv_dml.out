@@ -201,11 +201,11 @@ select * from update_pk_test order by 1,2;
 explain update update_pk_test set a = 5;
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
- Update on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=14)
+ Update on update_pk_test  (cost=0.00..1.03 rows=1 width=18)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=18)
          Hash Key: a
-         ->  Split  (cost=0.00..1.01 rows=1 width=14)
-               ->  Seq Scan on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
+         ->  Split  (cost=0.00..1.03 rows=1 width=18)
+               ->  Seq Scan on update_pk_test  (cost=0.00..1.01 rows=1 width=18)
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -408,8 +408,8 @@ insert into foo select generate_series(1,10);
 explain delete from foo where foo.a=1;
                         QUERY PLAN                        
 ----------------------------------------------------------
- Delete on foo  (cost=0.00..2.12 rows=1 width=10)
-   ->  Seq Scan on foo  (cost=0.00..2.12 rows=1 width=10)
+ Delete on foo  (cost=0.00..3.12 rows=1 width=10)
+   ->  Seq Scan on foo  (cost=0.00..3.12 rows=1 width=10)
          Filter: (a = 1)
  Optimizer: Postgres query optimizer
 (4 rows)
