@@ -18,6 +18,9 @@ SELECT lag(a order by a) over (order by a) FROM aggtest;  -- window function
 SELECT count(a order by a) over (order by a) FROM aggtest;  -- window derived aggregate
 SELECT array_agg(a order by a) over (order by a) FROM aggtest; -- window derived ordered aggregate
 
+-- agg on entryDB, this used to raise error "MIN/MAX subplan has unexpected flowtype"
+SELECT min(attnum) min_attnum FROM pg_catalog.pg_attribute WHERE attrelid = 'pg_proc'::regclass AND attnum > 0;
+
 -- check for mpp-2687
 CREATE TEMPORARY TABLE mpp2687t (
     dk text,

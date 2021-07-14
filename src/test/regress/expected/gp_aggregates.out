@@ -62,6 +62,13 @@ SELECT array_agg(a order by a) over (order by a) FROM aggtest; -- window derived
 ERROR:  aggregate ORDER BY is not implemented for window functions
 LINE 1: SELECT array_agg(a order by a) over (order by a) FROM aggtes...
                ^
+-- agg on entryDB, this used to raise error "MIN/MAX subplan has unexpected flowtype"
+SELECT min(attnum) min_attnum FROM pg_catalog.pg_attribute WHERE attrelid = 'pg_proc'::regclass AND attnum > 0;
+ min_attnum 
+------------
+          1
+(1 row)
+
 -- check for mpp-2687
 CREATE TEMPORARY TABLE mpp2687t (
     dk text,

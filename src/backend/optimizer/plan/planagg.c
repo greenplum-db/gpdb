@@ -578,6 +578,10 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *mminfo)
 	{
 		plan = (Plan *) make_motion_gather(subroot, plan, subroot->sort_pathkeys, CdbLocusType_SingleQE);
 	}
+	else if (plan->flow->flotype == FLOW_SINGLETON && plan->flow->locustype == CdbLocusType_Entry)
+	{
+		/* No need to gather if the plan is executed on entryDB. */
+	}
 	else
 		elog(ERROR, "MIN/MAX subplan has unexpected flowtype: %d", plan->flow->type);
 
