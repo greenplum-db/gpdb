@@ -73,16 +73,10 @@ lockEqual(LockInstanceData *lock1, LockInstanceData *lock2)
 static bool
 lockIsHoldTillEndXact(LockInstanceData *lock)
 {
-	LOCKTAG		*tag = &lock->locktag;
-
 	if (lock->holdTillEndXact)
 		return true;
 
-	if (tag->locktag_type == LOCKTAG_TRANSACTION)
-		return true;
-
 	/* FIXME: other types */
-
 	return false;
 }
 
