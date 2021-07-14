@@ -4633,6 +4633,11 @@ CTranslatorExprToDXL::PdxlnMotion(CExpression *pexprMotion,
 			break;
 
 		case COperator::EopPhysicalMotionHashDistribute:
+			// When fDuplicateHazardMotion is true then redistribute motion will
+			// be translated into a result hash filter node during DXL to PlStmt
+			// by TranslateDXLDuplicateSensitiveMotion(). That is only valid if
+			// child distribution is strict-replicated (not tainted) or
+			// universal.
 			motion = GPOS_NEW(m_mp)
 				CDXLPhysicalRedistributeMotion(m_mp, fDuplicateHazardMotion);
 			break;
@@ -7555,6 +7560,11 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 	{
 		// if Motion is duplicate-hazard, we have to read from one input segment
 		// to avoid generating duplicate values
+		//
+		// Additionally, if the child distribution is tainted-replicated, the
+		// motion (which cannot be a result hash filter node) will read the
+		// input from one segment in order to safely propogate the replicated
+		// distribution.
 		IntPtrArray *pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
 		INT iSegmentId = *((*m_pdrgpiSegments)[0]);
 		pdrgpi->Append(GPOS_NEW(m_mp) INT(iSegmentId));

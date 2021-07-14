@@ -3839,8 +3839,9 @@ CUtils::PcrMap(CColRef *pcrSource, CColRefArray *pdrgpcrSource,
 }
 
 // Check if duplicate values can be generated when executing the given Motion expression,
-// duplicates occur if Motion's input has replicated/universal distribution,
-// which means that we have exactly the same copy of input on each host,
+// duplicates occur if Motion's input has strict-replicated/universal distribution,
+// which means that we have exactly the same copy of input on each host. Note that
+// tainted-replicated does not satisfy the assertion of identical input copies.
 BOOL
 CUtils::FDuplicateHazardMotion(CExpression *pexprMotion)
 {
