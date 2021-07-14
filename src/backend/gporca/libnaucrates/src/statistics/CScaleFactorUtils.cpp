@@ -312,7 +312,7 @@ CScaleFactorUtils::DampedJoinScaleFactor(const CStatisticsConfig *stats_config,
 		return CDouble(1.0);
 	}
 
-	return stats_config->DDampingFactorJoin().Pow(CDouble(num_columns));
+	return stats_config->DDampingFactorJoin().Pow(CDouble(num_columns - 1));
 }
 
 
@@ -335,7 +335,7 @@ CScaleFactorUtils::DampedFilterScaleFactor(
 		return CDouble(1.0);
 	}
 
-	return stats_config->DDampingFactorFilter().Pow(CDouble(num_columns));
+	return stats_config->DDampingFactorFilter().Pow(CDouble(num_columns - 1));
 }
 
 
@@ -358,7 +358,7 @@ CScaleFactorUtils::DampedGroupByScaleFactor(
 		return CDouble(1.0);
 	}
 
-	return stats_config->DDampingFactorGroupBy().Pow(CDouble(num_columns + 1));
+	return stats_config->DDampingFactorGroupBy().Pow(CDouble(num_columns));
 }
 
 
