@@ -54,8 +54,7 @@ CPhysicalLeftOuterIndexNLJoin::Matches(COperator *pop) const
 
 CEnfdProp::EPropEnforcingType
 CPhysicalLeftOuterIndexNLJoin::EpetDistribution(
-	CExpressionHandle &exprhdl,			 // exprhdl
-	const CEnfdDistribution *ped) const	 // ped
+	CExpressionHandle &exprhdl, const CEnfdDistribution *ped) const
 {
 	GPOS_ASSERT(nullptr != ped);
 
