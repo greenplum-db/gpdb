@@ -2099,14 +2099,14 @@ CEngine::FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 	// when there are no motions, therefore we need to handle this exceptional
 	// case here.
 	//
-	// Similar exceptions should be OR'd into fDistirbutionReqdException to
+	// Similar exceptions should be OR'd into fDistributionReqdException to
 	// force checking EpetDistribution on the physical operation
 	BOOL fDistributionReqdException =
 		popPhysical->Eopid() == COperator::EopPhysicalLeftOuterIndexNLJoin;
 	BOOL fDistributionReqd =
-		(!GPOS_FTRACE(EopttraceDisableMotions) &&
-		 (CDistributionSpec::EdtAny != prpp->Ped()->PdsRequired()->Edt())) ||
-		fDistributionReqdException;
+		!GPOS_FTRACE(EopttraceDisableMotions) &&
+		((CDistributionSpec::EdtAny != prpp->Ped()->PdsRequired()->Edt()) ||
+		 fDistributionReqdException);
 
 	BOOL fRewindabilityReqd = !GPOS_FTRACE(EopttraceDisableSpool) &&
 							  (prpp->Per()->PrsRequired()->IsCheckRequired());

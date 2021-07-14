@@ -2966,10 +2966,6 @@ select data from tt_varchar where data > any(select id from tt_int);
 DROP CAST (integer AS text);
 reset optimizer_enforce_subplans;
 
--- start_ignore
-DROP SCHEMA orca CASCADE;
--- end_ignore
-
 create table left_outer_index_nl_foo (a integer, b integer, c integer) distributed randomly;
 create table left_outer_index_nl_bar (a integer, b integer, c integer) distributed randomly;
 create index left_outer_index_nl_bar_idx on left_outer_index_nl_bar using btree (b);
@@ -3028,3 +3024,6 @@ reset optimizer_enable_hashjoin;
 reset enable_nestloop;
 reset enable_hashjoin;
 
+-- start_ignore
+DROP SCHEMA orca CASCADE;
+-- end_ignore
