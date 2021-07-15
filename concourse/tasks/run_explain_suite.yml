@@ -28,7 +28,7 @@ run:
         echo "Running workload ${WORKLOAD}"
         cp -rL gp_workloads/${WORKLOAD}/sql sql
         cp gp_workloads/${WORKLOAD}/schema_6X.sql schema.sql
-        cp gp_workloads/${WORKLOAD}/stats_6X.sql stats.sql
+        cp gp_workloads/${WORKLOAD}/stats_7X.sql stats.sql
         gpdb_src/concourse/scripts/build_gpdb.py --mode ${MODE} --action test_explain_suite
         break
       fi
