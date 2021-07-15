@@ -12,6 +12,9 @@ select count(*) from cf_executor_test;
 select * from cf_executor_test order by a limit 1 for update;
 select * from cf_executor_test order by a limit 1 for share;
 
+select oid from pg_class order by oid limit 0 for update;
+select oid from pg_class order by oid limit 0 for share;
+
 --returning clause
 insert into cf_executor_test values (1) returning *;
 
