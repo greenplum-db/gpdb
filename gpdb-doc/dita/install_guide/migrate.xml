@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="kh138244">Migrating or Upgrading from Greenplum 4.3 or 5 to Greenplum 6</title>
+  <title id="kh138244">Migrating or Upgrading to Greenplum 6</title>
   <shortdesc>You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the standard
     backup and restore procedures of <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, <ph
       otherprops="pivotal"> or by using <codeph>gpcopy</codeph></ph>. You can upgrade from Greenplum
@@ -100,9 +100,9 @@
   <topic id="prep-gpdb4">
     <title>Preparing Greenplum 4.3 and 5 Databases for Backup and Upgrade</title>
     <body>
-      <p>This section highlights changes in Greenplum 6.x that you need to be aware when upgrading
-        from Greenplum 5 to 6, or when backing up Greenplum 4 or 5 and plan to restore the data in
-        Greenplum 6. </p>
+      <p>This section highlights changes in Greenplum 6.x that you need to be aware of when
+        upgrading from Greenplum 5 to 6, or when backing up Greenplum 4 or 5 with the intention of
+        restoring the data in Greenplum 6. </p>
       <note>A Greenplum 4 system must be at least version 4.3.22 to use the
           <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities. A Greenplum 5 system
         must be at least version 5.5. Be sure to use the latest release of the backup and restore
