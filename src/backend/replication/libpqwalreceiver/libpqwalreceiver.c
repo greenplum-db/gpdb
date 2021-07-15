@@ -96,6 +96,7 @@ static void
 libpqrcv_connect(char *conninfo)
 {
 	char		conninfo_repl[MAXCONNINFO + 75];
+	PostgresPollingStatusType status;
 
 	/*
 	 * Connect using deliberately undocumented parameter: replication. The
@@ -106,7 +107,47 @@ libpqrcv_connect(char *conninfo)
 			 "%s dbname=replication replication=true fallback_application_name=walreceiver",
 			 conninfo);
 
-	streamConn = PQconnectdb(conninfo_repl);
+	streamConn =  PQconnectStart(conninfo_repl);
+	if (PQstatus(streamConn) == CONNECTION_BAD)
+		ereport(ERROR,
+				(errmsg("could not connect to the primary server: %s",
+						PQerrorMessage(streamConn))));
+
+	/*
+	 * Poll connection until we have OK or FAILED status.
+	 *
+	 * Per spec for PQconnectPoll, first wait till socket is write-ready.
+	 */
+	status = PGRES_POLLING_WRITING;
+	do
+	{
+		int			io_flag;
+		int			rc;
+
+		/*
+		 * This flag has to be setup for the further call of WaitLatchOrSocket.
+		 */
+		io_flag = WL_SOCKET_READABLE;
+		if (status == PGRES_POLLING_WRITING)
+			io_flag |= WL_SOCKET_WRITEABLE;
+
+		rc = WaitLatchOrSocket(&MyProc->procLatch,
+							   WL_POSTMASTER_DEATH | WL_LATCH_SET | io_flag,
+							   PQsocket(streamConn),
+							   0);
+
+		/* Interrupted? */
+		if (rc & WL_LATCH_SET)
+		{
+			ResetLatch(&MyProc->procLatch);
+			ProcessWalRcvInterrupts();
+		}
+
+		/* If socket is ready, advance the libpq state machine */
+		if (rc & io_flag)
+			status = PQconnectPoll(streamConn);
+	} while (status != PGRES_POLLING_OK && status != PGRES_POLLING_FAILED);
+
 	if (PQstatus(streamConn) != CONNECTION_OK)
 		ereport(ERROR,
 				(errmsg("could not connect to the primary server: %s",
