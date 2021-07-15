@@ -57,6 +57,14 @@ url_custom_fopen(char *url,
 	int			url_len;
 	int			i;
 
+	/* Remove any CR or LF chars from the URL.  Leaves the overall length intact. */
+  for (i = 0; url[i] != '\0'; i++)
+  {
+    if ('\r' == url[i] || '\n' == url[i]) {
+      url[i] = ' ';
+    }
+  }
+
 	file = palloc0(sizeof(URL_CUSTOM_FILE));
 	file->common.type = CFTYPE_CUSTOM;
 	file->common.url = pstrdup(url);
