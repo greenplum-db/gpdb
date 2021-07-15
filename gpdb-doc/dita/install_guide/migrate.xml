@@ -2,15 +2,16 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="kh138244">Migrating Data from Greenplum 4.3 or 5 to Greenplum 6</title>
+  <title id="kh138244">Migrating or Upgrading to Greenplum 6</title>
   <shortdesc>You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the standard
-    backup and restore procedures, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph><ph
-      otherprops="pivotal">, or by using <codeph>gpcopy</codeph></ph>.</shortdesc>
+    backup and restore procedures of <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, <ph
+      otherprops="pivotal"> or by using <codeph>gpcopy</codeph></ph>. You can upgrade from Greenplum
+    5.x to Greenplum 6.x using <codeph>gpupgrade</codeph>.</shortdesc>
   <body>
     <p>
       <note otherprops="oss-only">Open source Greenplum Database is available only for Greenplum
         Database 5 and later. </note>
-      <note>You can upgrade a Greenplum Database 5.28 system directly to Greenplum 6.9 or later
+      <note>You can upgrade a Greenplum Database 5.28.12 system directly to Greenplum 6.17 or later
         using <xref href="https://greenplum.docs.pivotal.io/upgrade/" format="html" scope="external"
           >gpupgrade</xref>. You cannot upgrade a Greenplum Database 4.3 system directly to
         Greenplum 6.</note>
@@ -97,8 +98,11 @@
     </body>
   </topic>
   <topic id="prep-gpdb4">
-    <title>Preparing Greenplum 4.3 and 5 Databases for Backup</title>
+    <title>Preparing Greenplum 4.3 and 5 Databases for Backup and Upgrade</title>
     <body>
+      <p>This section highlights changes in Greenplum 6.x that you need to be aware of when
+        upgrading from Greenplum 5 to 6, or when backing up Greenplum 4 or 5 with the intention of
+        restoring the data in Greenplum 6. </p>
       <note>A Greenplum 4 system must be at least version 4.3.22 to use the
           <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities. A Greenplum 5 system
         must be at least version 5.5. Be sure to use the latest release of the backup and restore
@@ -113,20 +117,24 @@
       <p>Following are some issues that are known to cause errors when restoring a Greenplum 4.3 or
         5 backup to Greenplum 6. Keep a list of any changes you make to the Greenplum 4.3 or 5
         database to enable migration so that you can fix them in Greenplum 6 after restoring the
-        backup.</p>
+        backup. These issues can also occur during an upgrade from Greenplum 5 to 6, while using
+          <xref href="https://gpdb.docs.pivotal.io/upgrade/latest/index.html" format="html"
+          scope="external">Greenplum Upgrade</xref>. </p>
       <ul>
         <li>If you have configured PXF in your Greenplum Database 5 installation, review <xref
             scope="peer" href="../pxf/migrate_5to6.html" type="topic" format="html">Migrating PXF
             from Greenplum 5</xref> to plan for the PXF migration.</li>
         <li>Greenplum Database version 6 removes support for the <codeph>gphdfs</codeph> protocol.
           If you have created external tables that use gphdfs, remove the external table definitions
-          and (optionally) recreate them to use Greenplum Platform Extension Framework (PXF) before you migrate
-          the data to Greenplum 6. Refer to <xref scope="peer" href="../pxf/gphdfs-pxf-migrate.html"
-            >Migrating gphdfs External Tables to PXF</xref> in the PXF documentation for the
-          migration procedure.</li>
+          and (optionally) recreate them to use Greenplum Platform Extension Framework (PXF) before
+          you migrate the data to Greenplum 6. Refer to <xref scope="peer"
+            href="../pxf/gphdfs-pxf-migrate.html">Migrating gphdfs External Tables to PXF</xref> in
+          the PXF documentation for the migration procedure.</li>
         <li>References to catalog tables or their attributes can cause a restore to fail due to
-          catalog changes from Greenplum 4.3 or 5 to Greenplum 6. Here are some catalog issues to be
-          aware of when migrating to Greenplum 6:<ul id="ul_i54_jjj_s3b">
+          catalog changes from Greenplum 4.3 or 5 to Greenplum 6.  For more details on the
+          deprecated objects, see <xref href="../ref_guide/deprecated-objects.xml#topic1">Objects
+            Deprecated in Greenplum 6</xref>. Here are some catalog issues to be aware of when
+          migrating to Greenplum 6:<ul id="ul_i54_jjj_s3b">
             <li>In the <codeph>pg_class</codeph> system table, the <codeph>reltoastidxid</codeph>
               column has been removed.</li>
             <li>In the <codeph>pg_stat_replication</codeph> system table, the
@@ -153,7 +161,7 @@
               Greenplum 4 catalog tables. For example, restoring a UDF can fail if it references a
               custom data type that is created later in the backup file.</li>
           </ul></li>
-        <li>The  <codeph>INTO <varname>error_table</varname></codeph> clause of the <codeph>CREATE
+        <li>The <codeph>INTO <varname>error_table</varname></codeph> clause of the <codeph>CREATE
             EXTERNAL TABLE</codeph> and <codeph>COPY</codeph> commands was deprecated in Greenplum
           4.3 and is unsupported in Greenplum 5 and 6. Remove this clause from any external table
           definitions before you create a backup of your Greenplum 4.3 system. The
@@ -211,8 +219,8 @@
             of type <codeph>abstime</codeph>, <codeph>reltime</codeph>, <codeph>tinterval</codeph>,
               <codeph>money</codeph>, or <codeph>anyarray</codeph>, use the <codeph>ALTER
               TABLE</codeph> command to set the distribution to <codeph>RANDOM</codeph> before you
-            back up the database. After the data is restored, you can set a new distribution
-            policy.</p></li>
+            back up or upgrade the database. After the data is restored, you can set a new
+            distribution policy.</p></li>
         <li>In Greenplum 4.3 and 5, it was possible to <codeph>ALTER</codeph> a table that has a
           primary key or unique index to be <codeph>DISTRIBUTED RANDOMLY</codeph>. Greenplum 6 does
           not permit tables <codeph>DISTRIBUTED RANDOMLY</codeph> to have primary keys or unique

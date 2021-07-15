@@ -288,5 +288,6 @@
 		<topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
 		<topicref href="extensions/serverapi.ditamap" format="ditamap"/>
 		<topicref href="misc.ditamap" format="ditamap"/>
+		<topicref href="deprecated-objects.xml" id="depr_objects"/>
 	</topicref>
 </map>
