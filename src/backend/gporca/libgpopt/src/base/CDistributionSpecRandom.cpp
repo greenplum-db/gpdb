@@ -154,9 +154,7 @@ CDistributionSpecRandom::AppendEnforcers(CMemoryPool *mp,
 		CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 	CDistributionSpecRandom *random_dist_spec = nullptr;
 
-	if (expr_dist_spec->Edt() == CDistributionSpec::EdtUniversal ||
-		expr_dist_spec->Edt() == CDistributionSpec::EdtStrictReplicated ||
-		expr_dist_spec->Edt() == CDistributionSpec::EdtTaintedReplicated)
+	if (CUtils::FDuplicateHazardDistributionSpec(expr_dist_spec))
 	{
 		// the motion node is enforced on top of a child
 		// deriving universal spec or replicated distribution, this motion node
