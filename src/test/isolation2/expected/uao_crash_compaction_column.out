@@ -628,10 +628,7 @@ ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=29553: server closed the c
  1     | 0          | 1              | 10       | 2        | 1     
  1     | 1          | 129            | 10       | 2        | 1     
  1     | 2          | 257            | 10       | 2        | 1     
- 2     | 0          | 2              | 0        | 0        | 1     
- 2     | 1          | 130            | 0        | 0        | 1     
- 2     | 2          | 258            | 0        | 0        | 1     
-(6 rows)
+(3 rows)
 -- generates truncate xlog record for all the files having entry in
 -- pg_aocsseg table.
 6:VACUUM crash_vacuum_in_appendonly_insert_1;

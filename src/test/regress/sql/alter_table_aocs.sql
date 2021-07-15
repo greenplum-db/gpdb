@@ -474,3 +474,23 @@ ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN d int;
 DROP TABLE aocs_alter_add_col_no_compress;
 
 RESET gp_add_column_inherits_table_setting;
+
+--
+-- Test case: validate pg_aocsseg consistency after alter table
+-- add column with rollback.
+--
+-- pg_aocsseg stores vpinfo structure with serialized EOF information
+-- for every column in AOCS table. If transaction adds new columns,
+-- spawns new pg_aocsseg entries and rollbacks, check there is no
+-- inconsistency in pg_aocsseg after it (with vacuum).
+--
+SET gp_default_storage_options='appendonly=true, orientation=column';
+CREATE TABLE aocs_alter_add_col_no_compress AS
+   SELECT g AS a, g AS b FROM generate_series(1, 10) AS g DISTRIBUTED BY (a);
+BEGIN;
+ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN c int;
+UPDATE aocs_alter_add_col_no_compress SET c = 1;
+ROLLBACK;
+VACUUM aocs_alter_add_col_no_compress;
+DROP TABLE aocs_alter_add_col_no_compress;
+RESET gp_default_storage_options;
