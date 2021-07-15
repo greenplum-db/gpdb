@@ -119,7 +119,7 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     print("Pipeline validated: all jobs accounted for")
     return True
 
-def create_pipeline():
+def create_pipeline(git_remote, git_branch):
     """Generate OS specific pipeline sections
     """
     if ARGS.test_trigger_false:
@@ -139,7 +139,10 @@ def create_pipeline():
         'test_sections': ARGS.test_sections,
         'pipeline_type': ARGS.pipeline_type,
         'stagger_sections': stagger_sections,
-        'test_trigger': test_trigger
+        'test_trigger': test_trigger,
+        'build_test_rc_rpm': ARGS.build_test_rc_rpm,
+        'git_username': git_remote.split('/')[-2],
+        'git_branch': git_branch
     }
 
     pipeline_yml = render_template(ARGS.template_filename, context)
@@ -156,7 +159,7 @@ def create_pipeline():
 
     return True
 
-def how_to_use_generated_pipeline_message():
+def how_to_use_generated_pipeline_message(git_remote, git_branch):
     msg = '\n'
     msg += '======================================================================\n'
     msg += '  Generate Pipeline type: .. : %s\n' % ARGS.pipeline_type
@@ -165,6 +168,7 @@ def how_to_use_generated_pipeline_message():
     msg += '  OS Types ................. : %s\n' % ARGS.os_types
     msg += '  Test sections ............ : %s\n' % ARGS.test_sections
     msg += '  test_trigger ............. : %s\n' % ARGS.test_trigger_false
+    msg += '  build_test_rc_rpm ........ : %s\n' % ARGS.build_test_rc_rpm
     msg += '======================================================================\n\n'
     if ARGS.pipeline_type == 'prod':
         pipeline_name = '5X_STABLE'
@@ -187,8 +191,8 @@ def how_to_use_generated_pipeline_message():
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.dev.yml \\\n'
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_dev.yml \\\n'
         msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
-        msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
-        msg += '    -v gpdb-git-branch=%s \\\n' % suggested_git_branch()
+        msg += '    -v gpdb-git-remote=%s \\\n' % git_remote
+        msg += '    -v gpdb-git-branch=%s \\\n' % git_branch
         msg += '    -v pipeline-name=%s\n' % pipeline_name
 
     return msg
@@ -230,7 +234,7 @@ if __name__ == "__main__":
                         action='store',
                         dest='test_sections',
                         choices=['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep', 'AA'],
-                        default=['ICW'],
+                        default=[],
                         nargs='+',
                         help='Select tests sections to run')
 
@@ -245,6 +249,16 @@ if __name__ == "__main__":
                         default=os.getlogin(),
                         help='Developer userid to use for pipeline file name.')
 
+    PARSER.add_argument(
+        '--build-test-rc',
+        action='store_true',
+        dest='build_test_rc_rpm',
+        default=False,
+        help='Generate a release candidate RPM. Useful for testing branches against'
+             'products that consume RC RPMs such as gpupgrade. Use prod'
+             'configuration to build prod RCs.'
+    )
+
     ARGS = PARSER.parse_args()
 
     ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
@@ -253,16 +267,23 @@ if __name__ == "__main__":
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
         ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep', 'AA']
 
+    if ARGS.pipeline_type == 'prod' and ARGS.build_test_rc_rpm:
+        raise Exception('Cannot specify a prod pipeline when building a test'
+                        'RC. Please specify one or the other.')
+
+    git_remote = suggested_git_remote()
+    git_branch = suggested_git_branch()
+
     # if generating a dev pipeline but didn't specify an output, don't overwrite
     # the production pipeline
     if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:
         default_dev_output_filename = 'gpdb-' + ARGS.pipeline_type + '-' + ARGS.user + '.yml'
         ARGS.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
-    pipeline_created = create_pipeline()
+    pipeline_created = create_pipeline(git_remote, git_branch)
 
     if pipeline_created:
-        print(how_to_use_generated_pipeline_message())
+        print(how_to_use_generated_pipeline_message(git_remote, git_branch))
     else:
         exit(1)
 
