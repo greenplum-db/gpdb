@@ -530,14 +530,17 @@ is_probe_retry_needed()
 
 /*
  * Check the WalSndCtl to obtain if mirror is up or down, if the wal sender is
- * in streaming, and if synchronous replication is enabled or not.
+ * in streaming, and if synchronous replication is enabled or not, decide if
+ * the primary is ready for syncrep if needed.
  */
 void
-GetMirrorStatus(FtsResponse *response)
+GetMirrorStatus(FtsResponse *response, bool *ready_for_syncrep)
 {
 	response->IsMirrorUp = false;
 	response->IsInSync = false;
 	response->RequestRetry = false;
+	if (ready_for_syncrep != NULL)
+		*ready_for_syncrep = false;
 
 	LWLockAcquire(SyncRepLock, LW_SHARED);
 
@@ -557,6 +560,12 @@ GetMirrorStatus(FtsResponse *response)
 		is_up = is_mirror_up(walsender);
 		is_streaming = (walsender->state == WALSNDSTATE_STREAMING);
 
+		if (ready_for_syncrep != NULL)
+			*ready_for_syncrep = is_up &&
+								((walsender->state == WALSNDSTATE_STREAMING) ||
+								 (walsender->state == WALSNDSTATE_CATCHUP &&
+								  walsender->caughtup_within_range));
+
 		response->IsMirrorUp = is_up;
 		response->IsInSync = (is_up && is_streaming);
 		SpinLockRelease(&walsender->mutex);
@@ -569,6 +578,34 @@ GetMirrorStatus(FtsResponse *response)
 
 	if (!response->IsMirrorUp)
 		response->RequestRetry = is_probe_retry_needed();
+}
+
+/*
+ * Get the state of the wal sender for primary-mirror wal streaming.
+ */
+WalSndState
+gp_get_walsender_state()
+{
+	int			i;
+	WalSndState state = WALSNDSTATE_STARTUP;
+
+	for (i = 0; i < max_wal_senders; i++)
+	{
+		WalSnd *walsender = &WalSndCtl->walsnds[i];
+
+		SpinLockAcquire(&walsender->mutex);
+
+		if (walsender->is_for_gp_walreceiver)
+		{
+			state = walsender->state;
+			SpinLockRelease(&walsender->mutex);
+			break;
+		}
+
+		SpinLockRelease(&walsender->mutex);
+	}
+
+	return state;
 }
 
 /*

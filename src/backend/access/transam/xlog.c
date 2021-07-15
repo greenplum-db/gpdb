@@ -48,6 +48,7 @@
 #include "postmaster/walwriter.h"
 #include "postmaster/startup.h"
 #include "replication/basebackup.h"
+#include "replication/gp_replication.h"
 #include "replication/logical.h"
 #include "replication/slot.h"
 #include "replication/origin.h"
@@ -12883,6 +12884,59 @@ initialize_wal_bytes_written(void)
 void
 wait_to_avoid_large_repl_lag(void)
 {
+	int64_t throttle_size = (rep_lag_avoidance_threshold == 0 ?
+							  (1024 * 1024) : (rep_lag_avoidance_threshold * 1024));
+
+	/*
+	 * Throttle during wal catchup. At the time mostly syncrep is off
+	 * temporarily to avoid blocking the write transactions, but we also
+	 * flow-control the new xlog to ensure it does not slow down catchup too
+	 * much.
+	 *
+	 * It is possible that wal state is streaming but syncrep is off. This
+	 * could happen if mirror has been down or mirror is streaming but fts has
+	 * not probed yet. For the later scenario we could throttle also but we
+	 * are not making the logic more complex given the window is small.
+	 */
+	if (wal_bytes_written > throttle_size &&
+		!IS_QUERY_DISPATCHER() &&
+		gp_get_walsender_state() == WALSNDSTATE_CATCHUP)
+	{
+		XLogRecPtr ori_min_lsn, cur_min_lsn;
+		int64_t ori_lag, cur_lag;
+
+		/* Throttle in serial for the large write workload. */
+		LWLockAcquire(WalCatchupThrottleLock, LW_EXCLUSIVE);
+
+		ori_min_lsn = XLogGetReplicationSlotMinimumLSN();
+		ori_lag = GetFlushRecPtr() - ori_min_lsn;
+
+		Assert (ori_lag >= 0);
+
+		while(!XLogRecPtrIsInvalid(ori_min_lsn))
+		{
+			/* sleep for 5ms. */
+			pg_usleep(5 * 1000);
+
+			cur_min_lsn = XLogGetReplicationSlotMinimumLSN();
+			if (XLogRecPtrIsInvalid(cur_min_lsn))
+				break;
+			cur_lag = GetFlushRecPtr() - cur_min_lsn;
+
+			/*
+			 * new wal with throttle_size size was generated. Let's wait until
+			 * 2 * throttle_size wal is streamed. In theory we could roughly
+			 * reduce the catchup time by 50% during heavy write load.
+			 */
+			if ((ori_lag - cur_lag) >= 2 * throttle_size ||
+				gp_get_walsender_state() != WALSNDSTATE_CATCHUP)
+				break;
+
+		}
+
+		LWLockRelease(WalCatchupThrottleLock);
+	}
+
 	/* rep_lag_avoidance_threshold is defined in KB */
 	if (rep_lag_avoidance_threshold &&
 		wal_bytes_written > (rep_lag_avoidance_threshold * 1024))
