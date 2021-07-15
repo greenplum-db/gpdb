@@ -4633,11 +4633,32 @@ CTranslatorExprToDXL::PdxlnMotion(CExpression *pexprMotion,
 			break;
 
 		case COperator::EopPhysicalMotionHashDistribute:
-			// When fDuplicateHazardMotion is true then redistribute motion will
-			// be translated into a result hash filter node during DXL to PlStmt
-			// by TranslateDXLDuplicateSensitiveMotion(). That is only valid if
-			// child distribution is strict-replicated (not tainted) or
-			// universal.
+			// If child is tainted-replicated, then we cannot use a result hash
+			// filter node because the values on each segment are not guaranteed
+			// to be identical.
+			//
+			// Example of tainted-replication: a scan of a replicated table that
+			// contains the values (10), (20) along with a project of nextval()
+			// can produce the following tuples:
+			//
+			//       rep-val  nextval
+			// Seg1:      10       1
+			//            20       2
+			//
+			// Seg2:      10       3
+			//            20       4
+			//
+			// Seg3:      10       5
+			//            20       6
+			//
+			// If nextval is used in a hash filter we could get missing or
+			// duplicate results because we're not guaranteed that 1, 3, and 5
+			// (coresponding to value 10) will produce same hashed segment
+			// value. Same for 2, 4, and 6 (corresponding to value 20).
+			//
+			// CDXLPhysicalRedistributeMotion::is_duplicate_sensitive is set to
+			// decide whether the motion should be translated into result hash
+			// filter node or redistribute motion.
 			motion = GPOS_NEW(m_mp)
 				CDXLPhysicalRedistributeMotion(m_mp, fDuplicateHazardMotion);
 			break;
@@ -7563,8 +7584,8 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 		//
 		// Additionally, if the child distribution is tainted-replicated, the
 		// motion (which cannot be a result hash filter node) will read the
-		// input from one segment in order to safely propogate the replicated
-		// distribution.
+		// input from one segment in order to ensure that data is consistent
+		// after bring read from operator delivering tainted replication.
 		IntPtrArray *pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
 		INT iSegmentId = *((*m_pdrgpiSegments)[0]);
 		pdrgpi->Append(GPOS_NEW(m_mp) INT(iSegmentId));
