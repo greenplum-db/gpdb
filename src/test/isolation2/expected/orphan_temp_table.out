@@ -1,0 +1,43 @@
+-- Test orphan temp table on coordinator.
+-- Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
+
+-- create a temp table
+1: CREATE TEMP TABLE test_temp_table_cleanup(a int);
+CREATE
+
+-- panic on segment 0
+1: SELECT gp_inject_fault('before_exec_scan', 'panic', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- trigger 'before_exec_scan' panic in ExecScan
+1: SELECT * FROM test_temp_table_cleanup;
+ERROR:  fault triggered, fault name:'before_exec_scan' fault type:'panic'  (seg0 slice1 172.17.0.4:7002 pid=437900)
+
+-- we should not see the temp table on the coordinator
+1: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
+ oid | relname | relnamespace 
+-----+---------+--------------
+(0 rows)
+
+
+-- the temp table is left on segment 0, it should be dropped by autovacuum later
+0U: SELECT relname FROM pg_class where relname = 'test_temp_table_cleanup';
+ relname                 
+-------------------------
+ test_temp_table_cleanup 
+(1 row)
+
+-- no temp table left on other segments
+1U: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
+ oid | relname | relnamespace 
+-----+---------+--------------
+(0 rows)
+
+1: SELECT gp_inject_fault('before_exec_scan', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
