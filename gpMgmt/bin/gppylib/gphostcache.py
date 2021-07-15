@@ -312,3 +312,17 @@ class GpHostCache:
         pool.empty_completed_items()
 
         return failed_segs
+
+def address2hostname(address, pool=None):
+  hostname = None
+  if pool is None:
+    cmd=unix.Hostname('host lookup', ctxt=base.REMOTE, remoteHost=address)
+    cmd.run(validateAfter=True)
+    hostname = cmd.get_hostname()
+  else:
+    cache = GpInterfaceToHostNameCache(pool, [address], [None])
+    hostname = cache.getHostName(address)
+  if not hostname:
+    raise Exception("can't resolve address to hostname: '%s'" % address)
+
+  return hostname

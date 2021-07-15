@@ -660,7 +660,7 @@ class SegmentTemplate:
         try:
             masterSeg = self.gparray.master
             cmd = PgBaseBackup(pgdata=self.tempDir,
-                               host=masterSeg.getSegmentHostName(),
+                               host=masterSeg.getSegmentAddress(),
                                port=str(masterSeg.getSegmentPort()),
                                recovery_mode=False,
                                target_gp_dbid=dummyDBID)

@@ -7,7 +7,7 @@ Adds and/or initializes a standby master host for a Greenplum Database system.
 SYNOPSIS
 *****************************************************
 
-gpinitstandby { -s <standby_hostname> [-P <port>] | -r | -n } 
+gpinitstandby { -s <standby_address> [-P <port>] | -r | -n } 
 
 [-a] [-q] [-D] [-S <standby data directory>] [-l <logfile_directory>]
 
@@ -123,9 +123,12 @@ OPTIONS
  Database system. 
 
 
--s <standby_hostname> 
+-s <standby_hostname> or <standby_address>
 
- The host name of the standby master host. 
+ The address of the standby master host. It will be the `address` of
+ the standby in gp_segment_configuration, the `hostname` column of the standby
+ in gp_segment_configuration is resolved by this address. If the provided
+ `standby_address` is the same as the hostname, they will be the same.
 
 --hba-hostnames
 

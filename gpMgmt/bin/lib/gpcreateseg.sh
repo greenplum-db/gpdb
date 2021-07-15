@@ -84,9 +84,7 @@ ADD_PG_HBA_ENTRIES() {
     local CIDR_ADDR
 
     for ADDR in "$@"; do
-        # MPP-15889
-        CIDR_ADDR=$(GET_CIDRADDR $ADDR)
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $(GET_CIDRADDR $ADDR)      trust >> ${GP_DIR}/$PG_HBA"
     done
 }
 
@@ -149,16 +147,14 @@ CREATE_QES_PRIMARY () {
     if [ $HBA_HOSTNAMES -eq 0 ]; then
         for MASTER_IP in "${MASTER_IP_ADDRESS[@]}"
         do
-            # MPP-15889
             CIDR_MASTER_IP=$(GET_CIDRADDR $MASTER_IP)
             $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_MASTER_IP}	trust >> ${GP_DIR}/$PG_HBA"
             PARA_EXIT $? "Update $PG_HBA for master IP address ${CIDR_MASTER_IP}"
-          done
+        done
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
           LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby master IP address for segment instances"
           for STANDBY_IP in "${STANDBY_IP_ADDRESS[@]}"
           do
-          # MPP-15889
               CIDR_STANDBY_IP=$(GET_CIDRADDR $STANDBY_IP)
               $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_STANDBY_IP}	trust >> ${GP_DIR}/$PG_HBA"
               PARA_EXIT $? "Update $PG_HBA for master standby address ${CIDR_STANDBY_IP}"
@@ -187,17 +183,17 @@ CREATE_QES_PRIMARY () {
     else # use hostnames in pg_hba.conf
         # add localhost
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${MASTER_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	$(GET_CIDRADDR $MASTER_HOSTNAME)	trust >> ${GP_DIR}/$PG_HBA"
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
-          $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $MIRROR_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
+          $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $(GET_CIDRADDR $MIRROR_HOSTADDRESS)      trust >> ${GP_DIR}/$PG_HBA"
         fi
         PARA_EXIT $? "Update $PG_HBA for master IP address ${MASTER_HOSTNAME}"
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
             LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby master IP address for segment instances"
-            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${STANDBY_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
+            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	$(GET_CIDRADDR ${STANDBY_HOSTNAME})	trust >> ${GP_DIR}/$PG_HBA"
             PARA_EXIT $? "Update $PG_HBA for master standby address ${STANDBY_HOSTNAME}"
         fi
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $GP_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $(GET_CIDRADDR $GP_HOSTADDRESS)      trust >> ${GP_DIR}/$PG_HBA"
     fi
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
 }
@@ -219,9 +215,9 @@ CREATE_QES_MIRROR () {
             PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${CIDR_ADDR} trust"
         done
     else
-        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${GP_HOSTADDRESS} trust"
+        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} $(GET_CIDRADDR $GP_HOSTADDRESS) trust"
         if [ "${GP_HOSTADDRESS}" != "${PRIMARY_HOSTADDRESS}" ]; then
-            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${PRIMARY_HOSTADDRESS} trust"
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} $(GET_CIDRADDR $PRIMARY_HOSTADDRESS) trust"
         fi
     fi
     RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; cat - >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload" <<< "${PG_HBA_ENTRIES}"

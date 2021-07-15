@@ -5,6 +5,7 @@ from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
+import gppylib.gphostcache
 
 
 class RecoveryTriplet:
@@ -83,10 +84,10 @@ class RecoveryTriplet:
 
 
 class RecoveryTripletRequest:
-    def __init__(self, failed, failover_host=None, failover_port=None, failover_datadir=None, is_new_host=False):
+    def __init__(self, failed, failover_address=None, failover_port=None, failover_datadir=None, is_new_host=False):
         self.failed = failed
 
-        self.failover_host = failover_host
+        self.failover_address = failover_address
         self.failover_port = failover_port
         self.failover_datadir = failover_datadir
         self.failover_to_new_host = is_new_host
@@ -149,7 +150,7 @@ class RecoveryTriplets:
             # "<failed_address>|<failed_port>|<failed_data_dir> <failed_address>|<failed_port>|<failed_data_dir>" does full recovery
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
             failover = None
-            if req.failover_host:
+            if req.failover_address:
 
                 # these two lines make it so that failover points to the object that is registered in gparray
                 #   as the failed segment(!).
@@ -157,8 +158,9 @@ class RecoveryTriplets:
                 req.failed = failover.copy()
 
                 # now update values in failover segment
-                failover.setSegmentAddress(req.failover_host)
-                failover.setSegmentHostName(req.failover_host)
+                failover.setSegmentAddress(req.failover_address)
+                failover_hostname = gppylib.gphostcache.address2hostname(req.failover_address)
+                failover.setSegmentHostName(failover_hostname)
                 failover.setSegmentPort(int(req.failover_port))
                 failover.setSegmentDataDirectory(req.failover_datadir)
                 failover.unreachable = False if req.failover_to_new_host else failover.unreachable

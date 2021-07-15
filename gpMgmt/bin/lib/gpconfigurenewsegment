@@ -43,7 +43,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile):
+                 syncWithSegmentAddress, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -57,7 +57,7 @@ class ConfExpSegCmd(Command):
         self.verbose = verbose
         self.useLighterDirectoryValidation = useLighterDirectoryValidation
         self.isPrimary = isPrimary
-        self.syncWithSegmentHostname = syncWithSegmentHostname
+        self.syncWithSegmentAddress = syncWithSegmentAddress
         self.syncWithSegmentPort = syncWithSegmentPort
         self.replicationSlotName = replicationSlotName
         self.logfileDirectory = logfileDirectory
@@ -137,7 +137,7 @@ class ConfExpSegCmd(Command):
                                                                                 self.dbid)
                     # Create a mirror based on the primary
                     cmd = PgBaseBackup(pgdata=self.datadir,
-                                       host=self.syncWithSegmentHostname,
+                                       host=self.syncWithSegmentAddress,
                                        port=str(self.syncWithSegmentPort),
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
@@ -361,7 +361,7 @@ try:
 
         # These variables should not be used if it's a primary
         # they will be junk data passed through the config.
-        primaryHostName = seg[6]
+        primaryAddress = seg[6]
         primarySegmentPort = int(seg[7])
         progressFile = seg[8]
 
@@ -375,7 +375,7 @@ try:
                            , tarfile = options.tarfile
                            , useLighterDirectoryValidation = directoryValidationLevel
                            , isPrimary = isPrimary
-                           , syncWithSegmentHostname = primaryHostName
+                           , syncWithSegmentAddress = primaryAddress
                            , syncWithSegmentPort = primarySegmentPort
                            , verbose = options.verbose
                            , validationOnly = options.validationOnly

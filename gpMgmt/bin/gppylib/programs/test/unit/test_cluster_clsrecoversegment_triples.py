@@ -2,6 +2,7 @@
 
 import copy
 import io
+import socket
 from mock import Mock, patch, MagicMock
 import tempfile
 
@@ -441,6 +442,9 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                               unreachable_existing_hosts=None):
         unreachable_hosts = unreachable_hosts if unreachable_hosts else []
         gppylib.programs.clsRecoverSegment_triples.get_unreachable_segment_hosts = Mock(return_value=unreachable_hosts)
+        def addr2hostname(address, pool=None):
+          return address
+        gppylib.gphostcache.address2hostname = addr2hostname
 
         initial_gparray = self.get_gp_array(gparray_str, unreachable_existing_hosts)
         mutated_gparray = self.get_gp_array(gparray_str, unreachable_existing_hosts)

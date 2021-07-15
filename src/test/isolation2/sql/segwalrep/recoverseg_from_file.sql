@@ -13,17 +13,14 @@ include: helpers/server_helpers.sql;
 -- generate_recover_config_file:
 --   generate config file used by recoverseg -i
 --
-create or replace function generate_recover_config_file(datadir text, port text)
+create or replace function generate_recover_config_file(address text, datadir text, port text)
 returns void as $$
-    import io
-    import os
-    myhost = os.uname()[1]
-    inplaceConfig = myhost + '|' + port + '|' + datadir
+    inplaceConfig = address + '|' + port + '|' + datadir
     configStr = inplaceConfig + ' ' + inplaceConfig
 	
-    f = open("/tmp/recover_config_file", "w")
-    f.write(configStr)
-    f.close()
+    with open("/tmp/recover_config_file", "w") as f:
+        f.write(configStr)
+
 $$ language plpythonu;
 
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
@@ -53,9 +50,9 @@ select gp_request_fts_probe_scan();
 0Uq:
 
 -- generate recover config file
-select generate_recover_config_file(
-	(select datadir from gp_segment_configuration c where c.role='m' and c.content=1),
-	(select port from gp_segment_configuration c where c.role='m' and c.content=1)::text);
+select generate_recover_config_file(address, datadir, port::text)
+  from gp_segment_configuration
+  where role='m' and content=1;
 
 -- recover from config file, only seg with content=1 will be recovered
 !\retcode gprecoverseg -a -i /tmp/recover_config_file;

@@ -140,6 +140,8 @@ install:
 before_script:
     - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
     - cp ~/.ssh/{id_rsa.pub,authorized_keys}
+    - ssh-keyscan $(hostname) $(python -c 'import socket;print(socket.gethostbyname(socket.gethostname()))') >> ~/.ssh/known_hosts
+    - ssh-keyscan localhost 127.0.0.1 >> ~/.ssh/known_hosts
     - ccache --zero-stats
 
 script:

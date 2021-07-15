@@ -10,6 +10,7 @@ Feature: gprecoverseg tests involving migrating to a new host
       Given the database is running
       And all the segments are running
       And the segments are synchronized
+      And check if the addresses of wal replication are correct for all pairs
       And database "gptest" exists
       And the user runs gpconfig sets guc "wal_sender_timeout" with "15s"
       And the user runs "gpstop -air"
@@ -20,6 +21,7 @@ Feature: gprecoverseg tests involving migrating to a new host
       Then gprecoverseg should return a return code of 0
       And pg_hba file "/data/gpdata/mirror/gpseg0/pg_hba.conf" on host "<acting_primary>" contains entries for "<used>"
       And the cluster configuration is saved for "<test_case>"
+      And check if the addresses of wal replication are correct for all pairs
       And the "before" and "<test_case>" cluster configuration matches with the expected for gprecoverseg newhost
       And gprecoverseg should print "Skipping shared memory cleanup and gpsegstop on unreachable host" to stdout
       And gprecoverseg should not print "ExecutionError" to stdout

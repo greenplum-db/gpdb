@@ -250,7 +250,9 @@ MIRROR_DIRS_LIST=${MIRROR_DIRS_LIST#* }
 # Host configuration
 #*****************************************************************************************
 
-LOCALHOST=`hostname`
+# Use local IP as address in gp_segment_configuration
+# the `hostname` column will be resolved to the hostname of the segment
+LOCALHOST=$(python -c 'import socket;print(socket.gethostbyname(socket.gethostname()))')
 echo $LOCALHOST > hostfile
 
 #*****************************************************************************************

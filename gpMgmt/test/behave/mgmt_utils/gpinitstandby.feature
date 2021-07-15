@@ -9,11 +9,13 @@ Feature: Tests for gpinitstandby feature
         And verify the standby master entries in catalog
         And the user runs gpinitstandby with options "-n"
         And gpinitstandby should print "Standy master is already up and running" to stdout
+        And check if the addresses of wal replication are correct for all pairs
         When the standby master goes down
         And the user runs gpinitstandby with options "-n"
         Then gpinitstandby should return a return code of 0
         And verify the standby master entries in catalog
         And gpinitstandby should print "Successfully started standby master" to stdout
+        And check if the addresses of wal replication are correct for all pairs
 
     Scenario: gpinitstandby fails if given same host and port as master segment
         Given the database is running
