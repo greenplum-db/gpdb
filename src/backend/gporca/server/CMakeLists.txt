@@ -164,6 +164,9 @@ UDA-AnyArray InClauseWithMCV CastedInClauseWithMCV FilterScalarCast
 IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements ArrayCmpAnyEmpty ArrayCmpAllEmpty
 ArrayCmpAnyEmptyLessThan;
 
+CCTEPropertiesTest:
+CTE-PushProperties CTE-NoPushProperties;
+
 CProjectTest:
 ProjectWithConstant ProjectWithTextConstant ProjectSetFunction Equivalence-class-project-over-LOJ;
 
