@@ -310,7 +310,7 @@ resource_types:
   source:
     repository: pivotalcf/pivnet-resource
     tag: latest-final
-{% if "ICW" in test_sections %}
+{% if "ICW" in test_sections or build_test_rc_rpm %}
 - name: gcs
   type: registry-image
   source:
@@ -536,22 +536,18 @@ resources:
 
 {% if pipeline_type == "prod" or build_test_rc_rpm %}
 - name: gpdb_rpm_installer_centos6
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{gpdb-stable-builds-bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: release_candidates/gpdb_rpm_installer_centos6/gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
 
 - name: gpdb_rpm_installer_centos7
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{gpdb-stable-builds-bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: release_candidates/gpdb_rpm_installer_centos7/gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
 
 - name: greenplum-database-release
   type: git
@@ -761,12 +757,14 @@ resources:
     versioned_file: ((pipeline-name))/icw_planner_centos6_dump/dump.sql.xz
 {% endif %}
 
+{% if "DPM" in test_sections or "MM" in test_sections %}
 - name: python-behave
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: ((pivotal-gp-internal-artifacts-gcs-bucket))/python-test-dependencies/behave-(1\.2\.6-.*).tar.gz
+{% endif %}
 
 ## ======================================================================
 ##                   _
