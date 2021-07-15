@@ -40,12 +40,14 @@ SELECT gp_wait_until_triggered_fault('vacuum_update_dat_frozen_xid', 1, dbid) fr
 SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
 
 -- template0 should be young
--- Sometimes one trigger of autovacuum doesn't bring down the age for
--- template0, hence wait for few triggers to drop it
+-- We only wait for 1 worker above to update the datfrozenxid. Based
+-- on age of database multiple workers can be invoked to perform the
+-- job. Given that number is not deterministic, we need to have retry
+-- logic to check for age dropped for the database or not.
 DO $$
 DECLARE young BOOLEAN;
 BEGIN
-     FOR i in 1..300 loop
+     FOR i in 1..1500 loop
 	      SELECT age(datfrozenxid) < 200 * 1000000
 	      FROM gp_dist_random('pg_database') WHERE datname='template0' AND gp_segment_id = 0
 	      into young;
