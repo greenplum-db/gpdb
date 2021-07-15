@@ -3826,7 +3826,7 @@ typedef struct ReindexStmt
 	const char *name;			/* name of database to reindex */
 	int			options;		/* Reindex options flags */
 	bool		concurrent;		/* reindex concurrently? */
-	Oid			relid;			/* oid of TABLE, used by QE */
+	Oid			relid;			/* oid of table or index, used by QE */
 } ReindexStmt;
 
 /* ----------------------

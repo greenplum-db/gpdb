@@ -26,12 +26,12 @@ select c_relname, 1 as have_same_number_of_rows from before_reindex_crtabforadd_
 
 DELETE FROM reindex_crtabforadd_part_heap_btree  WHERE id < 12;
 1: BEGIN;
-2: BEGIN;
-1: REINDEX TABLE  reindex_crtabforadd_part_heap_btree;
-2&: alter table reindex_crtabforadd_part_heap_btree add partition new_p START (date '2013-06-01') INCLUSIVE ;
+1: LOCK reindex_crtabforadd_part_heap_btree IN ACCESS EXCLUSIVE MODE;
+2&: REINDEX TABLE  reindex_crtabforadd_part_heap_btree;
+3&: alter table reindex_crtabforadd_part_heap_btree add partition new_p START (date '2013-06-01') INCLUSIVE ;
 1: COMMIT;
 2<:
-2: COMMIT;
+3<:
 3: Insert into reindex_crtabforadd_part_heap_btree values(29,'2013-06-09',14.20);
 3: select count(*) from reindex_crtabforadd_part_heap_btree where id = 29;
 3: set enable_seqscan=false;

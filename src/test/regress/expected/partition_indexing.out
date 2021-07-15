@@ -81,21 +81,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 select count(*) from mpp3033a;
  count 
 -------
@@ -137,21 +129,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 select count(*) from mpp3033a;
  count 
 -------
@@ -207,7 +191,6 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
 ERROR:  relation "mpp3033a_unique2" does not exist
 reindex index mpp3033a_hundred;
@@ -264,21 +247,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 select count(*) from mpp3033a;
  count 
 -------
@@ -374,21 +349,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 select count(*) from mpp3033a;
  count 
 -------
@@ -430,21 +397,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 select count(*) from mpp3033a;
  count 
 -------
@@ -500,7 +459,6 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
 ERROR:  relation "mpp3033a_unique2" does not exist
 reindex index mpp3033a_hundred;
@@ -563,21 +521,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 reindex index mpp3033a_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033a_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_unique2;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_hundred;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 reindex index mpp3033b_stringu1;
-ERROR:  REINDEX is not yet implemented for partitioned indexes
 select count(*) from mpp3033a;
  count 
 -------
