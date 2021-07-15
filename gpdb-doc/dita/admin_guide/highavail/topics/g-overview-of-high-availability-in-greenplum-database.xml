@@ -45,7 +45,7 @@
             computed and saved with the page. When a page is later retrieved from disk, the
             checksums are verified and the page is only permitted to enter managed memory if the
             verification succeeds. A failed checksum verification is an indication of corruption in
-            the file system and causes Greenplum Database to generate an error, aborting the
+            the file system and causes Greenplum Database to generate an error, cancelling the
             transaction.</p>
          <p>The default checksum settings provide the best level of protection from undetected disk
             corruption propagating into the database and to mirror segments.</p>
@@ -117,7 +117,7 @@
          <p>There are two master instances in a highly available cluster, a <i>primary</i> and a
                <i>standby</i>. As with segments, the master and standby should be deployed on
             different hosts so that the cluster can tolerate a single host failure. Clients connect
-            to the primary master and queries can be executed only on the primary master. The
+            to the primary master and queries can be run only on the primary master. The
             standby master is kept up to date with the primary master using Write-Ahead Logging
             (WAL)-based streaming replication. See <xref
                href="g-overview-of-master-mirroring.xml#topic4"/>.</p>
@@ -137,7 +137,7 @@
          <p>Dual ETL provides a complete standby cluster with the same data as the primary cluster.
             ETL (extract, transform, and load) refers to the process of cleansing, transforming,
             validating, and loading incoming data into a data warehouse. With dual ETL, this process
-            is executed twice in parallel, once on each cluster, and is validated each time. It also
+            is run twice in parallel, once on each cluster, and is validated each time. It also
             allows data to be queried on both clusters, doubling the query throughput. Applications
             can take advantage of both clusters and also ensure that the ETL is successful and
             validated on both clusters.</p>

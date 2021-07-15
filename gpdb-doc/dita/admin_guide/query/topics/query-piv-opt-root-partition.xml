@@ -7,7 +7,7 @@
     aggregate nodes, and for costing the query steps. In contrast, the Postgres Planner uses the
     statistics of each leaf partition.</shortdesc>
   <body>
-    <p>If you execute queries on partitioned tables, you should collect statistics on the root
+    <p>If you run queries on partitioned tables, you should collect statistics on the root
       partition and periodically update those statistics to ensure that GPORCA can generate optimal
       query plans. If the root partition statistics are not up-to-date or do not exist, GPORCA still
       performs dynamic partition elimination for queries against the table. However, the query plan
@@ -32,7 +32,7 @@
         the root partition statistics. If your table is very large, this operation can take a
         significant amount of time. <codeph>ANALYZE ROOTPARTITION</codeph> also uses an
           <codeph>ACCESS SHARE</codeph> lock that prevents certain operations, such as
-          <codeph>TRUNCATE</codeph> and <codeph>VACUUM</codeph> operations, during execution. For
+          <codeph>TRUNCATE</codeph> and <codeph>VACUUM</codeph> operations, during runtime. For
         these reasons, you should schedule <codeph>ANALYZE</codeph> operations periodically, or when
         there are significant changes to leaf partition data.</p>
       <p>Follow these best practices for running <codeph>ANALYZE</codeph> or <codeph>ANALYZE
@@ -50,7 +50,7 @@
             new tuples inserted from the new leaf partition.</li>
           <li>For very large tables, run <codeph>ANALYZE</codeph> or <codeph>ANALYZE
               ROOTPARTITION</codeph> only weekly, or at some interval longer than daily.</li>
-          <li>Avoid running <codeph>ANALYZE</codeph> with no arguments, because doing so executes
+          <li>Avoid running <codeph>ANALYZE</codeph> with no arguments, because doing so runs
             the command on all database tables including partitioned tables. With large databases,
             these global <codeph>ANALYZE</codeph> operations are difficult to monitor, and it can be
             difficult to predict the time needed for completion.</li>
@@ -83,7 +83,7 @@
   <topic id="topic_r5d_hv1_kr">
     <title>Disabling Automatic Root Partition Statistics Collection</title>
     <body>
-      <p>If you do not intend to execute queries on partitioned tables with GPORCA (setting the
+      <p>If you do not intend to run queries on partitioned tables with GPORCA (setting the
         server configuration parameter <codeph><xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer"
             >optimizer</xref></codeph> to <codeph>off</codeph>), then you can disable the automatic

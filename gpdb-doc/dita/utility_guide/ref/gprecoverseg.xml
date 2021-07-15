@@ -9,7 +9,7 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gprecoverseg</b> [[<b>-p</b> <varname>new_recover_host</varname>[,...]] | <b>-i</b> <varname>recover_config_file</varname>] [<b>-d</b> <varname>master_data_directory</varname>] 
-             [<b>-B</b> <varname>parallel_processes</varname>] [<b>-F</b> [<b>-s</b>]] [<b>-a</b>] [<b>-q</b>] 
+             [<b>-b</b> <varname>segment_batch_size</varname>] [<b>-B</b> <varname>batch_size</varname>] [<b>-F</b> [<b>-s</b>]] [<b>-a</b>] [<b>-q</b>] 
 	      [<b>--hba-hostnames</b> <varname>boolean</varname>] 
              [<b>--no-progress</b>] [<b>-l</b> <varname>logfile_directory</varname>]
 
@@ -22,63 +22,56 @@
 
 <b>gprecoverseg</b> <b>--version</b></codeblock>
     </section>
-    <section id="section3">
-      <title>Description</title>
-      <p>In a system with mirrors enabled, the <codeph>gprecoverseg</codeph> utility reactivates a
-        failed segment instance and identifies the changed database files that require
-        resynchronization. Once <codeph>gprecoverseg</codeph> completes this process, the system
-        goes into <i>resyncronizing</i> mode until the recovered segment is brought up to date. The
-        system is online and fully operational during resyncronization.</p>
-      <p>During an incremental recovery (the <codeph>-F</codeph> option is not specified), if
-          <codeph>gprecoverseg</codeph> detects a segment instance with mirroring disabled in a
-        system with mirrors enabled, the utility reports that mirroring is disabled for the segment,
-        does not attempt to recover that segment instance, and continues the recovery process. </p>
-      <p>A segment instance can fail for several reasons, such as a host failure, network failure,
-        or disk failure. When a segment instance fails, its status is marked as <i>down</i> in the
-        Greenplum Database system catalog, and its mirror is activated in <i>change tracking</i>
-        mode. In order to bring the failed segment instance back into operation again, you must
-        first correct the problem that made it fail in the first place, and then recover the segment
-        instance in Greenplum Database using <codeph>gprecoverseg</codeph>.</p>
-      <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
-        instance data is not corrupted, contact VMware Support. </note>
-      <p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an active
-        mirror to recover from. For systems that do not have mirroring enabled, or in the event of a
-        double fault (a primary and mirror pair both down at the same time) — you must take manual
-        steps to recover the failed segment instances and then perform a system restart to bring the
-        segments back online. For example, this command restarts a system.</p>
-      <codeblock>gpstop -r</codeblock>
-      <p>By default, a failed segment is recovered in place, meaning that the system brings the
-        segment back online on the same host and data directory location on which it was originally
-        configured. In this case, use the following format for the recovery configuration file
-        (using <codeph>-i</codeph>).</p>
-      <codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt; </codeblock>
-      <p>In some cases, this may not be possible (for example, if a host was physically damaged and
+    <section id="section3"><title>Description</title>In a system with mirrors enabled, the
+        <codeph>gprecoverseg</codeph> utility reactivates a failed segment instance and identifies
+      the changed database files that require resynchronization. Once <codeph>gprecoverseg</codeph>
+      completes this process, the system goes into <i>resynchronizing</i> mode until the recovered
+      segment is brought up to date. The system is online and fully operational during
+        resynchronization.<p>During an incremental recovery (the <codeph>-F</codeph> option is not
+        specified), if <codeph>gprecoverseg</codeph> detects a segment instance with mirroring
+        disabled in a system with mirrors enabled, the utility reports that mirroring is disabled
+        for the segment, does not attempt to recover that segment instance, and continues the
+        recovery process. </p><p>A segment instance can fail for several reasons, such as a host
+        failure, network failure, or disk failure. When a segment instance fails, its status is
+        marked as <i>down</i> in the Greenplum Database system catalog, and its mirror is activated
+        in <i>change tracking</i> mode. In order to bring the failed segment instance back into
+        operation again, you must first correct the problem that made it fail in the first place,
+        and then recover the segment instance in Greenplum Database using
+          <codeph>gprecoverseg</codeph>.</p><note otherprops="pivotal"> If incremental recovery was
+        not successful and the down segment instance data is not corrupted, contact VMware Support.
+        </note><p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an
+        active mirror to recover from. For systems that do not have mirroring enabled, or in the
+        event of a double fault (a primary and mirror pair both down at the same time) — you must
+        take manual steps to recover the failed segment instances and then perform a system restart
+        to bring the segments back online. For example, this command restarts a
+        system.</p><codeblock>gpstop -r</codeblock><p>By default, a failed segment is recovered in
+        place, meaning that the system brings the segment back online on the same host and data
+        directory location on which it was originally configured. In this case, use the following
+        format for the recovery configuration file (using
+        <codeph>-i</codeph>).</p><codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt; </codeblock><p>In
+        some cases, this may not be possible (for example, if a host was physically damaged and
         cannot be recovered). In this situation, <codeph>gprecoverseg</codeph> allows you to recover
         failed segments to a completely new host (using <codeph>-p</codeph>), on an alternative data
         directory location on your remaining live segment hosts (using <codeph>-s</codeph>), or by
         supplying a recovery configuration file (using <codeph>-i</codeph>) in the following format.
         The word <b>SPACE</b> indicates the location of a required space. Do not add additional
-        spaces.</p>
-      <codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;<b>SPACE</b>
+        spaces.</p><codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;<b>SPACE</b>
 &lt;recovery_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;
-</codeblock>
-      <p>See the <codeph>-i</codeph> option below for details and examples of a recovery
-        configuration file.</p>
-      <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you determine
-        your current segment configuration so that you can plan your mirror recovery configuration.
-        For example, run the following query:</p>
-      <codeblock>=# SELECT dbid, content, address, port, datadir 
+</codeblock><p>See
+        the <codeph>-i</codeph> option below for details and examples of a recovery configuration
+        file.</p><p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you
+        determine your current segment configuration so that you can plan your mirror recovery
+        configuration. For example, run the following
+        query:</p><codeblock>=# SELECT dbid, content, address, port, datadir 
    FROM gp_segment_configuration
-   ORDER BY dbid;</codeblock>
-      <p>The new recovery segment host must be pre-installed with the Greenplum Database software
-        and configured exactly the same as the existing segment hosts. A spare data directory
-        location must exist on all currently configured segment hosts and have enough disk space to
-        accommodate the failed segments.</p>
-      <p>The recovery process marks the segment as up again in the Greenplum Database system
-        catalog, and then initiates the resynchronization process to bring the transactional state
-        of the segment up-to-date with the latest changes. The system is online and available during
-        resynchronization. </p>
-    </section>
+   ORDER BY dbid;</codeblock><p>The
+        new recovery segment host must be pre-installed with the Greenplum Database software and
+        configured exactly the same as the existing segment hosts. A spare data directory location
+        must exist on all currently configured segment hosts and have enough disk space to
+        accommodate the failed segments.</p><p>The recovery process marks the segment as up again in
+        the Greenplum Database system catalog, and then initiates the resynchronization process to
+        bring the transactional state of the segment up-to-date with the latest changes. The system
+        is online and available during resynchronization. </p></section>
     <section id="section4">
       <title>Options</title>
       <parml>
@@ -87,10 +80,16 @@
           <pd>Do not prompt the user for confirmation.</pd>
         </plentry>
         <plentry>
-          <pt>-B <varname>parallel_processes</varname></pt>
-          <pd>The number of segments to recover in parallel. If not specified, the utility will
-            start up to 16 parallel processes depending on how many segment instances it needs to
-            recover.</pd>
+          <pt>-b <varname>segment_batch_size</varname></pt>
+          <pd>The maximum number of segments per host to operate on in parallel. Valid values are
+              <codeph>1</codeph> to <codeph>128</codeph>. If not specified, the utility will start
+            recovering up to 64 segments in parallel on each host.</pd>
+        </plentry>
+        <plentry>
+          <pt>-B <varname>batch_size</varname></pt>
+          <pd>The number of hosts to work on in parallel. If not specified, the utility will start
+            working on up to 16 hosts in parallel. Valid values are <codeph>1</codeph> to
+              <codeph>64</codeph>. </pd>
         </plentry>
         <plentry>
           <pt>-d <varname>master_data_directory</varname></pt>
@@ -180,12 +179,26 @@ newPort|newDataDirectory</codeblock>
         <plentry>
           <pt>-p <varname>new_recover_host</varname>[,...]</pt>
           <pd>Specifies a spare host outside of the currently configured Greenplum Database array on
-            which to recover invalid segments. In the case of multiple failed segment hosts, you can
-            specify a comma-separated list. The spare host must have the Greenplum Database software
-            installed and configured, and have the same hardware and OS configuration as the current
-            segment hosts (same OS version, locales, <codeph>gpadmin</codeph> user account, data
-            directory locations created, ssh keys exchanged, number of network interfaces, network
-            interface naming convention, and so on.).</pd>
+            which to recover invalid segments.</pd>
+          <pd>
+            <note type="important">The hostname of the new node needs to match the hostname being
+              recovered.</note>
+          </pd>
+          <pd>The spare host must have the Greenplum Database software installed and configured, and
+            have the same hardware and OS configuration as the current segment hosts (same hostname,
+            OS version, locales, <codeph>gpadmin</codeph> user account, data directory locations
+            created, ssh keys exchanged, number of network interfaces, network interface naming
+            convention, and so on). Specifically, the Greenplum Database binaries must be installed,
+            the spare host must be able to connect password-less with all segments including the
+            Greenplum master, and any other Greenplum Database specific OS configuration parameters
+            must be applied.</pd>
+          <pd>
+            <note>In the case of multiple failed segment hosts, you can specify the hosts to recover
+              with a comma-separated list. However, it is strongly recommended to recover one host
+              at a time. If you must recover more than one host at a time, then it is critical to
+              ensure that a double fault scenario does not occur, in which both the segment primary
+              and corresponding mirror are offline.</note>
+          </pd>
         </plentry>
         <plentry>
           <pt>-q (no screen output)</pt>

@@ -42,6 +42,7 @@
 
 #ifdef CDB_MOTION_DEBUG
 #include "lib/stringinfo.h"		/* StringInfo */
+#include "utils/lsyscache.h"
 #endif
 
 /*
@@ -119,20 +120,27 @@ static void doSendTuple(Motion *motion, MotionState *node, TupleTableSlot *outer
 
 #ifdef CDB_MOTION_DEBUG
 static void
-formatTuple(StringInfo buf, HeapTuple tup, TupleDesc tupdesc, Oid *outputFunArray)
+formatTuple(StringInfo buf, GenericTuple tuple, TupleDesc tupleDesc,
+			MemTupleBinding *bind, Oid *outputFunArray)
 {
 	int			i;
+	bool		isMemTuple = is_memtuple(tuple);
 
-	for (i = 0; i < tupdesc->natts; i++)
+	for (i = 0; i < tupleDesc->natts; i++)
 	{
 		bool		isnull;
-		Datum		d = heap_getattr(tup, i + 1, tupdesc, &isnull);
+		Datum		d;
+
+		if (isMemTuple)
+			d = memtuple_getattr((MemTuple) tuple, bind, i + 1, &isnull);
+		else
+			d = heap_getattr((HeapTuple) tuple, i + 1, tupleDesc, &isnull);
 
 		if (d && !isnull)
 		{
 			Datum		ds = OidFunctionCall1(outputFunArray[i], d);
 			char	   *s = DatumGetCString(ds);
-			char	   *name = NameStr(tupdesc->attrs[i]->attname);
+			char	   *name = NameStr(tupleDesc->attrs[i]->attname);
 
 			if (name && *name)
 				appendStringInfo(buf, "  %s=\"%.30s\"", name, s);
@@ -422,8 +430,8 @@ execMotionUnsortedReceiver(MotionState *node)
 						 motion->motionID,
 						 node->numTuplesToParent);
 		formatTuple(&buf, tuple, ExecGetResultType(&node->ps),
-					node->outputFunArray);
-		elog(DEBUG3, buf.data);
+					slot->tts_mt_bind, node->outputFunArray);
+		elog(DEBUG3, "%s", buf.data);
 		pfree(buf.data);
 	}
 #endif
@@ -718,9 +726,9 @@ execMotionSortedReceiver(MotionState *node)
 								 motion->motionID,
 								 node->routeIdNext,
 								 node->numTuplesFromAMS);
-				formatTuple(&buf, inputTuple, ExecGetResultType(&node->ps),
-							node->outputFunArray);
-				elog(DEBUG3, buf.data);
+				formatTuple(&buf, inputTuple, node->tupleheap_cxt->tupDesc,
+							node->tupleheap_cxt->mt_bind, node->outputFunArray);
+				elog(DEBUG3, "%s", buf.data);
 				pfree(buf.data);
 			}
 #endif
@@ -775,8 +783,8 @@ execMotionSortedReceiver(MotionState *node)
 						 node->routeIdNext,
 						 node->numTuplesToParent);
 		formatTuple(&buf, tuple, ExecGetResultType(&node->ps),
-					node->outputFunArray);
-		elog(DEBUG3, buf.data);
+					slot->tts_mt_bind, node->outputFunArray);
+		elog(DEBUG3, "%s", buf.data);
 		pfree(buf.data);
 	}
 #endif
@@ -847,9 +855,9 @@ execMotionSortedReceiverFirstTime(MotionState *node)
 								 motion->motionID,
 								 iSegIdx,
 								 node->numTuplesFromAMS);
-				formatTuple(&buf, inputTuple, ExecGetResultType(&node->ps),
-							node->outputFunArray);
-				elog(DEBUG3, buf.data);
+				formatTuple(&buf, inputTuple, comparatorContext->tupDesc,
+							comparatorContext->mt_bind, node->outputFunArray);
+				elog(DEBUG3, "%s", buf.data);
 				pfree(buf.data);
 			}
 #endif
@@ -1590,8 +1598,9 @@ doSendTuple(Motion *motion, MotionState *node, TupleTableSlot *outerTupleSlot)
 						 node->numTuplesToAMS);
 		formatTuple(&buf, ExecFetchSlotGenericTuple(outerTupleSlot),
 					ExecGetResultType(&node->ps),
+					outerTupleSlot->tts_mt_bind,
 					node->outputFunArray);
-		elog(DEBUG3, buf.data);
+		elog(DEBUG3, "%s", buf.data);
 		pfree(buf.data);
 	}
 #endif

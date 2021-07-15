@@ -286,7 +286,7 @@ def parseargs():
     parser.add_option('-c', '--confinfo', type='string')
     parser.add_option('-t', '--tarfile', type='string')
     parser.add_option('-n', '--newsegments', action='store_true')
-    parser.add_option('-B', '--batch-size', type='int', default=DEFAULT_BATCH_SIZE, metavar='<batch_size>')
+    parser.add_option('-b', '--batch-size', type='int', default=DEFAULT_BATCH_SIZE, metavar='<batch_size>')
     parser.add_option("-V", "--validation-only", dest="validationOnly", action='store_true', default=False)
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
     parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)

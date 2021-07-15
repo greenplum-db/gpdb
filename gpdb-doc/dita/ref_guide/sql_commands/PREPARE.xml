@@ -13,17 +13,17 @@
       <title>Description</title>
       <p><codeph>PREPARE</codeph> creates a prepared statement. A prepared statement is a
         server-side object that can be used to optimize performance. When the
-          <codeph>PREPARE</codeph> statement is executed, the specified statement is parsed,
+          <codeph>PREPARE</codeph> statement is run, the specified statement is parsed,
         analyzed, and rewritten. When an <codeph>EXECUTE</codeph> command is subsequently issued,
-        the prepared statement is planned and executed. This division of labor avoids repetitive
+        the prepared statement is planned and run. This division of labor avoids repetitive
         parse analysis work, while allowing the execution plan to depend on the specific parameter
         values supplied.</p>
       <p>Prepared statements can take parameters, values that are substituted into the statement
-        when it is executed. When creating the prepared statement, refer to parameters by position,
+        when it is run. When creating the prepared statement, refer to parameters by position,
         using <codeph>$1</codeph>, <codeph>$2</codeph>, etc. A corresponding list of parameter data
         types can optionally be specified. When a parameter's data type is not specified or is
         declared as unknown, the type is inferred from the context in which the parameter is first
-        used (if possible). When executing the statement, specify the actual values for these
+        used (if possible). When running the statement, specify the actual values for these
         parameters in the <codeph>EXECUTE</codeph> statement.</p>
       <p>Prepared statements only last for the duration of the current database session. When the
         session ends, the prepared statement is forgotten, so it must be recreated before being used
@@ -32,10 +32,10 @@
         to use. Prepared statements can be manually cleaned up using the <codeph><xref
             href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></codeph> command. </p>
       <p>Prepared statements have the largest performance advantage when a single session is being
-        used to execute a large number of similar statements. The performance difference will be
+        used to run a large number of similar statements. The performance difference will be
         particularly significant if the statements are complex to plan or rewrite, for example, if
         the query involves a join of many tables or requires the application of several rules. If
-        the statement is relatively simple to plan and rewrite but relatively expensive to execute,
+        the statement is relatively simple to plan and rewrite but relatively expensive to run,
         the performance advantage of prepared statements will be less noticeable.</p>
     </section>
     <section id="section4">
@@ -44,7 +44,7 @@
         <plentry>
           <pt><varname>name</varname></pt>
           <pd>An arbitrary name given to this particular prepared statement. It must be unique
-            within a single session and is subsequently used to execute or deallocate a previously
+            within a single session and is subsequently used to run or deallocate a previously
             prepared statement.</pd>
         </plentry>
         <plentry>
@@ -63,11 +63,11 @@
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>A prepared statement can be executed with either a <i>generic plan</i> or a <i>custom
+      <p>A prepared statement can be run with either a <i>generic plan</i> or a <i>custom
           plan</i>. A generic plan is the same across all executions, while a custom plan is
         generated for a specific execution using the parameter values given in that call. Use of a
         generic plan avoids planning overhead, but in some situations a custom plan will be much
-        more efficient to execute because the planner can make use of knowledge of the parameter
+        more efficient to run because the planner can make use of knowledge of the parameter
         values. If the prepared statement has no parameters, a generic plan is always used.</p>
       <p>By default (with the default value, <codeph>auto</codeph>, for the server configuration
         parameter <codeph><xref href="../config_params/guc-list.xml#plan_cache_mode"
@@ -110,12 +110,12 @@
     </section>
     <section id="section6">
       <title>Examples</title>
-      <p>Create a prepared statement for an <codeph>INSERT</codeph> statement, and then execute
+      <p>Create a prepared statement for an <codeph>INSERT</codeph> statement, and then run
         it:</p>
       <codeblock>PREPARE fooplan (int, text, bool, numeric) AS INSERT INTO 
 foo VALUES($1, $2, $3, $4);
 EXECUTE fooplan(1, 'Hunter Valley', 't', 200.00);</codeblock>
-      <p>Create a prepared statement for a <codeph>SELECT</codeph> statement, and then execute it.
+      <p>Create a prepared statement for a <codeph>SELECT</codeph> statement, and then run it.
         Note that the data type of the second parameter is not specified, so it is inferred from the
         context in which <codeph>$2</codeph> is used:</p>
       <codeblock>PREPARE usrrptplan (int) AS SELECT * FROM users u, logs l 

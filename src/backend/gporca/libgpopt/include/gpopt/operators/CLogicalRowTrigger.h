@@ -43,9 +43,6 @@ private:
 	// stability
 	IMDFunction::EFuncStbl m_efs;
 
-	// data access
-	IMDFunction::EFuncDataAcc m_efda;
-
 	// private copy ctor
 	CLogicalRowTrigger(const CLogicalRowTrigger &);
 

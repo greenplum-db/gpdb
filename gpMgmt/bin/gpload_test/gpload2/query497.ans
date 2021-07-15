@@ -1,0 +1,13 @@
+2021-06-01 17:04:39|INFO|gpload session started 2021-06-01 17:04:39
+2021-06-01 17:04:39|INFO|setting schema 'public' for table 'texttable'
+2021-06-01 17:04:39|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-06-01 17:04:39|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2021-06-01 17:04:39|INFO|did not find an external table to reuse. creating ext_gpload_reusable_650c1ebc_c2b8_11eb_ab9c_0050569ea4ff
+2021-06-01 17:04:39|ERROR|ERROR:  column "non_col" does not exist
+LINE 1: ...ble."s1" and into_table."s2"=from_table."s2" and  non_col = ...
+                                                             ^
+ encountered while running update public."texttable" into_table set "n2"=from_table."n2" from staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3 from_table where into_table."n1"=from_table."n1" and into_table."s1"=from_table."s1" and into_table."s2"=from_table."s2" and  non_col = 5 
+2021-06-01 17:04:39|INFO|rows Inserted          = 0
+2021-06-01 17:04:39|INFO|rows Updated           = 0
+2021-06-01 17:04:39|INFO|data formatting errors = 0
+2021-06-01 17:04:39|INFO|gpload failed

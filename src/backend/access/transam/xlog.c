@@ -813,6 +813,12 @@ static bool bgwriterLaunched = false;
 static int	MyLockNo = 0;
 static bool holdingAllLocks = false;
 
+/*
+ * gpdb: backup of ControlFile->checkPointCopy.redo.  This is used by
+ * KeepLogSeg() to avoid pg_rewind failure due to missing xlog file.
+ */
+static XLogRecPtr ControlFileOldCheckpointCopyRedo = InvalidXLogRecPtr;
+
 static void readRecoveryCommandFile(void);
 static void exitArchiveRecovery(TimeLineID endTLI, XLogSegNo endLogSegNo);
 static bool recoveryStopsBefore(XLogRecord *record);
@@ -883,8 +889,6 @@ static int	get_sync_bit(int method);
 
 /* New functions added for WAL replication */
 static void XLogProcessCheckpointRecord(XLogRecord *rec);
-
-static void GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo);
 
 static void CopyXLogRecordToWAL(int write_len, bool isLogSwitch,
 					XLogRecData *rdata,
@@ -8794,32 +8798,6 @@ CreateCheckPoint(int flags)
 	TRACE_POSTGRESQL_CHECKPOINT_START(flags);
 
 	/*
-	 * When the crash happens, we need to handle the transactions that have
-	 * already inserted 'commit' record and haven't inserted 'forget' record.
-	 *
-	 * If the 'commit' record is logically before the checkpoint REDO pointer,
-	 * we save the transactions in checkpoint record, and these transactions
-	 * will be load into shared memory and mark as 'crash committed' during
-	 * redo checkpoint.
-	 * If the 'commit' record is logically after the checkpoint REDO pointer,
-	 * the transactions will be added to shared memory and mark as 'crash
-	 * committed' during redo xact.
-	 * All these transactions will be stored in the shutdown checkpoint record
-	 * after recovery, and they will be finally recovered in recoverTM().
-	 *
-	 * So if it's a shutdown checkpoint here, we should include all 'crash
-	 * committed' transactions, and if it's a normal checkpoint should include
-	 * all transactions whose 'commit' record is logically before checkpoint
-	 * REDO pointer.
-	 *
-	 * We don't hold the WALInsertLock, so there's a time window that allows
-	 * transactions insert 'commit' record and/or 'forget' record after
-	 * checkpoint REDO pointer. That's fine, resend 'commit prepared' to already
-	 * finished transactions is handled.
-	 */
-	getDtxCheckPointInfo(&dtxCheckPointInfo, &dtxCheckPointInfoSize);
-
-	/*
 	 * Get the other info we need for the checkpoint record.
 	 */
 	LWLockAcquire(XidGenLock, LW_SHARED);
@@ -8861,6 +8839,8 @@ CreateCheckPoint(int flags)
 	 */
 	END_CRIT_SECTION();
 
+	SIMPLE_FAULT_INJECTOR("before_wait_VirtualXIDsDelayingChkpt");
+
 	/*
 	 * In some cases there are groups of actions that must all occur on one
 	 * side or the other of a checkpoint record. Before flushing the
@@ -8899,6 +8879,39 @@ CreateCheckPoint(int flags)
 		} while (HaveVirtualXIDsDelayingChkpt(vxids, nvxids));
 	}
 	pfree(vxids);
+
+	/*
+	 * When the crash happens, we need to handle the transactions that have
+	 * already inserted 'commit' record and haven't inserted 'forget' record.
+	 *
+	 * If the 'commit' record is logically before the checkpoint REDO pointer,
+	 * we save the transactions in checkpoint record, and these transactions
+	 * will be load into shared memory and mark as 'crash committed' during
+	 * redo checkpoint.
+	 * If the 'commit' record is logically after the checkpoint REDO pointer,
+	 * the transactions will be added to shared memory and mark as 'crash
+	 * committed' during redo xact.
+	 * All these transactions will be stored in the shutdown checkpoint record
+	 * after recovery, and they will be finally recovered in recoverTM().
+	 *
+	 * So if it's a shutdown checkpoint here, we should include all 'crash
+	 * committed' transactions, and if it's a normal checkpoint should include
+	 * all transactions whose 'commit' record is logically before checkpoint
+	 * REDO pointer.
+	 *
+	 * We don't hold the WALInsertLock, so there's a time window that allows
+	 * transactions insert 'commit' record and/or 'forget' record after
+	 * checkpoint REDO pointer. That's fine, resend 'commit prepared' to already
+	 * finished transactions is handled.
+	 *
+	 * Currently `MyTmGxact->includeInCkpt = true` and `XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT)`
+	 * is already protected by delayChkpt, so these are an atomic operation
+	 * from the outside perspective. getDtxCheckPointInfo() should be called
+	 * after HaveVirtualXIDsDelayingChkpt() otherwise some distributed transactions
+	 * with a state of DTX_STATE_INSERTED_COMMITTED may not be included in the
+	 * checkpoint record.
+	 */
+	getDtxCheckPointInfo(&dtxCheckPointInfo, &dtxCheckPointInfoSize);
 
 	CheckPointGuts(checkPoint.redo, flags);
 
@@ -8989,6 +9002,12 @@ CreateCheckPoint(int flags)
 				(errmsg("concurrent transaction log activity while database system is shutting down")));
 
 	/*
+	 * ControlFile->checkPointCopy.redo will be updated soon so let's store it
+	 * for later use in KeepLogSeg().
+	 */
+	ControlFileOldCheckpointCopyRedo = ControlFile->checkPointCopy.redo;
+
+	/*
 	 * Select point at which we can truncate the log, which we base on the
 	 * prior checkpoint's earliest info or the oldest prepared transaction xlog record's info.
 	 */
@@ -9064,7 +9083,6 @@ CreateCheckPoint(int flags)
 	 */
 	if (gp_keep_all_xlog == false && _logSegNo)
 	{
-		GetXLogCleanUpTo(recptr, &_logSegNo);
 		KeepLogSeg(recptr, &_logSegNo);
 		InvalidateObsoleteReplicationSlots(_logSegNo);
 		_logSegNo--;
@@ -9543,7 +9561,7 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	XLogSegNo	currSegNo;
 	XLogSegNo	segno;
 	XLogRecPtr	keep;
-	bool setvalue = false;
+	static XLogRecPtr CkptRedoBeforeMinLSN = InvalidXLogRecPtr;
 
 	XLByteToSeg(recptr, currSegNo);
 	segno = currSegNo;
@@ -9551,36 +9569,53 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	/*
 	 * Calculate how many segments are kept by slots first, adjusting for
 	 * max_slot_wal_keep_size.
+	 *
+	 * Greenplum: coordinator needs a different way to determine the keep
+	 * point as replication slot is not created there.
 	 */
-	keep = XLogGetReplicationSlotMinimumLSN();
+	keep = IS_QUERY_DISPATCHER() ?
+		WalSndCtlGetXLogCleanUpTo() :
+		XLogGetReplicationSlotMinimumLSN();
+
 #ifdef FAULT_INJECTOR
 	/*
-	 * Ignore the replication slot's LSN and let the WAL still needed by the
-	 * replication slot to be removed.  This is used to test if WAL sender can
-	 * recognize that an incremental recovery has failed when the WAL
+	 * Let the WAL still needed be removed.  This is used to test if WAL sender
+	 * can recognize that an incremental recovery has failed when the WAL
 	 * requested by a mirror no longer exists.
 	 */
 	if (SIMPLE_FAULT_INJECTOR("keep_log_seg") == FaultInjectorTypeSkip)
+	{
 		keep = GetXLogWriteRecPtr();
+		XLByteToSeg(keep, *logSegNo);
+	}
 #endif
 	if (keep != InvalidXLogRecPtr)
 	{
+		if (!XLogRecPtrIsInvalid(ControlFileOldCheckpointCopyRedo))
+		{
+			/*
+			 * basically with this logic, GPDB never uses restart_lsn as
+			 * lowest cut-off point. Instead always will use Checkpoint redo
+			 * location prior to restart_lsn as cut-off point.
+			 */
+			if (ControlFileOldCheckpointCopyRedo < keep)
+			{
+				keep = ControlFileOldCheckpointCopyRedo;
+				CkptRedoBeforeMinLSN = ControlFileOldCheckpointCopyRedo;
+			}
+			else if (!XLogRecPtrIsInvalid(CkptRedoBeforeMinLSN))
+				keep = CkptRedoBeforeMinLSN;
+		}
+
 		XLByteToSeg(keep, segno);
-		setvalue = true;
 
 		/* Cap by max_slot_wal_keep_size ... */
 		if (max_slot_wal_keep_size_mb >= 0)
 		{
 			XLogRecPtr	slot_keep_segs;
-
 			slot_keep_segs = ConvertToXSegs(max_slot_wal_keep_size_mb);
-
-			if (slot_keep_segs > wal_keep_segments &&
-				currSegNo - segno > slot_keep_segs)
-			{
-				*logSegNo = currSegNo - slot_keep_segs;
-				return;
-			}
+			if (currSegNo - segno > slot_keep_segs)
+				segno = currSegNo - slot_keep_segs;
 		}
 	}
 
@@ -9592,11 +9627,10 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 			segno = 1;
 		else
 			segno = currSegNo - wal_keep_segments;
-		setvalue = true;
 	}
 
 	/* don't delete WAL segments newer than the calculated segment */
-	if (setvalue && (XLogRecPtrIsInvalid(*logSegNo) || segno < *logSegNo))
+	if (segno < *logSegNo)
 		*logSegNo = segno;
 }
 
@@ -12239,28 +12273,6 @@ bool
 IsStandbyMode(void)
 {
 	return StandbyMode;
-}
-
-static void
-GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo)
-{
-	/*
-	 * See if we have a live WAL sender and see if it has a
-	 * start xlog location (with active basebackup) or standby fsync location
-	 * (with active standby). We have to compare it with prev. checkpoint
-	 * location. We use the min out of them to figure out till
-	 * what point we need to save the xlog seg files
-	 */
-	XLogRecPtr xlogCleanUpTo = WalSndCtlGetXLogCleanUpTo();
-	if (!XLogRecPtrIsInvalid(xlogCleanUpTo))
-	{
-		if (recptr < xlogCleanUpTo)
-			xlogCleanUpTo = recptr;
-	}
-	else
-		xlogCleanUpTo = recptr;
-
-	KeepLogSeg(xlogCleanUpTo, _logSegNo);
 }
 
 /*

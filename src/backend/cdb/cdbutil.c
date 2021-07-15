@@ -749,7 +749,7 @@ cdbcomponent_destroyCdbComponents(void)
 /*
  * Allocated a segdb
  *
- * If thers is idle segdb in the freelist, return it, otherwise, initialize
+ * If there is idle segdb in the freelist, return it, otherwise, initialize
  * a new segdb.
  *
  * idle segdbs has an established connection with segment, but new segdb is
@@ -867,11 +867,13 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	CdbComponentDatabaseInfo	*cdbinfo;
 	MemoryContext				oldContext;	
 	int							maxLen;
+	bool						isWriter;
 
 	Assert(cdb_component_dbs);
 	Assert(CdbComponentsContext);
 
 	cdbinfo = segdbDesc->segment_database_info;
+	isWriter = segdbDesc->isWriter;
 
 	/* update num of active QEs */
 	DECR_COUNT(cdbinfo, numActiveQEs);
@@ -884,11 +886,11 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	/* If freelist length exceed gp_cached_gang_threshold, destroy it */
 	maxLen = segdbDesc->segindex == -1 ?
 					MAX_CACHED_1_GANGS : gp_cached_gang_threshold;
-	if (!segdbDesc->isWriter && list_length(cdbinfo->freelist) >= maxLen)
+	if (!isWriter && list_length(cdbinfo->freelist) >= maxLen)
 		goto destroy_segdb;
 
 	/* Recycle the QE, put it to freelist */
-	if (segdbDesc->isWriter)
+	if (isWriter)
 	{
 		/* writer is always the header of freelist */
 		segdbDesc->segment_database_info->freelist =
@@ -927,7 +929,7 @@ destroy_segdb:
 
 	cdbconn_termSegmentDescriptor(segdbDesc);
 
-	if (segdbDesc->isWriter)
+	if (isWriter)
 	{
 		markCurrentGxactWriterGangLost();
 	}

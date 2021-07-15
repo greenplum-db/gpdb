@@ -47,7 +47,7 @@
             </entry>
             <entry colname="col2">integer</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">The number of transactions currently executing in the resource group.</entry>
+            <entry colname="col4">The number of transactions currently running in the resource group.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -71,7 +71,7 @@
             </entry>
             <entry colname="col2">integer</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">The total number of executed transactions in the resource group since the Greenplum Database cluster was last started, excluding the <codeph>num_running</codeph>.</entry>
+            <entry colname="col4">The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the <codeph>num_running</codeph>.</entry>
           </row>
           <row>
             <entry colname="col1">

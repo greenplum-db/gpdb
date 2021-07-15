@@ -68,6 +68,7 @@ class WorkerPool(object):
             self.workers.append(w)
             w.start()
         self.numWorkers = numWorkers
+        self.logger.debug("WorkerPool() initialized with %d workers" % self.numWorkers)
 
     ###
     def getNumWorkers(self):

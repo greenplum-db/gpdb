@@ -1,0 +1,89 @@
+-- Scenario to test, CHECKPOINT getting distributed transaction
+-- information between COMMIT processing time window
+-- `XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT)` and
+-- insertedDistributedCommitted(). `delayChkpt` protects this
+-- case. There used to bug in placement of getDtxCheckPointInfo() in
+-- checkpoint code causing, transaction to be committed on coordinator
+-- and aborted on segments. Test case is meant to validate
+-- getDtxCheckPointInfo() gets called after
+-- GetVirtualXIDsDelayingChkpt().
+--
+-- Test controls the progress of COMMIT executed in session 1 and of
+-- CHECKPOINT executed in the checkpointer process, with high-level
+-- flow:
+--
+-- 1. session 1: COMMIT is blocked at start_insertedDistributedCommitted
+-- 2. checkpointer: Start a CHECKPOINT and wait to reach before_wait_VirtualXIDsDelayingChkpt
+-- 3. session 1: COMMIT is resumed
+-- 4. checkpointer: CHECKPOINT is resumed and executes to keep_log_seg to finally introduce panic and perform crash recovery
+--
+-- Bug existed when getDtxCheckPointInfo() was invoked before
+-- GetVirtualXIDsDelayingChkpt(), getDtxCheckPointInfo() will not
+-- contain the distributed transaction in session1 whose state is
+-- DTX_STATE_INSERTED_COMMITTED.  Therefore, after crash recovery, the
+-- 2PC transaction that has been committed on coordinator will be
+-- considered as orphaned prepared transaction hence is aborted at
+-- segments. As a result the SELECT executed by session3 used to fail
+-- because the twopcbug table only existed on the coordinator.
+--
+1: select gp_inject_fault_infinite('start_insertedDistributedCommitted', 'suspend', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1: begin;
+BEGIN
+1: create table twopcbug(i int, j int);
+CREATE
+1&: commit;  <waiting ...>
+2: select gp_inject_fault_infinite('before_wait_VirtualXIDsDelayingChkpt', 'skip', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+33&: checkpoint;  <waiting ...>
+2: select gp_inject_fault_infinite('keep_log_seg', 'panic', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+-- wait to make sure we don't resume commit processing before this
+-- step in checkpoint
+2: select gp_wait_until_triggered_fault('before_wait_VirtualXIDsDelayingChkpt', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- reason for this inifinite wait is just to avoid test flake. Without
+-- this joining step "1<" may see "COMMIT" sometimes or "server closed
+-- the connection unexpectedly" otherwise. With this its always
+-- "server closed the connection unexpectedly".
+2: select gp_inject_fault_infinite('after_xlog_xact_distributed_commit', 'infinite_loop', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+2: select gp_inject_fault_infinite('start_insertedDistributedCommitted', 'resume', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+33<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+-- wait until coordinator is up for querying.
+3: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+3: select count(1) from twopcbug;
+ count 
+-------
+ 0     
+(1 row)

@@ -352,27 +352,29 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 //---------------------------------------------------------------------------
 IMdIdArray *
 CTranslatorUtils::ResolvePolymorphicTypes(CMemoryPool *mp,
-										  IMdIdArray *mdid_array,
-										  List *arg_types_list,
+										  IMdIdArray *return_arg_mdids,
+										  List *input_arg_types,
 										  FuncExpr *funcexpr)
 {
 	ULONG arg_index = 0;
 
-	const ULONG num_arg_types = gpdb::ListLength(arg_types_list);
+	const ULONG num_arg_types = gpdb::ListLength(input_arg_types);
 	const ULONG num_args_from_query = gpdb::ListLength(funcexpr->args);
-	const ULONG num_return_args = mdid_array->Size();
-	const ULONG num_args = num_arg_types < num_args_from_query
-							   ? num_arg_types
-							   : num_args_from_query;
+	const ULONG num_return_args = return_arg_mdids->Size();
+	const ULONG num_args = std::min(num_arg_types, num_args_from_query);
 	const ULONG total_args = num_args + num_return_args;
 
-	OID arg_types[num_args];
+	OID arg_types[total_args];
 	char arg_modes[total_args];
 
-	// copy function argument types
+	// copy the first 'num_args' function argument types
 	ListCell *arg_type = NULL;
-	ForEach(arg_type, arg_types_list)
+	ForEach(arg_type, input_arg_types)
 	{
+		if (arg_index >= num_args)
+		{
+			break;
+		}
 		arg_types[arg_index] = lfirst_oid(arg_type);
 		arg_modes[arg_index++] = PROARGMODE_IN;
 	}
@@ -380,7 +382,7 @@ CTranslatorUtils::ResolvePolymorphicTypes(CMemoryPool *mp,
 	// copy function return types
 	for (ULONG ul = 0; ul < num_return_args; ul++)
 	{
-		IMDId *mdid = (*mdid_array)[ul];
+		IMDId *mdid = (*return_arg_mdids)[ul];
 		arg_types[arg_index] = CMDIdGPDB::CastMdid(mdid)->Oid();
 		arg_modes[arg_index++] = PROARGMODE_TABLE;
 	}
@@ -394,7 +396,7 @@ CTranslatorUtils::ResolvePolymorphicTypes(CMemoryPool *mp,
 				"could not determine actual argument/return type for polymorphic function"));
 	}
 
-	// generate a new array of mdids based on the resolved types
+	// generate a new array of mdids based on the resolved return types
 	IMdIdArray *resolved_types = GPOS_NEW(mp) IMdIdArray(mp);
 
 	// get the resolved return types

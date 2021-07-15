@@ -3793,6 +3793,9 @@ CTranslatorQueryToDXL::TranslateJoinExprInFromToDXL(JoinExpr *join_expr)
 	ForBoth(lc_node, rte->joinaliasvars, lc_col_name, alias->colnames)
 	{
 		Node *join_alias_node = (Node *) lfirst(lc_node);
+		// rte->joinaliasvars may contain NULL ptrs which indicates dropped columns
+		if (!join_alias_node)
+			continue;
 		GPOS_ASSERT(IsA(join_alias_node, Var) ||
 					IsA(join_alias_node, CoalesceExpr));
 		Value *value = (Value *) lfirst(lc_col_name);

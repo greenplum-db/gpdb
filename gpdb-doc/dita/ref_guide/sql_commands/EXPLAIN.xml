@@ -54,7 +54,7 @@ EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
         realize that the cost only reflects things that the query optimizer cares about. In
         particular, the cost does not consider the time spent transmitting result rows to the
         client.</p>
-      <p><codeph>EXPLAIN ANALYZE</codeph> causes the statement to be actually executed, not only
+      <p><codeph>EXPLAIN ANALYZE</codeph> causes the statement to be actually run, not only
         planned. The <codeph>EXPLAIN ANALYZE</codeph> plan shows the actual results along with the
         planner's estimates. This is useful for seeing whether the planner's estimates are close to
         reality. In addition to the information shown in the <codeph>EXPLAIN</codeph> plan,
@@ -84,7 +84,7 @@ workfile
           that segment. The <i>&lt;time&gt; to first row</i> may be omitted if it is the same as the
             <i>&lt;time&gt; to end</i>.</li>
       </ul>
-      <note type="important">Keep in mind that the statement is actually executed when
+      <note type="important">Keep in mind that the statement is actually run when
           <codeph>ANALYZE</codeph> is used. Although <codeph>EXPLAIN ANALYZE</codeph> will discard
         any output that a <codeph>SELECT</codeph> would return, other side effects of the statement
         will happen as usual. If you wish to use <codeph>EXPLAIN ANALYZE</codeph> on a DML statement

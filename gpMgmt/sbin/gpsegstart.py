@@ -132,7 +132,7 @@ class GpSegStart:
 
     def __init__(self, dblist, gpversion, mirroringMode, num_cids, era,
                  timeout, pickledTransitionData, specialMode, wrapper, wrapper_args,
-                 master_checksum_version, parallel, logfileDirectory=False):
+                 master_checksum_version, segment_batch_size, logfileDirectory=False):
 
         # validate/store arguments
         #
@@ -160,7 +160,7 @@ class GpSegStart:
 
         # initialize state
         #
-        self.pool                  = base.WorkerPool(numWorkers=min(len(dblist), parallel))
+        self.pool                  = base.WorkerPool(numWorkers=min(len(dblist), segment_batch_size))
         self.logger                = logger
         self.overall_status        = None
 
@@ -353,7 +353,8 @@ class GpSegStart:
         parser.add_option('', '--wrapper', dest="wrapper", default=None, type='string')
         parser.add_option('', '--wrapper-args', dest="wrapper_args", default=None, type='string')
         parser.add_option('', '--master-checksum-version', dest="master_checksum_version", default=None, type='string', action="store")
-        parser.add_option('-B', '--parallel', type="int", dest="parallel", default=gp.DEFAULT_GPSTART_NUM_WORKERS, help='maximum size of a threadpool to start segments')
+        parser.add_option('-b', '--segment-batch-size', type="int", dest="segment_batch_size", default=gp.DEFAULT_GPSTART_NUM_WORKERS,
+                          help='Max number of segments per host to operate on in parallel.')
 
         return parser
 
@@ -375,7 +376,7 @@ class GpSegStart:
                           options.wrapper,
                           options.wrapper_args,
                           options.master_checksum_version,
-                          options.parallel,
+                          options.segment_batch_size,
                           logfileDirectory=logfileDirectory)
 
 #-------------------------------------------------------------------------

@@ -21,7 +21,7 @@ from gppylib import gplog
 from gppylib.commands import base
 from gppylib.commands import unix
 from gppylib.commands import gp
-from gppylib.commands.gp import SEGMENT_STOP_TIMEOUT_DEFAULT
+from gppylib.commands.gp import SEGMENT_STOP_TIMEOUT_DEFAULT, DEFAULT_SEGHOST_NUM_WORKERS
 from gppylib.commands import pg
 from gppylib.db import dbconn
 from gppylib import pgconf
@@ -138,7 +138,7 @@ class SegStop(base.Command):
 # -------------------------------------------------------------------------
 class GpSegStop:
     ######
-    def __init__(self, dblist, mode, gpversion, timeout=SEGMENT_STOP_TIMEOUT_DEFAULT, logfileDirectory=False):
+    def __init__(self, dblist, mode, gpversion, timeout=SEGMENT_STOP_TIMEOUT_DEFAULT, logfileDirectory=False, segment_batch_size=DEFAULT_SEGHOST_NUM_WORKERS):
         self.dblist = dblist
         self.mode = mode
         self.expected_gpversion = gpversion
@@ -153,6 +153,7 @@ class GpSegStop:
         self.logger = logger
         self.pool = None
         self.logfileDirectory = logfileDirectory
+        self.segment_batch_size = segment_batch_size
 
     ######
     def run(self):
@@ -160,7 +161,7 @@ class GpSegStop:
         failures = []
 
         self.logger.info("Issuing shutdown commands to local segments...")
-        self.pool = base.WorkerPool()
+        self.pool = base.WorkerPool(min(len(self.dblist), self.segment_batch_size))
         for db in self.dblist:
             cmd = SegStop('segment shutdown', db=db, mode=self.mode, timeout=self.timeout)
             self.pool.addCommand(cmd)
@@ -202,13 +203,15 @@ class GpSegStop:
                           help="how to shutdown. modes are smart,fast, or immediate")
         parser.add_option("-t", "--timeout", dest="timeout", type="int", default=SEGMENT_STOP_TIMEOUT_DEFAULT,
                           help="seconds to wait")
+        parser.add_option("-b", "--segment-batch-size", dest="segment_batch_size", type="int", default=DEFAULT_SEGHOST_NUM_WORKERS,
+                          help="Max number of segments per host to operate on in parallel.")
         return parser
 
     @staticmethod
     def createProgram(options, args):
         logfileDirectory = options.ensure_value("logfileDirectory", False)
         return GpSegStop(options.dblist, options.mode, options.gpversion, options.timeout,
-                         logfileDirectory=logfileDirectory)
+                         logfileDirectory=logfileDirectory, segment_batch_size=options.segment_batch_size)
 
 
 # -------------------------------------------------------------------------

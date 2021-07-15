@@ -471,7 +471,7 @@ extern void UnregisterExprContextCallback(ExprContext *econtext,
 extern ShareNodeEntry * ExecGetShareNodeEntry(EState *estate, int shareid, bool fCreate);
 
 extern void fake_outer_params(JoinState *node);
-extern void ExecPrefetchJoinQual(JoinState *node);
+extern void ExecPrefetchQual(JoinState *node, bool isJoinQual);
 
 /* ResultRelInfo and Append Only segment assignment */
 void ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping);

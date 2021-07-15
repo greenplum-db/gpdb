@@ -6,7 +6,7 @@
 <b>dropdb</b> <b>-? | --help</b>
 
 <b>dropdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>dropdb</codeph> destroys an existing database. The user who
-executes this command must be a superuser or the owner of the database
+runs this command must be a superuser or the owner of the database
 being dropped. </p><p><codeph>dropdb</codeph> is a wrapper around the SQL command <codeph>DROP DATABASE</codeph>. <ph
                                        >See the <i>Greenplum Database Reference
                                                 Guide</i> for information about <codeph>DROP

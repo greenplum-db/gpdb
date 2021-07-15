@@ -136,7 +136,7 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
             condition. </pd>
           <pd>Note that <codeph>WHERE CURRENT OF</codeph> cannot be specified together with a
             Boolean condition. The <codeph>UPDATE...WHERE CURRENT OF</codeph> statement can only be
-            executed on the server, for example in an interactive psql session or a script. Language
+            run on the server, for example in an interactive psql session or a script. Language
             extensions such as PL/pgSQL do not have support for updatable cursors.</pd>
           <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
             more information about creating cursors.</pd>
@@ -170,8 +170,8 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
         will be used is not readily predictable.</p>
       <p>Because of this indeterminacy, referencing other tables only within sub-selects is safer,
         though often harder to read and slower than using a join.</p>
-      <p>Executing <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on a
-        specific partition (child table) of a partitioned table is not supported. Instead, execute
+      <p>Running <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on a
+        specific partition (child table) of a partitioned table is not supported. Instead, run 
         these commands on the root partitioned table, the table created with the <codeph>CREATE
           TABLE</codeph> command.</p>
       <p>For a partitioned table, all the child tables are locked during the <codeph>UPDATE</codeph>

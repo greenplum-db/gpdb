@@ -45,7 +45,8 @@ CMDCastGPDB::CMDCastGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	GPOS_ASSERT(m_mdid->IsValid());
 	GPOS_ASSERT(m_mdid_src->IsValid());
 	GPOS_ASSERT(m_mdid_dest->IsValid());
-	GPOS_ASSERT_IMP(!is_binary_coercible, m_mdid_cast_func->IsValid());
+	GPOS_ASSERT_IMP(!is_binary_coercible && m_path_type != EmdtCoerceViaIO,
+					m_mdid_cast_func->IsValid());
 
 	m_dxl_str = CDXLUtils::SerializeMDObj(
 		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);

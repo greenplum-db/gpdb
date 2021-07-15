@@ -1,42 +1,18 @@
-2021-01-07 03:26:41|INFO|gpload session started 2021-01-07 03:26:41
-2021-01-07 03:26:41|INFO|setting schema 'public' for table 'testspecialchar'
-2021-01-07 03:26:41|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-01-07 03:26:41|INFO|did not find an external table to reuse. creating ext_gpload_reusable_28d204da_5098_11eb_b7ae_0242ac120005
-2021-01-07 03:26:41|INFO|running time: 0.15 seconds
-2021-01-07 03:26:41|INFO|rows Inserted          = 8
-2021-01-07 03:26:41|INFO|rows Updated           = 0
-2021-01-07 03:26:41|INFO|data formatting errors = 0
-2021-01-07 03:26:41|INFO|gpload succeeded
-2021-01-07 03:26:41|INFO|gpload session started 2021-01-07 03:26:41
-2021-01-07 03:26:41|INFO|setting schema 'public' for table 'testspecialchar'
-2021-01-07 03:26:41|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-01-07 03:26:41|INFO|reusing external table ext_gpload_reusable_28d204da_5098_11eb_b7ae_0242ac120005
-2021-01-07 03:26:42|INFO|running time: 0.11 seconds
-2021-01-07 03:26:42|INFO|rows Inserted          = 8
-2021-01-07 03:26:42|INFO|rows Updated           = 0
-2021-01-07 03:26:42|INFO|data formatting errors = 0
-2021-01-07 03:26:42|INFO|gpload succeeded
-2021-01-07 03:26:42|INFO|gpload session started 2021-01-07 03:26:42
-2021-01-07 03:26:42|INFO|setting schema 'public' for table 'testspecialchar'
-2021-01-07 03:26:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file2.txt" -t 30
-2021-01-07 03:26:42|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
-2021-01-07 03:26:42|INFO|did not find an external table to reuse. creating ext_gpload_reusable_294a54da_5098_11eb_933f_0242ac120005
-2021-01-07 03:26:42|INFO|running time: 0.27 seconds
-2021-01-07 03:26:42|INFO|rows Inserted          = 2
-2021-01-07 03:26:42|INFO|rows Updated           = 12
-2021-01-07 03:26:42|INFO|data formatting errors = 0
-2021-01-07 03:26:42|INFO|gpload succeeded
-2021-01-07 03:26:42|INFO|gpload session started 2021-01-07 03:26:42
-2021-01-07 03:26:42|INFO|setting schema 'public' for table 'testspecialchar'
-2021-01-07 03:26:42|ERROR|no mapping for input column "'Field1'" to output table
-2021-01-07 03:26:42|INFO|rows Inserted          = 0
-2021-01-07 03:26:42|INFO|rows Updated           = 0
-2021-01-07 03:26:42|INFO|data formatting errors = 0
-2021-01-07 03:26:42|INFO|gpload failed
-2021-01-07 03:26:43|INFO|gpload session started 2021-01-07 03:26:43
-2021-01-07 03:26:43|INFO|setting schema 'public' for table 'testspecialchar'
-2021-01-07 03:26:43|ERROR|no mapping for input column "Field1" to output table
-2021-01-07 03:26:43|INFO|rows Inserted          = 0
-2021-01-07 03:26:43|INFO|rows Updated           = 0
-2021-01-07 03:26:43|INFO|data formatting errors = 0
-2021-01-07 03:26:43|INFO|gpload failed
+2020-11-30 16:20:47|INFO|gpload session started 2020-11-30 16:20:47
+2020-11-30 16:20:47|INFO|setting schema 'public' for table 'texttable'
+2020-11-30 16:20:47|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-11-30 16:20:47|INFO|reusing external table ext_gpload_reusable_f160fcb6_32e4_11eb_b17e_00505698707d
+2020-11-30 16:20:47|INFO|running time: 0.12 seconds
+2020-11-30 16:20:47|INFO|rows Inserted          = 16
+2020-11-30 16:20:47|INFO|rows Updated           = 0
+2020-11-30 16:20:47|INFO|data formatting errors = 0
+2020-11-30 16:20:47|INFO|gpload succeeded
+2020-11-30 16:20:48|INFO|gpload session started 2020-11-30 16:20:48
+2020-11-30 16:20:48|INFO|setting schema 'public' for table 'texttable'
+2020-11-30 16:20:48|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-11-30 16:20:48|INFO|reusing external table ext_gpload_reusable_f160fcb6_32e4_11eb_b17e_00505698707d
+2020-11-30 16:20:48|INFO|running time: 0.12 seconds
+2020-11-30 16:20:48|INFO|rows Inserted          = 16
+2020-11-30 16:20:48|INFO|rows Updated           = 0
+2020-11-30 16:20:48|INFO|data formatting errors = 0
+2020-11-30 16:20:48|INFO|gpload succeeded

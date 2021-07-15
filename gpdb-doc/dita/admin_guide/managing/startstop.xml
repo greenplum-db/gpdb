@@ -64,14 +64,14 @@
     <taskbody>
       <context>The <codeph>gpstop</codeph> utility can reload changes to the
           <filepath>pg_hba.conf</filepath> configuration file and to <i>runtime</i> parameters in
-        the master <filepath>postgresql.conf</filepath> file and <filepath>pg_hba.conf</filepath>
-        file without service interruption. Active sessions pick up changes when they reconnect to
+        the master <filepath>postgresql.conf</filepath> file without service interruption. 
+Active sessions pick up changes when they reconnect to
         the database. Many server configuration parameters require a full system restart
           (<codeph>gpstop -r</codeph>) to activate. For information about server configuration
         parameters, see the <cite>Greenplum Database Reference Guide</cite>.</context>
       <steps-unordered id="steps-unordered_n3k_mtk_gp">
         <step>
-          <cmd>Reload configuration file changes without shutting down the system using the
+          <cmd>Reload configuration file changes without shutting down the Greenplum Database system using the
               <codeph>gpstop</codeph> utility:</cmd>
           <stepxmp>
             <codeblock>$ gpstop -u</codeblock>
@@ -105,10 +105,11 @@
           </stepxmp>
         </step>
         <step>
-          <cmd>After completing your administrative tasks, stop the master in utility mode. Then,
+          <cmd>After completing your administrative tasks, stop the master in maintenance mode. Then,
             restart it in production mode.</cmd>
           <stepxmp>
-            <codeblock>$ gpstop -mr</codeblock>
+            <codeblock>$ gpstop -m
+$ gpstart</codeblock>
           </stepxmp>
           <info>
             <note type="warning">
@@ -128,8 +129,13 @@
           <codeph>postgres</codeph> processes in the system, including the master and all segment
         instances. The <codeph>gpstop</codeph> utility uses a default of up to 64 parallel worker
         threads to bring down the Postgres instances that make up the Greenplum Database cluster.
-        The system waits for any active transactions to finish before shutting down. To stop
-        Greenplum Database immediately, use fast mode.</context>
+        The system waits for any active transactions to finish before shutting down. If after two
+        minutes there are still active connections, <codeph>gpstop</codeph> will prompt you to
+        either continue waiting in smart mode, stop in fast mode, or stop in immediate mode. To stop
+        Greenplum Database immediately, use fast mode. <note type="important">Immediate shut down
+          mode is not recommended. This mode stops all database processes without allowing the
+          database server to complete transaction processing or clean up any temporary or in-process
+          work files.</note></context>
       <steps-unordered>
         <step>
           <cmd>To stop Greenplum Database:</cmd>
@@ -142,9 +148,10 @@
           <stepxmp>
             <codeblock>$ gpstop -M fast</codeblock>
           </stepxmp>
-          <stepresult>By default, you are not allowed to shut down Greenplum Database if there are any
-      client connections to the database. Use the <codeph>-M fast</codeph> option to roll
-      back all in progress transactions and terminate any connections before shutting down.</stepresult>
+          <stepresult>By default, you are not allowed to shut down Greenplum Database if there are
+            any client connections to the database. Use the <codeph>-M fast</codeph> option to roll
+            back all in progress transactions and terminate any connections before shutting
+            down.</stepresult>
         </step>
       </steps-unordered>
     </taskbody>

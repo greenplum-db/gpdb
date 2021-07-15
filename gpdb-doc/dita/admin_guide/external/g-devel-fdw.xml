@@ -237,7 +237,7 @@ GetForeignPlan (PlannerInfo *root,
               <entry colname="col1"><codeblock>void
 BeginForeignScan (ForeignScanState *node,
                   int eflags)</codeblock></entry>
-              <entry colname="col2">Begin executing a foreign scan. Called during
+              <entry colname="col2">Begin running a foreign scan. Called during
                executor startup.</entry>
             </row>
             <row>
@@ -349,7 +349,7 @@ GetForeignColumnOptions(Oid relid, AttrNumber attnum);</codeblock></entry>
         <codeph>master</codeph> (the default), <codeph>any</codeph> (master or
         any one segment), or <codeph>all</codeph> segments.</p>
       <note>Write/update operations using a foreign data wrapper are always
-        executed on the Greenplum Database master, regardless of the
+        performed on the Greenplum Database master, regardless of the
         <codeph>mpp_execute</codeph> setting.</note>
       <p>The following scan code snippet probes the <codeph>mpp_execute</codeph>
         value associated with a foreign table:</p>

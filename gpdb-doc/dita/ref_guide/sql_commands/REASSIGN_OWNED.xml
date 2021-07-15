@@ -34,7 +34,7 @@
       <title>Notes</title>
       <p><codeph>REASSIGN OWNED</codeph> is often used to prepare for the removal of one or more
         roles. Because <codeph>REASSIGN OWNED</codeph> does not affect objects in other databases,
-        it is usually necessary to execute this command in each database that contains objects owned
+        it is usually necessary to run this command in each database that contains objects owned
         by a role that is to be removed. </p>
       <p><codeph>REASSIGN OWNED</codeph> requires privileges on both the
         source role(s) and the target role.</p>

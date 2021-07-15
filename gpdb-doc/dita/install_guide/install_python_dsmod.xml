@@ -414,7 +414,7 @@
         are set.</p>
       <note>The <codeph>PyMC3</codeph> module depends on <codeph>Tk</codeph>. If you want to use
           <codeph>PyMC3</codeph>, you must install the <codeph>tk</codeph> OS package on every node
-        in your cluster. For example: <codeblock>$ yum install tk
+        in your cluster. For example: <codeblock>$ sudo yum install tk
 </codeblock></note>
       <ol>
         <li>Locate the Python Data Science module package that you built or downloaded.<p>The file

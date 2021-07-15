@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-    <topicref href="../../6-15/homenav.html" scope="external"
-        navtitle="Greenplum Database 6.15 Documentation" format="html" otherprops="oss-only"/>
-    <topicref href="../../6-15/homenav.html" scope="external"
-        navtitle="Tanzu Greenplum 6.15 Documentation" format="html" otherprops="pivotal"/>
+    <topicref href="../../6-17/homenav.html" scope="external"
+        navtitle="Greenplum Database 6.17 Documentation" format="html" otherprops="oss-only"/>
+    <topicref href="../../6-17/homenav.html" scope="external"
+        navtitle="Tanzu Greenplum 6.17 Documentation" format="html" otherprops="pivotal"/>
     <topicref href="utility_guide.xml" navtitle="Utility Guide">
         <topicref href="about-utils.xml"/>
         <topicref href="utility-programs.xml" linking="targetonly">
@@ -37,7 +37,8 @@
             <topicref href="ref/gpmapreduce.xml"/>
             <topicref href="ref/gpmapreduce-yaml.xml"/>
             <topicref href="ref/gpmovemirrors.xml"/>
-            <!-- hidden until testing is complete -msk
+            <topicref href="ref/gpmt.xml" otherprops="pivotal"/>
+<!-- hidden until testing is complete -msk
         <topicref href="ref/gpmovemirrors.xml"/>
 -->
             <topicref href="ref/gppkg.xml"/>

@@ -1,0 +1,9 @@
+2021-01-04 15:02:58|INFO|gpload session started 2021-01-04 15:02:58
+2021-01-04 15:02:58|INFO|setting schema 'public' for table 'csvtable'
+2021-01-04 15:02:58|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2021-01-04 15:02:58|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e031ff3a_4e5a_11eb_97bf_000c299afcc5
+2021-01-04 15:02:58|INFO|running time: 0.06 seconds
+2021-01-04 15:02:58|INFO|rows Inserted          = 3
+2021-01-04 15:02:58|INFO|rows Updated           = 0
+2021-01-04 15:02:58|INFO|data formatting errors = 0
+2021-01-04 15:02:58|INFO|gpload succeeded

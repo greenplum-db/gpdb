@@ -37,7 +37,7 @@
       </ul></p>
     <p>The internals of PostgreSQL have been modified or supplemented to support the parallel
       structure of Greenplum Database. For example, the system catalog, optimizer, query executor,
-      and transaction manager components have been modified and enhanced to be able to execute
+      and transaction manager components have been modified and enhanced to be able to run
       queries simultaneously across all of the parallel PostgreSQL database instances. The Greenplum
         <i>interconnect</i> (the networking layer) enables communication between the distinct
       PostgreSQL instances and allows the system to behave as one logical database. </p>
@@ -104,7 +104,7 @@
         Greenplum Database system; each segment contains a distinct portion of data. The database
         server processes that serve segment data run under the corresponding segment instances.
         Users interact with segments in a Greenplum Database system through the master.</p>
-      <p>Segments run on a servers called <i>segment hosts</i>. A segment host typically executes
+      <p>Segments run on a server called <i>segment hosts</i>. A segment host typically runs
         from two to eight Greenplum segments, depending on the CPU cores, RAM, storage, network
         interfaces, and workloads. Segment hosts are expected to be identically configured. The key
         to obtaining the best performance from Greenplum Database is to distribute data and

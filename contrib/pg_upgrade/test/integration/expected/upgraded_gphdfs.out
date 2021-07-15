@@ -1,5 +1,0 @@
-SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcatupdate, rolcanlogin, rolreplication, rolconnlimit, rolpassword, rolvaliduntil, rolconfig, rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd FROM pg_roles WHERE rolname='gphdfsuser';
- rolname    | rolsuper | rolinherit | rolcreaterole | rolcreatedb | rolcatupdate | rolcanlogin | rolreplication | rolconnlimit | rolpassword | rolvaliduntil | rolconfig | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
-------------+----------+------------+---------------+-------------+--------------+-------------+----------------+--------------+-------------+---------------+-----------+-------------------+-------------------+-------------------
- gphdfsuser | f        | t          | f             | f           | f            | f           | f              | -1           | ********    |               |           | f                 | f                 | f                 
-(1 row)

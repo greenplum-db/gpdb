@@ -100,7 +100,7 @@
 -------------+----------+------------+----------------------------------------------------------------
  plcontainer | 1.0.0    | public     | GPDB execution sandboxing for Python and R
  plpgsql     | 1.0      | pg_catalog | PL/pgSQL procedural language
- plr         | 8.3.0.16 | public     | load R interpreter and execute R script from within a database
+ plr         | 8.3.0.16 | public     | load R interpreter and run R script from within a database
 </codeblock>
           <p>Check for the <codeph>plr</codeph> and/or <codeph>plcontainer</codeph>
             extension <codeph>Name</codeph>.</p></li>

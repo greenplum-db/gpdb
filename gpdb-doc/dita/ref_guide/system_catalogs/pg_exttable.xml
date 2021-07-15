@@ -64,7 +64,7 @@
             <entry colname="col1"><codeph>command</codeph></entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The OS command to execute when the external table is
+            <entry colname="col4">The OS command to run when the external table is
               accessed.</entry>
           </row>
           <row>

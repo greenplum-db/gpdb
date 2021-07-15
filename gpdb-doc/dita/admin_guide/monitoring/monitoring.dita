@@ -110,9 +110,9 @@ WHERE preferred_role &lt;&gt; role;</codeblock></p>
                                 <entry>
                                     <p>When the segments are not running in their preferred role,
                                         hosts have uneven numbers of primary segments on each host,
-                                        implying that processing is skewed. Wait for a potential
-                                        window and restart the database to bring the segments into
-                                        their preferred roles.</p>
+                                        implying that processing is skewed. Run <codeph>gprecoverseg
+                                            -r</codeph> to bring the segments back into their
+                                        preferred roles.</p>
                                 </entry>
                             </row>
                             <row>
@@ -180,12 +180,10 @@ FROM gp_master_mirroring;</codeblock></p>
                                         <codeblock>SELECT count(*) FROM gp_segment_configuration;</codeblock></p>
                                 </entry>
                                 <entry>
-                                    <p>If this query fails the active master may be down. Try again
-                                        several times and then inspect the active master manually.
-                                        If the active master is down, reboot or power cycle the
-                                        active master to ensure no processes remain on the active
-                                        master and then trigger the activation of the standby
-                                        master.</p>
+                                    <p>If this query fails, the active master may be down. Try to
+                                        start the database on the original master if the server is
+                                        up and running. If that fails, try to activate the standby
+                                        master as master.</p>
                                 </entry>
                             </row>
                         </tbody>
@@ -262,8 +260,8 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                                 capacities approaching 100%.</li>
                                         </ul></p>
                                 </entry>
-                                <entry>Free space on the system by removing some data or
-                                    files.</entry>
+                                <entry>Use <codeph>VACUUM</codeph>/<codeph>VACUUM FULL</codeph> on
+                                    user tables to reclaim space occupied by dead rows.</entry>
                             </row>
                             <row>
                                 <entry>Check for errors or dropped packets on the network
@@ -329,14 +327,16 @@ WHERE logseverity in ('FATAL', 'ERROR')
                         </thead>
                         <tbody>
                             <row>
-                                <entry>Run catalog consistency checks to ensure the catalog on each
-                                    host in the cluster is consistent and in a good
-                                        state.<p>Recommended frequency: weekly</p><p>Severity:
-                                        IMPORTANT</p></entry>
-                                <entry>Run the Greenplum
-                                    <codeph>gpcheckcat</codeph> utility in each
-                                    database:<codeblock>gpcheckcat -O</codeblock></entry>
-                                <entry>Run repair scripts for any issues detected.</entry>
+                                <entry>Run catalog consistency checks in each database to ensure the
+                                    catalog on each host in the cluster is consistent and in a good
+                                        state.<p>You may run this command while the database is up
+                                        and running. </p><p>Recommended frequency:
+                                        weekly</p><p>Severity: IMPORTANT</p></entry>
+                                <entry>Run the Greenplum <codeph>gpcheckcat</codeph> utility in each
+                                        database:<codeblock>gpcheckcat -O</codeblock><note> With the
+                                            <codeph>-O</codeph> option, <codeph>gpcheckcat</codeph>
+                                        runs just 10 of its usual 15 tests.</note></entry>
+                                <entry>Run the repair scripts for any issues identified.</entry>
                             </row>
                             <row>
                                 <entry>Check for <codeph>pg_class</codeph> entries that have no
@@ -444,9 +444,10 @@ WHERE logseverity in ('FATAL', 'ERROR')
                             </thead>
                             <tbody>
                                 <row>
-                                    <entry>Mark deleted rows in heap tables so that the space they
-                                        occupy can be reused.<p>Recommended frequency:
-                                            daily</p><p>Severity: CRITICAL</p></entry>
+                                    <entry>Reclaim space occupied by deleted rows in the  heap
+                                        tables so that the space they occupy can be
+                                            reused.<p>Recommended frequency: daily</p><p>Severity:
+                                            CRITICAL</p></entry>
                                     <entry>Vacuum user
                                         tables:<codeblock>VACUUM <i>&lt;table></i>;</codeblock></entry>
                                     <entry>Vacuum updated tables regularly to prevent bloating.

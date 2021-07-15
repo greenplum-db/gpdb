@@ -14,6 +14,11 @@
       master, standby master, each primary segment, and each mirror segment. </p>
     <p>A tablespace is Greenplum Database system object (a global object), you can use a tablespace
       from any database if you have appropriate privileges.</p>
+    <note>Greenplum Database does not support different tablespace locations for a primary-mirror
+      pair with the same content ID. It is only possible to configure different locations for
+      different content IDs. Do not modify symbolic links under the <codeph>pg_tblspc</codeph>
+      directory so that primary-mirror pairs point to different file locations; this will lead to
+      erroneous behavior.</note>
   </body>
   <topic id="topic13" xml:lang="en">
     <title>Creating a Tablespace</title>
@@ -81,9 +86,9 @@ CREATE TABLE foo(i int);
       <p>These tablespaces use the default system location, the data directory locations created at
         system initialization.</p>
       <p>To see tablespace information, use the <codeph>pg_tablespace</codeph> catalog table to get
-        the objecct ID (OID) of the tablespace and then use
-          <codeph>gp_tablespace_location()</codeph> function to display the tablespace directories.
-        This is an example that lists one user-defined tablespace, <codeph>myspace</codeph>:</p>
+        the object ID (OID) of the tablespace and then use <codeph>gp_tablespace_location()</codeph>
+        function to display the tablespace directories. This is an example that lists one
+        user-defined tablespace, <codeph>myspace</codeph>:</p>
       <p>
         <codeblock>SELECT oid, * FROM pg_tablespace ;
 

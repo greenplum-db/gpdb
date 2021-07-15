@@ -19,12 +19,12 @@ resources:
 - name: gpdb6-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
 
 - name: gpdb6-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test
 
 - name: libquicklz-centos7
   type: gcs
@@ -53,7 +53,6 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
-
 
 jobs:
 - name: compile_and_test_gpdb
@@ -130,3 +129,6 @@ jobs:
         file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
         image: gpdb6-centos7-build
         timeout: 1h
+
+      - task: check_format
+        file: gpdb_src/concourse/tasks/check_format.yml

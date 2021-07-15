@@ -1074,6 +1074,8 @@ _readCreateStmt_common(CreateStmt *local_node)
 	READ_BOOL_FIELD(buildAoBlkdir);
 	READ_NODE_FIELD(attr_encodings);
 	READ_BOOL_FIELD(isCtas);
+	READ_NODE_FIELD(intoQuery);
+	READ_NODE_FIELD(intoPolicy);
 
 	/*
 	 * Some extra checks to make sure we didn't get lost
@@ -2380,6 +2382,7 @@ void readJoinInfo(Join *local_node)
 
 	READ_BOOL_FIELD(prefetch_inner);
 	READ_BOOL_FIELD(prefetch_joinqual);
+	READ_BOOL_FIELD(prefetch_qual);
 
 	READ_ENUM_FIELD(jointype, JoinType);
 	READ_NODE_FIELD(joinqual);

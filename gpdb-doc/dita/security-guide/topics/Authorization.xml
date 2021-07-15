@@ -33,7 +33,7 @@
     <body>
       <p> When an object (table, view, sequence, database, function, language, schema, or
         tablespace) is created, it is assigned an owner. The owner is normally the role that
-        executed the creation statement. For most kinds of objects, the initial state is that only
+        ran the creation statement. For most kinds of objects, the initial state is that only
         the owner (or a superuser) can do anything with the object. To allow other roles to use it,
         privileges must be granted. Greenplum Database supports the following privileges for each
         object type: </p>

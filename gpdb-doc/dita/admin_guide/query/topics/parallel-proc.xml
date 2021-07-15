@@ -18,8 +18,8 @@
         segments, as shown in <xref href="#topic2/iy139990" type="fig" format="dita"/>. The master
         dispatches targeted query plans to a single segment, as shown in <xref
           href="#topic2/iy145883" type="fig" format="dita"/>. Each segment is responsible for
-        executing local database operations on its own set of data.</p>
-      <p>Most database operations—such as table scans, joins, aggregations, and sorts—execute across
+        running local database operations on its own set of data.</p>
+      <p>Most database operations—such as table scans, joins, aggregations, and sorts—run across
         all segments in parallel. Each operation is performed on a segment database independent of
         the data stored in the other segment databases.</p>
       <fig id="iy139990">
@@ -45,14 +45,14 @@
     <body>
       <p>A query plan is the set of operations Greenplum Database will perform to
         produce the answer to a query. Each <i>node</i> or step in the plan represents a database
-        operation such as a table scan, join, aggregation, or sort. Plans are read and executed from
+        operation such as a table scan, join, aggregation, or sort. Plans are read and run from
         bottom to top.</p>
       <p id="iy146386">In addition to common database operations such as table scans, joins, and so
         on, Greenplum Database has an additional operation type called <i>motion</i>.
         A motion operation involves moving tuples between the segments during query processing. Note
         that not every query requires a motion. For example, a targeted query plan does not require
         data to move across the interconnect. </p>
-      <p>To achieve maximum parallelism during query execution, Greenplum divides the work of the query plan into <i>slices</i>. A slice is a portion of the plan
+      <p>To achieve maximum parallelism during query runtime, Greenplum divides the work of the query plan into <i>slices</i>. A slice is a portion of the plan
         that segments can work on independently. A query plan is sliced wherever a <i>motion</i>
         operation occurs in the plan, with one slice on each side of the motion.</p>
       <p>For example, consider the following simple query involving a join between two tables:</p>
@@ -97,7 +97,7 @@ WHERE dateCol = '04-30-2016';
         processes.</p>
       <p>There is at least one worker process assigned to each <i>slice</i> of the query plan. A
         worker process works on its assigned portion of the query plan independently. During query
-        execution, each segment will have a number of processes working on the query in parallel. </p>
+       runtime, each segment will have a number of processes working on the query in parallel. </p>
       <p>Related processes that are working on the same slice of the query plan but on different
         segments are called <i>gangs</i>. As a portion of work is completed, tuples flow up the
         query plan from one gang of processes to the next. This inter-process communication between

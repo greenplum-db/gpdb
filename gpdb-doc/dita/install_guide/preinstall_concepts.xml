@@ -56,7 +56,7 @@
         <p>The standby master is kept up to date by a transaction log replication process, which
           runs on the standby master host and synchronizes the data between the primary and standby
           master hosts. If the primary master fails, the log replication process shuts down, and an
-          administrator can activate the standby master in its place. When an the standby master is
+          administrator can activate the standby master in its place. When the standby master is
           active, the replicated logs are used to reconstruct the state of the master host at the
           time of the last successfully committed transaction.</p>
         <p>Since the master does not contain any user data, only the system catalog tables need to
@@ -96,8 +96,8 @@
         <p>A mirror segment must always reside on a different host than its primary segment. Mirror
           segments can be arranged across the hosts in the system in one of two standard
           configurations, or in a custom configuration you design. The default configuration, called
-            <i>group</i> mirroring, places the mirror segments for all primary segments on a host on
-          one other host. Another option, called <i>spread</i> mirroring, spreads mirrors for each
+            <i>group</i> mirroring, places the mirror segments for all primary segments on one 
+	other host. Another option, called <i>spread</i> mirroring, spreads mirrors for each
           host's primary segments over the remaining hosts. Spread mirroring requires that there be
           more hosts in the system than there are primary segments on the host. On hosts with
           multiple network interfaces, the primary and mirror segments are distributed equally among

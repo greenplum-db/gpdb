@@ -33,7 +33,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
         <li id="em137940"><b>READ COMMITTED</b> — A statement can only see rows committed before it
           began. This is the default. </li>
         <li id="em137943"><b>REPEATABLE READ</b> — All statements in the current transaction can
-          only see rows committed before the first query or data-modification statement executed in
+          only see rows committed before the first query or data-modification statement run in
           the transaction.</li>
       </ul>
       <p>The SQL standard defines two additional levels, <codeph>READ UNCOMMITTED</codeph> and
@@ -43,7 +43,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
       <p>The transaction isolation level cannot be changed after the first query or
         data-modification statement (<codeph>SELECT</codeph>, <codeph>INSERT</codeph>,
           <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, <codeph>FETCH</codeph>, or
-          <codeph>COPY</codeph>) of a transaction has been executed.</p>
+          <codeph>COPY</codeph>) of a transaction has been run.</p>
       <p>The transaction access mode determines whether the transaction is read/write or read-only.
         Read/write is the default. When a transaction is read-only, the following SQL commands are
         disallowed: <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
@@ -51,7 +51,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
           <codeph>CREATE</codeph>, <codeph>ALTER</codeph>, and <codeph>DROP</codeph> commands;
           <codeph>GRANT</codeph>, <codeph>REVOKE</codeph>, <codeph>TRUNCATE</codeph>; and
           <codeph>EXPLAIN ANALYZE</codeph> and <codeph>EXECUTE</codeph> if the command they would
-        execute is among those listed. This is a high-level notion of read-only that does not
+        run is among those listed. This is a high-level notion of read-only that does not
         prevent all writes to disk.</p>
       <p> The <codeph>DEFERRABLE</codeph> transaction property has no effect unless the transaction
         is also <codeph>SERIALIZABLE</codeph> and <codeph>READ ONLY</codeph>. When all of these
@@ -84,8 +84,8 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
               COMMITTED</codeph>.</pd>
           <pd><codeph>READ COMMITTED</codeph>, the default isolation level in Greenplum Database,
             guarantees that a statement can only see rows committed before it began. The same
-            statement executed twice in a transaction can produce different results if another
-            concurrent transaction commits after the statement is executed the first time. </pd>
+            statement run twice in a transaction can produce different results if another
+            concurrent transaction commits after the statement is run the first time. </pd>
           <pd>The <codeph>REPEATABLE READ</codeph> isolation level guarantees that a transaction can
             only see rows committed before it began. <codeph>REPEATABLE READ</codeph> is the
             strictest transaction isolation level Greenplum Database supports. Applications that use
@@ -93,7 +93,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
             transactions due to serialization failures.</pd>
           <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees that all
             statements of the current transaction can only see rows committed before the first query
-            or data-modification statement was executed in this transaction. If a pattern of reads
+            or data-modification statement was run in this transaction. If a pattern of reads
             and writes among concurrent serializable transactions would create a situation which
             could not have occurred for any serial (one-at-a-time) execution of those transactions,
             one of the transactions will be rolled back with a
@@ -113,7 +113,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
             all <codeph>CREATE</codeph>, <codeph>ALTER</codeph>, and <codeph>DROP</codeph> commands;
               <codeph>GRANT</codeph>, <codeph>REVOKE</codeph>, <codeph>TRUNCATE</codeph>; and
               <codeph>EXPLAIN ANALYZE</codeph> and <codeph>EXECUTE</codeph> if the command they
-            would execute is among those listed.</pd>
+            would run is among those listed.</pd>
         </plentry>
         <plentry>
           <pt>[NOT] DEFERRABLE</pt>
@@ -130,7 +130,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>If <codeph>SET TRANSACTION</codeph> is executed without a prior <codeph>START
+      <p>If <codeph>SET TRANSACTION</codeph> is run without a prior <codeph>START
           TRANSACTION</codeph> or <codeph>BEGIN</codeph>, a warning is issued and the command has no
         effect. </p>
       <p>It is possible to dispense with <codeph>SET TRANSACTION</codeph> by instead specifying the

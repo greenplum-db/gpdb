@@ -76,20 +76,23 @@ def dumpTupleCount(cur):
 
 
 def dumpStats(cur, inclHLL):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
-        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
+    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, pgs.* ' \
+        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt, pg_namespace pgtn ' \
         'WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN ' + \
         sysnslist + \
         ' and pgc.oid = pgs.starelid ' \
         'and pga.attrelid = pgc.oid ' \
         'and pga.attnum = pgs.staattnum ' \
         'and pga.atttypid = pgt.oid ' \
+        'and pgt.typnamespace = pgtn.oid ' \
         'ORDER BY pgc.relname, pgs.staattnum'
+    # the outline of the DML used to create stats for one column in pg_statistic
     pstring = '--\n' \
         '-- Table: {0}, Attribute: {1}\n' \
         '--\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
         '{2});\n\n'
+    # the types of the columns in the pg_statistic table, except for starelid and stavalues[1-5]
     types = ['smallint',  # staattnum
              'boolean',
              'real',
@@ -119,14 +122,27 @@ def dumpStats(cur, inclHLL):
 
         i = 0
         hll = False
-        if vals[3][0] == '_':
-            rowTypes = types + [vals[3]] * 5
+        typeschema = vals[3]
+        typename = vals[4]
+        if typeschema != "pg_catalog":
+            # a type that is not built-in, qualify it with its schema name
+            # and play it safe by double-quoting the identifiers
+            typename = '"%s"."%s"' % (typeschema, typename)
+
+        # determine the actual types of stavalues[1-5], the columns are defined as "anyarray"
+        if vals[4][0] == '_':
+            # column is an array type, use as is
+            rowTypes = types + [typename] * 5
         else:
-            rowTypes = types + [vals[3] + '[]'] * 5
-        for val, typ in zip(vals[5:], rowTypes):
+            # non-array type, make an array type out of it
+            rowTypes = types + [typename + '[]'] * 5
+
+        # create the content of the VALUES clause
+        for val, typ in zip(vals[6:], rowTypes):
             i = i + 1
             str_val = "'%s'" % val
             if i == 10 and (val == 98 or val == 99):
+                # column stakind5 has value 98 or 99 (HLL stats)
                 if inclHLL == False:
                     val = 0
                 hll = True
@@ -137,6 +153,7 @@ def dumpStats(cur, inclHLL):
                 val = val.replace("'", "''").replace('\\', '\\\\')
                 val = "E'" + val + "'"
             if i == 25 and hll == True:
+                # the actual HLL value in stavalues5
                 if inclHLL == True:
                     rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
                 else:

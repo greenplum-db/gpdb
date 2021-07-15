@@ -505,10 +505,12 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "  WHEN p.proexeclocation = 'a' THEN '%s'\n"
 						  "  WHEN p.proexeclocation = 'm' THEN '%s'\n"
 						  "  WHEN p.proexeclocation = 's' THEN '%s'\n"
+						  "  WHEN p.proexeclocation = 'i' THEN '%s'\n"
 						  "END as \"%s\"",
 						  gettext_noop("any"),
 						  gettext_noop("master"),
 						  gettext_noop("all segments"),
+						  gettext_noop("initplan"),
 						  gettext_noop("Execute on"));
 		appendPQExpBuffer(&buf,
 				  ",\n CASE WHEN prosecdef THEN '%s' ELSE '%s' END AS \"%s\""

@@ -26,6 +26,7 @@ generate_old_dump(void)
 	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
 			  PG_OPTIONS_UTILITY_MODE
 			  "\"%s/pg_dumpall\" %s --schema-only --globals-only "
+			  "--resource-groups --resource-queues "
 			  "--quote-all-identifiers --binary-upgrade %s -f %s",
 			  new_cluster.bindir, cluster_conn_opts(&old_cluster),
 			  log_opts.verbose ? "--verbose" : "",

@@ -95,6 +95,9 @@ def before_scenario(context, scenario):
     if 'gpmovemirrors' in context.feature.tags:
         context.mirror_context = MirrorMgmtContext()
 
+    if 'gprecoverseg' in context.feature.tags:
+        context.mirror_context = MirrorMgmtContext()
+
     if 'gpconfig' in context.feature.tags:
         context.gpconfig_context = GpConfigContext()
 

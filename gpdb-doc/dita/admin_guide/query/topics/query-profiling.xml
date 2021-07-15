@@ -126,7 +126,7 @@ Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
         estimates. This allows you to see if the optimizer's estimates are close to reality.
           <codeph>EXPLAIN ANALYZE</codeph> also shows the following:</p>
       <ul>
-        <li id="in209045">The total runtime (in milliseconds) in which the query executed.</li>
+        <li id="in209045">The total runtime (in milliseconds) in which the query ran.</li>
         <li id="in209046">The memory used by each slice of the query plan, as well as the memory
           reserved for the whole query statement.</li>
         <li id="in209047">The number of <i>workers</i> (segments) involved in a plan node operation.

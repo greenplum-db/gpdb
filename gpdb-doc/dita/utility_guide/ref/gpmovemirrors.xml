@@ -8,8 +8,8 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpmovemirrors</b> <b>-i</b> <varname>move_config_file</varname> [<b>-d</b> <varname>master_data_directory</varname>] 
-          [<b>-l</b> <varname>logfile_directory</varname>] 
-          [<b>-B</b> <varname>parallel_processes</varname>] [<b>-v</b>] [<b>--hba-hostnames</b> <varname>boolean</varname>] 
+          [<b>-l</b> <varname>logfile_directory</varname>] [<b>-b</b> <varname>segment_batch_size</varname>]
+          [<b>-B</b> <varname>batch_size</varname>] [<b>-v</b>] [<b>--hba-hostnames</b> <varname>boolean</varname>] 
 
 <b>gpmovemirrors</b> <b>-?</b> 
 
@@ -33,10 +33,16 @@
       <title>Options</title>
       <parml>
         <plentry>
-          <pt>-B <varname>parallel_processes</varname></pt>
-          <pd>The number of mirror segments to move in parallel. If not specified, the utility will
-            start up to 4 parallel processes depending on how many mirror segment instances it needs
-            to move.</pd>
+          <pt>-b <varname>segment_batch_size</varname></pt>
+          <pd>The maximum number of segments per host to operate on in parallel. Valid values are
+              <codeph>1</codeph> to <codeph>128</codeph>. If not specified, the utility will start
+            recovering up to 64 segments in parallel on each host. </pd>
+        </plentry>
+        <plentry>
+          <pt>-B <varname>batch_size</varname></pt>
+          <pd>The number of hosts to work on in parallel. If not specified, the utility will start
+            working on up to 16 hosts in parallel. Valid values are <codeph>1</codeph> to
+              <codeph>64</codeph>. </pd>
         </plentry>
         <plentry>
           <pt>-d <varname>master_data_directory</varname></pt>

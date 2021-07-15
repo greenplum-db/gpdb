@@ -12,7 +12,7 @@
         <section id="section3">
             <title>Description</title>
             <p><codeph>DROP SERVER</codeph> removes an existing foreign server descriptor.
-              The user executing this command must be the owner of the server.</p>
+              The user running this command must be the owner of the server.</p>
         </section>
         <section id="section4">
             <title>Parameters</title>

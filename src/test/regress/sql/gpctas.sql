@@ -98,3 +98,65 @@ CREATE TABLE ctas_aocs WITH (appendonly=true, orientation=column) AS SELECT * FR
 SELECT * FROM ctas_aocs;
 DROP TABLE ctas_base;
 DROP TABLE ctas_aocs;
+
+-- Github Issue 10760
+-- Previously CTAS with Initplan will dispatch oids twice
+create table t1_github_issue_10760(a int, b int) distributed randomly;
+
+-- Because there is no Initplan in ORCA of this test case, there is no
+-- 10760 problem in ORCA. So here manually set the optimizer to
+-- ensure that there is Initplan in the execution plan.
+set optimizer=off;
+explain select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760);
+
+begin;
+        create table t2_github_issue_10760 as select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760) distributed randomly;
+        drop table t2_github_issue_10760;
+        create table t2_github_issue_10760 as select * from t1_github_issue_10760 where b > (select count(*) from t1_github_issue_10760) distributed randomly;
+end;
+
+select count (distinct oid) from  (select oid from pg_class where relname = 't2_github_issue_10760' union all select oid from gp_dist_random('pg_class') where relname = 't2_github_issue_10760')x;
+
+drop table t1_github_issue_10760;
+drop table t2_github_issue_10760;
+
+reset optimizer;
+
+-- CTAS with no data will not lead to catalog inconsistent
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/11999
+create or replace function mv_action_select_issue_11999() returns bool language sql as
+'declare c cursor for select 1/0; select true';
+
+create materialized view sro_mv_issue_11999 as select mv_action_select_issue_11999() with no data;
+create table t_sro_mv_issue_11999 as select mv_action_select_issue_11999() with no data;
+
+select count(*)
+from
+(
+  select localoid, policytype, numsegments, distkey
+  from gp_distribution_policy
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+  union all
+  select localoid, policytype, numsegments, distkey
+  from gp_dist_random('gp_distribution_policy')
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+)x;
+
+select count(distinct (localoid, policytype, numsegments, distkey))
+from
+(
+  select localoid, policytype, numsegments, distkey
+  from gp_distribution_policy
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+  union all
+  select localoid, policytype, numsegments, distkey
+  from gp_dist_random('gp_distribution_policy')
+  where localoid::regclass::text = 'sro_mv_issue_11999' or
+        localoid::regclass::text = 't_sro_mv_issue_11999'
+)x;
+
+-- then refresh should error out
+refresh materialized view sro_mv_issue_11999;

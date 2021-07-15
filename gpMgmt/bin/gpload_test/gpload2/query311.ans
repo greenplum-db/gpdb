@@ -1,0 +1,9 @@
+2020-12-17 15:19:25|INFO|gpload session started 2020-12-17 15:19:25
+2020-12-17 15:19:25|INFO|setting schema 'public' for table 'texttable'
+2020-12-17 15:19:25|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-17 15:19:25|INFO|did not find an external table to reuse. creating ext_gpload_reusable_315a6784_4038_11eb_b496_000c299afcc5
+2020-12-17 15:19:25|ERROR|A gpload control file processing error occurred. error_limit must be 2 or higher
+2020-12-17 15:19:25|INFO|rows Inserted          = 0
+2020-12-17 15:19:25|INFO|rows Updated           = 0
+2020-12-17 15:19:25|INFO|data formatting errors = 0
+2020-12-17 15:19:25|INFO|gpload failed

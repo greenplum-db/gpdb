@@ -35,12 +35,12 @@
     
     <section id="text_analytics">
       <title>Text Analytics</title>
-      <p><xref href="http://gptext.docs.pivotal.io/330/topics/intro.html" format="dita">Pivotal
-        GPText</xref> enables processing mass quantities of raw text data 
-        (such as social media feeds or e-mail databases) into mission-critical information that 
-        guides project and business decisions. GPText joins the Greenplum Database massively parallel-processing 
-        database server with Apache SolrCloud enterprise search. GPText includes powerful text search as well as
-        support for text analysis.</p>
+      <p><xref href="http://gptext.docs.pivotal.io/330/topics/intro.html" format="dita">Tanzu
+            Greenplum Text</xref> enables processing of mass quantities of raw text data (such as
+          social media feeds or e-mail databases) into mission-critical information that guides
+          project and business decisions. Tanzu Greenplum Text joins the Greenplum Database massively
+          parallel-processing database server with Apache SolrCloud enterprise search. Tanzu Greenplum Text
+          includes powerful text search as well as support for text analysis.</p>
     </section>
     
     <section id="pr_lang_and_ext">
@@ -94,7 +94,7 @@
           to your Greenplum Database deployment.</li>
       <li otherprops="Pivotal">Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations,
         including SAS, IBM Cognos, SAP Analytics Solutions, Qlik, Tableau, Apache Zeppelin, and Jupyter.</li>
-      <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an
+      <li>Run deep learning algorithms using popular frameworks like Keras and TensorFlow in an
           MPP relational database, with GPU (Graphical Processing Unit) acceleration.</li>
       <li>Use containers capable of isolating executors from the host OS. Greenplum PL/Container implements
         a trusted language execution engine which permits customized data science workloads or environments created

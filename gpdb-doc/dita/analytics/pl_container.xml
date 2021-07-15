@@ -5,7 +5,7 @@
   <title id="pz212122">PL/Container Language</title>
   <body>
     <p>Pl/Container enables users to run Greenplum procedural language functions inside a Docker
-      container, to avoid security risks associated with executing Python or R code on Greenplum
+      container, to avoid security risks associated with running Python or R code on Greenplum
       segment hosts. This topic covers information about the architecture, installation, and setup
       of PL/Container:</p>
     <ul>
@@ -41,7 +41,7 @@
       <ul>
         <li> The function execution process takes place in a separate environment and allows
           decoupling of the data processing. SQL operators such as "scan," "filter," and "project"
-          are executed at the query executor (QE) side, and advanced data analysis is executed at
+          are run at the query executor (QE) side, and advanced data analysis is run at
           the container side. </li>
         <li>User code cannot access the OS or the file system of the local host.</li>
         <li>User code cannot introduce any security risks.</li>
@@ -62,7 +62,7 @@
           data using a PL/Container function. On the first call to a function in a segment
           container, the query executor on the master host starts the container on that segment
           host. It then contacts the running container to obtain the results. The container might
-          respond with a Service Provider Interface (SPI) - a SQL query executed by the container to
+          respond with a Service Provider Interface (SPI) - a SQL query run by the container to
           get some data back from the database - returning the result to the query executor.</p>
         <p>A container running in standby mode waits on the socket and does not consume any CPU
           resources. PL/Container memory consumption depends on the amount of data cached in global
@@ -82,8 +82,8 @@
             <li>Includes improved log messages to help diagnose problems.</li>
             <li>Supports the <codeph>DO</codeph> command (anonymous code block). </li>
           </ul></p>
-        <p>PL/Container 3 is currently a Beta feature, and provides only an Beta R Docker image for
-          executing functions; Python images are not yet available. Save and uninstall any existing
+        <p>PL/Container 3 is currently a Beta feature, and provides only a Beta R Docker image for
+          running functions; Python images are not yet available. Save and uninstall any existing
           PL/Container software before you install PL/Container 3 Beta.</p>
       </section>
     </body>
@@ -233,7 +233,7 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz
             <p>By default, the <codeph>image-add</codeph> command copies the image to each Greenplum
               Database segment and standby master host, and installs the image. When you specify
               the <codeph>[-ulc | --use_local_copy]</codeph> option, <codeph>plcontainer</codeph>
-              installs the image only on the host on which you execute the command. Use this option
+              installs the image only on the host on which you run the command. Use this option
               when the PL/Container image already resides on disk on a host.</p>
             <p>For more information on <codeph>image-add</codeph> options, visit the <xref
                 href="../utility_guide/ref/plcontainer.xml#topic_rw3_52s_dw">plcontainer </xref> reference page. </p>

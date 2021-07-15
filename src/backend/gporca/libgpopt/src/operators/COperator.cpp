@@ -72,33 +72,6 @@ COperator::OsPrint(IOstream &os) const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		COperator::EfdaDeriveFromChildren
-//
-//	@doc:
-//		Derive data access function property from child expressions
-//
-//---------------------------------------------------------------------------
-IMDFunction::EFuncDataAcc
-COperator::EfdaDeriveFromChildren(CExpressionHandle &exprhdl,
-								  IMDFunction::EFuncDataAcc efdaDefault)
-{
-	IMDFunction::EFuncDataAcc efda = efdaDefault;
-
-	const ULONG arity = exprhdl.Arity();
-	for (ULONG ul = 0; ul < arity; ul++)
-	{
-		IMDFunction::EFuncDataAcc efdaChild = exprhdl.PfpChild(ul)->Efda();
-		if (efdaChild > efda)
-		{
-			efda = efdaChild;
-		}
-	}
-
-	return efda;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		COperator::EfsDeriveFromChildren
 //
 //	@doc:
@@ -135,15 +108,12 @@ COperator::EfsDeriveFromChildren(CExpressionHandle &exprhdl,
 CFunctionProp *
 COperator::PfpDeriveFromChildren(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								 IMDFunction::EFuncStbl efsDefault,
-								 IMDFunction::EFuncDataAcc efdaDefault,
 								 BOOL fHasVolatileFunctionScan, BOOL fScan)
 {
 	IMDFunction::EFuncStbl efs = EfsDeriveFromChildren(exprhdl, efsDefault);
-	IMDFunction::EFuncDataAcc efda =
-		EfdaDeriveFromChildren(exprhdl, efdaDefault);
 
 	return GPOS_NEW(mp) CFunctionProp(
-		efs, efda,
+		efs,
 		fHasVolatileFunctionScan || exprhdl.FChildrenHaveVolatileFuncScan(),
 		fScan);
 }

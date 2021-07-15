@@ -107,6 +107,34 @@ select 1 from foo group by grouping sets ((), ());
 select 1 from foo group by grouping sets ((), ());
 
 --
+-- GROUPING SETS with const in the group by
+--
+create table foo_gset_const(a int);
+insert into foo_gset_const values(0), (1);
+-- const and var in the groupint sets
+explain (costs off)
+select 1, a from foo_gset_const group by grouping sets(1,2);
+select 1, a from foo_gset_const group by grouping sets(1,2);
+
+explain (costs off)
+select 1, a, count(distinct(a)) from foo_gset_const group by grouping sets(1,2);
+select 1, a, count(distinct(a)) from foo_gset_const group by grouping sets(1,2);
+
+explain (costs off)
+select * from (select 1 as x, a, sum(a) as sum from foo_gset_const group by grouping sets(1, 2)) ss where x = 1 and sum = 1;
+select * from (select 1 as x, a, sum(a) as sum from foo_gset_const group by grouping sets(1, 2)) ss where x = 1 and sum = 1;
+-- only const in the groupint sets
+explain (costs off)
+select '' ,'' ,count(1) from foo_gset_const group by rollup(1,2) ;
+select '' ,'' ,count(1) from foo_gset_const group by rollup(1,2) ;
+
+explain (costs off)
+select '' ,'' ,count(distinct(a)) from foo_gset_const group by rollup(1,2) ;
+select '' ,'' ,count(distinct(a)) from foo_gset_const group by rollup(1,2) ;
+drop table foo_gset_const;
+
+--
 -- Reset settings
 --
 reset optimizer;
+

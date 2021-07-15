@@ -41,7 +41,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
           <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for resource groups that you assign to roles.
             Any transactions submitted after the <codeph>CONCURRENCY</codeph> value limit is
             reached are queued. When a running transaction completes, the earliest queued
-            transaction is executed.</pd>
+            transaction is run.</pd>
           <pd> The <codeph>CONCURRENCY</codeph> value
             must be an integer in the range [0 .. <codeph>max_connections</codeph>]. The default 
             <codeph>CONCURRENCY</codeph> value for a resource group that you create for roles is 20.</pd>

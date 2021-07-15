@@ -72,19 +72,19 @@
       <p>Greenplum Database supports two types of resource groups: groups that manage resources for
         roles, and groups that manage resources for external components such as PL/Container.</p>
       <p>The most common application for resource groups is to manage the number of active queries
-        that different roles may execute concurrently in your Greenplum Database cluster. You can
+        that different roles may run concurrently in your Greenplum Database cluster. You can
         also manage the amount of CPU and memory resources that Greenplum allocates to each
         query.</p>
       <p>Resource groups for roles use Linux control groups (cgroups) for CPU resource management.
         Greenplum Database tracks virtual memory internally for these resource groups using a memory
         auditor referred to as <codeph>vmtracker</codeph>.</p>
-      <p>When the user executes a query, Greenplum Database evaluates the query against a set of
-        limits defined for the resource group. Greenplum Database executes the query immediately if
+      <p>When the user runs a query, Greenplum Database evaluates the query against a set of
+        limits defined for the resource group. Greenplum Database runs the query immediately if
         the group's resource limits have not yet been reached and the query does not cause the group
         to exceed the concurrent transaction limit. If these conditions are not met, Greenplum
         Database queues the query. For example, if the maximum number of concurrent transactions for
         the resource group has already been reached, a subsequent query is queued and must wait
-        until other queries complete before it runs. Greenplum Database may also execute a pending
+        until other queries complete before it runs. Greenplum Database may also run a pending
         query when the resource group's concurrency and memory limits are altered to large enough
         values.</p>
       <p>Within a resource group for roles, transactions are evaluated on a first in, first out
@@ -256,7 +256,7 @@
         20.</p>
       <p>Greenplum Database queues any transactions submitted after the resource group reaches its
           <codeph>CONCURRENCY</codeph> limit. When a running transaction completes, Greenplum
-        Database un-queues and executes the earliest queued transaction if sufficient memory
+        Database un-queues and runs the earliest queued transaction if sufficient memory
         resources exist.</p>
       <p>You can set the server configuration parameter <codeph><xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_bypass" type="section"
@@ -363,17 +363,31 @@
               multiplied by 100, and</li>
             <li>The <codeph>gp_resource_group_cpu_limit</codeph> value.</li>
           </ul></p>
-        <p>CPU resource assignment for resource groups configured with a
-            <codeph>CPU_RATE_LIMIT</codeph> is elastic in that Greenplum Database may allocate the
-          CPU resources of an idle resource group to a busier one(s). In such situations, CPU
-          resources are re-allocated to the previously idle resource group when that resource group
-          next becomes active. If multiple resource groups are busy, they are allocated the CPU
-          resources of any idle resource groups based on the ratio of their
-            <codeph>CPU_RATE_LIMIT</codeph>s. For example, a resource group created with a
-            <codeph>CPU_RATE_LIMIT</codeph> of 40 will be allocated twice as much extra CPU resource
-          as a resource group that you create with a <codeph>CPU_RATE_LIMIT</codeph> of 20.</p>
         <p>When you configure <codeph>CPU_RATE_LIMIT</codeph> for a resource group, Greenplum
           Database disables <codeph>CPUSET</codeph> for the group and sets the value to -1.</p>
+        <p>There are two different ways of assigning CPU resources by percentage, determined by the
+          value of the configuration parameter
+            <codeph>gp_resource_group_cpu_ceiling_enforcement</codeph>:</p>
+        <section>
+          <title>Elastic mode</title>
+          <p>This mode is active when <codeph>gp_resource_group_cpu_ceiling_enforcement</codeph> is
+            set to <codeph>false</codeph> (default). It is elastic in that Greenplum Database may
+            allocate the CPU resources of an idle resource group to a busier one(s). In such
+            situations, CPU resources are re-allocated to the previously idle resource group when
+            that resource group next becomes active. If multiple resource groups are busy, they are
+            allocated the CPU resources of any idle resource groups based on the ratio of their
+              <codeph>CPU_RATE_LIMIT</codeph>s. For example, a resource group created with a
+              <codeph>CPU_RATE_LIMIT</codeph> of 40 will be allocated twice as much extra CPU
+            resource as a resource group that you create with a <codeph>CPU_RATE_LIMIT</codeph> of
+            20.</p>
+        </section>
+        <section>
+          <title>Ceiling Enforcement mode</title>
+          <p>This mode is active when <codeph>gp_resource_group_cpu_ceiling_enforcement</codeph> is
+            set to <codeph>true</codeph>. The resource group is enforced to not use more CPU
+            resources than the defined value <codeph>CPU_RATE_LIMIT</codeph>, avoiding the use of
+            the CPU burst feature.</p>
+        </section>
       </body>
     </topic>
   </topic>
@@ -833,7 +847,7 @@ gpstart
             type="topic" format="dita"/></codeph> command drops a resource group. To drop a resource
         group for a role, the group cannot be assigned to any role, nor can there be any
         transactions active or waiting in the resource group. Dropping a resource group for an
-        external component in which there are running instances kills the running instances.</p>
+        external component in which there are running instances terminates the running instances.</p>
       <p>To drop a resource group:</p>
       <p>
         <codeblock>=# DROP RESOURCE GROUP <i>exec</i>; </codeblock>
@@ -1016,8 +1030,8 @@ gpstart
       <body>
         <p>There may be cases when you want to cancel a running or queued transaction in a resource
           group. For example, you may want to remove a query that is waiting in the resource group
-          queue but has not yet been executed. Or, you may want to stop a running query that is
-          taking too long to execute, or one that is sitting idle in a transaction and taking up
+          queue but has not yet been run. Or, you may want to stop a running query that is
+          taking too long to run, or one that is sitting idle in a transaction and taking up
           resource group transaction slots that are needed by other users.</p>
         <p>By default, transactions can remain queued in a resource group indefinitely.
           If you want Greenplum Database to cancel a queued transaction after a

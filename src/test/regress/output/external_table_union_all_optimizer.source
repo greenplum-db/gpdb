@@ -1,0 +1,117 @@
+-- Test external table as left child of union all with replicated table
+CREATE EXTERNAL TABLE multilocation_external_table(a INTEGER)
+location ('file://@hostname@@abs_srcdir@/data/location1.csv', 'file://@hostname@@abs_srcdir@/data/location2.csv', 'file://@hostname@@abs_srcdir@/data/location3.csv')
+ON ALL FORMAT 'text';
+CREATE EXTERNAL TABLE one_external_table(a INTEGER)
+location ('file://@hostname@@abs_srcdir@/data/location2.csv')
+ON SEGMENT 2 FORMAT 'text';
+CREATE TABLE simple_replicated_table(a integer) DISTRIBUTED REPLICATED;
+INSERT INTO simple_replicated_table VALUES (1);
+CREATE TABLE simple_distributed_table(a integer) DISTRIBUTED BY (a);
+INSERT INTO simple_distributed_table VALUES (2);
+EXPLAIN SELECT A FROM multilocation_external_table UNION ALL SELECT A FROM simple_replicated_table;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..886.95 rows=1000001 width=4)
+   ->  Append  (cost=0.00..872.05 rows=333334 width=4)
+         ->  External Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               One-Time Filter: (gp_execution_segment() = 2)
+               ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+SELECT A FROM multilocation_external_table UNION ALL SELECT A FROM simple_replicated_table;
+ a 
+---
+ 3
+ 1
+ 1
+ 2
+(4 rows)
+
+EXPLAIN SELECT A FROM simple_replicated_table UNION ALL SELECT A FROM multilocation_external_table;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..100000000000919.44 rows=1000001 width=4)
+   ->  Append  (cost=0.00..100000000000874.72 rows=3000003 width=4)
+         ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=3 width=4)
+         ->  Broadcast Motion 3:1  (slice2; segments: 3)  (cost=0.00..100000000000439.72 rows=3000000 width=4)
+               ->  External Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+SELECT A FROM simple_replicated_table UNION ALL SELECT A FROM multilocation_external_table;
+ a 
+---
+ 1
+ 2
+ 3
+ 1
+(4 rows)
+
+EXPLAIN SELECT A FROM simple_replicated_table UNION ALL SELECT a FROM multilocation_external_table UNION ALL SELECT A FROM simple_distributed_table;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..100000000001350.44 rows=1000002 width=4)
+   ->  Append  (cost=0.00..100000000001305.72 rows=3000006 width=4)
+         ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=3 width=4)
+         ->  Broadcast Motion 3:1  (slice2; segments: 3)  (cost=0.00..100000000000439.72 rows=3000000 width=4)
+               ->  External Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
+         ->  Broadcast Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+               ->  Seq Scan on simple_distributed_table  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+SELECT A FROM simple_replicated_table UNION ALL SELECT a FROM multilocation_external_table UNION ALL SELECT A FROM simple_distributed_table;
+ a 
+---
+ 1
+ 2
+ 3
+ 1
+ 2
+(5 rows)
+
+EXPLAIN SELECT A FROM simple_distributed_table UNION ALL SELECT a FROM multilocation_external_table UNION ALL SELECT A FROM simple_replicated_table;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1317.95 rows=1000002 width=4)
+   ->  Append  (cost=0.00..1303.05 rows=333334 width=4)
+         ->  Seq Scan on simple_distributed_table  (cost=0.00..431.00 rows=1 width=4)
+         ->  External Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+SELECT A FROM simple_distributed_table UNION ALL SELECT a FROM multilocation_external_table UNION ALL SELECT A FROM simple_replicated_table;
+ a 
+---
+ 2
+ 1
+ 2
+ 1
+ 3
+(5 rows)
+
+EXPLAIN SELECT * FROM one_external_table UNION ALL SELECT a FROM simple_replicated_table;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..886.95 rows=1000001 width=4)
+   ->  Append  (cost=0.00..872.05 rows=333334 width=4)
+         ->  External Scan on one_external_table  (cost=0.00..437.23 rows=333334 width=4)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               One-Time Filter: (gp_execution_segment() = 2)
+               ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+SELECT * FROM one_external_table UNION ALL SELECT a FROM simple_replicated_table;
+ a 
+---
+ 2
+ 1
+(2 rows)
+

@@ -223,3 +223,10 @@ ALTER TABLE test_part_col ALTER COLUMN f TYPE TEXT;
 ALTER TABLE test_part_col DROP COLUMN f;
 
 DROP TABLE test_part_col;
+
+-- Create view with JOIN clause, drop column, check select to view not causing segfault
+CREATE TABLE dropped_col_t1(i1 int, i2 int);
+CREATE TABLE dropped_col_t2(i1 int, i2 int);
+CREATE VIEW dropped_col_v AS SELECT dropped_col_t1.i1 FROM dropped_col_t1 JOIN dropped_col_t2 ON dropped_col_t1.i1=dropped_col_t2.i1;
+ALTER TABLE dropped_col_t1 DROP COLUMN i2;
+SELECT * FROM dropped_col_v;

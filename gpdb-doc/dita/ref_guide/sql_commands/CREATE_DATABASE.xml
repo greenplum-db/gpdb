@@ -19,7 +19,7 @@ only create databases owned by themselves.</p><p>By default, the new database wi
           template0</codeph>, you can create a clean database containing only the standard objects
         predefined by Greenplum Database. This is useful if you wish to avoid copying any
         installation-local objects that may have been added to <codeph>template1</codeph>. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of a database to create.</pd></plentry><plentry><pt><varname>user_name</varname></pt><pd>The name of the database user who will own the new database, or <codeph>DEFAULT</codeph>
-to use the default owner (the user executing the command). </pd></plentry><plentry><pt><varname>template</varname></pt><pd>The name of the template from which to create the new database, or
+to use the default owner (the user running the command). </pd></plentry><plentry><pt><varname>template</varname></pt><pd>The name of the template from which to create the new database, or
 <codeph>DEFAULT</codeph> to use the default template (<varname>template1</varname>).
 </pd></plentry><plentry><pt><varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
               <codeph>'SQL_ASCII'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph>
@@ -45,7 +45,7 @@ This tablespace will be the default tablespace used for objects created
 in this database.</pd></plentry><plentry><pt><varname>connlimit</varname></pt><pd>The maximum number of concurrent connections possible. The default
 of -1 means there is no limitation.</pd></plentry></parml></section><section id="section5">
       <title>Notes</title>
-      <p><codeph>CREATE DATABASE</codeph> cannot be executed inside a transaction block.</p>
+      <p><codeph>CREATE DATABASE</codeph> cannot be run inside a transaction block.</p>
       <p>When you copy a database by specifying its name as the template, no other sessions can be
         connected to the template database while it is being copied. New connections to the template
         database are locked out until <codeph>CREATE DATABASE</codeph> completes.</p>

@@ -1,0 +1,45 @@
+2021-06-21 16:22:34|INFO|gpload session started 2021-06-21 16:22:34
+2021-06-21 16:22:34|INFO|setting schema 'public' for table 'testspecialchar'
+2021-06-21 16:22:34|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-21 16:22:34|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d4da3768_d269_11eb_9513_0050569ea4ff
+2021-06-21 16:22:34|ERROR|could not run SQL "create external table ext_gpload_reusable_d4da3768_d269_11eb_9513_0050569ea4ff("Field1" text,"Field#2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+                                                                 ^
+
+2021-06-21 16:22:34|INFO|rows Inserted          = 0
+2021-06-21 16:22:34|INFO|rows Updated           = 0
+2021-06-21 16:22:34|INFO|data formatting errors = 0
+2021-06-21 16:22:34|INFO|gpload failed
+2021-06-21 16:22:35|INFO|gpload session started 2021-06-21 16:22:35
+2021-06-21 16:22:35|INFO|setting schema 'public' for table 'testspecialchar'
+2021-06-21 16:22:35|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-21 16:22:35|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_40df9a45044f2d17b97f89bbbc58f24f
+2021-06-21 16:22:35|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d4ee1aa8_d269_11eb_b922_0050569ea4ff
+2021-06-21 16:22:35|ERROR|could not run SQL "create external table ext_gpload_reusable_d4ee1aa8_d269_11eb_b922_0050569ea4ff("Field1" text,"Field#2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+                                                                 ^
+
+2021-06-21 16:22:35|INFO|rows Inserted          = 0
+2021-06-21 16:22:35|INFO|rows Updated           = 0
+2021-06-21 16:22:35|INFO|data formatting errors = 0
+2021-06-21 16:22:35|INFO|gpload failed
+2021-06-21 16:22:35|INFO|gpload session started 2021-06-21 16:22:35
+2021-06-21 16:22:35|INFO|setting schema 'public' for table 'testspecialchar'
+2021-06-21 16:22:35|ERROR|no mapping for input column "'Field1'" to output table
+2021-06-21 16:22:35|INFO|rows Inserted          = 0
+2021-06-21 16:22:35|INFO|rows Updated           = 0
+2021-06-21 16:22:35|INFO|data formatting errors = 0
+2021-06-21 16:22:35|INFO|gpload failed
+2021-06-21 16:22:35|INFO|gpload session started 2021-06-21 16:22:35
+2021-06-21 16:22:35|INFO|setting schema 'public' for table 'testspecialchar'
+2021-06-21 16:22:35|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-21 16:22:35|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_40df9a45044f2d17b97f89bbbc58f24f
+2021-06-21 16:22:35|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d51458a8_d269_11eb_9311_0050569ea4ff
+2021-06-21 16:22:35|ERROR|could not run SQL "create external table ext_gpload_reusable_d51458a8_d269_11eb_9311_0050569ea4ff("Field1" text,"Field#2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+                                                                 ^
+
+2021-06-21 16:22:35|INFO|rows Inserted          = 0
+2021-06-21 16:22:35|INFO|rows Updated           = 0
+2021-06-21 16:22:35|INFO|data formatting errors = 0
+2021-06-21 16:22:35|INFO|gpload failed

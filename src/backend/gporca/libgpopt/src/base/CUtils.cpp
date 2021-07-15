@@ -3619,6 +3619,13 @@ CUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpr,
 				parrayCoerceCast->Location()),
 			pexpr);
 	}
+	else if (pmdcast->GetMDPathType() == IMDCast::EmdtCoerceViaIO)
+	{
+		CScalarCoerceViaIO *op = GPOS_NEW(mp)
+			CScalarCoerceViaIO(mp, mdid_dest, default_type_modifier,
+							   COperator::EcfImplicitCast, -1 /* location */);
+		pexprCast = GPOS_NEW(mp) CExpression(mp, op, pexpr);
+	}
 	else
 	{
 		CScalarCast *popCast =

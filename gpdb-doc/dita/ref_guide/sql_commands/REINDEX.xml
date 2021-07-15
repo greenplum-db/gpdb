@@ -31,14 +31,14 @@
         <plentry>
           <pt>DATABASE</pt>
           <pd>Recreate all indexes within the current database. Indexes on shared system catalogs
-            are also processed. This form of <codeph>REINDEX</codeph> cannot be executed inside a
+            are also processed. This form of <codeph>REINDEX</codeph> cannot be run inside a
             transaction block.</pd>
         </plentry>
         <plentry>
           <pt>SYSTEM</pt>
           <pd>Recreate all indexes on system catalogs within the current database. Indexes on shared
             system catalogs are included. Indexes on user tables are not processed. This form of
-              <codeph>REINDEX</codeph> cannot be executed inside a transaction block.</pd>
+              <codeph>REINDEX</codeph> cannot be run inside a transaction block.</pd>
         </plentry>
         <plentry>
           <pt><varname>name</varname></pt>

@@ -1,0 +1,18 @@
+2020-12-03 10:20:46|INFO|gpload session started 2020-12-03 10:20:46
+2020-12-03 10:20:46|INFO|setting schema 'public' for table 'texttable'
+2020-12-03 10:20:46|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-12-03 10:20:46|INFO|reusing external table ext_gpload_reusable_4e783b4a_350a_11eb_9b18_00505698707d
+2020-12-03 10:20:46|INFO|running time: 0.12 seconds
+2020-12-03 10:20:46|INFO|rows Inserted          = 16
+2020-12-03 10:20:46|INFO|rows Updated           = 0
+2020-12-03 10:20:46|INFO|data formatting errors = 0
+2020-12-03 10:20:46|INFO|gpload succeeded
+2020-12-03 10:20:47|INFO|gpload session started 2020-12-03 10:20:47
+2020-12-03 10:20:47|INFO|setting schema 'public' for table 'texttable'
+2020-12-03 10:20:47|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-12-03 10:20:47|INFO|reusing external table ext_gpload_reusable_4e783b4a_350a_11eb_9b18_00505698707d
+2020-12-03 10:20:47|INFO|running time: 0.11 seconds
+2020-12-03 10:20:47|INFO|rows Inserted          = 16
+2020-12-03 10:20:47|INFO|rows Updated           = 0
+2020-12-03 10:20:47|INFO|data formatting errors = 0
+2020-12-03 10:20:47|INFO|gpload succeeded

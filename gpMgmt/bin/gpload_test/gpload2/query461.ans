@@ -1,0 +1,14 @@
+2020-12-17 11:36:19|INFO|gpload session started 2020-12-17 11:36:19
+2020-12-17 11:36:19|INFO|setting schema 'public' for table 'texttable'
+2020-12-17 11:36:19|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2020-12-17 11:36:19|INFO|did not find an external table to reuse. creating ext_gpload_reusable_066745ca_4019_11eb_8500_7085c2381836
+2020-12-17 11:36:19|INFO|running time: 0.14 seconds
+2020-12-17 11:36:19|INFO|rows Inserted          = 16
+2020-12-17 11:36:19|INFO|rows Updated           = 0
+2020-12-17 11:36:19|INFO|data formatting errors = 0
+2020-12-17 11:36:19|INFO|gpload succeeded
+ count 
+-------
+    16
+(1 row)
+

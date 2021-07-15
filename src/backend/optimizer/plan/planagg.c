@@ -553,6 +553,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *mminfo)
 	PlannerInfo *subroot = mminfo->subroot;
 	Query	   *subparse = subroot->parse;
 	Plan	   *plan;
+	bool        needGather = false;
 
 	/*
 	 * Generate the plan for the subquery. We already have a Path, but we have
@@ -567,13 +568,15 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *mminfo)
 	 */
 	plan = plan_pushdown_tlist(root, plan, copyObject(subparse->targetList));
 
-	if (plan->flow->flotype == FLOW_SINGLETON)
+	/* check whether to gather subplan */
+	if (plan->flow->flotype == FLOW_PARTITIONED ||
+		(plan->flow->flotype == FLOW_SINGLETON &&
+		 plan->flow->locustype == CdbLocusType_SegmentGeneral))
+		needGather = true;
+
+	if (needGather)
 	{
-		/* ok */
-	}
-	else if (plan->flow->flotype == FLOW_PARTITIONED)
-	{
-		plan = (Plan *) make_motion_gather(subroot, plan, subroot->sort_pathkeys);
+		plan = (Plan *) make_motion_gather(subroot, plan, subroot->sort_pathkeys, CdbLocusType_SingleQE);
 	}
 	else
 		elog(ERROR, "MIN/MAX subplan has unexpected flowtype: %d", plan->flow->type);

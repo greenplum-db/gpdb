@@ -14,6 +14,27 @@ Feature: Tests for gpaddmirrors
           And user can start transactions
          Then the tablespace is valid
 
+    Scenario Outline: limits number of parallel processes correctly
+        Given the cluster is generated with "3" primaries only
+        And a tablespace is created with data
+        When gpaddmirrors adds 3 mirrors with additional args "<args>"
+        Then gpaddmirrors should only spawn up to <master_workers> workers in WorkerPool
+        And check if gpaddmirrors ran "$GPHOME/bin/lib/gpconfigurenewsegment" 2 times with args "-b <segHost_workers>"
+        And check if gpaddmirrors ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
+        And an FTS probe is triggered
+        And the segments are synchronized
+        And verify the database has mirrors
+        And the tablespace is valid
+        And user stops all primary processes
+        And user can start transactions
+        And the tablespace is valid
+
+    Examples:
+        | args      | master_workers | segHost_workers |
+        | -B 1 -b 1 |  1             |  1              |
+        | -B 2 -b 1 |  2             |  1              |
+        | -B 1 -b 2 |  1             |  2              |
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 

@@ -1,0 +1,10 @@
+---
+title: PXF Upgrade and Migration
+---
+When you upgrade your Greenplum Database system, you must perform some additional steps in order to bring your PXF configuration up to date.
+
+There are three possible scenarios:
+
+1. Upgrading PXF after [migrating from Greenplum Database 5.x](migrate_5to6.html). If you were previously using the `gphdfs` external table protocol to access data stored in Hadoop, you must [migrate your gphdfs external tables](gphdfs-pxf-migrate.html) to use PXF instead, since Greenplum Database version 6 removes support for the `gphdfs` protocol.
+1. Upgrading PXF after [upgrading Greenplum Database from a previous 6.x version](upgrade_pxf_6x.html). Note that different steps are outlined based on your PXF installation source: a manually installed `rpm` or `deb` package downloaded from Tanzu Network, or the version included with Greenplum Database installer. 
+1. If you are upgrading a PXF `rpm` or `deb` installation outside of a Greenplum Database upgrade, refer to the [PXF Documentation](../../pxf/6-0/upgrade_pxf_rpm.html).

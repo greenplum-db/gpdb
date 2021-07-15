@@ -44,18 +44,22 @@ ALTER TEXT SEARCH DICTIONARY <varname>name</varname> SET SCHEMA <varname>new_sch
       </parml>
       <p>Template-specific options can appear in any order.</p>
             
-</section><section id="section5"><title>Examples</title><p>The following example command changes the stopword
-        list for a Snowball-based dictionary. Other parameters remain unchanged.</p><codeph>ALTER
-        TEXT SEARCH DICTIONARY my_dict ( StopWords = newrussian );</codeph><p>The following example
-        command changes the language option to <codeph>dutch</codeph>, and removes the stopword
-        option entirely.</p><codeph>ALTER TEXT SEARCH DICTIONARY my_dict ( language = dutch,
-        StopWords );</codeph><p>The following example command "updates" the dictionary's definition
-        without actually changing
-        anything.</p><pre>ALTER TEXT SEARCH DICTIONARY my_dict ( dummy );</pre><p>(The reason this
-        works is that the option removal code doesn't complain if there is no such option.) This
-        trick is useful when changing configuration files for the dictionary: the ALTER will force
-        existing database sessions to re-read the configuration files, which otherwise they would
-        never do if they had read them earlier.</p></section><section
+</section><section id="section5">
+      <title>Examples</title>
+      <p>The following example command changes the stopword list for a Snowball-based dictionary.
+        Other parameters remain unchanged.</p>
+      <pre>ALTER TEXT SEARCH DICTIONARY my_dict ( StopWords = newrussian );</pre>
+      <p>The following example command changes the language option to <codeph>dutch</codeph>, and
+        removes the stopword option entirely.</p>
+      <pre>ALTER TEXT SEARCH DICTIONARY my_dict ( language = dutch, StopWords );</pre>
+      <p>The following example command "updates" the dictionary's definition without actually
+        changing anything.</p>
+      <pre>ALTER TEXT SEARCH DICTIONARY my_dict ( dummy );</pre>
+      <p>(The reason this works is that the option removal code doesn't complain if there is no such
+        option.) This trick is useful when changing configuration files for the dictionary: the
+        ALTER will force existing database sessions to re-read the configuration files, which
+        otherwise they would never do if they had read them earlier.</p>
+    </section><section
           id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TEXT SEARCH
             DICTIONARY</codeph> statement in the SQL standard.</p></section><section
               id="section7"><title>See Also</title><p><codeph><xref

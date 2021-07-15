@@ -120,7 +120,7 @@ kernel.shmall = 197951838</codeblock>
     <p>See <xref href="../install_guide/prep_os.xml#topic3/shared_memory_pages" format="dita">Setting the Greenplum Recommended OS Parameters</xref> for more details.</p>
     <section id="host_segs">
       <title>Number of Segments per Host</title>
-      <p>Determining the number of segments to execute on each segment host has immense impact on
+      <p>Determining the number of segments to run on each segment host has immense impact on
         overall system performance. The segments share the host's CPU cores, memory, and NICs with
         each other and with other processes running on the host. Over-estimating the number of
         segments a server can accommodate is a common cause of suboptimal performance.</p>
@@ -201,7 +201,7 @@ kernel.shmall = 197951838</codeblock>
     <section id="spill_files">
       <title>Resource Queue Spill File Configuration</title>
       <p>Greenplum Database creates <i>spill files</i> (also called <i>workfiles</i>) on disk if a
-        query is allocated insufficient memory to execute in memory. A single query can create no
+        query is allocated insufficient memory to run in memory. A single query can create no
         more than 100,000 spill files, by default, which is sufficient for the majority of queries. </p>
       <p>You can control the maximum number of spill files created per query and per segment with
         the configuration parameter <codeph>gp_workfile_limit_files_per_query</codeph>. Set the

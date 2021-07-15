@@ -9,6 +9,10 @@ CREATE ROLE rg_test_role;
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
 CREATE ROLE rg_test_role_super SUPERUSER;
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
+ALTER ROLE rg_test_role_super NOSUPERUSER;
+SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
+ALTER ROLE rg_test_role_super SUPERUSER;
+SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
 
 ALTER ROLE rg_test_role RESOURCE GROUP none;
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';

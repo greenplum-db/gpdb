@@ -1,0 +1,27 @@
+TRUNCATE TABLE
+2021-01-04 16:37:58|INFO|gpload session started 2021-01-04 16:37:58
+2021-01-04 16:37:58|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:37:58|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_03.txt" -t 30
+2021-01-04 16:37:58|INFO|did not find an external table to reuse. creating ext_gpload_reusable_25e782c2_4e68_11eb_aeda_7085c2381836
+2021-01-04 16:37:58|INFO|running time: 0.15 seconds
+2021-01-04 16:37:58|INFO|rows Inserted          = 1
+2021-01-04 16:37:58|INFO|rows Updated           = 0
+2021-01-04 16:37:58|INFO|data formatting errors = 0
+2021-01-04 16:37:58|INFO|gpload succeeded
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-04 16:38:57|INFO|gpload session started 2021-01-04 16:38:57
+2021-01-04 16:38:57|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:38:57|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
+2021-01-04 16:38:57|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_ea670ed2951ca1d409fee5af7147a731
+2021-01-04 16:38:57|INFO|did not find an external table to reuse. creating ext_gpload_reusable_49267748_4e68_11eb_8660_7085c2381836
+2021-01-04 16:38:57|INFO|running time: 0.20 seconds
+2021-01-04 16:38:57|INFO|rows Inserted          = 0
+2021-01-04 16:38:57|INFO|rows Updated           = 1
+2021-01-04 16:38:57|INFO|data formatting errors = 0
+2021-01-04 16:38:57|INFO|gpload succeeded
+ s1 |  s2  | s3 |         dt          | n1 | n2 | n3 |  n4  |  n5   | n6 | n7 
+----+------+----+---------------------+----+----+----+------+-------+----+----
+ a  | qwer | 42 | 2088-06-01 05:30:30 |  0 |  0 |  0 | 0.00 | 0.000 |  0 |  0
+(1 row)
+

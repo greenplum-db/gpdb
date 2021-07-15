@@ -125,4 +125,7 @@ s/ERROR:  infinite recursion detected.*/ERROR:  infinite recursion detected/
 m/ERROR:  could not find hash function for hash operator.*/
 s/ERROR:  could not find hash function for hash operator.*/ERROR:  could not find hash function for hash operator/
 
+m/ERROR:  could not devise a plan.*/
+s/ERROR:  could not devise a plan.*/ERROR:  could not devise a plan/
+
 -- end_matchsubs

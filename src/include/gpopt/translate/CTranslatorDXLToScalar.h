@@ -231,8 +231,10 @@ private:
 	Const *ConvertDXLDatumToConstInt8(CDXLDatum *datum_dxl);
 	Const *ConvertDXLDatumToConstBool(CDXLDatum *datum_dxl);
 	Const *TranslateDXLDatumGenericToScalar(CDXLDatum *datum_dxl);
-	Expr *TranslateRelabelTypeOrFuncExprFromDXL(
-		const CDXLScalarCast *scalar_cast, Expr *pexprChild);
+	Expr *TranslateDXLScalarCastWithChildExpr(const CDXLScalarCast *scalar_cast,
+											  Expr *child_expr);
+	Expr *TranslateDXLScalarCoerceViaIOWithChildExpr(
+		const CDXLScalarCoerceViaIO *dxl_coerce_via_io, Expr *child_expr);
 
 	// private copy ctor
 	CTranslatorDXLToScalar(const CTranslatorDXLToScalar &);

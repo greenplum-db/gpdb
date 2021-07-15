@@ -304,3 +304,13 @@ SELECT * FROM dml_timestamptz ORDER BY 1;
  4714-01-27 00:00:00-08
 (1 row)
 
+-- test unknown type implicit casting
+with unknown as (
+        select '2021' as foo
+)
+select foo from unknown where foo = 2021.0;
+ foo  
+------
+ 2021
+(1 row)
+

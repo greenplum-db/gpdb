@@ -2,8 +2,6 @@ platform: linux
 inputs:
  - name: ccp_src
  - name: cluster_env_files
-caches:
- - path: pip-cache-dir
 run:
   path: bash
   args:
@@ -15,13 +13,6 @@ run:
 
     # TODO: ask CCP maintainers for a feature to do this for us
     scp cluster_env_files/hostfile_all mdw:/tmp
-
-    # Install patchelf. We need to SSH as root, hence the use of
-    # cluster_env_files.
-    ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "sudo bash -c '
-        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
-        install_python_hacks
-    '"
 
     # ensure cluster is stopped
     ssh -n mdw "
@@ -71,6 +62,29 @@ run:
         '"
     done <cluster_env_files/etc_hostfile
 
+    # install dependencies
+    while read LINE; do
+        host=$(echo $LINE | awk '{ print $3 }')
+        ssh -n $host "sudo bash -c '
+            cp -a /opt/greenplum-db-test-deps/behave/* /usr/local/greenplum-db-devel/ext/python
+            sudo chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel/ext/python
+        '"
+    done <cluster_env_files/etc_hostfile
+
+    # This allows sudo access for gpadmin on all machines in the cluster.
+    # One use is to modify networking on the cluster machines, as is done to
+    # add/delete blackhole routes in the gprecoverseg_newhost tests.
+    SUDO_ACCESS_ON_HOSTS=${SUDO_ACCESS_ON_HOSTS:-0}
+    SUDO_MDW_USERNAME=${SUDO_MDW_USERNAME:-centos}
+    if (( $SUDO_ACCESS_ON_HOSTS )); then
+        while read LINE; do
+            host=$(echo $LINE | awk '{ print $3 }')
+            ssh -n $SUDO_MDW_USERNAME@$host "
+              sudo usermod -a -G google-sudoers gpadmin
+            "
+        done <cluster_env_files/etc_hostfile
+    fi
+
     # start cluster back up
     ssh -n mdw "
         source /usr/local/greenplum-db-devel/greenplum_path.sh
@@ -78,19 +92,8 @@ run:
         if [ -d \$MASTER_DATA_DIRECTORY ]; then gpstart -a; fi
     "
 
-    while read -r host; do
-        scp -qr "pip-cache-dir" $host:pip-cache-dir
-    done < cluster_env_files/hostfile_all
-
     ssh -t mdw "
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
-        install_python_requirements_on_multi_host /home/gpadmin/gpdb_src/gpMgmt/requirements-dev.txt
-
         $CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\"
     "
 
-    # Refresh the Concourse container cache with the updated contents
-    # from the CCP mdw node.
-
-    rm -rf "pip-cache-dir/http"
-    scp -qr mdw:pip-cache-dir/http "pip-cache-dir"

@@ -1968,6 +1968,12 @@ AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
 DROP FUNCTION IF EXISTS func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM);
 
+--TVF accepts ANYENUM, ANYELEMENT, ANYELEMENT return ANYENUM, ANYARRAY
+CREATE FUNCTION return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT) RETURNS TABLE (ae ANYENUM, aa ANYARRAY)
+AS $$ SELECT $1, array[$2, $3] $$ LANGUAGE SQL STABLE;
+SELECT * FROM return_enum_as_array('red'::rainbow, 'yellow'::rainbow, 'blue'::rainbow);
+DROP FUNCTION IF EXISTS return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT);
+
 -- start_ignore
 drop table foo;
 -- end_ignore
@@ -2872,8 +2878,151 @@ select enable_xform('CXformSelect2BitmapBoolOp');
 select enable_xform('CXformSelect2DynamicBitmapBoolOp');
 select enable_xform('CXformJoin2BitmapIndexGetApply');
 select enable_xform('CXformInnerJoin2NLJoin');
+
+-- test casting with setops
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except all
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect all
+    select 2019::int)
+select * from v where year > 1;
+
 reset optimizer_enable_hashjoin;
 reset optimizer_trace_fallback;
+
+create table sqall_t1(a int) distributed by (a);
+insert into sqall_t1 values (1), (2), (3);
+set optimizer_join_order='query';
+select * from sqall_t1 where a not in (
+	    select b.a from sqall_t1 a left join sqall_t1 b on false);
+reset optimizer_join_order;
+
+-- Make sure materialize projects child's tlist, not what is requested
+create table material_test(first_id int, second_id int);
+create index material_test_idx on material_test using btree (second_id);
+create table material_test2(first_id int, second_id int);
+
+insert into material_test select generate_series(1,10), generate_series(1,10);
+insert into material_test2 select generate_series(1,10), generate_series(1,10);
+insert into material_test select generate_series(1,100), generate_series(1,100);
+insert into material_test2 select generate_series(1,100), generate_series(1,100);
+
+analyze material_test;
+analyze material_test2;
+
+explain (verbose) with mat_w as (
+select first_id
+from material_test
+where second_id in (1,2,3,4)
+)
+select first_id
+from material_test2
+where first_id in (select first_id from mat_w)
+and first_id in (select first_id from mat_w);
+
+with mat_w as (
+select first_id
+from material_test
+where second_id in (1,2,3,4)
+)
+select first_id
+from material_test2
+where first_id in (select first_id from mat_w)
+and first_id in (select first_id from mat_w);
+
+create table tt_varchar(
+	data character varying
+) distributed by (data);
+insert into tt_varchar values('test');
+create table tt_int(
+	id integer
+) distributed by (id);
+insert into tt_int values(1);
+
+set optimizer_enforce_subplans = 1;
+-- test collation in subplan testexpr
+select data from tt_varchar where data > any(select id::text from tt_int);
+-- test implicit coerce via io
+CREATE CAST (integer AS text) WITH INOUT AS IMPLICIT;
+select data from tt_varchar where data > any(select id from tt_int);
+
+DROP CAST (integer AS text);
+reset optimizer_enforce_subplans;
+
+create table left_outer_index_nl_foo (a integer, b integer, c integer) distributed randomly;
+create table left_outer_index_nl_bar (a integer, b integer, c integer) distributed randomly;
+create index left_outer_index_nl_bar_idx on left_outer_index_nl_bar using btree (b);
+
+insert into left_outer_index_nl_foo select i, i, i from generate_series(1, 4)i;
+insert into left_outer_index_nl_bar select i, i, i from generate_series(2, 6)i;
+
+analyze left_outer_index_nl_foo;
+analyze left_outer_index_nl_bar;
+
+set optimizer_enable_hashjoin=off;
+set enable_nestloop=on;
+set enable_hashjoin=off;
+
+--- verify that the inner half of a left outer nested loop join is non-randomly distributed
+explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo r left outer join left_outer_index_nl_bar l on r.b=l.b;
+select r.a, r.b, r.c, l.c from left_outer_index_nl_foo r left outer join left_outer_index_nl_bar l on r.b=l.b;
+
+create table left_outer_index_nl_foo_hash (a integer, b integer, c text);
+create table left_outer_index_nl_bar_hash (a integer, b integer, c text);
+create index left_outer_index_nl_bar_hash_idx on left_outer_index_nl_bar_hash using btree (b);
+
+insert into left_outer_index_nl_foo_hash select i, i, i from generate_series(1, 4)i;
+insert into left_outer_index_nl_bar_hash select i, i, i from generate_series(2, 6)i;
+
+analyze left_outer_index_nl_foo_hash;
+analyze left_outer_index_nl_bar_hash;
+
+--- verify that the inner half of a left outer nested loop join is non-randomly distributed
+explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar l on r.b=l.b;
+select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar l on r.b=l.b;
+
+--- verify that a motion is introduced such that joins on each segment are internal to that segment (distributed by join key)
+explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar_hash l on r.b=l.b;
+select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar_hash l on r.b=l.b;
+
+create table left_outer_index_nl_foo_repl (a integer, b integer, c integer) distributed replicated;
+create table left_outer_index_nl_bar_repl (a integer, b integer, c integer) distributed replicated;
+create index left_outer_index_nl_bar_repl_idx on left_outer_index_nl_bar_repl using btree (b);
+
+insert into left_outer_index_nl_foo_repl select i, i, i from generate_series(1, 4)i;
+insert into left_outer_index_nl_bar_repl select i, i, i from generate_series(2, 6)i;
+
+analyze left_outer_index_nl_foo_repl;
+analyze left_outer_index_nl_bar_repl;
+
+--- replicated on both sides shouldn't require a motion
+explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_repl r left outer join left_outer_index_nl_bar_repl l on r.b=l.b;
+select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_repl r left outer join left_outer_index_nl_bar_repl l on r.b=l.b;
+
+--- outer side replicated, inner side hashed can have interesting cases (gather + join on one segment of inner side and redistribute + join + gather are both valid)
+explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_repl r left outer join left_outer_index_nl_bar_hash l on r.b=l.b;
+select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_repl r left outer join left_outer_index_nl_bar_hash l on r.b=l.b;
+
+reset optimizer_enable_hashjoin;
+reset enable_nestloop;
+reset enable_hashjoin;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

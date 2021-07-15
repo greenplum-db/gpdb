@@ -59,8 +59,9 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_TEXT_SEARCH_TEMPLATE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="DROP_TEXT_SEARCH_TEMPLATE.xml#topic1"/></codeph></p>
+      <p><codeph><xref href="DROP_TEXT_SEARCH_TEMPLATE.xml#topic1"/></codeph>, <codeph><xref
+            href="ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1"/></codeph>
+      </p>
     </section>
   </body>
 </topic>

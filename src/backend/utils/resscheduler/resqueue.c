@@ -560,16 +560,20 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 		return false;
 	}
 
+	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+
 	/*
 	 * Double-check that we are actually holding a lock of the type we want to
 	 * Release.
 	 */
 	if (!(proclock->holdMask & LOCKBIT_ON(lockmode)) || proclock->nLocks <= 0)
 	{
-		LWLockRelease(partitionLock);
-		elog(DEBUG1, "Resource queue %d: proclock not held", locktag->locktag_field1);
+		elog(LOG, "ResLockRelease: Resource queue %d: proclock not held", locktag->locktag_field1);
 		RemoveLocalLock(locallock);
+
 		ResCleanUpLock(lock, proclock, hashcode, false);
+		LWLockRelease(ResQueueLock);
+		LWLockRelease(partitionLock);
 
 		return false;
 	}
@@ -580,8 +584,6 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	MemSet(&portalTag, 0, sizeof(ResPortalTag));
 	portalTag.pid = MyProc->pid;
 	portalTag.portalId = resPortalId;
-
-	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
 	incrementSet = ResIncrementFind(&portalTag);
 	if (!incrementSet)
@@ -986,10 +988,24 @@ ResCleanUpLock(LOCK *lock, PROCLOCK *proclock, uint32 hashcode, bool wakeupNeede
 		uint32		proclock_hashcode;
 
 		if (proclock->lockLink.next != NULL)
-			SHMQueueDelete(&proclock->lockLink);
+		{
+			SHM_QUEUE  *queue = &proclock->lockLink;
+			SHM_QUEUE  *nextElem = queue->next;
+			SHM_QUEUE  *prevElem = queue->prev;
+			SHMQueueDelete(queue);
+			if (prevElem->next == NULL || nextElem->prev == NULL)
+				elog(PANIC, "corruption of lock table encountered");
+		}
 
 		if (proclock->procLink.next != NULL)
-			SHMQueueDelete(&proclock->procLink);
+		{
+			SHM_QUEUE  *queue = &proclock->procLink;
+			SHM_QUEUE  *nextElem = queue->next;
+			SHM_QUEUE  *prevElem = queue->prev;
+			SHMQueueDelete(queue);
+			if (prevElem->next == NULL || nextElem->prev == NULL)
+				elog(PANIC, "corruption of lock table encountered");
+		}
 
 		proclock_hashcode = ProcLockHashCode(&proclock->tag, hashcode);
 		hash_search_with_hash_value(LockMethodProcLockHash, (void *) &(proclock->tag),

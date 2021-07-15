@@ -1,0 +1,8 @@
+2020-12-22 15:40:01|INFO|gpload session started 2020-12-22 15:40:01
+2020-12-22 15:40:01|INFO|setting schema 'public' for table 'texttable2'
+2020-12-22 15:40:01|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2020-12-22 15:40:01|ERROR|A gpload control file processing error occurred. ESCAPE cannot be set to OFF in CSV mode
+2020-12-22 15:40:01|INFO|rows Inserted          = 0
+2020-12-22 15:40:01|INFO|rows Updated           = 0
+2020-12-22 15:40:01|INFO|data formatting errors = 0
+2020-12-22 15:40:01|INFO|gpload failed

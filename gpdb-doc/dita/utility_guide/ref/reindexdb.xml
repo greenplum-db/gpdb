@@ -44,7 +44,7 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
               affect currently running queries. To avoid disrupting ongoing business operations, schedule
               the <codeph>reindexb</codeph> operation during a period of low activity.</p>
             <p><codeph>reindexdb</codeph> might need to 
-                connect several times to the coordinator server, asking for a password each time. It is convenient to have
+                connect several times to the master server, asking for a password each time. It is convenient to have
               a <codeph>~/.pgpass</codeph> file in such cases.</p>
           </section><section id="section7"><title>Examples</title><p>To reindex the database <codeph>mydb</codeph>:</p><codeblock>reindexdb mydb</codeblock><p>To reindex the table <codeph>foo</codeph> and the index <codeph>bar</codeph> in a database named
           <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8">

@@ -31,6 +31,7 @@
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "storage/lmgr.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
@@ -181,7 +182,11 @@ AOCSTruncateToEOF(Relation aorel)
 				segno;
 	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
-	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	Snapshot	appendOnlyMetaDataSnapshot = SnapshotSelf;
+
+#ifdef FAULT_INJECTOR
+	SIMPLE_FAULT_INJECTOR("ao_column_truncate_to_eof");
+#endif
 
 	Assert(RelationIsAoCols(aorel));
 
@@ -241,7 +246,6 @@ AOCSTruncateToEOF(Relation aorel)
 		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
-	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
 static void
@@ -436,7 +440,7 @@ AOCSDrop(Relation aorel,
 	int			i,
 				segno;
 	AOCSFileSegInfo *fsinfo;
-	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	Snapshot	appendOnlyMetaDataSnapshot = SnapshotSelf;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoCols(aorel));
@@ -486,7 +490,6 @@ AOCSDrop(Relation aorel,
 		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
-	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
 
@@ -516,7 +519,11 @@ AOCSCompact(Relation aorel,
 				segno;
 	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
-	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	Snapshot	appendOnlyMetaDataSnapshot = SnapshotSelf;
+
+#ifdef FAULT_INJECTOR
+	SIMPLE_FAULT_INJECTOR("ao_column_compact");
+#endif
 
 	Assert(RelationIsAoCols(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
@@ -602,6 +609,4 @@ AOCSCompact(Relation aorel,
 		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
-
-	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }

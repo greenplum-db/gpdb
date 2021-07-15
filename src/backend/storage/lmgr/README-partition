@@ -1,0 +1,61 @@
+src/backend/storage/lmgr/README-partition
+
+The behavior about locking on partition table
+===========================================================
+
+If the relation is partitioned, we should acquire corresponding locks on
+each leaf partition before entering InitPlan. The snapshot will acquire before
+the InitPlan, so if we wait the locks for a while in the InitPlan. When we
+get all locks, the snapshot maybe become invalid. So we must acquire lock
+before entering InitPlan to keep the snapshot valid.
+
+If the sql statement is not cached, we will acquire locks on partition in the 
+function setTargetTable. In the past, we will only acquire locks on the parent table.
+But now, if the table is partitioned, we will acquire all the locks on all the children
+tables. 
+
+If the sql statement is cached, we will acquire locks on partition in the function
+ScanQueryForLocks.
+
+We need to keep lock type consistent with upstreaming. If the lockUpgraded 
+happens, we need to upgrade lock on the partition table. 
+
+About the lock type, only one situation is special, when the command is to insert,
+and gdd don't open, the dead lock will happen.
+for example:
+Without locking the partition relations on QD when INSERT with Planner the 
+following dead lock scenario may happen between INSERT and AppendOnly VACUUM 
+drop phase on the partition table:
+
+1. AO VACUUM drop on QD: acquired AccessExclusiveLock
+2. INSERT on QE: acquired RowExclusiveLock
+3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
+4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
+
+2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks until 3 and 4 proceed. 
+Hence INSERT needs to Lock the partition tables on QD here (before 2) to prevent 
+this dead lock.
+
+This will cause a deadlock. But if gdd have already opened, gdd will solve the 
+dead lock. So it is safe to not get locks for partitions.
+
+But for the update and delete, we must acquire locks whether the gdd opens or not.
+
+More detail about the lock behavior
+-----------------------------------------------------------
+
+We can start with that. It is important to focus on partitioned tables. Regular, 
+non-partitioned tables have simpler locking strategy. And whether we use orca or not,
+the lock behavior is the same. Suppose we have a root partition table named root. The root
+table have three child tables named child_1、child_2 and child_3. We want to delete a tuple from
+table when the gdd is off, we need to acquire RowExclusiveLock on root and all child tables. 
+Although we know the tuple is in the child_1, we still want to acquire RowExclusiveLock on the
+all child tables for security.
+
+ -----------------------------------------------------------------------------------------------------------------
+|    DML        |       gdd on                                    |      gdd off                                  |
+|    Insert     | RowExclusiveLock on root table                  | RowExclusiveLock on root and all child tables |
+|    Delete     | ExclusiveLock on root and all child tables      | ExclusiveLock on root and all child tables    |
+|    Update     | ExclusiveLock on root and all child tables      | ExclusiveLock on root and all child tables    |
+ -----------------------------------------------------------------------------------------------------------------
+

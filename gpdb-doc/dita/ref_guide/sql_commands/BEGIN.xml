@@ -16,13 +16,13 @@
         <section id="section3">
             <title>Description</title>
             <p><codeph>BEGIN</codeph> initiates a transaction block, that is, all statements after a
-                    <codeph>BEGIN</codeph> command will be executed in a single transaction until an
+                    <codeph>BEGIN</codeph> command will be run in a single transaction until an
                 explicit <codeph>COMMIT</codeph> or <codeph>ROLLBACK</codeph> is given. By default
-                (without <codeph>BEGIN</codeph>), Greenplum Database executes transactions in
-                autocommit mode, that is, each statement is executed in its own transaction and a
+                (without <codeph>BEGIN</codeph>), Greenplum Database runs transactions in
+                autocommit mode, that is, each statement is run in its own transaction and a
                 commit is implicitly performed at the end of the statement (if execution was
                 successful, otherwise a rollback is done). </p>
-            <p>Statements are executed more quickly in a transaction block, because transaction
+            <p>Statements are run more quickly in a transaction block, because transaction
                 start/commit requires significant CPU and disk activity. Execution of multiple
                 statements inside a transaction is also useful to ensure consistency when making
                 several related changes: other sessions will be unable to see the intermediate
@@ -30,7 +30,7 @@
             <p>If the isolation level, read/write mode, or deferrable mode is specified, the new
                 transaction has those characteristics, as if <codeph><xref
                         href="./SET_TRANSACTION.xml#topic1" type="topic" format="dita"/></codeph>
-                was executed. </p>
+                was run. </p>
         </section>
         <section id="section4">
             <title>Parameters</title>
@@ -54,9 +54,9 @@
                             <codeph>READ COMMITTED</codeph>.</pd>
                     <pd><codeph>READ COMMITTED</codeph>, the default isolation level in Greenplum
                         Database, guarantees that a statement can only see rows committed before it
-                        began. The same statement executed twice in a transaction can produce
+                        began. The same statement run twice in a transaction can produce
                         different results if another concurrent transaction commits after the
-                        statement is executed the first time. </pd>
+                        statement is run the first time. </pd>
                     <pd>The <codeph>REPEATABLE READ</codeph> isolation level guarantees that a
                         transaction can only see rows committed before it began. <codeph>REPEATABLE
                             READ</codeph> is the strictest transaction isolation level Greenplum
@@ -64,7 +64,7 @@
                             READ</codeph> isolation level must be prepared to retry transactions due
                         to serialization failures.</pd>
                     <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees
-                        that executing multiple concurrent transactions produces the same effects as
+                        that running multiple concurrent transactions produces the same effects as
                         running the same transactions one at a time. If you specify
                             <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to
                             <codeph>REPEATABLE READ</codeph>.</pd>

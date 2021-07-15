@@ -173,21 +173,20 @@
               the database, so make sure your <codeph><xref href="../../ref_guide/config_params/guc-list.xml#max_connections"
                 type="dita">max_connections</xref></codeph> setting is high enough to
               accommodate all connections.</pd>
-            <pd>Requesting exclusive locks on database objects while running a parallel dump
-              could cause the dump to fail. The reason is that the <codeph>pg_dump</codeph>
-              master process requests shared locks on the objects that the worker processes are
-              going to dump later in order to make sure that nobody deletes them and makes them
-              go away while the dump is running. If another client then requests an exclusive
-              lock on a table, that lock will not be granted but will be queued waiting for the
-              shared lock of the master process to be released. Consequently, any other access
-              to the table will not be granted either and will queue after the exclusive lock
-              request. This includes the worker process trying to dump the table. Without any
-              precautions this would be a classic deadlock situation. To detect this conflict,
-              the <codeph>pg_dump</codeph> worker process requests another shared lock using the
-              <codeph>NOWAIT</codeph> option. If the worker process is not granted this shared
-              lock, somebody else must have requested an exclusive lock in the meantime and
-              there is no way to continue with the dump, so <codeph>pg_dump</codeph> has no
-              choice but to abort the dump.</pd>
+            <pd>Requesting exclusive locks on database objects while running a parallel dump could
+              cause the dump to fail. The reason is that the <codeph>pg_dump</codeph> master
+              process requests shared locks on the objects that the worker processes are going to
+              dump later in order to make sure that nobody deletes them and makes them go away while
+              the dump is running. If another client then requests an exclusive lock on a table,
+              that lock will not be granted but will be queued waiting for the shared lock of the
+              master process to be released. Consequently, any other access to the table will
+              not be granted either and will queue after the exclusive lock request. This includes
+              the worker process trying to dump the table. Without any precautions this would be a
+              classic deadlock situation. To detect this conflict, the <codeph>pg_dump</codeph>
+              worker process requests another shared lock using the <codeph>NOWAIT</codeph> option.
+              If the worker process is not granted this shared lock, somebody else must have
+              requested an exclusive lock in the meantime and there is no way to continue with the
+              dump, so <codeph>pg_dump</codeph> has no choice but to cancel the dump.</pd>
             <pd>For a consistent backup, the database server needs to support synchronized
               snapshots, a feature that was introduced in Greenplum Database 6.0. With this
               feature, database clients can ensure they see the same data set even though they
@@ -485,15 +484,15 @@
             <pt>--function-oids <varname>oids</varname></pt>
             <pd>Dump the function(s) specified in the <varname>oids</varname> list of object
               identifiers. <note>This option is provided solely for use by other administration
-              utilities; its use for any other purpose is not recommended or supported. The
-              behaviour of the option may change in future releases without notice.</note></pd>
+                utilities; its use for any other purpose is not recommended or supported. The
+                behavior of the option may change in future releases without notice.</note></pd>
           </plentry>
           <plentry>
             <pt>--relation-oids <varname>oids</varname></pt>
             <pd>Dump the relation(s) specified in the <varname>oids</varname> list of object
               identifiers. <note>This option is provided solely for use by other administration
-              utilities; its use for any other purpose is not recommended or supported. The
-              behaviour of the option may change in future releases without notice.</note></pd>
+                utilities; its use for any other purpose is not recommended or supported. The
+                behavior of the option may change in future releases without notice.</note></pd>
           </plentry>
           <plentry>
             <pt>-? | --help</pt>

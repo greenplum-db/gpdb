@@ -801,7 +801,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 			MemoryContextSwitchTo(oldCtx);
 		}
 		else
-			repalloc(comboCids, combocidcnt * sizeof(ComboCidKeyData));
+			comboCids = repalloc(comboCids, combocidcnt * sizeof(ComboCidKeyData));
 	}
 	memcpy(comboCids, tmp_combocids, combocidcnt * sizeof(ComboCidKeyData));
 	usedComboCids = ((combocidcnt < MaxComboCids) ? combocidcnt : MaxComboCids);

@@ -5,6 +5,7 @@ from pygresql import pgdb
 
 from gppylib import gparray
 from gppylib.programs.clsSystemState import *
+from gppylib.commands.unix import CommandNotFoundException
 
 #
 # Creation helpers for gparray.Segment.
@@ -92,6 +93,24 @@ class ReplicationInfoTestCase(unittest.TestCase):
         cursor.fetchall.return_value = rows
         cursor.fetchone.side_effect = rows
         return cursor
+
+    def find_ss(cmd):
+        if cmd == 'ss':
+            return "echo 'u_str  LISTEN     0      128    /tmp/.s.PGSQL.6000 664041384'"
+        if cmd == 'grep':
+            return 'grep'
+        if cmd == 'awk':
+            return 'awk'
+        else:
+            raise CommandNotFoundException(cmd, '/usr/local/bin')
+
+    def dont_find_ss_netstat(cmd):
+        if cmd == 'grep':
+            return 'grep'
+        if cmd == 'awk':
+            return 'awk'
+        else:
+            raise CommandNotFoundException(cmd, '/usr/local/bin')
 
     def mock_pg_stat_replication(self, mock_execSQL, rows):
         self._pg_rows['pg_stat_replication'] = rows
@@ -353,6 +372,27 @@ class ReplicationInfoTestCase(unittest.TestCase):
     def test_set_mirror_replication_values_complains_about_incorrect_kwargs(self):
         with self.assertRaises(TypeError):
             GpSystemStateProgram._set_mirror_replication_values(self.data, self.mirror, badarg=1)
+
+    # test the condition when netstat is not found but ss is found
+    @mock.patch('gppylib.commands.unix.findCmdInPath', mock.MagicMock(side_effect=find_ss))
+    def test_PgPortIsActive_no_netstat(self):
+        port = 6000
+        port_active = unix.PgPortIsActive.local('check netstat for postmaster port', "/tmp/.s.PGSQL.%d" % port,
+                                                        port)
+        self.assertTrue(port_active, "PgPortIsActive.local should be true")
+
+    # test the condition when netstat and ss are not found
+    @mock.patch('gppylib.commands.unix.findCmdInPath', mock.MagicMock(side_effect=dont_find_ss_netstat))
+    def test_PgPortIsActive_no_netstat_ss(self):
+        port = 6000
+        port_active = False
+        try:
+            port_active = unix.PgPortIsActive.local('check netstat for postmaster port', "/tmp/.s.PGSQL.%d" % port,
+                                                            port)
+        except CommandNotFoundException:
+            pass
+        self.assertFalse(port_active, "PgPortIsActive.local should be false")
+
 
 class GpStateDataTestCase(unittest.TestCase):
     def test_switchSegment_sets_current_segment_correctly(self):

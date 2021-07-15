@@ -1,3 +1,5 @@
+import tempfile
+
 from time import sleep
 from gppylib.commands.base import Command, ExecutionError, REMOTE, WorkerPool
 from gppylib.db import dbconn
@@ -134,3 +136,114 @@ def impl(context):
         And user can start transactions
         And the segments are synchronized
         ''')
+
+# This test explicitly compares the actual before and after gparrays with what we
+# expect.  While such a test is not extensible, it is easy to debug and does exactly
+# what we need to right now.  Besides, the calling Scenario requires a specific cluster
+# setup.  Note the before cluster is a standard CCP 5-host cluster(mdw/sdw1-4) and the
+# after cluster is a result of a call to `gprecoverseg -p` after hosts have been shutdown.
+# This causes the shutdown primaries to fail over to the mirrors, at which point there are 4
+# contents in the cluster with no mirrors.  The `gprecoverseg -p` call creates those 4
+# mirrors on new hosts.  It does not leave the cluster in its original state.
+@then('the "{before}" and "{after}" cluster configuration matches with the expected for gprecoverseg newhost')
+def impl(context, before, after):
+    if not hasattr(context,'saved_array') or (before not in context.saved_array) or \
+            (after not in context.saved_array):
+        raise Exception("before_array or after_array not saved prior to call")
+
+    expected = {}
+
+    # this is the expected configuration coming into the Scenario(e.g. the original CCP cluster)
+    expected["before"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+2|0|p|p|s|u|sdw1|sdw1|20000|/data/gpdata/primary/gpseg0
+3|1|p|p|s|u|sdw1|sdw1|20001|/data/gpdata/primary/gpseg1
+16|6|m|m|s|u|sdw1|sdw1|21000|/data/gpdata/mirror/gpseg6
+17|7|m|m|s|u|sdw1|sdw1|21001|/data/gpdata/mirror/gpseg7
+10|0|m|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
+11|1|m|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
+4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
+5|3|p|p|s|u|sdw2|sdw2|20001|/data/gpdata/primary/gpseg3
+12|2|m|m|s|u|sdw3|sdw3|21000|/data/gpdata/mirror/gpseg2
+13|3|m|m|s|u|sdw3|sdw3|21001|/data/gpdata/mirror/gpseg3
+6|4|p|p|s|u|sdw3|sdw3|20000|/data/gpdata/primary/gpseg4
+7|5|p|p|s|u|sdw3|sdw3|20001|/data/gpdata/primary/gpseg5
+14|4|m|m|s|u|sdw4|sdw4|21000|/data/gpdata/mirror/gpseg4
+15|5|m|m|s|u|sdw4|sdw4|21001|/data/gpdata/mirror/gpseg5
+8|6|p|p|s|u|sdw4|sdw4|20000|/data/gpdata/primary/gpseg6
+9|7|p|p|s|u|sdw4|sdw4|20001|/data/gpdata/primary/gpseg7
+'''
+    expected["after_recreation"] = expected["before"]
+
+    # this is the expected configuration after "gprecoverseg -p sdw5" after "sdw1" goes down
+    expected["one_host_down"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+10|0|p|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
+11|1|p|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
+4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
+5|3|p|p|s|u|sdw2|sdw2|20001|/data/gpdata/primary/gpseg3
+12|2|m|m|s|u|sdw3|sdw3|21000|/data/gpdata/mirror/gpseg2
+13|3|m|m|s|u|sdw3|sdw3|21001|/data/gpdata/mirror/gpseg3
+6|4|p|p|s|u|sdw3|sdw3|20000|/data/gpdata/primary/gpseg4
+7|5|p|p|s|u|sdw3|sdw3|20001|/data/gpdata/primary/gpseg5
+14|4|m|m|s|u|sdw4|sdw4|21000|/data/gpdata/mirror/gpseg4
+15|5|m|m|s|u|sdw4|sdw4|21001|/data/gpdata/mirror/gpseg5
+8|6|p|p|s|u|sdw4|sdw4|20000|/data/gpdata/primary/gpseg6
+9|7|p|p|s|u|sdw4|sdw4|20001|/data/gpdata/primary/gpseg7
+2|0|m|p|s|u|sdw5|sdw5|20000|/data/gpdata/primary/gpseg0
+3|1|m|p|s|u|sdw5|sdw5|20001|/data/gpdata/primary/gpseg1
+16|6|m|m|s|u|sdw5|sdw5|20002|/data/gpdata/mirror/gpseg6
+17|7|m|m|s|u|sdw5|sdw5|20003|/data/gpdata/mirror/gpseg7
+'''
+
+    # this is the expected configuration after "gprecoverseg -p sdw5,sdw6" after "sdw1,sdw3" go down
+    expected["two_hosts_down"] ='''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+10|0|p|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
+11|1|p|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
+4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
+5|3|p|p|s|u|sdw2|sdw2|20001|/data/gpdata/primary/gpseg3
+14|4|p|m|s|u|sdw4|sdw4|21000|/data/gpdata/mirror/gpseg4
+15|5|p|m|s|u|sdw4|sdw4|21001|/data/gpdata/mirror/gpseg5
+8|6|p|p|s|u|sdw4|sdw4|20000|/data/gpdata/primary/gpseg6
+9|7|p|p|s|u|sdw4|sdw4|20001|/data/gpdata/primary/gpseg7
+2|0|m|p|s|u|sdw5|sdw5|20000|/data/gpdata/primary/gpseg0
+3|1|m|p|s|u|sdw5|sdw5|20001|/data/gpdata/primary/gpseg1
+16|6|m|m|s|u|sdw5|sdw5|20002|/data/gpdata/mirror/gpseg6
+17|7|m|m|s|u|sdw5|sdw5|20003|/data/gpdata/mirror/gpseg7
+12|2|m|m|s|u|sdw6|sdw6|20000|/data/gpdata/mirror/gpseg2
+13|3|m|m|s|u|sdw6|sdw6|20001|/data/gpdata/mirror/gpseg3
+6|4|m|p|s|u|sdw6|sdw6|20002|/data/gpdata/primary/gpseg4
+7|5|m|p|s|u|sdw6|sdw6|20003|/data/gpdata/primary/gpseg5
+'''
+
+    if (before not in expected) or (after not in expected):
+        raise Exception("before_array or after_array has no expected array...")
+
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(expected[before])
+        f.flush()
+        expected_before_gparray = GpArray.initFromFile(f.name)
+
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(expected[after])
+        f.flush()
+        expected_after_gparray = GpArray.initFromFile(f.name)
+
+    compare_gparray_with_recovered_host(context.saved_array[before], context.saved_array[after], expected_before_gparray, expected_after_gparray)
+
+def compare_gparray_with_recovered_host(before_gparray, after_gparray, expected_before_gparray, expected_after_gparray):
+
+    def _sortedSegs(gparray):
+        segs_by_host = GpArray.getSegmentsByHostName(gparray.getSegDbList())
+        for host in segs_by_host:
+            segs_by_host[host] = sorted(segs_by_host[host], key=lambda seg: seg.getSegmentDbId())
+        return segs_by_host
+
+    before_segs = _sortedSegs(before_gparray)
+    expected_before_segs = _sortedSegs(expected_before_gparray)
+
+    after_segs = _sortedSegs(after_gparray)
+    expected_after_segs  = _sortedSegs(expected_after_gparray)
+
+    if before_segs != expected_before_segs or after_segs != expected_after_segs:
+        msg = "MISMATCH\n\nactual_before:\n{}\n\nexpected_before:\n{}\n\nactual_after:\n{}\n\nexpected_after:\n{}\n".format(
+            before_segs, expected_before_segs, after_segs, expected_after_segs)
+        raise Exception(msg)

@@ -11,5 +11,3 @@ params:
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
 run:
   path: gpdb_src/concourse/scripts/behave_gpdb.bash
-caches:
-  - path: pip-cache-dir

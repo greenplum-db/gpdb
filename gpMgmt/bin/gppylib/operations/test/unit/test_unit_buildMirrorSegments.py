@@ -113,10 +113,11 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
     @patch('gppylib.operations.utils.ParallelOperation.run')
     @patch('gppylib.gparray.Segment.getSegmentHostName', side_effect=['foo1', 'foo2'])
-    def test_ensureSharedMemCleaned(self, mock1, mock2):
+    def test_ensureSharedMemCleaned(self, mock_getSegmentHostName, mock_run):
         self.buildMirrorSegs._GpMirrorListToBuild__ensureSharedMemCleaned(Mock(), [Mock(), Mock()])
         self.logger.info.assert_any_call('Ensuring that shared memory is cleaned up for stopped segments')
         self.assertEquals(self.logger.warning.call_count, 0)
+        self.assertEquals(mock_run.call_count, 1)
 
     @patch('gppylib.operations.buildMirrorSegments.read_era')
     @patch('gppylib.operations.startSegments.StartSegmentsOperation')

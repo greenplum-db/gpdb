@@ -4028,7 +4028,9 @@ static SSL_CTX *initialize_ctx(void)
 	}
 
 	/* Create our context*/
-	ctx = SSL_CTX_new( TLSv1_server_method() );
+	ctx = SSL_CTX_new( SSLv23_method() );
+	/* Disable old protocol versions */
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 );
 
 	/* Generate random seed */
 	if ( RAND_poll() == 0 )

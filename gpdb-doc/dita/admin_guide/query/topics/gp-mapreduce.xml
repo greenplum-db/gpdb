@@ -11,7 +11,7 @@
     <p>You configure a Greenplum MapReduce job via a YAML-formatted configuration
       file, then pass the file to the Greenplum MapReduce program, <codeph>gpmapreduce</codeph>,
       for execution by the Greenplum Database parallel engine. The Greenplum Database system distributes
-      the input data, executes the program across a set of machines, handles machine failures, and
+      the input data, runs the program across a set of machines, handles machine failures, and
       manages the required inter-machine communication.</p>
     <p>Refer to <codeph><xref href="../../../utility_guide/ref/gpmapreduce.xml#topic1" type="topic" format="dita"/></codeph>
       for details about running the Greenplum MapReduce program.</p>
@@ -69,7 +69,7 @@ ThirdKey: "This is a string: not a mapping"</codeblock>
 - five scalar values
 # inline sequence
 [this, is, a list, with, five scalar values]</codeblock>
-      <p>A <i>mapping</i> is used to pair up data values with indentifiers called <i>keys</i>.
+      <p>A <i>mapping</i> is used to pair up data values with identifiers called <i>keys</i>.
         Mappings use a colon and space (<codeph>: </codeph>) for each <codeph>key: value</codeph>
         pair, or can also be specified inline as a comma-separated list within curly braces. The
           <i>key</i> is used as an index for retrieving data from a mapping. </p>
@@ -234,7 +234,7 @@ DEFINE:
 
   # A TASK is an object that defines an entire INPUT/MAP/REDUCE stage
   # within a Greenplum MapReduce pipeline. It is like EXECUTION, but it is
-  # executed only when called as input to other processing stages.
+  # run only when called as input to other processing stages.
   # Identify a task called 'doc_prep' which takes in the 'doc' INPUT defined earlier
   # and runs the 'doc_map' MAP function which returns doc_id, term, [term_position]
   - TASK:
@@ -266,7 +266,7 @@ DEFINE:
   # A REDUCE has an initial 'state' variable defined for each grouping key. that is 
   # A TRANSITION function adjusts the state for every value in a key grouping.
   # If present, an optional CONSOLIDATE function combines multiple 
-  # 'state' variables. This allows the TRANSITION function to be executed locally at
+  # 'state' variables. This allows the TRANSITION function to be run locally at
   # the segment-level and only redistribute the accumulated 'state' over
   # the network. If present, an optional FINALIZE function can be used to perform 
   # final computation on a state and emit one or more rows of output from the state.
@@ -363,7 +363,7 @@ DEFINE:
         if previous:
           yield len(previous)
 
-   # Define the 'term_match' task which is then executed as part 
+   # Define the 'term_match' task which is then run as part 
    # of the 'final_output' query. It takes the INPUT 'term_join' defined
    # earlier and uses the REDUCE function 'term_reducer' defined earlier
   - TASK:

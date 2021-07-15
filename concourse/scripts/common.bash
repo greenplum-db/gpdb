@@ -5,8 +5,43 @@
 ## ----------------------------------------------------------------------
 
 function set_env() {
-    export TERM=xterm-256color
-    export TIMEFORMAT=$'\e[4;33mIt took %R seconds to complete this step\e[0m';
+	export TERM=xterm-256color
+	export TIMEFORMAT=$'\e[4;33mIt took %R seconds to complete this step\e[0m'
+}
+
+function os_id() {
+	if [[ -f "/etc/redhat-release" ]]; then
+		echo "centos"
+	else
+		echo "$(
+			. /etc/os-release
+			echo "${ID}"
+		)"
+	fi
+}
+
+function os_version() {
+	if [[ -f "/etc/redhat-release" ]]; then
+		echo "$(sed </etc/redhat-release 's/.*release *//' | cut -d. -f1)"
+	else
+		echo "$(
+			. /etc/os-release
+			echo "${VERSION_ID}"
+		)"
+	fi
+}
+
+function build_arch() {
+	local id=$(os_id)
+	local version=$(os_version)
+	# BLD_ARCH expects rhel{6,7,8}_x86_64 || photon3_x86_64 || sles12_x86_64 || ubuntu18.04_x86_64
+	case ${id} in
+	photon | sles) version=$(os_version | cut -d. -f1) ;;
+	centos) id="rhel" ;;
+	*) ;;
+	esac
+
+	echo "${id}${version}_x86_64"
 }
 
 ## ----------------------------------------------------------------------
@@ -14,48 +49,44 @@ function set_env() {
 ## ----------------------------------------------------------------------
 
 function install_gpdb() {
-    [ ! -d /usr/local/greenplum-db-devel ] && mkdir -p /usr/local/greenplum-db-devel
-    tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
+	[ ! -d /usr/local/greenplum-db-devel ] && mkdir -p /usr/local/greenplum-db-devel
+	tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
 }
 
 function setup_configure_vars() {
-    # We need to add GPHOME paths for configure to check for packaged
-    # libraries (e.g. ZStandard).
-    source /usr/local/greenplum-db-devel/greenplum_path.sh
-    export LDFLAGS="-L${GPHOME}/lib"
-    export CPPFLAGS="-I${GPHOME}/include"
+	# We need to add GPHOME paths for configure to check for packaged
+	# libraries (e.g. ZStandard).
+	source /usr/local/greenplum-db-devel/greenplum_path.sh
+	export LDFLAGS="-L${GPHOME}/lib"
+	export CPPFLAGS="-I${GPHOME}/include"
 }
 
 function configure() {
-  if [ -f /opt/gcc_env.sh ]; then
-    # ubuntu uses the system compiler
-    source /opt/gcc_env.sh
-  fi
-  pushd gpdb_src
-      # The full set of configure options which were used for building the
-      # tree must be used here as well since the toplevel Makefile depends
-      # on these options for deciding what to test. Since we don't ship
-      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca --with-openssl ${CONFIGURE_FLAGS}
+	pushd gpdb_src
+	# The full set of configure options which were used for building the
+	# tree must be used here as well since the toplevel Makefile depends
+	# on these options for deciding what to test. Since we don't ship
+	./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca --with-openssl ${CONFIGURE_FLAGS}
 
-  popd
+	popd
 }
 
 function install_and_configure_gpdb() {
-  install_gpdb
-  setup_configure_vars
-  configure
+	install_gpdb
+	setup_configure_vars
+	configure
 }
 
 function make_cluster() {
-  source /usr/local/greenplum-db-devel/greenplum_path.sh
-  export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
-  export STATEMENT_MEM=250MB
-  pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; make create-demo-cluster"
+	source /usr/local/greenplum-db-devel/greenplum_path.sh
+	export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
+	export STATEMENT_MEM=250MB
+	pushd gpdb_src/gpAux/gpdemo
+	su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; make create-demo-cluster"
 
-  if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
-    # generate the addresses for proxy mode
-    su gpadmin -c bash -- -e <<EOF
+	if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
+		# generate the addresses for proxy mode
+		su gpadmin -c bash -- -e <<EOF
       source /usr/local/greenplum-db-devel/greenplum_path.sh
       source $PWD/gpdemo-env.sh
 
@@ -73,108 +104,11 @@ function make_cluster() {
 
       gpstop -u
 EOF
-  fi
+	fi
 
-  popd
+	popd
 }
 
 function run_test() {
-  # is this particular python version giving us trouble?
-  ln -s "$(pwd)/gpdb_src/gpAux/ext/rhel6_x86_64/python-2.7.12" /opt
-  su gpadmin -c "bash /opt/run_test.sh $(pwd)"
-}
-
-
-function install_python_hacks() {
-    # Our Python installation doesn't run standalone; it requires
-    # LD_LIBRARY_PATH which causes virtualenv to fail (because the system and
-    # vendored libpythons collide). We'll try our best to install patchelf to
-    # fix this later, but it's not available on all platforms.
-    if which zypper > /dev/null; then
-        zypper addrepo https://download.opensuse.org/repositories/devel:tools:building/SLE_12_SP4/devel:tools:building.repo
-        # Note that this will fail on SLES11.
-        if ! zypper --non-interactive --gpg-auto-import-keys install patchelf; then
-            set +x
-            echo 'WARNING: could not install patchelf; virtualenv may fail later'
-            echo 'WARNING: This is a known issue on SLES11.'
-            set -x
-        fi
-    elif which yum > /dev/null; then
-        yum install -y patchelf
-    elif which apt > /dev/null; then
-        apt update
-        apt install patchelf
-    else
-        set +x
-        echo "ERROR: install_python_hacks() doesn't support the current platform and should be modified"
-        exit 1
-    fi
-}
-
-function _install_python_requirements() {
-    # virtualenv 16.0 and greater does not support python2.6, which is
-    # used on centos6
-    pip --retries 10 install --user virtualenv~=15.0
-    export PATH=$PATH:~/.local/bin
-
-    # create virtualenv before sourcing greenplum_path since greenplum_path
-    # modifies PYTHONHOME and PYTHONPATH
-    #
-    # XXX Patch up the vendored Python's RPATH so we can successfully run
-    # virtualenv. If we instead set LD_LIBRARY_PATH (as greenplum_path.sh
-    # does), the system Python and the vendored Python will collide and
-    # virtualenv will fail. This step requires patchelf.
-    if which patchelf > /dev/null; then
-        patchelf \
-            --set-rpath /usr/local/greenplum-db-devel/ext/python/lib \
-            /usr/local/greenplum-db-devel/ext/python/bin/python
-
-        virtualenv \
-            --python /usr/local/greenplum-db-devel/ext/python/bin/python /tmp/venv
-    else
-        # We don't have patchelf on this environment. The only workaround we
-        # currently have is to set both PYTHONHOME and LD_LIBRARY_PATH and
-        # pray that the resulting libpython collision doesn't break
-        # something too badly.
-        echo 'WARNING: about to execute a cross-linked virtualenv; here there be dragons'
-        LD_LIBRARY_PATH=/usr/local/greenplum-db-devel/ext/python/lib \
-        PYTHONHOME=/usr/local/greenplum-db-devel/ext/python \
-        virtualenv \
-            --python /usr/local/greenplum-db-devel/ext/python/bin/python /tmp/venv
-    fi
-}
-
-function install_python_requirements_on_single_host() {
-    local requirements_txt="$1"
-
-    # Set PIP Download cache directory
-    export PIP_CACHE_DIR=${PWD}/pip-cache-dir
-
-    _install_python_requirements
-
-    # Install requirements into the vendored Python stack
-    mkdir -p /tmp/py-requirements
-    source /tmp/venv/bin/activate
-        pip --retries 10 install --ignore-installed --prefix /tmp/py-requirements -r ${requirements_txt}
-        cp -r /tmp/py-requirements/* /usr/local/greenplum-db-devel/ext/python/
-    deactivate
-}
-
-function install_python_requirements_on_multi_host() {
-    local requirements_txt="$1"
-
-    # Set PIP Download cache directory
-    export PIP_CACHE_DIR=/home/gpadmin/pip-cache-dir
-
-    _install_python_requirements
-
-    # Install requirements into the vendored Python stack on all hosts.
-    mkdir -p /tmp/py-requirements
-
-    source /tmp/venv/bin/activate
-        pip --retries 10 install --ignore-installed --prefix /tmp/py-requirements -r ${requirements_txt}
-        while read -r host; do
-            rsync -rz /tmp/py-requirements/ "$host":/usr/local/greenplum-db-devel/ext/python/
-        done < /tmp/hostfile_all
-    deactivate
+	su gpadmin -c "bash /opt/run_test.sh $(pwd)"
 }

@@ -2033,6 +2033,72 @@ select from t2_ncols union select * from t2_ncols;
 ERROR:  each UNION query must have the same number of columns
 LINE 1: select from t2_ncols union select * from t2_ncols;
                                           ^
+-- Issue https://github.com/greenplum-db/gpdb/issues/12031, extra junk tagrget entry added
+-- on the Subquery Scan node when we compare the hashExprs and the targetlist of the scan plan.
+-- And if it appears under the Append node, with Motion node on top of the Subquery Scan node,
+-- it'll cause the mismatch of the target lists for these nodes, generate wrong result.
+-- The plan looks like:
+-- Motion
+-- --> Append
+-- -----> Subplan1
+-- -----> Subplan2
+-- So remove the unnecessary call of `add_to_flat_tlist_junk` in `create_scan_plan` and `create_join_plan`.
+CREATE TABLE junkt1 (model character varying(16), last_build_date timestamp) DISTRIBUTED BY (model);
+-- Note the model in junkt1 and junkt2 has different varying value, this cause add junk
+-- target entry before
+CREATE TABLE junkt2(model character varying(12), last_build_date timestamp) DISTRIBUTED BY (model);
+create table junkt3 (model2 text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'model2' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into junkt3 values ('WF2598042001');
+insert into junkt1 values('WF2598042001','2020/3/6 3:43:08 PM');
+set optimizer = off;
+explain (costs off, verbose) select b.model2, f.model, f.last_build_date::date + case when f.model~'^.F.+$' then interval '5year' else interval '1year' end <= '2021-07-08'
+	from junkt3 b
+	join junkt1 f on f.model = b.model2
+union all
+select b.model2, f.model, f.last_build_date::date + interval '1year' <= '2021-07-08'
+	from junkt3 b
+	join junkt2 f on f.model = b.model2;
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: b.model2, f.model, ((((f.last_build_date)::date + CASE WHEN ((f.model)::text ~ '^.F.+$'::text) THEN '@ 5 years'::interval ELSE '@ 1 year'::interval END) <= 'Thu Jul 08 00:00:00 2021'::timestamp without time zone))
+   ->  Append
+         ->  Hash Join
+               Output: b.model2, f.model, (((f.last_build_date)::date + CASE WHEN ((f.model)::text ~ '^.F.+$'::text) THEN '@ 5 years'::interval ELSE '@ 1 year'::interval END) <= 'Thu Jul 08 00:00:00 2021'::timestamp without time zone)
+               Hash Cond: (b.model2 = (f.model)::text)
+               ->  Seq Scan on public.junkt3 b
+                     Output: b.model2
+               ->  Hash
+                     Output: f.model, f.last_build_date
+                     ->  Seq Scan on public.junkt1 f
+                           Output: f.model, f.last_build_date
+         ->  Hash Join
+               Output: b_1.model2, f_1.model, (((f_1.last_build_date)::date + '@ 1 year'::interval) <= 'Thu Jul 08 00:00:00 2021'::timestamp without time zone)
+               Hash Cond: ((f_1.model)::text = b_1.model2)
+               ->  Seq Scan on public.junkt2 f_1
+                     Output: f_1.model, f_1.last_build_date
+               ->  Hash
+                     Output: b_1.model2
+                     ->  Seq Scan on public.junkt3 b_1
+                           Output: b_1.model2
+ Optimizer: Postgres query optimizer
+(22 rows)
+
+select b.model2, f.model, f.last_build_date::date + case when f.model~'^.F.+$' then interval '5year' else interval '1year' end <= '2021-07-08'
+	from junkt3 b
+	join junkt1 f on f.model = b.model2
+union all
+select b.model2, f.model, f.last_build_date::date + interval '1year' <= '2021-07-08'
+	from junkt3 b
+	join junkt2 f on f.model = b.model2;
+    model2    |    model     | ?column? 
+--------------+--------------+----------
+ WF2598042001 | WF2598042001 | f
+(1 row)
+
+reset optimizer;
 --
 -- Clean up
 --
@@ -2042,3 +2108,6 @@ DROP TABLE IF EXISTS T_random CASCADE;
 DROP VIEW IF EXISTS v1_ncols CASCADE;
 DROP TABLE IF EXISTS t1_ncols CASCADE;
 DROP TABLE IF EXISTS t2_ncols CASCADE;
+DROP TABLE IF EXISTS junkt1 CASCADE;
+DROP TABLE IF EXISTS junkt2 CASCADE;
+DROP TABLE IF EXISTS junkt3 CASCADE;

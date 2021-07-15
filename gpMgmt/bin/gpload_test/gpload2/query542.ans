@@ -1,0 +1,121 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_\_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:32|INFO|gpload session started 2021-01-05 17:25:32
+2021-01-05 17:25:32|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:32|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:33|INFO|did not find an external table to reuse. creating ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:33|INFO|running time: 0.12 seconds
+2021-01-05 17:25:33|INFO|rows Inserted          = 1
+2021-01-05 17:25:33|INFO|rows Updated           = 0
+2021-01-05 17:25:33|INFO|data formatting errors = 0
+2021-01-05 17:25:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_$_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:33|INFO|gpload session started 2021-01-05 17:25:33
+2021-01-05 17:25:33|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:33|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:33|INFO|running time: 0.12 seconds
+2021-01-05 17:25:33|INFO|rows Inserted          = 1
+2021-01-05 17:25:33|INFO|rows Updated           = 0
+2021-01-05 17:25:33|INFO|data formatting errors = 0
+2021-01-05 17:25:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_#_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:33|INFO|gpload session started 2021-01-05 17:25:33
+2021-01-05 17:25:33|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:33|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:33|INFO|running time: 0.13 seconds
+2021-01-05 17:25:33|INFO|rows Inserted          = 1
+2021-01-05 17:25:33|INFO|rows Updated           = 0
+2021-01-05 17:25:33|INFO|data formatting errors = 0
+2021-01-05 17:25:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_,_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:33|INFO|gpload session started 2021-01-05 17:25:33
+2021-01-05 17:25:33|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:33|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:33|INFO|running time: 0.12 seconds
+2021-01-05 17:25:33|INFO|rows Inserted          = 1
+2021-01-05 17:25:33|INFO|rows Updated           = 0
+2021-01-05 17:25:33|INFO|data formatting errors = 0
+2021-01-05 17:25:33|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_(_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:33|INFO|gpload session started 2021-01-05 17:25:33
+2021-01-05 17:25:33|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:33|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:34|INFO|running time: 0.12 seconds
+2021-01-05 17:25:34|INFO|rows Inserted          = 1
+2021-01-05 17:25:34|INFO|rows Updated           = 0
+2021-01-05 17:25:34|INFO|data formatting errors = 0
+2021-01-05 17:25:34|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_._c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:34|INFO|gpload session started 2021-01-05 17:25:34
+2021-01-05 17:25:34|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:34|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:34|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:34|INFO|running time: 0.14 seconds
+2021-01-05 17:25:34|INFO|rows Inserted          = 1
+2021-01-05 17:25:34|INFO|rows Updated           = 0
+2021-01-05 17:25:34|INFO|data formatting errors = 0
+2021-01-05 17:25:34|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_/_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:34|INFO|gpload session started 2021-01-05 17:25:34
+2021-01-05 17:25:34|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:34|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:34|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:34|INFO|running time: 0.13 seconds
+2021-01-05 17:25:34|INFO|rows Inserted          = 1
+2021-01-05 17:25:34|INFO|rows Updated           = 0
+2021-01-05 17:25:34|INFO|data formatting errors = 0
+2021-01-05 17:25:34|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_'_c" text, c2 int) DISTRIBUTED BY ("c2");
+CREATE TABLE
+;
+2021-01-05 17:25:34|INFO|gpload session started 2021-01-05 17:25:34
+2021-01-05 17:25:34|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:25:34|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:25:34|INFO|reusing external table ext_gpload_reusable_f5b8de0e_4f37_11eb_9b99_7085c2381836
+2021-01-05 17:25:34|INFO|running time: 0.12 seconds
+2021-01-05 17:25:34|INFO|rows Inserted          = 1
+2021-01-05 17:25:34|INFO|rows Updated           = 0
+2021-01-05 17:25:34|INFO|data formatting errors = 0
+2021-01-05 17:25:34|INFO|gpload succeeded

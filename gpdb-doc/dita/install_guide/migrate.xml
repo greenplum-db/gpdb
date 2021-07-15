@@ -74,7 +74,7 @@
           will also need to drop any dependent database objects that reference compatibility
           functions.<p>Install the Oracle Compatibility Functions in Greenplum 6 by creating the
               <codeph>orafce</codeph> module in each database where you require the
-            functions:<codeblock>$ psql -d <varname>dbname</varname> 'CREATE EXTENSION orafce'</codeblock>See
+            functions:<codeblock>$ psql -d <varname>dbname</varname> -c 'CREATE EXTENSION orafce'</codeblock>See
               <xref href="install_modules.xml#topic_d45_wcw_pgb"/> for information about installing
               <codeph>orafce</codeph> and other modules.</p></li>
         <li>When restoring language-based user-defined functions, the shared object file must be in
@@ -94,6 +94,11 @@
             href="../admin_guide/workload_mgmt_resgroups.xml" format="dita" scope="peer">Using
             Resource Groups</xref> for information about enabling and configuring resource
           groups.</li>
+        <li>Filespaces are removed in Greenplum 6. When creating a tablespace, note that different
+          tablespace locations for a primary-mirror pair is no longer supported in Greenplum 6. See
+            <xref href="../admin_guide/ddl/ddl-tablespace.xml" format="dita" scope="peer">Creating
+            and Managing Tablespaces</xref> for information about creating and configuring
+          tablespaces. </li>
       </ul>
     </body>
   </topic>
@@ -141,9 +146,9 @@
                 <codeph>procpid</codeph> column is renamed to <codeph>pid</codeph>.</li>
             <li>In the <codeph>pg_stat_activity</codeph> system table, the <codeph>procpid</codeph>
               column is renamed to <codeph>pid</codeph>. The <codeph>current_query</codeph> column
-              is replaced by two columns <codeph>state</codeph>: the state of the backend, and
-                <codeph>query</codeph>: the last run query, or currently running query if
-                <codeph>state</codeph> is <codeph>active</codeph>. </li>
+              is replaced by two columns: <codeph>state</codeph> (the state of the backend), and
+                <codeph>query</codeph> (the last run query, or currently running query if
+                <codeph>state</codeph> is <codeph>active</codeph>). </li>
             <li>In the <codeph>gp_distribution_policy</codeph> system table, the
                 <codeph>attrnums</codeph> column is renamed to <codeph>distkey</codeph> and its data
               type is changed to <codeph>int2vector</codeph>. A backend function
@@ -341,7 +346,7 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
         <li>To use the new Greenplum 6 default hash operator classes, use the command <codeph>ALTER
             TABLE &lt;table> SET DISTRIBUTED BY (&lt;key>)</codeph> to redistribute tables restored
           from Greenplum 4.3 or 5 backups. The <codeph>gp_use_legacy_hashops</codeph> parameter must
-          be set to <codeph>off</codeph> when your execute the command. See <xref
+          be set to <codeph>off</codeph> when you run the command. See <xref
             href="#redistribute" format="dita"/> for more information about hash operator classes.
         </li>
       </ul>

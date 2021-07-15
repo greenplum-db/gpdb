@@ -1,0 +1,25 @@
+You are now connected to database "reuse_gptest" as user "gpadmin".
+DROP TABLE IF EXISTS mapping_test;
+DROP TABLE
+CREATE TABLE mapping_test(s1 text, s2 text, s3 text, s4 int) DISTRIBUTED BY(s1);
+CREATE TABLE
+INSERT INTO mapping_test VALUES ('aaa', '', '', 0);
+INSERT 0 1
+2021-06-02 16:00:02|INFO|gpload session started 2021-06-02 16:00:02
+2021-06-02 16:00:02|INFO|setting schema 'public' for table 'mapping_test'
+2021-06-02 16:00:02|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_mapping_01.txt" -t 30
+2021-06-02 16:00:02|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_edcb757d70ae1c70cdd2f7d15496f54b
+2021-06-02 16:00:02|INFO|did not find an external table to reuse. creating ext_gpload_reusable_88a19d0a_c378_11eb_ad65_0050569ea4ff
+2021-06-02 16:00:02|ERROR|ERROR:  column "s4" is of type integer but expression is of type text
+HINT:  You will need to rewrite or cast the expression.
+ encountered while running INSERT INTO staging_gpload_reusable_edcb757d70ae1c70cdd2f7d15496f54b ("s1","s2","s4") SELECT c1,c3,c2 FROM ext_gpload_reusable_88a19d0a_c378_11eb_ad65_0050569ea4ff
+2021-06-02 16:00:02|INFO|rows Inserted          = 0
+2021-06-02 16:00:02|INFO|rows Updated           = 0
+2021-06-02 16:00:02|INFO|data formatting errors = 0
+2021-06-02 16:00:02|INFO|gpload failed
+SELECT * FROM mapping_test;
+ s1  | s2 | s3 | s4 
+-----+----+----+----
+ aaa |    |    |  0
+(1 row)
+

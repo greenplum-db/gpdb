@@ -62,7 +62,7 @@
                 Greenplum Database segment and standby master host, and installs the image.
                 When you specify an <varname>image_file</varname> and provide the
                 [<b>-ulc</b> | <b>--use_local_copy</b>] option, <codeph>plcontainer</codeph>
-                installs the image only on the host on which you execute the command.</pd>
+                installs the image only on the host on which you run the command.</pd>
             <pd>After installing the Docker image, use the <codeph><xref
                   href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref></codeph>
               command to configure PL/Container to use the Docker image.</pd>

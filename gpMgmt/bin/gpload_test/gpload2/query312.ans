@@ -1,0 +1,12 @@
+2021-06-01 15:54:11|INFO|gpload session started 2021-06-01 15:54:11
+2021-06-01 15:54:11|INFO|setting schema 'public' for table 'texttable'
+2021-06-01 15:54:11|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-06-01 15:54:11|INFO|did not find an external table to reuse. creating ext_gpload_reusable_8d575134_c2ae_11eb_8355_0050569ea4ff
+2021-06-01 15:54:11|ERROR|ERROR:  segment reject limit reached, aborting operation  (seg2 slice1 127.0.0.1:6004 pid=11649)
+DETAIL:  Last error was: invalid input syntax for integer: "invalid string", column n1
+CONTEXT:  External table ext_gpload_reusable_8d575134_c2ae_11eb_8355_0050569ea4ff, line 4 of gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt, column n1
+ encountered while running INSERT INTO public."texttable" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7" FROM ext_gpload_reusable_8d575134_c2ae_11eb_8355_0050569ea4ff
+2021-06-01 15:54:11|INFO|rows Inserted          = 0
+2021-06-01 15:54:11|INFO|rows Updated           = 0
+2021-06-01 15:54:11|INFO|data formatting errors = 0
+2021-06-01 15:54:11|INFO|gpload failed

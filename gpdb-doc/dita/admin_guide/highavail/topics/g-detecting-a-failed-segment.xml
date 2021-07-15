@@ -28,7 +28,7 @@
         the FTS probes each primary segment instance by making a TCP socket connection to the
         segment instance using the hostname and port registered in the
           <codeph>gp_segment_configuration</codeph> table. If the connection succeeds, the segment
-        performs a few simple checks and reports back to the FTS. The checks include executing a
+        performs a few simple checks and reports back to the FTS. The checks include running a
           <codeph>stat</codeph> system call on critical segment directories and checking for
         internal faults in the segment instance. If no issues are detected, a positive reply is sent
         to the FTS and no action is taken for that segment instance. </p>

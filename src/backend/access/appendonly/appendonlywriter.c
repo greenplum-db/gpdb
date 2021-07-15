@@ -1125,6 +1125,13 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 	AORelHashEntryData *aoentry = NULL;
 	TransactionId CurrentXid = GetTopTransactionId();
 
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("reserved_segno") == FaultInjectorTypeSkip)
+	{
+		return RESERVED_SEGNO;
+	}
+#endif
+
 	switch (Gp_role)
 	{
 		case GP_ROLE_EXECUTE:
@@ -1141,6 +1148,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 		case GP_ROLE_DISPATCH:
 
 			Assert(existingsegno == InvalidFileSegNumber);
+
 
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 					  (errmsg("SetSegnoForWrite: Choosing a segno for append-only "

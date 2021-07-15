@@ -44,7 +44,7 @@
             <codeph><xref href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or
             <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> statement
         to update or delete table data. The <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
-        statement can only be executed on the server, for example in an interactive psql session or
+        statement can only be run on the server, for example in an interactive psql session or
         a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
       </p>
     </section>
@@ -137,8 +137,8 @@
         (or <codeph>ROLLBACK</codeph>) to define a transaction block.</p>
       <p>If <codeph>WITH HOLD</codeph> is specified and the transaction that created the cursor
         successfully commits, the cursor can continue to be accessed by subsequent transactions in
-        the same session. (But if the creating transaction is aborted, the cursor is removed.) A
-        cursor created with <codeph>WITH HOLD</codeph> is closed when an explicit
+        the same session. (But if the creating transaction ends prematurely, the cursor is
+        removed.) A cursor created with <codeph>WITH HOLD</codeph> is closed when an explicit
           <codeph>CLOSE</codeph> command is issued on it, or the session ends. In the current
         implementation, the rows represented by a held cursor are copied into a temporary file or
         memory area so that they remain available for subsequent transactions. </p>

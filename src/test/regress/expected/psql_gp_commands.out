@@ -245,6 +245,25 @@ comment on operator family dd_opfamily using btree is 'this is an operator famil
  test_psql_schema | dd_opfamily | operator family | this is an operator family
 (3 rows)
 
+-- \df+ should list all exec locations
+CREATE FUNCTION foofunc_exec_on_any() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON ANY;
+ALTER FUNCTION foofunc_exec_on_any() OWNER TO test_psql_de_role;
+CREATE FUNCTION foofunc_exec_on_master() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON MASTER;
+ALTER FUNCTION foofunc_exec_on_master() OWNER TO test_psql_de_role;
+CREATE FUNCTION foofunc_exec_on_all_segments() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
+ALTER FUNCTION foofunc_exec_on_all_segments() OWNER TO test_psql_de_role;
+CREATE FUNCTION foofunc_exec_on_initplan() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON INITPLAN;
+ALTER FUNCTION foofunc_exec_on_initplan() OWNER TO test_psql_de_role;
+\df+ foofunc_exec_on_*
+                                                                                                 List of functions
+      Schema      |             Name             | Result data type | Argument data types |  Type  | Data access  |  Execute on  | Security | Volatility |       Owner       | Language | Source code | Description 
+------------------+------------------------------+------------------+---------------------+--------+--------------+--------------+----------+------------+-------------------+----------+-------------+-------------
+ test_psql_schema | foofunc_exec_on_all_segments | integer          |                     | normal | contains sql | all segments | invoker  | volatile   | test_psql_de_role | sql      | SELECT 1    | 
+ test_psql_schema | foofunc_exec_on_any          | integer          |                     | normal | contains sql | any          | invoker  | volatile   | test_psql_de_role | sql      | SELECT 1    | 
+ test_psql_schema | foofunc_exec_on_initplan     | integer          |                     | normal | contains sql | initplan     | invoker  | volatile   | test_psql_de_role | sql      | SELECT 1    | 
+ test_psql_schema | foofunc_exec_on_master       | integer          |                     | normal | contains sql | master       | invoker  | volatile   | test_psql_de_role | sql      | SELECT 1    | 
+(4 rows)
+
 -- Clean up
 DROP OWNED BY test_psql_de_role;
 DROP ROLE test_psql_de_role;

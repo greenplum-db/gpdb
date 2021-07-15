@@ -20,6 +20,20 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
 -------------
  6438        
 (1 row)
+ALTER ROLE rg_test_role_super NOSUPERUSER;
+ALTER
+SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
+ rolresgroup 
+-------------
+ 6437        
+(1 row)
+ALTER ROLE rg_test_role_super SUPERUSER;
+ALTER
+SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
+ rolresgroup 
+-------------
+ 6438        
+(1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP none;
 ALTER

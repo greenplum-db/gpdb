@@ -21,6 +21,61 @@
           for more information.</ph></p>
       </body>
     </topic>
+    <topic id="topic_upgrade">
+      <title>Upgrading the Module from Version 1.0.0 to 1.0.1</title>
+      <body>
+        <p>Starting in Greenplum Database 6.16, <codeph>gp_sparse_vector</codeph>
+          (version 1.0.1) functions and objects are installed in the schema named
+          <codeph>sparse_vector</codeph>. If you used <codeph>gp_sparse_vector</codeph>
+          version 1.0.0 in your previous Greenplum Database installation and are
+          considering upgrading to version 1.0.1, you have two options:</p>
+          <ol>
+            <li>Upgrade the module:
+              <note>Upgrading to <codeph>gp_sparse_vector</codeph> 1.0.1 requires 
+                that you update any scripts that reference the module's objects.
+                You must also adjust how you reference these objects in a client
+                session.</note>
+              <ol>
+                <li>Update the <codeph>gp_sparse_vector</codeph> module to version
+                  1.0.1 in each database in which you are using the module:
+                  <codeblock>ALTER EXTENSION gp_sparse_vector UPDATE TO '1.0.1';</codeblock></li>
+                <li>Locate any scripts in which you reference
+                  <codeph>gp_sparse_vector</codeph> objects. You must either add the
+                  <codeph>sparse_vector</codeph> schema to a <codeph>search_path</codeph>,
+                  or alternatively you can choose to prepend <codeph>sparse_vector.</codeph>
+                  to all non-<codeph>CAST</codeph> <codeph>gp_sparse_vector</codeph> function
+                  or object name references.</li>
+              </ol>
+              <p>When you reference <codeph>gp_sparse_vector</codeph> functions or objects
+                in a client session, you must also update the <codeph>search_path</codeph> or
+                prepend <codeph>sparse_vector.</codeph> to all non-<codeph>CAST</codeph>
+                function or object name references.</p>
+            </li>
+            <li>Do not upgrade the module.<p>No changes are required on your part if
+              you choose not to upgrade the <codeph>gp_sparse_vector</codeph> module.
+              Your existing scripts, workloads, and how you reference
+              <codeph>gp_sparse_vector</codeph> objects in a client session remain
+              the same.</p></li>
+          </ol>
+      </body>
+    </topic>
+    <topic id="topic_about">
+      <title>About the gp_sparse_vector Module</title>
+      <body>
+        <p><codeph>gp_sparse_vector</codeph> functions and objects are installed in
+          the schema named <codeph>sparse_vector</codeph> starting in Greenplum
+          Database version 6.16. In earlier versions of Greenplum Database, the
+          <codeph>gp_sparse_vector</codeph> objects are installed in the 
+          <codeph>public</codeph> schema.</p>
+        <p>To access <codeph>gp_sparse_vector</codeph> objects, you must add
+          <codeph>sparse_vector</codeph> to a <codeph>search_path</codeph>,
+          or alternative you can prepend <codeph>sparse_vector.</codeph>
+          to the function or object name. For example:</p>
+        <codeblock>SELECT sparse_vector.array_agg( col1 ) FROM table1;</codeblock>
+        <p><codeph>CAST</codeph>s that are created by the <codeph>gp_sparse_vector</codeph>
+          module remain in the <codeph>public</codeph> schema.</p>
+      </body>
+    </topic>
     <topic id="topic_doc">
       <title>Using the gp_sparse_vector Module</title>
       <body>

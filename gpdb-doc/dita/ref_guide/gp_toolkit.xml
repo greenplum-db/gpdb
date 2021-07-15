@@ -294,7 +294,7 @@
             <tbody class="- topic/tbody ">
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">lorusename</entry>
-                <entry colname="col2" class="- topic/entry ">Name of the user executing the
+                <entry colname="col2" class="- topic/entry ">Name of the user running the
                   session.</entry>
               </row>
               <row class="- topic/row ">
@@ -906,7 +906,7 @@
       <title id="ie192312" class="- topic/title ">gp_log_command_timings</title>
       <body class="- topic/body ">
         <p>This view uses an external table to read the log files on the master and report the
-          execution time of SQL commands executed in a database session. The use of this view
+          run time of SQL commands in a database session. The use of this view
           requires superuser permissions.</p>
         <table id="ie176169" class="- topic/table ">
           <title class="- topic/title ">gp_log_command_timings view</title>
@@ -1044,7 +1044,7 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">logslice </entry>
                 <entry colname="col2" class="- topic/entry ">The slice id (portion of the query plan
-                  being executed).</entry>
+                  being run).</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">logdistxact </entry>
@@ -1260,7 +1260,7 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">logslice </entry>
                 <entry colname="col2" class="- topic/entry ">The slice id (portion of the query plan
-                  being executed).</entry>
+                  being run).</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">logdistxact </entry>
@@ -1649,7 +1649,7 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">num_running</entry>
                 <entry colname="col2" class="- topic/entry ">The number of transactions currently
-                  executing in the resource group.</entry>
+                  running in the resource group.</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">num_queueing</entry>
@@ -1664,8 +1664,8 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">num_executed</entry>
-                <entry colname="col2" class="- topic/entry ">The total number of executed
-                  transactions in the resource group since the Greenplum Database cluster was last
+                <entry colname="col2" class="- topic/entry ">The total number of transactions 
+                  run in the resource group since the Greenplum Database cluster was last
                   started, excluding the num_running.</entry>
               </row>
               <row class="- topic/row ">
@@ -2221,7 +2221,7 @@
     <body class="- topic/body ">
       <p>The <i class="+ topic/ph hi-d/i ">gp_workfile_*</i> views show information about all the
         queries that are currently using disk spill space. Greenplum Database creates work files on
-        disk if it does not have sufficient memory to execute the query in memory. This information
+        disk if it does not have sufficient memory to run the query in memory. This information
         can be used for troubleshooting and tuning queries. The information in the views can also be
         used to specify the values for the Greenplum Database configuration parameters <codeph
           class="+ topic/ph pr-d/codeph ">gp_workfile_limit_per_query</codeph> and <codeph
@@ -2326,7 +2326,7 @@
                 <entry colname="col2" class="- topic/entry ">integer</entry>
                 <entry colname="col3" class="- topic/entry "/>
                 <entry colname="col4" class="- topic/entry ">The query plan slice. The portion of
-                  the query plan that is being executed.</entry>
+                  the query plan that is being run.</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
@@ -3115,7 +3115,7 @@ WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;</codeblock>
     <body class="- topic/body ">
       <p>All tables in Greenplum Database are distributed, meaning their data is divided across all
         of the segments in the system. If the data is not distributed evenly, then query processing
-        performance may suffer. The following views can help diagnose if a table has uneven data
+        performance may decrease. The following views can help diagnose if a table has uneven data
         distribution:</p>
       <ul class="- topic/ul " id="ul_fxc_vk5_vp">
         <li id="ie194964" class="- topic/li ">

@@ -11,7 +11,12 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>gprestore</codeph> invokes the <codeph>restore_data</codeph> plugin command on each segment host when a restoring a streaming backup.</p>
+      <p><codeph>gprestore</codeph> invokes a plugin's <codeph>restore_data</codeph>
+        or <codeph>restore_data_subset</codeph> command to restore a backup.
+        <codeph>gprestore</codeph> invokes the <codeph>restore_data</codeph> plugin
+        command on each segment host when restoring a compressed,
+        multiple-data-file, or non-filtered streaming backup, or when the plugin
+        does not support the <codeph>restore_data_subset</codeph> command.</p>
       <p>The <codeph>restore_data</codeph> implementation should read a potentially large data file named or mapped to <codeph>data_filenamekey</codeph> from the remote storage system and write the contents to <codeph>stdout</codeph>. If the <codeph>backup_data</codeph> command modified the data in any way (i.e. compressed), <codeph>restore_data</codeph> should perform the reverse operation.</p>
     </section>
     <section id="section4"><title>Arguments</title><parml>
@@ -27,6 +32,9 @@
     </section>
     <section id="section5"><title>Exit Code</title>
       <p>The <codeph>restore_data</codeph> command must exit with a value of 0 on success, non-zero if an error occurs. In the case of a non-zero exit code, <codeph>gprestore</codeph> displays the contents of <codeph>stderr</codeph> to the user.</p>
+    </section>
+    <section id="section6"><title>See Also</title>
+      <p><xref href="restore_data_subset.xml"></xref></p>
     </section>
   </body>
 </topic>

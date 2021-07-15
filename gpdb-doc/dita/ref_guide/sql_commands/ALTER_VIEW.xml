@@ -17,7 +17,7 @@ ALTER VIEW [ IF EXISTS ] <varname>name</varname> RESET ( <varname>view_option_na
       <title>Description</title>
       <p><codeph>ALTER VIEW</codeph> changes various auxiliary properties of a view. (If you want to
         modify the view's defining query, use <codeph>CREATE OR REPLACE VIEW</codeph>. </p>
-      <p>To execute this command you must be the owner of the view. To change a view's schema you
+      <p>To run this command you must be the owner of the view. To change a view's schema you
         must also have <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you
         must also be a direct or indirect member of the new owning role, and that role must have
           <codeph>CREATE</codeph> privilege on the view's schema. These restrictions enforce that

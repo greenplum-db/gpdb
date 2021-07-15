@@ -409,6 +409,7 @@ _outJoinPlanInfo(StringInfo str, const Join *node)
 
 	WRITE_BOOL_FIELD(prefetch_inner);
 	WRITE_BOOL_FIELD(prefetch_joinqual);
+	WRITE_BOOL_FIELD(prefetch_qual);
 
 	WRITE_ENUM_FIELD(jointype, JoinType);
 	WRITE_NODE_FIELD(joinqual);
@@ -2594,6 +2595,8 @@ _outCreateStmtInfo(StringInfo str, const CreateStmt *node)
 	WRITE_BOOL_FIELD(buildAoBlkdir);
 	WRITE_NODE_FIELD(attr_encodings);
 	WRITE_BOOL_FIELD(isCtas);
+	WRITE_NODE_FIELD(intoQuery);
+	WRITE_NODE_FIELD(intoPolicy);
 }
 
 static void
@@ -2999,6 +3002,7 @@ _outCreateDomainStmt(StringInfo str, const CreateDomainStmt *node)
 	WRITE_NODE_TYPE("CREATEDOMAINSTMT");
 	WRITE_NODE_FIELD(domainname);
 	WRITE_NODE_FIELD_AS(typeName, typename);
+	WRITE_NODE_FIELD(collClause);
 	WRITE_NODE_FIELD(constraints);
 }
 #endif /* COMPILING_BINARY_FUNCS */

@@ -281,7 +281,7 @@
                         </ul></pd>
                 </plentry>
                 <plentry>
-                    <pt>--mirror_mode={group|spread}</pt>
+                    <pt>--mirror-mode={group|spread}</pt>
                     <pd>Use this option to specify the placement of mirror segment instances on the
                         segment hosts. The default, <codeph>group</codeph>, groups the mirror
                         segments for all of a host's primary segments on a single alternate host.
@@ -395,7 +395,7 @@ MIRROR_PORT_BASE = 7000</codeblock>
                 <plentry>
                     <pt>TRUSTED_SHELL</pt>
                     <pd><b>Required.</b> The shell the <codeph>gpinitsystem</codeph> utility uses to
-                        execute commands on remote hosts. Allowed values are <codeph>ssh</codeph>.
+                        run commands on remote hosts. Allowed values are <codeph>ssh</codeph>.
                         You must set up your trusted host environment before running the
                             <codeph>gpinitsystem</codeph> utility (you can use
                             <codeph>gpssh-exkeys</codeph> to do this).</pd>
@@ -590,7 +590,7 @@ mwd~mwd.local~7001~/data/mirror1/gpseg0~3~0
                 defines the Greenplum Database cluster) using <codeph>QD_PRIMARY_ARRAY</codeph> and
                     <codeph>PRIMARY_ARRAY</codeph> parameters:</p>
             <codeblock>$ gpinitsystem -I cluster_init.config</codeblock>
-            <p>The following example uses a host system configured with mulitple NICs. If host
+            <p>The following example uses a host system configured with multiple NICs. If host
                 systems are configured with multiple NICs, you can initialize a Greenplum Database
                 system to use each NIC as a Greenplum host system. You must ensure that the host
                 systems are configured with sufficient resources to support all the segment

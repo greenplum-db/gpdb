@@ -73,7 +73,7 @@
         using the R client. Using PivotalR requires that MADlib is installed on the Greenplum
         Database.</p>
       <p>PivotalR allows R users to leverage the scalability and performance of in-database
-        analytics without leaving the R command line. The computational work is executed
+        analytics without leaving the R command line. The computational work is run
         in-database, while the end user benefits from the familiar R interface. Compared with
         respective native R functions, there is an increase in scalability and a decrease in running
         time. Furthermore, data movement, which can take hours for very large data sets, is
@@ -129,10 +129,10 @@
               >Pivotal Network</xref>.</li>
           <li>Copy the MADlib package to the Greenplum Database master host.</li>
           <li>Unpack the MADlib distribution package. For
-            example:<codeblock>$ tar xzvf madlib-1.17.0+3-gp6-rhel7-x86_64.tar.gz</codeblock></li>
+            example:<codeblock>$ tar xzvf madlib-1.18.0+2-gp6-rhel7-x86_64.tar.gz</codeblock></li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
             command. For
-            example:<codeblock>$ gppkg -i ./madlib-1.17.0+3-gp6-rhel7-x86_64/madlib-1.17.0+3-gp6-rhel7-x86_64.gppkg</codeblock></li>
+            example:<codeblock>$ gppkg -i ./madlib-1.18.0+2-gp6-rhel7-x86_64/madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -176,7 +176,7 @@
       <body>
         <p>To upgrade MADlib, run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph>
           option. This command upgrades an installed MADlib package to MADlib
-          1.17.0+3.<codeblock>$ gppkg -u madlib-1.17.0+3-gp6-rhel7-x86_64.gppkg</codeblock></p>
+          1.18.0+2.<codeblock>$ gppkg -u madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg</codeblock></p>
       </body>
     </topic>
     <topic id="topic_bql_bgd_3w">
@@ -186,7 +186,7 @@
             <codeph>madpack upgrade</codeph> to upgrade the MADlib functions in a database
           schema.</p>
         <note>Use <codeph>madpack upgrade</codeph> only if you upgraded a major MADlib package
-          version, for example from 1.15 to 1.17.0. You do not need to update the functions within a
+          version, for example from 1.15 to 1.18.0. You do not need to update the functions within a
           patch version upgrade, for example from 1.16+1 to 1.16+3.</note>
         <p>This example command upgrades the MADlib functions in the schema <codeph>madlib</codeph>
           of the Greenplum Database <codeph>test</codeph>. </p>
@@ -219,8 +219,8 @@
         <p>If no databases use the MADlib functions, use the Greenplum <codeph>gppkg</codeph>
           utility with the <codeph>-r</codeph> option to uninstall the MADlib package. When removing
           the package you must specify the package and version. This example uninstalls MADlib
-          package version 1.17.</p>
-        <codeblock>$ gppkg -r madlib-1.17.0+3-gp5-rhel7-x86_64</codeblock>
+          package version 1.18.0.</p>
+        <codeblock>$ gppkg -r madlib-1.18.0+2-gp6-rhel7-x86_64</codeblock>
         <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
           to list the installed extensions and their versions.</p>
         <p>After you uninstall the package, restart the database.</p>

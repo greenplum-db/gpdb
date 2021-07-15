@@ -32,6 +32,7 @@ host     all         gpmon         ::1/128         md5</codeblock>These
         <codeph>gpperfmon</codeph>:<codeblock>local   gpperfmon   gpmon                        md5
 host    gpperfmon   gpmon    127.0.0.1/28        md5
 host    gpperfmon   gpmon    ::1/128             md5</codeblock></p>
+      <p>You must run <codeph>gpstop -u</codeph> to load the changes.</p>
       <p>The password used to authenticate the <codeph>gpmon</codeph> user is stored in the
           <codeph>gpadmin</codeph> home directory in the <codeph>~/.pgpass</codeph> file. The
           <codeph>~/.pgpass</codeph> file must be owned by the <codeph>gpadmin</codeph> user and be

@@ -1,5 +1,7 @@
 CREATE EXTENSION gp_sparse_vector;
 
+SET search_path TO sparse_vector;
+
 DROP TABLE if exists test;
 CREATE TABLE test (a int, b svec) DISTRIBUTED BY (a);
 
@@ -13,7 +15,7 @@ SELECT a,b::float8[] cross_product_equals FROM (SELECT a,b FROM test) foo WHERE 
 DROP TABLE IF EXISTS test2;
 CREATE TABLE test2 AS SELECT * FROM test DISTRIBUTED BY (a);
 -- Test the plus operator (should be 9 rows)
-SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2;
+SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2 ORDER BY 1;
 
 -- Test ORDER BY
 SELECT (t1.b+t2.b)::float8[] cross_product_sum, l2norm(t1.b+t2.b) l2norm, (t1.b+t2.b) sparse_vector FROM test t1, test2 t2 ORDER BY 3;
@@ -81,3 +83,4 @@ SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9
 SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9,8,7,6,5,4,3,2,0}'::svec::float8[]);
 
 DROP EXTENSION gp_sparse_vector;
+SET search_path TO DEFAULT;

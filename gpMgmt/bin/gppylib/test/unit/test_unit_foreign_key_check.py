@@ -176,7 +176,7 @@ class GpCheckCatTestCase(GpTestCase):
     def _get_filter(self, table_name):
         query_filters = {}
         query_filters['pg_appendonly'] = "(relstorage='a' or relstorage='c')"
-        query_filters['pg_attribute'] = "true"
+        query_filters['pg_attribute'] = "(relnatts > 0 or relnatts is NULL)"
         query_filters['pg_constraint'] = "((relchecks>0 or relhaspkey='t') and relkind = 'r')"
         query_filters['gp_distribution_policy'] = """(relnamespace not in(select oid from pg_namespace where nspname ~ 'pg_')
                                                            and relnamespace not in(select oid from pg_namespace where nspname ~ 'gp_')

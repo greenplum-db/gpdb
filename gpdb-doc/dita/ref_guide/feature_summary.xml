@@ -56,7 +56,7 @@
               part basis within a partitioned table. They guarantee the uniqueness of the key within
               each part or sub-part.</p></li>
           <li id="ik264592"><codeph>VOLATILE</codeph> or <codeph>STABLE</codeph> functions cannot
-            execute on the segments, and so are generally limited to being passed literal values as
+           run on the segments, and so are generally limited to being passed literal values as
             the arguments to their parameters.</li>
           <li id="ik264601">Triggers are not supported since they typically rely on the use of
               <codeph>VOLATILE</codeph> functions.</li>
@@ -443,10 +443,10 @@
               <entry colname="col1"><codeph>CREATE FUNCTION</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Limitations:</b><p>Functions defined as
-                    <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph> can be executed in
-                  Greenplum Database provided that they are executed on the master only.
+                    <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph> can be run in
+                  Greenplum Database provided that they are run on the master only.
                     <codeph>STABLE</codeph> and <codeph>VOLATILE</codeph> functions cannot be used
-                  in statements that execute at the segment level. </p></entry>
+                  in statements that run at the segment level. </p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE GROUP</codeph></entry>

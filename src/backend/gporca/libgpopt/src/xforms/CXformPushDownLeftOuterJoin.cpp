@@ -137,6 +137,14 @@ CXformPushDownLeftOuterJoin::Transform(CXformContext *pxfctxt,
 		}
 	}
 
+	if (pdrgpexprLOJChildren->Size() == 0)
+	{
+		// cannot create a valid LOJ; bail
+		pdrgpexprLOJChildren->Release();
+		pdrgpexprNAryJoinChildren->Release();
+		return;
+	}
+
 	CExpression *pexprLOJOuterChild = (*pdrgpexprLOJChildren)[0];
 	if (1 < pdrgpexprLOJChildren->Size())
 	{

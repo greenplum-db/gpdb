@@ -2,7 +2,7 @@
 title: Migrating PXF from Greenplum 5
 ---
 
-If you are using PXF in your Greenplum Database 5 installation, upgrade Greenplum Database to version **5.21.2** or newer before you migrate PXF to Greenplum Database 6.
+If you are using PXF in your Greenplum Database 5 installation, upgrade Greenplum Database to version **5.21.2** or newer before you migrate PXF to Greenplum Database **6.10.1** or newer.
 
 The PXF Greenplum Database 5 to 6 migration procedure has two parts. You perform one PXF procedure in your Greenplum Database 5 installation, then install, configure, and migrate data to Greenplum 6:
 
@@ -16,8 +16,12 @@ Before migrating PXF from Greenplum 5 to Greenplum 6, ensure that you can:
 
 - Identify the version number of your Greenplum 5 installation. If it is older than 5.21.2, upgrade to a newer 5.x version.
 - Identify the version of PXF running in the Greenplum 5 cluster.
+- Identify the location of your PXF installation:
+
+    - If you installed PXF from a separate `rpm` or `deb`, the PXF install location is `/usr/local/pxf-gp<greenplum-major-version>`.
+    - If you are running the PXF included in the Greenplum 5 installation, the PXF install location is `$GPHOME/pxf`.
 - Determine if you have `gphdfs` external tables defined in your Greenplum 5 installation.
-- Identify the file system location of the PXF `$PXF_CONF` directory in your Greenplum 5 installation. In Greenplum 5.15 and later, `$PXF_CONF` identifies the user configuration directory that was provided to the `pxf cluster init` command. This directory contains PXF server configurations, security keytab files, and log files.
+- Identify the file system location of the PXF `$PXF_CONF` directory in your Greenplum 5 installation. (If you are unsure of the location, you can find the value in `pxf-env-default.sh`.) In Greenplum 5.15 and later, `$PXF_CONF` identifies the user configuration directory that was provided to the `pxf cluster init` command. This directory contains PXF server configurations, security keytab files, and log files.
 
 
 ## <a id="pxf5pre"></a>Step 1: Complete PXF Greenplum Database 5 Pre-Migration Actions
@@ -45,7 +49,7 @@ Perform this procedure in your Greenplum Database 5 installation:
 (1 row)
     ```
 
-2. Identify and note the PXF version number. For example:
+2. Identify and note the version number of PXF running in your Greenplum 5 installation. For example:
 
     ``` shell
     gpadmin@gp5master$ pxf version
@@ -62,7 +66,7 @@ Perform this procedure in your Greenplum Database 5 installation:
 
 ## <a id="pxfmig"></a>Step 2: Migrating PXF to Greenplum 6
 
-After you install and configure Greenplum Database 6 and migrate table definitions and data from the Greenplum 5 installation, perform the following procedure to configure and start the new PXF software:
+After you upgrade to Greenplum Database 6, and table definitions and data from the Greenplum 5 installation have been migrated or upgraded, perform the following procedure to configure and start the new PXF software:
 
 1. Log in to the Greenplum Database 6 master node. For example:
 
@@ -72,13 +76,30 @@ After you install and configure Greenplum Database 6 and migrate table definitio
 
 2. Identify and note the version number of your Greenplum Database 6 installation.
 
-2. Identify the version of PXF installed on your Greenplum 6 hosts:
+3. PXF releases different software packages for Greenplum Database version 5 and version 6. 
+    1. If you are running version 6.x of the independent PXF distribution that you installed via an `rpm` or `deb` in your Greenplum 5.x installation:
+        1. Install the same PXF 6.x version *for Greenplum 6* on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/6-0/installing_pxf.html).
+        1. Copy the PXF extension control file from the PXF installation directory to the new Greenplum 6 install directory:
+
+            ``` shell
+            gpadmin@gp6master pxf cluster register
+            ```
+        1. Start PXF on each host:
+
+            ``` shell
+            gpadmin@gp6master pxf cluster start
+            ```
+        1. Skip the following steps and exit this procedure.
+
+    1. You can use the version of PXF included in your Greenplum installation (located in `$GPHOME/pxf`), **or** you can install the latest independent PXF 5.16.x distribution for Greenplum 6 on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/5-16/installing_pxf.html).
+
+        <div class="note">If you are interested in running PXF version 6.x, upgrade to that version <b>after</b> you complete this entire procedure and verify that PXF is working in your Greenplum 6.x installation.</div>
+
+1. Identify and note the PXF (to) version number. For example:
 
     ``` shell
     gpadmin@gp6master$ pxf version
     ```
-
-3. If the version of PXF installed in your Greenplum 5 installation is newer than the version of PXF installed in your Greenplum 6 cluster, install the PXF distribution on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/5-15/installing_pxf.html). Be sure to install a version of PXF that is the same, or newer, than the version of PXF installed in your Greenplum 5 cluster.
 
 2. If you installed Greenplum Database 6 on a new set of hosts, copy the `$PXF_CONF` directory from your Greenplum 5 installation to the master node. Consider copying the directory to the same file system location at which it resided in the 5 cluster. For example, if `PXF_CONF=/usr/local/greenplum-pxf`:
 
@@ -86,9 +107,42 @@ After you install and configure Greenplum Database 6 and migrate table definitio
     gpadmin@gp6master$ scp -r gpadmin@<gp5master>:/usr/local/greenplum-pxf /usr/local/
     ```
 
-3. Initialize PXF on each segment host as described in [Initializing PXF](../../pxf/5-15/init_pxf.html), specifying the `PXF_CONF` directory that you copied in the step above.
+3. Initialize PXF on each segment host as described in [Initializing PXF](../../pxf/5-16/init_pxf.html), specifying the `PXF_CONF` directory that you copied in the step above.
 
-4. Perform any version-applicable upgrade actions identified in [Step 2](https://gpdb.docs.pivotal.io/5280/pxf/upgrade_pxf.html#pxfup) of the PXF 5.x upgrade documentation in your Greenplum Database 6 installation. **Start with step 6 in the procedure**.
+5. **If you are migrating PXF from Greenplum Database version 5.23 or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now set the `hadoop.security.authentication` property in the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
+
+    1. Navigate to the server configuration directory.
+    2. Open the `jdbc-site.xml` file in the editor of your choice and uncomment or add the following property block to the file:
+
+        ```xml
+        <property>
+            <name>hadoop.security.authentication</name>
+            <value>kerberos</value>
+        </property>
+        ```
+    3. Save the file and exit the editor.
+
+5. **If you are migrating PXF from Greenplum Database version 5.26 or earlier**: The PXF `Hive` and `HiveRC` profiles now support column projection using column name-based mapping. If you have any existing PXF external tables that specify one of these profiles, and the external table relied on column index-based mapping, you may be required to drop and recreate the tables:
+
+    1. Identify all PXF external tables that you created that specify a `Hive` or `HiveRC` profile.
+
+    2. For *each* external table that you identify in step 1, examine the definitions of both the PXF external table and the referenced Hive table. If the column names of the PXF external table *do not* match the column names of the Hive table:
+
+        1. Drop the existing PXF external table. For example:
+
+            ``` sql
+            DROP EXTERNAL TABLE pxf_hive_table1;
+            ```
+
+        2. Recreate the PXF external table using the Hive column names. For example:
+
+            ``` sql
+            CREATE EXTERNAL TABLE pxf_hive_table1( hivecolname int, hivecolname2 text )
+              LOCATION( 'pxf://default.hive_table_name?PROFILE=Hive')
+            FORMAT 'custom' (FORMATTER='pxfwritable_import');
+            ```
+
+        3. Review any SQL scripts that you may have created that reference the PXF external table, and update column names if required.
 
 5. Synchronize the PXF configuration from the Greenplum Database 6 master host to the standby master and each segment host in the cluster. For example:
 
@@ -96,7 +150,11 @@ After you install and configure Greenplum Database 6 and migrate table definitio
     gpadmin@gp6master$ pxf cluster sync
     ```
  
-6. Start PXF on each Greenplum Database 6 segment host as described in [Starting PXF](../../pxf/5-15/cfginitstart_pxf.html#start_pxf).
+6. Start PXF on each Greenplum Database 6 segment host:
+
+    ``` shell
+    gpadmin@gp6master pxf cluster start
+    ```
 
 7. Verify the migration by testing that each PXF external table can access the referenced data store.
 

@@ -130,7 +130,7 @@ sdw4-2</codeblock></li>
             <li id="jm138730">Open the file you just copied in a text editor. <p>Set all of the
                 required parameters according to your environment. See <codeph><xref
                     href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-                  >gpinitsystem</xref></codeph> for more information. A Greenplum Database system
+                    >gpinitsystem</xref></codeph> for more information. A Greenplum Database system
                 must contain a master instance and at <i>least two</i> segment instances (even if
                 setting up a single node system). </p><p>The <codeph>DATA_DIRECTORY</codeph>
                 parameter is what determines how many segments per host will be created. If your
@@ -185,9 +185,10 @@ declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /dat
                 example:<codeblock>$ cd ~
 $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem</codeblock><p>For
                 a fully redundant system (with a standby master and a <i>spread</i> mirror
-                configuration) include the <codeph>-s</codeph> and <codeph>-S</codeph> options. For
+                configuration) include the <codeph>-s</codeph> and
+                  <codeph>--mirror-mode=spread</codeph> options. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
-  -s <varname>standby_master_hostname</varname> -S</codeblock><p>During
+  -s <varname>standby_master_hostname</varname> --mirror-mode=spread</codeblock><p>During
                 a new cluster creation, you may use the <codeph><varname>-O
                     output_configuration_file</varname></codeph> option to save the cluster
                 configuration details in a file. For
@@ -195,7 +196,10 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 output file can be edited and used at a later stage as the input file of the
                   <codeph>-I</codeph> option, to create a new cluster or to recover from a backup.
                 See <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-                  >gpinitsystem</xref> for further details.</p></li>
+                  >gpinitsystem</xref> for further details. <note>Calling
+                    <codeph>gpinitsystem</codeph> with the <codeph>-O</codeph> option does not
+                  initialize the Greenplum Database system; it merely generates and saves a file with cluster
+                  configuration details.</note></p></li>
             <li id="jm138853">The utility will verify your setup information and make sure it can
               connect to each host and access the data directories specified in your configuration.
               If all of the pre-checks are successful, the utility will prompt you to confirm your
@@ -298,7 +302,7 @@ export MASTER_DATA_DIRECTORY=/data/master/gpseg-1</codeblock></li>
               <codeph>PGDATABASE</codeph> for convenience. For
             example:<codeblock>export PGPORT=5432
 export PGUSER=gpadmin
-export PGDATABASE=<varname>default_login_database_name</varname></codeblock></li>
+export PGDATABASE=gpadmin</codeblock></li>
           <li>(Optional) If you use RHEL 7 or CentOS 7, add the following line to the end of the
               <codeph>.bashrc</codeph> file to enable using the <codeph>ps</codeph> command in the
               <codeph>greenplum_path.sh</codeph>

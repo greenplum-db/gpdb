@@ -524,10 +524,9 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 
 	const IMDFunction *pmdfunc = m_pmda->RetrieveFunc(mdid_func);
 
-	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability() ||
-		IMDFunction::EfdaNoSQL != pmdfunc->GetFuncDataAccess())
+	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasVolatileOrSQLFunc();
+		COptCtxt::PoctxtFromTLS()->SetHasVolatileFunc();
 	}
 
 	return pexpr;
@@ -836,9 +835,6 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 
 		BOOL fEqualTypes = IMDId::MDIdCompare(pmdidSource, mdid_dest);
 		BOOL fFirstChild = (0 == child_index);
-		BOOL fUnionOrUnionAll =
-			((EdxlsetopUnionAll == dxl_op->GetSetOpType()) ||
-			 (EdxlsetopUnion == dxl_op->GetSetOpType()));
 
 		if (!pcrsChildOutput->FMember(colref))
 		{
@@ -874,10 +870,8 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 		{
 			// no cast function needed, add the colref to the array of input colrefs
 			(*ppdrgpcrChild)->Append(const_cast<CColRef *>(colref));
-			continue;
 		}
-
-		if (fUnionOrUnionAll || fFirstChild)
+		else
 		{
 			// add the colref to the hash map between DXL ColId and colref as they can used above the setop
 			CColRef *new_colref = PcrCreate(colref, pmdtype, type_modifier,
@@ -888,10 +882,6 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 			CExpression *pexprChildProjElem =
 				PexprCastPrjElem(pmdidSource, mdid_dest, colref, new_colref);
 			(*ppdrgpexprChildProjElems)->Append(pexprChildProjElem);
-		}
-		else
-		{
-			(*ppdrgpcrChild)->Append(const_cast<CColRef *>(colref));
 		}
 	}
 }
@@ -2894,10 +2884,9 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 		pexprFunc = GPOS_NEW(m_mp) CExpression(m_mp, pop);
 	}
 
-	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability() ||
-		IMDFunction::EfdaNoSQL != pmdfunc->GetFuncDataAccess())
+	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasVolatileOrSQLFunc();
+		COptCtxt::PoctxtFromTLS()->SetHasVolatileFunc();
 	}
 
 	return pexprFunc;

@@ -25,13 +25,13 @@ try:
     from pygresql import pg
     from gppylib import gparray, gplog, pgconf, userinput, utils
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
+    from gppylib.operations.segment_tablespace_locations import get_tablespace_locations
+    from gppylib.operations.update_pg_hba_on_segments import update_pg_hba_for_new_mirrors
 
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # constants
-MAX_BATCH_SIZE = 128
-
 GPDB_STOPPED = 1
 GPDB_STARTED = 2
 GPDB_UTILITY = 3
@@ -69,8 +69,10 @@ def parseargs():
     parser.add_option('-d', '--master-data-directory', dest='master_data_directory',
                       help='The master data directory for the system. If this option is not specified, \
                             the value is obtained from the $MASTER_DATA_DIRECTORY environment variable.')
-    parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=16, metavar="<batch_size>",
-                      help='Expansion configuration batch size. Valid values are 1-%d' % MAX_BATCH_SIZE)
+    parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=gp.DEFAULT_MASTER_NUM_WORKERS, metavar="<batch_size>",
+                      help='Max number of hosts to operate on in parallel. Valid values are 1-%d' % gp.MAX_MASTER_NUM_WORKERS)
+    parser.add_option('-b', '--segment-batch-size', dest='segment_batch_size', type='int', default=gp.DEFAULT_SEGHOST_NUM_WORKERS, metavar="<segment_batch_size>",
+                      help='Max number of segments per host to operate on in parallel. Valid values are: 1-%d' % gp.MAX_SEGHOST_NUM_WORKERS)
     parser.add_option('-v', '--verbose', dest="verbose", action='store_true',
                       help='debug output.')
     parser.add_option('-l', '--log-file-directory', dest="logfile_directory",
@@ -93,8 +95,13 @@ def parseargs():
         logger.error('Unknown argument %s' % args[0])
         parser.exit()
 
-    if options.batch_size < 1 or options.batch_size > 128:
-        logger.error('Invalid argument.  -B value must be >= 1 and <= %s' % MAX_BATCH_SIZE)
+    if options.batch_size < 1 or options.batch_size > gp.MAX_MASTER_NUM_WORKERS:
+        logger.error('Invalid value for argument -B. Value must be >= 1 and <= %d' % gp.MAX_MASTER_NUM_WORKERS)
+        parser.print_help()
+        parser.exit()
+
+    if options.segment_batch_size < 1 or options.segment_batch_size > gp.MAX_SEGHOST_NUM_WORKERS:
+        logger.error('Invalid value for argument -b. Value must be >= 1 and <= %d' % gp.MAX_SEGHOST_NUM_WORKERS)
         parser.print_help()
         parser.exit()
 
@@ -128,6 +135,7 @@ def logOptionValues(options):
     logger.info("  --input                 = " + str(options.input_filename))
     logger.info("  --master-data-directory = " + str(options.master_data_directory))
     logger.info("  --batch-size            = " + str(options.batch_size))
+    logger.info("  --segment-batch-size    = " + str(options.segment_batch_size))
     if options.verbose != None:
         logger.info("  --verbose               = " + str(options.verbose))
     if options.continue_move != None:
@@ -255,9 +263,9 @@ class Configuration:
                     self.oldMirrorList.append(oldMirror)
                     self.newMirrorList.append(newMirror)
                 except ValueError:
-                    raise ValueError('Missing or invalid value on line %d of file: %s.' % (line, inputFile))
+                    raise ValueError('Missing or invalid value on line %d of file: %s.' % (lineno, inputFile))
                 except Exception, e:
-                    raise Exception('Invalid input file on line %d of file %s: %s' % (line, inputFile, str(e)))
+                    raise Exception('Invalid input file on line %d of file %s: %s' % (lineno, inputFile, str(e)))
 
     def write_output_file(self, filename, oldToNew=True):
         """ Write out the configuration in a format appropriate for use with the -i option. """
@@ -291,6 +299,7 @@ args = None
 pidfilepid = None  # pid of the process which has the lock
 locktorelease = None
 sml = None  # sml (simple main lock)
+mirror_tablespace_locations = {} #map of mirror and its tablespace locations
 
 logger = get_default_logger()
 
@@ -361,82 +370,48 @@ try:
                 if segment.getSegmentContentId() == seg.getSegmentContentId() and segment.getSegmentRole() != seg.getSegmentRole():
                     PgHbaEntriesToUpdate.append((segment.getSegmentDataDirectory(), segment.getSegmentHostName(), newMirror.address))
 
-
     """ Prepare common execution steps for running commands on segments """
     mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
     totalDirsToDelete = len(mirrorsToDelete)
     numberOfWorkers = min(totalDirsToDelete, options.batch_size)
 
+    """ Fetch tablespace locations before mirror move """
+    for mirror in mirrorsToDelete:
+        mirror_tablespace_locations[mirror.dataDirectory] = get_tablespace_locations(False, mirror.dataDirectory)
+
     """ Update pg_hba.conf on primary segments with new mirror information """
-
-    if numberOfWorkers > 0:
-        pool = WorkerPool(numWorkers=numberOfWorkers)
-        try:
-            for primary_datadir, primary_hostname, newMirror_hostname in PgHbaEntriesToUpdate:
-                # Start with an empty string so that the later .join prepends a newline to the first entry
-                entries = ['']
-                # Add the samehost replication entry to support single-host development
-                entries.append("host replication {username} samehost trust".format(username=unix.getUserName()))
-                if options.hba_hostnames:
-                    hostname, _, _ = socket.gethostbyaddr(newMirror_hostname)
-                    entries.append("host all {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
-                    entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
-                else:
-                    newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
-                    for ip in newMirror_ips:
-                        cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = ip + cidr_suffix
-                        entries.append("host all {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr))
-                    new_mirror_if_addrs = IfAddrs.list_addrs(newMirror_hostname)
-                    for ip in new_mirror_if_addrs:
-                        cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = ip + cidr_suffix
-                        entries.append("host replication {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr))
-                cmdStr = ". {gphome}/greenplum_path.sh; echo '{entries}' >> {datadir}/pg_hba.conf; pg_ctl -D {datadir} reload".format(
-                    gphome=os.environ["GPHOME"],
-                    entries="\n".join(entries),
-                    datadir=primary_datadir
-                )
-                logger.info("Updating pg_hba.conf entries on primary %s:%s with new mirror %s information" % (primary_hostname, primary_datadir, newMirror_hostname))
-                cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=REMOTE, remoteHost=primary_hostname)
-                pool.addCommand(cmd)
-            # Wait for the segments to finish
-            pool.join()
-        except:
-            pool.haltWork()
-            pool.joinWorkers()
-
-        failure = False
-        results = []
-        for cmd in pool.getCompletedItems():
-            r = cmd.get_results()
-        if not cmd.was_successful():
-           logging.error("Unable to update pg_hba conf on primary segment: " + str(r))
-           failure = True
-
-        pool.haltWork()
-        pool.joinWorkers()
-        if failure:
-            logging.error("Unable to update pg_hba.conf on the primary segments")
-            raise Exception("Unable to update pg_hba.conf on the primary segments.")
+    update_pg_hba_for_new_mirrors(PgHbaEntriesToUpdate, options.hba_hostnames, options.batch_size)
 
     """ Create a backout file for the user if they choose to go back to the original configuration. """
     backout_filename = options.input_filename + "_backout_" + str(time.strftime("%m%d%y%H%M%S"))
     newConfig.write_output_file(backout_filename, False)
 
     """ Start gprecoverseg. """
-    recoversegOptions = "-i " + newConfig.inputFile + " -v -a -d " + options.master_data_directory
+    recoversegOptions = "-i " + newConfig.inputFile + " -B " + str(options.batch_size) + \
+                        " -b " + str(options.segment_batch_size) + " -v -a -d " + options.master_data_directory
     if options.logfile_directory != None:
         recoversegOptions = recoversegOptions + " -l " + str(options.logfile_directory)
     logger.info('About to run gprecoverseg with options: ' + recoversegOptions)
     cmd = GpRecoverSeg("Running gprecoverseg", options=recoversegOptions)
     cmd.run(validateAfter=True)
 
+    """ Reinitialize gparray after the new mirrors are in place. """
+    gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
+    mirrorDirectories = set((seg.getSegmentHostName(),seg.getSegmentContentId()) for seg in gpArrayInstance.getDbList() if seg.isSegmentMirror())
+
     """ Delete old mirror directories. """
     if numberOfWorkers > 0:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in mirrorsToDelete:
-            logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
+            logger.info("About to remove old mirror segment directories: " + mirror.dataDirectory)
+
+            if mirror_tablespace_locations[mirror.dataDirectory]:
+                for host, content, tablespace_dir in mirror_tablespace_locations[mirror.dataDirectory]:
+                    if (host, content) not in mirrorDirectories:
+                        cmd = RemoveDirectory("removing old mirror tablespace directory", tablespace_dir, ctxt=REMOTE,
+                                              remoteHost=mirror.address)
+                        pool.addCommand(cmd)
+
             cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
                                   remoteHost=mirror.address)
             pool.addCommand(cmd)

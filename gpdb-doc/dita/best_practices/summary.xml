@@ -97,7 +97,7 @@
               to MB to set the value of the configuration parameter. </li>
           </ul></li>
         <li>In a scenario where a large number of workfiles are generated calculate the
-            <codeph>gp_vmem</codeph> factor with this formulat to account for the
+            <codeph>gp_vmem</codeph> factor with this formula to account for the
           workfiles:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
       <varname>total_#_workfiles</varname>))) / 1.7</codeblock>
         </li>
@@ -233,7 +233,8 @@
             TABLE...AS</codeph> operation, then rename and drop the original table.</li>
         <li>Frequently run <codeph>VACUUM</codeph> on the system catalogs to avoid catalog bloat and
           the need to run <codeph>VACUUM FULL</codeph> on catalog tables. </li>
-        <li>Never kill <codeph>VACUUM</codeph> on catalog tables.</li>
+        <li>Never issue a <codeph>kill</codeph> command against <codeph>VACUUM</codeph> on catalog
+          tables.</li>
       </ul>
       <p>See <xref href="bloat.xml#topic_gft_h11_bp"/>.</p>
     </section>

@@ -1,8 +1,13 @@
 CREATE EXTENSION gp_sparse_vector;
+SET search_path TO sparse_vector;
 DROP TABLE IF EXISTS features;
+NOTICE:  table "features" does not exist, skipping
 DROP TABLE IF EXISTS corpus;
+NOTICE:  table "corpus" does not exist, skipping
 DROP TABLE IF EXISTS documents;
+NOTICE:  table "documents" does not exist, skipping
 DROP TABLE IF EXISTS dictionary;
+NOTICE:  table "dictionary" does not exist, skipping
 -- Test simple document classIFication routines
 CREATE TABLE features (dictionary text[][]) DISTRIBUTED RANDOMLY;
 INSERT INTO features values ('{am,before,being,bothered,corpus,document,i,in,is,me,never,now,one,really,second,the,third,this,until}');
@@ -76,6 +81,7 @@ SELECT docnum, (feature_vector*logidf) AS tf_idf FROM (SELECT log(count(feature_
 
 -- Create a table with TF / IDF weighted vectors in it
 DROP TABLE IF EXISTS WEIGHTS;
+NOTICE:  table "weights" does not exist, skipping
 CREATE TABLE weights AS (SELECT docnum, (feature_vector*logidf) tf_idf FROM (SELECT log(count(feature_vector)/vec_count_nonzero(feature_vector)) AS logidf FROM corpus) foo, corpus ORDER BY docnum) DISTRIBUTED RANDOMLY;
 -- Calculate the angular distance between the first document to each other document
 SELECT docnum,trunc((180.*(ACOS(dmin(1.,(tf_idf%*%testdoc)/(l2norm(tf_idf)*l2norm(testdoc))))/(4.*ATAN(1.))))::numeric,2) AS angular_distance FROM weights,(SELECT tf_idf testdoc FROM weights WHERE docnum = 1 LIMIT 1) foo ORDER BY 1;
@@ -92,3 +98,4 @@ DROP TABLE corpus;
 DROP TABLE documents;
 DROP TABLE WEIGHTS;
 DROP EXTENSION gp_sparse_vector;
+SET search_path TO DEFAULT;

@@ -64,7 +64,8 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 		CLogicalDML::EdmlDelete == edmlop || CLogicalDML::EdmlUpdate == edmlop,
 		NULL != pcrCtid && NULL != pcrSegmentId);
 
-	m_pds = CPhysical::PdsCompute(m_mp, m_ptabdesc, pdrgpcrSource);
+	m_pds =
+		CPhysical::PdsCompute(m_mp, m_ptabdesc, pdrgpcrSource, pcrSegmentId);
 
 	if (CDistributionSpec::EdtHashed == m_pds->Edt() &&
 		ptabdesc->ConvertHashToRandom())

@@ -76,7 +76,10 @@
     </section>
     <section id="password-strength-recommendations">
       <title>Operating System Users and File System</title>
-      <p> To protect the network from intrusion, system administrators should verify the passwords
+      <p>
+        <note>Commands shown in this section should be run as the root user.</note>
+      </p>
+      <p>To protect the network from intrusion, system administrators should verify the passwords
         used within an organization are sufficiently strong. The following recommendations can
         strengthen a password: </p>
       <ul>
@@ -197,7 +200,7 @@ password required pam_cracklib.so try_first_pass retry=3\minlen=14 dcredit=-1 uc
         reflect your security policy requirements. A locked account can be manually unlocked using
         the <codeph>pam_tally2</codeph>
         utility:<codeblock>
-/sbin/pam_tally2 --user {username} -reset
+/sbin/pam_tally2 --user {username} --reset
 </codeblock></p>
       <p> You can use PAM to limit the reuse of recent passwords. The remember option for the
           <codeph>pam_ unix</codeph> module can be set to remember the recent passwords and prevent

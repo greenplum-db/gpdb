@@ -29,14 +29,14 @@
                 execution of the function. The volatility attributes (<codeph>IMMUTABLE</codeph>,
                     <codeph>STABLE</codeph>, <codeph>VOLATILE</codeph>) and the <codeph>EXECUTE
                     ON</codeph> attributes control two different aspects of function execution. In
-                general, volatility indicates when the function is executed, and <codeph>EXECUTE
-                    ON</codeph> indicates where it is executed. The volatility attributes are
+                general, volatility indicates when the function is run, and <codeph>EXECUTE
+                    ON</codeph> indicates where it is run. The volatility attributes are
                 PostgreSQL based attributes, the <codeph>EXECUTE ON</codeph> attributes are
                 Greenplum Database attributes.</p>
-            <p>For example, a function defined with the <codeph>IMMUTABLE</codeph> attribute can be executed at query
-                planning time, while a function with the <codeph>VOLATILE</codeph> attribute must be executed for every
-                row in the query. A function with the <codeph>EXECUTE ON MASTER</codeph> attribute executes only on the
-                master instance, and a function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute executes on
+            <p>For example, a function defined with the <codeph>IMMUTABLE</codeph> attribute can be run at query
+                planning time, while a function with the <codeph>VOLATILE</codeph> attribute must be run for every
+                row in the query. A function with the <codeph>EXECUTE ON MASTER</codeph> attribute runs only on the
+                master instance, and a function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute runs on
                 all primary segment instances (not the master). </p>
             <p>These tables summarize what Greenplum Database assumes about function execution based
                 on the attribute.</p>
@@ -105,24 +105,24 @@
                     <tbody>
                         <row>
                             <entry colname="col1">EXECUTE ON ANY</entry>
-                            <entry colname="col3">Indicates that the function can be executed on the
+                            <entry colname="col3">Indicates that the function can be run on the
                                 master, or any segment instance, and it returns the same result
-                                regardless of where it executes. This is the default
+                                regardless of where it runs. This is the default
                                 attribute.</entry>
                             <entry colname="col4">Greenplum Database determines where the function
-                                executes.</entry>
+                                runs.</entry>
                         </row>
                         <row>
                             <entry colname="col1">EXECUTE ON MASTER</entry>
-                            <entry colname="col3">Indicates that the function must be executed on
+                            <entry colname="col3">Indicates that the function must be run on
                                 the master instance.</entry>
                             <entry colname="col4">Specify this attribute if the user-defined
-                                function executes queries to access tables. </entry>
+                                function runs queries to access tables. </entry>
                         </row>
                         <row>
                             <entry colname="col1">EXECUTE ON ALL SEGMENTS</entry>
                             <entry colname="col3">Indicates that for each invocation, the function
-                                must be executed on all primary segment instances, but not the
+                                must be run on all primary segment instances, but not the
                                 master.</entry>
                             <entry colname="col4"/>
                         </row>
@@ -150,14 +150,14 @@
                         format="dita" scope="peer">CREATE FUNCTION</xref></codeph>.</p>
             <p>In Greenplum Database, data is divided up across segments — each segment is a
                 distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not
-                execute functions classified as <codeph>VOLATILE</codeph> at the segment level if
+                run functions classified as <codeph>VOLATILE</codeph> at the segment level if
                 they contain SQL commands or modify the database in any way. For example, functions
-                such as <codeph>setval()</codeph> are not allowed to execute on distributed data in
+                such as <codeph>setval()</codeph> are not allowed to run on distributed data in
                 Greenplum Database because they can cause inconsistent data between segment
                 instances.</p>
-            <p>A function can execute read-only queries on replicated tables (<codeph>DISTRIBUTED
+            <p>A function can run read-only queries on replicated tables (<codeph>DISTRIBUTED
                     REPLICATED</codeph>) on the segments, but any SQL command that modifies data
-                must execute on the master instance.
+                must run on the master instance.
                 <note>The hidden system columns (<codeph>ctid</codeph>, <codeph>cmin</codeph>,
                         <codeph>cmax</codeph>, <codeph>xmin</codeph>, <codeph>xmax</codeph>, and
                         <codeph>gp_segment_id</codeph>) cannot be referenced in user queries on
@@ -187,8 +187,8 @@ SELECT foo();</codeblock>
             <body>
                 <p>There is relatively little difference between the <codeph>STABLE</codeph> and
                         <codeph>IMMUTABLE</codeph> function volatility categories for simple
-                    interactive queries that are planned and immediately executed. It does not
-                    matter much whether a function is executed once during planning or once during
+                    interactive queries that are planned and immediately run. It does not
+                    matter much whether a function is run once during planning or once during
                     query execution start up. But there is a big difference when you save the plan
                     and reuse it later. If you mislabel a function <codeph>IMMUTABLE</codeph>,
                     Greenplum Database may prematurely fold it to a constant during planning,
@@ -210,8 +210,8 @@ SELECT foo();</codeblock>
                 your user-defined function is <codeph>IMMUTABLE</codeph> or <codeph>STABLE</codeph>,
                 you must specify the correct volatility level when you register your function.</p>
             <p>By default, user-defined functions are declared as <codeph>EXECUTE ON ANY</codeph>. A function that
-                executes queries to access tables is supported only when the function executes on the master instance,
-                except that a function can execute <codeph>SELECT</codeph> commands that access only replicated tables
+                runs queries to access tables is supported only when the function runs on the master instance,
+                except that a function can run <codeph>SELECT</codeph> commands that access only replicated tables
                 on the segment instances. A function that accesses hash-distributed or randomly distributed tables must
                 be defined with the <codeph>EXECUTE ON MASTER</codeph> attribute. Otherwise, the function might return
                 incorrect results when the function is used in a complicated query. Without the attribute, planner
@@ -223,9 +223,9 @@ SELECT foo();</codeblock>
             <p>In Greenplum Database, the shared library files for user-created functions must
                 reside in the same library path location on every host in the Greenplum Database
                 array (masters, segments, and mirrors).</p>
-            <p>You can also create and execute anonymous code blocks that are written in a Greenplum
+            <p>You can also create and run anonymous code blocks that are written in a Greenplum
                 Database procedural language such as PL/pgSQL. The anonymous blocks run as transient
-                anonymous functions. For information about creating and executing anonymous blocks,
+                anonymous functions. For information about creating and running anonymous blocks,
                 see the <xref href="../../../ref_guide/sql_commands/DO.xml#topic1"
                         ><codeph>DO</codeph></xref> command.</p>
         </body>

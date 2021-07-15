@@ -56,13 +56,11 @@ CScalarWindowFunc::CScalarWindowFunc(CMemoryPool *mp, IMDId *mdid_func,
 	{
 		const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
 		m_efs = pmdfunc->GetFuncStability();
-		m_efda = pmdfunc->GetFuncDataAccess();
 	}
 	else
 	{
 		// TODO: , Aug 15, 2012; pull out properties of aggregate functions
 		m_efs = IMDFunction::EfsImmutable;
-		m_efda = IMDFunction::EfdaNoSQL;
 	}
 }
 

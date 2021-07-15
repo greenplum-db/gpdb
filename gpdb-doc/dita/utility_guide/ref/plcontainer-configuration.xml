@@ -77,7 +77,7 @@
                                                 <codeph>-</codeph> (dash). Maximum length is 63
                                                 Bytes.<p>The <codeph>id</codeph> specifies which
                                                 Docker image to use when PL/Container creates a
-                                                Docker container to execute a user-defined
+                                                Docker container to run a user-defined
                                                 function.</p></pd>
                                     </plentry>
                                     <plentry>
@@ -305,9 +305,9 @@
                         files on all Greenplum Database segments. However, PL/Container
                         configurations of currently running sessions use the configuration that
                         existed during session start up. To update the PL/Container configuration in
-                        a running session, execute this command in the session.</p>
+                        a running session, run this command in the session.</p>
                     <codeblock>SELECT * FROM plcontainer_refresh_config;</codeblock>
-                    <p>Running the command executes a PL/Container function that updates the session
+                    <p>The command runs a PL/Container function that updates the session
                         configuration on the master and segment instances.</p>
                 </section>
         

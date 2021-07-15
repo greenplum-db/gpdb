@@ -45,11 +45,11 @@
         <plentry>
           <pt><varname>scope</varname></pt>
           <pd>The execution scope value indicates the host and number of times the plugin command is
-            executed. <varname>scope</varname> can be one of these values:<ul id="ul_rpk_tzt_k2b">
-              <li><codeph>master</codeph> - Execute the plugin command once on the master host.</li>
-              <li><codeph>segment_host</codeph> - Execute the plugin command once on each of the
+            run. <varname>scope</varname> can be one of these values:<ul id="ul_rpk_tzt_k2b">
+              <li><codeph>master</codeph> - Run the plugin command once on the master host.</li>
+              <li><codeph>segment_host</codeph> - Run the plugin command once on each of the
                 segment hosts.</li>
-              <li><codeph>segment</codeph> - Execute the plugin command once for each active segment
+              <li><codeph>segment</codeph> - Run the plugin command once for each active segment
                 instance on the host running the segment instance. The <varname>contentID</varname>
                 identifies the segment instance.</li>
             </ul></pd>

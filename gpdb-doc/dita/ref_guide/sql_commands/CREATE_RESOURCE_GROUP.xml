@@ -29,7 +29,7 @@
          and <codeph>default_group</codeph>. These group names, as well as the group name <codeph>none</codeph>, are reserved.</p>
       <p>
         To set appropriate limits for resource groups, the Greenplum Database administrator must
-        be familiar with the queries typically executed on the system, as well as the users/roles executing those queries and the external components they may be using, such as PL/Containers.</p>
+        be familiar with the queries typically run on the system, as well as the users/roles running those queries and the external components they may be using, such as PL/Containers.</p>
       <p>
         After creating a resource group for a role, assign the group to one or more roles using the <codeph><xref
             href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
