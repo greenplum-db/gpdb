@@ -42,10 +42,14 @@ Module contents:
     spiffInterval() - get begin/end datetime given any subset of begin/end/duration
 """
 
+import cStringIO
+import csv
 from datetime import date, datetime
 import re
 import sys
 import time
+
+csvDelimeter = '|'
 
 timestampPattern = re.compile(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d(\.\d*)?')
 # This pattern matches the date and time stamp at the beginning of a line
@@ -253,27 +257,33 @@ def FilterLogEntries(iterable,
             msg += '; timestamps from %s to %s' % srange
         print >>msgfile, msg
 
-    
+
 
 #------------------------------- Spying --------------------------------
 class CsvFlatten(object):
     """
-    Used to flatten a CSV parsed log line into something that looks like the 
+    Used to flatten a CSV parsed log line into something that looks like the
     old format.
     """
-    
+
     def __init__(self,iterable):
         self.source = iter(iterable)
-    
+        self.buffer = cStringIO.StringIO()
+        self.writer = csv.writer(self.buffer, delimiter=csvDelimeter, quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
     def __iter__(self):
         return self
-    
+
     def next(self):
         item = self.source.next()
         #we need to make a minor format change to the log level field so that
         # our single regex will match both.
         item[16] = item[16] + ": "
-        return '|'.join(item) + "\n"
+
+        self.buffer.truncate(0)
+        self.writer.writerow(item)
+
+        return self.buffer.getvalue()
 
 
 #------------------------------- Spying --------------------------------
@@ -700,13 +710,13 @@ def MatchColumns(iterable, cols):
                 n = 1
                 out = []
                 
-                for c in s.split('|'):
+                for c in s.split(csvDelimeter):
                     if n in cols:
                         out.append(c)
                     n += 1
                 if len(out):
                     #print out
-                    ret.append('|'.join(out) + "\n")
+                    ret.append(csvDelimeter.join(out) + "\n")
             yield ret
 
 #-------------------------------- Slicing --------------------------------
