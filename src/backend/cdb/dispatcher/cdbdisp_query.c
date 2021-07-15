@@ -892,9 +892,10 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		command_len = pg_mbcliplen(command, command_len,
 								   QUERY_STRING_TRUNCATE_SIZE-1) + 1;
 
-	initStringInfo(&resgroupInfo);
+	resgroupInfo.data = NULL;
+	resgroupInfo.len = 0;
 	if (IsResGroupActivated())
-		SerializeResGroupInfo(&resgroupInfo);
+		SerializeResGroupInfo(&resgroupInfo, false);
 
 	total_query_len = 1 /* 'M' */ +
 		sizeof(len) /* message length */ +
@@ -1006,6 +1007,7 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	{
 		memcpy(pos, resgroupInfo.data, resgroupInfo.len);
 		pos += resgroupInfo.len;
+		pfree(resgroupInfo.data);
 	}
 
 	len = pos - shared_query - 1;
