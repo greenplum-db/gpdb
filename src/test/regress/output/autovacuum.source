@@ -85,12 +85,30 @@ SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', 1);
 (1 row)
 
 -- catalog table should be young
-SELECT age(relfrozenxid) < 200 * 1000000 FROM pg_class WHERE relname='pg_class';
- ?column? 
-----------
- t
-(1 row)
+-- We only wait for 1 worker above to update the datfrozenxid. Based
+-- on age of database multiple workers can be invoked to perform the
+-- job. Given that number is not deterministic, we need to have retry
+-- logic to check for age dropped for the database or not.
+DO $$
+DECLARE young BOOLEAN;
+BEGIN
+     FOR i in 1..1500 loop
+	      SELECT age(relfrozenxid) < 200 * 1000000
+	      FROM pg_class WHERE relname='pg_class'
+	      into young;
 
+	      IF young THEN
+	         raise notice 'Regression Database is young now';
+		 EXIT;
+	      END IF;
+	      PERFORM pg_sleep(0.2);
+     END LOOP;
+
+     IF not young THEN
+	raise notice 'Regression Database is still old';
+     END IF;
+END$$;
+NOTICE:  Regression Database is young now
 -- Reset GUCs.
 ALTER SYSTEM RESET autovacuum_naptime;
 select * from pg_reload_conf();
