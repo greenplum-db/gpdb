@@ -41,7 +41,6 @@
 #include "access/aomd.h"
 #include "access/transam.h"
 #include "access/tupdesc.h"
-#include "access/tuptoaster.h"
 #include "access/valid.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
@@ -357,24 +356,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 		   (scan->storageAttributes.compress ? "true" : "false"),
 		   scan->usableBlockSize);
 
-
 	return true;
-}
-
-/*
- * errcontext_appendonly_insert_block_user_limit
- *
- * Add an errcontext() line showing the table name but little else because this is a user
- * caused error.
- */
-static int
-errcontext_appendonly_insert_block_user_limit(AppendOnlyInsertDesc aoInsertDesc)
-{
-	char	   *relationName = NameStr(aoInsertDesc->aoi_rel->rd_rel->relname);
-
-	errcontext("Append-Only table '%s'", relationName);
-
-	return 0;
 }
 
 /*
@@ -536,8 +518,6 @@ AppendOnlyExecutorReadBlock_GetContents(AppendOnlyExecutorReadBlock *executorRea
 			/*
 			 * Large row.
 			 */
-
-			/* UNDONE: Error out if NOTOAST isn't ON. */
 
 			/* UNDONE: Error out if it is not a single row */
 			Assert(executorReadBlock->executorBlockKind == AoExecutorBlockKind_SingleRow);
@@ -1698,8 +1678,6 @@ appendonly_beginscan(Relation relation,
  * TODO: instead of freeing resources here and reallocating them in initscan
  * over and over see which of them can be refactored into appendonly_beginscan
  * and persist there until endscan is finally reached. For now this will do.
- *
- * GPDB_12_MERGE_FIXME: what to do with the new flags?
  * ----------------
  */
 void
@@ -2609,21 +2587,6 @@ appendonly_insert_init(Relation rel, int segno)
 
 	Assert(segno >= 0);
 	aoInsertDesc->cur_segno = segno;
-
-	/*
-	 * Adding a NOTOAST table attribute in 3.3.3 would require a catalog
-	 * change, so in the interim we will test this with a GUC.
-	 *
-	 * This GUC must have the same value on write and read.
-	 */
-/* 	aoInsertDesc->useNoToast = aoentry->notoast; */
-	/*
-	 * GPDB_12_MERGE_FIXME: we should simply never use toast for AO, variable
-	 * length blocks of AO should be able to accommodate variable length
-	 * datums.
-	 */
-	aoInsertDesc->useNoToast = !(rel->rd_tableam->relation_needs_toast_table(rel));
-
 	aoInsertDesc->usableBlockSize = blocksize;
 
 	attr = &aoInsertDesc->storageAttributes;
@@ -2734,9 +2697,6 @@ appendonly_insert_init(Relation rel, int segno)
 																	 * calculation */
 	aoInsertDesc->tempSpace = (uint8 *) palloc(aoInsertDesc->tempSpaceLen * sizeof(uint8));
 	maxtupsize = aoInsertDesc->maxDataLen - VARBLOCK_HEADER_LEN - 4;
-	aoInsertDesc->toast_tuple_threshold = maxtupsize / 4;	/* see tuptoaster.h for
-															 * more information */
-	aoInsertDesc->toast_tuple_target = maxtupsize / 4;
 
 	/* open our current relation file segment for write */
 	SetCurrentFileSegForWrite(aoInsertDesc);
@@ -2797,15 +2757,11 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 				  MemTuple instup,
 				  AOTupleId *aoTupleId)
 {
-	Relation	relation = aoInsertDesc->aoi_rel;
 	VarBlockByteLen itemLen;
-	uint8	   *itemPtr;
-	MemTuple	tup = NULL;
-	bool		need_toast;
-	bool		isLargeContent;
+	uint8		   *itemPtr;
+	bool			isLargeContent;
 
 	Assert(aoInsertDesc->usableBlockSize > 0 && aoInsertDesc->tempSpaceLen > 0);
-	Assert(aoInsertDesc->toast_tuple_threshold > 0 && aoInsertDesc->toast_tuple_target > 0);
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
@@ -2816,32 +2772,10 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 	/* tableName */
 #endif
 
-	if (aoInsertDesc->useNoToast)
-		need_toast = false;
-	else
-		need_toast = (MemTupleHasExternal(instup, aoInsertDesc->mt_bind) ||
-					  memtuple_get_size(instup) > aoInsertDesc->toast_tuple_threshold);
-
-	/*
-	 * If the new tuple is too big for storage or contains already toasted
-	 * out-of-line attributes from some other relation, invoke the toaster.
-	 *
-	 * Note: below this point, tup is the data we actually intend to store
-	 * into the relation; instup is the caller's original untoasted data.
-	 */
-	if (need_toast)
-		tup = toast_insert_or_update_memtup(relation, instup,
-											NULL, aoInsertDesc->mt_bind,
-											aoInsertDesc->toast_tuple_target,
-											false,	/* errtbl is never AO */
-											0);
-	else
-		tup = instup;
-
 	/*
 	 * get space to insert our next item (tuple)
 	 */
-	itemLen = memtuple_get_size(tup);
+	itemLen = memtuple_get_size(instup);
 	isLargeContent = false;
 
 	/*
@@ -2864,27 +2798,11 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 			/*
 			 * Case #1.  The entire tuple cannot fit within a VarBlock.  It is
 			 * too large.
+			 *
+			 * Indicate we need to write the large tuple as a large
+			 * content multiple-block set.
 			 */
-			if (aoInsertDesc->useNoToast)
-			{
-				/*
-				 * Indicate we need to write the large tuple as a large
-				 * content multiple-block set.
-				 */
-				isLargeContent = true;
-			}
-			else
-			{
-				/*
-				 * Use a different errcontext when user input (tuple contents)
-				 * cause the error.
-				 */
-				ereport(ERROR,
-						(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-						 errmsg("item too long (check #1): length %d, maxBufferLen %d",
-								itemLen, aoInsertDesc->varBlockMaker.maxBufferLen),
-						 errcontext_appendonly_insert_block_user_limit(aoInsertDesc)));
-			}
+			isLargeContent = true;
 		}
 		else
 		{
@@ -2907,27 +2825,11 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 				/*
 				 * Case #2.  The entire tuple cannot fit within a VarBlock. It
 				 * is too large.
+				 *
+				 * Indicate we need to write the large tuple as a large
+				 * content multiple-block set.
 				 */
-				if (aoInsertDesc->useNoToast)
-				{
-					/*
-					 * Indicate we need to write the large tuple as a large
-					 * content multiple-block set.
-					 */
-					isLargeContent = true;
-				}
-				else
-				{
-					/*
-					 * Use a different errcontext when user input (tuple
-					 * contents) cause the error.
-					 */
-					ereport(ERROR,
-							(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-							 errmsg("item too long (check #2): length %d, maxBufferLen %d",
-									itemLen, aoInsertDesc->varBlockMaker.maxBufferLen),
-							 errcontext_appendonly_insert_block_user_limit(aoInsertDesc)));
-				}
+				isLargeContent = true;
 			}
 		}
 	}
@@ -2940,7 +2842,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		Assert(itemPtr != NULL);
 
 		if (itemLen > 0)
-			memcpy(itemPtr, tup, itemLen);
+			memcpy(itemPtr, instup, itemLen);
 	}
 	else
 	{
@@ -2948,8 +2850,6 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		 * Write the large tuple as a large content multiple-block set.
 		 */
 		Assert(itemPtr == NULL);
-		Assert(!need_toast);
-		Assert(instup == tup);
 
 		/*
 		 * "Cancel" the last block allocation, if one.
@@ -2963,7 +2863,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		 */
 		AppendOnlyStorageWrite_Content(
 									   &aoInsertDesc->storageWrite,
-									   (uint8 *) tup,
+									   (uint8 *) instup,
 									   itemLen,
 									   AoExecutorBlockKind_SingleRow,
 									    /* rowCount */ 1);
@@ -3012,9 +2912,6 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		   itemLen,
 		   (isLargeContent ? "true" : "false"),
 		   aoInsertDesc->bufferCount);
-
-	if (tup != instup)
-		pfree(tup);
 }
 
 /*
