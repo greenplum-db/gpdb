@@ -137,7 +137,7 @@ SELECT tableoid::regclass, count(*) FROM partdisttest GROUP BY 1;
 (1 row)
 
 DROP TABLE partdisttest;
--- Log errors on QEs
+-- Log errors on QEs for partitions
 CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
   DISTRIBUTED BY (id)
   PARTITION BY RANGE (t)
@@ -145,7 +145,78 @@ CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
     PARTITION p2020 START ('2020-01-01'::TIMESTAMP) END ('2021-01-01'::TIMESTAMP),
     DEFAULT PARTITION extra
   );
+\set QUIET off
 COPY partdisttest FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 2;
 INFO:  first field processed in the QE: 1
 NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+COPY 1
+\set QUIET on
 DROP TABLE partdisttest;
+-- Check completion tags when COPY FROM
+CREATE TABLE copydisttest(id INT, d VARCHAR(4))
+  DISTRIBUTED BY (id);
+CREATE FUNCTION copydisttest_ignore_even() RETURNS trigger
+LANGUAGE plpgsql AS $$ 
+BEGIN
+  IF new.id % 2 = 0 THEN
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER copydisttest_before_ins BEFORE INSERT ON copydisttest
+FOR EACH ROW EXECUTE PROCEDURE copydisttest_ignore_even();
+\set QUIET off
+-- COPY on QD
+-- expect 'COPY 2'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  all fields will be processed in the QD
+COPY 2
+-- expect 'COPY 1'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  all fields will be processed in the QD
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+COPY 1
+-- expect 'COPY 0'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  all fields will be processed in the QD
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+COPY 0
+-- expect 'COPY 0'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  all fields will be processed in the QD
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+COPY 0
+-- expect 'COPY 0'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  all fields will be processed in the QD
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+COPY 0
+-- COPY on QE
+-- expect 'COPY 2'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  first field processed in the QE: 1
+COPY 2
+-- expect 'COPY 1'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  first field processed in the QE: 1
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+COPY 1
+-- expect 'COPY 0'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  first field processed in the QE: 1
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+COPY 0
+-- expect 'COPY 0'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  first field processed in the QE: 1
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+COPY 0
+-- expect 'COPY 0'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+INFO:  first field processed in the QE: 1
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+COPY 0
+\set QUIET on
+DROP TABLE copydisttest;
+DROP FUNCTION copydisttest_ignore_even();

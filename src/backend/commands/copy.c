@@ -4682,6 +4682,23 @@ CopyFrom(CopyState cstate)
 		cdbCopyEnd(cdbCopy,
 				   &total_completed_from_qes,
 				   &total_rejected_from_qes);
+
+		/*
+		 * Reset returned processed to total_completed_from_qes.
+		 *
+		 * processed above excludes only rejected rows on QD, it
+		 * should also exclude rejected rows on QEs.
+		 *
+		 * NOTE:
+		 *  total_completed_from_qes + total_rejected_from_qes <= # of
+		 *  input file rows
+		 *
+		 * total_rejected_from_qes includes only rows rejected by
+		 * SREH; however, total_completed_from_qes excludes both
+		 * SREH-rejected rows and TRIGGER-rejected rows.
+		 */
+		processed = total_completed_from_qes;
+
 		if (cstate->cdbsreh)
 		{
 			/* emit a NOTICE with number of rejected rows */
@@ -4717,16 +4734,12 @@ CopyFrom(CopyState cstate)
 	AfterTriggerEndQuery(estate);
 
 	/*
-	 * If SREH and in executor mode send the number of rejected
-	 * rows to the client (QD COPY).
-	 * If COPY ... FROM/TO ... ON SEGMENT, then we need to send the number of
-	 * completed rows as well.
+	 * In QE, send the number of rejected rows to the client (QD COPY) if
+	 * SREH is on, always send the number of completed rows.
 	 */
-	if ((cstate->errMode != ALL_OR_NOTHING && cstate->dispatch_mode == COPY_EXECUTOR)
-		|| cstate->on_segment)
+	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		SendNumRows((cstate->errMode != ALL_OR_NOTHING) ? cstate->cdbsreh->rejectcount : 0,
-				cstate->on_segment ? processed : 0);
+		SendNumRows((cstate->errMode != ALL_OR_NOTHING) ? cstate->cdbsreh->rejectcount : 0, processed);
 	}
 
 	ExecResetTupleTable(estate->es_tupleTable, false);

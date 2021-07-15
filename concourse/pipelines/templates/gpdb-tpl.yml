@@ -274,15 +274,17 @@ groups:
 {%endif %}
 
 
-{% if pipeline_configuration == "prod" %}
+{% if pipeline_configuration == "prod" or build_test_rc_rpm %}
 ## ======================================================================
 
 - name: Release
   jobs:
+{% if pipeline_configuration == "prod" %}
   - gate_release_candidate_start
   - Release_Candidate
-  - Build_Release_Candidate_RPMs
   - Publish Server Builds
+{% endif %}
+  - Build_Release_Candidate_RPMs
 
 {% endif %}
 ## ======================================================================
@@ -493,7 +495,7 @@ resources:
     tag: latest
 
 {% endif %}
-{% if "centos7" in os_types or "CLI" in test_sections %}
+{% if test_sections and ("centos7" in os_types or "CLI" in test_sections) %}
 - name: gpdb7-centos7-test
   type: registry-image
   source:
@@ -534,13 +536,6 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/master/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 
-- name: gpdb_rpm_installer_centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/master/greenplum-db-(.*)-rhel7-x86_64((rc-build-type-gcs)).rpm
-
 - name: bin_gpdb_ubuntu18.04_rc
   type: gcs
   source:
@@ -569,6 +564,15 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server-src/published/master/server-src-rc-*.tar.gz
+{% endif %}
+
+{% if pipeline_configuration == "prod" or build_test_rc_rpm %}
+- name: gpdb_rpm_installer_centos7
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/master/greenplum-db-(.*)-rhel7-x86_64((rc-build-type-gcs)).rpm
 
 - name: greenplum-database-release
   type: git
@@ -1821,7 +1825,7 @@ jobs:
 {% endif %}
 {% endif %}
 
-{% if pipeline_configuration == "prod" %}
+{% if pipeline_configuration == "prod" or build_test_rc_rpm %}
 ## ======================================================================
 ##  ____      _
 ## |  _ \ ___| | ___  __ _ ___  ___
@@ -1830,6 +1834,7 @@ jobs:
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
 
+{% if pipeline_configuration == "prod" %}
 - name: gate_release_candidate_start
   plan:
   - in_parallel:
@@ -1980,55 +1985,67 @@ jobs:
         params:
           file: "server_tar/server-src-rc-*.tar.gz"
 
+{% endif %}
+
 - name: Build_Release_Candidate_RPMs
   plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        passed: [gate_release_candidate_start]
-      - get: bin_gpdb_centos7
-        trigger: true
-        passed: [gate_release_candidate_start]
-      - get: gpdb7-centos7-build
-      - get: greenplum-database-release
-      - get: license_file
-  - task: create_gpdb_rpm_package_centos7
-    file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
-    image: gpdb7-centos7-build
-    input_mapping:
-      bin_gpdb: bin_gpdb_centos7
-    output_mapping:
-      gpdb_rpm_installer: gpdb_rpm_centos7
-    params:
-      PLATFORM: "rhel7"
-      GPDB_NAME: greenplum-db-7
-      GPDB_RELEASE: 1
-      GPDB_LICENSE: VMware, Inc. or its affiliates EULA
-      GPDB_URL: https://github.com/greenplum-db/gpdb
-      GPDB_OSS: false
-  - task: rename_rc_artifacts
-    image: gpdb7-centos7-build
-    config:
-      platform: linux
-      inputs:
-        - name: gpdb_src
-        - name: gpdb_rpm_centos7
-      outputs:
-        - name: renamed_gpdb_rpm_centos7
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+{% if not build_test_rc_rpm %}
+            passed: [gate_release_candidate_start]
+{% endif %}
+          - get: bin_gpdb_centos7
+            trigger: true
+{% if not build_test_rc_rpm %}
+            passed: [gate_release_candidate_start]
+{% endif %}
+          - get: gpdb7-centos7-build
+          - get: greenplum-database-release
+          - get: license_file
+    - task: create_gpdb_rpm_package_centos7
+      file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
+      image: gpdb7-centos7-build
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos7
+      output_mapping:
+        gpdb_rpm_installer: gpdb_rpm_centos7
       params:
-        RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-            gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
-            cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
-  - in_parallel:
-      steps:
-      - put: gpdb_rpm_installer_centos7
+        PLATFORM: "rhel7"
+        GPDB_NAME: greenplum-db-7
+        GPDB_RELEASE: 1
+        GPDB_LICENSE: VMware, Inc. or its affiliates EULA
+        GPDB_URL: https://github.com/greenplum-db/gpdb
+        GPDB_OSS: false
+    - task: rename_rc_artifacts
+      image: gpdb7-centos7-build
+      config:
+        platform: linux
+        inputs:
+          - name: gpdb_src
+          - name: gpdb_rpm_centos7
+        outputs:
+          - name: renamed_gpdb_rpm_centos7
         params:
-          file: renamed_gpdb_rpm_centos7/*.rpm
+          RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+              gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
+{% if build_test_rc_rpm %}
+              # Uniquely name the rpm using the github username and test branch
+              # to prevent filename collisions on GCS.
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+{% else %}
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+{% endif %}
+    - in_parallel:
+        steps:
+          - put: gpdb_rpm_installer_centos7
+            params:
+              file: renamed_gpdb_rpm_centos7/*.rpm
 
 {% endif %}
 

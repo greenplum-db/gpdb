@@ -63,9 +63,6 @@ lockIsHoldTillEndXact(LockInstanceData *lock)
 	if (lock->holdTillEndXact)
 		return true;
 
-	if (tag->locktag_type == LOCKTAG_TRANSACTION)
-		return true;
-
 	/* FIXME: other types */
 
 	return false;

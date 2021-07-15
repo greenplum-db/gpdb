@@ -3495,6 +3495,7 @@ select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::
 
 drop external table ext_w_expand;
 
+select gp_debug_reset_create_table_default_numsegments();
 
 --
 -- Test host name cannot be resolved
@@ -3583,4 +3584,3 @@ CREATE EXTERNAL WEB TABLE test_part_integrity_p2 (LIKE test_part_integrity_p1) E
 ALTER TABLE test_part_integrity ATTACH PARTITION test_part_integrity_p1 FOR VALUES IN (1);
 ALTER TABLE test_part_integrity ATTACH PARTITION test_part_integrity_p2 FOR VALUES IN (2);
 SELECT * FROM test_part_integrity;
-DROP TABLE test_part_integrity;

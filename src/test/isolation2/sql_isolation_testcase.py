@@ -696,6 +696,11 @@ if __name__ == "__main__":
                       help="connect to database DBNAME", metavar="DBNAME")
     (options, args) = parser.parse_args()
 
+    # Explicitly set multiprocessing start method to 'fork' (Unix
+    # default) to make isolation2 work with python3.8+ on MacOS.
+    if sys.version_info >= (3, 8) and sys.platform == "darwin":
+        multiprocessing.set_start_method('fork')
+
     executor = SQLIsolationExecutor(dbname=options.dbname)
 
     executor.process_isolation_file(sys.stdin, sys.stdout)

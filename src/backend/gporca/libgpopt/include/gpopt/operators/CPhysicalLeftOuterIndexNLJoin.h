@@ -33,6 +33,10 @@ public:
 	// dtor
 	~CPhysicalLeftOuterIndexNLJoin() override;
 
+	CEnfdProp::EPropEnforcingType EpetDistribution(
+		CExpressionHandle &exprhdl,
+		const CEnfdDistribution *ped) const override;
+
 	// ident accessors
 	EOperatorId
 	Eopid() const override

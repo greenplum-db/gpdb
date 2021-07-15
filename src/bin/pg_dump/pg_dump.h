@@ -56,6 +56,7 @@ typedef enum
 	DO_COLLATION,
 	DO_CONVERSION,
 	DO_TABLE,
+	DO_TABLE_ATTACH,
 	DO_ATTRDEF,
 	DO_INDEX,
 	DO_INDEX_ATTACH,
@@ -394,6 +395,13 @@ typedef struct _tableInfo
 	int			numTriggers;	/* number of triggers for table */
 	struct _triggerInfo *triggers;	/* array of TriggerInfo structs */
 } TableInfo;
+
+typedef struct _tableAttachInfo
+{
+	DumpableObject dobj;
+	TableInfo  *parentTbl;		/* link to partitioned table */
+	TableInfo  *partitionTbl;	/* link to partition */
+} TableAttachInfo;
 
 typedef struct _attrDefInfo
 {

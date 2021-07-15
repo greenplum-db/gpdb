@@ -243,6 +243,7 @@ static void dumpTrigger(Archive *fout, TriggerInfo *tginfo);
 static void dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo);
 static void dumpTable(Archive *fout, TableInfo *tbinfo);
 static void dumpTableSchema(Archive *fout, TableInfo *tbinfo);
+static void dumpTableAttach(Archive *fout, TableAttachInfo *tbinfo);
 static void dumpAttrDef(Archive *fout, AttrDefInfo *adinfo);
 static void dumpSequence(Archive *fout, TableInfo *tbinfo);
 static void dumpSequenceData(Archive *fout, TableDataInfo *tdinfo);
@@ -263,10 +264,10 @@ static void dumpUserMappings(Archive *fout,
 static void dumpDefaultACL(Archive *fout, DefaultACLInfo *daclinfo);
 
 static void dumpACL(Archive *fout, CatalogId objCatId, DumpId objDumpId,
-					const char *type, const char *name, const char *subname,
-					const char *nspname, const char *owner,
-					const char *acls, const char *racls,
-					const char *initacls, const char *initracls);
+					  const char *type, const char *name, const char *subname,
+					  const char *nspname, const char *owner,
+					  const char *acls, const char *racls,
+					  const char *initacls, const char *initracls);
 
 static void getDependencies(Archive *fout);
 static void BuildArchiveDependencies(Archive *fout);
@@ -560,10 +561,10 @@ main(int argc, char **argv)
 		 * the following options don't have an equivalent short option letter
 		 */
 		{"attribute-inserts", no_argument, &dopt.column_inserts, 1},
+		{"binary-upgrade", no_argument, &dopt.binary_upgrade, 1},
 		{"column-inserts", no_argument, &dopt.column_inserts, 1},
 		{"disable-dollar-quoting", no_argument, &dopt.disable_dollar_quoting, 1},
 		{"disable-triggers", no_argument, &dopt.disable_triggers, 1},
-		{"binary-upgrade", no_argument, &dopt.binary_upgrade, 1},	/* not documented */
 		{"enable-row-security", no_argument, &dopt.enable_row_security, 1},
 		{"exclude-table-data", required_argument, NULL, 4},
 		{"extra-float-digits", required_argument, NULL, 8},
@@ -779,8 +780,8 @@ main(int argc, char **argv)
 				dumpsnapshot = pg_strdup(optarg);
 				break;
 
-            case 7:				/* no-sync */
-                dosync = false;
+			case 7:				/* no-sync */
+				dosync = false;
                 break;
 
             case 8:
@@ -1203,10 +1204,13 @@ main(int argc, char **argv)
 	 */
 	ropt = NewRestoreOptions();
 	ropt->filename = filename;
+
+	/* if you change this list, see dumpOptionsFromRestoreOptions */
 	ropt->dropSchema = dopt.outputClean;
 	ropt->dataOnly = dopt.dataOnly;
 	ropt->schemaOnly = dopt.schemaOnly;
 	ropt->if_exists = dopt.if_exists;
+	ropt->column_inserts = dopt.column_inserts;
 	ropt->dumpSections = dopt.dumpSections;
 	ropt->aclsSkip = dopt.aclsSkip;
 	ropt->superuser = dopt.outputSuperuser;
@@ -1215,10 +1219,6 @@ main(int argc, char **argv)
 	ropt->noTablespace = dopt.outputNoTablespaces;
 	ropt->disable_triggers = dopt.disable_triggers;
 	ropt->use_setsessauth = dopt.use_setsessauth;
-	ropt->binary_upgrade = dopt.binary_upgrade;
-
-	/* if you change this list, see dumpOptionsFromRestoreOptions */
-	ropt->column_inserts = dopt.column_inserts;
 	ropt->disable_dollar_quoting = dopt.disable_dollar_quoting;
 	ropt->dump_inserts = dopt.dump_inserts;
 	ropt->no_comments = dopt.no_comments;
@@ -1237,8 +1237,6 @@ main(int argc, char **argv)
 		ropt->compression = compressLevel;
 
 	ropt->suppressDumpWarnings = true;	/* We've already shown them */
-
-	ropt->binary_upgrade = dopt.binary_upgrade;
 
 	SetArchiveOptions(fout, &dopt, ropt);
 
@@ -1855,7 +1853,6 @@ selectDumpableNamespace(NamespaceInfo *nsinfo, Archive *fout)
 		else
 			nsinfo->dobj.dump = DUMP_COMPONENT_ACL;
 		nsinfo->dobj.dump_contains = DUMP_COMPONENT_ALL;
-
 	}
 	else
 		nsinfo->dobj.dump_contains = nsinfo->dobj.dump = DUMP_COMPONENT_ALL;
@@ -1926,7 +1923,7 @@ selectDumpableType(TypeInfo *tyinfo, Archive *fout)
 {
 	/* skip complex types, except for standalone composite types */
 	if (OidIsValid(tyinfo->typrelid) &&
-			tyinfo->typrelkind != RELKIND_COMPOSITE_TYPE)
+		tyinfo->typrelkind != RELKIND_COMPOSITE_TYPE)
 	{
 		TableInfo  *tytable = findTableByOid(tyinfo->typrelid);
 
@@ -2721,6 +2718,7 @@ makeTableDataInfo(DumpOptions *dopt, TableInfo *tbinfo)
 		return;
 	/* Skip EXTERNAL TABLEs (like foreign tables in GPDB 6.x and below) */
 	if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
+		return;
 	/* Skip partitioned tables (data in partitions) */
 	if (tbinfo->relkind == RELKIND_PARTITIONED_TABLE)
 		return;
@@ -7137,7 +7135,7 @@ getTables(Archive *fout, int *numTables)
 						  "d.classid = c.tableoid AND d.objid = c.oid AND "
 						  "d.objsubid = 0 AND "
 						  "d.refclassid = c.tableoid AND d.deptype = 'a') "
-					   "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid) "
+						  "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid) "
 						  "LEFT JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid "
 						  "LEFT JOIN pg_partition p ON pr.paroid = p.oid "
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0)"
@@ -7877,6 +7875,7 @@ getInherits(Archive *fout, int *numInherits)
 	int			i;
 	PQExpBuffer query = createPQExpBuffer();
 	InhInfo    *inhinfo;
+
 	int			i_inhrelid;
 	int			i_inhparent;
 
@@ -9545,7 +9544,6 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			tbinfo->attrdefs[j] = NULL; /* fix below */
 			if (PQgetvalue(res, j, i_atthasdef)[0] == 't')
 				hasdefaults = true;
-
 			/* these flags will be set in flagInhAttrs() */
 			tbinfo->inhNotNull[j] = false;
 
@@ -9554,15 +9552,6 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 				tbinfo->attencoding[j] = pg_strdup(PQgetvalue(res, j, i_attencoding));
 			else
 				tbinfo->attencoding[j] = NULL;
-
-			/*
-			 * External table doesn't support inheritance so ensure that all
-			 * attributes are marked as local.  Applicable to partitioned
-			 * tables where a partition is exchanged for an external table.
-			 */
-			// FIXME
-			//if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
-			//	tbinfo->attislocal[j] = false;
 		}
 
 		PQclear(res);
@@ -10990,6 +10979,9 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			if (!postDataSchemaOnly)
 			dumpTable(fout, (TableInfo *) dobj);
 			break;
+		case DO_TABLE_ATTACH:
+			dumpTableAttach(fout, (TableAttachInfo *) dobj);
+			break;
 		case DO_ATTRDEF:
 			if (!postDataSchemaOnly)
 			dumpAttrDef(fout, (AttrDefInfo *) dobj);
@@ -12061,7 +12053,7 @@ dumpDomain(Archive *fout, TypeInfo *tyinfo)
 												 tyinfo->dobj.catId.oid,
 												 tyinfo->dobj.namespace->dobj.catId.oid,
 												 tyinfo->dobj.name,
-												 true); /* force array type */
+												 true);	/* force array type */
 
 	qtypname = pg_strdup(fmtId(tyinfo->dobj.name));
 	qualtypname = pg_strdup(fmtQualifiedDumpable(tyinfo));
@@ -16127,12 +16119,6 @@ dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo)
 					NULL, fdwinfo->rolname,
 					fdwinfo->dobj.catId, 0, fdwinfo->dobj.dumpId);
 
-	/* Dump Foreign Data Wrapper Comments */
-	if (fdwinfo->dobj.dump & DUMP_COMPONENT_COMMENT)
-		dumpComment(fout, "FOREIGN DATA WRAPPER", qfdwname,
-					NULL, fdwinfo->rolname,
-					fdwinfo->dobj.catId, 0, fdwinfo->dobj.dumpId);
-
 	/* Handle the ACL */
 	if (fdwinfo->dobj.dump & DUMP_COMPONENT_ACL)
 		dumpACL(fout, fdwinfo->dobj.catId, fdwinfo->dobj.dumpId,
@@ -16215,12 +16201,6 @@ dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo)
 								  .section = SECTION_PRE_DATA,
 								  .createStmt = q->data,
 								  .dropStmt = delq->data));
-
-	/* Dump Foreign Server Comments */
-	if (srvinfo->dobj.dump & DUMP_COMPONENT_COMMENT)
-		dumpComment(fout, "SERVER", qsrvname,
-					NULL, srvinfo->rolname,
-					srvinfo->dobj.catId, 0, srvinfo->dobj.dumpId);
 
 	/* Dump Foreign Server Comments */
 	if (srvinfo->dobj.dump & DUMP_COMPONENT_COMMENT)
@@ -16950,6 +16930,7 @@ dumpTable(Archive *fout, TableInfo *tbinfo)
 			char	   *attnamecopy;
 
 			attnamecopy = pg_strdup(fmtId(attname));
+
 			/* Column's GRANT type is always TABLE */
 			dumpACL(fout, tbinfo->dobj.catId, tbinfo->dobj.dumpId,
 					"TABLE", namecopy, attnamecopy,
@@ -17439,7 +17420,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 	qrelname = pg_strdup(fmtId(tbinfo->dobj.name));
 	qualrelname = pg_strdup(fmtQualifiedDumpable(tbinfo));
-
 
 	if (tbinfo->hasoids)
 		pg_log_warning("WITH OIDS is not supported anymore (table \"%s\")",
@@ -18251,27 +18231,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		}
 
 		/*
-		 * For partitioned tables, emit the ATTACH PARTITION clause.  Note
-		 * that we always want to create partitions this way instead of using
-		 * CREATE TABLE .. PARTITION OF, mainly to preserve a possible column
-		 * layout discrepancy with the parent, but also to ensure it gets the
-		 * correct tablespace setting if it differs from the parent's.
-		 */
-		if (tbinfo->ispartition)
-		{
-			/* With partitions there can only be one parent */
-			if (tbinfo->numParents != 1)
-				fatal("invalid number of parents %d for table \"%s\"",
-					  tbinfo->numParents, tbinfo->dobj.name);
-
-			/* Perform ALTER TABLE on the parent */
-			appendPQExpBuffer(q,
-							  "ALTER TABLE ONLY %s ATTACH PARTITION %s %s;\n",
-							  fmtQualifiedDumpable(parents[0]),
-							  qualrelname, tbinfo->partbound);
-		}
-
-		/*
 		 * In binary_upgrade mode, arrange to restore the old relfrozenxid and
 		 * relminmxid of all vacuumable relations.  (While vacuum.c processes
 		 * TOAST tables semi-independently, here we see them only as children
@@ -18531,6 +18490,55 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	destroyPQExpBuffer(delq);
 	free(qrelname);
 	free(qualrelname);
+}
+
+/*
+ * dumpTableAttach
+ *	  write to fout the commands to attach a child partition
+ *
+ * Child partitions are always made by creating them separately
+ * and then using ATTACH PARTITION, rather than using
+ * CREATE TABLE ... PARTITION OF.  This is important for preserving
+ * any possible discrepancy in column layout, to allow assigning the
+ * correct tablespace if different, and so that it's possible to restore
+ * a partition without restoring its parent.  (You'll get an error from
+ * the ATTACH PARTITION command, but that can be ignored, or skipped
+ * using "pg_restore -L" if you prefer.)  The last point motivates
+ * treating ATTACH PARTITION as a completely separate ArchiveEntry
+ * rather than emitting it within the child partition's ArchiveEntry.
+ */
+static void
+dumpTableAttach(Archive *fout, TableAttachInfo *attachinfo)
+{
+	DumpOptions *dopt = fout->dopt;
+	PQExpBuffer q;
+
+	if (dopt->dataOnly)
+		return;
+
+	if (!(attachinfo->partitionTbl->dobj.dump & DUMP_COMPONENT_DEFINITION))
+		return;
+
+	q = createPQExpBuffer();
+
+	/* Perform ALTER TABLE on the parent */
+	appendPQExpBuffer(q,
+					  "ALTER TABLE ONLY %s ",
+					  fmtQualifiedDumpable(attachinfo->parentTbl));
+	appendPQExpBuffer(q,
+					  "ATTACH PARTITION %s %s;\n",
+					  fmtQualifiedDumpable(attachinfo->partitionTbl),
+					  attachinfo->partitionTbl->partbound);
+
+	ArchiveEntry(fout, attachinfo->dobj.catId, attachinfo->dobj.dumpId,
+				 ARCHIVE_OPTS(.tag = attachinfo->dobj.name,
+							  .namespace = attachinfo->dobj.namespace->dobj.name,
+							  .owner = attachinfo->partitionTbl->rolname,
+							  .description = "TABLE ATTACH",
+							  .section = SECTION_PRE_DATA,
+							  .createStmt = q->data));
+
+	destroyPQExpBuffer(q);
 }
 
 /*
@@ -20110,6 +20118,7 @@ processExtensionTables(Archive *fout, ExtensionInfo extinfo[],
 				configtbl = findTableByOid(configtbloid);
 				if (configtbl == NULL)
 					continue;
+
 				/*
 				 * Tables of not-to-be-dumped extensions shouldn't be dumped
 				 * unless the table or its schema is explicitly included
@@ -20168,12 +20177,12 @@ processExtensionTables(Archive *fout, ExtensionInfo extinfo[],
 	query = createPQExpBuffer();
 
 	printfPQExpBuffer(query,
-			"SELECT conrelid, confrelid "
-			"FROM pg_constraint "
-				"JOIN pg_depend ON (objid = confrelid) "
-			"WHERE contype = 'f' "
-			"AND refclassid = 'pg_extension'::regclass "
-			"AND classid = 'pg_class'::regclass;");
+					  "SELECT conrelid, confrelid "
+					  "FROM pg_constraint "
+					  "JOIN pg_depend ON (objid = confrelid) "
+					  "WHERE contype = 'f' "
+					  "AND refclassid = 'pg_extension'::regclass "
+					  "AND classid = 'pg_class'::regclass;");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 	ntups = PQntuples(res);
@@ -20412,6 +20421,7 @@ addBoundaryDependencies(DumpableObject **dobjs, int numObjs,
 			case DO_COLLATION:
 			case DO_CONVERSION:
 			case DO_TABLE:
+			case DO_TABLE_ATTACH:
 			case DO_ATTRDEF:
 			case DO_PROCLANG:
 			case DO_CAST:

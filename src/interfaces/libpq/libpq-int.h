@@ -249,7 +249,7 @@ struct pg_result
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
 	int64		numRejected;
-	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
+	/* GPDB: number of rows completed when COPY FROM */
 	int64		numCompleted;
 	/* GPDB */
 	int		nWaits;

@@ -322,8 +322,7 @@ SendNumRows(int64 numrejected, int64 numcompleted)
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
 	pq_sendint64(&buf, numrejected);
-	if (numcompleted > 0)		/* optional send completed num for COPY FROM
-								 * ON SEGMENT */
+	if (numcompleted > 0)		/* optional send completed num */
 		pq_sendint64(&buf, numcompleted);
 	pq_endmessage(&buf);
 }

@@ -65,6 +65,7 @@ Feature: gprecoverseg tests
       And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
+      And the segments are synchronized
 
     Examples:
       | args      | coordinator_workers | segHost_workers |
@@ -84,6 +85,7 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+	And the segments are synchronized
 
     Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running

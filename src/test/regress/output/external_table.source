@@ -4758,6 +4758,12 @@ select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::
 (1 row)
 
 drop external table ext_w_expand;
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
 --
 -- Test host name cannot be resolved
 --
@@ -4876,4 +4882,3 @@ SELECT * FROM test_part_integrity;
  2 | 3
 (4 rows)
 
-DROP TABLE test_part_integrity;

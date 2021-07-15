@@ -1,5 +1,8 @@
 --  MPP-21536: Duplicated rows inserted when ORCA is turned on
 
+create schema bfv_dml;
+set search_path=bfv_dml;
+
 -- create test table
 create table m();
 alter table m add column a int;
@@ -198,3 +201,123 @@ rollback;
 select * from execinsert_test;
 
 drop table execinsert_test;
+
+--
+-- Verify that DELETE properly redistributes in the case of joins
+--
+
+-- start_ignore
+drop table if exists foo;
+drop table if exists bar;
+-- end_ignore
+
+create table foo (a int, b int) distributed randomly;
+create table bar(a int, b int);
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+explain delete from foo using bar where foo.a=bar.a;
+delete from foo using bar where foo.a=bar.a;
+select * from foo;
+drop table foo;
+drop table bar;
+
+create table foo (a int, b int) distributed randomly;
+create table bar(a int, b int);
+insert into foo select generate_series(1, 10);
+insert into bar select generate_series(1, 10);
+explain delete from foo using bar where foo.a = bar.a returning foo.*;
+delete from foo using bar where foo.a = bar.a returning foo.*;
+select * from foo;
+drop table foo;
+drop table bar;
+
+create table foo (a int, b int) distributed randomly;
+insert into foo select generate_series(1,10);
+explain delete from foo where foo.a=1;
+delete from foo where foo.a=1;
+drop table foo;
+
+create table foo (a int, b int) distributed randomly;
+create table bar(a int, b int);
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+explain delete from foo using bar where foo.a=bar.b;
+delete from foo using bar where foo.a=bar.b;
+drop table foo;
+drop table bar;
+
+create table foo (a int, b int) distributed randomly;
+insert into foo select generate_series(1,10);
+explain delete from foo using foo foo_1 where foo_1.a=foo.a;
+delete from foo using foo foo_1 where foo_1.a=foo.a;
+drop table foo;
+
+create table foo (a int, b int) distributed randomly;
+insert into foo select generate_series(1,10);
+explain delete from foo;
+delete from foo;
+drop table foo;
+
+create table foo (a int, b int) distributed randomly;
+create table bar(a int, b int) distributed randomly;
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+explain delete from foo using bar;
+delete from foo using bar;
+drop table foo;
+drop table bar;
+
+create table foo (a int, b int) distributed randomly;
+create table bar(a int, b int) distributed randomly;
+insert into bar select i, i from generate_series(1, 1000)i;
+insert into foo select i,i from generate_series(1, 10)i;
+analyze foo;
+analyze bar;
+set optimizer_enable_motion_redistribute=off;
+explain delete from foo using bar where foo.b=bar.b;
+delete from foo using bar where foo.b=bar.b;
+drop table foo;
+drop table bar;
+reset optimizer_enable_motion_redistribute;
+
+create table foo (a int, b int) distributed randomly;
+create table bar (a int, b int) distributed randomly;
+insert into foo (a, b) values (1, 2);
+explain insert into bar select * from foo;
+insert into bar select * from foo;
+select * from bar;
+drop table foo;
+drop table bar;
+
+create table foo (a int, b int) distributed randomly;
+create table bar (a int, b int) distributed randomly;
+insert into foo (a, b) values (1, 2);
+insert into bar (a, b) values (1, 2);
+explain update foo set a=4 from bar where foo.a=bar.a;
+update foo set a=4 from bar where foo.a=bar.a;
+select * from foo;
+drop table foo;
+drop table bar;
+
+create table foo (a int, b int) distributed randomly;
+create table bar (a int, b int) distributed randomly;
+create table jazz (a int, b int) distributed randomly;
+insert into foo (a, b) values (1, 2);
+insert into bar (a, b) values (1, 2);
+insert into jazz (a, b) values (1, 2);
+explain insert into foo select bar.a from bar, jazz where bar.a=jazz.a;
+insert into foo select bar.a from bar, jazz where bar.a=jazz.a;
+select * from foo;
+drop table foo;
+drop table bar;
+drop table jazz;
+
+create table foo (a int) distributed randomly;
+create table bar (b int) distributed randomly;
+insert into foo select i from generate_series(1, 10)i;
+insert into bar select i from generate_series(1, 10)i;
+explain delete from foo using (select a from foo union all select b from bar) v;
+delete from foo using (select a from foo union all select b from bar) v;
+select * from foo;
+drop table foo;
+drop table bar;

@@ -1029,7 +1029,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2" DuplicateSensitive="true">
+          <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.019502" Rows="99.999999" Width="12"/>
             </dxl:Properties>

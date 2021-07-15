@@ -156,7 +156,7 @@ def validate_target(target):
         raise Exception('Invalid target "%s"; no secrets file found.  Please ensure your secrets files in %s are up to date.' % (target, SECRETS_PATH))
 
 
-def create_pipeline(args):
+def create_pipeline(args, git_remote, git_branch):
     """Generate OS specific pipeline sections"""
     if args.test_trigger_false:
         test_trigger = "true"
@@ -171,7 +171,10 @@ def create_pipeline(args):
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
         'test_trigger': test_trigger,
-        'use_ICW_workers': args.use_ICW_workers
+        'use_ICW_workers': args.use_ICW_workers,
+        'build_test_rc_rpm': args.build_test_rc_rpm,
+        'git_username': git_remote.split('/')[-2],
+        'git_branch': git_branch
     }
 
     pipeline_yml = render_template(args.template_filename, context)
@@ -189,15 +192,7 @@ def create_pipeline(args):
     return True
 
 
-def gen_pipeline(args, pipeline_name, secret_files,
-                 git_remote=None,
-                 git_branch=None):
-
-    if git_remote is None:
-        git_remote = suggested_git_remote()
-    if git_branch is None:
-        git_branch = suggested_git_branch()
-
+def gen_pipeline(args, pipeline_name, secret_files, git_remote, git_branch):
     secrets = ""
     for secret in secret_files:
         secrets += "-l %s/%s " % (SECRETS_PATH, secret)
@@ -236,6 +231,7 @@ def header(args):
   Test sections ............ : %s
   test_trigger ............. : %s
   use_ICW_workers .......... : %s
+  build_test_rc_rpm ........ : %s
 ======================================================================
 ''' % (args.pipeline_target,
        args.output_filepath,
@@ -243,11 +239,12 @@ def header(args):
        args.os_types,
        args.test_sections,
        args.test_trigger_false,
-       args.use_ICW_workers
+       args.use_ICW_workers,
+       args.build_test_rc_rpm
        )
 
 
-def print_fly_commands(args):
+def print_fly_commands(args, git_remote, git_branch):
     pipeline_name = os.path.basename(args.output_filepath).rsplit('.', 1)[0]
 
     print(header(args))
@@ -262,7 +259,7 @@ def print_fly_commands(args):
 
     print('NOTE: You can set the developer pipeline with the following:\n')
     print(gen_pipeline(args, pipeline_name, ["gpdb_%s-ci-secrets.dev.yml" % BASE_BRANCH,
-                                             "ccp_ci_secrets_%s.yml" % args.pipeline_target]))
+                                             "ccp_ci_secrets_%s.yml" % args.pipeline_target], git_remote, git_branch))
 
 
 def main():
@@ -338,7 +335,7 @@ def main():
             'AA',
             'Extensions'
         ],
-        default=['ICW'],
+        default=[],
         nargs='+',
         help='Select tests sections to run'
     )
@@ -368,7 +365,21 @@ def main():
         help='Set use_ICW_workers to "true".'
     )
 
+    parser.add_argument(
+        '--build-test-rc',
+        action='store_true',
+        dest='build_test_rc_rpm',
+        default=False,
+        help='Generate a release candidate RPM. Useful for testing branches against'
+             'products that consume RC RPMs such as gpupgrade. Use prod'
+             'configuration to build prod RCs.'
+    )
+
     args = parser.parse_args()
+
+    if args.pipeline_target == 'prod' and args.build_test_rc_rpm:
+        raise Exception('Cannot specify a prod pipeline when building a test'
+                        'RC. Please specify one or the other.')
 
     validate_target(args.pipeline_target)
 
@@ -397,6 +408,9 @@ def main():
             'Extensions'
         ]
 
+    git_remote = suggested_git_remote()
+    git_branch = suggested_git_branch()
+
     # if generating a dev pipeline but didn't specify an output,
     # don't overwrite the master pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
@@ -406,12 +420,12 @@ def main():
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
-    pipeline_created = create_pipeline(args)
+    pipeline_created = create_pipeline(args, git_remote, git_branch)
 
     if not pipeline_created:
         exit(1)
 
-    print_fly_commands(args)
+    print_fly_commands(args, git_remote, git_branch)
 
 
 if __name__ == "__main__":

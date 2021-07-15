@@ -642,7 +642,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				segment_rows_rejected = res->numRejected;
 
 			/*
-			 * When COPY FROM ON SEGMENT, need to calculate the number of this
+			 * When COPY FROM, need to calculate the number of this
 			 * segment's completed rows
 			 */
 			if (res->numCompleted > 0)
