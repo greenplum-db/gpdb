@@ -1260,6 +1260,18 @@ DoCopy(ParseState *pstate, const CopyStmt *stmt,
 		cstate->whereClause = whereClause;
 
 		/*
+		 * COPY FROM ON SEGMENT doesn't handle the distributed replicated tables
+		 * since we cannot ensure the same data for all segments.
+		 */
+		if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH && GpPolicyIsReplicated(rel->rd_cdbpolicy))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("COPY FROM ON SEGMENT doesn't support distributed replicated table"),
+					 errhint("Use COPY FROM statements instead.")));
+		}
+
+		/*
 		 * Error handling setup
 		 */
 		if (cstate->sreh)

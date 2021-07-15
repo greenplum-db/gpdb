@@ -1662,3 +1662,35 @@ select * from foo;
  database in COPY TO: funny copy"db'with\\quotes
 (3 rows)
 
+-- Test COPY FROM and TO on distributed replicated tables
+-- COPY on master should just work
+DROP TABLE IF EXISTS dist_rep_src;
+NOTICE:  table "dist_rep_src" does not exist, skipping
+DROP TABLE IF EXISTS dist_rep_dst;
+NOTICE:  table "dist_rep_dst" does not exist, skipping
+CREATE TABLE dist_rep_src(a int,b char) distributed replicated;
+CREATE TABLE dist_rep_dst(a int,b char) distributed replicated;
+INSERT INTO dist_rep_src values(1,'1');
+INSERT INTO dist_rep_src values(2,'2');
+COPY dist_rep_src TO '/tmp/dist_rep_src.txt';
+COPY dist_rep_dst FROM '/tmp/dist_rep_src.txt';
+SELECT * FROM dist_rep_dst;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+(2 rows)
+
+TRUNCATE TABLE dist_rep_dst;
+-- COPY TO should work on segment
+COPY dist_rep_src TO '/tmp/dist_rep_src_<SEGID>.txt' ON SEGMENT;
+-- COPY FROM should fail on segment
+COPY dist_rep_dst FROM '/tmp/dist_rep_src_<SEGID>.txt' ON SEGMENT;
+ERROR:  COPY FROM ON SEGMENT doesn't support distributed replicated table
+HINT:  Use COPY FROM statements instead.
+-- Nothing should be copied
+SELECT * FROM dist_rep_dst;
+ a | b 
+---+---
+(0 rows)
+

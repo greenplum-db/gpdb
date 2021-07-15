@@ -1337,3 +1337,23 @@ COPY foo FROM PROGRAM 'cat /tmp/gpcopyenvtest' ESCAPE 'OFF';
 COPY foo FROM PROGRAM '/usr/bin/env bash -c ''echo -E database in COPY FROM: $GP_DATABASE''' ESCAPE 'OFF';
 
 select * from foo;
+
+-- Test COPY FROM and TO on distributed replicated tables
+-- COPY on master should just work
+DROP TABLE IF EXISTS dist_rep_src;
+DROP TABLE IF EXISTS dist_rep_dst;
+CREATE TABLE dist_rep_src(a int,b char) distributed replicated;
+CREATE TABLE dist_rep_dst(a int,b char) distributed replicated;
+INSERT INTO dist_rep_src values(1,'1');
+INSERT INTO dist_rep_src values(2,'2');
+COPY dist_rep_src TO '/tmp/dist_rep_src.txt';
+COPY dist_rep_dst FROM '/tmp/dist_rep_src.txt';
+SELECT * FROM dist_rep_dst;
+
+TRUNCATE TABLE dist_rep_dst;
+-- COPY TO should work on segment
+COPY dist_rep_src TO '/tmp/dist_rep_src_<SEGID>.txt' ON SEGMENT;
+-- COPY FROM should fail on segment
+COPY dist_rep_dst FROM '/tmp/dist_rep_src_<SEGID>.txt' ON SEGMENT;
+-- Nothing should be copied
+SELECT * FROM dist_rep_dst;
