@@ -3815,7 +3815,7 @@ deconstruct_agg_info(MppGroupContext *ctx)
 	 *---------------------------------------------------------------------
 	 */
 	ctx->dqa_offsets = palloc(sizeof(int) * (1 + ctx->numDistinctCols));
-	ctx->dqa_offsets[0] = ctx->numGroupCols;
+	ctx->dqa_offsets[0] = list_length(ctx->grps_tlist);
 	for (i = 0; i < ctx->numDistinctCols; i++)
 	{
 		ctx->dqa_offsets[i + 1] = ctx->dqa_offsets[i]
@@ -4163,7 +4163,7 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			Aggref	   *dqa_aggref;
 			TargetEntry *firstarg = (TargetEntry *) linitial(aggref->args);
 
-			arg_var = makeVar(ctx->final_varno, ctx->numGroupCols + 1,
+			arg_var = makeVar(ctx->final_varno, list_length(ctx->grps_tlist) + 1,
 							  exprType((Node *) firstarg->expr),
 							  exprTypmod((Node *) firstarg->expr),
 							  exprCollation((Node *) firstarg->expr),
@@ -4263,7 +4263,7 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			ctx->prefs_tlist = lappend(ctx->prefs_tlist, prelim_tle);
 
 			args = makeVar(ctx->final_varno,
-						   ctx->numGroupCols
+						   list_length(ctx->grps_tlist)
 						   + (ctx->use_dqa_pruning ? 1 : 0)
 						   + attrno,
 						   transtype,
