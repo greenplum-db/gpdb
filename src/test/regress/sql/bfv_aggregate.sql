@@ -1470,6 +1470,15 @@ explain (costs off)
 select 1, median(col1) from group_by_const group by 1;
 select 1, median(col1) from group_by_const group by 1;
 
+--
+-- Test GROUP BY IN exists subquery
+--
+create temp table group_by_subquery(col1 int);
+insert into group_by_subquery select i from generate_series(1, 5) i;
+explain (costs off)
+select col1 from group_by_subquery where exists (select avg(col1) from group_by_subquery group by col1);
+select col1 from group_by_subquery where exists (select avg(col1) from group_by_subquery group by col1);
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

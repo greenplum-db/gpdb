@@ -1823,6 +1823,43 @@ select 1, median(col1) from group_by_const group by 1;
         1 |  500.5
 (1 row)
 
+--
+-- Test GROUP BY IN exists subquery
+--
+create temp table group_by_subquery(col1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into group_by_subquery select i from generate_series(1, 5) i;
+explain (costs off)
+select col1 from group_by_subquery where exists (select avg(col1) from group_by_subquery group by col1);
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Result
+   Filter: (SubPlan 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on group_by_subquery
+   SubPlan 1
+     ->  Limit
+           ->  Materialize
+                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                       ->  GroupAggregate
+                             Group Key: group_by_subquery_1.col1
+                             ->  Sort
+                                   Sort Key: group_by_subquery_1.col1
+                                   ->  Seq Scan on group_by_subquery group_by_subquery_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
+
+select col1 from group_by_subquery where exists (select avg(col1) from group_by_subquery group by col1);
+ col1 
+------
+    2
+    3
+    4
+    1
+    5
+(5 rows)
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;
