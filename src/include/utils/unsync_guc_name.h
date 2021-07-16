@@ -34,6 +34,7 @@
 		"checkpoint_flush_after",
 		"checkpoint_timeout",
 		"checkpoint_warning",
+		"client_connection_check_interval",
 		"client_encoding",
 		"cluster_name",
 		"config_file",

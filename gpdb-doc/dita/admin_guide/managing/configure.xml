@@ -220,6 +220,9 @@
             <strow>
               <stentry>
                 <p>
+                  <codeph>client_connection_check_interval</codeph>
+                </p>
+                <p>
                   <codeph>gp_vmem_idle_resource_timeout</codeph>
                 </p>
                 <p>

@@ -34,6 +34,9 @@
               <xref href="#check_function_bodies"/>
             </li>
             <li>
+              <xref href="#client_connection_check_interval"/>
+            </li>
+            <li>
               <xref href="#client_encoding"/>
             </li>
             <li>
@@ -867,6 +870,34 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="client_connection_check_interval">
+      <title>client_connection_check_interval</title>
+    <body>
+      <p>Sets the time interval between optional checks that the client is still
+        connected, while running queries. 0 disables connection checks. </p>
+      <table id="client_connection_check_interval_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">number of milliseconds</entry>
+              <entry colname="col2">0</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

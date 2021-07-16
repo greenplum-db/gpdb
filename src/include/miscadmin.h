@@ -87,6 +87,7 @@ extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
 
 extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;
+extern PGDLLIMPORT volatile sig_atomic_t CheckClientConnectionPending;
 
 /* these are marked volatile because they are examined by signal handlers: */
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
