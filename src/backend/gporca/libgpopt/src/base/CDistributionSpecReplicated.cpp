@@ -92,6 +92,12 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 			return true;
 		}
 
+		if (CDistributionSpec::EdtRandom == pdss->Edt() &&
+			(CDistributionSpecRandom::PdsConvert(pdss))->IsDuplicateSensitive())
+		{
+			return false;
+		}
+
 		// a replicated distribution satisfies any non-singleton one,
 		// as well as singleton distributions that are not master-only
 		return !(EdtSingleton == pdss->Edt() &&
