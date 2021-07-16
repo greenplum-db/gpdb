@@ -14,3 +14,4 @@ Feature: Tests for gpcheckperf
     When  the user runs "gpcheckperf -h mdw -h sdw1 -d /data/gpdata/ -r n"
     Then  gpcheckperf should return a return code of 0
     And   gpcheckperf should print "avg = " to stdout
+    And   gpcheckperf should not print "NOTICE: -t is deprecated " to stdout
