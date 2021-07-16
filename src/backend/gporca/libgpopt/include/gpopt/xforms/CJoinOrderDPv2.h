@@ -563,6 +563,12 @@ public:
 
 	IOstream &OsPrintProperty(IOstream &, SExpressionProperties &) const;
 
+	virtual CXform::EXformId
+	EOriginXForm() const
+	{
+		return CXform::ExfExpandNAryJoinDPv2;
+	}
+
 #ifdef GPOS_DEBUG
 	void DbgPrint();
 #endif

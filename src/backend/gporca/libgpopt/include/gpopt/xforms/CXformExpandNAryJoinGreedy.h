@@ -79,6 +79,7 @@ public:
 	{
 		return true;
 	}
+
 };	// class CXformExpandNAryJoinGreedy
 
 }  // namespace gpopt

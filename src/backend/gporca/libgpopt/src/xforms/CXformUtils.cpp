@@ -38,6 +38,7 @@
 #include "gpopt/operators/CLogicalRowTrigger.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalInnerHashJoin.h"
 #include "gpopt/operators/CScalarAssertConstraint.h"
 #include "gpopt/operators/CScalarAssertConstraintList.h"
 #include "gpopt/operators/CScalarBitmapBoolOp.h"
@@ -4815,6 +4816,5 @@ CXformUtils::AddALinearStackOfUnaryExpressions(
 
 	return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
 }
-
 
 // EOF

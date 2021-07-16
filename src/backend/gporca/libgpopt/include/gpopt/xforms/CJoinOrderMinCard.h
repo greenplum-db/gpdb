@@ -50,6 +50,12 @@ public:
 	// print function
 	virtual IOstream &OsPrint(IOstream &) const;
 
+	virtual CXform::EXformId
+	EOriginXForm() const
+	{
+		return CXform::ExfExpandNAryJoinMinCard;
+	}
+
 };	// class CJoinOrderMinCard
 
 }  // namespace gpopt

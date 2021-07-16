@@ -37,10 +37,11 @@ protected:
 
 public:
 	// ctor
-	CPhysicalRightOuterHashJoin(CMemoryPool *mp,
-								CExpressionArray *pdrgpexprOuterKeys,
-								CExpressionArray *pdrgpexprInnerKeys,
-								IMdIdArray *hash_opfamilies = NULL);
+	CPhysicalRightOuterHashJoin(
+		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+		CExpressionArray *pdrgpexprInnerKeys,
+		IMdIdArray *hash_opfamilies = NULL,
+		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	virtual ~CPhysicalRightOuterHashJoin();

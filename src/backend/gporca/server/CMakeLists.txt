@@ -225,7 +225,7 @@ DPE-with-unsupported-pred DPE-SemiJoin DPE-IN DPE-NOT-IN HJN-DPE-Bitmap-Outer-Ch
 NLJ-Broadcast-DPE-Outer-Child PartTbl-MultiWayJoinWithDPE PartTbl-MultiWayJoinWithDPE-2
 PartTbl-LeftOuterHashJoin-DPE-IsNull PartTbl-LeftOuterNLJoin-DPE-IsNull
 PartTbl-List-DPE-Varchar-Predicates PartTbl-List-DPE-Int-Predicates PartTbl-DPE-PartitionSelectorRewindability
-PartTbl-RightOuterHashJoin-DPE-IsNull SPE-IS-NULL;
+PartTbl-RightOuterHashJoin-DPE-IsNull SPE-IS-NULL JoinOrderDPE;
 
 CSetop1Test:
 ValueScanWithDuplicateAndSelfComparison PushGbBelowNaryUnionAll

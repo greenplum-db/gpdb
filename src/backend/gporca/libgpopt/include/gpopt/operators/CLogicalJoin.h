@@ -32,9 +32,13 @@ private:
 	// private copy ctor
 	CLogicalJoin(const CLogicalJoin &);
 
+	// xform that join originated from
+	CXform::EXformId m_origin_xform;
+
 protected:
 	// ctor
-	explicit CLogicalJoin(CMemoryPool *mp);
+	explicit CLogicalJoin(CMemoryPool *mp,
+						  CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	virtual ~CLogicalJoin()
@@ -61,6 +65,15 @@ public:
 	)
 	{
 		return PopCopyDefault();
+	}
+
+	// conversion function
+	static CLogicalJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+
+		return dynamic_cast<CLogicalJoin *>(pop);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -146,6 +159,13 @@ public:
 	{
 		return true;
 	}
+
+	CXform::EXformId
+	OriginXform()
+	{
+		return m_origin_xform;
+	}
+
 
 };	// class CLogicalJoin
 
