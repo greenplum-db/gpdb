@@ -247,7 +247,7 @@ create_gang_retry:
 					default:
 						ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 										errmsg("failed to acquire resources on one or more segments"),
-										errdetail("unknow pollstatus (%s)", segdbDesc->whoami)));
+										errdetail("unknown pollstatus (%s)", segdbDesc->whoami)));
 						break;
 				}
 

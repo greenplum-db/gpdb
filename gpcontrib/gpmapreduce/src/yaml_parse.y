@@ -949,7 +949,7 @@ yaml_yylex (YYSTYPE *lvalp, mapred_parser_t *parser)
 
 			case YAML_MAPPING_START_EVENT:
 				if (++parser->frame >= MAX_CONTEXT_DEPTH) {
-					fprintf(stderr, "Maximum context depth exceded");
+					fprintf(stderr, "Maximum context depth exceeded");
 					parser->state = STATE_DONE;
 					return END_STREAM;
 				}
@@ -960,7 +960,7 @@ yaml_yylex (YYSTYPE *lvalp, mapred_parser_t *parser)
 
 			case YAML_SEQUENCE_START_EVENT:
 				if (++parser->frame >= MAX_CONTEXT_DEPTH) {
-					printf("Maximum context depth exceded");
+					printf("Maximum context depth exceeded");
 					parser->state = STATE_DONE;
 					return END_STREAM;
 				}
