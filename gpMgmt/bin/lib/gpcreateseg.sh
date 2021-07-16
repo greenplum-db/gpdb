@@ -106,9 +106,7 @@ ADD_PG_HBA_ENTRIES() {
     local CIDR_ADDR
 
     for ADDR in "$@"; do
-        # MPP-15889
-        CIDR_ADDR=$(GET_CIDRADDR $ADDR)
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $(GET_CIDRADDR $ADDR)      trust >> ${GP_DIR}/$PG_HBA"
     done
 }
 
@@ -170,12 +168,11 @@ CREATE_QES_PRIMARY () {
             CIDR_COORDINATOR_IP=$(GET_CIDRADDR $COORDINATOR_IP)
             $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_COORDINATOR_IP}	trust >> ${GP_DIR}/$PG_HBA"
             PARA_EXIT $? "Update $PG_HBA for coordinator IP address ${CIDR_COORDINATOR_IP}"
-          done
+        done
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
           LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby coordinator IP address for segment instances"
           for STANDBY_IP in "${STANDBY_IP_ADDRESS[@]}"
           do
-          # MPP-15889
               CIDR_STANDBY_IP=$(GET_CIDRADDR $STANDBY_IP)
               $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_STANDBY_IP}	trust >> ${GP_DIR}/$PG_HBA"
               PARA_EXIT $? "Update $PG_HBA for coordinator standby address ${CIDR_STANDBY_IP}"
@@ -206,7 +203,7 @@ CREATE_QES_PRIMARY () {
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${COORDINATOR_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
-          $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $MIRROR_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
+          $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $(GET_CIDRADDR $MIRROR_HOSTADDRESS)      trust >> ${GP_DIR}/$PG_HBA"
         fi
         PARA_EXIT $? "Update $PG_HBA for coordinator IP address ${COORDINATOR_HOSTNAME}"
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
@@ -214,7 +211,7 @@ CREATE_QES_PRIMARY () {
             $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${STANDBY_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
             PARA_EXIT $? "Update $PG_HBA for coordinator standby address ${STANDBY_HOSTNAME}"
         fi
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $GP_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $(GET_CIDRADDR $GP_HOSTADDRESS)      trust >> ${GP_DIR}/$PG_HBA"
     fi
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
 }
@@ -236,9 +233,9 @@ CREATE_QES_MIRROR () {
             PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${CIDR_ADDR} trust"
         done
     else
-        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${GP_HOSTADDRESS} trust"
+        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} $(GET_CIDRADDR $GP_HOSTADDRESS) trust"
         if [ "${GP_HOSTADDRESS}" != "${PRIMARY_HOSTADDRESS}" ]; then
-            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} ${PRIMARY_HOSTADDRESS} trust"
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} $(GET_CIDRADDR $PRIMARY_HOSTADDRESS) trust"
         fi
     fi
     RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; cat - >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload" <<< "${PG_HBA_ENTRIES}"

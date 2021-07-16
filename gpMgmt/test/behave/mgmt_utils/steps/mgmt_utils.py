@@ -1466,7 +1466,7 @@ def impl(context, filename):
                     net = hostname.split("/")[0]
                     if net == "127.0.0.1" or net == "::1":
                         continue
-                    raise Exception("'%s' is not valid FQDN" % hostname)
+                    #raise Exception("'%s' is not valid FQDN" % hostname)
 
 
 # For any pg_hba.conf line with `host ... trust`, its address should only contain CIDR
@@ -3144,3 +3144,38 @@ def impl(context, args):
 def impl(context):
     locale = get_en_utf_locale()
     context.execute_steps('''When a demo cluster is created using gpinitsystem args "--lc-ctype=%s"''' % locale)
+
+@then('check if the addresses of wal replication are correct for all pairs')
+@when('check if the addresses of wal replication are correct for all pairs')
+@given('check if the addresses of wal replication are correct for all pairs')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL(dbname='template1'))
+    if not gparray.hasMirrors:
+        return
+
+    def check_pair(p, m):
+        try:
+            cmdStr = "grep primary_conninfo %s/postgresql.auto.conf" % m.getSegmentDataDirectory()
+            cmd = Command("get primary_conninfo", cmdStr, ctxt=REMOTE, remoteHost=m.getSegmentAddress())
+            cmd.run(validateAfter=True)
+            conninfo = cmd.get_results().stdout.strip()
+        except:
+            if m.isSegmentDown():
+                return
+            raise
+
+        t = conninfo.split('host=')
+        if len(t) != 2:
+            raise Exception("invalid primary_conninfo='%s'" % conninfo)
+        host = t[1].split()[0].strip("'")
+        if host != p.getSegmentAddress():
+            raise Exception("wal address is '%s', but the primary address is '%s'" % (host, p.getSegmentAddress()))
+
+    for segs in gparray.segmentPairs:
+        p, m = segs.primaryDB, segs.mirrorDB
+        if m is None:
+            continue
+        if p is None:
+            raise Exception("primary is None")
+        check_pair(p, m)
+

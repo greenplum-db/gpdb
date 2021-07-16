@@ -250,7 +250,8 @@ MIRROR_DIRS_LIST=${MIRROR_DIRS_LIST#* }
 # Host configuration
 #*****************************************************************************************
 
-LOCALHOST=`hostname`
+LOCALHOST=$(python -c 'import socket;print(socket.gethostbyname(socket.gethostname()))')
+COORDINATOR_HOSTNAME=`hostname`
 echo $LOCALHOST > hostfile
 
 #*****************************************************************************************
@@ -283,7 +284,7 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	declare -a DATA_DIRECTORY=(${PRIMARY_DIRS_LIST})
 	
 	# Name of host on which to setup the QD
-	COORDINATOR_HOSTNAME=$LOCALHOST
+	COORDINATOR_HOSTNAME=$COORDINATOR_HOSTNAME
 	
 	# Name of directory on that host in which to setup the QD
 	COORDINATOR_DIRECTORY=$QDDIR

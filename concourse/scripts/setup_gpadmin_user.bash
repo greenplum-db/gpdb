@@ -30,7 +30,7 @@ ssh_keyscan_for_user() {
   {
     ssh-keyscan localhost
     ssh-keyscan 0.0.0.0
-    ssh-keyscan `hostname`
+    ssh-keyscan `hostname` $(python -c 'import socket;print(socket.gethostbyname(socket.gethostname()))')
   } >> "${home_dir}/.ssh/known_hosts"
 }
 
