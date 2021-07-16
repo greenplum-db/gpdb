@@ -220,15 +220,21 @@ delete from tabwithoids RETURNING oid > 1000, tabwithoids;
 -- Verify that DELETE properly redistributes in the case of joins
 --
 
--- start_ignore
 drop table if exists foo;
 drop table if exists bar;
--- end_ignore
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 create table bar(a int, b int);
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+-- previously, table foo is defined as  randomly distributed and 
+-- that might lead to flaky result of the explain statement
+-- since random cost. We set policy to random without move the
+-- data after data is all inserted. This method can both have
+-- a random dist table and a stable test result.
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a=bar.a;
 delete from foo using bar where foo.a=bar.a;
 select * from foo;
