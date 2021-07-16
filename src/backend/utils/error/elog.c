@@ -224,7 +224,6 @@ static void write_pipe_chunks(char *data, int len, int dest);
 static void send_message_to_frontend(ErrorData *edata);
 static const char *error_severity(int elevel);
 static void append_with_tabs(StringInfo buf, const char *str);
-static bool is_log_level_output(int elevel, int log_min_level);
 static void write_pipe_chunks(char *data, int len, int dest);
 static void write_csvlog(ErrorData *edata);
 static void elog_debug_linger(ErrorData *edata);
@@ -2126,6 +2125,19 @@ elog_message(void)
 }
 
 /*
+ * GPDB: elog_get_hide_stmt
+ * Return the hide_stmt value for the error currently being handled.
+ * If no error exists, always return true.
+ */
+bool
+elog_get_hide_stmt(void)
+{
+	return (errordata_stack_depth < 0)
+		   ? true
+		   : errordata[errordata_stack_depth].hide_stmt;
+}
+
+/*
  * GetErrorContextStack - Return the context stack, for display/diags
  *
  * Returns a pstrdup'd string in the caller's context which includes the PG
@@ -3860,7 +3872,9 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 	write_syslogger_file_string(edata->context, amsyslogger, true);
 
 	/* user query */
-	write_syslogger_file_string(debug_query_string, amsyslogger, true);
+	if (debug_query_string != NULL && !edata->hide_stmt &&
+		is_log_level_output(edata->elevel, log_min_error_statement))
+		write_syslogger_file_string(debug_query_string, amsyslogger, true);
 
 	/* cursor pos */
 	syslogger_write_int32(true, "", edata->cursorpos, amsyslogger, true);
@@ -4015,7 +4029,9 @@ write_message_to_server_log(int elevel,
 	append_string_to_pipe_chunk(&buffer, context);
 
 	/* debug_query_string */
-	append_string_to_pipe_chunk(&buffer, query_text);
+	if (query_text != NULL &&
+		is_log_level_output(elevel, log_min_error_statement))
+		append_string_to_pipe_chunk(&buffer, query_text);
 
 	/* error_func_name */
 	if (show_funcname)
@@ -4807,7 +4823,7 @@ write_stderr(const char *fmt,...)
  * whether a message should go to the postmaster log, whereas a simple >=
  * test is correct for testing whether the message should go to the client.
  */
-static bool
+bool
 is_log_level_output(int elevel, int log_min_level)
 {
 	if (elevel == LOG || elevel == LOG_SERVER_ONLY)

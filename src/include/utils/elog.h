@@ -471,6 +471,7 @@ bool        elog_dismiss(int downgrade_to_elevel);
 int         elog_geterrcode(void);      
 int         elog_getelevel(void);      
 char        *elog_message(void);
+bool        elog_get_hide_stmt(void);
 
 
 /* GUC-configurable parameters */
@@ -530,6 +531,7 @@ extern void write_message_to_server_log(int elevel,
 										void* const *stacktracearray,
 										bool printstack);
 
+extern bool is_log_level_output(int elevel, int log_min_level);
 extern void debug_backtrace(void);
 extern uint32 gp_backtrace(void **stackAddresses, uint32 maxStackDepth);
 extern char *gp_stacktrace(void **stackAddresses, uint32 stackDepth);
