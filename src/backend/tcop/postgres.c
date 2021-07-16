@@ -4970,7 +4970,15 @@ PostgresMain(int argc, char *argv[],
 		 */
 		if (debug_query_string != NULL)
 		{
-			elog(LOG, "An exception was encountered during the execution of statement: %s", debug_query_string);
+			/*
+			 * GPDB: We should also honour whether hide the statement and GUC
+			 * log_min_error_statement to prevent print the statement
+			 * when error happens.
+			 */
+			if (!elog_get_hide_stmt() &&
+				is_log_level_output(elog_getelevel(), log_min_error_statement))
+				elog(LOG, "An exception was encountered during the execution of statement: %s",
+					 debug_query_string);
 			debug_query_string = NULL;
 		}
 
