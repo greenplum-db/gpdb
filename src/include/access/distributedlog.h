@@ -38,7 +38,6 @@
 typedef struct DistributedLogEntry
 {
 	DistributedTransactionId distribXid;
-
 } DistributedLogEntry;
 
 extern void DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xids,
@@ -66,7 +65,8 @@ extern void DistributedLog_CheckPoint(void);
 extern void DistributedLog_Extend(TransactionId newestXid);
 extern bool DistributedLog_GetLowWaterXid(
 							  TransactionId *lowWaterXid);
-extern void DistributedLog_InitOldestXmin(void);
+extern void DistributedLog_InitOldestXmin(TransactionId oldestActiveXid, TransactionId nextXid);
+extern void DistributedLog_Truncate(TransactionId oldestXmin);
 
 /* XLOG stuff */
 #define DISTRIBUTEDLOG_ZEROPAGE		0x00
