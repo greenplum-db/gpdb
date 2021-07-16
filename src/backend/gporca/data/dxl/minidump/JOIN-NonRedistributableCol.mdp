@@ -273,7 +273,7 @@ explain select * from foo, testhstore where foo.b = testhstore.h;
     <dxl:Plan Id="0" SpaceSize="12">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000526" Rows="1.000000" Width="14"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000736" Rows="1.000000" Width="14"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -290,7 +290,7 @@ explain select * from foo, testhstore where foo.b = testhstore.h;
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000474" Rows="1.000000" Width="14"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000579" Rows="1.000000" Width="14"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -313,7 +313,7 @@ explain select * from foo, testhstore where foo.b = testhstore.h;
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000014" Rows="2.000000" Width="9"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="2.000000" Width="9"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">

@@ -791,7 +791,7 @@ explain select * from foo where b = 25 or b = 35;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000136" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000273" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -808,7 +808,7 @@ explain select * from foo where b = 25 or b = 35;
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000093" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:TableDescriptor Mdid="0.34063.1.1" TableName="foo">
             <dxl:Columns>
@@ -838,7 +838,7 @@ explain select * from foo where b = 25 or b = 35;
           <dxl:Filter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000093" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">
@@ -880,7 +880,7 @@ explain select * from foo where b = 25 or b = 35;
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000093" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="a">

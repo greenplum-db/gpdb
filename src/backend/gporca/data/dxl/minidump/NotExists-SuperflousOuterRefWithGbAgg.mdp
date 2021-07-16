@@ -372,7 +372,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
     <dxl:Plan Id="0" SpaceSize="32">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001220" Rows="2.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001259" Rows="2.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -386,7 +386,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="LeftAntiSemiJoin">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001160" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001169" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">

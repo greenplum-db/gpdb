@@ -402,7 +402,7 @@
     <dxl:Plan Id="1" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000292" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000583" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="id">
@@ -419,7 +419,7 @@
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000167" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000333" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id">
@@ -435,7 +435,7 @@
           <dxl:Filter/>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000167" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000333" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="id">

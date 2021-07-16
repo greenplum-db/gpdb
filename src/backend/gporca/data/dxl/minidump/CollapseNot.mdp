@@ -300,7 +300,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
     <dxl:Plan Id="0" SpaceSize="42">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001142" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001199" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="16" Alias="?column?">
@@ -311,14 +311,14 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.001138" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001195" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1293.001134" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.001184" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter>
@@ -333,7 +333,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
                       <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.20.1.0"/>
                       <dxl:Ident ColId="18" ColName="ColRef_0018" TypeMdid="0.20.1.0"/>
                     </dxl:Comparison>
-                    <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                     <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                   </dxl:If>
                   <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
@@ -343,7 +343,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
             <dxl:OneTimeFilter/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.001112" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.001118" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="0"/>

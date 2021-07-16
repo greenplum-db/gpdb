@@ -586,7 +586,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000197" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000306" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -603,7 +603,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:TableDescriptor Mdid="0.66695.1.1" TableName="dd_part_singlecol">
             <dxl:Columns>
@@ -633,7 +633,7 @@ explain select * from dd_part_singlecol where a is null and b is null;
           <dxl:Filter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">

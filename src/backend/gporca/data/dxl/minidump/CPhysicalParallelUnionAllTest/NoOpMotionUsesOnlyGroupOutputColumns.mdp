@@ -280,7 +280,7 @@ EXPLAIN SELECT b, a FROM foo UNION ALL SELECT b, a FROM foo INTERSECT ALL SELECT
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001324" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001383" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="b">

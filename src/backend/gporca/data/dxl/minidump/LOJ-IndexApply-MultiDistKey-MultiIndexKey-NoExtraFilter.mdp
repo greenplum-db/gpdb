@@ -358,7 +358,7 @@
     <dxl:Plan Id="0" SpaceSize="11">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="461.001441" Rows="5.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="461.003268" Rows="5.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -384,7 +384,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="461.000993" Rows="5.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="461.002821" Rows="5.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -469,7 +469,7 @@
           </dxl:RedistributeMotion>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="30.000672" Rows="0.833333" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="30.002419" Rows="0.833333" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="d">

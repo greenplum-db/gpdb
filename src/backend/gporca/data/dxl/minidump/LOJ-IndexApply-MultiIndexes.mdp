@@ -408,7 +408,7 @@ set optimizer_enable_hashjoin = off;
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="868.122115" Rows="3.000000" Width="48"/>
+          <dxl:Cost StartupCost="0" TotalCost="868.128260" Rows="3.000000" Width="48"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -434,7 +434,7 @@ set optimizer_enable_hashjoin = off;
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="868.121579" Rows="3.000000" Width="48"/>
+            <dxl:Cost StartupCost="0" TotalCost="868.126650" Rows="3.000000" Width="48"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -462,7 +462,7 @@ set optimizer_enable_hashjoin = off;
           </dxl:JoinFilter>
           <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000482" Rows="2.000000" Width="32"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000768" Rows="2.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -531,7 +531,7 @@ set optimizer_enable_hashjoin = off;
             </dxl:RedistributeMotion>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000143" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000429" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="a">
@@ -591,7 +591,7 @@ set optimizer_enable_hashjoin = off;
           </dxl:NestedLoopJoin>
           <dxl:BitmapTableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.120880" Rows="0.500000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.125280" Rows="0.500000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="a">

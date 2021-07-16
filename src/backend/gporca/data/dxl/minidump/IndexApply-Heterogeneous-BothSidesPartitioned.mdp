@@ -921,7 +921,7 @@ select * from x, y where (x.i > y.j);
     <dxl:Plan Id="3" SpaceSize="4">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.001512" Rows="1.000000" Width="44"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.002238" Rows="1.000000" Width="44"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -953,7 +953,7 @@ select * from x, y where (x.i > y.j);
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.001348" Rows="1.000000" Width="44"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.001746" Rows="1.000000" Width="44"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -1113,7 +1113,7 @@ select * from x, y where (x.i > y.j);
           </dxl:BroadcastMotion>
           <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000333" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="i">
@@ -1132,7 +1132,7 @@ select * from x, y where (x.i > y.j);
             <dxl:Filter/>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000333" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="44" Alias="i">
@@ -1174,7 +1174,7 @@ select * from x, y where (x.i > y.j);
             </dxl:IndexScan>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000333" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="55" Alias="i">

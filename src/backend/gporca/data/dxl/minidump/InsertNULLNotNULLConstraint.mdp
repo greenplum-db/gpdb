@@ -169,7 +169,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="1" ActionCol="2" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.015664" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.031292" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo>
           <dxl:KeyValue>
@@ -195,7 +195,7 @@
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000039" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000042" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="a">

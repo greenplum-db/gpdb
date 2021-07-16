@@ -822,7 +822,7 @@
     <dxl:Plan Id="1" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000402" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000467" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">

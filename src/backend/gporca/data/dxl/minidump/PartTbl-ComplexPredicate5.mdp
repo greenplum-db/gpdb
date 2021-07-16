@@ -782,7 +782,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000197" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000306" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -799,7 +799,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:TableDescriptor Mdid="0.34063.1.1" TableName="foo">
             <dxl:Columns>
@@ -829,7 +829,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           <dxl:Filter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">
@@ -887,7 +887,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="a">
@@ -945,7 +945,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="a">
@@ -1003,7 +1003,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="40" Alias="a">
@@ -1061,7 +1061,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="50" Alias="a">
@@ -1119,7 +1119,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="60" Alias="a">
@@ -1177,7 +1177,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="70" Alias="a">
@@ -1235,7 +1235,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="80" Alias="a">
@@ -1293,7 +1293,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="90" Alias="a">
@@ -1351,7 +1351,7 @@ explain select * from foo where (b > 25 and b<35 and a > 10) or (b<15 and a>5);
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000126" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="100" Alias="a">

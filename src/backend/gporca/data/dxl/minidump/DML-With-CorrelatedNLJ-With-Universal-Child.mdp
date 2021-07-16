@@ -285,7 +285,7 @@
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:DMLInsert Columns="1" ActionCol="14" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="882688.057927" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="882688.106301" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo>
           <dxl:KeyValue>
@@ -311,7 +311,7 @@
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="882688.047511" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="882688.095884" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="?column?">
@@ -330,7 +330,7 @@
           </dxl:HashExprList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="882688.047490" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="882688.095864" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="?column?">
@@ -344,7 +344,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="882688.047482" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="882688.095856" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList/>
               <dxl:Filter>
@@ -353,7 +353,7 @@
                   <dxl:ParamList/>
                   <dxl:Limit>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000032" Rows="1.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000079" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="2" Alias="a">
@@ -362,7 +362,7 @@
                     </dxl:ProjList>
                     <dxl:Materialize Eager="true">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="1.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="2" Alias="a">
@@ -372,7 +372,7 @@
                       <dxl:Filter/>
                       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="0">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000024" Rows="1.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="2" Alias="a">
@@ -383,7 +383,7 @@
                         <dxl:SortingColumnList/>
                         <dxl:TableScan>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="4"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="4"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="2" Alias="a">

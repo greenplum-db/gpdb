@@ -245,7 +245,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.025686" Rows="1.000110" Width="64"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.026243" Rows="1.000110" Width="64"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -256,7 +256,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.025448" Rows="1.000110" Width="64"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.025527" Rows="1.000110" Width="64"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -266,7 +266,7 @@
           <dxl:Filter>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.19.1.0"/>
-              <dxl:ConstValue TypeMdid="0.19.1.0" Value="YWJjMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA==" LintValue="2072455951"/>
+              <dxl:ConstValue TypeMdid="0.19.1.0" Value="YWJjMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA==" LintValue="2072455951"/>
             </dxl:Comparison>
           </dxl:Filter>
           <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="t">

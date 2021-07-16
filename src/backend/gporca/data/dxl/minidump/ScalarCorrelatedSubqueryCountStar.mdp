@@ -304,7 +304,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
   <dxl:Plan Id="0" SpaceSize="20">
     <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
       <dxl:Properties>
-        <dxl:Cost StartupCost="0" TotalCost="862.000673" Rows="1.000000" Width="8"/>
+        <dxl:Cost StartupCost="0" TotalCost="862.000710" Rows="1.000000" Width="8"/>
       </dxl:Properties>
       <dxl:ProjList>
         <dxl:ProjElem ColId="19" Alias="?column?">
@@ -315,7 +315,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
       <dxl:SortingColumnList/>
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000643" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000680" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="19" Alias="?column?">
@@ -329,7 +329,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
         <dxl:OneTimeFilter/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000640" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000677" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="ColRef_0020">
@@ -340,7 +340,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="Left">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000635" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000672" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="count">

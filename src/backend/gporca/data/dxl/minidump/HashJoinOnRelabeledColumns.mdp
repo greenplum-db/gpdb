@@ -266,9 +266,9 @@
       </dxl:LogicalJoin>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="16">
-      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+      <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000640" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000740" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -279,31 +279,28 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:SortingColumnList/>
-        <dxl:HashJoin JoinType="Inner">
+        <dxl:JoinFilter/>
+        <dxl:HashCondList>
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+            <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+              <dxl:Ident ColId="0" ColName="a" TypeMdid="0.1043.1.0"/>
+            </dxl:Cast>
+            <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+              <dxl:Ident ColId="8" ColName="b" TypeMdid="0.1043.1.0"/>
+            </dxl:Cast>
+          </dxl:Comparison>
+        </dxl:HashCondList>
+        <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000569" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000112" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.1043.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="8" Alias="b">
-              <dxl:Ident ColId="8" ColName="b" TypeMdid="0.1043.1.0"/>
-            </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:JoinFilter/>
-          <dxl:HashCondList>
-            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.1043.1.0"/>
-              </dxl:Cast>
-              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                <dxl:Ident ColId="8" ColName="b" TypeMdid="0.1043.1.0"/>
-              </dxl:Cast>
-            </dxl:Comparison>
-          </dxl:HashCondList>
+          <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
@@ -327,6 +324,18 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
+        </dxl:GatherMotion>
+        <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="431.000112" Rows="1.000000" Width="8"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="8" Alias="b">
+              <dxl:Ident ColId="8" ColName="b" TypeMdid="0.1043.1.0"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:Filter/>
+          <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
@@ -350,8 +359,8 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
-        </dxl:HashJoin>
-      </dxl:GatherMotion>
+        </dxl:GatherMotion>
+      </dxl:HashJoin>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

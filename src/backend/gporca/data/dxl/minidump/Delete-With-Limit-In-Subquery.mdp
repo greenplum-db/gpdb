@@ -724,7 +724,7 @@
     <dxl:Plan Id="0" SpaceSize="238">
       <dxl:DMLDelete Columns="0" ActionCol="21" OidCol="0" CtidCol="1" SegmentIdCol="7" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.965580" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.965612" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -746,7 +746,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.942142" Rows="1.000000" Width="18"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.942175" Rows="1.000000" Width="18"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -766,7 +766,7 @@
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.942136" Rows="1.000000" Width="14"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.942169" Rows="1.000000" Width="14"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">

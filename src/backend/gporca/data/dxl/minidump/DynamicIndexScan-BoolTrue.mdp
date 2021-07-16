@@ -837,7 +837,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000279" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000557" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -854,7 +854,7 @@
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000154" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000308" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -870,7 +870,7 @@
           <dxl:Filter/>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000154" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000308" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">
@@ -908,7 +908,7 @@
           </dxl:IndexScan>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000154" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000308" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="a">
@@ -946,7 +946,7 @@
           </dxl:IndexScan>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000154" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000308" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="a">
@@ -984,7 +984,7 @@
           </dxl:IndexScan>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000154" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000308" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="40" Alias="a">
@@ -1022,7 +1022,7 @@
           </dxl:IndexScan>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000154" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000308" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="50" Alias="a">

@@ -271,7 +271,7 @@ explain select * from xfoo where j = 1 and k = 2;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.061662" Rows="1.000000" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.064985" Rows="1.000000" Width="28"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -291,7 +291,7 @@ explain select * from xfoo where j = 1 and k = 2;
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.061540" Rows="1.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.064620" Rows="1.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">

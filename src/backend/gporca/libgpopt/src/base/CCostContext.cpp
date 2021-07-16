@@ -670,17 +670,18 @@ CCostContext::DRowsPerHost() const
 		CExpressionArray *pdrgpexpr = pdshashed->Pdrgpexpr();
 		CColRefSet *pcrsUsed = CUtils::PcrsExtractColumns(m_mp, pdrgpexpr);
 
-		const CColRefSet *pcrsReqdStats =
-			this->Poc()->GetReqdRelationalProps()->PcrsStat();
-		if (!pcrsReqdStats->ContainsAll(pcrsUsed))
+		CColRefSet *pcrsPresentedStats = Pstats()->GetColRefSet(m_mp);
+		if (!pcrsPresentedStats->ContainsAll(pcrsUsed))
 		{
 			// statistics not available for distribution columns, therefore
 			// assume uniform distribution across hosts
 			// clean up
 			pcrsUsed->Release();
+			pcrsPresentedStats->Release();
 
 			return CDouble(rows / ulHosts);
 		}
+		pcrsPresentedStats->Release();
 
 		ULongPtrArray *pdrgpul = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 		pcrsUsed->ExtractColIds(m_mp, pdrgpul);

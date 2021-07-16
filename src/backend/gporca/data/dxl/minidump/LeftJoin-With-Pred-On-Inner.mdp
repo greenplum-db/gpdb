@@ -255,9 +255,9 @@
       </dxl:LogicalJoin>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="5">
-      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+      <dxl:HashJoin JoinType="Left">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001150" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001350" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -274,10 +274,21 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:SortingColumnList/>
-        <dxl:HashJoin JoinType="Left">
+        <dxl:JoinFilter>
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+            <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
+          </dxl:Comparison>
+        </dxl:JoinFilter>
+        <dxl:HashCondList>
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+            <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+          </dxl:Comparison>
+        </dxl:HashCondList>
+        <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001007" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000194" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -286,26 +297,9 @@
             <dxl:ProjElem ColId="1" Alias="j">
               <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="9" Alias="i">
-              <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
-            </dxl:ProjElem>
-            <dxl:ProjElem ColId="10" Alias="j">
-              <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-            </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:JoinFilter>
-            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-              <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
-            </dxl:Comparison>
-          </dxl:JoinFilter>
-          <dxl:HashCondList>
-            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-              <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
-            </dxl:Comparison>
-          </dxl:HashCondList>
+          <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="16"/>
@@ -333,6 +327,21 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
+        </dxl:GatherMotion>
+        <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="431.000260" Rows="1.000000" Width="16"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="9" Alias="i">
+              <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="10" Alias="j">
+              <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:Filter/>
+          <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000116" Rows="1.000000" Width="16"/>
@@ -365,8 +374,8 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
-        </dxl:HashJoin>
-      </dxl:GatherMotion>
+        </dxl:GatherMotion>
+      </dxl:HashJoin>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

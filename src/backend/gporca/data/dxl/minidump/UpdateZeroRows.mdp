@@ -440,7 +440,7 @@
             <dxl:Column ColId="22" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
         </dxl:TableDescriptor>
-        <dxl:Result>
+        <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="34"/>
           </dxl:Properties>
@@ -464,14 +464,19 @@
               <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="12" Alias="ColRef_0012">
-              <dxl:ConstValue TypeMdid="0.26.1.0" Value="795132"/>
+              <dxl:Ident ColId="12" ColName="ColRef_0012" TypeMdid="0.26.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
-          <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
+          <dxl:SortingColumnList/>
+          <dxl:HashExprList>
+            <dxl:HashExpr>
+              <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
+            </dxl:HashExpr>
+          </dxl:HashExprList>
+          <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="30"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="34"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="x">
@@ -492,14 +497,12 @@
               <dxl:ProjElem ColId="11" Alias="ColRef_0011">
                 <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
+              <dxl:ProjElem ColId="12" Alias="ColRef_0012">
+                <dxl:ConstValue TypeMdid="0.26.1.0" Value="795132"/>
+              </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList/>
-            <dxl:HashExprList>
-              <dxl:HashExpr>
-                <dxl:Ident ColId="0" ColName="x" TypeMdid="0.23.1.0"/>
-              </dxl:HashExpr>
-            </dxl:HashExprList>
+            <dxl:OneTimeFilter/>
             <dxl:Assert ErrorCode="23514">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="30"/>
@@ -659,8 +662,8 @@
                 </dxl:Result>
               </dxl:Split>
             </dxl:Assert>
-          </dxl:RedistributeMotion>
-        </dxl:Result>
+          </dxl:Result>
+        </dxl:RedistributeMotion>
       </dxl:DMLUpdate>
     </dxl:Plan>
   </dxl:Thread>

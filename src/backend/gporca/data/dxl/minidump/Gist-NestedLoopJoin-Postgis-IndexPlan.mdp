@@ -301,7 +301,7 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.000490" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.001456" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -321,7 +321,7 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.000401" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.001188" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -343,7 +343,7 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000230" Rows="3.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000690" Rows="3.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -357,7 +357,7 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -385,7 +385,7 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
           </dxl:BroadcastMotion>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000136" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000407" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">
