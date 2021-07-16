@@ -83,6 +83,7 @@
 #include "commands/tablespace.h"
 #include "common/file_perm.h"
 #include "miscadmin.h"
+#include "pgtar.h"
 #include "postmaster/bgwriter.h"
 #include "storage/bufmgr.h"
 #include "storage/fd.h"
@@ -95,7 +96,6 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-#include "utils/tarrable.h"
 #include "utils/varlena.h"
 
 #include "catalog/heap.h"
@@ -249,6 +249,29 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
 	pfree(dir);
 }
 
+static void
+check_dir_permission(char *location)
+{
+	/*
+	 * Attempt to coerce target directory to safe permissions.  If this fails,
+	 * it doesn't exist or has the wrong owner.
+	 */
+	if (chmod(location, pg_dir_create_mode) != 0)
+	{
+		if (errno == ENOENT)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_FILE),
+					 errmsg("directory \"%s\" does not exist", location),
+					 InRecovery ? errhint("Create this directory for the tablespace before "
+										  "restarting the server.") : 0));
+		else
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not set permissions on directory \"%s\": %m",
+							location)));
+	}
+}
+
 /*
  * Create a table space
  *
@@ -345,12 +368,12 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 
 	/*
 	 * Check that location isn't too long. Remember that we're going to append
-	 * '<dbid>/<GP_TABLESPACE_VERSION_DIRECTORY>/<dboid>/<relid>_<fork>.<nnn>'.
+	 * 'XXXXXXXX/<GP_TABLESPACE_VERSION_DIRECTORY>/<dboid>/<relid>_<fork>.<nnn>'.
 	 * FYI, we never actually
 	 * reference the whole path here, but MakePGDirectory() uses the first two
 	 * parts.
 	 */
-	if (strlen(location) + 1 + MAX_DBID_STRING_LENGTH + 1 + strlen(GP_TABLESPACE_VERSION_DIRECTORY) + 1 +
+	if (strlen(location) + 1 + GP_TABLESPACE_DIR_LEN + 1 + strlen(GP_TABLESPACE_VERSION_DIRECTORY) + 1 +
 		OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1 + OIDCHARS > MAXPGPATH)
 	{
 		ereport(ERROR,
@@ -359,7 +382,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 						location)));
 	}
 
-	if ((strlen(location) + 1 + MAX_DBID_STRING_LENGTH + 1) > MAX_TARABLE_SYMLINK_PATH_LENGTH)
+	if ((strlen(location) + 1 + GP_TABLESPACE_DIR_LEN + 1) > MAX_TARABLE_SYMLINK_PATH_LENGTH)
 		ereport(WARNING, (errmsg("tablespace location \"%s\" is too long for TAR", location),
 						  errdetail("The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).")
 						  ));
@@ -442,7 +465,19 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	/* Post creation hook for new tablespace */
 	InvokeObjectPostCreateHook(TableSpaceRelationId, tablespaceoid, 0);
 
-	create_tablespace_directories(location, tablespaceoid);
+	check_dir_permission(location);
+
+	/*
+	 * Greenplum: create a unique tablespace location, dedicated to current
+	 * segment.
+	 */
+	char gplocation[MAXPGPATH];
+
+	strlcpy(gplocation, location, MAXPGPATH);
+	if (!create_unique_subdir(gplocation, DataDir))
+		elog(ERROR, "cannot create unique subdir under %s", gplocation);
+
+	create_tablespace_directories(gplocation, tablespaceoid);
 
 	/* Record the filesystem change in XLOG */
 	{
@@ -453,7 +488,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec,
 						 offsetof(xl_tblspc_create_rec, ts_path));
-		XLogRegisterData((char *) location, strlen(location) + 1);
+		XLogRegisterData((char *) gplocation, strlen(gplocation) + 1);
 
 		SIMPLE_FAULT_INJECTOR("before_xlog_create_tablespace");
 		(void) XLogInsert(RM_TBLSPC_ID, XLOG_TBLSPC_CREATE);
@@ -771,19 +806,20 @@ static void
 create_tablespace_directories(const char *location, const Oid tablespaceoid)
 {
 	char	   *linkloc;
-	char	   *location_with_dbid_dir;
 	char	   *location_with_version_dir;
 	struct stat st;
 
-	elog(DEBUG5, "creating tablespace directories for tablespaceoid %d on dbid %d",
-		tablespaceoid, GpIdentity.dbid);
-
 	linkloc = psprintf("pg_tblspc/%u", tablespaceoid);
-	location_with_dbid_dir = psprintf("%s/%d", location, GpIdentity.dbid);
-	location_with_version_dir = psprintf("%s/%s", location_with_dbid_dir,
+	location_with_version_dir = psprintf("%s/%s", location,
 										 GP_TABLESPACE_VERSION_DIRECTORY);
 
 	/*
+	 * Greenplum: permissions on user-specified tablespace location have
+	 * already been checked by the caller.  The location here contains
+	 * segment-specific directory appended to the user-specified location.  We
+	 * keep the following permissions check anyway, to reduce diff against
+	 * upstream PostgreSQL.
+	 *
 	 * Attempt to coerce target directory to safe permissions.  If this fails,
 	 * it doesn't exist or has the wrong owner.
 	 */
@@ -820,31 +856,6 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 	}
 
 	/*
-	 * In GPDB each segment has a directory with its unique dbid under the
-	 * tablespace path. Unlike the location_with_version_dir, do not error out
-	 * if it already exists.
-	 */
-	if (stat(location_with_dbid_dir, &st) < 0) 
-	{
-		if (errno == ENOENT)
-		{
-			if (mkdir(location_with_dbid_dir, S_IRWXU) < 0)
-					ereport(ERROR,
-							(errcode_for_file_access(),
-								errmsg("could not create directory \"%s\": %m", location_with_dbid_dir)));
-		}
-		else
-			ereport(ERROR,
-					(errcode_for_file_access(),
-						errmsg("could not stat directory \"%s\": %m", location_with_dbid_dir)));
-
-	}
-	else
-		ereport(DEBUG1,
-				(errmsg("directory \"%s\" already exists in tablespace",
-					location_with_dbid_dir)));
-
-	/*
 	 * The creation of the version directory prevents more than one tablespace
 	 * in a single location.
 	 */
@@ -858,8 +869,8 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 		else
 			ereport(ERROR,
 					(errcode_for_file_access(),
-				  errmsg("could not create directory \"%s\": %m",
-						 location_with_version_dir)));
+					 errmsg("could not create directory \"%s\": %m",
+							location_with_version_dir)));
 	}
 
 	/*
@@ -871,17 +882,15 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 	/*
 	 * Create the symlink under PGDATA
 	 */
-	if (symlink(location_with_dbid_dir, linkloc) < 0)
+	if (symlink(location, linkloc) < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not create symbolic link \"%s\": %m",
 						linkloc)));
 
 	pfree(linkloc);
-	pfree(location_with_dbid_dir);
 	pfree(location_with_version_dir);
 }
-
 
 /*
  * This block was moved from DropTableSpace, just before inserting the
@@ -1023,7 +1032,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 {
 	char	   *linkloc;
 	char	   *linkloc_with_version_dir;
-	char	    link_target_dir[MAXPGPATH + 1 + MAX_DBID_STRING_LENGTH];
+	char	    link_target_dir[MAXPGPATH + 1 + GP_TABLESPACE_DIR_LEN];
 	int		    rllen;
 	DIR		   *dirdesc;
 	struct dirent *de;
@@ -1171,6 +1180,7 @@ remove_symlink:
 		}
 		else
 		{
+			unlink_gp_segment(link_target_dir);
 			if(directory_is_empty(link_target_dir) && rmdir(link_target_dir) < 0)
 				ereport(redo ? LOG : ERROR,
 						(errcode_for_file_access(),
@@ -1951,6 +1961,86 @@ get_tablespace_name(Oid spc_oid)
 	return result;
 }
 
+/*
+ * Greenplum: when replaying tablespace creation on standby, we either have to
+ * use the location in the WAL record or generate a new random subdir.  This
+ * function contains the logic to make that decision.  It returns a location
+ * after creating it on filesystem, if necessary.
+ *
+ * Two scenarios need consideration:
+ *
+ * 1. Normal WAL replay on standby - if the location from WAL record does not
+ * exist, use the location from WAL record.  The location should be created on
+ * filesystem first.  If the location from WAL record already exists, generate
+ * new location.
+ *
+ * 2. Recovering from a crash on standby - if the location from WAL already
+ * exists and contains a symlink back to our data directory, the tablespace
+ * creation is being replayed more than once.  Use the location from WAL
+ * again, as it was used during previous replay.  Otherwise, generate new
+ * location.
+ */
+static char *
+get_standby_location(xl_tblspc_create_rec *xlrec)
+{
+	Assert(StandbyMode);
+
+	struct stat st;
+	if (stat(xlrec->ts_path, &st) == 0 && S_ISDIR(st.st_mode))
+	{
+		/* Read the segment data dir link */
+		char *linkloc = psprintf("%s/%s", xlrec->ts_path, GP_SEGMENT_LINK);
+		uint32 len = strlen(DataDir);
+		char *linktarget = (char *) palloc(len + 1);
+		size_t ret = readlink(linkloc, linktarget, len + 1);
+		linktarget[len] = '\0';
+		/* Log readlink failure but don't error out. */
+		if (ret < 0)
+			elog(LOG, "tablespace %d, could not read link %s: %m",
+				 xlrec->ts_id, linkloc);
+
+		if (ret == len && strcmp(linktarget, DataDir) == 0)
+		{
+			/* The location in WAL record exists and belongs to us. */
+			return xlrec->ts_path;
+		}
+
+		/*
+		 * The location in WAL record exists but doesn't belong to us.  This
+		 * can happen when us and our primary are deployed on the same host.
+		 * Generate new location.
+		 */
+		len = strlen(xlrec->ts_path);
+		char *gplocation = (char *) palloc(len + 1);
+		strlcpy(gplocation, xlrec->ts_path, len + 1);
+		get_parent_directory(gplocation);
+		check_dir_permission(gplocation);
+		if (!create_unique_subdir(gplocation, DataDir))
+			elog(ERROR, "cannot create unique subdir under %s",
+				 gplocation);
+		Assert(strlen(gplocation) == len);
+		/*
+		 * XXX Recovering from crash may lead to orphan tablespace
+		 * directories.  It is possible that this WAL record was already
+		 * replayed before crash.  We will leak the directory created in
+		 * previous replay because we don't remember it anywhere.  This should
+		 * happen only if we are deployed on the same host as our primary,
+		 * which is not likely to happen in production.
+		 */
+		return gplocation;
+	}
+	else
+	{
+		/*
+		 * Use the same location as recorded in the WAL record.  We are
+		 * deployed on a different host as compared to our primary.
+		 */
+		if (MakePGDirectory(xlrec->ts_path) < 0)
+			elog(ERROR, "cannot create directory %s: %m", xlrec->ts_path);
+		link_gp_segment(xlrec->ts_path, DataDir);
+		return xlrec->ts_path;
+	}
+}
 
 /*
  * TABLESPACE resource manager's routines
@@ -1966,9 +2056,24 @@ tblspc_redo(XLogReaderState *record)
 	if (info == XLOG_TBLSPC_CREATE)
 	{
 		xl_tblspc_create_rec *xlrec = (xl_tblspc_create_rec *) XLogRecGetData(record);
-		char	   *location = xlrec->ts_path;
+		char *gplocation;
 
-		create_tablespace_directories(location, xlrec->ts_id);
+		if (StandbyMode)
+			gplocation = get_standby_location(xlrec);
+		else
+		{
+			/*
+			 * Recovering from a crash on primary - use the location from WAL
+			 * record.  It must already exist on filesystem because the
+			 * location is created before emitting the WAL record in normal
+			 * operation.
+			 */
+			gplocation = xlrec->ts_path;
+		}
+		create_tablespace_directories(gplocation, xlrec->ts_id);
+
+		if (gplocation != xlrec->ts_path)
+			pfree(gplocation);
 	}
 	else if (info == XLOG_TBLSPC_DROP)
 	{

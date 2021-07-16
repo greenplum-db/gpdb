@@ -120,8 +120,6 @@ create or replace function list_tablespace_dbid_dirs(expected_number_of_tablespa
 
 	result.append('expected {expected_number_of_tablespaces} tablespaces'.format(expected_number_of_tablespaces=expected_number_of_tablespaces))
 	result.append('found %d tablespaces' % found_number_of_tablespaces)
-	for row in rows:
-		result.append(str(row))
 	return result
 $$ language plpython3u;
 

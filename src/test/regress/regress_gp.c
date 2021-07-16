@@ -2110,3 +2110,49 @@ get_tablespace_version_directory_name(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_TEXT_P(CStringGetTextDatum(GP_TABLESPACE_VERSION_DIRECTORY));
 }
+
+PG_FUNCTION_INFO_V1(gp_segment_tablespace_link);
+Datum
+gp_segment_tablespace_link(PG_FUNCTION_ARGS)
+{
+	Oid	tablespace	= PG_GETARG_OID(0);
+	char linktarget[MAXPGPATH];
+	char *linkloc = psprintf("%s/pg_tblspc/%d", DataDir, tablespace);
+
+	DIR *dirdesc;
+	struct dirent *de;
+
+	dirdesc = AllocateDir(linkloc);
+
+	do
+	{
+		de = ReadDir(dirdesc, linkloc);
+	}
+	while (de && (strcmp(de->d_name, ".") == 0 ||
+				  strcmp(de->d_name, "..") == 0 ||
+				  strcmp(de->d_name, GP_TABLESPACE_VERSION_DIRECTORY) == 0));
+
+	if (!de)
+	{
+		FreeDir(dirdesc);
+		elog(ERROR, "could not find a link to data directory in %s", linkloc);
+	}
+
+	/*
+	 * The only file other than tablespace version dir should be the link to
+	 * data dir.
+	 */
+	linkloc = psprintf("%s/%s", linkloc, de->d_name);
+
+	FreeDir(dirdesc);
+
+	size_t ret = readlink(linkloc, linktarget, sizeof(linktarget));
+	if (ret == sizeof(linktarget))
+		elog(ERROR, "link %s does not point to a valid data directory",
+			 linkloc);
+	else if (ret < 0)
+		elog(ERROR, "could not read link %s: %m", linkloc);
+	linktarget[ret] = '\0';
+	PG_RETURN_TEXT_P(CStringGetTextDatum(linktarget));
+}
+
