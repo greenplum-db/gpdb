@@ -300,6 +300,13 @@ Feature: gpcheckcat tests
         And the user runs "dropdb fkey2_db"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    Scenario: gpcheckcat should report no inconsistency of pg_extension between Master and Segements
+        Given database "pgextension_db" is dropped and recreated
+        And the user runs sql "set allow_system_table_mods=true;update pg_extension set extconfig='{2130}', extcondition='{2130}';" in "pgextension_db" on first primary segment
+        Then the user runs "gpcheckcat -R inconsistent pgextension_db"
+        Then gpcheckcat should return a return code of 0
+        And the user runs "dropdb gpextension_db"
+
     Scenario: gpcheckcat should generate repair scripts when -g, -R, and -E options are provided
         Given database "extra_gr_db" is dropped and recreated
         And the path "repair_dir" is removed from current working directory
