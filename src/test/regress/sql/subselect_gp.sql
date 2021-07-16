@@ -1044,3 +1044,28 @@ select * from foo where
 select * from foo where
   (case when foo.i in (select a.i from baz a) then foo.i else null end) in
   (select b.i from baz b);
+
+---
+--- Test param info is preserved when bringing a path to OuterQuery locus
+---
+drop table if exists param_t; 
+
+create table param_t (i int, j int);
+insert into param_t select i, i from generate_series(1,10)i;
+analyze param_t;
+
+explain (costs off)
+select * from param_t a where a.i in
+	(select count(b.j) from param_t b, param_t c,
+		lateral (select * from param_t d where d.j = c.j limit 10) s
+	where s.i = a.i
+	);
+select * from param_t a where a.i in
+	(select count(b.j) from param_t b, param_t c,
+		lateral (select * from param_t d where d.j = c.j limit 10) s
+	where s.i = a.i
+	);
+
+
+drop table if exists param_t; 
+

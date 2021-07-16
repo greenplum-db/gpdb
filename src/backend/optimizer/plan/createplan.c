@@ -2088,13 +2088,6 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path, int flags)
 		{
 			List	   *all_clauses = best_path->cdb_restrict_clauses;
 
-			/* Replace any outer-relation variables with nestloop params */
-			if (best_path->path.param_info)
-			{
-				all_clauses = (List *)
-					replace_nestloop_params(root, (Node *) all_clauses);
-			}
-
 			/* Sort clauses into best execution order */
 			all_clauses = order_qual_clauses(root, all_clauses);
 
@@ -2103,6 +2096,13 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path, int flags)
 
 			/* but we actually also want the pseudoconstants */
 			pseudoconstants = extract_actual_clauses(all_clauses, true);
+
+			/* Replace any outer-relation variables with nestloop params */
+			if (best_path->path.param_info)
+			{
+				scan_clauses = (List *)
+					replace_nestloop_params(root, (Node *) scan_clauses);
+			}
 		}
 
 		/* We need a Result node */
