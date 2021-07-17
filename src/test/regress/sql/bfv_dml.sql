@@ -220,73 +220,103 @@ delete from tabwithoids RETURNING oid > 1000, tabwithoids;
 -- Verify that DELETE properly redistributes in the case of joins
 --
 
--- start_ignore
 drop table if exists foo;
 drop table if exists bar;
--- end_ignore
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 create table bar(a int, b int);
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+-- Previously, table foo is defined as  randomly distributed and 
+-- that might lead to flaky result of the explain statement
+-- since random cost. We set policy to random without move the
+-- data after data is all inserted. This method can both have
+-- a random dist table and a stable test result.
+-- Following cases are using the same skill here.
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a=bar.a;
 delete from foo using bar where foo.a=bar.a;
 select * from foo;
 drop table foo;
 drop table bar;
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 create table bar(a int, b int);
-insert into foo select generate_series(1, 10);
-insert into bar select generate_series(1, 10);
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a = bar.a returning foo.*;
 delete from foo using bar where foo.a = bar.a returning foo.*;
 select * from foo;
 drop table foo;
 drop table bar;
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
 explain delete from foo where foo.a=1;
 delete from foo where foo.a=1;
 drop table foo;
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 create table bar(a int, b int);
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a=bar.b;
 delete from foo using bar where foo.a=bar.b;
 drop table foo;
 drop table bar;
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+-- Turn off redistribute motion for ORCA just for this case.
+-- This is to get a broadcast motion over foo_1 so that no
+-- motion is above the resultrelation foo thus no ExplicitMotion.
+set optimizer_enable_motion_redistribute = off;
 explain delete from foo using foo foo_1 where foo_1.a=foo.a;
 delete from foo using foo foo_1 where foo_1.a=foo.a;
+reset optimizer_enable_motion_redistribute;
 drop table foo;
 
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
 insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
 explain delete from foo;
 delete from foo;
 drop table foo;
 
-create table foo (a int, b int) distributed randomly;
-create table bar(a int, b int) distributed randomly;
+create table foo (a int, b int);
+create table bar(a int, b int);
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar;
 delete from foo using bar;
 drop table foo;
 drop table bar;
 
-create table foo (a int, b int) distributed randomly;
-create table bar(a int, b int) distributed randomly;
+create table foo (a int, b int);
+create table bar(a int, b int);
 insert into bar select i, i from generate_series(1, 1000)i;
 insert into foo select i,i from generate_series(1, 10)i;
-analyze foo;
-analyze bar;
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze	foo;
+analyze	bar;
 set optimizer_enable_motion_redistribute=off;
 explain delete from foo using bar where foo.b=bar.b;
 delete from foo using bar where foo.b=bar.b;
@@ -326,10 +356,14 @@ drop table foo;
 drop table bar;
 drop table jazz;
 
-create table foo (a int) distributed randomly;
-create table bar (b int) distributed randomly;
+create table foo (a int);
+create table bar (b int);
 insert into foo select i from generate_series(1, 10)i;
 insert into bar select i from generate_series(1, 10)i;
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using (select a from foo union all select b from bar) v;
 delete from foo using (select a from foo union all select b from bar) v;
 select * from foo;

@@ -332,11 +332,25 @@ delete from tabwithoids RETURNING oid > 1000, tabwithoids;
 --
 -- Verify that DELETE properly redistributes in the case of joins
 --
-create table foo (a int, b int) distributed randomly;
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+drop table if exists bar;
+NOTICE:  table "bar" does not exist, skipping
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 create table bar(a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+-- Previously, table foo is defined as  randomly distributed and 
+-- that might lead to flaky result of the explain statement
+-- since random cost. We set policy to random without move the
+-- data after data is all inserted. This method can both have
+-- a random dist table and a stable test result.
+-- Following cases are using the same skill here.
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a=bar.a;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
@@ -360,11 +374,15 @@ select * from foo;
 
 drop table foo;
 drop table bar;
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 create table bar(a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-insert into foo select generate_series(1, 10);
-insert into bar select generate_series(1, 10);
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a = bar.a returning foo.*;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -403,8 +421,11 @@ select * from foo;
 
 drop table foo;
 drop table bar;
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
 explain delete from foo where foo.a=1;
                         QUERY PLAN                        
 ----------------------------------------------------------
@@ -416,11 +437,15 @@ explain delete from foo where foo.a=1;
 
 delete from foo where foo.a=1;
 drop table foo;
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 create table bar(a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar where foo.a=bar.b;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -441,14 +466,21 @@ explain delete from foo using bar where foo.a=bar.b;
 delete from foo using bar where foo.a=bar.b;
 drop table foo;
 drop table bar;
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+-- Turn off redistribute motion for ORCA just for this case.
+-- This is to get a broadcast motion over foo_1 so that no
+-- motion is above the resultrelation foo thus no ExplicitMotion.
+set optimizer_enable_motion_redistribute = off;
 explain delete from foo using foo foo_1 where foo_1.a=foo.a;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
- Delete on foo  (cost=3.43..6.86 rows=4 width=16)
-   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)  (cost=3.43..6.86 rows=4 width=16)
-         ->  Hash Join  (cost=3.43..6.86 rows=4 width=16)
+ Delete on foo  (cost=1.14..2.35 rows=3 width=16)
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1.14..2.35 rows=3 width=16)
+         ->  Hash Join  (cost=1.14..2.29 rows=3 width=16)
                Hash Cond: (foo.a = foo_1.a)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.30 rows=4 width=14)
                      Hash Key: foo.a
@@ -461,9 +493,13 @@ explain delete from foo using foo foo_1 where foo_1.a=foo.a;
 (12 rows)
 
 delete from foo using foo foo_1 where foo_1.a=foo.a;
+reset optimizer_enable_motion_redistribute;
 drop table foo;
-create table foo (a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
 explain delete from foo;
                         QUERY PLAN                        
 ----------------------------------------------------------
@@ -474,10 +510,16 @@ explain delete from foo;
 
 delete from foo;
 drop table foo;
-create table foo (a int, b int) distributed randomly;
-create table bar(a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into foo select generate_series(1,10);
 insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using bar;
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
@@ -494,12 +536,16 @@ explain delete from foo using bar;
 delete from foo using bar;
 drop table foo;
 drop table bar;
-create table foo (a int, b int) distributed randomly;
-create table bar(a int, b int) distributed randomly;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into bar select i, i from generate_series(1, 1000)i;
 insert into foo select i,i from generate_series(1, 10)i;
-analyze foo;
-analyze bar;
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze	foo;
+analyze	bar;
 set optimizer_enable_motion_redistribute=off;
 explain delete from foo using bar where foo.b=bar.b;
                                                QUERY PLAN                                                
@@ -604,10 +650,16 @@ select * from foo;
 drop table foo;
 drop table bar;
 drop table jazz;
-create table foo (a int) distributed randomly;
-create table bar (b int) distributed randomly;
+create table foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar (b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
 insert into foo select i from generate_series(1, 10)i;
 insert into bar select i from generate_series(1, 10)i;
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
 explain delete from foo using (select a from foo union all select b from bar) v;
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
