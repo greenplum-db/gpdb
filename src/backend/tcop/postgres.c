@@ -5164,7 +5164,7 @@ PostgresMain(int argc, char *argv[],
 		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			CheckForResetSession();
+			GpDropTempTables();
 			StartIdleResourceCleanupTimers();
 		}
 

@@ -706,16 +706,15 @@ void DisconnectAndDestroyUnusedQEs(void)
 /*
  * Drop any temporary tables associated with the current session and
  * use a new session id since we have effectively reset the session.
- *
- * Call this procedure outside of a transaction.
  */
 void
-CheckForResetSession(void)
+GpDropTempTables(void)
 {
 	int			oldSessionId = 0;
 	int			newSessionId = 0;
 	Oid			dropTempNamespaceOid;
 
+	/* No need to reset session or drop temp tables */
 	if (!NeedResetSession && OldTempNamespace == InvalidOid)
 		return;
 
@@ -877,5 +876,5 @@ void
 ResetAllGangs(void)
 {
 	DisconnectAndDestroyAllGangs(true);
-	CheckForResetSession();
+	GpDropTempTables();
 }

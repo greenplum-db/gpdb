@@ -74,7 +74,7 @@ extern void RecycleGang(Gang *gp, bool forceDestroy);
 extern void DisconnectAndDestroyAllGangs(bool resetSession);
 extern void DisconnectAndDestroyUnusedQEs(void);
 
-extern void CheckForResetSession(void);
+extern void GpDropTempTables(void);
 extern void ResetAllGangs(void);
 
 extern struct SegmentDatabaseDescriptor *getSegmentDescriptorFromGang(const Gang *gp, int seg);
