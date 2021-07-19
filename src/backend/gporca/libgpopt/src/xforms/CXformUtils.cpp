@@ -42,6 +42,7 @@
 #include "gpopt/operators/CScalarAssertConstraintList.h"
 #include "gpopt/operators/CScalarBitmapBoolOp.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
+#include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarDMLAction.h"
 #include "gpopt/operators/CScalarIdent.h"
@@ -2464,7 +2465,7 @@ CXformUtils::PexprAddCTEProducer(CMemoryPool *mp, ULONG ulCTEId,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::FProcessGPDBAntiSemiHashJoin
+//		CXformUtils::FExtractEquality
 //
 //	@doc:
 //		Helper to extract equality from an expression tree of the form
@@ -2568,8 +2569,18 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 					mp, pexprEquality,
 					pexprInner))  // equality uses an inner nullable column
 			{
-				pexprEquality->AddRef();
-				pdrgpexprNew->Append(pexprEquality);
+				(*pexprEquality)[0]->AddRef();
+
+				CExpression *pexprInnerNull =
+					CUtils::PexprIsNull(mp, (*pexprEquality)[0]);
+				COperator *pexprExpressionOp = GPOS_NEW(mp)
+					CScalarBoolOp(mp, CScalarBoolOp::EBoolOperator::EboolopOr);
+
+				CExpression *pexprExpression = GPOS_NEW(mp) CExpression(
+					mp, pexprExpressionOp, pexprEquality, pexprInnerNull);
+
+				pdrgpexprNew->Append(pexprExpression);
+
 				fSimplifiedPredicate = true;
 				continue;
 			}
