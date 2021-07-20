@@ -31,7 +31,8 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalJoin::CLogicalJoin(CMemoryPool *mp) : CLogical(mp)
+CLogicalJoin::CLogicalJoin(CMemoryPool *mp)
+	: CLogical(mp), m_join_order_origin_greedy(false)
 {
 	GPOS_ASSERT(nullptr != mp);
 }

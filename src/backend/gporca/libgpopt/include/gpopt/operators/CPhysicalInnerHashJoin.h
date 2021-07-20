@@ -55,7 +55,8 @@ public:
 	CPhysicalInnerHashJoin(CMemoryPool *mp,
 						   CExpressionArray *pdrgpexprOuterKeys,
 						   CExpressionArray *pdrgpexprInnerKeys,
-						   IMdIdArray *hash_opfamilies);
+						   IMdIdArray *hash_opfamilies,
+						   BOOL is_join_order_origin_greedy = false);
 
 	// dtor
 	~CPhysicalInnerHashJoin() override;

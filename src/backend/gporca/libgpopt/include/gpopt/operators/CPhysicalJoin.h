@@ -41,9 +41,13 @@ private:
 												 ULONG ulChildIndexToTestSecond,
 												 ULONG child_index);
 
+	// check whether join order originated from greedy xform
+	BOOL m_join_order_origin_greedy;
+
 protected:
 	// ctor
-	explicit CPhysicalJoin(CMemoryPool *mp);
+	explicit CPhysicalJoin(CMemoryPool *mp,
+						   BOOL is_join_order_origin_greedy = false);
 
 	// dtor
 	~CPhysicalJoin() override = default;
@@ -172,6 +176,11 @@ public:
 		return false;
 	}
 
+	BOOL
+	IsJoinOrderOriginGreedy()
+	{
+		return m_join_order_origin_greedy;
+	}
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------

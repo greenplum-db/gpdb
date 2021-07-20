@@ -106,6 +106,12 @@ CXformExpandNAryJoinGreedy::Transform(CXformContext *pxfctxt,
 		// normalize resulting expression
 		CExpression *pexprNormalized =
 			CNormalizer::PexprNormalize(pmp, pexprResult);
+		CLogicalJoin *popLogicalJoin =
+			CLogicalJoin::PopConvert(pexprNormalized->Pop());
+		if (nullptr != popLogicalJoin)
+		{
+			popLogicalJoin->MarkJoinOrderOriginAsGreedy();
+		}
 		pexprResult->Release();
 		pxfres->Add(pexprNormalized);
 	}

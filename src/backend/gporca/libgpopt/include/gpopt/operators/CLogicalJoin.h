@@ -29,6 +29,9 @@ namespace gpopt
 class CLogicalJoin : public CLogical
 {
 private:
+	// did expression originate from greedy join order xform?
+	BOOL m_join_order_origin_greedy;
+
 protected:
 	// ctor
 	explicit CLogicalJoin(CMemoryPool *mp);
@@ -58,6 +61,15 @@ public:
 							   ) override
 	{
 		return PopCopyDefault();
+	}
+
+	// conversion function
+	static CLogicalJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(nullptr != pop);
+
+		return dynamic_cast<CLogicalJoin *>(pop);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -144,6 +156,18 @@ public:
 	FSelectionOp() const override
 	{
 		return true;
+	}
+
+	void
+	MarkJoinOrderOriginAsGreedy()
+	{
+		m_join_order_origin_greedy = true;
+	}
+
+	BOOL
+	IsJoinOrderOriginGreedy()
+	{
+		return m_join_order_origin_greedy;
 	}
 
 };	// class CLogicalJoin

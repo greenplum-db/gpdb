@@ -38,6 +38,7 @@
 #include "gpopt/operators/CLogicalRowTrigger.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalInnerHashJoin.h"
 #include "gpopt/operators/CScalarAssertConstraint.h"
 #include "gpopt/operators/CScalarAssertConstraintList.h"
 #include "gpopt/operators/CScalarBitmapBoolOp.h"
@@ -4260,5 +4261,38 @@ CXformUtils::AddALinearStackOfUnaryExpressions(
 	return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
 }
 
+namespace gpopt
+{
+// Speciialization function for AddHashOrMergeJoinAlternative, specifically
+// to pass through the join order xform origin in the case of CPhysicalInnerHashJoin
+template <>
+void
+CXformUtils::AddHashOrMergeJoinAlternative<CPhysicalInnerHashJoin>(
+	CMemoryPool *mp, CExpression *pexprJoin, CExpressionArray *pdrgpexprOuter,
+	CExpressionArray *pdrgpexprInner, IMdIdArray *opfamilies,
+	CXformResult *pxfres)
+{
+	GPOS_ASSERT(CUtils::FLogicalJoin(pexprJoin->Pop()));
+	GPOS_ASSERT(3 == pexprJoin->Arity());
+	GPOS_ASSERT(nullptr != pdrgpexprOuter);
+	GPOS_ASSERT(nullptr != pdrgpexprInner);
+	GPOS_ASSERT(nullptr != pxfres);
+
+	for (ULONG ul = 0; ul < 3; ul++)
+	{
+		(*pexprJoin)[ul]->AddRef();
+	}
+
+	CLogicalJoin *popLogicalJoin = CLogicalJoin::PopConvert(pexprJoin->Pop());
+
+	CPhysicalInnerHashJoin *op = GPOS_NEW(mp)
+		CPhysicalInnerHashJoin(mp, pdrgpexprOuter, pdrgpexprInner, opfamilies,
+							   popLogicalJoin->IsJoinOrderOriginGreedy());
+	CExpression *pexprResult = GPOS_NEW(mp)
+		CExpression(mp, op, (*pexprJoin)[0], (*pexprJoin)[1], (*pexprJoin)[2]);
+
+	pxfres->Add(pexprResult);
+}
+}  // namespace gpopt
 
 // EOF

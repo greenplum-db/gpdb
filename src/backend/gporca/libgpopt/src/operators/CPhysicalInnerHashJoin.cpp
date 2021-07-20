@@ -32,9 +32,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
-	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies)
+	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
+	BOOL is_join_order_origin_greedy)
 	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
-						hash_opfamilies)
+						hash_opfamilies, is_join_order_origin_greedy)
 {
 }
 
