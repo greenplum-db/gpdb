@@ -287,12 +287,6 @@ procsignal_sigusr1_handler(SIGNAL_ARGS)
 	if (CheckProcSignal(PROCSIG_NOTIFY_INTERRUPT))
 		HandleNotifyInterrupt();
 
-	if (CheckProcSignal(PROCSIG_QUERY_FINISH))
-		QueryFinishHandler();
-
-	if (CheckProcSignal(PROCSIG_WALSND_INIT_STOPPING))
-		HandleWalSndInitStopping();
-
 	if (CheckProcSignal(PROCSIG_PARALLEL_MESSAGE))
 		HandleParallelMessageInterrupt();
 
@@ -316,6 +310,9 @@ procsignal_sigusr1_handler(SIGNAL_ARGS)
 
 	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN))
 		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN);
+
+	if (CheckProcSignal(PROCSIG_QUERY_FINISH))
+		QueryFinishHandler();
 
 	if (CheckProcSignal(PROCSIG_RESOURCE_GROUP_MOVE_QUERY))
 		HandleMoveResourceGroup();
