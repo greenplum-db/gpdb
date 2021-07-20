@@ -216,13 +216,13 @@ if __name__ == "__main__":
                         default=os.path.join(PIPELINES_DIR, default_output_filename),
                         help='Output filepath')
 
-    # PARSER.add_argument('-O', '--os_types',
-    #                     action='store',
-    #                     dest='os_types',
-    #                     default=['centos6', 'centos7', 'sles', 'aix7', 'win'],
-    #                     choices=['centos6', 'centos7', 'sles', 'aix7', 'win'],
-    #                     nargs='+',
-    #                     help='List of OS values to support')
+    PARSER.add_argument('-O', '--os_types',
+                        action='store',
+                        dest='os_types',
+                        default=['centos6', 'centos7', 'sles', 'aix7', 'win'],
+                        choices=['centos6', 'centos7', 'sles', 'aix7', 'win'],
+                        nargs='+',
+                        help='List of OS values to support')
 
     PARSER.add_argument('-t', '--pipeline_type',
                         action='store',
@@ -260,8 +260,6 @@ if __name__ == "__main__":
     )
 
     ARGS = PARSER.parse_args()
-
-    ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
 
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
