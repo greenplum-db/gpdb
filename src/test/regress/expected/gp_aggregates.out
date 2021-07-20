@@ -495,7 +495,7 @@ insert into agg_b values (1, 1, 1, 1);
 -- `AGGSTAGE_FINAL` stage and cause a crash since the type expected here should be numeric, but
 -- get a int value when executing numeric_avg_deserialize.
 set enable_groupagg = false;
-set optimizer_enable_groupagg = false; -- to force orca generate same plan
+set optimizer = off; -- the case is planner only, so disable orca
 explain (costs off, verbose)
 SELECT bb.v::text, count(distinct a.a), avg(a.c)	-- note the type cast
 FROM agg_a a
@@ -646,5 +646,5 @@ GROUP BY bb.v;
  1 |     1 |     1 | 100.0000000000000000
 (1 row)
 
-reset optimizer_enable_groupagg;
+reset optimizer;
 reset enable_groupagg;

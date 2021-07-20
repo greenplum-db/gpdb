@@ -206,7 +206,7 @@ insert into agg_b values (1, 1, 1, 1);
 -- get a int value when executing numeric_avg_deserialize.
 
 set enable_groupagg = false;
-set optimizer_enable_groupagg = false; -- to force orca generate same plan
+set optimizer = off; -- the case is planner only, so disable orca
 explain (costs off, verbose)
 SELECT bb.v::text, count(distinct a.a), avg(a.c)	-- note the type cast
 FROM agg_a a
@@ -245,5 +245,5 @@ Join ( SELECT b.b,
 		FROM agg_b b) as bb
 ON a.a = bb.b
 GROUP BY bb.v;
-reset optimizer_enable_groupagg;
+reset optimizer;
 reset enable_groupagg;
