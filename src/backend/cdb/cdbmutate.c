@@ -3092,13 +3092,14 @@ fixup_subplan_walker(Node *node, SubPlanWalkerContext *context)
 		 * while traversing the plan
 		 */
 			context->bms_subplans = bms_add_member(context->bms_subplans, plan_id);
-		else
+		else if (!((SubPlan *) node)->is_initplan)
 		{
 			/*
 			 * If plan_id is already available in the bitmapset, it means that there is
 			 * more than one subplan node which refer to the same plan_id. In this case
 			 * create a duplicate subplan, append it to the glob->subplans and update the plan_id
-			 * of the subplan to refer to the new copy of the subplan node
+			 * of the subplan to refer to the new copy of the subplan node and initplans are
+			 * not needed to be duplicated.
 			 */
 			PlannerInfo *root = (PlannerInfo *)context->base.node;
 			Plan *dupsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, subplan));
