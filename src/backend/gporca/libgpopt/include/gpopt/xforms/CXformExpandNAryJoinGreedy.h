@@ -76,6 +76,9 @@ public:
 	{
 		return true;
 	}
+
+	void PexprMarkGreedyChildren(CExpression *pexpr) const;
+
 };	// class CXformExpandNAryJoinGreedy
 
 }  // namespace gpopt
