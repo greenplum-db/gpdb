@@ -58,7 +58,7 @@ typedef struct GpSegConfigEntry
 
 	/* additional cached info */
 	char		*hostip;	/* cached lookup of name */
-	char		*hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
+	char		*hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */
 } GpSegConfigEntry;
 
 struct CdbComponentDatabaseInfo
@@ -67,10 +67,10 @@ struct CdbComponentDatabaseInfo
 
 	CdbComponentDatabases	*cdbs; /* point to owners */
 
-	int16		hostSegs;	/* number of primary segments on the same hosts */
-	List		*freelist;	/* list of idle segment dbs */
-	int			numIdleQEs;
-	int			numActiveQEs;
+	int16	hostSegs; /* number of primary segments on the same hosts */
+	List	*freelist; /* list of idle segment dbs */
+	int		numIdleQEs;
+	int		numActiveQEs;
 };
 
 

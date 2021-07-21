@@ -35,24 +35,24 @@ typedef struct SegmentDatabaseDescriptor
 	 *
 	 * Identical to segment_database_info->segindex.
 	 */
-	int32         			segindex;
+	int32	segindex;
 	
-    /*
+	/*
 	 * A non-NULL value points to the PGconn block of a successfully
 	 * established connection to the segment database.
 	 */
-	PGconn				   *conn;		
+	PGconn	*conn;
 
-    /*
-     * Connection info saved at most recent PQconnectdb.
-     *
-     * NB: Use malloc/free, not palloc/pfree, for the items below.
-     */
-    uint32		            motionListener; /* interconnect listener port */
-    int32					backendPid;
-    char                   *whoami;         /* QE identifier for msgs */
-	bool					isWriter;
-	int						identifier;		/* unique identifier in the cdbcomponent segment pool */
+	/*
+	* Connection info saved at most recent PQconnectdb.
+	*
+	* NB: Use malloc/free, not palloc/pfree, for the items below.
+	*/
+	uint32	motionListener; /* interconnect listener port */
+	int32	backendPid;
+	char	*whoami; /* QE identifier for msgs */
+	bool	isWriter;
+	int		identifier; /* unique identifier in the cdbcomponent segment pool */
 } SegmentDatabaseDescriptor;
 
 SegmentDatabaseDescriptor *

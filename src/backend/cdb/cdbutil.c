@@ -72,7 +72,7 @@
 
 #define GPSEGCONFIGDUMPFILE "gpsegconfig_dump"
 #define GPSEGCONFIGDUMPFILETMP "gpsegconfig_dump_tmp"
-#define GPSEGCONFIGNUMATTR 9 
+#define GPSEGCONFIGNUMATTR 9
 
 MemoryContext CdbComponentsContext = NULL;
 static CdbComponentDatabases *cdb_component_dbs = NULL;
@@ -113,7 +113,7 @@ typedef struct HostSegsEntry
  * Helper functions for fetching latest gp_segment_configuration outside of
  * the transaction.
  *
- * In phase 2 of 2PC, current xact has been marked to TRANS_COMMIT/ABORT, 
+ * In phase 2 of 2PC, current xact has been marked to TRANS_COMMIT/ABORT,
  * COMMIT_PREPARED or ABORT_PREPARED DTM are performed, if they failed,
  * dispather disconnect and destroy all gangs and fetch the latest segment
  * configurations to do RETRY_COMMIT_PREPARED or RETRY_ABORT_PREPARED,
@@ -138,17 +138,17 @@ readGpSegConfigFromFTSFiles(int *total_dbs)
 	Assert(!IsTransactionState());
 
 	/* notify and wait FTS to finish a probe and update the dump file */
-	FtsNotifyProber();	
+	FtsNotifyProber();
 
 	fd = AllocateFile(GPSEGCONFIGDUMPFILE, "r");
 
 	if (!fd)
 		elog(ERROR, "could not open gp_segment_configutation dump file:%s:%m", GPSEGCONFIGDUMPFILE);
 
-	configs = palloc0(sizeof (GpSegConfigEntry) * array_size); 
+	configs = palloc0(sizeof (GpSegConfigEntry) * array_size);
 
 	while (fgets(buf, sizeof(buf), fd))
-	{ 
+	{
 		config = &configs[idx];
 
 		if (sscanf(buf, "%d %d %c %c %c %c %d %s %s", (int *)&config->dbid, (int *)&config->segindex,
@@ -205,7 +205,7 @@ writeGpSegConfigToFTSFiles(void)
 	if (!fd)
 		elog(ERROR, "could not create tmp file: %s: %m", GPSEGCONFIGDUMPFILETMP);
 
-	configs = readGpSegConfigFromCatalog(&total_dbs); 
+	configs = readGpSegConfigFromCatalog(&total_dbs);
 
 	for (idx = 0; idx < total_dbs; idx++)
 	{
@@ -606,7 +606,7 @@ cdbcomponent_cleanupIdleQEs(bool includeWriter)
 	/* use cdb_component_dbs directly */
 	cdbs = cdb_component_dbs;
 
-	if (cdbs == NULL)		
+	if (cdbs == NULL)
 		return;
 
 	if (cdbs->segment_db_info != NULL)
@@ -630,7 +630,7 @@ cdbcomponent_cleanupIdleQEs(bool includeWriter)
 	return;
 }
 
-/* 
+/*
  * This function is called when a transaction is started and the snapshot of
  * segments info will not changed until the end of transaction
  */
@@ -665,7 +665,7 @@ cdbcomponent_updateCdbComponents(void)
 			if (TempNamespaceOidIsValid())
 			{
 				/*
-				 * Do not update here, otherwise, temp files will be lost 
+				 * Do not update here, otherwise, temp files will be lost
 				 * in segments;
 				 */
 			}
@@ -691,7 +691,7 @@ cdbcomponent_updateCdbComponents(void)
 }
 
 /*
- * cdbcomponent_getCdbComponents 
+ * cdbcomponent_getCdbComponents
  *
  *
  * Storage for the SegmentInstances block and all subsidiary
@@ -722,7 +722,7 @@ cdbcomponent_getCdbComponents()
 }
 
 /*
- * cdbcomponet_destroyCdbComponents 
+ * cdbcomponet_destroyCdbComponents
  *
  * Disconnect and destroy all idle QEs, releases the memory
  * occupied by the CdbComponentDatabases
@@ -743,7 +743,7 @@ cdbcomponent_destroyCdbComponents(void)
 
 	/* delete the memory context */
 	if (CdbComponentsContext)
-		MemoryContextDelete(CdbComponentsContext);	
+		MemoryContextDelete(CdbComponentsContext);
 	CdbComponentsContext = NULL;
 	cdb_component_dbs = NULL;
 }
@@ -768,7 +768,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 	MemoryContext 				oldContext;
 	bool						isWriter;
 
-	cdbinfo = cdbcomponent_getComponentInfo(contentId);	
+	cdbinfo = cdbcomponent_getComponentInfo(contentId);
 
 	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
 
@@ -793,7 +793,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 			continue;
 		}
 
-		cdbinfo->freelist = list_delete_cell(cdbinfo->freelist, curItem, prevItem); 
+		cdbinfo->freelist = list_delete_cell(cdbinfo->freelist, curItem, prevItem);
 		/* update numIdleQEs */
 		DECR_COUNT(cdbinfo, numIdleQEs);
 
@@ -843,7 +843,7 @@ cleanupQE(SegmentDatabaseDescriptor *segdbDesc)
 
 	/* if segment is down, the gang can not be reused */
 	if (FtsIsSegmentDown(segdbDesc->segment_database_info))
-		return false; 
+		return false;
 
 	/* If a reader exceed the cached memory limitation, destroy it */
 	if (!segdbDesc->isWriter &&
@@ -858,7 +858,7 @@ cleanupQE(SegmentDatabaseDescriptor *segdbDesc)
 	}
 
 	/* QE is no longer associated with a slice. */
-	cdbconn_setQEIdentifier(segdbDesc, /* slice index */ -1);	
+	cdbconn_setQEIdentifier(segdbDesc, /* slice index */ -1);
 
 	return true;
 }
@@ -867,7 +867,7 @@ void
 cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestroy)
 {
 	CdbComponentDatabaseInfo	*cdbinfo;
-	MemoryContext				oldContext;	
+	MemoryContext				oldContext;
 	int							maxLen;
 	bool						isWriter;
 
@@ -901,18 +901,18 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	else
 	{
 		ListCell   *lastWriter = NULL;
-		ListCell   *cell;
+		ListCell   *cell = NULL;
 
 		/*
 		 * In cdbcomponent_allocateIdleQE() readers are always popped from the
 		 * head, so to restore the original order we must pushed them back to
 		 * the head, and keep in mind readers must be put after the writers.
 		 */
-
 		for (cell = list_head(segdbDesc->segment_database_info->freelist);
 			 cell && ((SegmentDatabaseDescriptor *) lfirst(cell))->isWriter;
 			 lastWriter = cell, cell = lnext(cell)) ;
 
+		/* The for loop is already over */
 		if (lastWriter)
 			lappend_cell(segdbDesc->segment_database_info->freelist,
 						 lastWriter, segdbDesc);
@@ -984,7 +984,7 @@ cdbcomponent_getComponentInfo(int contentId)
 	/* entry db */
 	if (contentId == -1)
 	{
-		cdbInfo = &cdbs->entry_db_info[0];	
+		cdbInfo = &cdbs->entry_db_info[0];
 		return cdbInfo;
 	}
 
@@ -1351,8 +1351,8 @@ getAddressesForDBid(GpSegConfigEntry *c, int elevel)
 		if (c->segindex == 0 &&
 				c->preferred_role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 		{
-			c->address = pstrdup("dnserrordummyaddress"); 
-			c->hostname = pstrdup("dnserrordummyaddress"); 
+			c->address = pstrdup("dnserrordummyaddress");
+			c->hostname = pstrdup("dnserrordummyaddress");
 		}
 	}
 #endif
