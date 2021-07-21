@@ -3177,7 +3177,6 @@ relation_needs_vacanalyze(Oid relid,
 	 * at risk of wrap around and proceed to vacuum)
 	 */
 	if (*dovacuum && !IsSystemClass(relid, classForm) &&
-		strcmp(get_namespace_name(classForm->relnamespace), "information_schema") != 0 &&
 		!force_vacuum)
 	{
 		*dovacuum = false;
