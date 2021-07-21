@@ -107,30 +107,8 @@ CXformExpandNAryJoinGreedy::Transform(CXformContext *pxfctxt,
 		// normalize resulting expression
 		CExpression *pexprNormalized =
 			CNormalizer::PexprNormalize(pmp, pexprResult);
-		PexprMarkGreedyChildren(pexprNormalized);
 		pexprResult->Release();
 		pxfres->Add(pexprNormalized);
-	}
-}
-
-void
-CXformExpandNAryJoinGreedy::PexprMarkGreedyChildren(CExpression *pexpr) const
-{
-	// protect against stack overflow during recursion
-	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(nullptr != pexpr);
-
-	// recursively process children
-	const ULONG arity = pexpr->Arity();
-	for (ULONG ul = 0; ul < arity; ul++)
-	{
-		PexprMarkGreedyChildren((*pexpr)[ul]);
-	}
-
-	CLogicalJoin *popLogicalJoin = CLogicalJoin::PopConvert(pexpr->Pop());
-	if (nullptr != popLogicalJoin)
-	{
-		popLogicalJoin->MarkJoinOrderOriginAsGreedy();
 	}
 }
 

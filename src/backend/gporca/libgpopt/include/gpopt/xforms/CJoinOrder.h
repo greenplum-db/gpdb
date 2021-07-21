@@ -208,7 +208,8 @@ protected:
 	void ComputeEdgeCover();
 
 	// combine the two given components using applicable edges
-	SComponent *PcompCombine(SComponent *comp1, SComponent *comp2);
+	SComponent *PcompCombine(SComponent *comp1, SComponent *comp2,
+							 BOOL mark_as_greedy);
 
 	// derive stats on a given component
 	virtual void DeriveStats(CExpression *pexpr);

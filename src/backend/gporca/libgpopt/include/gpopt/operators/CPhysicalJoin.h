@@ -177,7 +177,7 @@ public:
 	}
 
 	BOOL
-	IsJoinOrderOriginGreedy()
+	IsJoinOrderOriginGreedy() const
 	{
 		return m_join_order_origin_greedy;
 	}

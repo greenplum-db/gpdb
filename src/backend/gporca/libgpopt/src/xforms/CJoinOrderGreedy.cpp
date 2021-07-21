@@ -86,7 +86,8 @@ CJoinOrderGreedy::GetStartingJoins()
 				continue;
 			}
 
-			CJoinOrder::SComponent *compTemp = PcompCombine(comp1, comp2);
+			CJoinOrder::SComponent *compTemp =
+				PcompCombine(comp1, comp2, true /* mark_as_greedy */);
 
 			// exclude cross joins to be considered as late as possible in the join order
 			if (CUtils::FCrossJoin(compTemp->m_pexpr))
@@ -236,7 +237,8 @@ CJoinOrderGreedy::PickBestJoin(CBitSet *candidate_comp_set)
 			continue;
 		}
 
-		SComponent *pcompTemp = PcompCombine(m_pcompResult, pcompCurrent);
+		SComponent *pcompTemp = PcompCombine(m_pcompResult, pcompCurrent,
+											 true /* mark_as_greedy */);
 		DeriveStats(pcompTemp->m_pexpr);
 		CDouble dRows = pcompTemp->m_pexpr->Pstats()->Rows();
 

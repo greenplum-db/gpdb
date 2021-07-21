@@ -102,8 +102,8 @@ CJoinOrderMinCard::PexprExpand()
 			}
 
 			// combine component with current result and derive stats
-			CJoinOrder::SComponent *pcompTemp =
-				PcompCombine(m_pcompResult, pcompCurrent);
+			CJoinOrder::SComponent *pcompTemp = PcompCombine(
+				m_pcompResult, pcompCurrent, false /* mark_as_greedy */);
 			DeriveStats(pcompTemp->m_pexpr);
 			CDouble rows = pcompTemp->m_pexpr->Pstats()->Rows();
 
