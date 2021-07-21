@@ -20,6 +20,7 @@
 #include "catalog/gp_segment_configuration.h"
 #include "nodes/pg_list.h"
 #include "nodes/plannodes.h"
+#include "storage/lwlock.h"
 
 struct SegmentDatabaseDescriptor;
 
@@ -69,6 +70,7 @@ struct CdbComponentDatabaseInfo
 
 	int16	hostSegs; /* number of primary segments on the same hosts */
 	List	*freelist; /* list of idle segment dbs */
+	LWLock	freelistLock; /* lock of touching the freelist */
 	int		numIdleQEs;
 	int		numActiveQEs;
 };

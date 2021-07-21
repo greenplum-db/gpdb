@@ -411,6 +411,8 @@ getCdbComponentInfo(void)
 		pRow->cdbs = component_databases;
 		pRow->config = config;
 		pRow->freelist = NIL;
+		LWLockInitialize(&pRow->freelistLock, LWLockNewTrancheId());
+		LWLockRegisterTranche(pRow->freelistLock.tranche, "gang_freelist");
 		pRow->numIdleQEs = 0;
 		pRow->numActiveQEs = 0;
 
@@ -558,6 +560,9 @@ getCdbComponentInfo(void)
 /*
  * Helper function to clean up the idle segdbs list of
  * a segment component.
+ *
+ * This would be called in a signal handler, lock the
+ * data to avoid corruption.
  */
 static void
 cleanupComponentIdleQEs(CdbComponentDatabaseInfo *cdi, bool includeWriter)
@@ -567,6 +572,13 @@ cleanupComponentIdleQEs(CdbComponentDatabaseInfo *cdi, bool includeWriter)
 	ListCell 					*curItem = NULL;
 	ListCell					*nextItem = NULL;
 	ListCell 					*prevItem = NULL;
+
+	/* Don't wait to get the lock, we might be in a signal handler */
+	if (!LWLockConditionalAcquire(&cdi->freelistLock, LW_EXCLUSIVE))
+	{
+		ereport(LOG, (errmsg("Failed to get the freelist lock, skip idle QEs' cleaning up")));
+		return;
+	}
 
 	Assert(CdbComponentsContext);
 	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
@@ -585,16 +597,16 @@ cleanupComponentIdleQEs(CdbComponentDatabaseInfo *cdi, bool includeWriter)
 			continue;
 		}
 
-		cdi->freelist = list_delete_cell(cdi->freelist, curItem, prevItem); 
+		cdi->freelist = list_delete_cell(cdi->freelist, curItem, prevItem);
 		DECR_COUNT(cdi, numIdleQEs);
 
 		cdbconn_termSegmentDescriptor(segdbDesc);
 
 		curItem = nextItem;
-
 	}
 
 	MemoryContextSwitchTo(oldContext);
+	LWLockRelease(&cdi->freelistLock);
 }
 
 void
@@ -776,6 +788,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 	 * Always try to pop from the head.  Make sure to push them back to head
 	 * in cdbcomponent_recycleIdleQE().
 	 */
+	LWLockAcquire(&cdbinfo->freelistLock, LW_EXCLUSIVE);
 	curItem = list_head(cdbinfo->freelist);
 	while (curItem != NULL)
 	{
@@ -800,6 +813,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 		segdbDesc = tmp;
 		break;
 	}
+	LWLockRelease(&cdbinfo->freelistLock);
 
 	if (!segdbDesc)
 	{
@@ -892,6 +906,7 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 		goto destroy_segdb;
 
 	/* Recycle the QE, put it to freelist */
+	LWLockAcquire(&cdbinfo->freelistLock, LW_EXCLUSIVE);
 	if (isWriter)
 	{
 		/* writer is always the header of freelist */
@@ -923,6 +938,7 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 
 	INCR_COUNT(cdbinfo, numIdleQEs);
 
+	LWLockRelease(&cdbinfo->freelistLock);
 	MemoryContextSwitchTo(oldContext);
 
 	return;
