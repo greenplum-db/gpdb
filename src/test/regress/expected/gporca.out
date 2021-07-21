@@ -13912,3 +13912,65 @@ SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt1.b = tt2.d) IS D
   
 (1 row)
 
+EXPLAIN SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM false);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=4)
+   ->  Seq Scan on tt1  (cost=0.00..321.00 rows=14350 width=4)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                 Filter: ((tt2.d = tt1.b) IS DISTINCT FROM false)
+                 ->  Materialize  (cost=0.00..1899.50 rows=86100 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+                             ->  Seq Scan on tt2  (cost=0.00..321.00 rows=28700 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM false);
+ b 
+---
+(0 rows)
+
+EXPLAIN SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM true);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=4)
+   ->  Seq Scan on tt1  (cost=0.00..321.00 rows=14350 width=4)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                 Filter: ((tt2.d = tt1.b) IS DISTINCT FROM true)
+                 ->  Materialize  (cost=0.00..1899.50 rows=86100 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+                             ->  Seq Scan on tt2  (cost=0.00..321.00 rows=28700 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM true);
+ b 
+---
+(0 rows)
+
+EXPLAIN SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM NULL);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=4)
+   ->  Seq Scan on tt1  (cost=0.00..321.00 rows=14350 width=4)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                 Filter: ((tt2.d = tt1.b) IS NOT NULL)
+                 ->  Materialize  (cost=0.00..1899.50 rows=86100 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+                             ->  Seq Scan on tt2  (cost=0.00..321.00 rows=28700 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM NULL);
+ b 
+---
+ 5
+  
+(2 rows)
+
