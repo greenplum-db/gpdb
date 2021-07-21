@@ -2519,9 +2519,7 @@ CXformUtils::FExtractEquality(
 //	@doc:
 //		GPDB hash join return no results if the inner side of anti-semi-join
 //		produces null values, this allows simplifying join predicates of the
-//		form (equality_expr IS DISTINCT FROM false) to (equality_expr) since
-//		GPDB hash join operator guarantees no join results to be returned in
-//		this case
+//		form (a = b IS DISTINCT FROM false) to (a = b OR a = NULL)
 //
 //
 //---------------------------------------------------------------------------
