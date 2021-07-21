@@ -3337,6 +3337,8 @@ jobs:
         outputs:
           - name: renamed_gpdb_rpm_centos6
           - name: renamed_gpdb_rpm_centos7
+        params:
+          RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
         run:
           path: sh
           args:
@@ -3346,11 +3348,11 @@ jobs:
 {% if build_test_rc_rpm %}
               # Uniquely name the rpm using the github username and test branch
               # to prevent filename collisions on GCS.
-              cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel6-x86_64.rpm
-              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel7-x86_64.rpm
+              cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel6-x86_64${RC_BUILD_TYPE_GCS}.rpm
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
 {% else %}
-              cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-${gpdb_semver}-rhel6-x86_64.rpm
-              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64.rpm
+              cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-${gpdb_semver}-rhel6-x86_64${RC_BUILD_TYPE_GCS}.rpm
+              cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
 {% endif %}
     - in_parallel:
         steps:
