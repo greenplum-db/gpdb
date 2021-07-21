@@ -42,7 +42,6 @@
 #include "gpopt/operators/CScalarAssertConstraintList.h"
 #include "gpopt/operators/CScalarBitmapBoolOp.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
-#include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarDMLAction.h"
 #include "gpopt/operators/CScalarIdent.h"
@@ -2465,7 +2464,7 @@ CXformUtils::PexprAddCTEProducer(CMemoryPool *mp, ULONG ulCTEId,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::FExtractEquality
+//		CXformUtils::FProcessGPDBAntiSemiHashJoin
 //
 //	@doc:
 //		Helper to extract equality from an expression tree of the form
@@ -2519,7 +2518,9 @@ CXformUtils::FExtractEquality(
 //	@doc:
 //		GPDB hash join return no results if the inner side of anti-semi-join
 //		produces null values, this allows simplifying join predicates of the
-//		form (a = b IS DISTINCT FROM false) to (a = b OR a = NULL)
+//		form (equality_expr IS DISTINCT FROM false) to (equality_expr) since
+//		GPDB hash join operator guarantees no join results to be returned in
+//		this case
 //
 //
 //---------------------------------------------------------------------------
@@ -2563,22 +2564,15 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 				CPhysicalJoin::FHashJoinCompatible(
 					pexprEquality, pexprOuter,
 					pexprInner) &&	// equality is hash-join compatible
-				CUtils::FUsesNullableCol(
-					mp, pexprEquality,
-					pexprInner))  // equality uses an inner nullable column
+				CUtils::FUsesNullableCol(mp, pexprEquality,
+										 pexprInner) ==
+					false &&  // equality uses an inner NOT NULL column
+				CUtils::FUsesNullableCol(mp, pexprEquality,
+										 pexprOuter) ==
+					false)	// equality uses an outer NOT NULL column
 			{
-				(*pexprEquality)[0]->AddRef();
-
-				CExpression *pexprInnerNull =
-					CUtils::PexprIsNull(mp, (*pexprEquality)[0]);
-				COperator *pexprExpressionOp = GPOS_NEW(mp)
-					CScalarBoolOp(mp, CScalarBoolOp::EBoolOperator::EboolopOr);
-
-				CExpression *pexprExpression = GPOS_NEW(mp) CExpression(
-					mp, pexprExpressionOp, pexprEquality, pexprInnerNull);
-
-				pdrgpexprNew->Append(pexprExpression);
-
+				pexprEquality->AddRef();
+				pdrgpexprNew->Append(pexprEquality);
 				fSimplifiedPredicate = true;
 				continue;
 			}
