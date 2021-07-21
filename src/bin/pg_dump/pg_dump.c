@@ -6792,7 +6792,14 @@ getFuncs(Archive *fout, int *numFuncs)
 							  "\n  OR p.oid = pg_transform.trftosql))",
 							  g_last_builtin_oid);
 
+/*
+ * GPDB: Much of the extension machinery was backported into GPDB 5 from higher
+ * major versions. So include the clause if we are running against GPDB 5.
+ */
+#if 0
 		if (dopt->binary_upgrade && fout->remoteVersion >= 90100)
+#endif
+		if (dopt->binary_upgrade && fout->remoteVersion >= 80300)
 			appendPQExpBufferStr(query,
 								 "\n  OR EXISTS(SELECT 1 FROM pg_depend WHERE "
 								 "classid = 'pg_proc'::regclass AND "
