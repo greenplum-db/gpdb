@@ -23,7 +23,7 @@ try:
     from gppylib.datetimeutils import str_to_datetime, str_to_duration, DatetimeValueError
     from gppylib.logfilter import *
     from gppylib.commands.gp import get_coordinatordatadir
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # These values are from cdb-pg/src/backend/po/*.po
@@ -245,7 +245,7 @@ def openInputFile(ifn, options):
             zname = zname[0:-3]
             if os.path.splitext(zname)[1] == '':
                 zname += '.log'
-        fileIn = open(ifn, (unzip and 'rb') or 'rU')
+        fileIn = open(ifn, (unzip and 'rb') or 'r')
         filesToClose.append(fileIn)
 
     # Set up input decompression
@@ -310,9 +310,9 @@ def openOutputFile(ifn, zname, options):
 
         if options.verbose:
             if options.append:
-                print >> sys.stderr, ' append to ', ofn
+                print(' append to', ofn, file=sys.stderr)
             else:
-                print >> sys.stderr, ' output to ', ofn
+                print(' output to', ofn, file=sys.stderr)
 
     # Set up output compression
     if zipout:
@@ -399,7 +399,7 @@ try:
         if options.verbose:
             msg = ('requested timestamp range from %s to %s'
                    % (begin or 'beginning of data', end or 'end of data'))
-            print >> sys.stderr, msg
+            print(msg, file=sys.stderr)
 
         # Loop over input files
         for ifn in args:
@@ -434,7 +434,7 @@ try:
 
                 if goodFormat and begin and filedate < begin:
                     if end and filedate > end:
-                        print >> sys.stderr, "SKIP file: %s" % zname
+                        print("SKIP file: %s" % zname, file=sys.stderr)
                         for f in inputFilesToClose:
                             f.close()
                         inputFilesToClose = []
@@ -442,7 +442,7 @@ try:
 
             # Announce each input file *before* its output file if --out is dir
             if options.verbose and outputFilePerInputFile:
-                print >> sys.stderr, '---------- ', ifn, '---------- '
+                print('----------', ifn, '----------', file=sys.stderr)
 
             # Open the output file (once per input file if --out is a directory)
             if fileOut is None:
@@ -450,7 +450,7 @@ try:
 
             # Announce input files *after* single output file
             if options.verbose and not outputFilePerInputFile:
-                print >> sys.stderr, '---------- ', ifn, '---------- '
+                print('----------', ifn, '----------', file=sys.stderr)
 
             # Construct the filtering pipeline
             filteredInput = FilterLogEntries(fileIn,
@@ -464,7 +464,7 @@ try:
             # Write filtered lines to output file.  Don't append \n to
             # each line, because the original line ends are still there.
             for line in filteredInput:
-                print >> fileOut, line,
+                print(line, file=fileOut)
 
             # Close input and output files
             for file in inputFilesToClose:
@@ -482,7 +482,7 @@ try:
             file.close()
         for file in inputFilesToClose:
             file.close()
-except IOError, msg:
+except IOError as msg:
     execname = os.path.basename(sys.argv[0])
-    print >> sys.stderr, '%s: (IOError) "%s"' % (execname, msg)
+    print('%s: (IOError) "%s"' % (execname, msg), file=sys.stderr)
     sys.exit(2)

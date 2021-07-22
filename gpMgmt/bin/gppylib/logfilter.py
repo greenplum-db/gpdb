@@ -253,7 +253,7 @@ def FilterLogEntries(iterable,
             msg += '; timestamps from %s to %s' % srange
         print(msg, file=msgfile)
 
-    
+
 
 #------------------------------- Spying --------------------------------
 class CsvFlatten(object):
@@ -261,13 +261,13 @@ class CsvFlatten(object):
     Used to flatten a CSV parsed log line into something that looks like the 
     old format.
     """
-    
+
     def __init__(self,iterable):
         self.source = iter(iterable)
-    
+
     def __iter__(self):
         return self
-    
+
     def __next__(self):
         item = next(self.source)
         #we need to make a minor format change to the log level field so that
@@ -541,7 +541,7 @@ def TimestampInBounds(iterable, begin, end):
     # any following lines which do not have timestamps.
     if isinstance(item, str):
         withinbounds = False
-        while True:
+        for item in source:
             if begin <= item < end:
                 withinbounds = True
                 yield item
@@ -549,17 +549,14 @@ def TimestampInBounds(iterable, begin, end):
                 withinbounds = False
             elif withinbounds:
                 yield item
-            item = next(source)
 
     # Else assume input consists of groups (i.e. sequences) of lines.
     # Yield groups in which the first line starts with a timestamp within
     # the given bounds.  Skip groups which are empty or have no timestamp.
-    while True:
+    for item in source:
         if (len(item) > 0 and
             begin <= item[0] < end):
             yield item
-        item = next(source)
-
 
 #--------------------------- Pattern Matching ----------------------------
     
@@ -699,7 +696,7 @@ def MatchColumns(iterable, cols):
             for s in item:
                 n = 1
                 out = []
-                
+
                 for c in s.split('|'):
                     if n in cols:
                         out.append(c)

@@ -17,7 +17,7 @@ This will be set automatically with a `source $GPHOME/greenplum_path.sh`
 
 ## Python Version
 
-System python 2.7 is currently required.
+System python 3 is currently required.
 
 
 Where Things Go
