@@ -12,7 +12,7 @@ def get_unreachable_segment_hosts(hosts, num_workers):
 
     pool = base.WorkerPool(numWorkers=num_workers)
     try:
-        for host in hosts:
+        for host in set(hosts):
             cmd = Command(name='check %s is up' % host, cmdStr="ssh %s 'echo %s'" % (host, host))
             pool.addCommand(cmd)
         pool.join()
