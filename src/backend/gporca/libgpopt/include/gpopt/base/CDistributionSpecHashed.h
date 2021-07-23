@@ -161,7 +161,7 @@ public:
 		BOOL must_exist) override;
 
 	// strip off any equivalent columns embedded in the distribution spec
-	virtual CDistributionSpec *StripEquivColumns(CMemoryPool *) override;
+	CDistributionSpec *StripEquivColumns(CMemoryPool *) override;
 
 	// append enforcers to dynamic array for the given plan properties
 	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,

@@ -165,7 +165,7 @@ CDistributionSpec *
 CDistributionSpecHashed::StripEquivColumns(CMemoryPool *mp)
 {
 	m_pdrgpexpr->AddRef();
-	if (NULL != m_opfamilies)
+	if (nullptr != m_opfamilies)
 	{
 		m_opfamilies->AddRef();
 	}
