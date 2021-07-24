@@ -1,0 +1,114 @@
+-- Test the log related GUCs
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+set log_min_error_statement = error;
+-- Case 1, test the log_min_error_statement GUC for coordinator log
+-- the error statement will be logged as default
+creat table log_aaa (id int, c text); -- this should raise error
+ERROR:  syntax error at or near "creat"
+LINE 1: creat table log_aaa (id int, c text);
+        ^
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+where logseverity='ERROR' and logmessage like '%"creat"%' order by logtime desc limit 1;
+ logseverity |           logmessage            |               logdebug                
+-------------+---------------------------------+---------------------------------------
+ ERROR       | syntax error at or near "creat" | creat table log_aaa (id int, c text);
+(1 row)
+
+-- should contain the log from elog_exception_statement()
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+where logseverity='LOG' and logmessage like '%exception was encountered%'
+and logmessage not like '%__gp_log_master_ext%'
+order by logtime desc limit 1;
+ logseverity |                                              logmessage                                               |               logdebug                
+-------------+-------------------------------------------------------------------------------------------------------+---------------------------------------
+ LOG         | An exception was encountered during the execution of statement: creat table log_aaa (id int, c text); | creat table log_aaa (id int, c text);
+(1 row)
+
+-- set log_min_error_statement to panic to skip log the error statement
+set log_min_error_statement = panic;
+creat table log_aaa (id int, c text); -- this should raise error
+ERROR:  syntax error at or near "creat"
+LINE 1: creat table log_aaa (id int, c text);
+        ^
+-- logdebug should be null
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+where logseverity='ERROR' and logmessage like '%"creat"%' order by logtime desc limit 1;
+ logseverity |           logmessage            | logdebug 
+-------------+---------------------------------+----------
+ ERROR       | syntax error at or near "creat" | 
+(1 row)
+
+-- this should only show the two select and log from elog_exception_statement() is not included
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+where logseverity='LOG' and logmessage like '%exception was encountered%'
+order by logtime desc limit 2;
+ logseverity |                                       logmessage                                        |                                   logdebug                                   
+-------------+-----------------------------------------------------------------------------------------+------------------------------------------------------------------------------
+ LOG         | statement: select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext | 
+             : where logseverity='LOG' and logmessage like '%exception was encountered%'                 
+             : order by logtime desc limit 2;                                                            
+ LOG         | statement: select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext | select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext 
+             : where logseverity='LOG' and logmessage like '%exception was encountered%'               : where logseverity='LOG' and logmessage like '%exception was encountered%'    
+             : and logmessage not like '%__gp_log_master_ext%'                                         : and logmessage not like '%__gp_log_master_ext%'                              
+             : order by logtime desc limit 1;                                                          : order by logtime desc limit 1;
+(2 rows)
+
+set log_min_error_statement = error;
+-- Case 2, test the log_min_error_statement GUC for segments log
+-- the error statement will be logged as default
+create table log_test(id int, c text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into log_test select i, 'test' from generate_series(1, 10) as i;
+-- use fault inject to trigger error
+SELECT gp_inject_fault('qe_got_snapshot_and_interconnect', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select * from log_test;
+ERROR:  fault triggered, fault name:'qe_got_snapshot_and_interconnect' fault type:'error'  (seg0 slice1 192.168.33.11:25432 pid=28101)
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_segment_ext
+where logseverity='ERROR' and logsegment = 'seg0' and logmessage like '%fault triggered%'
+order by logtime desc limit 1;
+ logseverity |                                    logmessage                                     |        logdebug         
+-------------+-----------------------------------------------------------------------------------+-------------------------
+ ERROR       | fault triggered, fault name:'qe_got_snapshot_and_interconnect' fault type:'error' | select * from log_test;
+(1 row)
+
+set log_min_error_statement = panic;
+SELECT gp_inject_fault('qe_got_snapshot_and_interconnect', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select * from log_test;
+ERROR:  fault triggered, fault name:'qe_got_snapshot_and_interconnect' fault type:'error'  (seg0 slice1 192.168.33.11:25432 pid=28101)
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+-- logdebug should be null
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_segment_ext
+where logseverity='ERROR' and logsegment = 'seg0' and logmessage like '%fault triggered%'
+order by logtime desc limit 1;
+ logseverity |                                    logmessage                                     | logdebug 
+-------------+-----------------------------------------------------------------------------------+----------
+ ERROR       | fault triggered, fault name:'qe_got_snapshot_and_interconnect' fault type:'error' | 
+(1 row)
+
+set log_min_error_statement = error;

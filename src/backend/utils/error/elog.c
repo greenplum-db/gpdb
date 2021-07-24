@@ -1726,6 +1726,30 @@ pg_re_throw(void)
 	abort();
 }
 
+/*
+ * GPDB: elog_exception_statement
+ * Write statement in log file if an exception was encountered during
+ * its execution.
+ */
+void
+elog_exception_statement(const char* statement)
+{
+	ErrorData  *edata = NULL;
+
+	if (errordata_stack_depth < 0 || statement == NULL)
+		return;
+
+	edata = &errordata[errordata_stack_depth];
+	/*
+	 * We should also honour whether hide the statement and GUC
+	 * log_min_error_statement to prevent print the statement
+	 * when error happens.
+	 */
+	if (!edata->hide_stmt &&
+		is_log_level_output(edata->elevel, log_min_error_statement))
+		elog(LOG, "An exception was encountered during the execution of statement: %s",
+			 statement);
+}
 
 /*
  * CDB: elog_demote
@@ -3284,7 +3308,11 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 	write_syslogger_file_string(edata->context, amsyslogger, true);
 
 	/* user query */
-	write_syslogger_file_string(debug_query_string, amsyslogger, true);
+	if (!edata->hide_stmt &&
+		is_log_level_output(edata->elevel, log_min_error_statement))
+		write_syslogger_file_string(debug_query_string, amsyslogger, true);
+	else
+		write_syslogger_file_string("", amsyslogger, true);
 
 	/* cursor pos */
 	syslogger_write_int32(true, "", edata->cursorpos, amsyslogger, true);
@@ -3441,7 +3469,10 @@ write_message_to_server_log(int elevel,
 	append_string_to_pipe_chunk(&buffer, context);
 
 	/* debug_query_string */
-	append_string_to_pipe_chunk(&buffer, query_text);
+	if (is_log_level_output(elevel, log_min_error_statement))
+		append_string_to_pipe_chunk(&buffer, query_text);
+	else
+		append_string_to_pipe_chunk(&buffer, NULL);
 
 	/* error_func_name */
 	if (show_funcname)

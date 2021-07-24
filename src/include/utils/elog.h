@@ -472,6 +472,13 @@ extern void ReThrowError(ErrorData *edata)  __attribute__((__noreturn__));
 extern void pg_re_throw(void) __attribute__((noreturn));
 
 /*
+ * GPDB: elog_exception_statement
+ * Write statement in log file if an exception was encountered during
+ * its execution.
+ */
+extern void	elog_exception_statement(const char* statement);
+
+/*
  * CDB: elog_demote
  *
  * A PG_CATCH() handler can call this to downgrade the error that it is

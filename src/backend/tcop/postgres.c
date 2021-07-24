@@ -4761,7 +4761,7 @@ PostgresMain(int argc, char *argv[],
 		 */
 		if (debug_query_string != NULL)
 		{
-			elog(LOG, "An exception was encountered during the execution of statement: %s", debug_query_string);
+			elog_exception_statement(debug_query_string);
 			debug_query_string = NULL;
 		}
 

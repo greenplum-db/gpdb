@@ -99,6 +99,7 @@ test: wrkloadadmin
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples.
 test: gp_toolkit
+test: log_guc
 
 test: gp_toolkit_ao_funcs filespace trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning runtime_stats
 test: rle rle_delta dsp
