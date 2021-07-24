@@ -20,6 +20,7 @@
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
 # file related tests (like gp_log_system, etc) faster.
 test: gp_toolkit
+test: log_guc
 
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
