@@ -1109,8 +1109,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	 * This needs to be before processing the partitioning clauses because
 	 * those could refer to generated columns.
 	 */
-	if (Gp_role != GP_ROLE_EXECUTE &&
-		(rawDefaults || stmt->constraints))
+	if (Gp_role != GP_ROLE_EXECUTE && rawDefaults)
 	{
 		List	   *newCookedDefaults;
 
@@ -1389,9 +1388,16 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	 * as for defaults above, but these need to come after partitioning is set
 	 * up.
 	 */
-	if (stmt->constraints)
-		AddRelationNewConstraints(rel, NIL, stmt->constraints,
-								  true, true, false, queryString);
+	if (Gp_role != GP_ROLE_EXECUTE && stmt->constraints)
+	{
+		List	   *newCookedDefaults;
+
+		newCookedDefaults =
+			AddRelationNewConstraints(rel, NIL, stmt->constraints,
+									  true, true, false, queryString);
+
+		cooked_constraints = list_concat(cooked_constraints, newCookedDefaults);
+	}
 
 	ObjectAddressSet(address, RelationRelationId, relationId);
 
