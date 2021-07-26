@@ -3362,6 +3362,19 @@ SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = tt1
 EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = tt1_notnull.b) IS DISTINCT FROM false);
 SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = tt1_notnull.b) IS DISTINCT FROM false);
 
+--- Previously, NOT IN would only use a Hash Anti Join if at least one of the variables in the predicate is constant
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
