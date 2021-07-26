@@ -429,8 +429,7 @@ CJoinOrder::ComputeEdgeCover()
 //
 //---------------------------------------------------------------------------
 CJoinOrder::SComponent *
-CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2,
-						 BOOL mark_as_greedy)
+CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2)
 {
 	GPOS_ASSERT(IsValidJoinCombination(comp1, comp2));
 	CBitSet *pbs = GPOS_NEW(m_mp) CBitSet(m_mp);
@@ -566,7 +565,7 @@ CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2,
 				CPredicateUtils::PexprConjunction(m_mp, loj_conjuncts);
 			pexpr = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
 				m_mp, pexprChild1, pexprChild2, predicate);
-			if (mark_as_greedy)
+			if (this->EOriginXForm() == CXform::ExfExpandNAryJoinGreedy)
 			{
 				CLogicalJoin *popLogicalJoin =
 					CLogicalJoin::PopConvert(pexpr->Pop());

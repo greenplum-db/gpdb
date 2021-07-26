@@ -191,6 +191,11 @@ public:
 	// print function
 	IOstream &OsPrint(IOstream &) const;
 
+	CXform::EXformId
+	EOriginXForm() const override
+	{
+		return CXform::ExfExpandNAryJoinDP;
+	}
 
 };	// class CJoinOrderDP
 
