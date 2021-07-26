@@ -74,6 +74,11 @@ public:
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
+
 	// return true if operator is a correlated NL Join
 	virtual BOOL
 	FCorrelated() const
