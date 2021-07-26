@@ -29,12 +29,14 @@ namespace gpopt
 class CLogicalJoin : public CLogical
 {
 private:
-	// did expression originate from greedy join order xform?
-	BOOL m_join_order_origin_greedy;
+	// xform that join originated from
+	CXform::EXformId m_join_order_origin_xform;
 
 protected:
 	// ctor
-	explicit CLogicalJoin(CMemoryPool *mp);
+	explicit CLogicalJoin(
+		CMemoryPool *mp,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalJoin() override = default;
@@ -158,17 +160,12 @@ public:
 		return true;
 	}
 
-	void
-	MarkJoinOrderOriginAsGreedy()
+	CXform::EXformId
+	JoinOrderOriginXform()
 	{
-		m_join_order_origin_greedy = true;
+		return m_join_order_origin_xform;
 	}
 
-	BOOL
-	IsJoinOrderOriginGreedy() const
-	{
-		return m_join_order_origin_greedy;
-	}
 
 };	// class CLogicalJoin
 

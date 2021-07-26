@@ -15,6 +15,7 @@
 
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/operators/CPhysical.h"
+#include "gpopt/xforms/CXform.h"
 
 namespace gpopt
 {
@@ -42,12 +43,13 @@ private:
 												 ULONG child_index);
 
 	// check whether join order originated from greedy xform
-	BOOL m_join_order_origin_greedy;
+	CXform::EXformId m_join_order_origin_xform;
 
 protected:
 	// ctor
-	explicit CPhysicalJoin(CMemoryPool *mp,
-						   BOOL is_join_order_origin_greedy = false);
+	explicit CPhysicalJoin(
+		CMemoryPool *mp,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalJoin() override = default;
@@ -176,10 +178,10 @@ public:
 		return false;
 	}
 
-	BOOL
-	IsJoinOrderOriginGreedy() const
+	CXform::EXformId
+	JoinOrderOriginXform()
 	{
-		return m_join_order_origin_greedy;
+		return m_join_order_origin_xform;
 	}
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------

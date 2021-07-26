@@ -52,11 +52,10 @@ public:
 	CPhysicalInnerHashJoin(const CPhysicalInnerHashJoin &) = delete;
 
 	// ctor
-	CPhysicalInnerHashJoin(CMemoryPool *mp,
-						   CExpressionArray *pdrgpexprOuterKeys,
-						   CExpressionArray *pdrgpexprInnerKeys,
-						   IMdIdArray *hash_opfamilies,
-						   BOOL is_join_order_origin_greedy = false);
+	CPhysicalInnerHashJoin(
+		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalInnerHashJoin() override;

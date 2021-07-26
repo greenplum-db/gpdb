@@ -21,6 +21,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalDML.h"
+#include "gpopt/operators/CPhysicalHashJoin.h"
 #include "gpopt/operators/CPhysicalScan.h"
 #include "gpopt/operators/CScalarArrayRefIndexList.h"
 #include "gpopt/operators/CScalarBoolOp.h"

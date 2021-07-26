@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "gpopt/xforms/CXform.h"
 
 // fwd declarations
 namespace gpmd
@@ -385,10 +386,10 @@ public:
 
 	// generate a binary join expression
 	template <class T>
-	static CExpression *PexprLogicalJoin(CMemoryPool *mp,
-										 CExpression *pexprLeft,
-										 CExpression *pexprRight,
-										 CExpression *pexprPredicate);
+	static CExpression *PexprLogicalJoin(
+		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
+		CExpression *pexprPredicate,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// generate an apply expression
 	template <class T>
@@ -991,14 +992,16 @@ typedef CHashSet<CExpression, CExpression::UlHashDedup, CUtils::Equals,
 template <class T>
 CExpression *
 CUtils::PexprLogicalJoin(CMemoryPool *mp, CExpression *pexprLeft,
-						 CExpression *pexprRight, CExpression *pexprPredicate)
+						 CExpression *pexprRight, CExpression *pexprPredicate,
+						 CXform::EXformId join_order_origin_xform)
 {
 	GPOS_ASSERT(nullptr != pexprLeft);
 	GPOS_ASSERT(nullptr != pexprRight);
 	GPOS_ASSERT(nullptr != pexprPredicate);
 
-	return GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) T(mp), pexprLeft,
-									pexprRight, pexprPredicate);
+	return GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) T(mp, join_order_origin_xform), pexprLeft,
+					pexprRight, pexprPredicate);
 }
 
 //---------------------------------------------------------------------------

@@ -33,10 +33,10 @@ public:
 		const CPhysicalLeftAntiSemiHashJoinNotIn &) = delete;
 
 	// ctor
-	CPhysicalLeftAntiSemiHashJoinNotIn(CMemoryPool *mp,
-									   CExpressionArray *pdrgpexprOuterKeys,
-									   CExpressionArray *pdrgpexprInnerKeys,
-									   IMdIdArray *hash_opfamilies);
+	CPhysicalLeftAntiSemiHashJoinNotIn(
+		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// ident accessors
 	EOperatorId

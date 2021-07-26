@@ -32,10 +32,10 @@ public:
 	CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &) = delete;
 
 	// ctor
-	CPhysicalLeftOuterHashJoin(CMemoryPool *mp,
-							   CExpressionArray *pdrgpexprOuterKeys,
-							   CExpressionArray *pdrgpexprInnerKeys,
-							   IMdIdArray *hash_opfamilies);
+	CPhysicalLeftOuterHashJoin(
+		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalLeftOuterHashJoin() override;

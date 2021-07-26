@@ -32,7 +32,9 @@ public:
 	CLogicalLeftAntiSemiJoin(const CLogicalLeftAntiSemiJoin &) = delete;
 
 	// ctor
-	explicit CLogicalLeftAntiSemiJoin(CMemoryPool *mp);
+	explicit CLogicalLeftAntiSemiJoin(
+		CMemoryPool *mp,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalLeftAntiSemiJoin() override = default;

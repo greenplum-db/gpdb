@@ -40,7 +40,9 @@ public:
 		delete;
 
 	// ctor
-	explicit CLogicalLeftAntiSemiJoinNotIn(CMemoryPool *mp);
+	explicit CLogicalLeftAntiSemiJoinNotIn(
+		CMemoryPool *mp,
+		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalLeftAntiSemiJoinNotIn() override = default;

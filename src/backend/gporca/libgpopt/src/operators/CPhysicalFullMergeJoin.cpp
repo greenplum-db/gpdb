@@ -28,8 +28,9 @@ using namespace gpopt;
 // ctor
 CPhysicalFullMergeJoin::CPhysicalFullMergeJoin(
 	CMemoryPool *mp, CExpressionArray *outer_merge_clauses,
-	CExpressionArray *inner_merge_clauses, IMdIdArray *)
-	: CPhysicalJoin(mp),
+	CExpressionArray *inner_merge_clauses, IMdIdArray *,
+	CXform::EXformId join_order_origin_xform)
+	: CPhysicalJoin(mp, join_order_origin_xform),
 	  m_outer_merge_clauses(outer_merge_clauses),
 	  m_inner_merge_clauses(inner_merge_clauses)
 {
