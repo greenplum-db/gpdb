@@ -14433,7 +14433,119 @@ SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2
 (1 row)
 
 --- Previously, NOT IN would only use a Hash Anti Join if at least one of the variables in the predicate is constant
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (tt1_notnull.b = tt2_notnull.d)
+         ->  Seq Scan on tt1_notnull  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on tt2_notnull  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: ((d = 4) IS DISTINCT FROM false)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+  b  
+-----
+ 101
+(1 row)
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (tt1_notnull.b = tt2.d)
+         ->  Seq Scan on tt1_notnull  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on tt2  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: ((d = 4) IS DISTINCT FROM false)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+ b 
+---
+(0 rows)
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+                                                                                                                                                                                            QUERY PLAN                                                                                                                                                                                             
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324032.15 rows=1 width=4)
+   Filter: (SubPlan 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+         ->  Seq Scan on tt1_notnull  (cost=0.00..431.00 rows=1 width=4)
+   SubPlan 1
+     ->  Result  (cost=0.00..431.00 rows=1 width=1)
+           Filter: ((CASE WHEN (sum((CASE WHEN (tt1_notnull.b = tt2_notnull.d) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (tt2_notnull.d IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (tt1_notnull.b IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (tt1_notnull.b = tt2_notnull.d) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       One-Time Filter: ((tt1_notnull.b = 4) IS DISTINCT FROM false)
+                       ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                   ->  Seq Scan on tt2_notnull  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+  b  
+-----
+ 101
+(1 row)
+
+EXPLAIN SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+                                                                                                                                                                                QUERY PLAN                                                                                                                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324032.15 rows=1 width=4)
+   Filter: (SubPlan 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+         ->  Seq Scan on tt1  (cost=0.00..431.00 rows=1 width=4)
+   SubPlan 1
+     ->  Result  (cost=0.00..431.00 rows=1 width=1)
+           Filter: ((CASE WHEN (sum((CASE WHEN (tt1.b = tt2_notnull.d) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (tt2_notnull.d IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (tt1.b IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (tt1.b = tt2_notnull.d) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       One-Time Filter: ((tt1.b = 4) IS DISTINCT FROM false)
+                       ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                   ->  Seq Scan on tt2_notnull  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
+
+SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+ b 
+---
+ 2
+ 4
+ 5
+(3 rows)
+
+--- Repeat the same for always empty inner SELECTs
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d from tt2_notnull WHERE FALSE IS DISTINCT FROM FALSE);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Hash Left Anti Semi (Not-In) Join  (cost=0.00..431.00 rows=1 width=4)
+   Hash Cond: (b = (NULL::integer))
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+         ->  Seq Scan on tt1_notnull  (cost=0.00..431.00 rows=1 width=4)
+   ->  Hash  (cost=0.00..0.00 rows=0 width=4)
+         ->  Result  (cost=0.00..0.00 rows=0 width=4)
+               One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d from tt2_notnull WHERE FALSE IS DISTINCT FROM FALSE);
+  b  
+-----
+ 101
+(1 row)
+
+--- Repeat the same pattern for NOT EXISTS
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.06 rows=1 width=4)
@@ -14443,17 +14555,17 @@ EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WH
          ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                      ->  Seq Scan on tt2_notnull  (cost=0.00..431.00 rows=1 width=1)
-                           Filter: ((d = 100) IS DISTINCT FROM false)
+                           Filter: ((d = 4) IS DISTINCT FROM false)
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
   b  
 -----
  101
 (1 row)
 
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.06 rows=1 width=4)
@@ -14463,16 +14575,16 @@ EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2
          ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                      ->  Seq Scan on tt2  (cost=0.00..431.00 rows=1 width=1)
-                           Filter: ((d = 100) IS DISTINCT FROM false)
+                           Filter: ((d = 4) IS DISTINCT FROM false)
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
  b 
 ---
 (0 rows)
 
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
  Nested Loop  (cost=0.00..1324032.08 rows=1 width=4)
@@ -14483,17 +14595,17 @@ EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WH
    ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                ->  Seq Scan on tt1_notnull  (cost=0.00..431.00 rows=1 width=4)
-                     Filter: (NOT ((b = 100) IS DISTINCT FROM false))
+                     Filter: (NOT ((b = 4) IS DISTINCT FROM false))
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
   b  
 -----
  101
 (1 row)
 
-EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
  Nested Loop  (cost=0.00..1324032.08 rows=1 width=4)
@@ -14504,15 +14616,14 @@ EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1
    ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                ->  Seq Scan on tt1  (cost=0.00..431.00 rows=1 width=4)
-                     Filter: (NOT ((b = 100) IS DISTINCT FROM false))
+                     Filter: (NOT ((b = 4) IS DISTINCT FROM false))
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
-SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
  b 
 ---
  2
- 4
  5
-(3 rows)
+(2 rows)
 

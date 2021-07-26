@@ -14041,51 +14041,158 @@ SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2
 (1 row)
 
 --- Previously, NOT IN would only use a Hash Anti Join if at least one of the variables in the predicate is constant
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=930.88..53378.52 rows=16 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=930.88..53378.30 rows=5 width=4)
+         Hash Cond: (tt1_notnull.b = tt2_notnull.d)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..895.00 rows=28700 width=4)
+               Hash Key: tt1_notnull.b
+               ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=28700 width=4)
+         ->  Hash  (cost=751.50..751.50 rows=14350 width=4)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..751.50 rows=14350 width=4)
+                     Hash Key: tt2_notnull.d
+                     ->  Seq Scan on tt2_notnull  (cost=0.00..464.50 rows=14350 width=4)
+                           Filter: ((d = 4) IS DISTINCT FROM false)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+  b  
+-----
+ 101
+(1 row)
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1576.62..156411.52 rows=16 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=1576.62..156411.30 rows=5 width=4)
+         Hash Cond: (tt1_notnull.b = tt2.d)
+         ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=28700 width=4)
+         ->  Hash  (cost=1038.50..1038.50 rows=43050 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1038.50 rows=43050 width=4)
+                     ->  Seq Scan on tt2  (cost=0.00..464.50 rows=14350 width=4)
+                           Filter: ((d = 4) IS DISTINCT FROM false)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+ b 
+---
+(0 rows)
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=4)
+   ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=14350 width=4)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                 One-Time Filter: ((tt1_notnull.b = 4) IS DISTINCT FROM false)
+                 ->  Materialize  (cost=0.00..1899.50 rows=86100 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+                             ->  Seq Scan on tt2_notnull  (cost=0.00..321.00 rows=28700 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+  b  
+-----
+ 101
+(1 row)
+
+EXPLAIN SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..895.00 rows=43050 width=4)
+   ->  Seq Scan on tt1  (cost=0.00..321.00 rows=14350 width=4)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Result  (cost=0.00..2760.50 rows=86100 width=4)
+                 One-Time Filter: ((tt1.b = 4) IS DISTINCT FROM false)
+                 ->  Materialize  (cost=0.00..1899.50 rows=86100 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=4)
+                             ->  Seq Scan on tt2_notnull  (cost=0.00..321.00 rows=28700 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+ b 
+---
+ 2
+ 4
+ 5
+(3 rows)
+
+--- Repeat the same for always empty inner SELECTs
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d from tt2_notnull WHERE FALSE IS DISTINCT FROM FALSE);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..393.06 rows=16 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..392.84 rows=5 width=4)
+         Hash Cond: (tt1_notnull.b = d)
+         ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=28700 width=4)
+         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
+               ->  Result  (cost=0.00..0.00 rows=0 width=0)
+                     One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d from tt2_notnull WHERE FALSE IS DISTINCT FROM FALSE);
+  b  
+-----
+ 101
+(1 row)
+
+--- Repeat the same pattern for NOT EXISTS
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.02..1469.02 rows=86100 width=4)
    InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1038.50 rows=43050 width=0)
            ->  Seq Scan on tt2_notnull  (cost=0.00..464.50 rows=14350 width=0)
-                 Filter: ((d = 100) IS DISTINCT FROM false)
+                 Filter: ((d = 4) IS DISTINCT FROM false)
    ->  Result  (cost=0.00..321.00 rows=28700 width=4)
          One-Time Filter: (NOT $0)
          ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=28700 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
   b  
 -----
  101
 (1 row)
 
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.02..1469.02 rows=86100 width=4)
    InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1038.50 rows=43050 width=0)
            ->  Seq Scan on tt2  (cost=0.00..464.50 rows=14350 width=0)
-                 Filter: ((d = 100) IS DISTINCT FROM false)
+                 Filter: ((d = 4) IS DISTINCT FROM false)
    ->  Result  (cost=0.00..321.00 rows=28700 width=4)
          One-Time Filter: (NOT $0)
          ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=28700 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
  b 
 ---
 (0 rows)
 
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10039614416.37 rows=16 width=4)
    ->  Nested Loop Anti Join  (cost=10000000000.00..10039614416.16 rows=5 width=4)
-         Join Filter: ((tt1_notnull.b = 100) IS DISTINCT FROM false)
+         Join Filter: ((tt1_notnull.b = 4) IS DISTINCT FROM false)
          ->  Seq Scan on tt1_notnull  (cost=0.00..321.00 rows=28700 width=4)
          ->  Materialize  (cost=0.00..1899.50 rows=86100 width=0)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=0)
@@ -14093,18 +14200,18 @@ EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WH
  Optimizer: Postgres query optimizer
 (8 rows)
 
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
   b  
 -----
  101
 (1 row)
 
-EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10039614416.37 rows=16 width=4)
    ->  Nested Loop Anti Join  (cost=10000000000.00..10039614416.16 rows=5 width=4)
-         Join Filter: ((tt1.b = 100) IS DISTINCT FROM false)
+         Join Filter: ((tt1.b = 4) IS DISTINCT FROM false)
          ->  Seq Scan on tt1  (cost=0.00..321.00 rows=28700 width=4)
          ->  Materialize  (cost=0.00..1899.50 rows=86100 width=0)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=0)
@@ -14112,11 +14219,10 @@ EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1
  Optimizer: Postgres query optimizer
 (8 rows)
 
-SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
  b 
 ---
  2
- 4
  5
-(3 rows)
+(2 rows)
 

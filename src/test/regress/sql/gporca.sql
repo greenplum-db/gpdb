@@ -3363,17 +3363,34 @@ EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WH
 SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = tt1_notnull.b) IS DISTINCT FROM false);
 
 --- Previously, NOT IN would only use a Hash Anti Join if at least one of the variables in the predicate is constant
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
 
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
 
-EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
-SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
 
-EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
-SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 100) IS DISTINCT FROM false);
+EXPLAIN SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1 WHERE b NOT IN (SELECT d FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+
+--- Repeat the same for always empty inner SELECTs
+EXPLAIN SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d from tt2_notnull WHERE FALSE IS DISTINCT FROM FALSE);
+SELECT b FROM tt1_notnull WHERE b NOT IN (SELECT d from tt2_notnull WHERE FALSE IS DISTINCT FROM FALSE);
+
+--- Repeat the same pattern for NOT EXISTS
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt2_notnull.d = 4) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = 4) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1_notnull WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1_notnull.b = 4) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2_notnull WHERE (tt1.b = 4) IS DISTINCT FROM false);
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
