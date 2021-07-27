@@ -65,7 +65,6 @@ init_tuplestore_state(ShareInputScanState *node)
 	ShareInputScan *sisc = (ShareInputScan *)node->ss.ps.plan;
 	ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, sisc->share_id, false);
 	PlanState *snState = NULL;
-
 	ShareType share_type = sisc->share_type;
 
 	if(snEntry)
@@ -84,12 +83,8 @@ init_tuplestore_state(ShareInputScanState *node)
 
 	if(share_type == SHARE_MATERIAL_XSLICE)
 	{
-		char rwfile_prefix[100];
-		shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-	
 		node->ts_state = palloc0(sizeof(GenericTupStore));
-
-		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false);
+		node->ts_state->matstore = ntuplestore_create_readerwriter(node->share_bufname_prefix, 0, false);
 		node->ts_pos = (void *) ntuplestore_create_accessor(node->ts_state->matstore, false);
 		ntuplestore_acc_seek_bof((NTupleStoreAccessor *)node->ts_pos);
 	}
@@ -103,13 +98,10 @@ init_tuplestore_state(ShareInputScanState *node)
 	}
 	else if(share_type == SHARE_SORT_XSLICE)
 	{
-		char rwfile_prefix[100];
-		shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
 		node->ts_state = palloc0(sizeof(GenericTupStore));
-
 		node->ts_state->sortstore = tuplesort_begin_heap_file_readerwriter(
 			&node->ss,
-			rwfile_prefix,
+			node->share_bufname_prefix,
 			false, /* isWriter */
 			NULL, /* tupDesc */
 			0, /* nkeys */
@@ -225,6 +217,12 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	sisstate->share_lk_ctxt = NULL;
 	sisstate->freed = false;
 
+	if (node->share_type == SHARE_MATERIAL_XSLICE || node->share_type == SHARE_SORT_XSLICE)
+	{
+		sisstate->share_bufname_prefix = shareinput_create_bufname_prefix(node->share_id);
+		sisstate->share_lk_ctxt = shareinput_init_lk_ctxt(node->share_id);
+	}
+
 	/* 
 	 * init child node.  
 	 * if outerPlan is NULL, this is no-op (so that the ShareInput node will be 
@@ -293,8 +291,7 @@ ExecSliceDependencyShareInputScan(ShareInputScanState *node)
 	EState *estate = node->ss.ps.state;
 	if(sisc->driver_slice >= 0 && sisc->driver_slice == currentSliceId)
 	{
-		node->share_lk_ctxt = shareinput_reader_waitready(sisc->share_id,
-			estate->es_plannedstmt->planGen);
+		shareinput_reader_waitready(node->share_lk_ctxt, sisc->share_id, estate->es_plannedstmt->planGen);
 	}
 }
 
@@ -390,10 +387,9 @@ ExecReScanShareInputScan(ShareInputScanState *node)
 #include "storage/fd.h"
 #include "cdb/cdbselect.h"
 
-void shareinput_create_bufname_prefix(char* p, int size, int share_id)
+char *shareinput_create_bufname_prefix(int share_id)
 {
-	snprintf(p, size, "SIRW_%d_%d_%d",
-            gp_session_id, gp_command_count, share_id);
+	return psprintf("SIRW_%d_%d_%d", gp_session_id, gp_command_count, share_id);
 }
 
 /* Here we use the absolute path name as the lock name.  See fd.c 
@@ -415,10 +411,29 @@ sisc_lockname(char *p, int size, int share_id, const char* name)
 	strcpy(p, path);
 }
 
+void *shareinput_init_lk_ctxt(int share_id)
+{
+	ShareInput_Lk_Context *pctxt = gp_malloc(sizeof(ShareInput_Lk_Context));
+
+	if(!pctxt)
+		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
+			errmsg("Share input reader failed: out of memory")));
+
+	pctxt->readyfd = -1;
+	pctxt->donefd = -1;
+	pctxt->zcnt = 0;
+	pctxt->del_ready = false;
+	pctxt->del_done = false;
+
+	sisc_lockname(pctxt->lkname_ready, MAXPGPATH, share_id, "ready");
+	sisc_lockname(pctxt->lkname_done, MAXPGPATH, share_id, "done");
+
+	return pctxt;
+}
+
 static void shareinput_clean_lk_ctxt(ShareInput_Lk_Context *lk_ctxt)
 {
 	elog(DEBUG1, "shareinput_clean_lk_ctxt cleanup lk ctxt %p", lk_ctxt);
-
 	if (!lk_ctxt)
 		return;
 
@@ -552,36 +567,21 @@ write_retry:
  *
  *  This is a blocking operation.
  */
-void *
-shareinput_reader_waitready(int share_id, PlanGenerator planGen)
+void
+shareinput_reader_waitready(void *ctxt, int share_id, PlanGenerator planGen)
 {
 	mpp_fd_set rset;
 	struct timeval tval;
 	int n;
 	char a;
-	ShareInput_Lk_Context *pctxt = gp_malloc(sizeof(ShareInput_Lk_Context));
-
-	if(!pctxt)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-			errmsg("Share input reader failed: out of memory")));
-
-	pctxt->readyfd = -1;
-	pctxt->donefd = -1;
-	pctxt->zcnt = 0;
-	pctxt->del_ready = false;
-	pctxt->del_done = false;
-	pctxt->lkname_ready[0] = '\0';
-	pctxt->lkname_done[0] = '\0';
-
+	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
 	RegisterXactCallbackOnce(XCallBack_ShareInput_FIFO, pctxt);
 
-	sisc_lockname(pctxt->lkname_ready, MAXPGPATH, share_id, "ready");
 	create_tmp_fifo(pctxt->lkname_ready);
 	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
 	if(pctxt->readyfd < 0)
 		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
 	
-	sisc_lockname(pctxt->lkname_done, MAXPGPATH, share_id, "done");
 	create_tmp_fifo(pctxt->lkname_done);
 	pctxt->donefd = open(pctxt->lkname_done, O_RDWR, 0600);
 	if(pctxt->donefd < 0)
@@ -637,7 +637,6 @@ shareinput_reader_waitready(int share_id, PlanGenerator planGen)
 					share_id, currentSliceId, save_errno);
 		}
 	}
-	return (void *) pctxt;
 }
 
 /*
@@ -653,35 +652,19 @@ shareinput_reader_waitready(int share_id, PlanGenerator planGen)
  *	For optimizer-generated plans we don't wait for acks, we proceed immediately.
  *  It is a non-blocking operation.
  */
-void *
-shareinput_writer_notifyready(int share_id, int xslice, PlanGenerator planGen)
+void
+shareinput_writer_notifyready(void *ctxt, int share_id, int xslice, PlanGenerator planGen)
 {
 	int n;
-
-	ShareInput_Lk_Context *pctxt = gp_malloc(sizeof(ShareInput_Lk_Context));
-
-	if(!pctxt)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-			errmsg("Shareinput Writer failed: out of memory")));
-
-	pctxt->readyfd = -1;
-	pctxt->donefd = -1;
-	pctxt->zcnt = 0;
-	pctxt->del_ready = false;
-	pctxt->del_done = false;
-	pctxt->lkname_ready[0] = '\0';
-	pctxt->lkname_done[0] = '\0';
-
+	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
 	RegisterXactCallbackOnce(XCallBack_ShareInput_FIFO, pctxt);
 
-	sisc_lockname(pctxt->lkname_ready, MAXPGPATH, share_id, "ready");
 	create_tmp_fifo(pctxt->lkname_ready);
 	pctxt->del_ready = true;
 	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
 	if(pctxt->readyfd < 0)
 		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
 
-	sisc_lockname(pctxt->lkname_done, MAXPGPATH, share_id, "done");
 	create_tmp_fifo(pctxt->lkname_done);
 	pctxt->del_done = true;
 	pctxt->donefd = open(pctxt->lkname_done, O_RDWR, 0600);
@@ -704,8 +687,6 @@ shareinput_writer_notifyready(int share_id, int xslice, PlanGenerator planGen)
 		/* For planner-generated plans, we wait for acks from all the readers */
 		writer_wait_for_acks(pctxt, share_id, xslice);
 	}
-
-	return (void *) pctxt;
 }
 
 /*
@@ -781,6 +762,10 @@ void
 shareinput_reader_notifydone(void *ctxt, int share_id)
 {
 	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
+
+	if (pctxt->donefd < 0)
+		return;
+
 #if USE_ASSERT_CHECKING
 	int rwsize  =
 #endif
@@ -803,6 +788,10 @@ void
 shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 {
 	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
+
+	if (pctxt->donefd < 0)
+		return;
+
 	mpp_fd_set rset;
 	struct timeval tval;
 	int numReady;

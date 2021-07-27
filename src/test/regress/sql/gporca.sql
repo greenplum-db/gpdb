@@ -3043,6 +3043,16 @@ SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = tt1.b) IS D
 
 EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt1.b = tt2.d) IS DISTINCT FROM NULL);
 SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt1.b = tt2.d) IS DISTINCT FROM NULL);
+create or replace function one(i int) returns int as $$
+begin
+	return 1;
+end
+$$ language PLPGSQL;
+CREATE TABLE tone (a int, b int, c int);
+insert into tone select i,i,i from generate_series(1, 10) i;
+ANALYZE tone;
+
+WITH cte AS (SELECT one(min(a)) from tone) SELECT 1 FROM tone, cte c1;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
