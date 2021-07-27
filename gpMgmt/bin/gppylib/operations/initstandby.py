@@ -39,9 +39,11 @@ def cleanup_pg_hba_backup(data_dirs_list):
     try:
         for data_dir in data_dirs_list:
             backup_file = os.path.join(data_dir, PG_HBA_BACKUP)
-            logger.info('Removing pg_hba.conf backup file %s' % backup_file)
             if os.path.exists(backup_file):
                 os.remove(backup_file)
+                logger.info('Removing pg_hba.conf backup file %s' % backup_file)
+            else:
+                logger.warning('pg_hba.conf backup file %s is not exist' % backup_file)
     except Exception as ex:
         logger.error('Unable to cleanup backup of pg_hba.conf %s' % ex)
 
@@ -63,7 +65,7 @@ def cleanup_pg_hba_backup_on_segment(gparr, unreachable_hosts=[]):
         for host, data_dirs_list in list(host_to_seg_map.items()):
             if host in unreachable_hosts:
                 continue
-            json_data_dirs_list = json.dumps(str(data_dirs_list))
+            json_data_dirs_list = json.dumps(data_dirs_list)
             cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d '%s' -D" % json_data_dirs_list
             cmd = Command('Cleanup the pg_hba.conf backups on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
             pool.addCommand(cmd)
