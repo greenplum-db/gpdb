@@ -36,9 +36,8 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalJoin::CPhysicalJoin(CMemoryPool *mp,
-							 CXform::EXformId join_order_origin_xform)
-	: CPhysical(mp), m_join_order_origin_xform(join_order_origin_xform)
+CPhysicalJoin::CPhysicalJoin(CMemoryPool *mp, CXform::EXformId origin_xform)
+	: CPhysical(mp), m_origin_xform(origin_xform)
 {
 }
 

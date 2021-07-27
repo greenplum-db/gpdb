@@ -113,10 +113,10 @@ public:
 	CPhysicalHashJoin(const CPhysicalHashJoin &) = delete;
 
 	// ctor
-	CPhysicalHashJoin(
-		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
-		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
-		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
+	CPhysicalHashJoin(CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+					  CExpressionArray *pdrgpexprInnerKeys,
+					  IMdIdArray *hash_opfamilies,
+					  CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalHashJoin() override;

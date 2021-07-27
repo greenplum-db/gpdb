@@ -45,8 +45,8 @@ CPhysicalHashJoin::CPhysicalHashJoin(CMemoryPool *mp,
 									 CExpressionArray *pdrgpexprOuterKeys,
 									 CExpressionArray *pdrgpexprInnerKeys,
 									 IMdIdArray *hash_opfamilies,
-									 CXform::EXformId join_order_origin_xform)
-	: CPhysicalJoin(mp, join_order_origin_xform),
+									 CXform::EXformId origin_xform)
+	: CPhysicalJoin(mp, origin_xform),
 	  m_pdrgpexprOuterKeys(pdrgpexprOuterKeys),
 	  m_pdrgpexprInnerKeys(pdrgpexprInnerKeys),
 	  m_hash_opfamilies(nullptr),
@@ -935,8 +935,7 @@ CPhysicalHashJoin::CreateOptRequests(CMemoryPool *mp)
 	CPhysicalJoin *physical_join = dynamic_cast<CPhysicalJoin *>(this);
 	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
 		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
-		physical_join->JoinOrderOriginXform() ==
-			CXform::ExfExpandNAryJoinGreedy)
+		physical_join->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
 	{
 		SetPartPropagateRequests(2);
 	}

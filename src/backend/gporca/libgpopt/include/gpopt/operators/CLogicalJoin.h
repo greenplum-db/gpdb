@@ -30,13 +30,12 @@ class CLogicalJoin : public CLogical
 {
 private:
 	// xform that join originated from
-	CXform::EXformId m_join_order_origin_xform;
+	CXform::EXformId m_origin_xform;
 
 protected:
 	// ctor
-	explicit CLogicalJoin(
-		CMemoryPool *mp,
-		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
+	explicit CLogicalJoin(CMemoryPool *mp,
+						  CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalJoin() override = default;
@@ -161,9 +160,9 @@ public:
 	}
 
 	CXform::EXformId
-	JoinOrderOriginXform()
+	OriginXform()
 	{
-		return m_join_order_origin_xform;
+		return m_origin_xform;
 	}
 
 

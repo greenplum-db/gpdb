@@ -36,7 +36,7 @@ public:
 	CPhysicalLeftAntiSemiHashJoin(
 		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
-		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
+		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalLeftAntiSemiHashJoin() override;

@@ -42,14 +42,13 @@ private:
 												 ULONG ulChildIndexToTestSecond,
 												 ULONG child_index);
 
-	// check whether join order originated from greedy xform
-	CXform::EXformId m_join_order_origin_xform;
+	// xform that join order originated from
+	CXform::EXformId m_origin_xform;
 
 protected:
 	// ctor
-	explicit CPhysicalJoin(
-		CMemoryPool *mp,
-		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
+	explicit CPhysicalJoin(CMemoryPool *mp,
+						   CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalJoin() override = default;
@@ -179,9 +178,9 @@ public:
 	}
 
 	CXform::EXformId
-	JoinOrderOriginXform()
+	OriginXform()
 	{
-		return m_join_order_origin_xform;
+		return m_origin_xform;
 	}
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------

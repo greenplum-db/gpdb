@@ -672,7 +672,7 @@ CXformUtils::AddHashOrMergeJoinAlternative(CMemoryPool *mp,
 	}
 	CLogicalJoin *popLogicalJoin = CLogicalJoin::PopConvert(pexprJoin->Pop());
 	T *op = GPOS_NEW(mp) T(mp, pdrgpexprOuter, pdrgpexprInner, opfamilies,
-						   popLogicalJoin->JoinOrderOriginXform());
+						   popLogicalJoin->OriginXform());
 	CExpression *pexprResult = GPOS_NEW(mp)
 		CExpression(mp, op, (*pexprJoin)[0], (*pexprJoin)[1], (*pexprJoin)[2]);
 	pxfres->Add(pexprResult);

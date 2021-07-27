@@ -33,9 +33,9 @@ using namespace gpopt;
 CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
-	CXform::EXformId join_order_origin_xform)
+	CXform::EXformId origin_xform)
 	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
-						hash_opfamilies, join_order_origin_xform)
+						hash_opfamilies, origin_xform)
 {
 }
 

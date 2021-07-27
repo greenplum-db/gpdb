@@ -33,8 +33,8 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalInnerJoin::CLogicalInnerJoin(CMemoryPool *mp,
-									 CXform::EXformId join_order_origin_xform)
-	: CLogicalJoin(mp, join_order_origin_xform)
+									 CXform::EXformId origin_xform)
+	: CLogicalJoin(mp, origin_xform)
 {
 	GPOS_ASSERT(nullptr != mp);
 }

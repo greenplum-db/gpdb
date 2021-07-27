@@ -24,7 +24,7 @@ public:
 	explicit CPhysicalFullMergeJoin(
 		CMemoryPool *mp, CExpressionArray *outer_merge_clauses,
 		CExpressionArray *inner_merge_clauses, IMdIdArray *hash_opfamilies,
-		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
+		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalFullMergeJoin() override;

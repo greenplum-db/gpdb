@@ -29,9 +29,9 @@ using namespace gpopt;
 CPhysicalLeftAntiSemiHashJoinNotIn::CPhysicalLeftAntiSemiHashJoinNotIn(
 	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
-	CXform::EXformId join_order_origin_xform)
+	CXform::EXformId origin_xform)
 	: CPhysicalLeftAntiSemiHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
-									hash_opfamilies, join_order_origin_xform)
+									hash_opfamilies, origin_xform)
 {
 }
 

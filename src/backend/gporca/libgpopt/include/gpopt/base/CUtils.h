@@ -389,7 +389,7 @@ public:
 	static CExpression *PexprLogicalJoin(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		CExpression *pexprPredicate,
-		CXform::EXformId join_order_origin_xform = CXform::ExfSentinel);
+		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// generate an apply expression
 	template <class T>
@@ -993,15 +993,14 @@ template <class T>
 CExpression *
 CUtils::PexprLogicalJoin(CMemoryPool *mp, CExpression *pexprLeft,
 						 CExpression *pexprRight, CExpression *pexprPredicate,
-						 CXform::EXformId join_order_origin_xform)
+						 CXform::EXformId origin_xform)
 {
 	GPOS_ASSERT(nullptr != pexprLeft);
 	GPOS_ASSERT(nullptr != pexprRight);
 	GPOS_ASSERT(nullptr != pexprPredicate);
 
-	return GPOS_NEW(mp)
-		CExpression(mp, GPOS_NEW(mp) T(mp, join_order_origin_xform), pexprLeft,
-					pexprRight, pexprPredicate);
+	return GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) T(mp, origin_xform),
+									pexprLeft, pexprRight, pexprPredicate);
 }
 
 //---------------------------------------------------------------------------
