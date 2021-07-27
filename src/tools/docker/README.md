@@ -14,15 +14,6 @@ docker build --build-arg BASE_IMAGE=ubuntu:16.04 -t local/gpdb-dev:ubuntu16 ubun
 docker build --build-arg BASE_IMAGE=ubuntu:18.04 -t local/gpdb-dev:ubuntu18 ubuntu
 ```
 
-OR
-## Download from docker hub
-```
-docker pull pivotaldata/gpdb-dev:centos6
-docker pull pivotaldata/gpdb-dev:centos7
-docker pull pivotaldata/gpdb-dev:ubuntu16
-docker pull pivotaldata/gpdb-dev:ubuntu18
-```
-
 # Build GPDB code with Docker
 
 Clone GPDB repo
@@ -32,7 +23,7 @@ cd gpdb
 ```
 Use docker image based on gpdb/src/tools/docker/centos7
 ```
-docker run -w /home/build/gpdb -v ${PWD}:/home/build/gpdb:cached -it pivotaldata/gpdb-dev:centos7 /bin/bash
+docker run -w /home/build/gpdb -v ${PWD}:/home/build/gpdb:cached -it local/gpdb-dev:centos7 /bin/bash
 ```
 
 Inside docker

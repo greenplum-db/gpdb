@@ -21,7 +21,7 @@ To make Greenplum accessible outside of the docker container use the -p switch (
 This will proxy connections / requests made to the `<port_on_local_machine>` across to `<greenplum_port_in_docker>` which will allow Greenplum within docker to receive them.
 
 ```bash
-docker run -t -v ~/workspace/gpdb:/home/gpadmin/gpdb_src --privileged --security-opt seccomp:unconfined -i pivotaldata/gpdb6-centos7-build:latest bash
+docker run -t -v ~/workspace/gpdb:/home/gpadmin/gpdb_src --privileged --security-opt seccomp:unconfined -i gcr.io/data-gpdb-public-images/gpdb6-centos7-build:latest bash
 ```
 
 ## Set up Container Dependencies and the gpadmin User

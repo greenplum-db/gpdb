@@ -153,10 +153,7 @@ See [Building GPDB client tools on Windows](README.Windows.md) for details.
 See [README.Docker.md](README.Docker.md).
 
 We provide a docker image with all dependencies required to compile and test
-GPDB [(See Usage)](src/tools/docker/README.md). You can view the dependency dockerfile at `./src/tools/docker/centos6-admin/Dockerfile`.
-The image is hosted on docker hub at `pivotaldata/gpdb-dev:centos6-gpadmin`.
-
-A quickstart guide to Docker can be found on the [Pivotal Engineering Journal](http://engineering.pivotal.io/post/docker-gpdb/).
+GPDB [(See Usage)](src/tools/docker/README.md).
 
 ## Development with Vagrant
 
