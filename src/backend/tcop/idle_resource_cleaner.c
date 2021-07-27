@@ -103,7 +103,18 @@ IdleGangTimeoutHandler(void)
 	{
 		idle_gang_timeout_occurred = 0;
 
+		/*
+		 * This function is also invoked by a normal routine (not an
+		 * interruption) in EnableClientWaitTimeoutInterrupt() if
+		 * idle_gang_timeout_occurred is true.
+		 *
+		 * Set the flag to not interrupt this function by itself.
+		 */
+		clientWaitTimeoutInterruptEnabled = 0;
+
 		DisconnectAndDestroyUnusedQEs();
+
+		clientWaitTimeoutInterruptEnabled = 1;
 	}
 	else
 		idle_gang_timeout_occurred = 1;
