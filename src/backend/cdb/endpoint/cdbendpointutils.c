@@ -167,7 +167,7 @@ check_parallel_retrieve_cursor(const char *cursorName, bool wait)
 	}
 
 	estate = portal->queryDesc->estate;
-	retVal = cdbdisp_checkDispatchAckMessage(estate->dispatcherState, ENDPOINT_FINISHED_ACK_MSG, wait);
+	retVal = cdbdisp_checkDispatchAckMessage(estate->dispatcherState, ENDPOINT_FINISHED_ACK_MSG, wait, DISPATCH_WAIT_ACK_ROOT);
 	SIMPLE_FAULT_INJECTOR("check_parallel_retrieve_cursor_after_udf");
 	check_parallel_retrieve_cursor_errors(estate);
 

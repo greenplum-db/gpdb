@@ -248,7 +248,7 @@ WaitEndpointsReady(EState *estate)
 	Assert(estate);
 	CdbDispatcherState *ds = estate->dispatcherState;
 
-	cdbdisp_checkDispatchAckMessage(ds, ENDPOINT_READY_ACK_MSG, true);
+	cdbdisp_checkDispatchAckMessage(ds, ENDPOINT_READY_ACK_MSG, true, DISPATCH_WAIT_ACK_ROOT);
 	check_parallel_retrieve_cursor_errors(estate);
 }
 

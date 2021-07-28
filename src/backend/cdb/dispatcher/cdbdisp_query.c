@@ -1141,6 +1141,9 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 					primaryGang->type == GANGTYPE_SINGLETON_READER ||
 					primaryGang->type == GANGTYPE_ENTRYDB_READER);
 
+		if (si == slice->rootIndex)
+			ds->rootGangSize = primaryGang->size;
+
 		if (Test_print_direct_dispatch_info)
 			elog(INFO, "(slice %d) Dispatch command to %s", slice->sliceIndex,
 						segmentsToContentStr(slice->segments));

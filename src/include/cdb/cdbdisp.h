@@ -33,7 +33,8 @@ enum GangType;
 typedef enum DispatchWaitMode
 {
 	DISPATCH_WAIT_NONE = 0,			/* wait until QE fully completes */
-	DISPATCH_WAIT_ACK_MESSAGE,		/* wait until QE send acknowledge message */
+	DISPATCH_WAIT_ACK_ROOT,			/* wait until root slice QE send acknowledge message */
+	DISPATCH_WAIT_ACK_ALL,			/* wait until all QE send acknowledge message */
 	DISPATCH_WAIT_FINISH,			/* send query finish */
 	DISPATCH_WAIT_CANCEL			/* send query cancel */
 } DispatchWaitMode;
@@ -44,6 +45,7 @@ typedef struct CdbDispatcherState
 	struct CdbDispatchResults *primaryResults;
 	void *dispatchParams;
 	int	largestGangSize;
+	int rootGangSize;
 	bool forceDestroyGang;
 	bool isExtendedQuery;
 #ifdef USE_ASSERT_CHECKING
@@ -57,7 +59,7 @@ typedef struct DispatcherInternalFuncs
 	bool (*checkForCancel)(struct CdbDispatcherState *ds);
 	int (*getWaitSocketFd)(struct CdbDispatcherState *ds);
 	void* (*makeDispatchParams)(int maxSlices, int largestGangSize, char *queryText, int queryTextLen);
-	bool (*checkAckMessage)(struct CdbDispatcherState *ds, const char* message, bool wait);
+	bool (*checkAckMessage)(struct CdbDispatcherState *ds, const char* message, bool wait, DispatchWaitMode waitMode);
 	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp, int sliceIndex);
 	void (*waitDispatchFinish)(struct CdbDispatcherState *ds);
@@ -129,12 +131,14 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
  * message: specifies the expected ACK message to check.
  * wait: if true, this function will wait until required ACK messages
  *       have been received from all QEs.
+ * waitMode: DISPATCH_WAIT_ACK_ROOT only waits ACK of the root slice;
+ *           DISPATCH_WAIT_ACK_ALL waits ACK of all slices.
  *
  * QEs should call cdbdisp_sendAckMessageToQD to send acknowledge messages to QD.
  */
 bool
 cdbdisp_checkDispatchAckMessage(struct CdbDispatcherState *ds, const char *message,
-								bool wait);
+								bool wait, DispatchWaitMode waitMode);
 
 /*
  * CdbCheckDispatchResult:

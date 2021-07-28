@@ -94,3 +94,83 @@ DECLARE
 (1 row)
 1: CLOSE c1;
 CLOSE
+
+--------- Test2: test for PARALLEL RETRIEVE CURSOR on select with join statement.
+-- there was a hang issue when declaring PARALLEL RETRIEVE CURSOR with join clause.
+-- for example: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
+-- the root cause is if there are more than one slices for a big table, cdbdisp_checkDispatchAckMessage()
+-- will block due to non-root slice is always running in a while loop to wait for motion buffer.
+-- this test case is used to verify the hang issue has been fixed.
+
+-- gp_max_packet_size must be set out of the test session
+!\retcode gpconfig -c gp_max_packet_size -v 512;
+-- start_ignore
+20210729:16:19:41:030632 gpconfig:lhlgpdb7:gpadmin-[INFO]:-completed successfully with parameters '-c gp_max_packet_size -v 512'
+
+-- end_ignore
+(exited with code 0)
+!\retcode  gpstop -u;
+-- start_ignore
+20210729:16:19:41:030829 gpstop:lhlgpdb7:gpadmin-[INFO]:-Starting gpstop with args: -u
+20210729:16:19:41:030829 gpstop:lhlgpdb7:gpadmin-[INFO]:-Gathering information and validating the environment...
+20210729:16:19:41:030829 gpstop:lhlgpdb7:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20210729:16:19:41:030829 gpstop:lhlgpdb7:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20210729:16:19:41:030829 gpstop:lhlgpdb7:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14885.ga86b597 build dev'
+20210729:16:19:41:030829 gpstop:lhlgpdb7:gpadmin-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+
+DROP TABLE IF EXISTS t2;
+DROP
+CREATE TABLE t2 (a BIGINT) DISTRIBUTED by (a);
+CREATE
+
+insert into t2 select generate_series(1,2000);
+INSERT 2000
+
+SET gp_interconnect_snd_queue_depth=1;
+SET
+SET gp_interconnect_queue_depth=1;
+SET
+
+-- start a new session to make sure gp_max_packet_size is reconfigured.
+2: BEGIN;
+BEGIN
+2: SHOW gp_max_packet_size;
+ gp_max_packet_size 
+--------------------
+ 512                
+(1 row)
+2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
+DECLARE
+2: SELECT gp_segment_id, state FROM gp_endpoints() WHERE cursorname='c2' ORDER BY gp_segment_id;
+ gp_segment_id | state 
+---------------+-------
+ 0             | READY 
+ 1             | READY 
+ 2             | READY 
+(3 rows)
+2: CLOSE c2;
+CLOSE
+
+-- cleanup
+DROP TABLE t2;
+ERROR:  canceling statement due to statement timeout
+!\retcode gpconfig -r gp_max_packet_size;
+-- start_ignore
+20210729:16:23:43:000489 gpconfig:lhlgpdb7:gpadmin-[INFO]:-completed successfully with parameters '-r gp_max_packet_size'
+
+-- end_ignore
+(exited with code 0)
+!\retcode  gpstop -u;
+-- start_ignore
+20210729:16:23:43:000702 gpstop:lhlgpdb7:gpadmin-[INFO]:-Starting gpstop with args: -u
+20210729:16:23:43:000702 gpstop:lhlgpdb7:gpadmin-[INFO]:-Gathering information and validating the environment...
+20210729:16:23:43:000702 gpstop:lhlgpdb7:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20210729:16:23:43:000702 gpstop:lhlgpdb7:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20210729:16:23:43:000702 gpstop:lhlgpdb7:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14885.ga86b597 build dev'
+20210729:16:23:43:000702 gpstop:lhlgpdb7:gpadmin-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)

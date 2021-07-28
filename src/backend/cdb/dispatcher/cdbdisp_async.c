@@ -74,7 +74,7 @@ typedef struct CdbDispatchCmdAsync
 	volatile DispatchWaitMode waitMode;
 
 	/*
-	 * When waitMode is set to DISPATCH_WAIT_ACK_MESSAGE, the expected
+	 * When waitMode is set to DISPATCH_WAIT_ACK_ROOT/DISPATCH_WAIT_ACK_ALL, the expected
 	 * acknowledge message from QE should be specified. This field stores the
 	 * expected acknowledge message.
 	 */
@@ -95,7 +95,8 @@ typedef struct CdbDispatchCmdAsync
 
 static void *cdbdisp_makeDispatchParams_async(int maxSlices, int largestGangSize, char *queryText, int len);
 
-static bool cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message, bool wait);
+static bool cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message,
+									bool wait, DispatchWaitMode waitMode);
 
 static void cdbdisp_checkDispatchResult_async(struct CdbDispatcherState *ds,
 								  DispatchWaitMode waitMode);
@@ -333,9 +334,12 @@ cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
  * message: specifies the expected ACK message to check.
  * wait: if true, this function will wait until required ACK messages
  *       have been received from all QEs.
+ * waitMode: DISPATCH_WAIT_ACK_ROOT only waits ACK of the root slice;
+ *           DISPATCH_WAIT_ACK_ALL waits ACK of all slices.
  */
 static bool
-cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message, bool wait)
+cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message,
+								bool wait, DispatchWaitMode waitMode)
 {
 	DispatchWaitMode prevWaitMode;
 	CdbDispatchCmdAsync *pParms;
@@ -350,7 +354,7 @@ cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message
 
 	pParms->ackMessage = message;
 	prevWaitMode = pParms->waitMode;
-	pParms->waitMode = DISPATCH_WAIT_ACK_MESSAGE;
+	pParms->waitMode = waitMode;
 
 	/*
 	 * Each time wait for an acknowledge message, must set
@@ -474,6 +478,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 		int			sock;
 		int			n;
 		int			nfds = 0;
+		int			ack_count = 0;
 		PGconn		*conn;
 
 		/*
@@ -500,15 +505,20 @@ checkDispatchResult(CdbDispatcherState *ds,
 			segdbDesc = dispatchResult->segdbDesc;
 			conn = segdbDesc->conn;
 
+			if ((pParms->waitMode == DISPATCH_WAIT_ACK_ROOT ||
+				pParms->waitMode == DISPATCH_WAIT_ACK_ALL) &&
+				checkAckMessage(dispatchResult, pParms->ackMessage))
+			{
+				ack_count++;
+				continue;
+			}
+
 			/*
 			 * Already finished with this QE?
 			 */
 			if (!dispatchResult->stillRunning)
 				continue;
 
-			if (pParms->waitMode == DISPATCH_WAIT_ACK_MESSAGE &&
-				checkAckMessage(dispatchResult, pParms->ackMessage))
-				continue;
 
 			Assert(!cdbconn_isBadConnection(segdbDesc));
 
@@ -539,9 +549,11 @@ checkDispatchResult(CdbDispatcherState *ds,
 		}
 
 		/*
-		 * Break out when no QEs still running.
+		 * Break out when no QEs still running or the root slice all acked.
 		 */
-		if (nfds <= 0)
+		if (nfds <= 0 ||
+			(pParms->waitMode == DISPATCH_WAIT_ACK_ROOT && ack_count == ds->rootGangSize) ||
+			(pParms->waitMode == DISPATCH_WAIT_ACK_ALL && ack_count == db_count))
 			break;
 
 		/*
@@ -555,7 +567,8 @@ checkDispatchResult(CdbDispatcherState *ds,
 		if (!wait)
 			timeout = 0;
 		else if (pParms->waitMode == DISPATCH_WAIT_NONE ||
-				 pParms->waitMode == DISPATCH_WAIT_ACK_MESSAGE ||
+				 pParms->waitMode == DISPATCH_WAIT_ACK_ROOT ||
+				 pParms->waitMode == DISPATCH_WAIT_ACK_ALL ||
 				 sentSignal)
 			timeout = DISPATCH_WAIT_TIMEOUT_MSEC;
 		else
@@ -587,7 +600,8 @@ checkDispatchResult(CdbDispatcherState *ds,
 			checkSegmentAlive(pParms);
 
 			if (pParms->waitMode != DISPATCH_WAIT_NONE &&
-				pParms->waitMode != DISPATCH_WAIT_ACK_MESSAGE)
+				pParms->waitMode != DISPATCH_WAIT_ACK_ROOT &&
+				pParms->waitMode != DISPATCH_WAIT_ACK_ALL)
 			{
 				signalQEs(pParms);
 				sentSignal = true;
@@ -600,7 +614,8 @@ checkDispatchResult(CdbDispatcherState *ds,
 		else if (n == 0)
 		{
 			if (pParms->waitMode != DISPATCH_WAIT_NONE &&
-				pParms->waitMode != DISPATCH_WAIT_ACK_MESSAGE)
+				pParms->waitMode != DISPATCH_WAIT_ACK_ROOT &&
+				pParms->waitMode != DISPATCH_WAIT_ACK_ALL)
 			{
 				signalQEs(pParms);
 				sentSignal = true;
@@ -732,7 +747,8 @@ handlePollError(CdbDispatchCmdAsync *pParms)
 		if (!dispatchResult->stillRunning)
 			continue;
 
-		if (pParms->waitMode == DISPATCH_WAIT_ACK_MESSAGE && dispatchResult->receivedAckMsg)
+		if ((pParms->waitMode == DISPATCH_WAIT_ACK_ROOT || pParms->waitMode == DISPATCH_WAIT_ACK_ALL) &&
+				 dispatchResult->receivedAckMsg)
 			continue;
 
 		/* We're done with this QE, sadly. */
@@ -787,7 +803,8 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 		if (!dispatchResult->stillRunning)
 			continue;
 
-		if (pParms->waitMode == DISPATCH_WAIT_ACK_MESSAGE && dispatchResult->receivedAckMsg)
+		if ((pParms->waitMode == DISPATCH_WAIT_ACK_ROOT || pParms->waitMode == DISPATCH_WAIT_ACK_ALL) &&
+				 dispatchResult->receivedAckMsg)
 			continue;
 
 		ELOG_DISPATCHER_DEBUG("looking for results from %d of %d (%s)",
@@ -870,7 +887,7 @@ signalQEs(CdbDispatchCmdAsync *pParms)
 
 		if (!dispatchResult->stillRunning ||
 			dispatchResult->wasCanceled ||
-			(pParms->waitMode == DISPATCH_WAIT_ACK_MESSAGE &&
+			((pParms->waitMode == DISPATCH_WAIT_ACK_ROOT || pParms->waitMode == DISPATCH_WAIT_ACK_ALL) &&
 			 dispatchResult->receivedAckMsg) ||
 			cdbconn_isBadConnection(segdbDesc))
 			continue;
