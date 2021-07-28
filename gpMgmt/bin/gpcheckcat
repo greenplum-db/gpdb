@@ -2,8 +2,8 @@
 '''
 Usage: gpcheckcat [<option>] [dbname]
 
-    -?
-    -B parallel: number of worker threads
+    -? | --help              : help menu
+    -B parallel              : number of worker threads
     -g dir                   : generate SQL to rectify catalog corruption, put it in dir
     -p port                  : DB port number
     -P passwd                : DB password
@@ -230,12 +230,12 @@ def getalldbs():
 def parseCommandLine():
     try:
         # A colon following the flag indicates an argument is expected
-        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:s:C:lE')
+        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:s:C:lE', 'help')
     except Exception as e:
         usage('Error: ' + str(e))
 
     for (switch, val) in options:
-        if switch == '-?':
+        if switch in ('-?', '--help'):
             usage(0)
         elif switch[1] in 'pBPUgSRCs':
             GV.opt[switch] = val
