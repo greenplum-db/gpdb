@@ -954,6 +954,7 @@ _readAlteredTableInfo(void)
 	READ_NODE_FIELD(newvals);
 	READ_BOOL_FIELD(verify_new_notnull);
 	READ_INT_FIELD(rewrite);
+	READ_OID_FIELD(newAccessMethod);
 	READ_BOOL_FIELD(dist_opfamily_changed);
 	READ_OID_FIELD(new_opclass);
 	READ_OID_FIELD(newTableSpace);

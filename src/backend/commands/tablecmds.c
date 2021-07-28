@@ -448,6 +448,7 @@ static void change_owner_recurse_to_sequences(Oid relationOid,
 static ObjectAddress ATExecClusterOn(Relation rel, const char *indexName,
 									 LOCKMODE lockmode);
 static void ATExecDropCluster(Relation rel, LOCKMODE lockmode);
+static void ATPrepSetAccessMethod(AlteredTableInfo *tab, Relation rel, const char *amname);
 static bool ATPrepChangePersistence(Relation rel, bool toLogged);
 static void ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel,
 								const char *tablespacename, LOCKMODE lockmode);
@@ -4246,6 +4247,7 @@ AlterTableGetLockLevel(List *cmds)
 				 */
 			case AT_AddColumn:	/* may rewrite heap, in some cases and visible
 								 * to SELECT */
+			case AT_SetAccessMethod:	/* must rewrite heap */
 			case AT_SetTableSpace:	/* must rewrite heap */
 			case AT_AlterColumnType:	/* must rewrite heap */
 				cmd_lockmode = AccessExclusiveLock;
@@ -4780,6 +4782,24 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 			pass = AT_PASS_DROP;
 			break;
+		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
+			ATSimplePermissions(rel, ATT_TABLE | ATT_MATVIEW);
+
+			/* partitioned tables don't have an access method */
+			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("cannot change access method of a partitioned table")));
+
+			/* check if another access method change was already requested */
+			if (OidIsValid(tab->newAccessMethod))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot have multiple SET ACCESS METHOD subcommands")));
+
+			ATPrepSetAccessMethod(tab, rel, cmd->name);
+			pass = AT_PASS_MISC;	/* does not matter; no work in Phase 2 */
+			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_MATVIEW | ATT_INDEX |
 								ATT_PARTITIONED_INDEX);
@@ -5265,6 +5285,9 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_DropOids:		/* SET WITHOUT OIDS */
 			/* nothing to do here, oid columns don't exist anymore */
 			break;
+		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
+			/* handled specially in Phase 3 */
+			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 
 			/*
@@ -5572,7 +5595,7 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		/*
 		 * We only need to rewrite the table if at least one column needs to
 		 * be recomputed, we are adding/removing the OID column, or we are
-		 * changing its persistence.
+		 * changing its persistence or access method.
 		 *
 		 * There are two reasons for requiring a rewrite when changing
 		 * persistence: on one hand, we need to ensure that the buffers
@@ -5585,8 +5608,10 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		{
 			/* Build a temporary relation and copy data */
 			Oid			OIDNewHeap;
+			Oid			NewAccessMethod;
 			Oid			NewTableSpace;
 			char		persistence;
+			TransactionId relfrozenxid;
 
 			OldHeap = table_open(tab->relid, NoLock);
 
@@ -5624,6 +5649,15 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 				NewTableSpace = tab->newTableSpace;
 			else
 				NewTableSpace = oldTableSpace;
+
+			/*
+			 * Select destination access method (same as original unless user
+			 * requested a change)
+			 */
+			if (OidIsValid(tab->newAccessMethod))
+				NewAccessMethod = tab->newAccessMethod;
+			else
+				NewAccessMethod = OldHeap->rd_rel->relam;
 
 			/*
 			 * Select persistence of transient table (same as original unless
@@ -5664,8 +5698,8 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 			 * persistence. That wouldn't work for pg_class, but that can't be
 			 * unlogged anyway.
 			 */
-			OIDNewHeap = make_new_heap(tab->relid, NewTableSpace, persistence,
-									   lockmode, hasIndexes, false);
+			OIDNewHeap = make_new_heap(tab->relid, NewTableSpace, NewAccessMethod,
+									   persistence, lockmode, hasIndexes, false);
 
 			/*
 			 * Copy the heap data into the new table with the desired
@@ -5687,13 +5721,21 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 			 * over to our original pg_class tuple. We do not want to do this
 			 * in the case of ALTER TABLE rewrites as the temp relfile will
 			 * not have correct stats.
+			 *
+			 * GPDB: Since pg_class.relfrozenxid doesn't mean anything for
+			 * AO/AOCO tables, and should not be set, pass in
+			 * InvalidTransactionId instead of RecentXmin.
 			 */
+			if (NewAccessMethod == AO_ROW_TABLE_AM_OID || NewAccessMethod == AO_COLUMN_TABLE_AM_OID)
+				relfrozenxid = InvalidTransactionId;
+			else
+				relfrozenxid = RecentXmin;
 			finish_heap_swap(tab->relid, OIDNewHeap,
 							 false, false,
 							 false /* swap_stats */,
 							 true,
 							 !OidIsValid(tab->newTableSpace),
-							 RecentXmin,
+							 relfrozenxid,
 							 ReadNextMultiXactId(),
 							 persistence);
 		}
@@ -6273,16 +6315,9 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 		scan = table_beginscan(oldrel, snapshot, 0, NULL);
 
 		if (newrel && RelationIsAoRows(newrel))
-		{
-			/* Table access method is not permitted to change */
-			Assert(RelationIsAoRows(oldrel));
 			appendonly_dml_init(newrel, CMD_INSERT);
-		}
 		else if (newrel && RelationIsAoCols(newrel))
-		{
-			Assert(RelationIsAoCols(oldrel));
 			aoco_dml_init(newrel, CMD_INSERT);
-		}
 
 		/*
 		 * Switch to per-tuple memory context and reset it for each tuple
@@ -6481,6 +6516,8 @@ ATGetQueueEntry(List **wqueue, Relation rel)
 	tab->relid = relid;
 	tab->relkind = rel->rd_rel->relkind;
 	tab->oldDesc = CreateTupleDescCopyConstr(RelationGetDescr(rel));
+	tab->newAccessMethod = InvalidOid;
+	tab->newTableSpace = InvalidOid;
 	tab->newrelpersistence = RELPERSISTENCE_PERMANENT;
 	tab->chgPersistence = false;
 
@@ -14023,6 +14060,41 @@ ATExecDropCluster(Relation rel, LOCKMODE lockmode)
 						   GetUserId(),
 						   "ALTER", "SET WITHOUT CLUSTER"
 				);
+}
+
+/*
+ * Preparation phase for SET ACCESS METHOD
+ *
+ * Check that access method exists.  If it is the same as the table's current
+ * access method, it is a no-op.  Otherwise, a table rewrite is necessary.
+ */
+static void
+ATPrepSetAccessMethod(AlteredTableInfo *tab, Relation rel, const char *amname)
+{
+	Oid			amoid;
+
+	/* Check that the table access method exists */
+	amoid = get_table_am_oid(amname, false);
+
+	if (rel->rd_rel->relam == amoid)
+		return;
+
+	/*
+	 * Since we don't support unique indexes for AO/AOCO tables, ban
+	 * heap->AO/AOCO in case the heap table has a unique index.
+	 */
+	if (rel->rd_rel->relam == HEAP_TABLE_AM_OID &&
+		(amoid == AO_ROW_TABLE_AM_OID || amoid == AO_COLUMN_TABLE_AM_OID))
+	{
+		if (relationHasUniqueIndex(rel))
+				ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("append-only tables do not support unique indexes"),
+					errdetail("heap table \"%s\" being altered contains unique index", RelationGetRelationName(rel))));
+	}
+
+	/* Save info for Phase 3 to do the real work */
+	tab->rewrite |= AT_REWRITE_ACCESS_METHOD;
+	tab->newAccessMethod = amoid;
 }
 
 /*
