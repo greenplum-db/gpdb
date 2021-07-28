@@ -125,7 +125,7 @@ OPTIONS
 
 -s <standby_hostname> or <standby_address>
 
- The address of the standby coordinaator host. It will be the `address` of
+ The address of the standby coordinator host. It will be the `address` of
  the standby in gp_segment_configuration, the `hostname` column of the standby
  in gp_segment_configuration is resolved by this address. If the provided
  `standby_address` is the same as the hostname, they will be the same.

@@ -13,11 +13,6 @@ class Gpexpand:
         self.working_directory = working_directory
         self.context = context
 
-    def get_gp_array(self):
-        dburl = dbconn.DbURL(dbname=self.database)
-        gparray = GpArray.initFromCatalog(dburl, utility=True)
-        return gparray
-
     def do_interview(self, hosts=None, num_of_segments=1, directory_pairs=None, has_mirrors=False):
         """
         hosts: list of hosts to expand to
@@ -48,7 +43,7 @@ class Gpexpand:
         # Would you like to initiate a new System Expansion Yy|Nn (default=N):
         p1.stdin.write(b"y\n")
         
-        gparray = self.get_gp_array()
+        gparray = GpArray.initFromCatalog(dbconn.DbURL(dbname=self.database), utility=True)
         # Are you sure you want to continue with this gpexpand session?
         standard, message = gparray.isStandardArray()
         if not standard:
