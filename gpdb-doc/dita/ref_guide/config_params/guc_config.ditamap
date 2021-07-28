@@ -143,7 +143,6 @@
             <topicref href="guc-list.xml#gp_resource_group_bypass"/>
             <topicref href="guc-list.xml#gp_resource_group_cpu_limit"/>
             <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
-            <topicref href="guc-list.xml#gp_resource_group_queuing_timeout"/>
             <topicref href="guc-list.xml#gp_resource_manager"/>
             <topicref href="guc-list.xml#gp_resqueue_memory_policy"/>
             <topicref href="guc-list.xml#gp_resqueue_priority"/>

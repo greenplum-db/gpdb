@@ -259,12 +259,6 @@
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_bypass" type="section"
             scope="peer">gp_resource_group_bypass</xref></codeph> to bypass a resource group
         concurrency limit.</p>
-      <p>You can set the server configuration parameter <codeph><xref
-            href="../ref_guide/config_params/guc-list.xml#gp_resource_group_queuing_timeout" type="section"
-            scope="peer">gp_resource_group_queuing_timeout</xref></codeph> to specify the
-         amount of time a transaction remains in the queue before Greenplum Database
-         cancels the transaction. The default timeout is zero, Greenplum queues
-         transactions indefinitely.</p>
     </body>
   </topic>
   <topic id="topic833971717" xml:lang="en">
@@ -858,7 +852,7 @@ gpstart
     </body>
   </topic>
   <topic id="topic_jlz_hzg_pkb">
-    <title>Configuring Automatic Query Termination Based on Memory Usage</title>
+    <title>Configuring Automatic Query Termination</title>
     <body>
       <p>When resource groups have a global shared memory pool, the server configuration parameter
             <codeph><xref
@@ -1037,14 +1031,7 @@ gpstart
           queue but has not yet been executed. Or, you may want to stop a running query that is
           taking too long to execute, or one that is sitting idle in a transaction and taking up
           resource group transaction slots that are needed by other users.</p>
-        <p>By default, transactions can remain queued in a resource group indefinitely.
-          If you want Greenplum Database to cancel a queued transaction after a
-          specific amount of time, set the server configuration parameter <codeph><xref
-            href="../ref_guide/config_params/guc-list.xml#gp_resource_group_queuing_timeout" type="section"
-            scope="peer">gp_resource_group_queuing_timeout</xref></codeph>. When this
-          parameter is set to a value (milliseconds) greater than 0, Greenplum cancels
-          any queued transaction when it has waited longer than the configured timeout.</p>
-        <p>To manually cancel a running or queued transaction, you must first determine the process id (pid)
+        <p>To cancel a running or queued transaction, you must first determine the process id (pid)
           associated with the transaction. Once you have obtained the process id, you can invoke
             <codeph>pg_cancel_backend()</codeph> to end that process, as shown below.</p>
         <p>For example, to view the process information associated with all statements currently
