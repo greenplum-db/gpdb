@@ -3323,6 +3323,8 @@ reset optimizer_enable_hashjoin;
 reset enable_nestloop;
 reset enable_hashjoin;
 
+--- IS DISTINCT FROM FALSE previously simplified to IS TRUE, returning incorrect results for some hash anti joins
+--- the following tests were added to verify the behavior is correct
 CREATE TABLE tt1 (a int, b int);
 CREATE TABLE tt2 (c int, d int);
 
