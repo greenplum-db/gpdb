@@ -928,10 +928,10 @@ CPhysicalHashJoin::CreateOptRequests(CMemoryPool *mp)
 	// set 2 only when needed.
 	//
 	// There are also cases where greedy does generate a better plan
-	// without DPE. This adds about 15% overhead to optimization time in
-	// some cases, but can create some fairly good alternatives to DP, so
-	// we also generate another request for expressions from the greedy
-	// alternative.
+	// without DPE. This adds some overhead (<10%)to optimization time in
+	// some cases, but can create better alternatives to DPE, so
+	// we also generate this additional request for expressions that originated
+	// from CXformExpandNAryJoinGreedy.
 	CPhysicalJoin *physical_join = dynamic_cast<CPhysicalJoin *>(this);
 	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
 		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
