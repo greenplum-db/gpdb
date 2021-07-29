@@ -43,7 +43,7 @@ def cleanup_pg_hba_backup(data_dirs_list):
                 os.remove(backup_file)
                 logger.info('Removing pg_hba.conf backup file %s' % backup_file)
             else:
-                logger.warning('pg_hba.conf backup file %s is not exist' % backup_file)
+                logger.warning('pg_hba.conf backup file %s does not exist' % backup_file)
     except Exception as ex:
         logger.error('Unable to cleanup backup of pg_hba.conf %s' % ex)
 

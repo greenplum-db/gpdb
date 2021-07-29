@@ -42,7 +42,7 @@ Feature: Tests for gpinitstandby feature
         And the file "log/testfile" does not exist under standby coordinator data directory
         And the file "db_dumps/testfile" does not exist under standby coordinator data directory
         And the file "promote/testfile" does not exist under standby coordinator data directory
-        And the file "pg_hba.conf.bak" dose not exist under standby coordinator data directory
+        And the file "pg_hba.conf.bak" does not exist under standby coordinator data directory
         ## maybe clean up the directories created in the coordinator data directory
 
     Scenario: gpstate -f shows standby coordinator information after running gpinitstandby
