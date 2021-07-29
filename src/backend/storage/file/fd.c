@@ -266,7 +266,7 @@ static Oid *tempTableSpaces = NULL;
 static int	numTempTableSpaces = -1;
 static int	nextTempTableSpace = 0;
 
-static Oid GetFirstTempTableSpace(void);
+Oid GetSessionTempTableSpace(void);
 
 /*--------------------
  *
@@ -1236,7 +1236,7 @@ PathNameOpenFile(FileName fileName, int fileFlags, int fileMode)
  * This is used for inter-process communication, where one process creates
  * a file, and another process reads it.
  *
- * NOTE: this always uses first tablespace from `temp_tablespaces`. Otherwise
+ * NOTE: this always uses the session temp tablespace from `temp_tablespaces`. Otherwise
  * picking randomly from list would be hard for the reader process to find the
  * file created by the writer process.
  */
@@ -1249,7 +1249,7 @@ OpenNamedTemporaryFile(const char *fileName,
 	File		file = 0;
 
 	/*
-	 * If some temp tablespace(s) have been given to us, try to use the first
+	 * If some temp tablespace(s) have been given to us, calculate a determined
 	 * one.  If a given tablespace can't be found, we silently fall back to
 	 * the database's default tablespace.
 	 *
@@ -1259,7 +1259,7 @@ OpenNamedTemporaryFile(const char *fileName,
 	 */
 	if (numTempTableSpaces > 0 && !interXact)
 	{
-		Oid            tblspcOid = GetFirstTempTableSpace();
+		Oid            tblspcOid = GetSessionTempTableSpace();
 
 		if (OidIsValid(tblspcOid))
 			file = OpenTemporaryFileInTablespace(tblspcOid,
@@ -1344,7 +1344,7 @@ OpenTemporaryFile(bool interXact, const char *filePrefix)
 	 */
 	if (numTempTableSpaces > 0 && !interXact)
 	{
-		Oid			tblspcOid = GetNextTempTableSpace();
+		Oid			tblspcOid = GetSessionTempTableSpace();
 
 		if (OidIsValid(tblspcOid))
 			file = OpenTemporaryFileInTablespace(tblspcOid,
@@ -1404,10 +1404,14 @@ GetTempFilePath(const char *filename, bool createdir)
 	char		tempfilepath[MAXPGPATH];
 	Oid			tblspcOid;
 
-	if (MyDatabaseTableSpace)
-		tblspcOid = MyDatabaseTableSpace;
-	else
-		tblspcOid = DEFAULTTABLESPACE_OID;
+	tblspcOid = GetSessionTempTableSpace();
+	if (!OidIsValid(tblspcOid))
+	{
+		if (MyDatabaseTableSpace)
+			tblspcOid = MyDatabaseTableSpace;
+		else
+			tblspcOid = DEFAULTTABLESPACE_OID;
+	}
 
 	/*
 	 * Identify the tempfile directory for this tablespace.
@@ -2662,16 +2666,23 @@ GetNextTempTableSpace(void)
 }
 
 /*
- * GetFirstTempTableSpace
+ * GetSessionTempTableSpace
  *
- * Select the First temp tablespace to use.  A result of InvalidOid means to
- * use the current database's default tablespace.
+ * Select temp tablespace for current session to use. It's like
+ * GetNextTempTableSpace, but it gets the same temp tablespace
+ * in all QD/QE processes in the same session.
+ * A result of InvalidOid means to use the current database's
+ * default tablespace.
  */
-static Oid
-GetFirstTempTableSpace(void)
+Oid
+GetSessionTempTableSpace(void)
 {
 	if (numTempTableSpaces > 0)
-		nextTempTableSpace = 0;
+	{
+		return gp_session_id < 0
+					? GetNextTempTableSpace()
+					: tempTableSpaces[gp_session_id % numTempTableSpaces];
+	}
 	return InvalidOid;
 }
 
