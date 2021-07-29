@@ -160,6 +160,9 @@ public:
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping,
 		BOOL must_exist) override;
 
+	// strip off any equivalent columns embedded in the distribution spec
+	CDistributionSpec *StripEquivColumns(CMemoryPool *) override;
+
 	// append enforcers to dynamic array for the given plan properties
 	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,

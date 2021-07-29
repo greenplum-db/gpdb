@@ -559,6 +559,12 @@ public:
 
 	static IOstream &OsPrintProperty(IOstream &, SExpressionProperties &);
 
+	CXform::EXformId
+	EOriginXForm() const override
+	{
+		return CXform::ExfExpandNAryJoinDPv2;
+	}
+
 };	// class CJoinOrderDPv2
 
 }  // namespace gpopt

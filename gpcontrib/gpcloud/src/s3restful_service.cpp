@@ -339,7 +339,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
 }
 
 S3MessageParser::S3MessageParser(const Response &resp)
-    : xmlptr(NULL), message("Unkown error"), code("Unknown error code") {
+    : xmlptr(NULL), message("Unknown error"), code("Unknown error code") {
     // Compatible S3 services don't always return XML
     if (resp.getRawData().data() == NULL) {
         return;

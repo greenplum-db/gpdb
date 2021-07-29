@@ -3172,16 +3172,11 @@ relation_needs_vacanalyze(Oid relid,
 	}
 
 	/*
-	 * GPDB: Autovacuum VACUUM is only enabled for catalog tables. In this
-	 * case we include tables in information_schema namespace.  (But ignore if
-	 * at risk of wrap around and proceed to vacuum)
+	 * GPDB: Autovacuum VACUUM is only enabled for catalog tables. (But ignore
+	 * if at risk of wrap around and proceed to vacuum)
 	 */
-	if (*dovacuum && !IsSystemClass(relid, classForm) &&
-		strcmp(get_namespace_name(classForm->relnamespace), "information_schema") != 0 &&
-		!force_vacuum)
-	{
+	if (!IsSystemClass(relid, classForm) && !force_vacuum)
 		*dovacuum = false;
-	}
 }
 
 /*

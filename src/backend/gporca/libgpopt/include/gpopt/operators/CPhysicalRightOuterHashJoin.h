@@ -36,10 +36,10 @@ public:
 	CPhysicalRightOuterHashJoin(const CPhysicalRightOuterHashJoin &) = delete;
 
 	// ctor
-	CPhysicalRightOuterHashJoin(CMemoryPool *mp,
-								CExpressionArray *pdrgpexprOuterKeys,
-								CExpressionArray *pdrgpexprInnerKeys,
-								IMdIdArray *hash_opfamilies);
+	CPhysicalRightOuterHashJoin(
+		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
+		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CPhysicalRightOuterHashJoin() override;

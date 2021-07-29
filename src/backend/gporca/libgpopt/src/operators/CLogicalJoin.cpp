@@ -31,11 +31,12 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalJoin::CLogicalJoin(CMemoryPool *mp) : CLogical(mp)
+
+CLogicalJoin::CLogicalJoin(CMemoryPool *mp, CXform::EXformId origin_xform)
+	: CLogical(mp), m_origin_xform(origin_xform)
 {
 	GPOS_ASSERT(nullptr != mp);
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:

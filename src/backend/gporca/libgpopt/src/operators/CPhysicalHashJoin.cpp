@@ -44,8 +44,9 @@ using namespace gpopt;
 CPhysicalHashJoin::CPhysicalHashJoin(CMemoryPool *mp,
 									 CExpressionArray *pdrgpexprOuterKeys,
 									 CExpressionArray *pdrgpexprInnerKeys,
-									 IMdIdArray *hash_opfamilies)
-	: CPhysicalJoin(mp),
+									 IMdIdArray *hash_opfamilies,
+									 CXform::EXformId origin_xform)
+	: CPhysicalJoin(mp, origin_xform),
 	  m_pdrgpexprOuterKeys(pdrgpexprOuterKeys),
 	  m_pdrgpexprInnerKeys(pdrgpexprInnerKeys),
 	  m_hash_opfamilies(nullptr),
@@ -925,8 +926,22 @@ CPhysicalHashJoin::CreateOptRequests(CMemoryPool *mp)
 	// will not be created for the above query if we send only 1 request.
 	// Also, increasing the number of request increases the optimization time, so
 	// set 2 only when needed.
-	if (GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
-		GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2))
+	//
+	// There are also cases where greedy does generate a better plan
+	// without DPE. This adds some overhead (<10%)to optimization time in
+	// some cases, but can create better alternatives to DPE, so
+	// we also generate this additional request for expressions that originated
+	// from CXformExpandNAryJoinGreedy.
+	CPhysicalJoin *physical_join = dynamic_cast<CPhysicalJoin *>(this);
+	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
+		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
+		physical_join->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
+	{
 		SetPartPropagateRequests(2);
+	}
+	else
+	{
+		SetPartPropagateRequests(1);
+	}
 }
 // EOF

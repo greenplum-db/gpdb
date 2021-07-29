@@ -233,7 +233,7 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
 		lsn <= WalSndCtl->lsn[mode])
 	{
 		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep because xlog upto LSN (%X/%X) which is "
+				"syncrep wait -- Not waiting for syncrep because xlog up to LSN (%X/%X) which is "
 				"greater than this backend's commit LSN (%X/%X) has already "
 				"been replicated.",
 			   (uint32) (WalSndCtl->lsn[mode] >> 32), (uint32) WalSndCtl->lsn[mode],

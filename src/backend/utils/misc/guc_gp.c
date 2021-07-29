@@ -613,7 +613,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 	{
 		{"gp_enable_direct_dispatch", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable dispatch for single-row-insert targetted mirror-pairs."),
+			gettext_noop("Enable dispatch for single-row-insert targeted mirror-pairs."),
 			gettext_noop("Don't involve the whole cluster if it isn't needed.")
 		},
 		&gp_enable_direct_dispatch,

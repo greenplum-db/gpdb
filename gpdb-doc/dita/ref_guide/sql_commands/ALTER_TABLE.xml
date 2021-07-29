@@ -211,9 +211,10 @@ where <varname>action</varname> is one of:
                                 <li id="ay136944"><b>SET STATISTICS</b> — Sets the per-column
                                         statistics-gathering target for subsequent
                                                 <codeph>ANALYZE</codeph> operations. The target can
-                                        be set in the range 100 to 10000, or set to -1 to revert to
+                                        be set in the range 0 to 10000, or set to -1 to revert to
                                         using the system default statistics target
-                                                (<codeph>default_statistics_target</codeph>).</li>
+                                                (<codeph>default_statistics_target</codeph>). When
+                                        set to 0, no statistics are collected.</li>
                                 <li>
                                         <p><b>SET ( <varname>attribute_option</varname> =
                                                   <varname>value</varname> [, ... ]) </b></p>

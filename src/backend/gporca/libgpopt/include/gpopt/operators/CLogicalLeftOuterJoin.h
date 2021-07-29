@@ -32,7 +32,8 @@ public:
 	CLogicalLeftOuterJoin(const CLogicalLeftOuterJoin &) = delete;
 
 	// ctor
-	explicit CLogicalLeftOuterJoin(CMemoryPool *mp);
+	explicit CLogicalLeftOuterJoin(
+		CMemoryPool *mp, CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalLeftOuterJoin() override = default;

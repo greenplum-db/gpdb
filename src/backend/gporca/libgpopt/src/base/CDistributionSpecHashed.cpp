@@ -161,6 +161,19 @@ CDistributionSpecHashed::PdsCopyWithRemappedColumns(
 }
 
 
+CDistributionSpec *
+CDistributionSpecHashed::StripEquivColumns(CMemoryPool *mp)
+{
+	m_pdrgpexpr->AddRef();
+	if (nullptr != m_opfamilies)
+	{
+		m_opfamilies->AddRef();
+	}
+	return GPOS_NEW(mp)
+		CDistributionSpecHashed(m_pdrgpexpr, m_fNullsColocated, m_opfamilies);
+}
+
+
 BOOL
 CDistributionSpecHashed::FDistributionSpecHashedOnlyOnGpSegmentId() const
 {

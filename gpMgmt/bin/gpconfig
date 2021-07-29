@@ -317,7 +317,7 @@ def do_change(options):
     if not options.coordinatoronly:
         hosts.extend(gp_array.get_hostlist(includeCoordinator=False))
 
-    unreachable_hosts = get_unreachable_segment_hosts(hosts, len(hosts))
+    unreachable_hosts = get_unreachable_segment_hosts(hosts, len(set(hosts)))
     if len(unreachable_hosts) > 0:
         confirm_user_wants_to_continue()
 

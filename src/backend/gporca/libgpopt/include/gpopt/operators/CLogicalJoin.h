@@ -29,9 +29,13 @@ namespace gpopt
 class CLogicalJoin : public CLogical
 {
 private:
+	// xform that join originated from
+	CXform::EXformId m_origin_xform;
+
 protected:
 	// ctor
-	explicit CLogicalJoin(CMemoryPool *mp);
+	explicit CLogicalJoin(CMemoryPool *mp,
+						  CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalJoin() override = default;
@@ -58,6 +62,15 @@ public:
 							   ) override
 	{
 		return PopCopyDefault();
+	}
+
+	// conversion function
+	static CLogicalJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(nullptr != pop);
+
+		return dynamic_cast<CLogicalJoin *>(pop);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -145,6 +158,13 @@ public:
 	{
 		return true;
 	}
+
+	CXform::EXformId
+	OriginXform()
+	{
+		return m_origin_xform;
+	}
+
 
 };	// class CLogicalJoin
 

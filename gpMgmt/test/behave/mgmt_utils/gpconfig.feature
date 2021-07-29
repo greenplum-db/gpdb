@@ -215,3 +215,10 @@ Feature: gpconfig integration tests
         | asks for confirmation and completes when user selects yes | 0           | should         | completed successfully | should                    | should                | gpconfig -c application_name -v "easy" < test/behave/mgmt_utils/steps/data/yes.txt|
         | asks for confirmation and aborts when user selects no     | 1           | should         | User Aborted. Exiting. | should not                | should not            | gpconfig -c application_name -v "easy" < test/behave/mgmt_utils/steps/data/no.txt |
         | does not ask for confirmation for coordinator only change | 0           | should not     | completed successfully | should                    | should not            | gpconfig -c application_name -v "easy" --coordinatoronly                          |
+
+    @demo_cluster
+    Scenario: gpconfig checks liveness of correct number of hosts
+      Given the database is running
+       When the user runs "gpconfig --debug -c optimizer -v on"
+       Then gpconfig should return a return code of 0
+        And gpconfig should print "WorkerPool() initialized with 1 workers" escaped to stdout

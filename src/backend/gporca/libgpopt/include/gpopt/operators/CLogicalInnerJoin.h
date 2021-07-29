@@ -35,7 +35,8 @@ public:
 	CLogicalInnerJoin(const CLogicalInnerJoin &) = delete;
 
 	// ctor
-	explicit CLogicalInnerJoin(CMemoryPool *mp);
+	explicit CLogicalInnerJoin(
+		CMemoryPool *mp, CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	~CLogicalInnerJoin() override = default;

@@ -15,6 +15,8 @@
 #include "gpos/io/IOstream.h"
 
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/xforms/CXform.h"
+
 
 // id for component created for relational nodes which are not
 // the child of LOJ
@@ -245,6 +247,12 @@ public:
 
 	// are these childs of the same LOJ
 	static BOOL IsChildOfSameLOJ(SComponent *comp1, SComponent *comp2);
+
+	virtual CXform::EXformId
+	EOriginXForm() const
+	{
+		return CXform::ExfSentinel;
+	}
 
 };	// class CJoinOrder
 

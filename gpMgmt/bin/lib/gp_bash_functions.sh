@@ -251,8 +251,7 @@ ERROR_EXIT () {
 		if [ $BACKOUT_FILE ]; then
 				if [ -s $BACKOUT_FILE ]; then
 						LOG_MSG "[WARN]:-Script has left Greenplum Database in an incomplete state"
-						LOG_MSG "[WARN]:-Run command bash $BACKOUT_FILE to remove these changes"
-						BACKOUT_COMMAND "if [ x$COORDINATOR_HOSTNAME != x\`$HOSTNAME\` ];then $ECHO \"[FATAL]:-Not on original coordinator host $COORDINATOR_HOSTNAME, backout script exiting!\";exit 1;fi"
+						LOG_MSG "[WARN]:-Run command bash $BACKOUT_FILE on coordinator to remove these changes"
 						$ECHO "$RM -f $BACKOUT_FILE" >> $BACKOUT_FILE
 				fi
 		fi

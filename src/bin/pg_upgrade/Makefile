@@ -49,7 +49,7 @@ greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_f
 # GPDB_95_MERGE_FIXME:
 # GPDB want to run installcheck of pg_upgrade in the end of installcheck-world
 # let installcheck be a no-op, so "make -C src/bin/ installcheck" does nothing on
-# src/bin/pg_upgrade, the real test of pg_upgrade will be triggerred by
+# src/bin/pg_upgrade, the real test of pg_upgrade will be triggered by
 # "make check" in the end of installcheck-world, see GNUmakefile.in
 
 # When $(MAKE) is present, make automatically infers that this is a

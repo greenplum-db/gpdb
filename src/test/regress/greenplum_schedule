@@ -24,6 +24,7 @@ test: gp_toolkit
 test: python_processed64bit
 test: enable_autovacuum
 
+test: log_guc
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
 # run separately - because slot counter may influenced by other parallel queries
