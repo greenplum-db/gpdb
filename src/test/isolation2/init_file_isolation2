@@ -4,8 +4,7 @@ m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
 
 m/\(cdbendpointretrieve\.c\:\d+\)/
-s/\(cdbendpointretrieve\.c\:\d+\)/
-
+s/\(cdbendpointretrieve\.c\:\d+\)//
 
 # remove beginning output of gpconfig
 m/^\d+.*gpconfig.*-\[INFO\]:-/

@@ -144,12 +144,12 @@ BEGIN
 (1 row)
 2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
 DECLARE
-2: SELECT gp_segment_id, state FROM gp_endpoints() WHERE cursorname='c2' ORDER BY gp_segment_id;
- gp_segment_id | state 
----------------+-------
- 0             | READY 
- 1             | READY 
- 2             | READY 
+2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
+ state 
+-------
+ READY 
+ READY 
+ READY 
 (3 rows)
 2: CLOSE c2;
 CLOSE

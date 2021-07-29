@@ -45,7 +45,7 @@ SET gp_interconnect_queue_depth=1;
 2: BEGIN;
 2: SHOW gp_max_packet_size;
 2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
-2: SELECT gp_segment_id, state FROM gp_endpoints() WHERE cursorname='c2' ORDER BY gp_segment_id;
+2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
 2: CLOSE c2;
 
 -- cleanup
