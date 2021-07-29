@@ -8,7 +8,7 @@ use TestLib;
 use Test::More tests => 1;
 
 # Initialize node to backup
-my $node_to_backup = get_new_node('to_backup');
+my $node_to_backup = PostgresNode->new('to_backup');
 $node_to_backup->init(
 	has_archiving    => 1,
 	allows_streaming => 1);
@@ -38,7 +38,7 @@ $node_to_backup->safe_psql('postgres',
 	"SELECT pg_switch_wal();");
 
 # Create new node from from backup
-my $node_restored = get_new_node('restored');
+my $node_restored = PostgresNode->new('restored');
 my $delay         = 5;
 $node_restored->init_from_backup($node_to_backup, $backup_name,
 	standby => 1, has_restoring => 1);

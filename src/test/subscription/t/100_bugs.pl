@@ -16,11 +16,11 @@ use Test::More tests => 5;
 # fix was to avoid the constant expressions simplification in
 # RelationGetIndexAttrBitmap(), so it's safe to call in more contexts.
 
-my $node_publisher = get_new_node('publisher');
+my $node_publisher = PostgresNode->new('publisher');
 $node_publisher->init(allows_streaming => 'logical');
 $node_publisher->start;
 
-my $node_subscriber = get_new_node('subscriber');
+my $node_subscriber = PostgresNode->new('subscriber');
 $node_subscriber->init(allows_streaming => 'logical');
 $node_subscriber->start;
 
@@ -78,7 +78,7 @@ $node_subscriber->stop('fast');
 # identity set before accepting updates.  If it did not it would cause
 # an error when an update was attempted.
 
-$node_publisher = get_new_node('publisher2');
+$node_publisher = PostgresNode->new('publisher2');
 $node_publisher->init(allows_streaming => 'logical');
 $node_publisher->start;
 
@@ -107,11 +107,11 @@ $node_publisher->stop('fast');
 # target table's relcache was not being invalidated. This leads to skipping
 # UPDATE/DELETE operations during apply on the subscriber side as the columns
 # required to search corresponding rows won't get logged.
-$node_publisher = get_new_node('publisher3');
+$node_publisher = PostgresNode->new('publisher3');
 $node_publisher->init(allows_streaming => 'logical');
 $node_publisher->start;
 
-$node_subscriber = get_new_node('subscriber3');
+$node_subscriber = PostgresNode->new('subscriber3');
 $node_subscriber->init(allows_streaming => 'logical');
 $node_subscriber->start;
 

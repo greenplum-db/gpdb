@@ -7,7 +7,7 @@ use TestLib;
 use Test::More tests => 1;
 
 # Initialize primary node
-my $node_primary = get_new_node('primary');
+my $node_primary = PostgresNode->new('primary');
 $node_primary->init(allows_streaming => 1);
 $node_primary->start;
 
@@ -20,7 +20,7 @@ my $backup_name = 'my_backup';
 $node_primary->backup($backup_name);
 
 # Create streaming standby from backup
-my $node_standby = get_new_node('standby');
+my $node_standby = PostgresNode->new('standby');
 my $delay        = 3;
 $node_standby->init_from_backup($node_primary, $backup_name,
 	has_streaming => 1);

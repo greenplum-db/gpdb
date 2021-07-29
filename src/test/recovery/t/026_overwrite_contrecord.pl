@@ -17,7 +17,7 @@ plan tests => 3;
 # that the replica replays the "overwrite contrecord" from that new
 # file and the standby promotes successfully.
 
-my $node = PostgresNode->get_new_node('primary');
+my $node = PostgresNode->new('primary');
 $node->init(allows_streaming => 1);
 # We need these settings for stability of WAL behavior.
 $node->append_conf(
@@ -75,7 +75,7 @@ unlink $node->basedir . "/pgdata/pg_wal/$endfile"
 
 # OK, create a standby at this spot.
 $node->backup_fs_cold('backup');
-my $node_standby = PostgresNode->get_new_node('standby');
+my $node_standby = PostgresNode->new('standby');
 $node_standby->init_from_backup($node, 'backup', has_streaming => 1);
 
 $node_standby->start;

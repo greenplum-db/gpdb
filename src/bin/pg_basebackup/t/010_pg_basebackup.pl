@@ -15,7 +15,7 @@ program_options_handling_ok('pg_basebackup');
 
 my $tempdir = TestLib::tempdir;
 
-my $node = get_new_node('main');
+my $node = PostgresNode->new('main');
 
 # Set umask so test directories and files are created with default permissions
 umask(0077);
@@ -179,7 +179,7 @@ ok(-f "$tempdir/tarbackup/base.tar", 'backup tar was created');
 rmtree("$tempdir/tarbackup");
 
 ########################## Test that the headers are zeroed out in both the primary and mirror WAL files
-my $node_wal_compare_primary = get_new_node('wal_compare_primary');
+my $node_wal_compare_primary = PostgresNode->new('wal_compare_primary');
 # We need to enable archiving for this test because we depend on the backup history
 # file created by pg_basebackup to retrieve the "STOP WAL LOCATION". This file only
 # gets persisted if archiving is turned on.

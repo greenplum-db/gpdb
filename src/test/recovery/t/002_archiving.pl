@@ -7,7 +7,7 @@ use Test::More tests => 14;
 use File::Copy;
 
 # Initialize primary node, doing archives
-my $node_primary = get_new_node('primary');
+my $node_primary = PostgresNode->new('primary');
 $node_primary->init(
 	has_archiving    => 1,
 	allows_streaming => 1);
@@ -21,7 +21,7 @@ $node_primary->start;
 $node_primary->backup($backup_name);
 
 # Initialize standby node from backup, fetching WAL from archives
-my $node_standby = get_new_node('standby');
+my $node_standby = PostgresNode->new('standby');
 # Note that this makes the standby store its contents on the archives
 # of the primary.
 $node_standby->init_from_backup($node_primary, $backup_name,
@@ -247,7 +247,7 @@ sub check_history_files
 	my $primary_archive = $node_primary->archive_dir;
 	wait_until_file_exists("$primary_archive/00000002.history", "history file to be archived");
 
-	my $node_standby2 = get_new_node('standby2');
+	my $node_standby2 = PostgresNode->new('standby2');
 	$node_standby2->init_from_backup($node_primary, $backup_name,
 		has_streaming => 1, has_restoring => 1);
 	$node_standby2->start;

@@ -25,7 +25,7 @@ plan tests => 18;
 # is really wrong.
 my $psql_timeout = IPC::Run::timer($TestLib::timeout_default);
 
-my $node = get_new_node('primary');
+my $node = PostgresNode->new('primary');
 $node->init(allows_streaming => 1);
 $node->start();
 

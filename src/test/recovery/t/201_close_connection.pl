@@ -31,7 +31,7 @@ my $set_guc_off = q{
 };
 my ($pid, $timed_out);
 
-my $node = get_new_node('node');
+my $node = PostgresNode->new('node');
 $node->init;
 $node->start;
 

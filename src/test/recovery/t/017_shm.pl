@@ -35,7 +35,7 @@ sub log_ipcs
 # These tests need a $port such that nothing creates or removes a segment in
 # $port's IpcMemoryKey range while this test script runs.  While there's no
 # way to ensure that in general, we do ensure that if PostgreSQL tests are the
-# only actors.  With TCP, the first get_new_node picks a port number.  With
+# only actors.  With TCP, the first PostgresNode->new picks a port number.  With
 # Unix sockets, use a postmaster, $port_holder, to represent a key space
 # reservation.  $port_holder holds a reservation on the key space of port
 # 1+$port_holder->port if it created the first IpcMemoryKey of its own port's
@@ -50,7 +50,7 @@ if (!$PostgresNode::use_tcp)
 	my $lock_port;
 	for ($lock_port = 511; $lock_port < 711; $lock_port += 2)
 	{
-		$port_holder = PostgresNode->get_new_node(
+		$port_holder = PostgresNode->new(
 			"port${lock_port}_holder",
 			port     => $lock_port,
 			own_host => 1);
@@ -73,7 +73,7 @@ if (!$PostgresNode::use_tcp)
 sub init_start
 {
 	my $name = shift;
-	my $ret = PostgresNode->get_new_node($name, port => $port, own_host => 1);
+	my $ret = PostgresNode->new($name, port => $port, own_host => 1);
 	defined($port) or $port = $ret->port;    # same port for all nodes
 	$ret->init;
 	# Limit semaphore consumption, since we run several nodes concurrently.

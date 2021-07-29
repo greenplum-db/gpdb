@@ -649,7 +649,7 @@ my %tests = (
 #########################################
 # Create a PG instance to test actually dumping from
 
-my $node = get_new_node('main');
+my $node = PostgresNode->new('main');
 $node->init;
 $node->start;
 

@@ -159,7 +159,7 @@ END
 
 note "setting up PostgreSQL instance";
 
-my $node = get_new_node('node');
+my $node = PostgresNode->new('node');
 $node->init;
 $node->append_conf('postgresql.conf', "listen_addresses = '$hostaddr'");
 $node->append_conf('postgresql.conf', "krb_server_keyfile = '$keytab'");

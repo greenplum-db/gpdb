@@ -14,7 +14,7 @@ is(-1, -1, "Disable this TAP test");
 exit;
 
 # Setup primary node
-my $node_primary = get_new_node("primary");
+my $node_primary = PostgresNode->new("primary");
 $node_primary->init(allows_streaming => 1);
 $node_primary->append_conf(
 	'postgresql.conf', qq(
@@ -26,7 +26,7 @@ $node_primary->backup('primary_backup');
 $node_primary->psql('postgres', "CREATE TABLE t_012_tbl (id int)");
 
 # Setup standby node
-my $node_standby = get_new_node('standby');
+my $node_standby = PostgresNode->new('standby');
 $node_standby->init_from_backup($node_primary, 'primary_backup',
 	has_streaming => 1);
 $node_standby->start;

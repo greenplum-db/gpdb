@@ -16,7 +16,7 @@ my ($node, $result);
 #
 # Test set-up
 #
-$node = get_new_node('CIC_test');
+$node = PostgresNode->new('CIC_test');
 $node->init;
 $node->append_conf('postgresql.conf',
 	'lock_timeout = ' . (1000 * $TestLib::timeout_default));

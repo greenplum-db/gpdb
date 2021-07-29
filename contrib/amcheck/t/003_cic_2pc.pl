@@ -19,7 +19,7 @@ my ($node, $result);
 #
 # Test set-up
 #
-$node = get_new_node('CIC_2PC_test');
+$node = PostgresNode->new('CIC_2PC_test');
 $node->init;
 $node->append_conf('postgresql.conf', 'max_prepared_transactions = 10');
 $node->append_conf('postgresql.conf',
