@@ -113,7 +113,7 @@ gp_check_parallel_retrieve_cursor(PG_FUNCTION_ARGS)
 }
 
 /*
- * gp_check_parallel_retrieve_cursor
+ * gp_wait_parallel_retrieve_cursor
  *
  * Wait until the given parallel retrieve cursor is finished.
  *
