@@ -500,7 +500,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="48">
+    <dxl:Plan Id="0" SpaceSize="216">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1231.893289" Rows="5.000000" Width="40"/>

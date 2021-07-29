@@ -471,7 +471,7 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="18">
+    <dxl:Plan Id="0" SpaceSize="30">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="868.122087" Rows="3.000000" Width="48"/>
