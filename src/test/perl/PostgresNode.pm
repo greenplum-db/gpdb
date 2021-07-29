@@ -855,7 +855,9 @@ sub start
 
 		# Note: We set the cluster_name here, not in postgresql.conf (in
 		# sub init) so that it does not get copied to standbys.
-		$ret = TestLib::system_log('pg_ctl', '-D', $self->data_dir, '-l',
+		# -w is now the default but having it here does no harm and helps
+		# compatibility with older versions.
+		$ret = TestLib::system_log('pg_ctl', '-w', '-D', $self->data_dir, '-l',
 		$self->logfile, '-o', "--cluster-name=$name -c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0 -c maintenance_mode=on",
 			'start');
 	}
@@ -992,7 +994,9 @@ sub restart
 
 	print "### Restarting node \"$name\"\n";
 
-	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-l', $logfile,
+	# -w is now the default but having it here does no harm and helps
+	# compatibility with older versions.
+	TestLib::system_or_bail('pg_ctl', '-w', '-D', $pgdata, '-l', $logfile,
 		'restart');
 
 	$self->_update_pid(1);
