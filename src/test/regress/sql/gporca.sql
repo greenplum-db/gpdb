@@ -3323,6 +3323,20 @@ reset optimizer_enable_hashjoin;
 reset enable_nestloop;
 reset enable_hashjoin;
 
+create table redistribute_loj_foo (a int, b int);
+create table redistribute_loj_bar (c int, d int);
+
+insert into redistribute_loj_foo values (1, 1), (2, 2), (3, 3);
+insert into redistribute_loj_bar values (3, 3), (2, 2), (1, 1);
+
+analyze redistribute_loj_foo;
+analyze redistribute_loj_bar;
+
+set optimizer_enable_hashjoin=0;
+
+explain select * from redistribute_loj_foo left join redistribute_loj_bar on (a = d);
+select * from redistribute_loj_foo left join redistribute_loj_bar on (a = d);
+
 --- IS DISTINCT FROM FALSE previously simplified to IS TRUE, returning incorrect results for some hash anti joins
 --- the following tests were added to verify the behavior is correct
 CREATE TABLE tt1 (a int, b int);
