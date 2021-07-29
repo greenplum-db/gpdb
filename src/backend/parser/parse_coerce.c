@@ -770,6 +770,12 @@ fixup_unknown_vars_in_targetlist(ParseState *pstate, List *targetlist)
 /*
  * Fix up the unknown Vars in the subquery specified by rtr. The new
  * types and typemods are given.
+ *
+ * Greenplum Specific Logic:
+ *   this function's call chain is
+ *    fixup_unknown_vars_in_RangeTblRef <-- fixup_unknown_vars_in_setop <-- transformSetOperationStmt
+ *   the whole bunch of code is added by Greenplum and it is only used during
+ *   parse-analyze Set Operation Statement.
  */
 static void
 fixup_unknown_vars_in_RangeTblRef(ParseState *pstate, RangeTblRef *rtr,
@@ -798,10 +804,19 @@ fixup_unknown_vars_in_RangeTblRef(ParseState *pstate, RangeTblRef *rtr,
 		if (IsA(tle->expr, Var) &&
 			((Var *)tle->expr)->vartype == UNKNOWNOID)
 		{
+			/*
+			 * As mentioned in this function's comments, this function can only be
+			 * used for Set Operation SQL Statement, like Q: q1 Union q2.
+			 * We are now in Q's context, q1 is parse-analyzed in a sub parse-state of
+			 * Q's and that sub parse-state is free-ed when finishing. So we have to
+			 * pass -1 as levelsup to the following function coerce_unknown_var.
+			 * See Github Issue https://github.com/greenplum-db/gpdb/issues/12407
+			 * for details.
+			 */
 			tle->expr = (Expr *)coerce_unknown_var(pstate, (Var *)tle->expr,
 												   colType, colTypmod,
 												   COERCION_IMPLICIT, COERCE_EXPLICIT_CALL,
-												   0);
+												   -1);
 		}
 
 		tle_lc = lnext(tle_lc);
@@ -811,6 +826,7 @@ fixup_unknown_vars_in_RangeTblRef(ParseState *pstate, RangeTblRef *rtr,
 }
 
 /*
+ * Greenplum specific function.
  * Fix up the unknown Vars in all subqueries in a SetOperationStmt.
  */
 void
