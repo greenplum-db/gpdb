@@ -500,12 +500,13 @@ retrieve_conn_authentication(Port *port)
 {
 	char	   *passwd;
 	Oid        owner_uid;
-	const char *msg = "Retrieve auth token is invalid";
+	const char *msg1 = "Failed to Retrieve the authentication password";
+	const char *msg2 = "Authentication failure (Wrong password or no endpoint for the user)";
 
 	sendAuthRequest(port, AUTH_REQ_PASSWORD, NULL, 0);
 	passwd = recv_password_packet(port);
 	if (passwd == NULL)
-		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD), errmsg("%s", msg)));
+		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD), errmsg("%s", msg1)));
 
 	/*
 	 * verify that the username is same as the owner of PARALLEL RETRIEVE CURSOR and the
@@ -513,7 +514,7 @@ retrieve_conn_authentication(Port *port)
 	 */
 	owner_uid = get_role_oid(port->user_name, false);
 	if (!AuthEndpoint(owner_uid, passwd))
-		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD), errmsg("%s", msg)));
+		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD), errmsg("%s", msg2)));
 
 	FakeClientAuthentication(port);
 }

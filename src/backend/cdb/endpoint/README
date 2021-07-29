@@ -1,11 +1,11 @@
 src/backend/cdb/endpoint/README
 
 With the size of greenplum cluster increasing, the performance bottleneck on the
-master node becomes more and more obvious.
+coordinator node becomes more and more obvious.
 
 The parallel retrieve cursor feature is designed to reduce the heavy
-burdens of the master node. For a query, it can redirect the results to segments 
-instead of gathering them to the master node. When it is executed, user can setup 
+burdens of the coordinator node. For a query, it can redirect the results to segments
+instead of gathering them to the coordinator node. When it is executed, user can setup
 retrieve mode connections to segments for retrieving result data in parallel.
 
 
@@ -13,7 +13,7 @@ Parallel Retrieve Cursor
 ========================
 
 Like a normal cursor, user can declare a parallel retrieve cursor on
-master, then retrieve the query results on each segment directly.
+coordinator, then retrieve the query results on each segment directly.
 
 Parallel retrieve cursor has similar declaration and syntax as
 normal cursor does. However, some cursor operations are not supported
@@ -55,23 +55,20 @@ List Parallel Retrieve Cursors and their endpoints
 
 To retrieve the query results of a parallel retrieve cursor, the related
 endpoint information is needed before start a retrieve session on QEs. The UDF
-gp_endpoints_info(boolean) can be used to list parallel
-retrieve cursors and their endpoints information.
+gp_endpoints() can be used to list parallel retrieve cursors and their
+endpoints information. This UDF could be run on the coordinator only.
 
-Syntax:
-gp_endpoints_info(is_for_all_session)
-
-When is_for_all_session is false, only parallel retrieve cursors created in
-current session will be listed. Otherwise, all parallel retrieve
-cursors created by this user will be listed.
-
-For a superuser, it can list all endpoints info of all users', but for
-non-superuser, it can only list the current user's endpoints info for
+For a superuser, it can list all endpoints information of all users', but for
+non-superuser, it can only list the current user's endpoints information for
 security reason.
 
-gp_endpoints_info Columns:
+Definition: gp_endpoints()
+
+gp_endpoints Columns:
 |-------------+-----------+------------------------------------------|
 | Column Name | Data Type | Description                              |
+|-------------+-----------+------------------------------------------|
+| dbid        | integer   | The QE's dbid                            |
 |-------------+-----------+------------------------------------------|
 | auth_token  | text      | Retrieve session authentication token    |
 |-------------+-----------+------------------------------------------|
@@ -84,14 +81,15 @@ gp_endpoints_info Columns:
 | port        | integer   | The port number to start the retrieve    |
 |             |           | session                                  |
 |-------------+-----------+------------------------------------------|
-| dbid        | integer   | The QE's segment id                      |
-|-------------+-----------+------------------------------------------|
 | userid      | oid       | The oid of the session user              |
 |-------------+-----------+------------------------------------------|
-| status      | text      | One of the following status for this     |
+| state       | text      | One of the following status for this     |
 |             |           | endpoint:                                |
 |             |           | READY:                                   |
 |             |           | The endpoint is ready to be retrieved    |
+|             |           | ATTACHED:                                |
+|             |           | The endpoint has been attached by a      |
+|             |           | a retrieve connection                    |
 |             |           | RETRIEVING:                              |
 |             |           | The endpoint is being retrieved          |
 |             |           | FINISHED:                                |
@@ -100,34 +98,23 @@ gp_endpoints_info Columns:
 |             |           | Due to errors, this endpoint has been    |
 |             |           | released and cannot be connected anymore |
 |-------------+-----------+------------------------------------------|
-| endpoint    | text      | The identification of this endpoint      |
+| endpointname| text      | The identification of this endpoint      |
 |-------------+-----------+------------------------------------------|
 
 Examples:
 
-postgres=# SELECT * from gp_endpoints_info(false);
-              auth_token            | cursorname | sessionid | hostname | port  | dbid | userid | status |     endpointname
-------------------------------------+------------+-----------+----------+-------+------+--------+--------+----------------------
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25432 |    2 |     10 | READY  | c1_00001507_00000000
- tk1903000016d13df15aab23265ce70de1 | c1         |      5383 | mdw      | 25433 |    3 |     10 | READY  | c1_00001507_00000001
- tk19030000313f450b16bcef3f196e7e47 | c1         |      5383 | mdw      | 25434 |    4 |     10 | READY  | c1_00001507_00000002
+postgres=# select * from gp_endpoints();
+ dbid |            auth_token            | cursorname | sessionid | hostname | port | userid | state |    endpointname
+------+----------------------------------+------------+-----------+----------+------+--------+-------+--------------------
+    2 | 75ebe7b49c3e09f35e017fc0181c62cf | c3         |       105 | host67   | 7002 |     10 | READY | c30000006900000005
+    3 | 3ee0a64a465dde2813d4940961747c88 | c3         |       105 | host67   | 7003 |     10 | READY | c30000006900000005
+    4 | 97a8eeee337798f718319c5234ea1440 | c3         |       105 | host67   | 7004 |     10 | READY | c30000006900000005
 (3 rows)
 
-For convenience, a view named GP_ENDPOINTS can also be used to list endpoints in current session, which is equivalence to gp_endpoints_info(false).
-
-Examples:
-
-postgres=# SELECT * from GP_ENDPOINTS;
-              auth_token            | cursorname | sessionid | hostname | port  | dbid | userid | status |     endpointname
-------------------------------------+------------+-----------+----------+-------+------+--------+--------+----------------------
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25432 |    2 |     10 | READY  | c1_00001507_00000000
- tk1903000016d13df15aab23265ce70de1 | c1         |      5383 | mdw      | 25433 |    3 |     10 | READY  | c1_00001507_00000001
- tk19030000313f450b16bcef3f196e7e47 | c1         |      5383 | mdw      | 25434 |    4 |     10 | READY  | c1_00001507_00000002
-(3 rows)
-
-The userid of the endpoint is the session user, not the current user. For example, 
-if login the database with "user1", then set role to another user "user2" and declare a parallel retrieve cursor.
-The userid of these endpoints is "user1" 's oid, not "user2". The session user should be used to start
+The userid of the endpoint is the session user, not the current user. For
+example, if login the database with "user1", then set role to another user
+"user2" and declare a parallel retrieve cursor.  The userid of these endpoints
+is user1's oid, not user2's oid. The session user should be used to start
 a retrieve connection. 
 
 Start A Retrieve Session
@@ -142,15 +129,16 @@ gp_retrieve_conn=true needs to be set to start retrieve session.
 
 Examples:
 
-$> PGOPTIONS='-c gp_retrieve_conn=true' psql -h mdw -p 25432 -d postgres -U user1
-Password: tk071500004015dc6da471b20417afed65
+$> PGOPTIONS='-c gp_retrieve_conn=true' psql -h host67 -p 7002 -d postgres -U user1
+Password: 75ebe7b49c3e09f35e017fc0181c62cf
 postgres=#
 
-Here the "tk071500004015dc6da471b20417afed65", "mdw" and "25432" are the
-endpoint "c1_00001507_00000000"'s token, hostname and port.
+Here the "75ebe7b49c3e09f35e017fc0181c62cf", "host67" and "7002" are the
+endpoint "c30000006900000005"'s token, hostname and port.
 
-Besides the user and password should match, the user also
-needs login permission. Otherwise this role is not allowed to login, even with correct password.
+Besides the user and password should match, the user also needs login
+permission. Otherwise this role is not allowed to login, even with correct
+password.
 
 Multiple parallel retrieve cursors can be retrieved from the same retrieve
 session as long as their token is the same.
@@ -174,7 +162,7 @@ An empty set will be returned if no more tuples for the endpoint.
 
 Examples:
 
-postgres=# RETRIEVE ALL FROM ENDPOINT c1_00001507_00000000;
+postgres=# RETRIEVE ALL FROM ENDPOINT c30000006900000005;
  col1 | col2
 ------+------
  0    | 0
@@ -185,16 +173,15 @@ postgres=# RETRIEVE ALL FROM ENDPOINT c1_00001507_00000000;
 List Endpoints In Utility Session On Endpoint QE
 ================================================
 
-It is possible to list all sessions' endpoints status in the UTILITY
-connection to specific endpoint (master or segment node) by using UDF
-"gp_endpoints_status_info()". Same as the UDF gp_endpoints_info(true),
-for a superuser, he can see all endpoints info of all users', but for
-non-superuser, he can only see his endpoints info for security reason.
+It is possible to list all sessions' endpoints in the UTILITY connection to
+specific endpoint (coordinator or segment node) by using UDF
+gp_segment_endpoints(). Same as the UDF gp_endpoints(), a superuser can see the
+endpoint information of all users, but non-superuser can see its endpoints
+information only for security reason.
 
-Syntax:
-gp_endpoints_status_info()
+Definition: gp_segment_endpoints()
 
-gp_endpoints_status_info Columns:
+gp_segment_endpoints Columns:
 |--------------+-----------+------------------------------------------|
 | Column Name  | Data Type | Description                              |
 |--------------+-----------+------------------------------------------|
@@ -202,20 +189,18 @@ gp_endpoints_status_info Columns:
 |--------------+-----------+------------------------------------------|
 | databaseid   | integer   | The database where the cursor is created |
 |--------------+-----------+------------------------------------------|
-|              |           | on                                       |
-|--------------+-----------+------------------------------------------|
 | senderpid    | integer   | The process where the query results are  |
 |              |           | sent from                                |
 |--------------+-----------+------------------------------------------|
 | receiverpid  | integer   | The process where the results are being  |
 |              |           | received on                              |
 |--------------+-----------+------------------------------------------|
-| status       | text      | The status for the endpoint              |
-|              |           | See gp_endpoints_info for more details   |
+| state        | text      | The state of the endpoint                |
+|              |           | See gp_endpoints() for more details      |
 |--------------+-----------+------------------------------------------|
-| dbid         | integer   | The QE's segment id                      |
+| dbid         | integer   | The QE's dbid                            |
 |--------------+-----------+------------------------------------------|
-| sessionid    | integer   | The session where the cursor created in  |
+| sessionid    | integer   | The session where the cursor created     |
 |--------------+-----------+------------------------------------------|
 | userid       | oid       | The user who created this endpoint       |
 |--------------+-----------+------------------------------------------|
@@ -227,27 +212,25 @@ gp_endpoints_status_info Columns:
 Examples:
 
 # Connect the segment in utility mode
-$> PGOPTIONS="-c gp_role=utility" psql -h mdw -p 25432 -d postgres
+$> PGOPTIONS="-c gp_role=utility" psql -h host67 -p 7002 -d postgres
 
-postgres=# select * from gp_endpoints_status_info();
-             auth_token             | databaseid | senderpid | receiverpid | status | dbid | sessionid | userid |     endpointname     | cursorname
-------------------------------------+------------+-----------+-------------+--------+------+-----------+--------+----------------------+------------
- tk071500004015dc6da471b20417afed65 |      16532 |    736783 |          -1 | READY  |    2 |      5383 |     10 | c2_00001507_00000000 | c2
+postgres=# select * from gp_segment_endpoints();
+            auth_token            | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid |    endpointname    | cursorname
+----------------------------------+------------+-----------+-------------+-------+------+-----------+--------+--------------------+------------
+ 51c6cd7f4c10c4a36579fbbb24cc6371 |      13361 |      3854 |          -1 | READY |    2 |         8 |     10 | c30000000800000003 | c3
 (1 row)
 
 
 Check Parallel Retrieve Cursor Retrieving Status
 ================================================
 
-UDF gp_check_parallel_retrieve_cursor(text) is designed for checking if
-all endpoints have been fully retrieved for the given parallel retrieve
-cursor.
-It will abort the current transaction if any error happens in the
-retrieving sessions. If error happens, the parallel retrieve cursor will
-be closed and all related endpoints will be freed.
+UDF gp_check_parallel_retrieve_cursor(text) is designed for checking if all
+endpoints have been fully retrieved for the given parallel retrieve cursor or
+not. It will abort the current transaction if any error happens in the
+retrieving sessions. If error happens, the parallel retrieve cursor will be
+closed and all related endpoints will be freed.
 
-Syntax:
-gp_check_parallel_retrieve_cursor(cursor_name)
+Definition: gp_check_parallel_retrieve_cursor(cursor_name)
 
 cursor_name is the parallel retrieve cursor name to be checked.
 It returns true if all endpoints have been fully retrieved. If any
@@ -268,15 +251,14 @@ Wait Parallel Retrieve Cursor To Be Fully Retrieved
 
 UDF gp_wait_parallel_retrieve_cursor(text) is designed to block until
 all the endpoints have been fully retrieved for the given parallel
-retrieve cursor. It will block the master session until all the relevant
+retrieve cursor. It will block the coordinator session until all the relevant
 endpoints are fully retrieved or any error happens in the retrieving
 sessions. When error happens, the current transaction will be aborted,
 all parallel retrieve cursors and their endpoints in current transaction
 will be freed. If it is interrupted by signals, the transaction will be
 aborted as well.
 
-Syntax:
-gp_wait_parallel_retrieve_cursor(cursor_name)
+Definition: gp_wait_parallel_retrieve_cursor(cursor_name)
 
 It will only return true if all endpoints fully retrieved. In any other
 cases, an error message will be thrown.
@@ -293,14 +275,13 @@ postgres=# SELECT gp_wait_parallel_retrieve_cursor('c2'); <waiting...>
 Error Handling In Retrieve Session
 ==================================
 
-When error happens in a retrieve session, the endpoint will be removed
-from QE. By checking GP_ENDPOINTS on QD, the endpoint won't be shown in
-the list anymore. The other retrieve sessions can still retrieve from
-other endpoints which belong to this session at this time. But if
-"gp_check_parallel_retrieve_cursor", "gp_wait_parallel_retrieve_cursor"
-or "CLOSE" are executed on QD, the other retrieve sessions will be
-canceled since the error is delivered to QD and treated as an error
-happens in the transaction.
+When error happens in a retrieve session, the endpoint will be removed from QE.
+The other retrieve sessions can still retrieve from other endpoints which
+belong to this session at this time. But if
+gp_check_parallel_retrieve_cursor(), gp_wait_parallel_retrieve_cursor() or
+CLOSE are executed on QD, the other retrieve sessions will be canceled since
+the error is delivered to QD and treated as an error happens in the
+transaction.
 
 When the endpoint is partially retrieved and then the corresponding
 retrieve session quits, the case will be treated as a retrieve session
@@ -317,7 +298,7 @@ its endpoints. All the related on-going retrieve statements will be
 canceled.
 
 Syntax:
-CLOSE cursor_name;
+CLOSE cursorname;
 
 Examples:
 
@@ -331,102 +312,113 @@ Walk-Through Example
 Assumes we have a table named "t1" with an integer column "id", and its
 data distributed as following:
 
-| id | location |
-| 0  | segment0 |
-| 1  | segment0 |
-| 2  | segment0 |
-| 3  | segment1 |
-| 4  | segment1 |
-| 5  | segment1 |
+postgres=# select gp_segment_id, * from t1;
+ gp_segment_id | id
+---------------+----
+             0 |  2
+             0 |  3
+             0 |  4
+             2 |  5
+             1 |  0
+             1 |  1
+(6 rows)
 
-To declare a parallel retrieve cursor on master in order to select all
+To declare a parallel retrieve cursor on coordinator in order to select all
 tuples from t1:
 
 -- Begin transaction first
-master=# BEGIN;
+postgres=# BEGIN;
 BEGIN
+
 -- Create the parallel retrieve cursor for the intent query
-master=# DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+postgres=# DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
+
 -- List endpoints to get the needed information to start retrieving
 -- sessions on segments
-master=# SELECT * FROM GP_ENDPOINTS;
-             auth_token             | cursorname | sessionid | hostname | port  | dbid | userid | status |     endpointname
-------------------------------------+------------+-----------+----------+-------+------+--------+--------+----------------------
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25432 |    2 |     10 | READY  | c1_00001507_00000000
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25433 |    3 |     10 | READY  | c1_00001507_00000001
-(2 rows)
+postgres=# SELECT * FROM gp_endpoints();
+ dbid |            auth_token            | cursorname | sessionid | hostname | port | userid | state |    endpointname
+------+----------------------------------+------------+-----------+----------+------+--------+-------+--------------------
+    2 | c5c116a13e2fdb8b436cdbc8e1bc7365 | c1         |        22 | host67   | 7002 |     10 | READY | c1000000160000000a
+    3 | ecf4af4e0e50f2530afda2af178a5bf8 | c1         |        22 | host67   | 7003 |     10 | READY | c1000000160000000a
+    4 | a522dc766936be8a88710fa137d52df2 | c1         |        22 | host67   | 7004 |     10 | READY | c1000000160000000a
+(3 rows)
 
-Now start a retrieve session on mdw:25432:
+Now start a retrieve session on the first segment (i.e. host67:7002)
 
-# gp_retrieve_conn=true is needed as the runtime parameter
-$> PGOPTIONS="-c gp_retrieve_conn=true" psql -h mdw -p 25432 -d postgres
-Password: tk071500004015dc6da471b20417afed65
+# gp_retrieve_conn=true is needed as the pg option.
+$> PGOPTIONS="-c gp_retrieve_conn=true" psql -h host67 -p 7002 -d postgres
+Password: c5c116a13e2fdb8b436cdbc8e1bc7365
 
--- Retrieve all rows on this endpoint
-seg0=# RETRIEVE ALL FROM ENDPOINT c1_00001507_00000000;
+-- Retrieve all rows of this endpoint
+postgres=# RETRIEVE ALL FROM ENDPOINT c10000001f00000003;
  id
 ----
- 0
- 1
- 2
+  2
+  3
+  4
 (3 rows)
 
 Now the status of endpoint "c1_00001507_00000000" should become
-"FINISHED" since all results on seg0 have been retrieved.
+"FINISHED" since all results on the segment have been retrieved.
 
--- List endpoints on master to check
-master=# SELECT * FROM GP_ENDPOINTS;
-             auth_token             | cursorname | sessionid | hostname | port  | dbid | userid | status   |     endpointname
-------------------------------------+------------+-----------+----------+-------+------+--------+----------+----------------------
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25432 |    2 |     10 | FINISHED | c1_00001507_00000000
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25433 |    3 |     10 | READY    | c1_00001507_00000001
-(2 rows)
+-- List endpoints on coordinator to check
+postgres=# SELECT * FROM gp_endpoints();
+ dbid |            auth_token            | cursorname | sessionid | hostname | port | userid |  state   |    endpointname
+------+----------------------------------+------------+-----------+----------+------+--------+----------+--------------------
+    2 | bb98d2e0b50c6733414a7295bfff5c72 | c1         |        31 | host67   | 7002 |     10 | FINISHED | c10000001f00000003
+    3 | 5f59f7f3338212f20d3bb1527fac9fcd | c1         |        31 | host67   | 7003 |     10 | READY    | c10000001f00000003
+    4 | ee62f79379b07ad3b411cd59ab78aff8 | c1         |        31 | host67   | 7004 |     10 | READY    | c10000001f00000003
+(3 rows)
 
+Start another retrieve session on host67:7003
 
-Start another retrieve session on mdw:25433
-
-$> PGOPTIONS="-c gp_retrieve_conn=true" psql -h mdw -p 25432 -d postgres
-Password: tk071500004015dc6da471b20417afed65
+$> PGOPTIONS="-c gp_retrieve_conn=true" psql -h host67 -p 7003 -d postgres
+Password: 5f59f7f3338212f20d3bb1527fac9fcd
 
 -- Retrieve 1 row on this endpoint
-seg1=# RETRIEVE 1 FROM ENDPOINT c1_00001507_00000001;
+postgres=# RETRIEVE 1 FROM ENDPOINT c10000001f00000003;
  id
 ----
- 4
+  0
 (1 row)
 
-The status of endpoint "c1_00001507_00000001" will firstly becomes "RETRIEVING", then becomes "ATTACHED".
-RETRIEVING means that a receiver is retrieving data from the endpoint. If a recevier finishes retrieving a part of data(but not retrieve all the data),
-the status becomes ATTACHED, means that this endpoint has been attached by a receiver. If the receiver has retrieved all the data from
-the endpoint, the status becomes FINISHED.
+The status of endpoint  will firstly becomes "RETRIEVING", then becomes
+"ATTACHED".  RETRIEVING means that a receiver is retrieving data from the
+endpoint. If a recevier finishes retrieving a part of data (but not retrieve all
+the data), the status becomes ATTACHED, means that this endpoint has been
+attached by a receiver. If the receiver has retrieved all the data from the
+endpoint, the status becomes FINISHED.
 
--- List endpoints on master to check
-master=# SELECT * FROM GP_ENDPOINTS;
-             auth_token             | cursorname | sessionid | hostname | port  | dbid | userid | status    |     endpointname
-------------------------------------+------------+-----------+----------+-------+------+--------+-----------+----------------------
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25432 |    2 |     10 | FINISHED  | c1_00001507_00000000
- tk071500004015dc6da471b20417afed65 | c1         |      5383 | mdw      | 25433 |    3 |     10 | ATTACHED  | c1_00001507_00000001
-(2 rows)
--- To check if the retrieving finished
-master=# select gp_check_parallel_retrieve_cursor('c1');
+-- List endpoints on coordinator to check
+postgres=# SELECT * FROM gp_endpoints();
+ dbid |            auth_token            | cursorname | sessionid | hostname | port | userid |  state   |    endpointname
+------+----------------------------------+------------+-----------+----------+------+--------+----------+--------------------
+    2 | bb98d2e0b50c6733414a7295bfff5c72 | c1         |        31 | host67   | 7002 |     10 | FINISHED | c10000001f00000003
+    3 | 5f59f7f3338212f20d3bb1527fac9fcd | c1         |        31 | host67   | 7003 |     10 | ATTACHED | c10000001f00000003
+    4 | ee62f79379b07ad3b411cd59ab78aff8 | c1         |        31 | host67   | 7004 |     10 | READY    | c10000001f00000003
+(3 rows)
+
+-- To check if the retrieving finished on the coordinator connection.
+postgres =# select gp_check_parallel_retrieve_cursor('c1');
  gp_check_parallel_retrieve_cursor
 -----------------------------------
  f
 (1 row)
 
-
 We can just close the cursor now if we decide to not retrieve the
-remaining query results:
+remaining query results (on the coordinator connection).
 
-master=# CLOSE c1;
-CLOSE
+postgres=# CLOSE c1;
+CLOSE CURSOR
+
 -- All endpoints are gone
-master=# SELECT * FROM GP_ENDPOINTS;
- auth_token | cursorname | sessionid | hostname | port | dbid | userid | status | endpointname
-------------+------------+-----------+----------+------+------+--------+--------+--------------
+postgres=# SELECT * FROM gp_endpoints();
+ dbid | auth_token | cursorname | sessionid | hostname | port | userid | state | endpointname
+------+------------+------------+-----------+----------+------+--------+-------+--------------
 (0 rows)
+
 -- End the transaction
-master=# END;
+coordinator=# END;
 END
 

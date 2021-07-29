@@ -340,8 +340,9 @@ DestroyEndpointExecState(EndpointExecState *state)
 	Assert(state->dsmSeg);
 
 	/*
-	 * wait for receiver to retrieve the first row. ackDone latch will be
-	 * reset to be re-used when retrieving finished.
+	 * wait for receiver to start tuple retrieving. ackDone latch will
+	 * be reset to be re-used when retrieving finished. See notify_sender()
+	 * callers.
 	 */
 	wait_receiver(state);
 
@@ -357,7 +358,7 @@ DestroyEndpointExecState(EndpointExecState *state)
 	/*
 	 * Wait until all data is retrieved by receiver. This is needed because
 	 * when the endpoint sends all data to shared message queue. The retrieve
-	 * session may still not get all data from
+	 * session may still not get all data.
 	 */
 	wait_receiver(state);
 

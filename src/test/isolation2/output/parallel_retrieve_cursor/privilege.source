@@ -199,15 +199,15 @@ DECLARE
 (1 row)
 --- Login as uu1 and retrieve, only u1 can retrieve
 3R: SELECT SESSION_USER, CURRENT_USER;
-#3retrieve> FATAL:  Retrieve auth token is invalid
+#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
 
 3R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
-#3retrieve> FATAL:  Retrieve auth token is invalid
+#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
 
 
 --- Retrieve c2(which belongs to u1) but current user is uu1.
 3R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-#3retrieve> FATAL:  Retrieve auth token is invalid
+#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
 
 0Rq: ... <quitting>
 3Rq:FAILED:  Sessions not started cannot be quit
