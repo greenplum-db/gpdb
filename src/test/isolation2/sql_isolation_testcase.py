@@ -774,7 +774,7 @@ class SQLIsolationExecutor(object):
                 raise Exception("No query should be given on quit")
             self.quit_process(output_file, process_name, con_mode, dbname=dbname)
         elif flag == "M":
-            self.get_process(output_file, process_name, con_mode, dbname=dbname).query(sql.strip())
+            self.get_process(output_file, process_name, con_mode, dbname=dbname).query(sql.strip(), post_run_cmd, global_sh_executor)
         else:
             raise Exception("Invalid isolation flag")
 
