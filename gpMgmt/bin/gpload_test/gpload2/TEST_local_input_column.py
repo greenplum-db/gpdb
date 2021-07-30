@@ -118,19 +118,20 @@ def test_74_gpload_insert_partial_columns():
 @pytest.mark.order(75)
 @prepare_before_test(num=75)
 def test_75_gpload_merge_chinese_standard_conforming_str_on():
-    """75 gpload merge data with different quotations '"col"'  "\"col\""  "'col'" and "col" 
+    """75 gpload merge data with different quotations '"col"'(support)  "\"col\""(support)  "'col'" and "col" 
     with standard_conforming_strings on"""
+    runfile(mkpath('setup.sql'))
     copy_data("external_file_19.txt", "data_file.txt")
-    # '"col"'
+    # '"Col"'  support
     columns1 = [("'\"列1\"'", 'text'), ("'\"列#2\"'", 'int'), ("'\"lie3\"'", 'timestamp')]
-    # "\"col\""
-    columns2 = [('"\\"列1\""', 'text'), ('"\\"列#2\""', 'int'), ('"\\"lie3\""', 'timestamp')]
-    # "'col'"
+    # "\"Col\""  support
+    columns2 = [('"\\"列1\\""', 'text'), ('"\\"列#2\\""', 'int'), ('"\\"lie3\\""', 'timestamp')]
+    # "'Col'"  not support
     columns3 = [('"\'列1\'"', 'text'), ('"\'列#2\'"', 'int'), ('"\'lie3\'"', 'timestamp')]
-    # "col"
+    # "Col" support
     columns4 = [('"列1"', 'text'), ('"列#2"', 'int'), ('"lie3"', 'timestamp')]
-    update_columns = {'"列1"': 'text'}
-    match_columns = {'"列#2"': 'int'}
+    update_columns = {"'\"列1\"'": 'text'}
+    match_columns = {"'\"列#2\"'": 'int'}
     write_config_file(mode='insert',file='data_file.txt',config='config/config_file1',reuse_tables=True, fast_match=True, table='chinese表',columns=columns1, delimiter="';'",sql=True,before='"set standard_conforming_strings =on;"')
     write_config_file(mode='merge',update_columns=update_columns,match_columns=match_columns,file='data_file.txt',config='config/config_file2',reuse_tables=True, fast_match=True, table='chinese表',columns=columns2, delimiter="';'",sql=True,before='"set standard_conforming_strings =on;"')
     write_config_file(mode='insert',file='data_file.txt',config='config/config_file3',reuse_tables=True, fast_match=True, table='chinese表',columns=columns3, delimiter="';'",sql=True,before='"set standard_conforming_strings =on;"')
@@ -148,10 +149,11 @@ def test_76_gpload_merge_chinese_standard_conforming_str_off():
     """76 gpload merge data with different quotations '"col"'  "\"col\""  "'col'" and "col" 
     with standard_conforming_strings off"""
     copy_data("external_file_18.txt", "data_file.txt")
+    # not support when standard_conforming_strings is off
     # '"col"'
     columns1 = [("'\"列1\"'", 'text'), ("'\"列#2\"'", 'int'), ("'\"lie3\"'", 'timestamp')]
     # "\"col\""
-    columns2 = [('"\\"列1\""', 'text'), ('"\\"列#2\""', 'int'), ('"\\"lie3\""', 'timestamp')]
+    columns2 = [('"\\"列1\\""', 'text'), ('"\\"列#2\\""', 'int'), ('"\\"lie3\\""', 'timestamp')]
     # "'col'"
     columns3 = [('"\'列1\'"', 'text'), ('"\'列#2\'"', 'int'), ('"\'lie3\'"', 'timestamp')]
     # "col"
@@ -178,7 +180,7 @@ def test_77_gpload_merge_capital_letters_standard_conforming_str_off():
     copy_data('external_file_16.txt','data_file.txt')
     update_columns=["'\"Field#2\"'"]
     match_columns = ["'\"Field1\"'", "'\"Field#2\"'"]
-
+    # not support when standard_conforming_strings is off
     # '"col"'
     columns1 = [("'\"Field1\"'", 'text'), ("'\"Field#2\"'", 'text')]
     # "\"col\""
@@ -199,4 +201,27 @@ def test_77_gpload_merge_capital_letters_standard_conforming_str_off():
     f.write("\\! gpload -f "+mkpath('config/config_file2')+"\n")
     f.write("\\! gpload -f "+mkpath('config/config_file3')+"\n")
     f.write("\\! gpload -f "+mkpath('config/config_file4')+"\n")
+    f.close()
+
+@pytest.mark.order(78)
+@prepare_before_test(num=78)
+def test_78_gpload_merge_upper_case():
+    """78 gpload merge data with different quotations '"col"' "\"col\"" "'col'" and "col"   """
+    copy_data("external_file_47.txt", "data_file.txt")
+    runfile(mkpath('setup.sql'))
+    columns = []
+    # "Col" support (only capital letters)
+    columns.append( [('"Field1"', 'int'), ('"Field2"', 'text'), ('"Field3"', 'text')] )
+    columns.append( [('"Field1"', ''), ('"Field2"', ''), ('"Field3"', '')] )
+    columns.append( [('"field1"', ''), ('"field2"', ''), ('"field3"', '')] )
+    columns.append( [('"field1"', 'int'), ('"field2"', 'text'), ('"field3"', 'text')] )
+
+    # Col support (only capital letters)
+    columns.append( [('Field1', 'int'), ('Field2', 'text'), ('Field3', 'text')] )
+    columns.append( [('Field1', ''), ('Field2', ''), ('Field3', '')] )
+
+    f = open(mkpath('query78.sql'),'w')
+    for i in range(6):
+        write_config_file(mode='insert',file='data_file.txt',config='config/config_file'+str(i),reuse_tables=True, fast_match=True, table='testheaderreuse',columns=columns[i], delimiter="','")
+        f.write("\\! gpload -f "+mkpath('config/config_file'+str(i))+"\n")
     f.close()

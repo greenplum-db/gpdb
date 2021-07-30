@@ -1,0 +1,54 @@
+2021-07-30 12:31:41|INFO|gpload session started 2021-07-30 12:31:41
+2021-07-30 12:31:41|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-07-30 12:31:41|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-30 12:31:41|INFO|did not find an external table to reuse. creating ext_gpload_reusable_09bd3310_f0ef_11eb_b617_0050569ea4ff
+2021-07-30 12:31:41|INFO|running time: 0.05 seconds
+2021-07-30 12:31:41|INFO|rows Inserted          = 2
+2021-07-30 12:31:41|INFO|rows Updated           = 0
+2021-07-30 12:31:41|INFO|data formatting errors = 0
+2021-07-30 12:31:41|INFO|gpload succeeded
+2021-07-30 12:31:41|INFO|gpload session started 2021-07-30 12:31:41
+2021-07-30 12:31:41|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-07-30 12:31:41|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-30 12:31:41|INFO|reusing external table ext_gpload_reusable_09bd3310_f0ef_11eb_b617_0050569ea4ff
+2021-07-30 12:31:41|INFO|running time: 0.04 seconds
+2021-07-30 12:31:41|INFO|rows Inserted          = 2
+2021-07-30 12:31:41|INFO|rows Updated           = 0
+2021-07-30 12:31:41|INFO|data formatting errors = 0
+2021-07-30 12:31:41|INFO|gpload succeeded
+2021-07-30 12:31:41|INFO|gpload session started 2021-07-30 12:31:41
+2021-07-30 12:31:41|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-07-30 12:31:41|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-30 12:31:41|INFO|reusing external table ext_gpload_reusable_09bd3310_f0ef_11eb_b617_0050569ea4ff
+2021-07-30 12:31:41|INFO|running time: 0.04 seconds
+2021-07-30 12:31:41|INFO|rows Inserted          = 2
+2021-07-30 12:31:41|INFO|rows Updated           = 0
+2021-07-30 12:31:41|INFO|data formatting errors = 0
+2021-07-30 12:31:41|INFO|gpload succeeded
+2021-07-30 12:31:42|INFO|gpload session started 2021-07-30 12:31:42
+2021-07-30 12:31:42|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-07-30 12:31:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-30 12:31:42|INFO|reusing external table ext_gpload_reusable_09bd3310_f0ef_11eb_b617_0050569ea4ff
+2021-07-30 12:31:42|INFO|running time: 0.04 seconds
+2021-07-30 12:31:42|INFO|rows Inserted          = 2
+2021-07-30 12:31:42|INFO|rows Updated           = 0
+2021-07-30 12:31:42|INFO|data formatting errors = 0
+2021-07-30 12:31:42|INFO|gpload succeeded
+2021-07-30 12:31:42|INFO|gpload session started 2021-07-30 12:31:42
+2021-07-30 12:31:42|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-07-30 12:31:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-30 12:31:42|INFO|reusing external table ext_gpload_reusable_09bd3310_f0ef_11eb_b617_0050569ea4ff
+2021-07-30 12:31:42|INFO|running time: 0.04 seconds
+2021-07-30 12:31:42|INFO|rows Inserted          = 2
+2021-07-30 12:31:42|INFO|rows Updated           = 0
+2021-07-30 12:31:42|INFO|data formatting errors = 0
+2021-07-30 12:31:42|INFO|gpload succeeded
+2021-07-30 12:31:42|INFO|gpload session started 2021-07-30 12:31:42
+2021-07-30 12:31:42|INFO|setting schema 'public' for table 'testheaderreuse'
+2021-07-30 12:31:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-30 12:31:42|INFO|reusing external table ext_gpload_reusable_09bd3310_f0ef_11eb_b617_0050569ea4ff
+2021-07-30 12:31:42|INFO|running time: 0.04 seconds
+2021-07-30 12:31:42|INFO|rows Inserted          = 2
+2021-07-30 12:31:42|INFO|rows Updated           = 0
+2021-07-30 12:31:42|INFO|data formatting errors = 0
+2021-07-30 12:31:42|INFO|gpload succeeded
