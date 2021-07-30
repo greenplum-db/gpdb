@@ -2546,3 +2546,336 @@ select * from foo where
   9 |  9
 (6 rows)
 
+-- When creating plan with subquery and CTE, it sets the useless flow for the plan.
+-- But we only need flow for the topmost plan and child of the motion. See commit
+-- https://github.com/greenplum-db/gpdb/commit/93abe741cd67f04958e2951edff02b45ab6e280f for detail
+-- The extra flow will cause subplan set wrong motionType and cause an ERROR
+-- unexpected gang size: XX
+-- This related to issue: https://github.com/greenplum-db/gpdb/issues/12371
+create table extra_flow_dist(a int, b int, c date);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table extra_flow_dist1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into extra_flow_dist select i, i, '1949-10-01'::date from generate_series(1, 10)i;
+insert into extra_flow_dist1 select i, i from generate_series(20, 22)i;
+-- case 1 subplan with outer general locus (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select
+	(
+	  select c from extra_flow_dist where b = x  -- subplan's outer is the below general locus path
+	) dt
+	from (select ( max(1) ) x) a  -- general locus
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   ->  Nested Loop
+         Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Subquery Scan on run_dt
+               Output: run_dt.dt
+               Filter: (run_dt.dt < '01-01-2010'::date)
+               ->  Subquery Scan on a
+                     Output: (SubPlan 1)
+                     ->  Aggregate
+                           Output: max(1)
+                           ->  Result
+                     SubPlan 1
+                       ->  Result
+                             Output: extra_flow_dist.c
+                             Filter: (extra_flow_dist.b = a.x)
+                             ->  Materialize
+                                   Output: extra_flow_dist.c, extra_flow_dist.b
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                         Output: extra_flow_dist.c, extra_flow_dist.b
+                                         ->  Seq Scan on subselect_gp.extra_flow_dist
+                                               Output: extra_flow_dist.c, extra_flow_dist.b
+         ->  Seq Scan on subselect_gp.extra_flow_dist1
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+ Optimizer: Postgres query optimizer
+(25 rows)
+
+with run_dt as (
+	select
+	(
+	  select c from extra_flow_dist where b = x
+	) dt
+	from (select ( max(1) ) x) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+     dt     | a  | b  
+------------+----+----
+ 10-01-1949 | 20 | 20
+ 10-01-1949 | 22 | 22
+ 10-01-1949 | 21 | 21
+(3 rows)
+
+create table extra_flow_rand(a int) distributed replicated;
+insert into extra_flow_rand values (1);
+-- case 2 for subplan with outer segment general locus (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x  -- subplan's outer is the below segment general locus path
+	) dt
+	from (select a x from extra_flow_rand) a  -- segment general locus
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   ->  Nested Loop
+         Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Subquery Scan on run_dt
+               Output: run_dt.dt
+               Filter: (run_dt.dt < '01-01-2010'::date)
+               ->  Seq Scan on subselect_gp.extra_flow_rand
+                     Output: (SubPlan 1)
+                     SubPlan 1
+                       ->  Result
+                             Output: extra_flow_dist.c
+                             Filter: (extra_flow_dist.b = extra_flow_rand.a)
+                             ->  Materialize
+                                   Output: extra_flow_dist.c, extra_flow_dist.b
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                         Output: extra_flow_dist.c, extra_flow_dist.b
+                                         ->  Seq Scan on subselect_gp.extra_flow_dist
+                                               Output: extra_flow_dist.c, extra_flow_dist.b
+         ->  Materialize
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+               ->  Seq Scan on subselect_gp.extra_flow_dist1
+                     Output: extra_flow_dist1.a, extra_flow_dist1.b
+ Optimizer: Postgres query optimizer
+(24 rows)
+
+with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x
+	) dt
+	from (select a x from extra_flow_rand) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+     dt     | a  | b  
+------------+----+----
+ 10-01-1949 | 22 | 22
+ 10-01-1949 | 20 | 20
+ 10-01-1949 | 21 | 21
+(3 rows)
+
+-- case 3 for subplan with outer entry locus (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x  -- subplan's outer is the below entry locus path
+	) dt
+	from (select 1 x from pg_class limit 1) a  -- entry locus
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   ->  Nested Loop
+         Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Broadcast Motion 1:3  (slice2)
+               Output: run_dt.dt
+               ->  Subquery Scan on run_dt
+                     Output: run_dt.dt
+                     Filter: (run_dt.dt < '01-01-2010'::date)
+                     ->  Subquery Scan on a
+                           Output: (SubPlan 1)
+                           ->  Limit
+                                 Output: 1
+                                 ->  Seq Scan on pg_catalog.pg_class
+                                       Output: 1
+                           SubPlan 1
+                             ->  Result
+                                   Output: extra_flow_dist.c
+                                   Filter: (extra_flow_dist.b = a.x)
+                                   ->  Materialize
+                                         Output: extra_flow_dist.c, extra_flow_dist.b
+                                         ->  Gather Motion 3:1  (slice3; segments: 3)
+                                               Output: extra_flow_dist.c, extra_flow_dist.b
+                                               ->  Seq Scan on subselect_gp.extra_flow_dist
+                                                     Output: extra_flow_dist.c, extra_flow_dist.b
+         ->  Seq Scan on subselect_gp.extra_flow_dist1
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+ Optimizer: Postgres query optimizer
+(28 rows)
+
+with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x  -- subplan's outer is the below entry locus path
+	) dt
+	from (select 1 x from pg_class limit 1) a  -- entry locus
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+     dt     | a  | b  
+------------+----+----
+ 10-01-1949 | 20 | 20
+ 10-01-1949 | 21 | 21
+ 10-01-1949 | 22 | 22
+(3 rows)
+
+-- case 4 subplan with outer segment general locus without param in subplan (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select x, y dt
+	from (select a x from extra_flow_rand ) a  -- segment general locus
+	left join (select max(1) y) aaa
+	on a.x > any (select random() from extra_flow_dist)  -- subplan's outer is the above segment general locus path
+)
+select * from run_dt, extra_flow_dist1
+where dt < extra_flow_dist1.a;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: extra_flow_rand.a, (max(1)), extra_flow_dist1.a, extra_flow_dist1.b
+   ->  Nested Loop
+         Output: extra_flow_rand.a, (max(1)), extra_flow_dist1.a, extra_flow_dist1.b
+         Join Filter: ((max(1)) < extra_flow_dist1.a)
+         ->  Nested Loop Left Join
+               Output: extra_flow_rand.a, (max(1))
+               Inner Unique: true
+               Join Filter: ((SubPlan 1))
+               ->  Seq Scan on subselect_gp.extra_flow_rand
+                     Output: extra_flow_rand.a, (SubPlan 1)
+                     SubPlan 1
+                       ->  Materialize
+                             Output: (random())
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                   Output: (random())
+                                   ->  Seq Scan on subselect_gp.extra_flow_dist
+                                         Output: random()
+               ->  Materialize
+                     Output: (max(1))
+                     ->  Aggregate
+                           Output: max(1)
+                           ->  Result
+         ->  Materialize
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+               ->  Seq Scan on subselect_gp.extra_flow_dist1
+                     Output: extra_flow_dist1.a, extra_flow_dist1.b
+ Optimizer: Postgres query optimizer
+(28 rows)
+
+-- case 5 for subplan with outer entry locus without param in subplan (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select x, y dt
+	from (select relnatts x from pg_class ) a  -- entry locus
+	left join (select max(1) y) aaa
+	on a.x > any (select random() from extra_flow_dist)  -- subplan's outer is the above entry loucs
+)
+select * from run_dt, extra_flow_dist1
+where dt < extra_flow_dist1.a;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: pg_class.relnatts, (max(1)), extra_flow_dist1.a, extra_flow_dist1.b
+   ->  Nested Loop
+         Output: pg_class.relnatts, (max(1)), extra_flow_dist1.a, extra_flow_dist1.b
+         Join Filter: ((max(1)) < extra_flow_dist1.a)
+         ->  Broadcast Motion 1:3  (slice2)
+               Output: pg_class.relnatts, (max(1))
+               ->  Nested Loop Left Join
+                     Output: pg_class.relnatts, (max(1))
+                     Inner Unique: true
+                     Join Filter: ((SubPlan 1))
+                     ->  Seq Scan on pg_catalog.pg_class
+                           Output: pg_class.relnatts, (SubPlan 1)
+                           SubPlan 1
+                             ->  Materialize
+                                   Output: (random())
+                                   ->  Gather Motion 3:1  (slice3; segments: 3)
+                                         Output: (random())
+                                         ->  Seq Scan on subselect_gp.extra_flow_dist
+                                               Output: random()
+                     ->  Materialize
+                           Output: (max(1))
+                           ->  Aggregate
+                                 Output: max(1)
+                                 ->  Result
+         ->  Materialize
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+               ->  Seq Scan on subselect_gp.extra_flow_dist1
+                     Output: extra_flow_dist1.a, extra_flow_dist1.b
+ Optimizer: Postgres query optimizer
+(30 rows)
+
+-- case 6 without CTE, nested subquery should not add extral flow
+explain (verbose, costs off) select * from (
+	select dt from (
+		select
+		(
+			select c from extra_flow_dist where b = x  -- subplan's outer is the below general locus path
+		) dt
+		from (select ( max(1) ) x) a  -- general locus
+		union
+		select
+		(
+			select c from extra_flow_dist where b = x  -- subplan's outer is the below general locus path
+		) dt
+		from (select ( max(1) ) x) aa  -- general locus
+	) tbl
+) run_dt,
+extra_flow_dist1
+where dt < '2010-01-01'::date;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: tbl.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   ->  Nested Loop
+         Output: tbl.dt, extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Subquery Scan on tbl
+               Output: tbl.dt
+               Filter: (tbl.dt < '01-01-2010'::date)
+               ->  HashAggregate
+                     Output: ((SubPlan 1))
+                     Group Key: ((SubPlan 1))
+                     ->  Append
+                           ->  Subquery Scan on a
+                                 Output: (SubPlan 1)
+                                 ->  Aggregate
+                                       Output: max(1)
+                                       ->  Result
+                                 SubPlan 1
+                                   ->  Result
+                                         Output: extra_flow_dist.c
+                                         Filter: (extra_flow_dist.b = a.x)
+                                         ->  Materialize
+                                               Output: extra_flow_dist.c, extra_flow_dist.b
+                                               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                     Output: extra_flow_dist.c, extra_flow_dist.b
+                                                     ->  Seq Scan on subselect_gp.extra_flow_dist
+                                                           Output: extra_flow_dist.c, extra_flow_dist.b
+                           ->  Subquery Scan on aa
+                                 Output: (SubPlan 2)
+                                 ->  Aggregate
+                                       Output: max(1)
+                                       ->  Result
+                                 SubPlan 2
+                                   ->  Result
+                                         Output: extra_flow_dist_1.c
+                                         Filter: (extra_flow_dist_1.b = aa.x)
+                                         ->  Materialize
+                                               Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                                               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                                     Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                                                     ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_1
+                                                           Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+         ->  Seq Scan on subselect_gp.extra_flow_dist1
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+ Optimizer: Postgres query optimizer
+(44 rows)
+

@@ -74,6 +74,7 @@
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"		/* apply_shareinput */
 #include "cdb/cdbpath.h"		/* cdbpath_segments */
+#include "cdb/cdbpathtoplan.h"
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbgroup.h"
 #include "cdb/cdbgroupingpaths.h"		/* create_grouping_paths() extensions */
@@ -545,6 +546,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	}
 
 	top_plan = create_plan(root, best_path, top_slice);
+	/* Decorate the top node of the plan with a Flow node. */
+	top_plan->flow = cdbpathtoplan_create_flow(root, best_path->locus);
 
 	/*
 	 * If creating a plan for a scrollable cursor, make sure it can run

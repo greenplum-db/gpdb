@@ -46,6 +46,7 @@
 
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
+#include "cdb/cdbpathtoplan.h"
 #include "cdb/cdbsubselect.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
@@ -395,6 +396,8 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 	subroot->curSlice->gangType = GANGTYPE_UNALLOCATED;
 
 	plan = create_plan(subroot, best_path, subroot->curSlice);
+	/* Decorate the top node of the plan with a Flow node. */
+	plan->flow = cdbpathtoplan_create_flow(subroot, best_path->locus);
 
 	/* And convert to SubPlan or InitPlan format. */
 	result = build_subplan(root, plan, subroot, plan_params,
@@ -442,6 +445,8 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 			subroot->curSlice->gangType = GANGTYPE_UNALLOCATED;
 
 			plan = create_plan(subroot, best_path, subroot->curSlice);
+			/* Decorate the top node of the plan with a Flow node. */
+			plan->flow = cdbpathtoplan_create_flow(subroot, best_path->locus);
 
 			/* Now we can check if it'll fit in work_mem */
 			/* XXX can we check this at the Path stage? */

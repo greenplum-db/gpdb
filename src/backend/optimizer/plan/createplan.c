@@ -385,9 +385,6 @@ create_plan(PlannerInfo *root, Path *best_path, PlanSlice *curSlice)
 			apply_tlist_labeling(topplan->targetlist, root->processed_tlist);
 	}
 
-	/* Decorate the top node of the plan with a Flow node. */
-	plan->flow = cdbpathtoplan_create_flow(root, best_path->locus);
-
 	/*
 	 * Attach any initPlans created in this query level to the topmost plan
 	 * node.  (In principle the initplans could go in any plan node at or
@@ -2586,6 +2583,9 @@ create_minmaxagg_plan(PlannerInfo *root, MinMaxAggPath *best_path)
 		 * recurse to create_plan not create_plan_recurse.
 		 */
 		plan = create_plan(subroot, mminfo->path, root->curSlice);
+
+		/* Decorate the top node of the plan with a Flow node. */
+		plan->flow = cdbpathtoplan_create_flow(root, mminfo->path->locus);
 
 		plan = (Plan *) make_limit(plan,
 								   subparse->limitOffset,
