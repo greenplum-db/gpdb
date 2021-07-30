@@ -36,16 +36,6 @@ EXPLAIN (COSTS false) DECLARE c1 SCROLL PARALLEL RETRIEVE CURSOR FOR SELECT * FR
 ERROR:  SCROLL is not allowed for the PARALLEL RETRIEVE CURSORs
 DETAIL:  Scrollable cursors can not be parallel
 
--- Test for default distributed table
-EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM t1;
- QUERY PLAN                               
-------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) 
-   Output: a, ctid, gp_segment_id         
-   ->  Seq Scan on public.t1              
-         Output: a, ctid, gp_segment_id   
- Optimizer: Postgres query optimizer      
-(5 rows)
 -- Test: explain output: Endpoint info (on master/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
  QUERY PLAN                          
@@ -88,14 +78,6 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
  Optimizer: Postgres query optimizer     
 (5 rows)
 
--- Test for system table which is accesssible on master
-EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM pg_class;
- QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                               
-   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions, ctid, gp_segment_id 
- Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                           
-(3 rows)
 -- Test: explain output: Endpoint info (on master/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class;
  QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -136,14 +118,6 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
 (5 rows)
 
 -- Test for UDF which can be executed on master
-EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM generate_series(1,10) as F;
- QUERY PLAN                                    
------------------------------------------------
- Function Scan on pg_catalog.generate_series f 
-   Output: f                                   
-   Function Call: generate_series(1, 10)       
- Optimizer: Postgres query optimizer           
-(4 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F;
  QUERY PLAN                                    
 -----------------------------------------------
@@ -186,16 +160,6 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
  Optimizer: Postgres query optimizer           
 (6 rows)
 
--- Test for replicated distributed table
-EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM rt1;
- QUERY PLAN                               
-------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1) 
-   Output: a                              
-   ->  Seq Scan on public.rt1             
-         Output: a                        
- Optimizer: Postgres query optimizer      
-(5 rows)
 -- Test: explain output: Endpoint info (on master/on some segments/on all segments)
 -- Here because replicated table will execute on seg id: session_id % segment_number
 -- Just replace the random specific seg id to SEGIDX for the output
