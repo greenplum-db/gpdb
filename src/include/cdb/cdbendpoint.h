@@ -3,21 +3,18 @@
  *	  Functions supporting the Greenplum Endpoint PARALLEL RETRIEVE CURSOR.
  *
  * The PARALLEL RETRIEVE CURSOR is introduced to reduce the heavy burdens of
- * master node. If possible it will not gather the result to master, and
- * redirect the result to segments. However some query may still need to
- * gather to the master. So the ENDPOINT is introduced to present these
- * node entities that when the PARALLEL RETRIEVE CURSOR executed, the query result
- * will be redirected to, not matter they are one master or some segments
- * or all segments.
+ * the coordinator node. If possible it will not gather the result, but keep
+ * the result on segments. However some query may still need to gather to the
+ * coordinator, so the ENDPOINT is introduced to present these node entities
+ * that when the PARALLEL RETRIEVE CURSOR executed, the query result will be
+ * redirected to, not matter they are the coordinator, some segments or all
+ * segments.
  *
- * When the PARALLEL RETRIEVE CURSOR executed, user can setup retrieve mode connection
- * (in retrieve mode connection, the libpq authentication will not depends on
- * pg_hba) to all endpoints for retrieving result data parallelly. The RETRIEVE
- * statement behavior is similar to the "FETCH count" statement, while it only
- * can be executed in retrieve mode connection to endpoint.
- *
- * #NOTE: ORCA does not support PARALLEL RETRIEVE CURSOR for now. It should
- * fall back to postgres optimizer.
+ * When the PARALLEL RETRIEVE CURSOR is executed, user can setup a retrieve
+ * only connection (in a retrieve connection, the libpq authentication will not
+ * depends on pg_hba) to all endpoints for retrieving result data in parallel.
+ * The RETRIEVE statement behavior is similar to the "FETCH count" statement,
+ * while it only can be executed in retrieve connections.
  *
  * Copyright (c) 2020-Present VMware, Inc. or its affiliates
  *

@@ -1,9 +1,6 @@
 /*
  * src/test/examples/test_parallel_cursor_extended_query.c
  *
- *
- * test_parallel_cursor_extended_query.c
- *
  * this program is to show extended query with the PARALLEL RETRIEVE CURSOR.
  */
 #include <stdio.h>
@@ -312,8 +309,8 @@ main(int argc, char **argv)
 	pgoptions = NULL;			/* special options to start up the backend
 								 * server */
 	pgoptions_retrieve_mode = "-c gp_retrieve_conn=true";/* specify this
-														 * connection is in the
-														 * retrieve mode */
+														 * connection is for
+														 * retrieve only */
 	pgtty = NULL;				/* debugging tty for the backend */
 
 	/* make a connection to the database */

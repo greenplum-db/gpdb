@@ -1,13 +1,12 @@
 /*
- * src/test/examples/test_parallel_cursor_wait.c
+ * src/test/examples/test_parallel_retrieve_cursor_wait.c
  *
- *
- * test_parallel_cursor_wait.c
- *		this program only support gpdb with the PARALLEL RETRIEVE CURSOR feature. It shows how to
- * use LIBPQ to make a connect to gpdb master node and create a PARALLEL RETRIEVE CURSOR and check
- * it's status in wait mode, and how to make multiple retrieve mode connections to all endpoints
- * of the PARALLEL RETRIEVE CURSOR (i.e. gpdb all segment nodes in this sample) and parallelly
- * retrieve the results of these endpoints.
+ * this program only supports gpdb with the PARALLEL RETRIEVE CURSOR feature.
+ * It shows how to use libpq to make a connect to the coordinator node, create
+ * a PARALLEL RETRIEVE CURSOR, check it's state in wait mode, and test multiple
+ * retrieve mode connections to all endpoints for the PARALLEL RETRIEVE CURSOR
+ * (i.e. all segments in this sample) and retrieve the results of these
+ * endpoints in parallel.
  */
 #include <stdio.h>
 #include <string.h>
@@ -184,8 +183,8 @@ main(int argc, char **argv)
 	pgoptions = NULL;			/* special options to start up the backend
 								 * server */
 	pgoptions_retrieve_mode = "-c gp_retrieve_conn=true";/* specify this
-														 * connection is in the
-														 * retrieve mode */
+														 * connection is for
+														 * retrieve only */
 	pgtty = NULL;				/* debugging tty for the backend */
 
 	/* make a connection to the database */
@@ -199,7 +198,7 @@ main(int argc, char **argv)
 		goto LABEL_ERR;
 
 	/*
-	 * start a transaction block because PARALLEL RETRIEVE CURSOR only support
+	 * start a transaction block because PARALLEL RETRIEVE CURSOR only supports
 	 * WITHOUT HOLD option
 	 */
 	if (exec_sql_without_resultset(master_conn, "BEGIN;", MASTER_CONNECT_INDEX) != 0)
@@ -316,7 +315,6 @@ main(int argc, char **argv)
 	if (exec_sql_without_resultset(master_conn, "END;", MASTER_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
 
-/*	 fclose(debug); */
 	retVal = 0;
 	goto LABEL_FINISH;
 

@@ -1,13 +1,12 @@
 /*
- * src/test/examples/test_parallel_cursor_nowait.c
+ * src/test/examples/test_parallel_retrieve_cursor_nowait.c
  *
- *
- * test_parallel_cursor_nowait.c
- *		this program only support gpdb with the PARALLEL RETRIEVE CURSOR feature. It shows how to
- * use LIBPQ to make a connect to gpdb master node and create a PARALLEL RETRIEVE CURSOR and check
- * it's status in nowait mode, and how to make multiple retrieve mode connections to all endpoints
- * of the PARALLEL RETRIEVE CURSOR (i.e. gpdb all segment nodes in this sample) and parallelly
- * retrieve the results of these endpoints.
+ * this program only support gpdb with the PARALLEL RETRIEVE CURSOR feature.
+ * It shows how to use libpq to make a connection to gpdb coordinator node,
+ * create a PARALLEL RETRIEVE CURSOR, check its state in nowait mode and test
+ * multiple retrieve mode connections to all endpoints for the PARALLEL
+ * RETRIEVE CURSOR (i.e. all segments in this sample) and retrieve the results
+ * from these endpoints in parallel.
  */
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +37,7 @@ check_prepare_conn(PGconn *conn, const char *dbName, int conn_idx)
 {
 	PGresult   *res;
 
-	/* check to see that the backend connection was successfully made */
+	/* check that the backend connection was successfully made */
 	if (PQstatus(conn) != CONNECTION_OK)
 	{
 		fprintf(stderr, "Connection to database \"%s\" failed: %s",
@@ -130,7 +129,7 @@ exec_sql_with_resultset(PGconn *conn, const char *sql, int conn_idx)
 	return 0;
 }
 
-/* this function is in the master connection */
+/* this function is in the coordinator connection */
 static int
 exec_check_parallel_cursor(PGconn *master_conn, int isCheckFinish)
 {
@@ -221,8 +220,8 @@ main(int argc, char **argv)
 	pgoptions = NULL;			/* special options to start up the backend
 								 * server */
 	pgoptions_retrieve_mode = "-c gp_retrieve_conn=true";/* specify this
-														 * connection is in the
-														 * retrieve mode */
+														 * connection is for
+														 * retrieve only */
 	pgtty = NULL;				/* debugging tty for the backend */
 
 	/* make a connection to the database */
@@ -236,7 +235,7 @@ main(int argc, char **argv)
 		goto LABEL_ERR;
 
 	/*
-	 * start a transaction block because PARALLEL RETRIEVE CURSOR only support
+	 * start a transaction block because PARALLEL RETRIEVE CURSOR only supports
 	 * WITHOUT HOLD option
 	 */
 	if (exec_sql_without_resultset(master_conn, "BEGIN;", MASTER_CONNECT_INDEX) != 0)
@@ -344,7 +343,6 @@ main(int argc, char **argv)
 		goto LABEL_ERR;
 
 
-/*	 fclose(debug); */
 	retVal = 0;
 	goto LABEL_FINISH;
 

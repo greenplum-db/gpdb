@@ -264,7 +264,7 @@ get_endpoint_from_retrieve_exec_entry(RetrieveExecEntry * entry, bool noError)
 }
 
 /*
- * start_retrieve - start to retrieve a endpoint.
+ * start_retrieve - start to retrieve an endpoint.
  *
  * Initialize current retrieve RetrieveExecEntry for the given
  * endpoint if it's the first time to retrieve the endpoint.
@@ -345,8 +345,8 @@ start_retrieve(const char *endpointName)
 }
 
 /*
- * validate_retrieve_endpoint - after find the retrieve endpoint,
- * validate whether it meets the requirements.
+ * validate_retrieve_endpoint - after finding the retrieve endpoint,
+ * validate whether it meets the requirement.
  */
 static void
 validate_retrieve_endpoint(Endpoint endpoint, const char *endpointName)
@@ -386,7 +386,6 @@ validate_retrieve_endpoint(Endpoint endpoint, const char *endpointName)
 
 	if (endpoint->receiverPid != InvalidPid && endpoint->receiverPid != MyProcPid)
 	{
-		/* already attached by other process before */
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("endpoint %s was already attached by receiver(pid: %d)",
@@ -414,7 +413,7 @@ attach_receiver_mq(RetrieveExecEntry * entry, dsm_handle dsmHandle)
 
 	/*
 	 * Store the result slot all the retrieve mode QE life cycle, we only have
-	 * one chance to built it.
+	 * one chance to build it.
 	 */
 	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
 
@@ -445,7 +444,7 @@ attach_receiver_mq(RetrieveExecEntry * entry, dsm_handle dsmHandle)
 	else
 		entry->retrieveTs = MakeTupleTableSlot(td, &TTSOpsHeapTuple);
 
-	/* */
+	/* Create the tuple queue reader. */
 	entry->tqReader = CreateTupleQueueReader(entry->mqHandle);
 	entry->retrieveState = RETRIEVE_STATE_ATTACHED;
 
@@ -486,7 +485,7 @@ notify_sender(RetrieveExecEntry *entry, bool finished)
 /*
  * Read a tuple from shared memory message queue.
  *
- * When read all tuples, should tell endpoint/sender that the retrieve is done.
+ * When reading all tuples, should tell sender that retrieve is done.
  */
 static TupleTableSlot *
 receive_tuple_slot(RetrieveExecEntry * entry)
@@ -564,15 +563,15 @@ receive_tuple_slot(RetrieveExecEntry * entry)
 /*
  * finish_retrieve - Finish a retrieve statement.
  *
- * When finish retrieve statement, if this process have not yet finish this
- * message queue reading, then don't reset it's pid.
+ * When finishing retrieve statement, if this process have not yet finished this
+ * message queue reading, then don't reset its pid.
  *
- * If current retrieve statement retrieve all tuples from endpoint. Set endpoint's
- * state to ENDPOINTSTATE_FINISHED.
- * Otherwise, set endpoint's status from ENDPOINTSTATE_RETRIEVING to ENDPOINTSTATE_ATTACHED.
+ * If current retrieve statement retrieve all tuples from endpoint. Set
+ * endpoint state to ENDPOINTSTATE_FINISHED.  Otherwise, set endpoint's status
+ * from ENDPOINTSTATE_RETRIEVING to ENDPOINTSTATE_ATTACHED.
  *
  * Note: don't drop the result slot, we only have one chance to built it.
- * Errors in these function is not expect to be raised.
+ * Errors in these function is not expected to be raised.
  */
 static void
 finish_retrieve(RetrieveExecEntry * entry, bool resetPID)
@@ -728,11 +727,10 @@ retrieve_exit_callback(int code, Datum arg)
 /*
  * Retrieve role xact abort callback.
  *
- * If normal abort, finish_retrieve and retrieve_cancel_action will only
- * be called once in current function for current endpoint_name.
- *
- * Buf if it's proc exit, these two methods will be called twice for current
- * endpoint_name. Since we call these two methods before dsm detach.
+ * If normal abort, finish_retrieve() and retrieve_cancel_action() will be
+ * called once in current function for current endpoint_name. but if it's proc
+ * exit, these two methods will be called twice for current endpoint_name,
+ * since we call these two methods before dsm detach.
  */
 static void
 retrieve_xact_callback(XactEvent ev, void *arg pg_attribute_unused())

@@ -2,9 +2,8 @@
  * src/test/examples/test_parallel_cursor_extended_query_error.c
  *
  *
- * test_parallel_cursor_extended_query_error.c
- *
- * this program is to test: RETRIEVE statement not allowed in the non-retrieve mode for extended query protocol.
+ * this program is to test: RETRIEVE statement not allowed in the non-retrieve
+ * mode for extended query protocol.
  */
 #include <stdio.h>
 #include <string.h>

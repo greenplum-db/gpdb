@@ -81,8 +81,7 @@
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 
-/* The timeout before returns failure for endpoints initialization, in milliseconds */
-#define WAIT_NORMAL_TIMEOUT				100
+#define WAIT_ENDPOINT_TIMEOUT				100
 
 /*
  * The size of endpoint tuple queue in bytes.
@@ -116,8 +115,10 @@ typedef struct SessionInfoEntry
 
 	/* The auth token for this session. */
 	int8		token[ENDPOINT_TOKEN_HEX_LEN];
+
 	/* How many endpoints are referred to this entry. */
 	uint16		refCount;
+
 }	SessionInfoEntry;
 
 /* Shared hash table for session infos */
@@ -288,8 +289,9 @@ EndpointNotifyQD(const char *message)
 }
 
 /*
- * Creates a dest receiver for PARALLEL RETRIEVE CURSOR. The dest receiver is
- * based on shm_mq that is used by the upstream parallel work.
+ * Allocate and initialize an endpoint and then create a dest receiver for
+ * PARALLEL RETRIEVE CURSOR. The dest receiver is based on shm_mq that is used
+ * by the upstream parallel work.
  */
 void
 SetupEndpointExecState(TupleDesc tupleDesc, const char *cursorName,
@@ -320,9 +322,8 @@ SetupEndpointExecState(TupleDesc tupleDesc, const char *cursorName,
 	state->dest = endpointDest;
 }
 
-
 /*
- * DestroyEndpointExecState - destroy TupleQueueDestReceiver
+ * Wait until the endpoint finishes and then clean up.
  *
  * If the queue is large enough for tuples to send, must wait for a receiver
  * to attach the message queue before endpoint detaches the message queue.
@@ -642,7 +643,7 @@ wait_receiver(EndpointExecState *state)
 		wr = WaitLatchOrSocket(&state->endpoint->ackDone,
 							   WL_LATCH_SET | WL_POSTMASTER_DEATH | WL_TIMEOUT | WL_SOCKET_READABLE,
 							   MyProcPort->sock,
-							   WAIT_NORMAL_TIMEOUT,
+							   WAIT_ENDPOINT_TIMEOUT,
 							   PG_WAIT_PARALLEL_RETRIEVE_CURSOR);
 
 		if (wr & WL_SOCKET_READABLE)
@@ -770,7 +771,7 @@ abort_endpoint(EndpointExecState *state)
 }
 
 /*
- * Wait for PARALLEL RETRIEVE CURSOR cleanup after endpoint send all data.
+ * Wait for PARALLEL RETRIEVE CURSOR cleanup after the endpoint sends all data.
  *
  * If all data get sent, hang the process and wait for QD to close it.
  * The purpose is to not clean up Endpoint entry until
@@ -793,7 +794,7 @@ wait_parallel_retrieve_close(void)
 		wr = WaitLatchOrSocket(&MyProc->procLatch,
 							   WL_LATCH_SET | WL_POSTMASTER_DEATH | WL_TIMEOUT | WL_SOCKET_READABLE,
 							   MyProcPort->sock,
-							   WAIT_NORMAL_TIMEOUT,
+							   WAIT_ENDPOINT_TIMEOUT,
 							   PG_WAIT_PARALLEL_RETRIEVE_CURSOR);
 
 		if (wr & WL_POSTMASTER_DEATH)
@@ -871,7 +872,6 @@ free_endpoint(Endpoint endpoint)
 Endpoint
 get_endpointdesc_by_index(int index)
 {
-	Assert(sharedEndpoints);
 	Assert(index > -1 && index < MAX_ENDPOINT_SIZE);
 	return &sharedEndpoints[index];
 }

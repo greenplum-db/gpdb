@@ -137,11 +137,11 @@ gp_wait_parallel_retrieve_cursor(PG_FUNCTION_ARGS)
  * gp_check_parallel_retrieve_cursor
  * gp_wait_parallel_retrieve_cursor
  *
- * Check whether given parallel retrieve cursor is finished.
+ * Check whether given parallel retrieve cursor is finishes.
  * If wait is true, hang until parallel retrieve cursor finished.
  *
- * Return true means finished.
- * Error out when parallel retrieve cursor has exception raised.
+ * Return true means finished. Error out when parallel retrieve cursor has
+ * exception raised.
  */
 static bool
 check_parallel_retrieve_cursor(const char *cursorName, bool wait)

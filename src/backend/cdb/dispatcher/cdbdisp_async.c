@@ -74,9 +74,9 @@ typedef struct CdbDispatchCmdAsync
 	volatile DispatchWaitMode waitMode;
 
 	/*
-	 * When waitMode is set to DISPATCH_WAIT_ACK_ROOT/DISPATCH_WAIT_ACK_ALL, the expected
-	 * acknowledge message from QE should be specified. This field stores the
-	 * expected acknowledge message.
+	 * When waitMode is set to DISPATCH_WAIT_ACK_ROOT/DISPATCH_WAIT_ACK_ALL,
+	 * the expected acknowledge message from QE should be specified. This field
+	 * stores the expected acknowledge message.
 	 */
 	const char	*ackMessage;
 
@@ -329,11 +329,11 @@ cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
  * Check the specified acknowledge messages from QEs.
  *
  * Check all dispatch connections to get expected acknowledge message.
- * Return true if receive all QEs' acknowledge message.
+ * Return true if receive all required QEs' acknowledge message.
  *
  * message: specifies the expected ACK message to check.
  * wait: if true, this function will wait until required ACK messages
- *       have been received from all QEs.
+ *       have been received from all required QEs.
  * waitMode: DISPATCH_WAIT_ACK_ROOT only waits ACK of the root slice;
  *           DISPATCH_WAIT_ACK_ALL waits ACK of all slices.
  */
@@ -348,7 +348,7 @@ cdbdisp_checkAckMessage_async(struct CdbDispatcherState *ds, const char *message
 	Assert(ds);
 
 	pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
-	/* cdbdisp_destroyDispatcherState is called */
+	/* If cdbdisp_destroyDispatcherState is called */
 	if (pParms == NULL || message == NULL)
 		return false;
 
@@ -519,7 +519,6 @@ checkDispatchResult(CdbDispatcherState *ds,
 			if (!dispatchResult->stillRunning)
 				continue;
 
-
 			Assert(!cdbconn_isBadConnection(segdbDesc));
 
 			/*
@@ -549,7 +548,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 		}
 
 		/*
-		 * Break out when no QEs still running or the root slice all acked.
+		 * Break out when no QEs still running or required QEs acked.
 		 */
 		if (nfds <= 0 ||
 			(pParms->waitMode == DISPATCH_WAIT_ACK_ROOT && ack_count == ds->rootGangSize) ||

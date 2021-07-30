@@ -117,6 +117,9 @@ example, if login the database with "user1", then set role to another user
 is user1's oid, not user2's oid. The session user should be used to start
 a retrieve connection. 
 
+There is another similar gp_session_endpoints() that shows the endpoint
+informations that belong to this session only.
+
 Start A Retrieve Session
 ========================
 

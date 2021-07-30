@@ -686,8 +686,6 @@ extern int  gp_debug_linger;
 
 #define UNSET_SLICE_ID -1
 extern int	currentSliceId;
-/* The root slice->sliceIndex of the main plan is always 0. */
-#define IS_ROOT_SLICE_FOR_MAIN_PLAN(slice) (slice->sliceIndex == 0)
 
 extern int cdb_total_plans;
 /* Enable ading the cost for walking the chain in the hash join. */

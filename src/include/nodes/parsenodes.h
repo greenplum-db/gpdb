@@ -3991,6 +3991,7 @@ typedef struct AlterPublicationStmt
 	DefElemAction tableAction;	/* What action to perform with the tables */
 } AlterPublicationStmt;
 
+
 typedef struct CreateSubscriptionStmt
 {
 	NodeTag		type;
