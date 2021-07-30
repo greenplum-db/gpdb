@@ -2856,26 +2856,6 @@ class gpload:
         self.rowsInserted = 0 # MPP-13024. No rows inserted yet (only to temp table).
         self.do_update(self.staging_table_name, 0)
 		
-        # delete the updated rows in staging table for merge
-        # so we can directly insert new rows left in staging table
-        # and avoid left outer join when insert new rows which is poor in performance
-
-        match = self.map_stuff('gpload:output:match_columns'
-                            , lambda x,y:'staging_table.%s=into_table.%s' % (x, y)
-                            , 0)
-        sql = 'DELETE FROM %s staging_table '% self.staging_table_name
-        sql += 'USING %s into_table WHERE '% self.get_qualified_tablename()
-        sql += ' %s' % ' AND '.join(match)
-
-        self.log(self.LOG, sql)
-        if not self.options.D:
-            try:
-                self.db.query(sql.encode('utf-8'))
-            except Exception as e:
-                strE = unicode(str(e), errors = 'ignore')
-                strF = unicode(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
-
         # insert new rows to the target table
 
         match = self.map_stuff('gpload:output:match_columns',lambda x,y:'into_table.%s=from_table.%s'%(x,y),0)
@@ -2887,7 +2867,12 @@ class gpload:
         sql += '(SELECT %s ' % ','.join(map(lambda a:'from_table.%s' % a[0], cols))
         sql += 'FROM (SELECT *, row_number() OVER (PARTITION BY %s) AS gpload_row_number ' % ','.join(matchColumns)
         sql += 'FROM %s) AS from_table ' % self.staging_table_name
-        sql += 'WHERE gpload_row_number=1)'
+        sql += 'LEFT OUTER JOIN %s into_table ' % self.get_qualified_tablename()
+        sql += 'ON %s '%' AND '.join(match)
+        where = self.map_stuff('gpload:output:match_columns',lambda x,y:'(into_table.%s IS NULL OR CAST(into_table.%s AS varchar) = \'\')'%(x,x),0)
+        sql += 'WHERE %s ' % ' AND '.join(where)
+        sql += 'AND gpload_row_number=1)'
+
         self.log(self.LOG, sql)
         if not self.options.D:
             try:

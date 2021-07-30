@@ -1,11 +1,11 @@
 Traceback (most recent call last):
-  File "pathto/gpload.py", line 3072, in <module>
+  File "pathto/gpload.py", line 3057, in <module>
     g = gpload(sys.argv[1:])
   File "pathto/gpload.py", line 1230, in __init__
     sys.stderr.write("Option %s needs a parameter.\n"%argv[0])
 IndexError: list index out of range
 Traceback (most recent call last):
-  File "pathto/gpload.py", line 3072, in <module>
+  File "pathto/gpload.py", line 3057, in <module>
     g = gpload(sys.argv[1:])
   File "pathto/gpload.py", line 1230, in __init__
     sys.stderr.write("Option %s needs a parameter.\n"%argv[0])
