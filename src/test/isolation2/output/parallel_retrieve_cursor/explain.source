@@ -78,6 +78,15 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
  Optimizer: Postgres query optimizer     
 (5 rows)
 
+-- Test for system table which is accesssible on master
+EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM pg_class;
+ QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                               
+   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions, ctid, gp_segment_id 
+ Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                           
+(3 rows)
+
 -- Test: explain output: Endpoint info (on master/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class;
  QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
