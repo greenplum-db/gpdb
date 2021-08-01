@@ -19,7 +19,8 @@
 #define MAX_ENDPOINT_SIZE				1024
 #define ENDPOINT_TOKEN_HEX_LEN			16
 #define ENDPOINT_TOKEN_STR_LEN			(ENDPOINT_TOKEN_HEX_LEN<<1)
-#define InvalidEndpointSessionId		(-1) /* follows invalid gp_session_id */
+#define InvalidEndpointSessionId		(-1)	/* follows invalid
+												 * gp_session_id */
 
 #define ENDPOINT_KEY_TUPLE_DESC_LEN		1
 #define ENDPOINT_KEY_TUPLE_DESC			2
@@ -54,4 +55,4 @@ extern void endpoint_token_str2hex(int8 *token, const char *tokenStr);
 extern void endpoint_token_hex2str(const int8 *token, char *tokenStr);
 extern char *state_enum_to_string(EndpointState state);
 
-#endif   /* CDBENDPOINTINTERNAL_H */
+#endif							/* CDBENDPOINTINTERNAL_H */

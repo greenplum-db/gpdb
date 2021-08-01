@@ -97,13 +97,13 @@
 #define DUMMY_CURSOR_NAME	"DUMMYCURSORNAME"
 #endif
 
-static EndpointExecState *CurrEndpointExecState;
+static EndpointExecState * CurrEndpointExecState;
 
 typedef struct SessionTokenTag
 {
 	int			sessionID;
 	Oid			userID;
-}	SessionTokenTag;
+}			SessionTokenTag;
 
 /*
  * sharedSessionInfoHash is located in shared memory on each segment for
@@ -119,7 +119,7 @@ typedef struct SessionInfoEntry
 	/* How many endpoints are referred to this entry. */
 	uint16		refCount;
 
-}	SessionInfoEntry;
+}			SessionInfoEntry;
 
 /* Shared hash table for session infos */
 static HTAB *sharedSessionInfoHash = NULL;
@@ -138,13 +138,13 @@ static void EndpointNotifyQD(const char *message);
 static Endpoint alloc_endpoint(const char *cursorName, dsm_handle dsmHandle);
 static void free_endpoint(Endpoint endpoint);
 static void create_and_connect_mq(TupleDesc tupleDesc,
-					  dsm_segment **mqSeg /* out */ ,
-					  shm_mq_handle **mqHandle /* out */ );
+								  dsm_segment **mqSeg /* out */ ,
+								  shm_mq_handle **mqHandle /* out */ );
 static void detach_mq(dsm_segment *dsmSeg);
 static void setup_session_info_entry(void);
-static void wait_receiver(EndpointExecState *state);
+static void wait_receiver(EndpointExecState * state);
 static void unset_endpoint_sender_pid(Endpoint endPoint);
-static void abort_endpoint(EndpointExecState *state);
+static void abort_endpoint(EndpointExecState * state);
 static void wait_parallel_retrieve_close(void);
 
 /* utility */
@@ -159,12 +159,13 @@ EndpointShmemSize(void)
 	Size		size;
 
 	size = MAXALIGN(mul_size(MAX_ENDPOINT_SIZE, sizeof(struct EndpointData)));
+
 	/*
 	 * Maximum parallel retrieve cursor session number should be no more than
 	 * the maximum endpoint number, so use MAX_ENDPOINT_SIZE here.
 	 */
 	size = add_size(
-	  size, hash_estimate_size(MAX_ENDPOINT_SIZE, sizeof(SessionInfoEntry)));
+					size, hash_estimate_size(MAX_ENDPOINT_SIZE, sizeof(SessionInfoEntry)));
 	return size;
 }
 
@@ -199,7 +200,7 @@ EndpointShmemInit(void)
 static void
 InitSharedEndpoints()
 {
-	Endpoint endpoints = sharedEndpoints;
+	Endpoint	endpoints = sharedEndpoints;
 
 	for (int i = 0; i < MAX_ENDPOINT_SIZE; ++i)
 	{
@@ -295,10 +296,10 @@ EndpointNotifyQD(const char *message)
  */
 void
 SetupEndpointExecState(TupleDesc tupleDesc, const char *cursorName,
-					   EndpointExecState *state)
+					   EndpointExecState * state)
 {
-	shm_mq_handle	*shmMqHandle;
-	DestReceiver	*endpointDest;
+	shm_mq_handle *shmMqHandle;
+	DestReceiver *endpointDest;
 
 	/*
 	 * The message queue needs to be created first since the dsm_handle has to
@@ -318,7 +319,7 @@ SetupEndpointExecState(TupleDesc tupleDesc, const char *cursorName,
 	 * message to QD so DECLARE PARALLEL RETRIEVE CURSOR statement can finish.
 	 */
 	EndpointNotifyQD(ENDPOINT_READY_ACK_MSG);
-	endpointDest	= CreateTupleQueueDestReceiver(shmMqHandle);
+	endpointDest = CreateTupleQueueDestReceiver(shmMqHandle);
 	state->dest = endpointDest;
 }
 
@@ -333,16 +334,16 @@ SetupEndpointExecState(TupleDesc tupleDesc, const char *cursorName,
  * Should also clean all other endpoint info here.
  */
 void
-DestroyEndpointExecState(EndpointExecState *state)
+DestroyEndpointExecState(EndpointExecState * state)
 {
-	DestReceiver	*endpointDest = state->dest;
+	DestReceiver *endpointDest = state->dest;
 
 	Assert(state->endpoint);
 	Assert(state->dsmSeg);
 
 	/*
-	 * wait for receiver to start tuple retrieving. ackDone latch will
-	 * be reset to be re-used when retrieving finished. See notify_sender()
+	 * wait for receiver to start tuple retrieving. ackDone latch will be
+	 * reset to be re-used when retrieving finished. See notify_sender()
 	 * callers.
 	 */
 	wait_receiver(state);
@@ -406,7 +407,7 @@ alloc_endpoint(const char *cursorName, dsm_handle dsmHandle)
 	session_dsm_handle = GetSessionDsmHandle();
 	if (session_dsm_handle == DSM_HANDLE_INVALID)
 		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-				errmsg("failed to create the per-session DSM segment.")));
+						errmsg("failed to create the per-session DSM segment.")));
 
 	LWLockAcquire(ParallelCursorEndpointLock, LW_EXCLUSIVE);
 
@@ -627,7 +628,7 @@ checkQDConnectionAlive()
  * from the queue, the queue will be not available for receiver.
  */
 static void
-wait_receiver(EndpointExecState *state)
+wait_receiver(EndpointExecState * state)
 {
 	elog(DEBUG3, "CDB_ENDPOINTS: wait receiver.");
 	while (true)
@@ -665,7 +666,7 @@ wait_receiver(EndpointExecState *state)
 			proc_exit(0);
 		}
 
-		if(wr & WL_LATCH_SET)
+		if (wr & WL_LATCH_SET)
 		{
 			elog(DEBUG3, "CDB_ENDPOINT:sender reset latch in wait_receiver()");
 			ResetLatch(&state->endpoint->ackDone);
@@ -725,15 +726,16 @@ unset_endpoint_sender_pid(Endpoint endpoint)
  * abort_endpoint - xact abort routine for endpoint
  */
 static void
-abort_endpoint(EndpointExecState *state)
+abort_endpoint(EndpointExecState * state)
 {
 	if (state->dest)
 	{
 		/*
-		 * rShutdown callback will call shm_mq_detach(),
-		 * so need to call it before detach_mq() to clean up.
+		 * rShutdown callback will call shm_mq_detach(), so need to call it
+		 * before detach_mq() to clean up.
 		 */
-		DestReceiver    *endpointDest = state->dest;
+		DestReceiver *endpointDest = state->dest;
+
 		(*endpointDest->rShutdown) (endpointDest);
 		(*endpointDest->rDestroy) (endpointDest);
 		state->dest = NULL;
@@ -742,6 +744,7 @@ abort_endpoint(EndpointExecState *state)
 	if (state->endpoint)
 	{
 		LWLockAcquire(ParallelCursorEndpointLock, LW_EXCLUSIVE);
+
 		/*
 		 * These two better be called in one lock section. So retriever abort
 		 * will not execute extra works.
@@ -858,7 +861,7 @@ free_endpoint(Endpoint endpoint)
 	tag.sessionID = endpoint->sessionID;
 	tag.userID = endpoint->userID;
 	infoEntry = (SessionInfoEntry *) hash_search(
-							   sharedSessionInfoHash, &tag, HASH_FIND, NULL);
+												 sharedSessionInfoHash, &tag, HASH_FIND, NULL);
 	if (infoEntry)
 	{
 		infoEntry->refCount--;
@@ -890,7 +893,7 @@ get_endpointdesc_by_index(int index)
 Endpoint
 find_endpoint(const char *endpointName, int sessionID)
 {
-	Endpoint res = NULL;
+	Endpoint	res = NULL;
 
 	Assert(endpointName);
 
@@ -927,8 +930,8 @@ get_token_from_session_hashtable(int sessionId, Oid userID, int8 *token /* out *
 												 HASH_FIND, NULL);
 	if (infoEntry == NULL)
 		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-				   errmsg("token for user id: %u, session: %d doesn't exist",
-						  tag.userID, sessionId)));
+						errmsg("token for user id: %u, session: %d doesn't exist",
+							   tag.userID, sessionId)));
 	memcpy(token, infoEntry->token, ENDPOINT_TOKEN_HEX_LEN);
 
 	LWLockRelease(ParallelCursorEndpointLock);
@@ -967,7 +970,8 @@ get_session_id_from_token(Oid userID, const int8 *token)
 static void
 generate_endpoint_name(char *name, const char *cursorName)
 {
-	int			len, cursorLen;
+	int			len,
+				cursorLen;
 
 	len = 0;
 
@@ -983,13 +987,12 @@ generate_endpoint_name(char *name, const char *cursorName)
 	len += ENDPOINT_NAME_SESSIONID_LEN;
 
 	/*
-	 * part3: gp_command_count
-	 * In theory cursor name + gp_session_id is enough, but we'd keep this part
-	 * to avoid confusion or potential issues for the scenario that in the same
-	 * session (thus same gp_session_id), two endpoints with same cursor names
-	 * (happens the cursor is dropped/rollbacked and then recreated) and
-	 * retrieve the endpoints would be confusing for users that in the same
-	 * retrieve connection.
+	 * part3: gp_command_count In theory cursor name + gp_session_id is
+	 * enough, but we'd keep this part to avoid confusion or potential issues
+	 * for the scenario that in the same session (thus same gp_session_id),
+	 * two endpoints with same cursor names (happens the cursor is
+	 * dropped/rollbacked and then recreated) and retrieve the endpoints would
+	 * be confusing for users that in the same retrieve connection.
 	 */
 	snprintf(name + len, ENDPOINT_NAME_COMMANDID_LEN + 1, "%08x", gp_command_count);
 	len += ENDPOINT_NAME_COMMANDID_LEN;
@@ -1017,8 +1020,8 @@ AtAbort_EndpointExecState()
 EndpointExecState *
 allocEndpointExecState()
 {
-	EndpointExecState	*endpointExecState;
-	MemoryContext		 oldcontext;
+	EndpointExecState *endpointExecState;
+	MemoryContext oldcontext;
 
 	if (unlikely(CurrEndpointExecState != NULL))
 		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),

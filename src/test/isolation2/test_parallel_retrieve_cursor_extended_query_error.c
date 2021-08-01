@@ -51,7 +51,7 @@ check_prepare_conn(PGconn *conn, const char *dbName, int conn_idx)
 		 * control.
 		 */
 		res = PQexec(conn,
-				   "SELECT pg_catalog.set_config('search_path', '', false)");
+					 "SELECT pg_catalog.set_config('search_path', '', false)");
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
 		{
 			fprintf(stderr, "SET failed: %s", PQerrorMessage(conn));
@@ -136,12 +136,12 @@ exec_sql_with_resultset_in_extended_query_protocol(PGconn *conn, const char *sql
 		case 1:
 			res1 = PQexecParams(conn,
 								sql,
-								0,		/* one param */
+								0,	/* one param */
 								NULL,	/* let the backend deduce param type */
 								paramValues,
 								NULL,	/* don't need param lengths since text */
 								NULL,	/* default to all text params */
-								0);		/* ask for binary results */
+								0); /* ask for binary results */
 			if (PQresultStatus(res1) != PGRES_TUPLES_OK)
 			{
 				fprintf(stderr, "PQexecParams() didn't return tuples properly: \"%s\"\nfailed %s", sql, PQerrorMessage(conn));

@@ -38,14 +38,14 @@ typedef struct
 	EndpointState state;
 	Oid			userId;
 	int			sessionId;
-}	EndpointInfo;
+}			EndpointInfo;
 
 typedef struct
 {
-	int			cur_idx;	/* current endpoint info for SRF. */
-	EndpointInfo *infos;	/* array of all endpoint info */
-	int			total_num;	/* number of endpoints */
-}	AllEndpointsInfo;
+	int			cur_idx;		/* current endpoint info for SRF. */
+	EndpointInfo *infos;		/* array of all endpoint info */
+	int			total_num;		/* number of endpoints */
+}			AllEndpointsInfo;
 
 /* Used in UDFs */
 static EndpointState state_string_to_enum(const char *state);
@@ -162,7 +162,7 @@ check_parallel_retrieve_cursor(const char *cursorName, bool wait)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-			   errmsg("this UDF only works for PARALLEL RETRIEVE CURSOR.")));
+				 errmsg("this UDF only works for PARALLEL RETRIEVE CURSOR.")));
 		return false;
 	}
 
@@ -219,7 +219,8 @@ gp_endpoints(PG_FUNCTION_ARGS)
 	Datum		values[9];
 	bool		nulls[9];
 	HeapTuple	tuple;
-	int			res_number, idx;
+	int			res_number,
+				idx;
 
 	if (SRF_IS_FIRSTCALL())
 	{
@@ -260,8 +261,8 @@ gp_endpoints(PG_FUNCTION_ARGS)
 		if (cdb_pgresults.numResults == 0)
 		{
 			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("gp_segment_endpoints didn't get back any data "
-								"from the segDBs")));
+							errmsg("gp_segment_endpoints didn't get back any data "
+								   "from the segDBs")));
 		}
 
 		res_number = 0;
@@ -274,7 +275,7 @@ gp_endpoints(PG_FUNCTION_ARGS)
 						ERROR,
 						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg(
-					 "gp_segment_endpoints(): resultStatus is not tuples_Ok")));
+								"gp_segment_endpoints(): resultStatus is not tuples_Ok")));
 			}
 			res_number += PQntuples(cdb_pgresults.pg_results[i]);
 		}
@@ -309,7 +310,7 @@ gp_endpoints(PG_FUNCTION_ARGS)
 
 		for (int i = 0; i < MAX_ENDPOINT_SIZE; i++)
 		{
-			const Endpoint entry = get_endpointdesc_by_index(i);
+			const		Endpoint entry = get_endpointdesc_by_index(i);
 
 			if (!entry->empty && (superuser() || entry->userID == GetUserId()))
 				cnt++;
@@ -323,7 +324,7 @@ gp_endpoints(PG_FUNCTION_ARGS)
 			{
 				all_info->infos =
 					(EndpointInfo *) repalloc(all_info->infos,
-												sizeof(EndpointInfo) * all_info->total_num);
+											  sizeof(EndpointInfo) * all_info->total_num);
 			}
 			else
 			{
@@ -333,7 +334,7 @@ gp_endpoints(PG_FUNCTION_ARGS)
 
 			for (int i = 0; i < MAX_ENDPOINT_SIZE; i++)
 			{
-				const Endpoint entry = get_endpointdesc_by_index(i);
+				const		Endpoint entry = get_endpointdesc_by_index(i);
 
 				/*
 				 * Only allow current user to get own endpoints. Or let
@@ -348,7 +349,7 @@ gp_endpoints(PG_FUNCTION_ARGS)
 										   GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
 										   false);
 					get_token_from_session_hashtable(entry->sessionID, entry->userID,
-											info->token);
+													 info->token);
 					StrNCpy(info->name, entry->name, NAMEDATALEN);
 					StrNCpy(info->cursorName, entry->cursorName, NAMEDATALEN);
 					info->state = entry->state;
@@ -369,10 +370,10 @@ gp_endpoints(PG_FUNCTION_ARGS)
 
 	while (all_info->cur_idx < all_info->total_num)
 	{
-		Datum				result;
-		char				tokenStr[ENDPOINT_TOKEN_STR_LEN + 1];
-		EndpointInfo	   *info = &all_info->infos[all_info->cur_idx++];
-		GpSegConfigEntry   *segCnfInfo = dbid_get_dbinfo(info->dbid);
+		Datum		result;
+		char		tokenStr[ENDPOINT_TOKEN_STR_LEN + 1];
+		EndpointInfo *info = &all_info->infos[all_info->cur_idx++];
+		GpSegConfigEntry *segCnfInfo = dbid_get_dbinfo(info->dbid);
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
@@ -410,7 +411,7 @@ gp_segment_endpoints(PG_FUNCTION_ARGS)
 	Datum		values[10];
 	bool		nulls[10];
 	HeapTuple	tuple;
-	int			*endpoint_idx;
+	int		   *endpoint_idx;
 
 	if (SRF_IS_FIRSTCALL())
 	{
@@ -450,7 +451,7 @@ gp_segment_endpoints(PG_FUNCTION_ARGS)
 	while (*endpoint_idx < MAX_ENDPOINT_SIZE)
 	{
 		Datum		result;
-		const Endpoint entry = get_endpointdesc_by_index(*endpoint_idx);
+		const		Endpoint entry = get_endpointdesc_by_index(*endpoint_idx);
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
@@ -463,7 +464,7 @@ gp_segment_endpoints(PG_FUNCTION_ARGS)
 		{
 			char	   *state = NULL;
 			int8		token[ENDPOINT_TOKEN_HEX_LEN];
-			char	    tokenStr[ENDPOINT_TOKEN_STR_LEN + 1];
+			char		tokenStr[ENDPOINT_TOKEN_STR_LEN + 1];
 
 			get_token_from_session_hashtable(entry->sessionID, entry->userID, token);
 			endpoint_token_hex2str(token, tokenStr);

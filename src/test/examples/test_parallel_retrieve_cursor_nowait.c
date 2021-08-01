@@ -52,7 +52,7 @@ check_prepare_conn(PGconn *conn, const char *dbName, int conn_idx)
 		 * control.
 		 */
 		res = PQexec(conn,
-				   "SELECT pg_catalog.set_config('search_path', '', false)");
+					 "SELECT pg_catalog.set_config('search_path', '', false)");
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
 		{
 			fprintf(stderr, "SET failed: %s", PQerrorMessage(conn));
@@ -219,9 +219,9 @@ main(int argc, char **argv)
 	pgport = NULL;				/* port of the backend */
 	pgoptions = NULL;			/* special options to start up the backend
 								 * server */
-	pgoptions_retrieve_mode = "-c gp_retrieve_conn=true";/* specify this
-														 * connection is for
-														 * retrieve only */
+	pgoptions_retrieve_mode = "-c gp_retrieve_conn=true";	/* specify this
+															 * connection is for
+															 * retrieve only */
 	pgtty = NULL;				/* debugging tty for the backend */
 
 	/* make a connection to the database */
@@ -235,8 +235,8 @@ main(int argc, char **argv)
 		goto LABEL_ERR;
 
 	/*
-	 * start a transaction block because PARALLEL RETRIEVE CURSOR only supports
-	 * WITHOUT HOLD option
+	 * start a transaction block because PARALLEL RETRIEVE CURSOR only
+	 * supports WITHOUT HOLD option
 	 */
 	if (exec_sql_without_resultset(master_conn, "BEGIN;", MASTER_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
