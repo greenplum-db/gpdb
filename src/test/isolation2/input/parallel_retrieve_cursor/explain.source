@@ -3,6 +3,8 @@
 DROP TABLE IF EXISTS t1;
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
 insert into t1 select generate_series(1,100);
+CREATE TABLE t2 (a INT) DISTRIBUTED RANDOMLY;
+insert into t2 select generate_series(1,100);
 DROP TABLE IF EXISTS rt1;
 CREATE TABLE rt1 (a INT) DISTRIBUTED REPLICATED;
 insert into rt1 select generate_series(1,100);
@@ -14,28 +16,31 @@ EXPLAIN (COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR WITH HOLD FOR SELECT *
 EXPLAIN (COSTS false) DECLARE c1 NO SCROLL PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 EXPLAIN (COSTS false) DECLARE c1 SCROLL PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 
--- Test: explain output: Endpoint info (on master/on some segments/on all segments)
+-- Test: explain output: Endpoint info (on coordinator/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 ORDER BY a;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 WHERE a=1;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 WHERE a=1 OR a=2;
 
--- Test for system table which is accesssible on master
+-- Test: Locus CdbLocusType_Strewn
+EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2;
+
+-- Test for system table which is accesssible on coordinator
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM pg_class;
 
--- Test: explain output: Endpoint info (on master/on some segments/on all segments)
+-- Test: explain output: Endpoint info (on coordinator/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class ORDER BY relname;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class WHERE gp_segment_id=1;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class WHERE gp_segment_id=1 OR gp_segment_id=2;
 
--- Test for UDF which can be executed on master
+-- Test for UDF which can be executed on coordinator
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F ORDER BY F;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F WHERE F=1;
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F WHERE F=1 OR F=2;
 
--- Test: explain output: Endpoint info (on master/on some segments/on all segments)
+-- Test: explain output: Endpoint info (on coordinator/on some segments/on all segments)
 -- Here because replicated table will execute on seg id: session_id % segment_number
 -- Just replace the random specific seg id to SEGIDX for the output
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1;
@@ -43,4 +48,3 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE a=1;
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE a=1 OR a=2;
 
--- TODO: Test UDF EXECUTE ON [ANY | MASTER | ALL SEGMENTS ], ref to src/test/regress/sql/function_extensions.sql

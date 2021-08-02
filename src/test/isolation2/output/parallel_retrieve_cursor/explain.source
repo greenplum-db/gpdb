@@ -6,6 +6,10 @@ CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
 CREATE
 insert into t1 select generate_series(1,100);
 INSERT 100
+CREATE TABLE t2 (a INT) DISTRIBUTED RANDOMLY;
+CREATE
+insert into t2 select generate_series(1,100);
+INSERT 100
 DROP TABLE IF EXISTS rt1;
 DROP
 CREATE TABLE rt1 (a INT) DISTRIBUTED REPLICATED;
@@ -36,12 +40,12 @@ EXPLAIN (COSTS false) DECLARE c1 SCROLL PARALLEL RETRIEVE CURSOR FOR SELECT * FR
 ERROR:  SCROLL is not allowed for the PARALLEL RETRIEVE CURSORs
 DETAIL:  Scrollable cursors can not be parallel
 
--- Test: explain output: Endpoint info (on master/on some segments/on all segments)
+-- Test: explain output: Endpoint info (on coordinator/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
  QUERY PLAN                          
 -------------------------------------
  Seq Scan on public.t1               
-   Output: a, ctid, gp_segment_id    
+   Output: a                         
  Endpoint: on all 3 segments         
  Optimizer: Postgres query optimizer 
 (4 rows)
@@ -56,14 +60,14 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
          Sort Key: t1.a                   
          ->  Seq Scan on public.t1        
                Output: a                  
- Endpoint: on master                      
+ Endpoint: "on coordinator"               
  Optimizer: Postgres query optimizer      
 (10 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 WHERE a=1;
  QUERY PLAN                           
 --------------------------------------
  Seq Scan on public.t1                
-   Output: a, ctid, gp_segment_id     
+   Output: a                          
    Filter: (t1.a = 1)                 
  Endpoint: on segments: contentid [1] 
  Optimizer: Postgres query optimizer  
@@ -72,68 +76,78 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
  QUERY PLAN                              
 -----------------------------------------
  Seq Scan on public.t1                   
-   Output: a, ctid, gp_segment_id        
+   Output: a                             
    Filter: ((t1.a = 1) OR (t1.a = 2))    
  Endpoint: on segments: contentid [1, 0] 
  Optimizer: Postgres query optimizer     
 (5 rows)
 
--- Test for system table which is accesssible on master
+-- Test: Locus CdbLocusType_Strewn
+EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2;
+ QUERY PLAN                          
+-------------------------------------
+ Seq Scan on public.t2               
+   Output: a                         
+ Endpoint: on all 3 segments         
+ Optimizer: Postgres query optimizer 
+(4 rows)
+
+-- Test for system table which is accesssible on coordinator
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM pg_class;
- QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                               
-   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions, ctid, gp_segment_id 
- Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                           
+ QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                                                          
+   Output: oid, relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relnatts, relchecks, relhasrules, relhastriggers, relhassubclass, relrowsecurity, relforcerowsecurity, relispopulated, relreplident, relispartition, relrewrite, relfrozenxid, relminmxid, relacl, reloptions, relpartbound 
+ Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                                                      
 (3 rows)
 
--- Test: explain output: Endpoint info (on master/on some segments/on all segments)
+-- Test: explain output: Endpoint info (on coordinator/on some segments/on all segments)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class;
- QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                               
-   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions, ctid, gp_segment_id 
- Endpoint: on master                                                                                                                                                                                                                                                                                                                                                                                           
- Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                           
+ QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                                                          
+   Output: oid, relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relnatts, relchecks, relhasrules, relhastriggers, relhassubclass, relrowsecurity, relforcerowsecurity, relispopulated, relreplident, relispartition, relrewrite, relfrozenxid, relminmxid, relacl, reloptions, relpartbound 
+ Endpoint: "on coordinator"                                                                                                                                                                                                                                                                                                                                                                                                               
+ Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                                                      
 (4 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class ORDER BY relname;
- QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                     
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Sort                                                                                                                                                                                                                                                                                                                                                                                           
-   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions       
-   Sort Key: pg_class.relname                                                                                                                                                                                                                                                                                                                                                                   
-   ->  Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                          
-         Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions 
- Endpoint: on master                                                                                                                                                                                                                                                                                                                                                                            
- Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                            
+ QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort                                                                                                                                                                                                                                                                                                                                                                                                                                           
+   Output: oid, relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relnatts, relchecks, relhasrules, relhastriggers, relhassubclass, relrowsecurity, relforcerowsecurity, relispopulated, relreplident, relispartition, relrewrite, relfrozenxid, relminmxid, relacl, reloptions, relpartbound       
+   Sort Key: pg_class.relname                                                                                                                                                                                                                                                                                                                                                                                                                   
+   ->  Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                                                          
+         Output: oid, relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relnatts, relchecks, relhasrules, relhastriggers, relhassubclass, relrowsecurity, relforcerowsecurity, relispopulated, relreplident, relispartition, relrewrite, relfrozenxid, relminmxid, relacl, reloptions, relpartbound 
+ Endpoint: "on coordinator"                                                                                                                                                                                                                                                                                                                                                                                                                     
+ Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                                                            
 (7 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class WHERE gp_segment_id=1;
- QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                               
-   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions, ctid, gp_segment_id 
-   Filter: (pg_class.gp_segment_id = 1)                                                                                                                                                                                                                                                                                                                                                                        
- Endpoint: on master                                                                                                                                                                                                                                                                                                                                                                                           
- Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                           
+ QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                                                          
+   Output: oid, relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relnatts, relchecks, relhasrules, relhastriggers, relhassubclass, relrowsecurity, relforcerowsecurity, relispopulated, relreplident, relispartition, relrewrite, relfrozenxid, relminmxid, relacl, reloptions, relpartbound 
+   Filter: (pg_class.gp_segment_id = 1)                                                                                                                                                                                                                                                                                                                                                                                                   
+ Endpoint: "on coordinator"                                                                                                                                                                                                                                                                                                                                                                                                               
+ Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                                                      
 (5 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM pg_class WHERE gp_segment_id=1 OR gp_segment_id=2;
- QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                    
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                               
-   Output: relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relstorage, relnatts, relchecks, relhasoids, relhaspkey, relhasrules, relhastriggers, relhassubclass, relispopulated, relreplident, relfrozenxid, relminmxid, relacl, reloptions, ctid, gp_segment_id 
-   Filter: ((pg_class.gp_segment_id = 1) OR (pg_class.gp_segment_id = 2))                                                                                                                                                                                                                                                                                                                                      
- Endpoint: on master                                                                                                                                                                                                                                                                                                                                                                                           
- Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                           
+ QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_catalog.pg_class                                                                                                                                                                                                                                                                                                                                                                                                          
+   Output: oid, relname, relnamespace, reltype, reloftype, relowner, relam, relfilenode, reltablespace, relpages, reltuples, relallvisible, reltoastrelid, relhasindex, relisshared, relpersistence, relkind, relnatts, relchecks, relhasrules, relhastriggers, relhassubclass, relrowsecurity, relforcerowsecurity, relispopulated, relreplident, relispartition, relrewrite, relfrozenxid, relminmxid, relacl, reloptions, relpartbound 
+   Filter: ((pg_class.gp_segment_id = 1) OR (pg_class.gp_segment_id = 2))                                                                                                                                                                                                                                                                                                                                                                 
+ Endpoint: "on coordinator"                                                                                                                                                                                                                                                                                                                                                                                                               
+ Optimizer: Postgres query optimizer                                                                                                                                                                                                                                                                                                                                                                                                      
 (5 rows)
 
--- Test for UDF which can be executed on master
+-- Test for UDF which can be executed on coordinator
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F;
  QUERY PLAN                                    
 -----------------------------------------------
  Function Scan on pg_catalog.generate_series f 
    Output: f                                   
    Function Call: generate_series(1, 10)       
- Endpoint: on master                           
+ Endpoint: "on coordinator"                    
  Optimizer: Postgres query optimizer           
 (5 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F ORDER BY F;
@@ -145,7 +159,7 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
    ->  Function Scan on pg_catalog.generate_series f 
          Output: f                                   
          Function Call: generate_series(1, 10)       
- Endpoint: on master                                 
+ Endpoint: "on coordinator"                          
  Optimizer: Postgres query optimizer                 
 (8 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F WHERE F=1;
@@ -155,7 +169,7 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
    Output: f                                   
    Function Call: generate_series(1, 10)       
    Filter: (f.f = 1)                           
- Endpoint: on master                           
+ Endpoint: "on coordinator"                    
  Optimizer: Postgres query optimizer           
 (6 rows)
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10) as F WHERE F=1 OR F=2;
@@ -165,39 +179,39 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
    Output: f                                   
    Function Call: generate_series(1, 10)       
    Filter: ((f.f = 1) OR (f.f = 2))            
- Endpoint: on master                           
+ Endpoint: "on coordinator"                    
  Optimizer: Postgres query optimizer           
 (6 rows)
 
--- Test: explain output: Endpoint info (on master/on some segments/on all segments)
+-- Test: explain output: Endpoint info (on coordinator/on some segments/on all segments)
 -- Here because replicated table will execute on seg id: session_id % segment_number
 -- Just replace the random specific seg id to SEGIDX for the output
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1;
  QUERY PLAN
---------------------------------------
+---------------------------------------
  Seq Scan on public.rt1
    Output: a
-  Endpoint: on segments: contentid [SEGIDX]
+ Endpoint: "on segment: contentid [SEGIDX]"
  Optimizer: Postgres query optimizer
 (4 rows)
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
  QUERY PLAN
---------------------------------------
+---------------------------------------
  Sort
    Output: a
    Sort Key: rt1.a
    ->  Seq Scan on public.rt1
          Output: a
-  Endpoint: on segments: contentid [SEGIDX]
+ Endpoint: "on segment: contentid [SEGIDX]"
  Optimizer: Postgres query optimizer
 (7 rows)
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE a=1;
  QUERY PLAN
---------------------------------------
+---------------------------------------
  Seq Scan on public.rt1
    Output: a
    Filter: (rt1.a = 1)
-  Endpoint: on segments: contentid [SEGIDX]
+ Endpoint: "on segment: contentid [SEGIDX]"
  Optimizer: Postgres query optimizer
 (5 rows)
 1: @post_run 'create_sub  "Endpoint: on segments: contentid \[[0-9]+\]" " Endpoint: on segments: contentid [SEGIDX]" ':EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE a=1 OR a=2;
@@ -206,8 +220,7 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
  Seq Scan on public.rt1
    Output: a
    Filter: ((rt1.a = 1) OR (rt1.a = 2))
-  Endpoint: on segments: contentid [SEGIDX]
+ Endpoint: "on segment: contentid [SEGIDX]"
  Optimizer: Postgres query optimizer
 (5 rows)
 
--- TODO: Test UDF EXECUTE ON [ANY | MASTER | ALL SEGMENTS ], ref to src/test/regress/sql/function_extensions.sql
