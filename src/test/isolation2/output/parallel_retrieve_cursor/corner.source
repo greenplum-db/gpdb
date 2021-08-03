@@ -1972,7 +1972,7 @@ DECLARE
 ROLLBACK
 -1Rq: ... <quitting>
 
--- Test24: endpoint name is too long to be truncated.
+-- Test24: endpoint name is too long and will be truncated.
 1: BEGIN;
 BEGIN
 1: DECLARE "x12345678901234567890123456789012345678901234567890123456789x" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t5;
@@ -2077,7 +2077,7 @@ ROLLBACK
 1Rq: ... <quitting>
 2Rq: ... <quitting>
 
--- Test25: cursor name is too long to be truncated.
+-- Test25: cursor name is too long and will be truncated.
 1: BEGIN;
 BEGIN
 1: DECLARE "x123456789012345678901234567890123456789012345678901234567890123456789x" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t1;
