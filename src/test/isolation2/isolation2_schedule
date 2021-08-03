@@ -1,3 +1,6 @@
+# test dispatch
+test: gpdispatch
+
 # test if gxid is valid or not on the cluster before running the tests
 test: check_gxid
 

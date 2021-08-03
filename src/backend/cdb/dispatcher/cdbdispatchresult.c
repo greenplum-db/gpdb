@@ -77,6 +77,19 @@ cdbdisp_makeResult(struct CdbDispatchResults *meleeResults,
 	dispatchResult->numrowscompleted = 0;
 	dispatchResult->ackPGNotifies = NULL;
 
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("make_dispatch_result_error") == FaultInjectorTypeSkip)
+	{
+		/*
+		 * Inject a fault to simulate the createPQExpBuffer return NULL (maybe because of
+		 * malloc failure, this will lead to enter the below if block and return NULL in
+		 * this function. We need to test this code path to verify the gang clean up code
+		 * is correct.
+		 */
+		dispatchResult->resultbuf = NULL;
+	}
+#endif
+
 	if (PQExpBufferBroken(dispatchResult->resultbuf) ||
 		PQExpBufferBroken(dispatchResult->error_message))
 	{
@@ -156,17 +169,24 @@ void
 cdbdisp_resetResult(CdbDispatchResult *dispatchResult)
 {
 	PQExpBuffer buf = dispatchResult->resultbuf;
-	PGresult  **begp = (PGresult **) buf->data;
-	PGresult  **endp = (PGresult **) (buf->data + buf->len);
-	PGresult  **p;
-
 	/*
-	 * Free the PGresult objects.
-	 */
-	for (p = begp; p < endp; ++p)
+	* the resultbuf may be empty due to oom, set in cdbdisp_makeResult()
+ 	* Related to issue: https://github.com/greenplum-db/gpdb/issues/12399
+	*/
+	if (buf)
 	{
-		Assert(*p != NULL);
-		PQclear(*p);
+		PGresult  **begp = (PGresult **) buf->data;
+		PGresult  **endp = (PGresult **) (buf->data + buf->len);
+		PGresult  **p;
+
+		/*
+		 * Free the PGresult objects.
+		 */
+		for (p = begp; p < endp; ++p)
+		{
+			Assert(*p != NULL);
+			PQclear(*p);
+		}
 	}
 
 	PGnotify* pgnotify = (PGnotify *) dispatchResult->ackPGNotifies;
