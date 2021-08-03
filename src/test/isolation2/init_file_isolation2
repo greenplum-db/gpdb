@@ -3,9 +3,6 @@
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
 
-m/\(cdbendpointretrieve\.c\:\d+\)/
-s/\(cdbendpointretrieve\.c\:\d+\)//
-
 # remove beginning output of gpconfig
 m/^\d+.*gpconfig.*-\[INFO\]:-/
 s/^\d+.*gpconfig.*-\[INFO\]:-//
@@ -46,5 +43,8 @@ s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./P
 
 m/available \d+ MB/
 s/available \d+ MB//
+
+m/\(cdbdisp_async\.c\:\d+\)/
+s/\(cdbdisp_async\.c:\d+\)/\(cdbdisp_async\.c:LINE_NUM\)/
 
 -- end_matchsubs

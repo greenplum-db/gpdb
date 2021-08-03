@@ -7,6 +7,7 @@ s/seg\d+ [0-9.]+:\d+ pid=\d+/SEG IP:PORT pid=PID/
 m/^ERROR:.*\(pid: \d+\)/
 s/\(pid: \d+\)/\(pid: PID\)/
 
-m/^ERROR:.*\(cdbendpointretrieve\.c:\d+\)/
+m/\(cdbendpointretrieve\.c\:\d+\)/
 s/\(cdbendpointretrieve\.c:\d+\)/\(cdbendpointretrieve\.c:LINE_NUM\)/
+
 -- end_matchsubs
