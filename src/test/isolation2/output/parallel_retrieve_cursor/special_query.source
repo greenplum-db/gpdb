@@ -153,10 +153,12 @@ DECLARE
 (3 rows)
 2: CLOSE c2;
 CLOSE
+2: END;
+END
 
 -- cleanup
 DROP TABLE t2;
-ERROR:  canceling statement due to statement timeout
+DROP
 !\retcode gpconfig -r gp_max_packet_size;
 -- start_ignore
 20210729:16:23:43:000489 gpconfig:lhlgpdb7:gpadmin-[INFO]:-completed successfully with parameters '-r gp_max_packet_size'

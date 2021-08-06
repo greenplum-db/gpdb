@@ -47,6 +47,7 @@ SET gp_interconnect_queue_depth=1;
 2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
 2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
 2: CLOSE c2;
+2: END;
 
 -- cleanup
 DROP TABLE t2;
