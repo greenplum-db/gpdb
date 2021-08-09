@@ -3,6 +3,14 @@
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
 
+# Ignore pid in fatal error message
+m/Process [0-9]+ will wait/
+s/Process [0-9]+ will wait/Process xxx will wait/
+
+# Ignore line number in error message
+m/cdbdisp_async.c:[0-9]+/
+s/cdbdisp_async.c:[0-9]+/cdbdisp_async.c:xxx/
+
 # remove beginning output of gpconfig
 m/^\d+.*gpconfig.*-\[INFO\]:-/
 s/^\d+.*gpconfig.*-\[INFO\]:-//
