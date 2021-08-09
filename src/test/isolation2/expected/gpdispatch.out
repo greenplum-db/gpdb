@@ -1,0 +1,37 @@
+-- Try to verify that a session fatal due to OOM should have no effect on other sessions.
+-- Report on https://github.com/greenplum-db/gpdb/issues/12399
+
+create extension if not exists gp_inject_fault;
+CREATE
+
+1: select gp_inject_fault('make_dispatch_result_error', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: begin;
+BEGIN
+
+-- session1 will be fatal.
+1: select count(*) > 0 from gp_dist_random('pg_class');
+FATAL:  could not allocate resources for segworker communication (cdbdisp_async.c:306)
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+-- session2 should be ok.
+2: select count(*) > 0 from gp_dist_random('pg_class');
+ ?column? 
+----------
+ t        
+(1 row)
+2: commit;
+COMMIT
+1q: ... <quitting>
+2q: ... <quitting>
+
+select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
