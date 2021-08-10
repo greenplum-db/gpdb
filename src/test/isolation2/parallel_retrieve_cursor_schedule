@@ -10,7 +10,6 @@ test: parallel_retrieve_cursor/syntax
 test: parallel_retrieve_cursor/retrieve_quit_check
 test: parallel_retrieve_cursor/retrieve_quit_wait
 test: parallel_retrieve_cursor/fault_inject
-test: parallel_retrieve_cursor/fault_inject_2
 test: parallel_retrieve_cursor/security
 test: parallel_retrieve_cursor/privilege
 test: parallel_retrieve_cursor/unset

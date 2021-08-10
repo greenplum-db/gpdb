@@ -1,7 +1,6 @@
 corner.sql
 explain.sql
 extended_query.sql
-fault_inject_2.sql
 fault_inject.sql
 privilege.sql
 replicated_table.sql

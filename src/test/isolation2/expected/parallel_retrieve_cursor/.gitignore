@@ -1,7 +1,6 @@
 corner.out
 explain.out
 extended_query.out
-fault_inject_2.out
 fault_inject.out
 privilege.out
 replicated_table.out

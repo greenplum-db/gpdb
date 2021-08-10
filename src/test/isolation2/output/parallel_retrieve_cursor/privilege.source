@@ -82,11 +82,11 @@ DECLARE
 1: DECLARE c12 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10);
 DECLARE
 --- u1 is able to see all endoints created by himself.
-1: SELECT DISTINCT(cursorname), userid FROM gp_endpoints();
- cursorname | userid 
-------------+--------
- c12        | u1_id 
- c2         | u1_id 
+1: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+ cursorname | usename 
+------------+---------
+ c12        | u1      
+ c2         | u1      
 (2 rows)
 
 --- adminuser should be able to see all the endpoints declared by u1 with state READY
@@ -105,12 +105,12 @@ SET
 2: @post_run 'parse_endpoint_info 12 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c12';
  endpoint_id12 | token_id | host_id | port_id | READY
 (1 row)
-2: SELECT DISTINCT(cursorname), userid FROM gp_endpoints();
- cursorname | userid 
-------------+--------
- c1         | admin_id 
- c12        | u1_id 
- c2         | u1_id 
+2: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+ cursorname | usename   
+------------+-----------
+ c1         | adminuser 
+ c12        | u1        
+ c2         | u1        
 (3 rows)
 
 --- adminuser should be able to see the cursor state change to READY
@@ -134,11 +134,11 @@ SET
 (1 row)
 0R: SELECT SESSION_USER, CURRENT_USER;
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
-0U: SELECT auth_token, userid FROM gp_segment_endpoints();
- auth_token                       | userid 
-----------------------------------+--------
- token_id | admin_id 
- token_id | u1_id 
+0U: SELECT auth_token, usename FROM gp_segment_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+ auth_token                       | usename   
+----------------------------------+-----------
+ token_id | adminuser 
+ token_id | u1        
 (2 rows)
 0R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
  a 
@@ -179,17 +179,17 @@ DECLARE
  endpoint_id3 | token_id | host_id | port_id | READY
 (3 rows)
 --- uu1 can not see u1's endpoints.
-1: SELECT DISTINCT(cursorname), userid FROM gp_endpoints();
- cursorname | userid 
-------------+--------
+1: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+ cursorname | usename 
+------------+---------
 (0 rows)
-2: SELECT DISTINCT(cursorname), userid FROM gp_endpoints();
- cursorname | userid 
-------------+--------
- c1         | admin_id 
- c12        | u1_id 
- c2         | u1_id 
- c3         | u1_id 
+2: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+ cursorname | usename   
+------------+-----------
+ c1         | adminuser 
+ c12        | u1        
+ c2         | u1        
+ c3         | u1        
 (4 rows)
 
 3: @pre_run 'export RETRIEVE_USER="uu1"; echo $RAW_STR ' : SELECT 1;
@@ -385,27 +385,27 @@ ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
-*U: SELECT auth_token, userid FROM gp_segment_endpoints();
- auth_token | userid 
-------------+--------
+*U: SELECT auth_token, usename FROM gp_segment_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+ auth_token | usename 
+------------+---------
 (0 rows)
 
- auth_token                       | userid 
-----------------------------------+--------
- token_id | admin_id 
- token_id | u1_id 
+ auth_token                       | usename   
+----------------------------------+-----------
+ token_id | adminuser 
+ token_id | u1        
 (2 rows)
 
- auth_token                       | userid 
-----------------------------------+--------
- token_id | admin_id 
- token_id | u1_id 
+ auth_token                       | usename   
+----------------------------------+-----------
+ token_id | adminuser 
+ token_id | u1        
 (2 rows)
 
- auth_token                       | userid 
-----------------------------------+--------
- token_id | admin_id 
- token_id | u1_id 
+ auth_token                       | usename   
+----------------------------------+-----------
+ token_id | adminuser 
+ token_id | u1        
 (2 rows)
 
 --- u2 is not able to retrieve from u1's endpoints in RETRIEVE mode
