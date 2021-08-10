@@ -100,6 +100,8 @@ ExecMotion(PlanState *pstate)
 	MotionState *node = castNode(MotionState, pstate);
 	Motion	   *motion = (Motion *) node->ps.plan;
 
+	CHECK_FOR_INTERRUPTS();
+
 	/* sanity check */
  	if (node->stopRequested)
  		ereport(ERROR,
