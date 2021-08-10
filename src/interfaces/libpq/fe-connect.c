@@ -396,6 +396,10 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 		"connection type", "D", 10,
 	offsetof(struct pg_conn, gpconntype)},
 
+	{"diff_options", NULL, NULL, NULL,
+		"updated synced GUCs", "D", 80,
+	offsetof(struct pg_conn, diffoptions)},
+
 	/* Terminating entry --- MUST BE LAST */
 	{NULL, NULL, NULL, NULL,
 	NULL, NULL, 0}

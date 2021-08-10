@@ -274,7 +274,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
  * Add one GUC to the option string.
  */
 static void
-addOneOption(StringInfo string, struct config_generic *guc)
+addOneOption(StringInfo string, StringInfo diff, struct config_generic *guc)
 {
 	Assert(guc && (guc->flags & GUC_GPDB_NEED_SYNC));
 	switch (guc->vartype)
@@ -283,30 +283,38 @@ addOneOption(StringInfo string, struct config_generic *guc)
 			{
 				struct config_bool *bguc = (struct config_bool *) guc;
 
-				appendStringInfo(string, " -c %s=%s", guc->name, *(bguc->variable) ? "true" : "false");
+				appendStringInfo(string, " -c %s=%s", guc->name, (bguc->reset_val) ? "true" : "false");
+				if (bguc->reset_val != *bguc->variable)
+					appendStringInfo(diff, " %s=%s", guc->name, *(bguc->variable) ? "true" : "false");
 				break;
 			}
 		case PGC_INT:
 			{
 				struct config_int *iguc = (struct config_int *) guc;
 
-				appendStringInfo(string, " -c %s=%d", guc->name, *iguc->variable);
+				appendStringInfo(string, " -c %s=%d", guc->name, iguc->reset_val);
+				if (iguc->reset_val != *iguc->variable)
+					appendStringInfo(diff, " %s=%d", guc->name, *iguc->variable);
 				break;
 			}
 		case PGC_REAL:
 			{
 				struct config_real *rguc = (struct config_real *) guc;
 
-				appendStringInfo(string, " -c %s=%f", guc->name, *rguc->variable);
+				appendStringInfo(string, " -c %s=%f", guc->name, rguc->reset_val);
+				if (rguc->reset_val != *rguc->variable)
+					appendStringInfo(diff, " %s=%f", guc->name, *rguc->variable);
 				break;
 			}
 		case PGC_STRING:
 			{
 				struct config_string *sguc = (struct config_string *) guc;
-				const char *str = *sguc->variable;
+				const char *str = sguc->reset_val;
 				int			i;
+				int			idx;
 
 				appendStringInfo(string, " -c %s=", guc->name);
+				idx = strlen(string->data);
 
 				/*
 				 * All whitespace characters must be escaped. See
@@ -319,16 +327,23 @@ addOneOption(StringInfo string, struct config_generic *guc)
 
 					appendStringInfoChar(string, str[i]);
 				}
+				if (strcmp(str, *sguc->variable) != 0)
+				{
+					appendStringInfo(diff, " %s=", guc->name);
+					appendStringInfoString(diff, &string->data[idx]);
+				}
 				break;
 			}
 		case PGC_ENUM:
 			{
 				struct config_enum *eguc = (struct config_enum *) guc;
-				int			value = *eguc->variable;
+				int			value = eguc->reset_val;
 				const char *str = config_enum_lookup_by_value(eguc, value);
 				int			i;
+				int			idx;
 
 				appendStringInfo(string, " -c %s=", guc->name);
+				idx = strlen(string->data);
 
 				/*
 				 * All whitespace characters must be escaped. See
@@ -342,6 +357,11 @@ addOneOption(StringInfo string, struct config_generic *guc)
 
 					appendStringInfoChar(string, str[i]);
 				}
+				if (value != *eguc->variable)
+				{
+					appendStringInfo(diff, " %s=", guc->name);
+					appendStringInfoString(diff, &string->data[idx]);
+				}
 				break;
 			}
 	}
@@ -350,16 +370,18 @@ addOneOption(StringInfo string, struct config_generic *guc)
 /*
  * Add GUCs to option string.
  */
-char *
-makeOptions(void)
+void
+makeOptions(char **options, char **diff_options)
 {
 	struct config_generic **gucs = get_guc_variables();
 	int			ngucs = get_num_guc_variables();
 	CdbComponentDatabaseInfo *qdinfo = NULL;
 	StringInfoData string;
+	StringInfoData diff;
 	int			i;
 
 	initStringInfo(&string);
+	initStringInfo(&diff);
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
@@ -375,10 +397,11 @@ makeOptions(void)
 			(guc->context == PGC_USERSET ||
 			 guc->context == PGC_BACKEND ||
 			 IsAuthenticatedUserSuperUser()))
-			addOneOption(&string, guc);
+			addOneOption(&string, &diff, guc);
 	}
 
-	return string.data;
+  *options = string.data;
+  *diff_options = diff.data;
 }
 
 /*

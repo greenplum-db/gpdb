@@ -2378,6 +2378,8 @@ build_startup_packet(const PGconn *conn, char *packet,
 		ADD_STARTUP_OPTION(GPCONN_TYPE, conn->gpconntype);
 	if (conn->pgoptions && conn->pgoptions[0])
 		ADD_STARTUP_OPTION("options", conn->pgoptions);
+	if (conn->diffoptions && conn->diffoptions[0])
+		ADD_STARTUP_OPTION("diff_options", conn->diffoptions);
 	if (conn->send_appname)
 	{
 		/* Use appname if present, otherwise use fallback */

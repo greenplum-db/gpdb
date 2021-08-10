@@ -125,9 +125,10 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 void
 cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 					   const char *gpqeid,
-					   const char *options)
+					   const char *options,
+					   const char *diff_options)
 {
-#define MAX_KEYWORDS 10
+#define MAX_KEYWORDS 11
 #define MAX_INT_STRING_LEN 20
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
 	const char *keywords[MAX_KEYWORDS];
@@ -146,6 +147,12 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	{
 		keywords[nkeywords] = "options";
 		values[nkeywords] = options;
+		nkeywords++;
+	}
+	if (diff_options)
+	{
+		keywords[nkeywords] = "diff_options";
+		values[nkeywords] = diff_options;
 		nkeywords++;
 	}
 
