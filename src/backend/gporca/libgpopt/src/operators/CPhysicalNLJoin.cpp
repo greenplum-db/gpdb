@@ -50,7 +50,7 @@ CPhysicalNLJoin::CPhysicalNLJoin(CMemoryPool *mp) : CPhysicalJoin(mp)
 	// (0) outer side requires Any distribution, inner attempts to match iff hashed
 	// (1) outer side requires Any distribution, inner requires a replicated
 
-	SetDistrRequests(1);
+	SetDistrRequests(2);
 }
 
 
@@ -241,7 +241,7 @@ CPhysicalNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			CEnfdDistribution::EdmSatisfy);
 	}
 
-	if (1 == child_index)
+	if (1 == child_index && ulOptReq == 0)
 	{
 		// compute a matching distribution based on derived distribution of outer child
 		CDistributionSpec *pdsOuter =
