@@ -231,7 +231,7 @@ insert into t1 select generate_series(1,100);
 2: BEGIN;
 2: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 2: @post_run 'get_tuple_cell SESSION82 1 1 ; create_match_sub_with_spaces $SESSION82 session82': SELECT sessionid,state FROM gp_session_endpoints() WHERE cursorname='c8';
--- Session 2 can only see all cursors with gp_endpoints().
+-- Session 2 can see all cursors with gp_endpoints().
 2: SELECT sessionid,state FROM gp_endpoints() WHERE cursorname='c8' order by sessionid;
 
 1: CLOSE c8;

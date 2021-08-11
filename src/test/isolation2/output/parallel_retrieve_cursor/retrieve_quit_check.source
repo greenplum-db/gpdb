@@ -33,7 +33,7 @@ DECLARE
  endpoint_id3 | token_id | host_id | port_id | READY
 (3 rows)
 
--- in one retrieve session, retrieve mutiple tokens (begin retrieving, finished retrieving, not yet retrieve)
+-- in one retrieve session, retrieve multiple tokens (begin retrieving, finished retrieving, not yet retrieve)
 0R: @pre_run 'set_endpoint_variable @ENDPOINT1' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";
  a  
 ----

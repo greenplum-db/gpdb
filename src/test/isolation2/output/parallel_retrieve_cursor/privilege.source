@@ -36,21 +36,6 @@ RESET
 
 
 --------- Test1: Admin should be able to see other user's endpoint, retrieve role auth should check token and user
-2: @post_run 'get_tuple_cell ADMIN_ID 1 1 && create_match_sub_with_spaces $ADMIN_ID admin_id': SELECT usesysid FROM pg_user WHERE usename = 'adminuser';
- usesysid
-----------
- admin_id 
-(1 row)
-2: @post_run 'get_tuple_cell U1_ID 1 1 && create_match_sub_with_spaces $U1_ID u1_id': SELECT usesysid FROM pg_user WHERE usename = 'u1';
- usesysid
-----------
- u1_id 
-(1 row)
-2: @post_run 'get_tuple_cell UU1_ID 1 1 && create_match_sub_with_spaces $UU1_ID uu1_id': SELECT usesysid FROM pg_user WHERE usename = 'uu1';
- usesysid
-----------
- uu1_id 
-(1 row)
 --- c1 is declared by superuser
 1: SET SESSION AUTHORIZATION adminuser;
 SET
@@ -81,7 +66,7 @@ DECLARE
 --- c12 is declared by u1 on entry db
 1: DECLARE c12 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10);
 DECLARE
---- u1 is able to see all endoints created by himself.
+--- u1 is able to see all endpoints created by himself.
 1: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
  cursorname | usename 
 ------------+---------
@@ -158,11 +143,15 @@ ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 --- Login as u1 and retrieve all to finish the test
 0R: SELECT SESSION_USER, CURRENT_USER;
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
-0R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT2";
+0R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
  a 
 ---
  2 
-(1 row)
+ 3 
+ 4 
+ 7 
+ 8 
+(5 rows)
 
 1: SET ROLE uu1;
 SET
@@ -214,7 +203,7 @@ DECLARE
 1<:  <... completed>
 FAILED:  Execution failed
 1: END;
-ERROR:  canceling MPP operation: "Endpoint retrieve session is quitting. All unfinished parallel retrieve cursors on the session will be terminated."  (seg0 192.168.235.128:7002 pid=71508)
+END
 2q: ... <quitting>
 3: @pre_run 'unset RETRIEVE_USER; echo $RAW_STR ' : SELECT 1;
  ?column? 
@@ -298,10 +287,6 @@ HINT:  using the same user as the PARALLEL RETRIEVE CURSOR creator to retrieve.
 -------------------
  t                 
 (1 row)
-
---- Switch back to u1 and retrieve all to finish the test
---*R: SET SESSION AUTHORIZATION u1;
---*R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
 
 1<:  <... completed>
 ERROR:  canceling statement due to user request
@@ -427,10 +412,6 @@ HINT:  using the same user as the PARALLEL RETRIEVE CURSOR creator to retrieve.
 -------------------
  t                 
 (1 row)
-
---- Switch back to u1 and retrieve all to finish the test
---*R: SET SESSION AUTHORIZATION u1;
---*R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
 
 1<:  <... completed>
 ERROR:  canceling statement due to user request

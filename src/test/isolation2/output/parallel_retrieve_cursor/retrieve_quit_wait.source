@@ -50,7 +50,7 @@ DECLARE
  c3         | READY 
 (9 rows)
 
--- in all retrieve sessions, retrieve mutiple tokens (begin retrieving, finished retrieving, not yet retrieve)
+-- in all retrieve sessions, retrieve multiple tokens (begin retrieving, finished retrieving, not yet retrieve)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT1' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";
 #-1retrieve> FATAL:  Retrieve auth token is invalid
 

@@ -14,7 +14,7 @@ insert into t1 select generate_series(1,100);
 1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c2';
 1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c3';
 
--- in one retrieve session, retrieve mutiple tokens (begin retrieving, finished retrieving, not yet retrieve)
+-- in one retrieve session, retrieve multiple tokens (begin retrieving, finished retrieving, not yet retrieve)
 0R: @pre_run 'set_endpoint_variable @ENDPOINT1' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";
 0R: @pre_run 'set_endpoint_variable @ENDPOINT2' : RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
 -- skip TOKEN3 in this session

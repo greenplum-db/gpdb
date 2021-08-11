@@ -1287,7 +1287,7 @@ DECLARE
  session82 | READY
  session82 | READY
 (3 rows)
--- Session 2 can only see all cursors with gp_endpoints().
+-- Session 2 can see all cursors with gp_endpoints().
 2: SELECT sessionid,state FROM gp_endpoints() WHERE cursorname='c8' order by sessionid;
  sessionid | state 
 -----------+-------

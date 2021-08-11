@@ -92,7 +92,7 @@ EXPLAIN (VERBOSE, COSTS false) DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * 
  Optimizer: Postgres query optimizer 
 (4 rows)
 
--- Test for system table which is accesssible on coordinator
+-- Test for system table which is accessible on coordinator
 EXPLAIN (VERBOSE, COSTS false) DECLARE c1 CURSOR FOR SELECT * FROM pg_class;
  QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                               
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -20,7 +20,7 @@ $$ LANGUAGE SQL;
 -- Test: Should not change gp_role in retrieve mode
 0R: set gp_role to 'utility';
 
--- Test: limit all statement which is supported in utility sesssion
+-- Test: limit all statement which is supported in utility session
 0R: show gp_role;
 
 0R: begin;
@@ -41,7 +41,7 @@ $$ LANGUAGE SQL;
 -- copy ... on program ... is also disallowed by this restriction.
 0R: COPY t1 to '/tmp/1.cvs';
 
--- Test: builtin function can be allowed
+-- Test: builtin function can not be allowed
 0R: select '12'::int;
 -- Test: UDF can not be allowed
 0R: SELECT myappend(ARRAY[42,6], 21);

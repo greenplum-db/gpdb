@@ -35,7 +35,7 @@ DECLARE
 0R: set gp_role to 'utility';
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 
--- Test: limit all statement which is supported in utility sesssion
+-- Test: limit all statement which is supported in utility session
 0R: show gp_role;
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 
@@ -69,7 +69,7 @@ ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 0R: COPY t1 to '/tmp/1.cvs';
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 
--- Test: builtin function can be allowed
+-- Test: builtin function can not be allowed
 0R: select '12'::int;
 ERROR:  This is  a retrieve connection, but query is not RETRIEVE.
 -- Test: UDF can not be allowed
