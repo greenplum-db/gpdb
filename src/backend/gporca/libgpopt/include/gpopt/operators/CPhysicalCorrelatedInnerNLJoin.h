@@ -101,7 +101,7 @@ public:
 		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) override
 	{
 		return PedCorrelatedJoin(mp, exprhdl, prppInput, child_index,
-								 pdrgpdpCtxt, ulOptReq);
+								 pdrgpdpCtxt, nullptr, ulOptReq);
 	}
 
 	// compute required distribution of the n-th child

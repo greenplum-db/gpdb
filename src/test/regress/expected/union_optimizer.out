@@ -387,10 +387,11 @@ select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
                Hash Cond: (NOT (tenk1.unique1 IS DISTINCT FROM tenk1_1.unique2))
                ->  Seq Scan on tenk1
                ->  Hash
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: tenk1_1.unique2
-                           ->  Seq Scan on tenk1 tenk1_1
-                                 Filter: (unique2 <> 10)
+                     ->  Result
+                           Filter: (tenk1_1.unique2 <> 10)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: tenk1_1.unique2
+                                 ->  Seq Scan on tenk1 tenk1_1
  Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
@@ -441,10 +442,11 @@ select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
                Hash Cond: (NOT (tenk1.unique1 IS DISTINCT FROM tenk1_1.unique2))
                ->  Seq Scan on tenk1
                ->  Hash
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: tenk1_1.unique2
-                           ->  Seq Scan on tenk1 tenk1_1
-                                 Filter: (unique2 <> 10)
+                     ->  Result
+                           Filter: (tenk1_1.unique2 <> 10)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: tenk1_1.unique2
+                                 ->  Seq Scan on tenk1 tenk1_1
  Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
@@ -754,14 +756,14 @@ explain (costs off)
          Group Key: ((t1.a || t1.b))
          ->  Sort
                Sort Key: ((t1.a || t1.b))
-               ->  Append
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: ((t1.a || t1.b))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ((t1.a || t1.b))
+                     ->  Append
                            ->  Result
                                  Filter: (((t1.a || t1.b)) = 'ab'::text)
                                  ->  Seq Scan on t1
-                     ->  Index Scan using t2_pkey on t2
-                           Index Cond: (ab = 'ab'::text)
+                           ->  Index Scan using t2_pkey on t2
+                                 Index Cond: (ab = 'ab'::text)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (14 rows)
 

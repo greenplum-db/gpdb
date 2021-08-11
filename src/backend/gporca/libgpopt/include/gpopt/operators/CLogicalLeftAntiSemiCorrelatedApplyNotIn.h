@@ -52,8 +52,28 @@ public:
 	}
 
 	// dtor
-	~CLogicalLeftAntiSemiCorrelatedApplyNotIn() override = default;
+	~CLogicalLeftAntiSemiCorrelatedApplyNotIn() override
+	{
+		if (pexprPredicate != nullptr)
+		{
+			pexprPredicate->Release();
+		}
+	}
 
+	CExpression *pexprPredicate =
+		nullptr;  // JOIN predicate, used to hash distribute inner child
+
+	void
+	SetPexprPredicate(CExpression *pexprPredicate_)
+	{
+		pexprPredicate = pexprPredicate_;
+	}
+
+	CExpression *
+	GetPexprPredicate()
+	{
+		return pexprPredicate;
+	}
 	// ident accessors
 	EOperatorId
 	Eopid() const override

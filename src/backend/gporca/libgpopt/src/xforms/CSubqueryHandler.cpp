@@ -548,9 +548,39 @@ CSubqueryHandler::FGenerateCorrelatedApplyForScalarSubquery(
 		else
 		{
 			// correlated inner expression requires correlated execution
+
+			CExpression *pexprPredicate = nullptr;
+
+			const BOOL validOp =
+				pexprOuter->Pop()->Eopid() == COperator::EopLogicalGet;
+			const BOOL validSelect =
+				pexprSubquery->PdrgPexpr()->Size() == 1 &&
+				(*pexprSubquery->PdrgPexpr())[0]->Pop()->Eopid() ==
+					COperator::EopLogicalSelect &&
+				(*(*pexprSubquery->PdrgPexpr())[0]->PdrgPexpr())[0]
+						->Pop()
+						->Eopid() == COperator::EopLogicalGet &&
+				(*(*pexprSubquery->PdrgPexpr())[0]->PdrgPexpr())[1]
+						->Pop()
+						->Eopid() == COperator::EopScalarCmp;
+
+			if (validOp && validSelect)
+			{
+				pexprPredicate =
+					(*(*pexprSubquery->PdrgPexpr())[0]->PdrgPexpr())[1];
+				pexprPredicate->AddRef();
+			}
+
 			*ppexprNewOuter =
 				CUtils::PexprLogicalApply<CLogicalLeftOuterCorrelatedApply>(
 					mp, pexprOuter, pexprInner, colref, eopidSubq);
+
+			CLogicalLeftOuterCorrelatedApply *leftOuterCorrelatedApply =
+				dynamic_cast<CLogicalLeftOuterCorrelatedApply *>(
+					(*ppexprNewOuter)->Pop());
+			GPOS_ASSERT(leftOuterCorrelatedApply != nullptr);
+
+			leftOuterCorrelatedApply->SetPexprPredicate(pexprPredicate);
 		}
 		*ppexprResidualScalar = CUtils::PexprScalarIdent(mp, colref);
 

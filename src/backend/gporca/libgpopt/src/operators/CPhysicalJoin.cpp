@@ -796,7 +796,8 @@ CPhysicalJoin::PrsRequiredCorrelatedJoin(CMemoryPool *mp,
 CEnfdDistribution *
 CPhysicalJoin::PedCorrelatedJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								 CReqdPropPlan *prppInput, ULONG child_index,
-								 CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
+								 CDrvdPropArray *pdrgpdpCtxt,
+								 CExpression *pexprPredicate, ULONG ulOptReq)
 {
 	GPOS_ASSERT(3 == exprhdl.Arity());
 	GPOS_ASSERT(2 > child_index);
@@ -835,6 +836,54 @@ CPhysicalJoin::PedCorrelatedJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			return GPOS_NEW(mp)
 				CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecSingleton(),
 								  CEnfdDistribution::EdmSatisfy);
+		}
+
+		if (CDistributionSpec::EdtHashed == pdsOuter->Edt() &&
+			pexprPredicate != nullptr)
+		{
+			// require inner child to have matching hashed distribution
+			CExpressionArray *pdrgpexpr =
+				CPredicateUtils::PdrgpexprConjuncts(mp, pexprPredicate);
+
+			CExpressionArray *pdrgpexprMatching =
+				GPOS_NEW(mp) CExpressionArray(mp);
+			CDistributionSpecHashed *pdshashed =
+				CDistributionSpecHashed::PdsConvert(pdsOuter);
+			CExpressionArray *pdrgpexprHashed = pdshashed->Pdrgpexpr();
+			const ULONG ulSize = pdrgpexprHashed->Size();
+
+			BOOL fSuccess = true;
+			for (ULONG ul = 0; fSuccess && ul < ulSize; ul++)
+			{
+				CExpression *pexpr = (*pdrgpexprHashed)[ul];
+
+				// get matching expression from predicate for the corresponding outer child
+				// to create CDistributionSpecHashed for inner child
+				CExpression *pexprMatching =
+					CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexpr);
+				fSuccess = (nullptr != pexprMatching);
+				if (fSuccess)
+				{
+					pexprMatching->AddRef();
+					pdrgpexprMatching->Append(pexprMatching);
+				}
+			}
+			pdrgpexpr->Release();
+
+			if (fSuccess)
+			{
+				GPOS_ASSERT(pdrgpexprMatching->Size() ==
+							pdrgpexprHashed->Size());
+
+				// create a matching hashed distribution request
+				BOOL fNullsColocated = pdshashed->FNullsColocated();
+				CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)
+					CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
+				pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
+				return GPOS_NEW(mp) CEnfdDistribution(
+					pdshashedEquiv, CEnfdDistribution::EdmExact);
+			}
+			pdrgpexprMatching->Release();
 		}
 	}
 

@@ -43,6 +43,14 @@ CLogicalLeftSemiCorrelatedApplyIn::CLogicalLeftSemiCorrelatedApplyIn(
 {
 }
 
+CLogicalLeftSemiCorrelatedApplyIn::~CLogicalLeftSemiCorrelatedApplyIn()
+{
+	if (pexprPredicate != nullptr)
+	{
+		pexprPredicate->Release();
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogicalLeftSemiCorrelatedApplyIn::PxfsCandidates

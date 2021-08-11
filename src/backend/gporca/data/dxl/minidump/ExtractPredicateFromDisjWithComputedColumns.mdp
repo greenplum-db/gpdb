@@ -454,7 +454,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="7695">
+    <dxl:Plan Id="0" SpaceSize="7145">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.002852" Rows="1.000000" Width="64"/>
@@ -648,7 +648,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                   </dxl:Columns>
                 </dxl:TableDescriptor>
               </dxl:TableScan>
-              <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
+              <dxl:Result>
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.000193" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
@@ -663,16 +663,22 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                     <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:HashExprList>
-                  <dxl:HashExpr>
-                    <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
-                  </dxl:HashExpr>
-                </dxl:HashExprList>
-                <dxl:Result>
+                <dxl:Filter>
+                  <dxl:Or>
+                    <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.419.1.0">
+                      <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
+                    </dxl:Comparison>
+                    <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.419.1.0">
+                      <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
+                    </dxl:Comparison>
+                  </dxl:Or>
+                </dxl:Filter>
+                <dxl:OneTimeFilter/>
+                <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000143" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000160" Rows="1.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="22" Alias="cid">
@@ -685,64 +691,53 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                       <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:Filter>
-                    <dxl:Or>
-                      <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.419.1.0">
-                        <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-                      </dxl:Comparison>
-                      <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.419.1.0">
-                        <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
-                      </dxl:Comparison>
-                    </dxl:Or>
-                  </dxl:Filter>
-                  <dxl:OneTimeFilter/>
-                  <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                  <dxl:Filter/>
+                  <dxl:SortingColumnList/>
+                  <dxl:HashExprList>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                  </dxl:HashExprList>
+                  <dxl:Result>
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="16"/>
                     </dxl:Properties>
-                    <dxl:GroupingColumns>
-                      <dxl:GroupingColumn ColId="22"/>
-                      <dxl:GroupingColumn ColId="23"/>
-                    </dxl:GroupingColumns>
                     <dxl:ProjList>
-                      <dxl:ProjElem ColId="32" Alias="tickets_cnt">
-                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
-                          <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.20.1.0"/>
-                        </dxl:AggFunc>
-                      </dxl:ProjElem>
                       <dxl:ProjElem ColId="22" Alias="cid">
                         <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                       <dxl:ProjElem ColId="23" Alias="date_sk">
                         <dxl:Ident ColId="23" ColName="date_sk" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
+                      <dxl:ProjElem ColId="32" Alias="tickets_cnt">
+                        <dxl:Ident ColId="32" ColName="tickets_cnt" TypeMdid="0.20.1.0"/>
+                      </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:Sort SortDiscardDuplicates="false">
+                    <dxl:OneTimeFilter/>
+                    <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000085" Rows="1.000000" Width="16"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="16"/>
                       </dxl:Properties>
+                      <dxl:GroupingColumns>
+                        <dxl:GroupingColumn ColId="22"/>
+                        <dxl:GroupingColumn ColId="23"/>
+                      </dxl:GroupingColumns>
                       <dxl:ProjList>
+                        <dxl:ProjElem ColId="32" Alias="tickets_cnt">
+                          <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
+                            <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.20.1.0"/>
+                          </dxl:AggFunc>
+                        </dxl:ProjElem>
                         <dxl:ProjElem ColId="22" Alias="cid">
                           <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="23" Alias="date_sk">
                           <dxl:Ident ColId="23" ColName="date_sk" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="33" Alias="ColRef_0033">
-                          <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.20.1.0"/>
-                        </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:SortingColumnList>
-                        <dxl:SortingColumn ColId="22" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                        <dxl:SortingColumn ColId="23" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                      </dxl:SortingColumnList>
-                      <dxl:LimitCount/>
-                      <dxl:LimitOffset/>
-                      <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
+                      <dxl:Sort SortDiscardDuplicates="false">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="431.000085" Rows="1.000000" Width="16"/>
                         </dxl:Properties>
@@ -758,18 +753,15 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:HashExprList>
-                          <dxl:HashExpr>
-                            <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
-                          </dxl:HashExpr>
-                          <dxl:HashExpr>
-                            <dxl:Ident ColId="23" ColName="date_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:HashExpr>
-                        </dxl:HashExprList>
-                        <dxl:Result>
+                        <dxl:SortingColumnList>
+                          <dxl:SortingColumn ColId="22" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                          <dxl:SortingColumn ColId="23" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        </dxl:SortingColumnList>
+                        <dxl:LimitCount/>
+                        <dxl:LimitOffset/>
+                        <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="16"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000085" Rows="1.000000" Width="16"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="22" Alias="cid">
@@ -783,36 +775,45 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:OneTimeFilter/>
-                          <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                          <dxl:SortingColumnList/>
+                          <dxl:HashExprList>
+                            <dxl:HashExpr>
+                              <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
+                            </dxl:HashExpr>
+                            <dxl:HashExpr>
+                              <dxl:Ident ColId="23" ColName="date_sk" TypeMdid="0.23.1.0"/>
+                            </dxl:HashExpr>
+                          </dxl:HashExprList>
+                          <dxl:Result>
                             <dxl:Properties>
                               <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="16"/>
                             </dxl:Properties>
-                            <dxl:GroupingColumns>
-                              <dxl:GroupingColumn ColId="22"/>
-                              <dxl:GroupingColumn ColId="23"/>
-                            </dxl:GroupingColumns>
                             <dxl:ProjList>
-                              <dxl:ProjElem ColId="33" Alias="ColRef_0033">
-                                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial">
-                                  <dxl:Ident ColId="21" ColName="ticket_number" TypeMdid="0.23.1.0"/>
-                                </dxl:AggFunc>
-                              </dxl:ProjElem>
                               <dxl:ProjElem ColId="22" Alias="cid">
                                 <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
                               </dxl:ProjElem>
                               <dxl:ProjElem ColId="23" Alias="date_sk">
                                 <dxl:Ident ColId="23" ColName="date_sk" TypeMdid="0.23.1.0"/>
                               </dxl:ProjElem>
+                              <dxl:ProjElem ColId="33" Alias="ColRef_0033">
+                                <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.20.1.0"/>
+                              </dxl:ProjElem>
                             </dxl:ProjList>
                             <dxl:Filter/>
-                            <dxl:Sort SortDiscardDuplicates="false">
+                            <dxl:OneTimeFilter/>
+                            <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="1.000000" Width="24"/>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="16"/>
                               </dxl:Properties>
+                              <dxl:GroupingColumns>
+                                <dxl:GroupingColumn ColId="22"/>
+                                <dxl:GroupingColumn ColId="23"/>
+                              </dxl:GroupingColumns>
                               <dxl:ProjList>
-                                <dxl:ProjElem ColId="21" Alias="ticket_number">
-                                  <dxl:Ident ColId="21" ColName="ticket_number" TypeMdid="0.23.1.0"/>
+                                <dxl:ProjElem ColId="33" Alias="ColRef_0033">
+                                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial">
+                                    <dxl:Ident ColId="21" ColName="ticket_number" TypeMdid="0.23.1.0"/>
+                                  </dxl:AggFunc>
                                 </dxl:ProjElem>
                                 <dxl:ProjElem ColId="22" Alias="cid">
                                   <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
@@ -822,15 +823,9 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:SortingColumnList>
-                                <dxl:SortingColumn ColId="22" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                                <dxl:SortingColumn ColId="23" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                              </dxl:SortingColumnList>
-                              <dxl:LimitCount/>
-                              <dxl:LimitOffset/>
-                              <dxl:TableScan>
+                              <dxl:Sort SortDiscardDuplicates="false">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="24"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="1.000000" Width="24"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="21" Alias="ticket_number">
@@ -844,30 +839,53 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
                                 <dxl:Filter/>
-                                <dxl:TableDescriptor Mdid="0.15667489.1.1" TableName="sales">
-                                  <dxl:Columns>
-                                    <dxl:Column ColId="20" Attno="1" ColName="item_sk" TypeMdid="0.23.1.0"/>
-                                    <dxl:Column ColId="21" Attno="2" ColName="ticket_number" TypeMdid="0.23.1.0"/>
-                                    <dxl:Column ColId="22" Attno="3" ColName="cid" TypeMdid="0.23.1.0"/>
-                                    <dxl:Column ColId="23" Attno="4" ColName="date_sk" TypeMdid="0.23.1.0"/>
-                                    <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                    <dxl:Column ColId="26" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                    <dxl:Column ColId="27" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                    <dxl:Column ColId="28" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                    <dxl:Column ColId="29" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                    <dxl:Column ColId="30" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                    <dxl:Column ColId="31" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                  </dxl:Columns>
-                                </dxl:TableDescriptor>
-                              </dxl:TableScan>
-                            </dxl:Sort>
-                          </dxl:Aggregate>
-                        </dxl:Result>
-                      </dxl:RedistributeMotion>
-                    </dxl:Sort>
-                  </dxl:Aggregate>
-                </dxl:Result>
-              </dxl:RedistributeMotion>
+                                <dxl:SortingColumnList>
+                                  <dxl:SortingColumn ColId="22" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                                  <dxl:SortingColumn ColId="23" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                                </dxl:SortingColumnList>
+                                <dxl:LimitCount/>
+                                <dxl:LimitOffset/>
+                                <dxl:TableScan>
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="24"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList>
+                                    <dxl:ProjElem ColId="21" Alias="ticket_number">
+                                      <dxl:Ident ColId="21" ColName="ticket_number" TypeMdid="0.23.1.0"/>
+                                    </dxl:ProjElem>
+                                    <dxl:ProjElem ColId="22" Alias="cid">
+                                      <dxl:Ident ColId="22" ColName="cid" TypeMdid="0.23.1.0"/>
+                                    </dxl:ProjElem>
+                                    <dxl:ProjElem ColId="23" Alias="date_sk">
+                                      <dxl:Ident ColId="23" ColName="date_sk" TypeMdid="0.23.1.0"/>
+                                    </dxl:ProjElem>
+                                  </dxl:ProjList>
+                                  <dxl:Filter/>
+                                  <dxl:TableDescriptor Mdid="0.15667489.1.1" TableName="sales">
+                                    <dxl:Columns>
+                                      <dxl:Column ColId="20" Attno="1" ColName="item_sk" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="21" Attno="2" ColName="ticket_number" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="22" Attno="3" ColName="cid" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="23" Attno="4" ColName="date_sk" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                      <dxl:Column ColId="26" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="27" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="28" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="29" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="30" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                      <dxl:Column ColId="31" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                    </dxl:Columns>
+                                  </dxl:TableDescriptor>
+                                </dxl:TableScan>
+                              </dxl:Sort>
+                            </dxl:Aggregate>
+                          </dxl:Result>
+                        </dxl:RedistributeMotion>
+                      </dxl:Sort>
+                    </dxl:Aggregate>
+                  </dxl:Result>
+                </dxl:RedistributeMotion>
+              </dxl:Result>
             </dxl:HashJoin>
           </dxl:RedistributeMotion>
           <dxl:TableScan>

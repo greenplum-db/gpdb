@@ -59,7 +59,8 @@ protected:
 	// helper to compute required distribution of correlated join's children
 	CEnfdDistribution *PedCorrelatedJoin(
 		CMemoryPool *mp, CExpressionHandle &exprhdl, CReqdPropPlan *prppInput,
-		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt,
+		CExpression *pexprPredicate, ULONG ulOptReq);
 
 	// helper to compute required rewindability of correlated join's children
 	static CRewindabilitySpec *PrsRequiredCorrelatedJoin(

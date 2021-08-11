@@ -14,6 +14,12 @@
 #include "gpos/base.h"
 
 #include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalCorrelatedInLeftSemiNLJoin.h"
+#include "gpopt/operators/CPhysicalCorrelatedInnerNLJoin.h"
+#include "gpopt/operators/CPhysicalCorrelatedLeftAntiSemiNLJoin.h"
+#include "gpopt/operators/CPhysicalCorrelatedLeftOuterNLJoin.h"
+#include "gpopt/operators/CPhysicalCorrelatedLeftSemiNLJoin.h"
+#include "gpopt/operators/CPhysicalCorrelatedNotInLeftAntiSemiNLJoin.h"
 #include "gpopt/xforms/CXformImplementation.h"
 #include "gpopt/xforms/CXformUtils.h"
 
@@ -96,6 +102,45 @@ public:
 			GPOS_NEW(mp)
 				TPhysicalJoin(mp, colref_array, popApply->EopidOriginSubq()),
 			pexprLeft, pexprRight, pexprScalar);
+
+		// if the correlated apply has a join predicate we can communicate
+		// for hash distribution optimizations, pass that over
+
+		CExpression *pexprPredicate = popApply->GetPexprPredicate();
+		if (pexprPredicate != nullptr)
+		{
+			switch (pexprPhysicalApply->Pop()->Eopid())
+			{
+				case COperator::EopPhysicalCorrelatedInnerNLJoin:
+					break;
+				case COperator::EopPhysicalCorrelatedLeftOuterNLJoin:
+					pexprPredicate->AddRef();
+					CPhysicalCorrelatedLeftOuterNLJoin::PopConvert(
+						pexprPhysicalApply->Pop())
+						->SetPexprPredicate(pexprPredicate);
+					break;
+					/*
+     case COperator::EopPhysicalCorrelatedLeftSemiNLJoin:
+                    pexprPredicate->AddRef();
+                    CPhysicalCorrelatedLeftSemiNLJoin::PopConvert(pexprPhysicalApply->Pop())->SetPexprPredicate(pexprPredicate);
+                    break;
+                case COperator::EopPhysicalCorrelatedInLeftSemiNLJoin:
+                    pexprPredicate->AddRef();
+                    CPhysicalCorrelatedInLeftSemiNLJoin::PopConvert(pexprPhysicalApply->Pop())->SetPexprPredicate(pexprPredicate);
+                    break;
+                case COperator::EopPhysicalCorrelatedLeftAntiSemiNLJoin:
+                    pexprPredicate->AddRef();
+                    CPhysicalCorrelatedLeftAntiSemiNLJoin::PopConvert(pexprPhysicalApply->Pop())->SetPexprPredicate(pexprPredicate);
+                    break;
+                case COperator::EopPhysicalCorrelatedNotInLeftAntiSemiNLJoin:
+                    pexprPredicate->AddRef();
+                    CPhysicalCorrelatedNotInLeftAntiSemiNLJoin::PopConvert(pexprPhysicalApply->Pop())->SetPexprPredicate(pexprPredicate);
+                    break;
+     */
+				default:
+					break;
+			}
+		}
 
 		// add alternative to results
 		pxfres->Add(pexprPhysicalApply);

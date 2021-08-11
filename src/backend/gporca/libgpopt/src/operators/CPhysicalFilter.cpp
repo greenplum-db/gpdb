@@ -112,16 +112,26 @@ CPhysicalFilter::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							 CDrvdPropArray *,	// pdrgpdpCtxt
 							 ULONG ulOptReq) const
 {
-	if (CDistributionSpec::EdtAny == pdsRequired->Edt() &&
-		CDistributionSpecAny::PdsConvert(pdsRequired)->FAllowOuterRefs() &&
-		!exprhdl.NeedsSingletonExecution())
+	if (!exprhdl.NeedsSingletonExecution())
 	{
-		// this situation arises when we have Filter on top of (Dynamic)IndexScan,
-		// in this case, we impose no distribution requirements even with the presence of outer references,
-		// the reason is that the Filter must be the inner child of IndexNLJoin and
-		// we need to have outer references referring to join's outer child
-		pdsRequired->AddRef();
-		return pdsRequired;
+		if (CDistributionSpec::EdtAny == pdsRequired->Edt() &&
+			CDistributionSpecAny::PdsConvert(pdsRequired)->FAllowOuterRefs())
+		{
+			// this situation arises when we have Filter on top of (Dynamic)IndexScan,
+			// in this case, we impose no distribution requirements even with the presence of outer references,
+			// the reason is that the Filter must be the inner child of IndexNLJoin and
+			// we need to have outer references referring to join's outer child
+			pdsRequired->AddRef();
+			return pdsRequired;
+		}
+
+		if (CDistributionSpec::EdtHashed == pdsRequired->Edt())
+		{
+			// correlated join has verified co-location, so we pass this through
+			//return PdsPassThru(mp, exprhdl, pdsRequired, child_index);
+			pdsRequired->AddRef();
+			return pdsRequired;
+		}
 	}
 
 	return CPhysical::PdsUnary(mp, exprhdl, pdsRequired, child_index, ulOptReq);

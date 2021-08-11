@@ -8801,7 +8801,7 @@ select max(a) from foo group by (select e from bar where bar.e = foo.a);
 -- nested subquery in group by
 select max(a) from foo group by (select g from jazz where foo.a = (select max(a) from foo where c = 1 group by b));
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
+DETAIL:  DXL-to-PlStmt Translation: Attribute number 4 not found in project list
  max 
 -----
    3
@@ -9954,9 +9954,9 @@ select c.cid cid,
 from cust c, sales s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
-                                                                                      QUERY PLAN
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1293.00 rows=1 width=24)
+                                                                                            QUERY PLAN                                                                                            
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=24)
    ->  Hash Join  (cost=0.00..1293.00 rows=1 width=24)
          Hash Cond: (cust.cid = sales.cid)
          ->  Seq Scan on cust  (cost=0.00..431.00 rows=1 width=20)
@@ -9966,15 +9966,16 @@ where c.cid = s.cid and s.date_sk = d.date_sk and
                      ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
                            Hash Cond: (sales.date_sk = datedim.date_sk)
                            Join Filter: (((datedim.year = 2001) AND (lower(sales.type) = 't1'::text) AND (plusone(datedim.moy) = 5)) OR ((datedim.moy = 4) AND (upper(sales.type) = 'T2'::text)))
-                           ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                                 Hash Key: sales.date_sk
-                                 ->  Seq Scan on sales  (cost=0.00..431.00 rows=1 width=16)
-                                       Filter: ((lower(type) = 't1'::text) OR (upper(type) = 'T2'::text))
+                           ->  Result  (cost=0.00..431.00 rows=1 width=16)
+                                 Filter: ((lower(sales.type) = 't1'::text) OR (upper(sales.type) = 'T2'::text))
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                                       Hash Key: sales.date_sk
+                                       ->  Seq Scan on sales  (cost=0.00..431.00 rows=1 width=16)
                            ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                                  ->  Seq Scan on datedim  (cost=0.00..431.00 rows=1 width=12)
                                        Filter: ((year = 2001) OR (moy = 4))
  Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+(19 rows)
 
 reset optimizer_segments;
 -- Bitmap indexes
@@ -13777,8 +13778,8 @@ CREATE TABLE ria (
     filter_match_id bigint
 ) DISTRIBUTED BY (id);
 explain (costs off) select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (ria.ip = oip.cidr)
@@ -13786,12 +13787,13 @@ explain (costs off) select *  from oip oip  join ria a on ip=cidr and oip.oid=19
                Hash Key: ria.ip
                ->  Seq Scan on ria
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                     Hash Key: oip.cidr
-                     ->  Seq Scan on oip
-                           Filter: (oid = 194073)
+               ->  Result
+                     Filter: (oip.oid = 194073)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: oip.cidr
+                           ->  Seq Scan on oip
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(13 rows)
 
 -- PartTbl-ArrayCoerce.mdp
 -- from comment

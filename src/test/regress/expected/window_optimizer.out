@@ -3069,10 +3069,10 @@ WHERE depname = 'sales';
          Partition By: depname
          ->  Sort
                Sort Key: depname
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: depname
-                     ->  Result
-                           Filter: ((depname)::text = 'sales'::text)
+               ->  Result
+                     Filter: ((depname)::text = 'sales'::text)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: depname
                            ->  WindowAgg
                                  Partition By: enroll_date
                                  ->  Sort

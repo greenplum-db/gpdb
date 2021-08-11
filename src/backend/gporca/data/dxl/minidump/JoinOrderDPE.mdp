@@ -3144,7 +3144,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="644">
+    <dxl:Plan Id="0" SpaceSize="692">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1301.264890" Rows="95315.069401" Width="24"/>
@@ -3223,7 +3223,7 @@
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:HashCondList>
-            <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="3" SelectorIds="11">
+            <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="3" SelectorIds="10">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.003571" Rows="156.000000" Width="8"/>
               </dxl:Properties>
@@ -3282,7 +3282,7 @@
                 </dxl:TableDescriptor>
               </dxl:TableScan>
             </dxl:Append>
-            <dxl:PartitionSelector RelationMdid="0.245931.1.0" SelectorId="11" ScanId="3" Partitions="3">
+            <dxl:PartitionSelector RelationMdid="0.245931.1.0" SelectorId="10" ScanId="3" Partitions="3">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000166" Rows="3.000003" Width="8"/>
               </dxl:Properties>

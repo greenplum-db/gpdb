@@ -433,6 +433,9 @@ private:
 	// translate a scalar op node
 	CDXLNode *PdxlnScOp(CExpression *pexprScOp);
 
+	// translate a scalar subquery
+	CDXLNode *PdxlnScSubquery(CExpression *pexprScConst);
+
 	// translate a scalar constant
 	CDXLNode *PdxlnScConst(CExpression *pexprScConst);
 

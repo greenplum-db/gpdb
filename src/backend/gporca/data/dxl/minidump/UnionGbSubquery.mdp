@@ -232,7 +232,7 @@
         </dxl:Union>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16458">
+    <dxl:Plan Id="0" SpaceSize="16686">
       <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000118" Rows="1.000000" Width="4"/>

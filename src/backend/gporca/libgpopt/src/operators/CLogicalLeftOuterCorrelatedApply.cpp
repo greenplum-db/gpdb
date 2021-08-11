@@ -44,6 +44,13 @@ CLogicalLeftOuterCorrelatedApply::CLogicalLeftOuterCorrelatedApply(
 {
 }
 
+CLogicalLeftOuterCorrelatedApply::~CLogicalLeftOuterCorrelatedApply()
+{
+	if (pexprPredicate != nullptr)
+	{
+		pexprPredicate->Release();
+	}
+}
 
 //---------------------------------------------------------------------------
 //	@function:

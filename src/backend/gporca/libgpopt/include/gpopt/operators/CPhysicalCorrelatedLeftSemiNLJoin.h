@@ -58,6 +58,19 @@ public:
 	~CPhysicalCorrelatedLeftSemiNLJoin() override
 	{
 		m_pdrgpcrInner->Release();
+		if (pexprPredicate != nullptr)
+		{
+			pexprPredicate->Release();
+		}
+	}
+
+	// join predicate used for hash distribution optimization request
+	CExpression *pexprPredicate = nullptr;
+
+	void
+	SetPexprPredicate(CExpression *pexprPredicate_)
+	{
+		pexprPredicate = pexprPredicate_;
 	}
 
 	// ident accessors
@@ -104,7 +117,7 @@ public:
 		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) override
 	{
 		return PedCorrelatedJoin(mp, exprhdl, prppInput, child_index,
-								 pdrgpdpCtxt, ulOptReq);
+								 pdrgpdpCtxt, pexprPredicate, ulOptReq);
 	}
 
 	// compute required distribution of the n-th child

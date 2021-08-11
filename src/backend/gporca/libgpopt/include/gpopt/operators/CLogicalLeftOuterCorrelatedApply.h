@@ -38,12 +38,26 @@ public:
 	CLogicalLeftOuterCorrelatedApply(CMemoryPool *mp,
 									 CColRefArray *pdrgpcrInner,
 									 EOperatorId eopidOriginSubq);
+	CExpression *pexprPredicate =
+		nullptr;  // JOIN predicate, used to hash distribute inner child
+
+	void
+	SetPexprPredicate(CExpression *pexprPredicate_)
+	{
+		pexprPredicate = pexprPredicate_;
+	}
+
+	CExpression *
+	GetPexprPredicate()
+	{
+		return pexprPredicate;
+	}
 
 	// ctor for patterns
 	explicit CLogicalLeftOuterCorrelatedApply(CMemoryPool *mp);
 
 	// dtor
-	~CLogicalLeftOuterCorrelatedApply() override = default;
+	~CLogicalLeftOuterCorrelatedApply() override;
 
 	// ident accessors
 	EOperatorId

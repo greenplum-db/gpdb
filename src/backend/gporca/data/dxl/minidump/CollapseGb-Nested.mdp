@@ -368,7 +368,7 @@
         </dxl:LogicalGroupBy>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2000">
+    <dxl:Plan Id="0" SpaceSize="200">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="432.745947" Rows="10000.000000" Width="4"/>

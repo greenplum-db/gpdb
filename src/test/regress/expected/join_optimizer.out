@@ -3860,10 +3860,10 @@ select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
                Hash Key: tenk1.unique2
                ->  Seq Scan on tenk1
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                     Hash Key: COALESCE(tenk1_1.twothousand, tenk1_2.twothousand)
-                     ->  Result
-                           Filter: (COALESCE(tenk1_1.twothousand, tenk1_2.twothousand) = 44)
+               ->  Result
+                     Filter: (COALESCE(tenk1_1.twothousand, tenk1_2.twothousand) = 44)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: COALESCE(tenk1_1.twothousand, tenk1_2.twothousand)
                            ->  Hash Right Join
                                  Hash Cond: (tenk1_1.thousand = tenk1_2.unique1)
                                  ->  Redistribute Motion 3:3  (slice4; segments: 3)

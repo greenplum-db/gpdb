@@ -28,6 +28,14 @@ CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply(CMemoryPool *mp)
 {
 }
 
+CLogicalInnerCorrelatedApply::~CLogicalInnerCorrelatedApply()
+{
+	if (pexprPredicate != nullptr)
+	{
+		pexprPredicate->Release();
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply

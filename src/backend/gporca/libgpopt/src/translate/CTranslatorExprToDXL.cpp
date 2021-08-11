@@ -86,6 +86,7 @@
 #include "gpopt/operators/CScalarNullIf.h"
 #include "gpopt/operators/CScalarOp.h"
 #include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarSwitch.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
 #include "naucrates/base/CDatumBoolGPDB.h"
@@ -163,6 +164,7 @@
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
 #include "naucrates/dxl/operators/CDXLScalarSortColList.h"
+#include "naucrates/dxl/operators/CDXLScalarSubquery.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitchCase.h"
 #include "naucrates/dxl/operators/CDXLScalarWindowFrameEdge.h"
@@ -625,6 +627,8 @@ CTranslatorExprToDXL::PdxlnScalar(CExpression *pexpr)
 			return CTranslatorExprToDXL::PdxlnScCoerceViaIO(pexpr);
 		case COperator::EopScalarArrayCoerceExpr:
 			return CTranslatorExprToDXL::PdxlnScArrayCoerceExpr(pexpr);
+		case COperator::EopScalarSubquery:
+			return CTranslatorExprToDXL::PdxlnScSubquery(pexpr);
 		case COperator::EopScalarArray:
 			return CTranslatorExprToDXL::PdxlnArray(pexpr);
 		case COperator::EopScalarArrayCmp:
@@ -6623,6 +6627,28 @@ CTranslatorExprToDXL::PdxlnDMLAction(CExpression *
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarDMLAction(m_mp));
 }
 
+//---------------------------------------------------------------------------
+//    @function:
+//        CTranslatorExprToDXL::PdxlnScSubquery
+//
+//    @doc:
+//        Create a DXL scalar subquery node
+//
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorExprToDXL::PdxlnScSubquery(CExpression *pexprScSubquery)
+{
+	GPOS_ASSERT(nullptr != pexprScSubquery);
+	GPOS_ASSERT(COperator::EopScalarSubquery ==
+				pexprScSubquery->Pop()->Eopid());
+
+	const CScalarSubquery *subquery =
+		dynamic_cast<CScalarSubquery *>(pexprScSubquery->Pop());
+	GPOS_ASSERT(subquery != nullptr);
+
+	return GPOS_NEW(m_mp) CDXLNode(
+		m_mp, GPOS_NEW(m_mp) CDXLScalarSubquery(m_mp, subquery->Pcr()->Id()));
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorExprToDXL::PdxlnScConst
