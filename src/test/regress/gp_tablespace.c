@@ -16,7 +16,7 @@
 
 /**
  * The use pattern is
- * select gp_tablespace_inotify_cmd('init0');
+ * select gp_tablespace_inotify_cmd('init');
  * select gp_tablespace_inotify_cmd('add', '<name1>', '<directory of tablespace>');
  * select gp_tablespace_inotify_cmd('add', '<name2>', '<directory of tablespace>');
  * ...
@@ -60,7 +60,7 @@ static MemoryContext mc = NULL;
 static void tablespace_inotify_checks(void);
 
 static void
-tablespace_inotify_init0()
+tablespace_inotify_init()
 {
 	int fd;
 	if (tablespace_inotify_fd >= 0)
@@ -142,7 +142,7 @@ tablespace_inotify_checks()
 		ereport(ERROR, (errmsg("memory context is null")));
 
 }
-// tablespace location, database
+
 static void
 tablespace_inotify_add(const char *name, const char *location)
 {
@@ -159,6 +159,7 @@ tablespace_inotify_add(const char *name, const char *location)
 		ereport(ERROR, (errmsg("Too many tablespace to watch")));
 
 	path = location;
+#if 0
 	// create pgsql_tmp if not exists.
 	{
 		struct stat stats;
@@ -172,9 +173,11 @@ tablespace_inotify_add(const char *name, const char *location)
 			if (e != 0)
 				ereport(ERROR, (errmsg("Can't create temp directory:%m")));
 		}
-//		if (!S_ISDIR(stats.st_mode))
+		/* The pgsql_tmp should be a directory or a link to a directory. */
+//		if (!S_ISDIR(stats.st_mode) && !S_ISLNK(stats.st_mode))
 //			ereport(ERROR, (errmsg("Temp path is not a directory")));
 	}
+#endif
 	wd = inotify_add_watch(tablespace_inotify_fd, path, IN_CREATE);
 	if (wd < 0)
 		ereport(ERROR, (errmsg("Can't add watch for path:%s, %m", path)));
@@ -267,7 +270,7 @@ gp_tablespace_inotify_match(PG_FUNCTION_ARGS)
 	}
 	regfree(&reg);
 	if (!found)
-		ereport(LOG, (errmsg("Doesn't find name='%s'", name)));
+		ereport(NOTICE, (errmsg("Doesn't find name='%s'", name)));
 	return num_matched;
 	PG_RETURN_INT32(num_matched);
 }
@@ -284,8 +287,8 @@ gp_tablespace_inotify_cmd(PG_FUNCTION_ARGS)
 	if (PG_NARGS() > 1)
 		name = TextDatumGetCString(PG_GETARG_TEXT_PP(1));
 
-	if (strcmp(cmd, "init0") == 0)
-		tablespace_inotify_init0();
+	if (strcmp(cmd, "init") == 0)
+		tablespace_inotify_init();
 	else if (strcmp(cmd, "clear") == 0)
 		tablespace_inotify_clear(name);
 	else if (strcmp(cmd, "exit") == 0)
@@ -297,7 +300,7 @@ gp_tablespace_inotify_cmd(PG_FUNCTION_ARGS)
 	else
 		ereport(ERROR, (errmsg("Unknown cmd=%s", cmd)));
 
-	PG_RETURN_NULL();
+	PG_RETURN_VOID();
 }
 
 PG_FUNCTION_INFO_V1(gp_tablespace_tmppath);
