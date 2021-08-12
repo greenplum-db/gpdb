@@ -36,6 +36,8 @@
  * select gp_tablespace_inotify_cmd('clear');
  * -- After `clear`, you can run another queries and do some check.
  * -- You don't need to setup the tablespaces again.
+ * -- optional: add a log to mark range of inotify events for different queries.
+ * select gp_tablespace_inotify_cmd('<TAG>', '<log messages>');
  *
  * -- Release inotify and other resources
  * select gp_tablespace_inotify_cmd('exit');
@@ -133,6 +135,11 @@ tablespace_inotify_exit()
 	}
 }
 
+static void
+tablespace_inotify_log(const char *tag, const char *line)
+{
+	fprintf(logFile, "[LOG][%s]: %s\n", tag, line);
+}
 static void
 tablespace_inotify_checks()
 {
@@ -294,6 +301,8 @@ gp_tablespace_inotify_cmd(PG_FUNCTION_ARGS)
 	else if (strcmp(cmd, "exit") == 0)
 		tablespace_inotify_exit();
 	else if (strcmp(cmd, "add") == 0)
+		tablespace_inotify_add(name, TextDatumGetCString(PG_GETARG_TEXT_PP(2)));
+	else if (strcmp(cmd, "log") == 0)
 		tablespace_inotify_add(name, TextDatumGetCString(PG_GETARG_TEXT_PP(2)));
 	else if (strcmp(cmd, "checkout") == 0)
 		tablespace_inotify_checkout();
