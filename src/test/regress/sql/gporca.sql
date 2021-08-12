@@ -3024,6 +3024,26 @@ reset optimizer_enable_hashjoin;
 reset enable_nestloop;
 reset enable_hashjoin;
 
+--- IS DISTINCT FROM FALSE previously simplified to IS TRUE, returning incorrect results for some hash anti joins
+--- the following tests were added to verify the behavior is correct
+CREATE TABLE tt1 (a int, b int);
+CREATE TABLE tt2 (c int, d int);
+
+INSERT INTO tt1 VALUES (1, NULL), (2, 2), (3, 4), (NULL, 5);
+INSERT INTO tt2 VALUES (1, 1), (2, NULL), (4, 4), (NULL, 2);
+
+ANALYZE tt1;
+ANALYZE tt2;
+
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM false);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM false);
+
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM true);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt2.d = tt1.b) IS DISTINCT FROM true);
+
+EXPLAIN SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt1.b = tt2.d) IS DISTINCT FROM NULL);
+SELECT b FROM tt1 WHERE NOT EXISTS (SELECT * FROM tt2 WHERE (tt1.b = tt2.d) IS DISTINCT FROM NULL);
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
