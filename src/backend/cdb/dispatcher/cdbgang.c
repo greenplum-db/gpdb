@@ -311,10 +311,8 @@ addOneOption(StringInfo string, StringInfo diff, struct config_generic *guc)
 				struct config_string *sguc = (struct config_string *) guc;
 				const char *str = sguc->reset_val;
 				int			i;
-				int			idx;
 
 				appendStringInfo(string, " -c %s=", guc->name);
-				idx = strlen(string->data);
 
 				/*
 				 * All whitespace characters must be escaped. See
@@ -329,8 +327,15 @@ addOneOption(StringInfo string, StringInfo diff, struct config_generic *guc)
 				}
 				if (strcmp(str, *sguc->variable) != 0)
 				{
+					const char *p = *sguc->variable;
 					appendStringInfo(diff, " %s=", guc->name);
-					appendStringInfoString(diff, &string->data[idx]);
+					for (i = 0; p[i] != '\0'; i++)
+					{
+						if (isspace((unsigned char) p[i]))
+							appendStringInfoChar(diff, '\\');
+
+						appendStringInfoChar(diff, p[i]);
+					}
 				}
 				break;
 			}
@@ -340,10 +345,8 @@ addOneOption(StringInfo string, StringInfo diff, struct config_generic *guc)
 				int			value = eguc->reset_val;
 				const char *str = config_enum_lookup_by_value(eguc, value);
 				int			i;
-				int			idx;
 
 				appendStringInfo(string, " -c %s=", guc->name);
-				idx = strlen(string->data);
 
 				/*
 				 * All whitespace characters must be escaped. See
@@ -359,8 +362,15 @@ addOneOption(StringInfo string, StringInfo diff, struct config_generic *guc)
 				}
 				if (value != *eguc->variable)
 				{
+					const char *p = config_enum_lookup_by_value(eguc, *eguc->variable);
 					appendStringInfo(diff, " %s=", guc->name);
-					appendStringInfoString(diff, &string->data[idx]);
+					for (i = 0; p[i] != '\0'; i++)
+					{
+						if (isspace((unsigned char) p[i]))
+							appendStringInfoChar(diff, '\\');
+
+						appendStringInfoChar(diff, p[i]);
+					}
 				}
 				break;
 			}

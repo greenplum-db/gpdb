@@ -262,3 +262,6 @@ test: orphan_temp_table
 
 # test if gxid is valid or not on the cluster after running the tests
 test: check_gxid
+
+# test if GUC is synchronized from the QD to QEs.
+test: sync_guc
