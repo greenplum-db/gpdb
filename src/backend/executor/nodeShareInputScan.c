@@ -454,7 +454,17 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	}
 
 	local_state = list_nth(estate->es_sharenode, node->share_id);
-	local_state->nsharers++;
+
+	/*
+	 * To accumulate the number of CTE consumers executed in this slice.
+	 * This variable will be used by the last finishing CTE consumer
+	 * in current slice, to wake the corresponding CTE producer up for
+	 * cleaning the materialized tuplestore, during squelching.
+	 */
+	if (currentSliceId == node->this_slice_id &&
+		currentSliceId != node->producer_slice_id)
+		local_state->nsharers++;
+
 	if (childState)
 		local_state->childState = childState;
 	sisstate->local_state = local_state;
