@@ -139,7 +139,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	 * acquire AccessExclusiveLock lock on pg_resgroupcapability at the beginning
 	 * of CREATE and ALTER
 	 */
-	pg_resgroupcapability_rel = table_open(ResGroupCapabilityRelationId, AccessExclusiveLock);
+	pg_resgroupcapability_rel = table_open(ResGroupCapabilityRelationId, RowExclusiveLock);
 	pg_resgroup_rel = table_open(ResGroupRelationId, RowExclusiveLock);
 
 	/* Check if MaxResourceGroups limit is reached */
@@ -432,7 +432,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	 * increase on different resource group.
 	 */
 	pg_resgroupcapability_rel = heap_open(ResGroupCapabilityRelationId,
-										  AccessExclusiveLock);
+										  RowExclusiveLock);
 
 	/* Load current resource group capabilities */
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupid, &oldCaps);
