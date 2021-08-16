@@ -115,7 +115,6 @@ extern void closeAllVfds(void);
 extern void SetTempTablespaces(Oid *tableSpaces, int numSpaces);
 extern bool TempTablespacesAreSet(void);
 extern Oid	GetNextTempTableSpace(void);
-extern Oid  GetSessionTempTableSpace(void);
 extern void AtEOXact_Files(void);
 extern void AtEOSubXact_Files(bool isCommit, SubTransactionId mySubid,
 				  SubTransactionId parentSubid);

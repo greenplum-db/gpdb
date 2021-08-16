@@ -266,8 +266,6 @@ static Oid *tempTableSpaces = NULL;
 static int	numTempTableSpaces = -1;
 static int	nextTempTableSpace = 0;
 
-Oid GetSessionTempTableSpace(void);
-
 /*--------------------
  *
  * Private Routines
@@ -1259,7 +1257,7 @@ OpenNamedTemporaryFile(const char *fileName,
 	 */
 	if (numTempTableSpaces > 0 && !interXact)
 	{
-		Oid            tblspcOid = GetSessionTempTableSpace();
+		Oid            tblspcOid = GetNextTempTableSpace();
 
 		if (OidIsValid(tblspcOid))
 			file = OpenTemporaryFileInTablespace(tblspcOid,
@@ -1344,7 +1342,7 @@ OpenTemporaryFile(bool interXact, const char *filePrefix)
 	 */
 	if (numTempTableSpaces > 0 && !interXact)
 	{
-		Oid			tblspcOid = GetSessionTempTableSpace();
+		Oid			tblspcOid = GetNextTempTableSpace();
 
 		if (OidIsValid(tblspcOid))
 			file = OpenTemporaryFileInTablespace(tblspcOid,
@@ -1404,7 +1402,7 @@ GetTempFilePath(const char *filename, bool createdir)
 	char		tempfilepath[MAXPGPATH];
 	Oid			tblspcOid;
 
-	tblspcOid = GetSessionTempTableSpace();
+	tblspcOid = GetNextTempTableSpace();
 	if (!OidIsValid(tblspcOid))
 	{
 		if (MyDatabaseTableSpace)
@@ -2647,6 +2645,30 @@ TempTablespacesAreSet(void)
 }
 
 /*
+ * GetSessionTempTableSpace
+ *
+ * Select temp tablespace for current session to use. It's like
+ * GetNextTempTableSpace in upstream, but it gets the same temp
+ * tablespace in all QD/QE processes in the same session.
+ * A result of InvalidOid means to use the current database's
+ * default tablespace.
+ */
+static inline Oid
+GetSessionTempTableSpace(void)
+{
+	if (numTempTableSpaces <= 0)
+		return InvalidOid;
+
+	if (gp_session_id >= 0)
+		return tempTableSpaces[gp_session_id % numTempTableSpaces];
+
+	/* If this session is not MPP, uses the implementation from upstream */
+	if (++nextTempTableSpace >= numTempTableSpaces)
+		nextTempTableSpace = 0;
+	return tempTableSpaces[nextTempTableSpace];
+}
+
+/*
  * GetNextTempTableSpace
  *
  * Select the next temp tablespace to use.  A result of InvalidOid means
@@ -2655,35 +2677,7 @@ TempTablespacesAreSet(void)
 Oid
 GetNextTempTableSpace(void)
 {
-	if (numTempTableSpaces > 0)
-	{
-		/* Advance nextTempTableSpace counter with wraparound */
-		if (++nextTempTableSpace >= numTempTableSpaces)
-			nextTempTableSpace = 0;
-		return tempTableSpaces[nextTempTableSpace];
-	}
-	return InvalidOid;
-}
-
-/*
- * GetSessionTempTableSpace
- *
- * Select temp tablespace for current session to use. It's like
- * GetNextTempTableSpace, but it gets the same temp tablespace
- * in all QD/QE processes in the same session.
- * A result of InvalidOid means to use the current database's
- * default tablespace.
- */
-Oid
-GetSessionTempTableSpace(void)
-{
-	if (numTempTableSpaces > 0)
-	{
-		return gp_session_id < 0
-					? GetNextTempTableSpace()
-					: tempTableSpaces[gp_session_id % numTempTableSpaces];
-	}
-	return InvalidOid;
+	return GetSessionTempTableSpace();
 }
 
 /*

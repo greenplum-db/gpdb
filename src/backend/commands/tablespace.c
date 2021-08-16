@@ -1492,7 +1492,7 @@ GetDefaultTablespace(char relpersistence)
 	if (relpersistence == RELPERSISTENCE_TEMP)
 	{
 		PrepareTempTablespaces();
-		return GetSessionTempTableSpace();
+		return GetNextTempTableSpace();
 	}
 
 	/* Fast path for default_tablespace == "" */

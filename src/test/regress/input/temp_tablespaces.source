@@ -41,31 +41,72 @@ create tablespace mytempsp7 location '@testtablespace@_mytempsp7';
 create tablespace mytempsp8 location '@testtablespace@_mytempsp8';
 create tablespace mytempsp9 location '@testtablespace@_mytempsp9';
 -- temp_tablespaces will synchronized to all segments
-set temp_tablespaces=mytempsp0,mytempsp1,mytempsp2,mytempsp3,mytempsp4,mytempsp5,mytempsp6,mytempsp7,mytempsp8,mytempsp9;
+set temp_tablespaces=mytempsp0;
 
-CREATE OR REPLACE FUNCTION gp_tablespace_inotify_cmd(cmd text, name text, param text)
+-- start_ignore
+\! wget -O /tmp/fswatch-1.16.0.tar.gz  https://github.com/emcrisostomo/fswatch/releases/download/1.16.0/fswatch-1.16.0.tar.gz
+\! tar xzf /tmp/fswatch-1.16.0.tar.gz -C /tmp
+-- unset some flags that will result link failure for fswatch
+-- we can't use a clear empty bash environment, because the gcc is probably installed under /opt,
+-- which is not accessible in standard directories.
+\! bash -c "cd /tmp/fswatch-1.16.0 ; unset LDFLAGS MAKEFLAGS CPPFLAGS MAKEOVERRIDES LD_LIBRARY_PATH MFLAGS CONFIGURE_FLAGS PYTHONPATH ; env ; ./configure --prefix=/tmp/fswatch.bin --enable-static=yes --enable-shared=no && make -j16 -s install-exec"
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION gp_tablespace_watch_start(dbid int, name text, location text)
     RETURNS void
     EXECUTE ON ALL SEGMENTS
-AS '@abs_builddir@/regress.so', 'gp_tablespace_inotify_cmd'
-    LANGUAGE C;
+AS $$
+import subprocess
+output = '/tmp/gp_temp_tablespaces_dbid%d_%s' % (dbid, name)
+cmd = "/tmp/fswatch.bin/bin/fswatch --latency=0.0001 --event=Created %s | tee -a /tmp/gp_temp_tablespaces_dbid%d.log > %s &" % (location, dbid, output)
+cmd = ["bash", "-c", cmd]
+process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+rc = process.wait()
+if rc != 0:
+    output, error = process.communicate()
+    raise Exception("error=%s" % str(error))
+$$ LANGUAGE plpythonu;
 
-CREATE OR REPLACE FUNCTION gp_tablespace_inotify_cmd(cmd text, name text)
+CREATE OR REPLACE FUNCTION gp_tablespace_watch_log(dbid int, message text)
     RETURNS void
     EXECUTE ON ALL SEGMENTS
-AS $$ select gp_tablespace_inotify_cmd($1, $2, '') $$
-    LANGUAGE SQL;
+AS $$
+import subprocess
+cmd = "echo \"%s\" >> /tmp/gp_temp_tablespaces_dbid%d.log" % (message, dbid)
+cmd = ["bash", "-c", cmd]
+process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+rc = process.wait()
+if rc != 0:
+    output, error = process.communicate()
+    raise Exception("error=%s" % str(error))
+$$ LANGUAGE plpythonu;
 
-CREATE OR REPLACE FUNCTION gp_tablespace_inotify_cmd(cmd text)
+CREATE OR REPLACE FUNCTION gp_tablespace_watch_stop()
     RETURNS void
     EXECUTE ON ALL SEGMENTS
-AS $$ select gp_tablespace_inotify_cmd($1, '', '') $$
-    LANGUAGE SQL;
+AS $$
+import subprocess
+cmd = "pkill fswatch"
+cmd = ["bash", "-c", cmd]
+process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+process.wait()
+$$ LANGUAGE plpythonu;
 
-CREATE OR REPLACE FUNCTION gp_tablespace_inotify_match(name text, param text)
+CREATE OR REPLACE FUNCTION gp_tablespace_watch_match(dbid int, name text, patstr text)
     RETURNS int
     EXECUTE ON ALL SEGMENTS
-AS '@abs_builddir@/regress.so', 'gp_tablespace_inotify_match'
-    LANGUAGE C;
+AS $$
+import subprocess
+script = '''grep "%s" '/tmp/gp_temp_tablespaces_dbid%d_%s' | wc -l''' % (patstr, dbid, name)
+cmd = ["bash", "-c", script]
+process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+rc = process.wait()
+output, error = process.communicate()
+if rc != 0:
+    raise Exception("error=%s" % str(error))
+return int(str(output).strip())
+$$ LANGUAGE plpythonu;
+
 
 CREATE OR REPLACE FUNCTION gp_temptablespace_path(tblspcOid Oid)
     RETURNS text
@@ -73,19 +114,35 @@ CREATE OR REPLACE FUNCTION gp_temptablespace_path(tblspcOid Oid)
 AS '@abs_builddir@/regress.so', 'gp_tablespace_tmppath'
     LANGUAGE C;
 
+
 CREATE TABLE tts_foo (a int, b int) distributed by(a);
 CREATE TABLE tts_bar (c int, d int) distributed by(d);
 CREATE TABLE tts_jazz(e int, f int) distributed by(e);
+CREATE TABLE tts_aggspill (i int, j int, t text) distributed by (i);
+CREATE TABLE tts_testsiscm (i1 int, i2 int, i3 int, i4 int) distributed by(i1);
+
+
 
 insert into tts_foo select i, i from generate_series(1,1000000)i;
 insert into tts_bar select i, i from generate_series(6000,120000)i;
 insert into tts_jazz select i, i from generate_series(4000,150000)i;
 
+insert into tts_aggspill select i, i*2, i::text from generate_series(1, 10000) i;
+insert into tts_aggspill select i, i*2, i::text from generate_series(1, 100000) i;
+insert into tts_aggspill select i, i*2, i::text from generate_series(1, 1000000) i;
+
+insert into tts_testsiscm select i, i % 1000, i % 100000, i % 75 from
+  (select generate_series(1, nsegments * 150000) as i from
+    (select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+
 ANALYZE tts_foo;
 ANALYZE tts_bar;
 ANALYZE tts_jazz;
+ANALYZE tts_aggspill;
+ANALYZE tts_testsiscm;
 
--- set small statement_mem, so temp files are generated by some operations,
+set gp_cte_sharing=on;
+-- set small statement_mem, so temp files are generated by some queries,
 -- like join/agg/share input scan, etc.
 set statement_mem = '2MB';
 -- this query should trigger the directory pgsql_tmp created
@@ -93,25 +150,22 @@ with out11 as (
     SELECT * FROM (
       WITH cte(a,b) AS (SELECT a-1, b+1 FROM tts_foo)
       SELECT * FROM (SELECT * FROM cte UNION ALL SELECT * FROM cte) AS X JOIN tts_bar ON b = c
-	  UNION ALL SELECT *, 1, 2 FROM cte
+      UNION ALL SELECT *, 1, 2 FROM cte
     ) AS XY
     JOIN tts_jazz on c = e AND b = f
 )
 select count(*) from out11;
 
--- init the inotify module to watch the creation of files for some directories later.
-select gp_tablespace_inotify_cmd('init');
 select dattablespace from pg_database where datname=current_database();
 
 -- show the directories for the default tablespace and temp tablespace.
 -- start_ignore
 select gp_temptablespace_path((select dattablespace from pg_database where datname=current_database() limit 1));
-select gp_temptablespace_path(0);
+select gp_temptablespace_path((select oid from pg_tablespace where spcname='mytempsp0' limit 1));
 -- end_ignore
--- watch the directories for creation of files under the default tablespace or temp tablespace
-select gp_tablespace_inotify_cmd('add', 'default', gp_temptablespace_path((select dattablespace from pg_database where datname=current_database() limit 1)));
--- gp_temptablespace_path(0) will calculate the temp tablespace that will be used as we expected.
-select gp_tablespace_inotify_cmd('add', 'temp', gp_temptablespace_path(0));
+
+select gp_tablespace_watch_start(gp_execution_dbid(), 'default', gp_temptablespace_path((select dattablespace from pg_database where datname=current_database() limit 1)));
+select gp_tablespace_watch_start(gp_execution_dbid(), 'temp', gp_temptablespace_path((select oid from pg_tablespace where spcname='mytempsp0' limit 1)));
 
 -- ShareInputScan across multiple slices, they should access the same
 -- temp tablespace.
@@ -119,124 +173,104 @@ with out11 as (
     SELECT * FROM (
       WITH cte(a,b) AS (SELECT a-1, b+1 FROM tts_foo)
       SELECT * FROM (SELECT * FROM cte UNION ALL SELECT * FROM cte) AS X JOIN tts_bar ON b = c
-	  UNION ALL SELECT *, 1, 2 FROM cte
+      UNION ALL SELECT *, 1, 2 FROM cte
     ) AS XY
     JOIN tts_jazz on c = e AND b = f
 )
 select count(*) from out11;
+-- optional: to separator the logged messages about created event
+select gp_tablespace_watch_log(gp_execution_dbid(), '[temp_tablespace]: separator 1 ]');
 
--- checkout temp tablespaces. After this point, the created files are collected.
-select gp_tablespace_inotify_cmd('checkout');
+set statement_mem='1MB';
+select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
 
--- check that the one of temp tablespace specified by GUC is used
--- and no files for hash-join or share-input-scan is generated in the default tablespace
-select gp_tablespace_inotify_match('default', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_cmd('clear', '*');
--- after clear, the following match should return false
-select gp_tablespace_inotify_match('default', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashJoin') > 0 as "exist";
+set optimizer = off;
+set statement_mem='3MB';
+select count(*) from (with ctesisc as
+  (select count(i1) as c1, i2 as c2, i3 as c3 from tts_testsiscm group by i2, i3)
+  select *
+  from ctesisc as t1, ctesisc as t2
+  where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
 
--- SIRW doesn't happen when the optimizer is off in the above case.
-set optimizer = on;
-with out11 as (
-    SELECT * FROM (
-      WITH cte(a,b) AS (SELECT a, b FROM tts_foo)
-      SELECT * FROM (SELECT * FROM cte UNION ALL SELECT * FROM cte) AS X JOIN tts_bar ON b = c
-	  UNION ALL SELECT *, 1, 2 FROM cte
-    ) AS XY
-    JOIN tts_jazz on c = e AND b = f
-)
-select count(*) from out11;
 
-select gp_tablespace_inotify_cmd('checkout');
-select gp_tablespace_inotify_match('default', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('default', '_SIRW_') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_SIRW_') > 0 as "exist";
-select gp_tablespace_inotify_cmd('clear', '*');
+select gp_tablespace_watch_stop();
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashJoin') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_HashJoin') > 0 as "exist";
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_SIRW_') > 0 as "exist";
+
+-- temp files in hash aggregate should reside in the temp tablespace.
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate_') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_HashAggregate_') > 0 as "exist";
 
 reset optimizer;
--- HashAggregate doesn't appear
-select gp_tablespace_inotify_match('default', '_HashAggregate_') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashAggregate_') > 0 as "exist";
-with cte as (
-  select count(1) from tts_jazz group by f
-)
-select count(1) from cte;
-
-select gp_tablespace_inotify_cmd('checkout');
--- temp files in hash aggregate should reside in the temp tablespace.
-select gp_tablespace_inotify_match('default', '_HashAggregate_') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashAggregate_') > 0 as "exist";
-
--- After we unset temp_tablespaces, the temp files should be generated in the default tablespace
-set temp_tablespaces to '';
-show temp_tablespaces;
-select gp_tablespace_inotify_cmd('clear', '*');
+-- set a list as temp_tablespaces to verify that temp files across slices can work.
+select gp_tablespace_watch_log(gp_execution_dbid(), '[SET - use multiple temp tablespaces]');
+set statement_mem='2MB';
+set temp_tablespaces=mytempsp0,mytempsp1,mytempsp2,mytempsp3,mytempsp4,mytempsp5,mytempsp6,mytempsp7,mytempsp8,mytempsp9;
 with out11 as (
     SELECT * FROM (
       WITH cte(a,b) AS (SELECT a-1, b+1 FROM tts_foo)
       SELECT * FROM (SELECT * FROM cte UNION ALL SELECT * FROM cte) AS X JOIN tts_bar ON b = c
-	  UNION ALL SELECT *, 1, 2 FROM cte
+      UNION ALL SELECT *, 1, 2 FROM cte
     ) AS XY
     JOIN tts_jazz on c = e AND b = f
 )
 select count(*) from out11;
 
--- checkout temp tablespaces. After this point, the created files are collected.
-select gp_tablespace_inotify_cmd('checkout');
+set statement_mem = '1MB';
+-- hash aggregate should spill on the default tablespace.
+select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
 
--- check that the one of temp tablespace specified by GUC is used
--- and no files for hash-join or share-input-scan is generated in the default tablespace
-select gp_tablespace_inotify_match('default', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_cmd('clear', '*');
--- after clear, the following match should return false
-select gp_tablespace_inotify_match('default', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashJoin') > 0 as "exist";
+select gp_tablespace_watch_log(gp_execution_dbid(), '[RESET - use default temp tablespace]');
 
--- SIRW doesn't happen when the optimizer is off in the above case.
-set optimizer = on;
+set optimizer = off;
+set statement_mem='3MB';
+select count(*) from (with ctesisc as
+  (select count(i1) as c1, i2 as c2, i3 as c3 from tts_testsiscm group by i2, i3)
+  select *
+  from ctesisc as t1, ctesisc as t2
+  where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
+
+-- After we unset temp_tablespaces, the temp files should be generated in the default tablespace
+set statement_mem='2MB';
+set temp_tablespaces to '';
+show temp_tablespaces;
+
+select gp_tablespace_watch_start(gp_execution_dbid(), 'default', gp_temptablespace_path((select dattablespace from pg_database where datname=current_database() limit 1)));
 with out11 as (
     SELECT * FROM (
-      WITH cte(a,b) AS (SELECT a, b FROM tts_foo)
+      WITH cte(a,b) AS (SELECT a-1, b+1 FROM tts_foo)
       SELECT * FROM (SELECT * FROM cte UNION ALL SELECT * FROM cte) AS X JOIN tts_bar ON b = c
-	  UNION ALL SELECT *, 1, 2 FROM cte
+      UNION ALL SELECT *, 1, 2 FROM cte
     ) AS XY
     JOIN tts_jazz on c = e AND b = f
 )
 select count(*) from out11;
+-- optional: separate logged messages about created events.
+select gp_tablespace_watch_log(gp_execution_dbid(), '[temp_tablespace]: separator 2 ]');
 
-select gp_tablespace_inotify_cmd('checkout');
-select gp_tablespace_inotify_match('default', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashJoin') > 0 as "exist";
-select gp_tablespace_inotify_match('default', '_SIRW_') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_SIRW_') > 0 as "exist";
-select gp_tablespace_inotify_cmd('clear', '*');
+set statement_mem='1MB';
+-- hash aggregate should spill on the default tablespace.
+select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
 
-reset optimizer;
--- HashAggregate doesn't appear
-select gp_tablespace_inotify_match('default', '_HashAggregate_') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashAggregate_') > 0 as "exist";
-with cte as (
-  select count(1) from tts_jazz group by f
-)
-select count(1) from cte;
+set optimizer = off;
+set statement_mem='3MB';
+select count(*) from (with ctesisc as
+  (select count(i1) as c1, i2 as c2, i3 as c3 from tts_testsiscm group by i2, i3)
+  select *
+  from ctesisc as t1, ctesisc as t2
+  where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
 
-select gp_tablespace_inotify_cmd('checkout');
+select gp_tablespace_watch_stop();
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashJoin') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 as "exist";
 -- temp files in hash aggregate should reside in the temp tablespace.
-select gp_tablespace_inotify_match('default', '_HashAggregate_') > 0 as "exist";
-select gp_tablespace_inotify_match('temp', '_HashAggregate_') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate_') > 0 as "exist";
 
--- stop to watch inotify events and release resources
-select gp_tablespace_inotify_cmd('exit');
 
-drop table tts_foo, tts_bar, tts_jazz;
-drop function gp_tablespace_inotify_cmd(text) cascade;
-drop function gp_tablespace_inotify_cmd(text, text) cascade;
-drop function gp_tablespace_inotify_cmd(text, text, text) cascade;
-drop function gp_tablespace_inotify_match(text, text) cascade;
+drop table tts_foo, tts_bar, tts_jazz, tts_aggspill, tts_testsiscm;
 drop tablespace mytempsp0;
 drop tablespace mytempsp1;
 drop tablespace mytempsp2;

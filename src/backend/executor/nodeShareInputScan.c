@@ -28,6 +28,7 @@
 
 #include "access/xact.h"
 #include "cdb/cdbvars.h"
+#include "commands/tablespace.h"
 #include "executor/executor.h"
 #include "executor/nodeShareInputScan.h"
 #include "miscadmin.h"
@@ -277,6 +278,19 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 		ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, node->share_id, true);
 		snEntry->refcount++;
 	}
+
+	/*
+	 * `PrepareTempTablespaces()` should be called when initializing ShareInputScanState.
+	 * The shareinput-reader will open/create the named pipe file in
+	 * ExecSliceDependencyShareInputScan() which is called at the begining of ExecutePlan().
+	 * The shareinput-writer will open/create the named pipe file when data is ready.
+	 * The READER and the WRITER share the pipe file for communication, so the pipe file
+	 * must be in the same tablespace. 
+	 *
+	 * We can't call PrepareTempTablespaces() under ExecShareInputScan()/ExecProcNode()
+	 * like other callers, because it's too late for the READER.
+	 */
+	PrepareTempTablespaces();
 	
 	return sisstate;
 }

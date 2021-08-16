@@ -38,7 +38,6 @@
 #include "commands/dbcommands.h"
 #include "commands/resgroupcmds.h"
 #include "commands/tablecmds.h"
-#include "commands/tablespace.h"
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "libpq/be-fsstubs.h"
@@ -2590,7 +2589,6 @@ StartTransaction(void)
 	initialize_wal_bytes_written();
 	ShowTransactionState("StartTransaction");
 
-	PrepareTempTablespaces();
 	elogif(Debug_print_full_dtm, LOG,
 		   "StartTransaction in DTX Context = '%s', "
 		   "isolation level %s, read-only = %d, %s",

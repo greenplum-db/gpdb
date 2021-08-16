@@ -19,6 +19,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h" /* work_mem */
+#include "commands/tablespace.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "executor/tuptable.h"
@@ -1358,6 +1359,7 @@ spill_hash_table(AggState *aggstate)
 	/* Spill set does not have a workfile_set. Use existing or create new one as needed */
 	if (hashtable->work_set == NULL)
 	{
+		PrepareTempTablespaces();
 		hashtable->work_set = workfile_mgr_create_set("HashAggregate", NULL, true /* hold pin */);
 	}
 
