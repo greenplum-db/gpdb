@@ -441,6 +441,33 @@ drop table t4_12146;
 
 reset allow_system_table_mods;
 
+-- Test index only scan path not error out when semjoin.
+-- Greenplum might add unique_rowid_path to handle semjoin,
+-- that was introduced in Greenplum long before, and after
+-- merging so many commits from upstream, new logic might
+-- not work well. The following cases test for this.
+create table t_indexonly_cdbdedup_1(a int, b int, c int);
+create table t_indexonly_cdbdedup_2(a int, b int, c int);
+create index on t_indexonly_cdbdedup_2(b);
+
+-- test only make sense under planner and this file
+-- is bfv_planner, so turn off orca for this.
+set optimizer = off;
+set enable_seqscan = off;
+set enable_bitmapscan = off;
+
+create extension if not exists gp_inject_fault;
+select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+explain (costs off)
+select b from t_indexonly_cdbdedup_2 where b in (select b from t_indexonly_cdbdedup_1 where t_indexonly_cdbdedup_1.b = 3) ;
+
+select gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+reset enable_bitmapscan;
+reset enable_seqscan;
+reset optimizer;
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
