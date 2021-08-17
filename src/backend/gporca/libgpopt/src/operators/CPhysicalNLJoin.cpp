@@ -45,12 +45,6 @@ CPhysicalNLJoin::CPhysicalNLJoin(CMemoryPool *mp) : CPhysicalJoin(mp)
 	//		DPE by outer child since a Motion operator gets in between PartitionSelector and DynamicScan
 
 	SetPartPropagateRequests(2);
-
-    // NLJ creates two distribution requests for children:
-	// (0) outer side requires Any distribution, inner attempts to match iff hashed
-	// (1) outer side requires Any distribution, inner requires a replicated
-
-	SetDistrRequests(2);
 }
 
 
@@ -241,7 +235,7 @@ CPhysicalNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			CEnfdDistribution::EdmSatisfy);
 	}
 
-	if (1 == child_index && ulOptReq == 0)
+	if (1 == child_index)
 	{
 		// compute a matching distribution based on derived distribution of outer child
 		CDistributionSpec *pdsOuter =
