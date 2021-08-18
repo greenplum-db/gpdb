@@ -5468,7 +5468,7 @@
             <row>
               <entry colname="col1">&lt;system dependent&gt;</entry>
               <entry colname="col2"/>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -5498,7 +5498,7 @@
             <row>
               <entry colname="col1">&lt;system dependent&gt;</entry>
               <entry colname="col2"/>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
