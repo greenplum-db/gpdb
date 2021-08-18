@@ -490,13 +490,12 @@ partition by range (year) (start (2006) end (2007) every (1), default partition 
 create table rank1_12402 (id int, rank int, year int, value int) distributed by (id)
 partition by range (year) (start (2006) end (2007) every (1), default partition extra );
 
--- create semi join plan, due to the cost of unique_rowid is high
-explain (costs off ) update rank_12402 set rank = 1 where id in (select id from rank1_12402) and value in (select value from rank1_12402);
-
 -- set the cost of unique_rowid_path low.
 create extension if not exists gp_inject_fault;
 select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 
+-- this case only make sense under planner and this file
+-- if bfv_planner, so turn off orca for it.
 set optimizer = off;
 -- It should create a unique_rowid plan.
 -- but it creates a semi-join plan, due to we disallow unique_rowid path in inheritance_planner.
