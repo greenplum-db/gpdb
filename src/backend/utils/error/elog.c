@@ -158,7 +158,7 @@ static void write_eventlog(int level, const char *line, int len);
 #define ERRORDATA_STACK_SIZE  10
 
 #define CMD_BUFFER_SIZE  1024
-#define SYMBOL_SIZE      2048
+#define SYMBOL_SIZE      512
 #define ADDRESS_SIZE     20
 #define STACK_DEPTH_MAX  100
 
