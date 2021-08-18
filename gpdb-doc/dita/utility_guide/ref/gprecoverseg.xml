@@ -100,29 +100,22 @@
           <pt>-F (full recovery)</pt>
           <pd>Optional. Perform a full copy of the active segment instance in order to recover the
             failed segment. The default is to only copy over the incremental changes that occurred
-            while the segment was down.
-            <note type="warning">A full recovery deletes the data directory of the down segment
-              instance before copying the data from the active (current primary) segment instance.
-              Before performing a full recovery, ensure that the segment failure did not cause data
-              corruption and that any host segment disk issues have been fixed.<p>Also, for a full
-                recovery, the utility does not restore custom files that are stored in the segment
-                instance data directory even if the custom files are also in the active segment
-                instance. You must restore the custom files manually. For example, when using the
-                  <codeph>gpfdists</codeph> protocol (<codeph>gpfdist</codeph> with SSL encryption)
-                to manage external data, client certificate files are required in the segment
-                instance <codeph>$PGDATA/gpfdists</codeph> directory. These files are not restored.
-                For information about configuring <codeph>gpfdists</codeph>, see <xref
+            while the segment was down. <note type="warning">A full recovery deletes the data
+              directory of the down segment instance before copying the data from the active
+              (current primary) segment instance. Before performing a full recovery, ensure that the
+              segment failure did not cause data corruption and that any host segment disk issues
+              have been fixed.<p>Also, for a full recovery, the utility does not restore custom
+                files that are stored in the segment instance data directory even if the custom
+                files are also in the active segment instance. You must restore the custom files
+                manually. For example, when using the <codeph>gpfdists</codeph> protocol
+                  (<codeph>gpfdist</codeph> with SSL encryption) to manage external data, client
+                certificate files are required in the segment instance
+                  <codeph>$PGDATA/gpfdists</codeph> directory. These files are not restored. For
+                information about configuring <codeph>gpfdists</codeph>, see <xref
                   href="../../security-guide/topics/Encryption.xml#gpfdist_connections"
-              />.</p></note></pd>
-          <pd>Full recovery can take a long time for large databases, so
-              <codeph>gprecoverseg</codeph> displays a running estimate of the completion progress
-            of the copy for each segment. Progress for each segment is updated once per second,
-            using ANSI escape codes to update the line for each segment in-place. If you are
-            redirecting the <codeph>gprecoverseg</codeph> output to a file, or if the ANSI escape
-            codes do not work correctly on your terminal, you can include the <codeph>-s</codeph>
-            option on the command line to omit the ANSI escape codes. This outputs a new line once
-            per second for each segment. Include the <codeph>--no-progress</codeph> option to
-            completely disable the progress reports.</pd>
+              />.</p></note> Use the <codeph>-s</codeph> option to output a new line once per second
+            for each segment. Alternatively, use the <codeph>--no-progress</codeph> option to
+            completely disable progress reports.</pd>
         </plentry>
         <plentry>
           <pt>--hba-hostnames <varname>boolean</varname></pt>
@@ -138,23 +131,21 @@
         </plentry>
         <plentry>
           <pt>-i <varname>recover_config_file</varname></pt>
-          <pd>Specifies the name of a file with the details about failed segments to recover. Each
-            line in the file is in the following format. The word <b>SPACE</b> indicates the
-            location of a required space. Do not add additional
-                spaces.<codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;<b>SPACE</b> 
-&lt;recovery_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;
-</codeblock><p><b>Comments</b></p><p>Lines
-              beginning with <codeph>#</codeph> are treated as comments and ignored.</p>
-            <p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
-              recover. This line can have one of two formats. In the event of in-place recovery,
-              enter one group of colon delimited fields in the line. For example:</p><p>
+          <pd>Specifies the name of a file with the details about failed segments to recover.
+              <p>Each line in the config file specifies a segment to recover. This line can have one
+              of two formats. In the event of in-place (incremental) recovery, enter one group of
+              colon delimited fields in the line. For example:</p><p>
               <codeblock>failedAddress|failedPort|failedDataDirectory</codeblock>
             </p><p>For recovery to a new location, enter two groups of fields separated by a space
               in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
               spaces.</p><p>
               <codeblock>failedAddress|failedPort|failedDataDirectory<b>SPACE</b>newAddress|
 newPort|newDataDirectory</codeblock>
-            </p><p><b>Examples</b></p><p><b>In-place recovery of a single mirror</b></p>
+            </p><p>
+              <note>Lines beginning with <codeph>#</codeph> are treated as comments and
+                ignored.</note>
+            </p><p><b>Examples</b></p><p><b>In-place (incremental) recovery of a single
+              mirror</b></p>
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16</codeblock>
             <p><b>Recovery of a single mirror to a new host</b></p>
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16<b>SPACE</b>sdw4-1|50001|/data1/recover1/gpseg16</codeblock>
@@ -168,10 +159,7 @@ newPort|newDataDirectory</codeblock>
         </plentry>
         <plentry>
           <pt>-o <varname>output_recover_config_file</varname></pt>
-          <pd>Specifies a file name and location to output a sample recovery configuration file. The
-            output file lists the currently invalid segments and their default recovery location in
-            the format that is required by the <codeph>-i</codeph> option. Use together with the
-              <codeph>-p</codeph> option to output a sample file for recovering on a different host.
+          <pd>Specifies a file name and location to output a sample recovery configuration file.
             This file can be edited to supply alternate recovery locations if needed. The following
             example outputs the default recovery configuration file:
             <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></pd>
