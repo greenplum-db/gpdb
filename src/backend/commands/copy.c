@@ -6529,19 +6529,32 @@ CopyReadLineText(CopyState cstate)
 				break;
 			}
 			else if (!cstate->csv_mode)
-
+			{
 				/*
 				 * If we are here, it means we found a backslash followed by
 				 * something other than a period.  In non-CSV mode, anything
 				 * after a backslash is special, so we skip over that second
-				 * character too.  If we didn't do that \\. would be
+				 * character too (except the character is EOL, see below).
+				 * If we didn't do that \\. would be
 				 * considered an eof-of copy, while in non-CSV mode it is a
 				 * literal backslash followed by a period.  In CSV mode,
 				 * backslashes are not special, so we want to process the
 				 * character after the backslash just like a normal character,
 				 * so we don't increment in those cases.
 				 */
-				raw_buf_ptr++;
+				if (c2 == '\n' && cstate->eol_type == EOL_NL)
+				{
+					/*
+					* We need to recognize the EOL.
+					* Github issue: https://github.com/greenplum-db/gpdb/issues/12454
+					*/
+					NO_END_OF_COPY_GOTO;
+				}
+				else
+				{
+					raw_buf_ptr++;
+				}
+			}
 		}
 
 		/*
