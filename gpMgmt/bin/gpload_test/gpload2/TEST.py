@@ -793,6 +793,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_40_gpload_column_withvarious_quotations_standard_conforming_strings_off(self):
         """ 40 test gpload input columns with '"col"'  "\"col\""  "'col'" and "col" when standard_conforming_strings is off"""
+        # columns with special characters are not supported when standard_conforming_strings is off
         copy_data('external_file_15.txt','data_file.txt')
         columns = ['\'"Field1"\': bigint','\'"Field#2"\': text' ]
         write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =off;')
@@ -813,13 +814,17 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
     def test_41_gpload_column_withvarious_quotations_standard_conforming_strings_on(self):
         """ 41 test gpload input columns with '"col"'  "\"col\""  "'col'" and "col" when standard_conforming_strings is on"""
         copy_data('external_file_15.txt','data_file.txt')
+        # column like '"Field1"', support
         columns = ['\'"Field1"\': bigint','\'"Field#2"\': text' ]
         write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =on;')
         copy_data('external_file_16.txt','data_file2.txt')
+        # column like "\"Field1\"", support
         columns = ['"\\"Field1\\"": bigint','"\\"Field#2\\"": text' ]
         write_config_file(update_columns='\'"Field#2"\'',config='config/config_file2', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =on;')
+        # column like "'Field1'", not support
         columns = ['"\'Field1\'": bigint','"\'Field#2\'": text' ]
         write_config_file(update_columns='\'"Field#2"\'',config='config/config_file3', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =on;')
+        # column like "Field1", not support
         columns = ['"Field1": bigint','"Field#2": text' ]
         write_config_file(update_columns='\'"Field#2"\'',config='config/config_file4', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='4', columns = columns,delimiter=";",match_columns='2',SQL=True,sql_before='set standard_conforming_strings =on;')
         f = open(mkpath('query41.sql'),'a')
@@ -833,6 +838,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         """42 test gpload column name without quotes but has capital letters and special characters"""
         copy_data('external_file_15.txt','data_file.txt')
         columns = ['Field1: bigint','Field#2: text' ]
+        # column like Field1: bigint, not support whatever the standard_conforming_strings is
         write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =on;')
         write_config_file(mode='insert',config='config/config_file2', reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='4',columns = columns, delimiter=";",SQL=True,sql_before='set standard_conforming_strings =off;')
         f = open(mkpath('query42.sql'),'w')

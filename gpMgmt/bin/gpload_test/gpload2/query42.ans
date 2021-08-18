@@ -1,21 +1,14 @@
-2021-05-21 14:15:42|INFO|gpload session started 2021-05-21 14:15:42
-2021-05-21 14:15:42|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-21 14:15:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-21 14:15:42|INFO|reusing external table ext_gpload_reusable_f7fb3214_b9fb_11eb_9d73_0050569e5d5e
-2021-05-21 14:15:42|INFO|running time: 0.04 seconds
-2021-05-21 14:15:42|INFO|rows Inserted          = 8
-2021-05-21 14:15:42|INFO|rows Updated           = 0
-2021-05-21 14:15:42|INFO|data formatting errors = 0
-2021-05-21 14:15:42|INFO|gpload succeeded
-2021-05-21 14:15:42|INFO|gpload session started 2021-05-21 14:15:42
-2021-05-21 14:15:42|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-21 14:15:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-21 14:15:42|INFO|did not find an external table to reuse. creating ext_gpload_reusable_f87b7460_b9fb_11eb_a987_0050569e5d5e
-2021-05-21 14:15:42|ERROR|could not run SQL "create external table ext_gpload_reusable_f87b7460_b9fb_11eb_a987_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://10.117.190.97:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
-                                                                 ^
-
-2021-05-21 14:15:42|INFO|rows Inserted          = 0
-2021-05-21 14:15:42|INFO|rows Updated           = 0
-2021-05-21 14:15:42|INFO|data formatting errors = 0
-2021-05-21 14:15:42|INFO|gpload failed
+2021-08-18 10:52:35|INFO|gpload session started 2021-08-18 10:52:35
+2021-08-18 10:52:35|INFO|setting schema 'public' for table 'testspecialchar'
+2021-08-18 10:52:35|ERROR|no mapping for input column "Field1" to output table
+2021-08-18 10:52:35|INFO|rows Inserted          = 0
+2021-08-18 10:52:35|INFO|rows Updated           = 0
+2021-08-18 10:52:35|INFO|data formatting errors = 0
+2021-08-18 10:52:35|INFO|gpload failed
+2021-08-18 10:52:35|INFO|gpload session started 2021-08-18 10:52:35
+2021-08-18 10:52:35|INFO|setting schema 'public' for table 'testspecialchar'
+2021-08-18 10:52:35|ERROR|no mapping for input column "Field1" to output table
+2021-08-18 10:52:35|INFO|rows Inserted          = 0
+2021-08-18 10:52:35|INFO|rows Updated           = 0
+2021-08-18 10:52:35|INFO|data formatting errors = 0
+2021-08-18 10:52:35|INFO|gpload failed
