@@ -468,6 +468,46 @@ reset enable_bitmapscan;
 reset enable_seqscan;
 reset optimizer;
 
+-- Test append path not error out when semjoin.
+-- issue1:https://github.com/greenplum-db/gpdb/issues/12402
+-- issue2:https://github.com/greenplum-db/gpdb/issues/3719
+
+-- Greenplum might add unique_rowid_path to handle semjoin, that
+-- was introduced in Greenplum long before, and after merging so
+-- many commits from upstream, new logic might not work well.
+-- We just disallow unique_rowid_path for inheritance_planner.
+
+-- through injecting fault in unique_row_path to make the cost
+-- of unique_rowid low, however, we use a switch to disallow
+-- create unique_rowid plan for inheritance plan.
+-- the two above issues can work well.
+-- The following cases test for this.
+
+--create table
+create table rank_12402 (id int, rank int, year int, value int) distributed by (id)
+partition by range (year) (start (2006) end (2007) every (1), default partition extra );
+
+create table rank1_12402 (id int, rank int, year int, value int) distributed by (id)
+partition by range (year) (start (2006) end (2007) every (1), default partition extra );
+
+-- create semi join plan, due to the cost of unique_rowid is high
+explain (costs off ) update rank_12402 set rank = 1 where id in (select id from rank1_12402) and value in (select value from rank1_12402);
+
+-- set the cost of unique_rowid_path low.
+create extension if not exists gp_inject_fault;
+select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+set optimizer = off;
+-- It should create a unique_rowid plan.
+-- but it creates a semi-join plan, due to we disallow unique_rowid path in inheritance_planner.
+explain (costs off ) update rank_12402 set rank = 1 where id in (select id from rank1_12402) and value in (select value from rank1_12402);
+
+select gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+reset optimizer;
+drop table rank_12402;
+drop table rank1_12402;
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
