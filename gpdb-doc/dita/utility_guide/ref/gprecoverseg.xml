@@ -18,7 +18,9 @@
 <b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> 
              [<b>-p</b> <varname>new_recover_host</varname>[,...]]
 
-<b>gprecoverseg</b> <b>-?</b> | <b>--help</b>
+<b>gprecoverseg</b> <b>-?</b> | <b>-h</b> | <b>--help</b>
+        
+<b>gprecoverseg</b> <b>-v</b> | <b>--verbose</b>
 
 <b>gprecoverseg</b> <b>--version</b></codeblock>
     </section>
@@ -180,13 +182,9 @@ newPort|newDataDirectory</codeblock>
           <pt>-p <varname>new_recover_host</varname>[,...]</pt>
           <pd>Specifies a spare host outside of the currently configured Greenplum Database array on
             which to recover invalid segments.</pd>
-          <pd>
-            <note type="important">The hostname of the new node needs to match the hostname being
-              recovered.</note>
-          </pd>
           <pd>The spare host must have the Greenplum Database software installed and configured, and
-            have the same hardware and OS configuration as the current segment hosts (same hostname,
-            OS version, locales, <codeph>gpadmin</codeph> user account, data directory locations
+            have the same hardware and OS configuration as the current segment hosts (same OS
+            version, locales, <codeph>gpadmin</codeph> user account, data directory locations
             created, ssh keys exchanged, number of network interfaces, network interface naming
             convention, and so on). Specifically, the Greenplum Database binaries must be installed,
             the spare host must be able to connect password-less with all segments including the
@@ -216,18 +214,18 @@ newPort|newDataDirectory</codeblock>
             progress queries, they will be cancelled and rolled back.</pd>
         </plentry>
         <plentry>
-          <pt>-s </pt>
-          <pd>Show <codeph>pg_basebackup</codeph> progress sequentially instead of in-place. Useful
-            when writing to a file, or if a tty does not support escape sequences. The default is to
-            show progress in-place. </pd>
+          <pt>-s (sequential progress)</pt>
+          <pd>Show <codeph>pg_basebackup</codeph> or <codeph>pg_rewind</codeph> progress
+            sequentially instead of in-place. Useful when writing to a file, or if a tty does not
+            support escape sequences. The default is to show progress in-place. </pd>
         </plentry>
         <plentry>
           <pt>--no-progress</pt>
-          <pd>Suppresses progress reports from the <codeph>pg_basebackup</codeph> utility. The
-            default is to display progress of base backups. </pd>
+          <pd>Suppresses progress reports from the <codeph>pg_basebackup</codeph> or
+              <codeph>pg_rewind</codeph> utility. The default is to display progress. </pd>
         </plentry>
         <plentry>
-          <pt>-v (verbose)</pt>
+          <pt>-v | --verbose</pt>
           <pd>Sets logging output to verbose.</pd>
         </plentry>
         <plentry>
@@ -235,7 +233,7 @@ newPort|newDataDirectory</codeblock>
           <pd>Displays the version of this utility.</pd>
         </plentry>
         <plentry>
-          <pt>-? (help)</pt>
+          <pt>-? | -h | --help</pt>
           <pd>Displays the online help.</pd>
         </plentry>
       </parml>
