@@ -192,12 +192,21 @@ bool S3InterfaceService::parseBucketXML(ListBucketResult *result, xmlParserCtxtP
     char *content = NULL;
     char *key = NULL;
     char *key_size = NULL;
+    char *next_marker = NULL;
 
     cur = rootElement->xmlChildrenNode;
     while (cur != NULL) {
         if (key) {
             xmlFree(key);
             key = NULL;
+        }
+
+        if (!xmlStrcmp(cur->name, (const xmlChar *)"NextMarker")) {
+            content = (char *)xmlNodeGetContent(cur);
+            if (content) {
+                next_marker = strdup(content);
+                xmlFree(content);
+            }
         }
 
         if (!xmlStrcmp(cur->name, (const xmlChar *)"IsTruncated")) {
@@ -262,7 +271,11 @@ bool S3InterfaceService::parseBucketXML(ListBucketResult *result, xmlParserCtxtP
         cur = cur->next;
     }
 
-    marker = (is_truncated && key) ? key : "";
+    if (is_truncated && next_marker) {
+        marker = next_marker;
+    } else {
+        marker = (is_truncated && key) ? key : "";
+    }
 
     if (key) {
         xmlFree(key);
@@ -299,6 +312,7 @@ ListBucketResult S3InterfaceService::listBucket(S3Url &s3Url) {
         if (!encodedPrefix.empty()) {
             querySs << (marker.empty() ? "prefix=" : "&prefix=") << encodedPrefix;
         }
+
         s3Url.setPrefix("");
         string queryStr = querySs.str();
 
@@ -470,8 +484,17 @@ string S3InterfaceService::uploadPartOfData(S3VectorUInt8 &data, const S3Url &s3
     Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, data);
     if (resp.getStatus() == RESPONSE_OK) {
         string headers(resp.getRawHeaders().begin(), resp.getRawHeaders().end());
+        string toSearch = "etag: ";
 
-        uint64_t etagStartPos = headers.find("ETag: ") + 6;
+        auto res =
+            std::search(headers.begin(), headers.end(), toSearch.begin(), toSearch.end(),
+                        [](char ch1, char ch2) { return std::tolower(ch1) == std::tolower(ch2); });
+
+        if (res == headers.end()) {
+            S3_DIE(S3RuntimeError, "Response does not contain etag in the header");
+        }
+
+        uint64_t etagStartPos = res - headers.begin() + toSearch.length();
         string etagToEnd = headers.substr(etagStartPos);
         // RFC 2616 states "HTTP/1.1 defines the sequence CR LF as the end-of-line
         // marker for all protocol elements except the entity-body"
