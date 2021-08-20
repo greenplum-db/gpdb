@@ -51,7 +51,6 @@ except Exception as e:
     sys.stderr.write(str(errorMsg))
     sys.exit(2)
 
-
 import hashlib
 import datetime,getpass,os,signal,socket,threading,time,traceback,re
 import subprocess
@@ -1893,19 +1892,6 @@ class gpload:
                     "the Greenplum Database running on port %i?" % (errorMessage,
                     self.options.p))
 
-    def add_quote_if_not(self, col):
-        '''
-        Judge if the column name string has quotations.
-        If not, return a string with double quotations.
-        pyyaml cannot preserve quotes of string in yaml file.
-        So we need to quote the string for furter comparison if it is not quoted.
-        '''
-        if col[0] == '"' and col[-1] == '"':
-            return col
-        elif col[0] == "'" and col[-1] == "'":
-            return col
-        else:
-            return quote_ident(col)
 
     def read_columns(self):
         '''
@@ -1923,7 +1909,6 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = list(d.keys())[0]
-                # col_name = self.add_quote_if_not(key)
                 if d[key] is None or not d[key]:
                     self.log(self.DEBUG,
                              'getting source column data type from target')

@@ -134,6 +134,7 @@ def test_62_gpload_wrong_port_range():
 @prepare_before_test(num=63, times=1)
 def test_63_gpload_test_port_range():
     "63 gpload yaml file use port_range"
+    runfile(mkpath('setup.sql'))
     copy_data('external_file_01.txt','data_file.txt')
     write_config_file(input_port=None,port_range='[8082,8090]'  ,format='text',file='data_file.txt',table='texttable')
 
@@ -154,6 +155,6 @@ def test_101_gpload_test_port_range():
     write_config_file(input_port=None,port_range='[8082,8090]', mode='insert',reuse_tables='true',fast_match='false', file='data_file.txt',config='config/config_file1', table='testheaderreuse', delimiter="','", format='csv', quote="'\x22'", encoding='LATIN1', log_errors=True, error_limit='1000', header='true', truncate=True, match_columns=False)
     write_config_file(input_port=None,port_range='[8082,8090]', mode='insert',reuse_tables='true',fast_match='false', file='data_file.txt',config='config/config_file2', table='testheaderreuse', delimiter="','", format='csv', quote="'\x22'", encoding='LATIN1', log_errors=True, error_limit='1000', truncate=True, match_columns=False)
     f = open(mkpath('query101.sql'),'w')
-    f.write("\! gpload -f "+mkpath('config/config_file1')+ "\n")
-    f.write("\! gpload -f "+mkpath('config/config_file2')+ "\n")
+    f.write("\\! gpload -f "+mkpath('config/config_file1')+ "\n")
+    f.write("\\! gpload -f "+mkpath('config/config_file2')+ "\n")
     f.close()
