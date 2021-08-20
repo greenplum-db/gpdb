@@ -974,6 +974,20 @@ ResCleanUpLock(LOCK *lock, PROCLOCK *proclock, uint32 hashcode, bool wakeupNeede
 	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
 
 	/*
+	 * This check should really be an assertion. But to guard against edge cases
+	 * previously not encountered, PANIC instead.
+	 */
+	if (lock->tag.locktag_type != LOCKTAG_RESOURCE_QUEUE ||
+		proclock->tag.myLock->tag.locktag_type != LOCKTAG_RESOURCE_QUEUE)
+	{
+		ereport(PANIC,
+				(errmsg("We are trying to clean up a non-resource queue lock"),
+				 errdetail("lock's locktag type = %d and proclock's locktag type = %d",
+						  lock->tag.locktag_type,
+						  proclock->tag.myLock->tag.locktag_type)));
+	}
+
+	/*
 	 * If this was my last hold on this lock, delete my entry in the proclock
 	 * table.
 	 */
