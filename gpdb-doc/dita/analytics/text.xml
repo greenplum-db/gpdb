@@ -6,27 +6,26 @@
   <body>
     <p>Greenplum Database offers two different methods for text search and analytics, <b>Greenplum
         Database full text search</b> and <b>Tanzu Greenplum Text</b>.</p>
-    <section>
+    <section id="section_yby_nv1_rqb">
       <title>Greenplum Database Full Text Search</title>
-    <p>Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database MPP
-      platform.  Greenplum Database text search is immediately available to you, with no need to
-      install and maintain additional software. For full details on this topic, see <xref
-        href="../admin_guide/textsearch/intro.xml" format="dita" scope="peer">Greenplum Database
-        text search</xref>.</p>
+      <p>Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database
+        MPP platform. Greenplum Database text search is immediately available to you, with no need
+        to install and maintain additional software. For full details on this topic, see <xref
+          href="../admin_guide/textsearch/intro.xml" format="dita" scope="peer">Greenplum Database
+          text search</xref>.</p>
     </section>
-    <section otherprops="Pivotal">
+    <section otherprops="Pivotal" id="section_ywf_4v1_rqb">
       <title>Tanzu Greenplum Text</title>
-    
-    <p>For advanced text analysis applications, VMWare also offers <xref
+      <p>For advanced text analysis applications, VMWare also offers <xref
           href="http://gptext.docs.pivotal.io/330/topics/intro.html" format="html" scope="external"
-            ><b>Tanzu Greenplum Text</b></xref>, which integrates Greenplum Database with the Apache Solr
-        text search platform. Tanzu Greenplum Text installs an Apache Solr cluster alongside your Greenplum
-        Database cluster and provides Greenplum Database functions you can use to create Solr
-        indexes, query them, and receive results in the database session.</p>
-    <p>Both of these systems provide powerful, enterprise-quality document indexing and searching
-        services. Tanzu Greeenplum Text, with Solr, has many capabilities that are not available with Greenplum
-        Database text search. In particular, Tanzu Greenplum Text is better for advanced text analysis
-        applications. For a comparative between these methods, see <xref
+            ><b>Tanzu Greenplum Text</b></xref>, which integrates Greenplum Database with the Apache
+        Solr text search platform. Tanzu Greenplum Text installs an Apache Solr cluster alongside
+        your Greenplum Database cluster and provides Greenplum Database functions you can use to
+        create Solr indexes, query them, and receive results in the database session.</p>
+      <p>Both of these systems provide powerful, enterprise-quality document indexing and searching
+        services. Tanzu Greeenplum Text, with Solr, has many capabilities that are not available
+        with Greenplum Database text search. In particular, Tanzu Greenplum Text is better for
+        advanced text analysis applications. For a comparative between these methods, see <xref
           href="../admin_guide/textsearch/intro.xml#gptext">Comparing Greenplum Database Text Search
           with Tanzu Greenplum Text</xref>.</p>
     </section>

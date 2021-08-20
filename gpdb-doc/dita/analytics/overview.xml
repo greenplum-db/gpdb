@@ -19,28 +19,29 @@
       <p>The following Greenplum Database analytics extensions are explored in different
         documentation sections, with installation and usage instructions:</p>
     
-    <section>
-      <title>Machine Learning and Deep Learning</title>
-      <p>The <xref href="madlib.xml" format="dita">Apache MADlib extension</xref> allows Greenplum Database users to run different machine learning 
-        and deep learning functions, including feature engineering, model training, evaluation and scoring. </p>
-    </section>
+    <section id="section_c33_lv1_rqb">
+        <title>Machine Learning and Deep Learning</title>
+        <p>The <xref href="madlib.xml" format="dita">Apache MADlib extension</xref> allows Greenplum
+          Database users to run different machine learning and deep learning functions, including
+          feature engineering, model training, evaluation and scoring. </p>
+      </section>
     
-    <section otherprops="pivotal">
-      <title>Geospatial Analytics</title>
-      <p><xref href="postGIS.xml" format="dita">PostGIS</xref> is a spatial database extension for PostgreSQL that allows GIS (Geographic Information Systems) 
-        objects to be stored in the database. The Greenplum Database PostGIS extension includes support for 
-        GiST-based R-Tree spatial indexes and functions for analysis and processing of GIS objects.
-      </p>
-    </section>
+    <section otherprops="pivotal" id="section_zd2_mv1_rqb">
+        <title>Geospatial Analytics</title>
+        <p><xref href="postGIS.xml" format="dita">PostGIS</xref> is a spatial database extension for
+          PostgreSQL that allows GIS (Geographic Information Systems) objects to be stored in the
+          database. The Greenplum Database PostGIS extension includes support for GiST-based R-Tree
+          spatial indexes and functions for analysis and processing of GIS objects. </p>
+      </section>
     
     <section id="text_analytics">
       <title>Text Analytics</title>
-      <p><xref href="http://gptext.docs.pivotal.io/330/topics/intro.html" format="dita">Tanzu
-            Greenplum Text</xref> enables processing of mass quantities of raw text data (such as
-          social media feeds or e-mail databases) into mission-critical information that guides
-          project and business decisions. Tanzu Greenplum Text joins the Greenplum Database massively
-          parallel-processing database server with Apache SolrCloud enterprise search. Tanzu Greenplum Text
-          includes powerful text search as well as support for text analysis.</p>
+      <p><xref href="text.xml#topic1"/> enables processing of mass quantities of raw text data (such
+          as social media feeds or e-mail databases) into mission-critical information that guides
+          project and business decisions. Tanzu Greenplum Text joins the Greenplum Database
+          massively parallel-processing database server with Apache SolrCloud enterprise search.
+          Tanzu Greenplum Text includes powerful text search as well as support for text
+          analysis.</p>
     </section>
     
     <section id="pr_lang_and_ext">
