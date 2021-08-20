@@ -1813,6 +1813,13 @@ CheckDeadLock(void)
 		{
 			ResRemoveFromWaitQueue(MyProc, 
 								   LockTagHashCode(&(MyProc->waitLock->tag)));
+			/*
+			 * lockAwaited's lock/proclock pointers are dangling after the call
+			 * to ResRemoveFromWaitQueue(). So clean up the locallock as well,
+			 * to avoid de-referencing them in the eventual ResLockRelease() in
+			 * ResLockPortal/ResLockUtilityPortal.
+			 */
+			RemoveLocalLock(lockAwaited);
 		}
 		else
 		{
@@ -2046,6 +2053,13 @@ ResLockWaitCancel(void)
 			Assert(LOCALLOCK_LOCKMETHOD(*lockAwaited) == RESOURCE_LOCKMETHOD);
 
 			ResRemoveFromWaitQueue(MyProc, lockAwaited->hashcode);
+			/*
+			 * lockAwaited's lock/proclock pointers are dangling after the call
+			 * to ResRemoveFromWaitQueue(). So clean up the locallock as well,
+			 * to avoid de-referencing them in the eventual ResLockRelease() in
+			 * ResLockPortal/ResLockUtilityPortal.
+			 */
+			RemoveLocalLock(lockAwaited);
 		}
 
 		lockAwaited = NULL;
