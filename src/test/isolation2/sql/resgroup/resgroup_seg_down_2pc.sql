@@ -1,10 +1,10 @@
 -- This test performs segment reconfiguration when "alter resource group" is executed in the two phase commit.
 -- The steps are, when run "alter resource group", before QD broadcasts commit prepared command to QEs(the 
 -- second phase of 2PC), we trigger an error and cause one primary segment down. 
--- The expectation is "alter resource group" can run sucessfully since the mirror segment is UP. 
+-- The expectation is "alter resource group" can run successfully since the mirror segment is UP. 
 -- After recover the segment, there is no error or blocking.
 
--- set these values purely to cut down test time, as default ts trigger is
+-- set these values purely to cut down test time, as default fts trigger is
 -- every min and 5 retries
 alter system set gp_fts_probe_interval to 10;
 alter system set gp_fts_probe_retries to 0;
@@ -12,7 +12,7 @@ select pg_reload_conf();
 
 1:create resource group rgroup_seg_down with (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35, CONCURRENCY=10);
 
--- inject an error in function dtm_broadcast_commit_prepared, that is QD broadcasts commit prepared command to QEs
+-- inject an error in function dtm_broadcast_commit_prepared, that is before QD broadcasts commit prepared command to QEs
 2:select gp_inject_fault_infinite('dtm_broadcast_commit_prepared', 'suspend', dbid) from gp_segment_configuration where role='p' and content=-1;
 -- this session will pend here since the above injected fault
 1&:alter resource group rgroup_seg_down set CONCURRENCY 20;

@@ -431,11 +431,11 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	 * We use ExclusiveLock here to prevent concurrent
 	 * increase on different resource group. 
 	 * We can't use AccessExclusiveLock here, the reason is that, 
-	 * if  there is a database recovery happened when alter resource group 
+	 * if there is a database recovery happened when run "alter resource group"
 	 * and acquire this kind of lock, the initialization of resource group 
 	 * in function InitResGroups will be pending during database startup, 
 	 * since this function will open this table with AccessShareLock, 
-	 * AccessShareLock and AccessExclusiveLock are not compatible.
+	 * AccessExclusiveLock is not compatible with any other lock.
 	 * ExclusiveLock and AccessShareLock are compatible.
 	 */
 	pg_resgroupcapability_rel = heap_open(ResGroupCapabilityRelationId,
