@@ -8117,7 +8117,7 @@
     </body>
   </topic>
   <topic id="replication_timeout">
-    <title>replication_timeout</title>
+    <title>wal_sender_timeout</title>
     <body>
       <p>For Greenplum Database master mirroring, sets the maximum time in milliseconds that the
           <codeph>walsender</codeph> process on the active master waits for a status message from
@@ -8142,34 +8142,6 @@
               <entry colname="col1">0 - INT_MAX</entry>
               <entry colname="col2">60000 ms (60 seconds)</entry>
               <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="regex_flavor">
-    <title>regex_flavor</title>
-    <body>
-      <p>The 'extended' setting may be useful for exact backwards compatibility with pre-7.4
-        releases of PostgreSQL. </p>
-      <table id="regex_flavor_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">advanced<p>extended</p><p>basic</p></entry>
-              <entry colname="col2">advanced</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
