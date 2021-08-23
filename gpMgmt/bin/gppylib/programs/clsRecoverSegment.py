@@ -366,6 +366,9 @@ class GpRecoverSegmentProgram:
             self.logger.info("Segments successfully recovered.")
             self.logger.info("********************************")
 
+            self.logger.info("Recovered mirror segments need to sync WAL with primary segments.")
+            self.logger.info("Use 'gpstate -e' to check progress of WAL sync remaining bytes")
+
         sys.exit(0)
 
     def trigger_fts_probe(self, port=0):

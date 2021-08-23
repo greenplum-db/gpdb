@@ -4,6 +4,7 @@ import mock
 from pygresql import pgdb
 
 from gppylib import gparray
+from .gp_unittest import GpTestCase
 from gppylib.programs.clsSystemState import *
 from gppylib.commands.unix import CommandNotFoundException
 
@@ -393,6 +394,49 @@ class ReplicationInfoTestCase(unittest.TestCase):
             pass
         self.assertFalse(port_active, "PgPortIsActive.local should be false")
 
+
+class SegmentsReqAttentionTestCase(GpTestCase):
+
+    def setUp(self):
+        coordinator = create_segment(content=-1, dbid=0)
+        self.primary1 = create_primary(content=0, dbid=1)
+        self.primary2 = create_primary(content=1, dbid=2)
+        mirror1 = create_mirror(content=0, dbid=3)
+        mirror2 = create_mirror(content=1, dbid=4)
+        self.gpArray = gparray.GpArray([coordinator, self.primary1, self.primary2, mirror1, mirror2])
+
+        self.data = GpStateData()
+        self.data.beginSegment(self.primary1)
+        self.data.beginSegment(self.primary2)
+
+        self.apply_patches([mock.patch('gppylib.db.dbconn.connect', autospec=True)])
+
+    def test_WalSyncRemainingBytes_multiple_segments_both_catchup(self):
+        m = mock.Mock()
+        m.fetchall.side_effect = [[[100, 'async']], [[10, 'async']]]
+        with mock.patch('gppylib.db.dbconn.execSQL', return_value=m) as mock_execSQL:
+            GpSystemStateProgram._get_unsync_segs_add_wal_remaining_bytes(self.data, self.gpArray)
+            self.assertEqual(mock_execSQL.call_count, 2)
+            self.assertEqual('100', self.data.getStrValue(self.primary1, VALUE__REPL_SYNC_REMAINING_BYTES))
+            self.assertEqual('10', self.data.getStrValue(self.primary2, VALUE__REPL_SYNC_REMAINING_BYTES))
+
+    def test_WalSyncRemainingBytes_multiple_segments_one_sync(self):
+        m = mock.Mock()
+        m.fetchall.side_effect = [[[100, 'async']], [[10, 'sync']]]
+        with mock.patch('gppylib.db.dbconn.execSQL', return_value=m) as mock_execSQL:
+            GpSystemStateProgram._get_unsync_segs_add_wal_remaining_bytes(self.data, self.gpArray)
+            self.assertEqual(mock_execSQL.call_count, 2)
+            self.assertEqual('100', self.data.getStrValue(self.primary1, VALUE__REPL_SYNC_REMAINING_BYTES))
+            self.assertEqual('', self.data.getStrValue(self.primary2, VALUE__REPL_SYNC_REMAINING_BYTES))
+
+    def test_WalSyncRemainingBytes_multiple_segments_one_down(self):
+        m = mock.Mock()
+        m.fetchall.side_effect = [[[100, 'async']], []]
+        with mock.patch('gppylib.db.dbconn.execSQL', return_value=m) as mock_execSQL:
+            GpSystemStateProgram._get_unsync_segs_add_wal_remaining_bytes(self.data, self.gpArray)
+            self.assertEqual(mock_execSQL.call_count, 2)
+            self.assertEqual('100', self.data.getStrValue(self.primary1, VALUE__REPL_SYNC_REMAINING_BYTES))
+            self.assertEqual('Unknown', self.data.getStrValue(self.primary2, VALUE__REPL_SYNC_REMAINING_BYTES))
 
 class GpStateDataTestCase(unittest.TestCase):
     def test_switchSegment_sets_current_segment_correctly(self):

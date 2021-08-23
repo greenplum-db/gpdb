@@ -115,16 +115,33 @@ Feature: gpstate tests
             | \S+             | [0-9]+ | \S+    | [0-9]+ |
         And gpstate should print "Unsynchronized Segment Pairs" to stdout
         And gpstate output looks like
-            | Current Primary | Port   | Mirror | Port   |
-            | \S+             | [0-9]+ | \S+    | [0-9]+ |
-            | \S+             | [0-9]+ | \S+    | [0-9]+ |
-            | \S+             | [0-9]+ | \S+    | [0-9]+ |
+            | Current Primary | Port   | WAL sync remaining bytes | Mirror | Port   |
+            | \S+             | [0-9]+ | Unknown                  | \S+    | [0-9]+ |
+            | \S+             | [0-9]+ | Unknown                  | \S+    | [0-9]+ |
+            | \S+             | [0-9]+ | Unknown                  | \S+    | [0-9]+ |
         And gpstate should print "Downed Segments" to stdout
         And gpstate output looks like
             | Segment | Port   | Config status | Status                |
             | \S+     | [0-9]+ | Down          | Down in configuration |
             | \S+     | [0-9]+ | Down          | Down in configuration |
             | \S+     | [0-9]+ | Down          | Down in configuration |
+
+    Scenario: gpstate show remaining bytes when mirror hasn't caught up
+        Given a standard local demo cluster is running
+        And the primary on content 0 is stopped
+        And user can start transactions
+        And sql "CREATE TABLE t AS SELECT generate_series(1,1000) AS a" is executed in "postgres" db
+        And the user suspend the walsender on the primary on content 0
+        And the user runs "gprecoverseg -a"
+        When the user runs "gpstate -e"
+        Then gpstate should print "Unsynchronized Segment Pairs" to stdout
+        And gpstate output looks like
+            | Current Primary | Port   | WAL sync remaining bytes            | Mirror | Port   |
+            | \S+             | [0-9]+ | [0-9]+                              | \S+    | [0-9]+ |
+        And the user reset the walsender on the primary on content 0
+        And the user waits until all bytes are sent to mirror on content 0
+        When the user runs "gpstate -e"
+        Then gpstate should not print "Unsynchronized Segment Pairs" to stdout
 
     Scenario: gpstate -c logs cluster info for a mirrored cluster
         Given a standard local demo cluster is running
