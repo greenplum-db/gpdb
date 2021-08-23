@@ -64,6 +64,7 @@ CATEGORY__REPLICATION_INFO = "Replication Info"
 VALUE__REPL_SENT_LSN = FieldDefinition("WAL Sent Location", "sent_lsn", "text")
 VALUE__REPL_FLUSH_LSN = FieldDefinition("WAL Flush Location", "flush_lsn", "text")
 VALUE__REPL_REPLAY_LSN = FieldDefinition("WAL Replay Location", "replay_lsn", "text")
+VALUE__REPL_SYNC_REMAINING_BYTES = FieldDefinition("WAL sync remaining bytes", "wal_sync_bytes", "int")
 
 CATEGORY__STATUS = "Status"
 VALUE__COORDINATOR_REPORTS_STATUS = FieldDefinition("Configuration reports status as", "status_in_config", "text", "Config status")
@@ -132,6 +133,7 @@ class GpStateData:
             VALUE__REPL_SENT_LSN,
             VALUE__REPL_FLUSH_LSN,
             VALUE__REPL_REPLAY_LSN,
+            VALUE__REPL_SYNC_REMAINING_BYTES,
         ]
 
         self.__entriesByCategory[CATEGORY__STATUS] = \
@@ -642,12 +644,11 @@ class GpSystemStateProgram:
             pass # logger.info( "No segment pairs with switched roles")
 
         # segments that are not synchronized
-        unsyncedPrimaries = [s for s in gpArray.getSegDbList() if s.isSegmentPrimary(current_role=True) and \
-                                                    not s.isSegmentModeSynchronized()]
-        if unsyncedPrimaries:
+        unsync_segs = self._get_unsync_segs_add_wal_remaining_bytes(data, gpArray)
+        if unsync_segs:
             logger.info("----------------------------------------------------")
             logger.info("Unsynchronized Segment Pairs")
-            logSegments(unsyncedPrimaries, logAsPairs=True)
+            logSegments(unsync_segs, True, [VALUE__REPL_SYNC_REMAINING_BYTES])
             exitCode = 1
         else:
             pass # logger.info( "No segment pairs are in resynchronization")
@@ -927,6 +928,44 @@ class GpSystemStateProgram:
             logger.warn("*****************************************************" )
 
         return 1 if hasWarnings else 0
+
+    @staticmethod
+    def _get_unsync_segs_add_wal_remaining_bytes(data, gpArray):
+        """
+        helper function for adding WAL sync remaining bytes to GpstateData and get unsync segments
+        :param gpArray: gpArray instance
+        returns list of primary segments of pairs which aren't in sync state
+        """
+        unsync_segs = []
+        primaries = [s for s in gpArray.getSegDbList() if s.isSegmentPrimary(current_role=True)]
+        for s in primaries:
+            try:
+                data.switchSegment(s)
+                url = dbconn.DbURL(hostname=s.hostname, port=s.port, dbname='template1')
+                conn = dbconn.connect(url, utility=True)
+                with closing(conn) as conn:
+                    cursor = dbconn.query(conn,
+                                          "SELECT pg_wal_lsn_diff(pg_current_wal_flush_lsn(), sent_lsn)"
+                                          ",sync_state FROM pg_stat_replication")
+                    rows = cursor.fetchall()
+                    cursor.close()
+                    if rows:
+                        # wal connection is active.
+                        if rows[0][1] != 'sync':
+                            # walsender is in 'catchup' state
+                            wal_sync_bytes_out = rows[0][0]
+                            unsync_segs.append(s)
+                            data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, wal_sync_bytes_out)
+                    else:
+                        # no return value from pg_stat_replication, there isn't a replication connection
+                        wal_sync_bytes_out = 'Unknown'
+                        unsync_segs.append(s)
+                        data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, wal_sync_bytes_out)
+            except pgdb.InternalError:
+                logger.warning('could not query segment {} ({}:{})'.format(
+                    s.dbid, s.hostname, s.port
+                ))
+        return unsync_segs
 
     @staticmethod
     def _add_replication_info(data, primary, mirror):
