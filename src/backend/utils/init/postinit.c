@@ -1351,6 +1351,7 @@ process_startup_options(Port *port, bool am_superuser)
 	}
 
 	/* Set GUCs that have been changed in the QD */
+	/* NOTE: this code block will not change the reset_val of the GUCs */
 	if (port->diff_options)
 	{
 		char	  **av;
