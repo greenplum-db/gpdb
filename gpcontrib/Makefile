@@ -19,12 +19,14 @@ ifeq "$(enable_debug_extensions)" "yes"
                gp_debug_numsegments \
                gp_inject_fault \
                gp_replica_check \
+               legacy_string_agg \
                gp_error_handling
 else
 	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
                gp_internal_tools \
                gp_pitr \
+               legacy_string_agg \
                gp_error_handling
 endif
 
