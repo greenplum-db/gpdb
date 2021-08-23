@@ -30,6 +30,7 @@
 3: insert into sync_t1 select i from generate_series(1,10)i;
 3: delete from sync_t1;
 3: select * from sync_t1;
+3: drop table sync_t1;
 3q:
 
 -- make sure all QEs call RESET if there are more than 1 QE of the session in the primary

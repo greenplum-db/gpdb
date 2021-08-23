@@ -58,6 +58,8 @@ DELETE 10
  i 
 ---
 (0 rows)
+3: drop table sync_t1;
+DROP
 3q: ... <quitting>
 
 -- make sure all QEs call RESET if there are more than 1 QE of the session in the primary
