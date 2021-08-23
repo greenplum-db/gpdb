@@ -203,7 +203,7 @@ select * from s full join s s1 on s.a = s1.a where s.a is null;
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="180">
+    <dxl:Plan Id="0" SpaceSize="112">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2586.001577" Rows="3.000000" Width="16"/>

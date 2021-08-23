@@ -422,7 +422,7 @@ FROM x
         </dxl:LogicalGet>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="73">
+    <dxl:Plan Id="0" SpaceSize="61">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.004152" Rows="10.000000" Width="8"/>
