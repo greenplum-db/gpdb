@@ -9,6 +9,7 @@ test: resgroup/resgroup_name_convention
 # fault injection tests
 test: resgroup/resgroup_assign_slot_fail
 test: resgroup/resgroup_unassign_entrydb
+test: resgroup/resgroup_seg_down_2pc
 
 # functions
 test: resgroup/resgroup_concurrency
