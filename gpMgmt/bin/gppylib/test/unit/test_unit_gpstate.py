@@ -97,6 +97,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
         self._pg_rows['pg_stat_replication'] = rows
         mock_query.side_effect = self._get_rows_for_query
 
+    def mock_pg_current_wal_lsn(self, mock_query, rows):
+        self._pg_rows['pg_current_wal_lsn'] = rows
+        mock_query.side_effect = self._get_rows_for_query
+
     def stub_replication_entry(self, **kwargs):
         # The row returned here must match the order and contents expected by
         # the pg_stat_replication query performed in _add_replication_info().
@@ -110,7 +114,8 @@ class ReplicationInfoTestCase(unittest.TestCase):
             kwargs.get('flush_left', 0),
             kwargs.get('replay_lsn', '0/0'),
             kwargs.get('replay_left', 0),
-            kwargs.get('backend_start', None)
+            kwargs.get('backend_start', None),
+            kwargs.get('sent_left', '0')
         )
 
     def mock_pg_stat_activity(self, mock_query, rows):
@@ -147,6 +152,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_adds_unknowns_if_pg_stat_replication_has_no_entries(self, mock_connect, mock_query):
         self.mock_pg_stat_replication(mock_query, [])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -161,6 +167,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
             self.stub_replication_entry(application_name='gp_walreceiver'),
             self.stub_replication_entry(application_name='gp_walreceiver'),
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -179,15 +186,21 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 flush_left=2048,
                 replay_lsn='0/0000',
                 replay_left=4096,
+                sent_left=1024,
             )
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
+        self.assertEqual('1024', self.data.getStrValue(self.primary, VALUE__REPL_SENT_LEFT))
+
         self.assertEqual('Streaming', self.data.getStrValue(self.mirror, VALUE__MIRROR_STATUS))
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
-        self.assertEqual('0/0800 (2048 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
-        self.assertEqual('0/0000 (4096 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
+        self.assertEqual('0/0800', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('0/0000', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
+        self.assertEqual('2048', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LEFT))
+        self.assertEqual('4096', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LEFT))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -200,14 +213,20 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 flush_left=0,
                 replay_lsn='0/1000',
                 replay_left=0,
+                sent_left=0,
             )
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
+
+        self.assertEqual('0', self.data.getStrValue(self.primary, VALUE__REPL_SENT_LEFT))
 
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
+        self.assertEqual('0', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LEFT))
+        self.assertEqual('0', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LEFT))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -220,19 +239,26 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 flush_left=None,
                 replay_lsn=None,
                 replay_left=None,
+                sent_left=None,
             )
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
+
+        self.assertEqual('Unknown', self.data.getStrValue(self.primary, VALUE__REPL_SENT_LEFT))
 
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LEFT))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LEFT))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_closes_connections(self, mock_connect, mock_query):
         self.mock_pg_stat_replication(mock_query, [])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -252,6 +278,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 replay_left=None,
             )
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -272,6 +299,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 backend_start='1970-01-01 00:00:00.000000-00'
             )
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -294,6 +322,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 state='streaming',
             ),
         ])
+        self.mock_pg_current_wal_lsn(mock_query, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -304,6 +333,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_displays_status_when_pg_rewind_is_active_and_mirror_is_down(self, mock_connect, mock_query):
         self.mock_pg_stat_replication(mock_query, [])
+        self.mock_pg_current_wal_lsn(mock_query, [])
         self.mirror.status = gparray.STATUS_DOWN
         self.mock_pg_stat_activity(mock_query, [self.stub_activity_entry()])
 
@@ -315,6 +345,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_does_not_update_mirror_status_when_mirror_is_down_and_there_is_no_recovery_underway(self, mock_connect, mock_query):
         self.mock_pg_stat_replication(mock_query, [])
+        self.mock_pg_current_wal_lsn(mock_query, [])
         self.mirror.status = gparray.STATUS_DOWN
         self.mock_pg_stat_activity(mock_query, [])
 
@@ -330,6 +361,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     def test_add_replication_info_displays_start_time_when_pg_rewind_is_active_and_mirror_is_down(self, mock_connect, mock_query):
         mock_date = '1970-01-01 00:00:00.000000-00'
         self.mock_pg_stat_replication(mock_query, [self.stub_replication_entry()])
+        self.mock_pg_current_wal_lsn(mock_query, [])
         self.mock_pg_stat_activity(mock_query, [self.stub_activity_entry(backend_start=mock_date)])
         self.mirror.status = gparray.STATUS_DOWN
 
@@ -341,6 +373,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_does_not_query_pg_stat_activity_when_mirror_is_up(self, mock_connect, mock_query):
         self.mock_pg_stat_replication(mock_query, [])
+        self.mock_pg_current_wal_lsn(mock_query, [])
         self.mock_pg_stat_activity(mock_query, [self.stub_activity_entry()])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
