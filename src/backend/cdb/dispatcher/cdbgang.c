@@ -380,7 +380,7 @@ addOneOption(StringInfo option, StringInfo diff, struct config_generic *guc)
 /*
  * Add GUCs to option/diff_options string.
  *
- * `options` is a list of `reset_val` of the GUCs, not the GUC's current value.
+ * `options` is a list of reset_val of the GUCs, not the GUC's current value.
  * `diff_options` is a list of the GUCs' current value. If the GUC is unchanged,
  * `diff_options` will omit it.
  *
@@ -388,15 +388,17 @@ addOneOption(StringInfo option, StringInfo diff, struct config_generic *guc)
  * PGC_S_CLIENT as its guc source. Then, `diff_options` is used to set the GUCs
  * with PGC_S_SESSION as its guc source.
  *
- * With PGC_S_CLIENT, SetConfigOption() will set the GUC's `reset_val`
- * when processing `options`, so the `reset_val` of the involved GUCs on all QD
+ * With PGC_S_CLIENT, SetConfigOption() will set the GUC's reset_val
+ * when processing `options`, so the reset_val of the involved GUCs on all QD
  * and QEs are the same.
  *
  * After applying `diff_options`, the GUCs' current value is set to the same
- * value as the QD and the `reset_val` of the GUC will not change.
+ * value as the QD and the reset_val of the GUC will not change.
  *
- * At last, both the `reset_val` and current value of the GUC are consistent,
+ * At last, both the reset_val and current value of the GUC are consistent,
  * even after RESET.
+ *
+ * See addOneOption() and process_startup_options() for more details.
  */
 void
 makeOptions(char **options, char **diff_options)
