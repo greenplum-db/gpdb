@@ -355,23 +355,24 @@ INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL c
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id = (select max(id2) from direct_dispatch_bar where id1 = 5);
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 4) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  (slice 3) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 4) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  (slice 3) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- tests with subplans (MPP-22019)
 CREATE TABLE MPP_22019_a ( i INT, j INT) DISTRIBUTED BY (i);
@@ -392,7 +393,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1765376.88 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1765376.88 rows=1 width=8)
    ->  Result  (cost=0.00..1765376.88 rows=1 width=8)
          Filter: (SubPlan 1)
          ->  Hash Join  (cost=0.00..862.00 rows=1 width=12)
@@ -406,7 +407,7 @@ EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHER
            ->  Result  (cost=0.00..431.00 rows=1 width=4)
                  Filter: (mpp_22019_a_1.j = mpp_22019_b.j)
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
-                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                              ->  Seq Scan on mpp_22019_a mpp_22019_a_1  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (17 rows)

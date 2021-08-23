@@ -412,7 +412,7 @@ Optimizer status: PQO version 2.67.0
         </dxl:LogicalJoin>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="9">
+    <dxl:Plan Id="0" SpaceSize="7">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="166192.837038" Rows="4994000.000000" Width="16"/>

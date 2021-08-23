@@ -429,7 +429,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2170">
+    <dxl:Plan Id="0" SpaceSize="2014">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.002274" Rows="1.000000" Width="64"/>

@@ -790,7 +790,14 @@ CPhysicalHashJoin::PdshashedRequired(CMemoryPool *,	 // mp
 	CDistributionSpec *pds = (*m_pdrgpdsRedistributeRequests)[ulReqIndex];
 
 	pds->AddRef();
-	return CDistributionSpecHashed::PdsConvert(pds);
+	CDistributionSpecHashed *pdsChild =
+		CDistributionSpecHashed::PdsConvert(pds);
+	if (pdsChild->FSatisfiedBySingleton())
+	{
+		pdsChild->MarkUnsatisfiableBySingleton();
+	}
+
+	return pdsChild;
 }
 
 //---------------------------------------------------------------------------

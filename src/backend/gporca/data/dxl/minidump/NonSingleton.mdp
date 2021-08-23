@@ -282,7 +282,7 @@ EXPLAIN SELECT a FROM snackbox JOIN (SELECT c FROM hottoast LIMIT 3) hottoast ON
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="22">
+    <dxl:Plan Id="0" SpaceSize="26">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000381" Rows="1.000000" Width="4"/>

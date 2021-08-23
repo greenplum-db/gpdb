@@ -1176,7 +1176,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="13">
+    <dxl:Plan Id="0" SpaceSize="11">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="58837188745941401600.000000" Rows="258611551791821375930368.000000" Width="65"/>

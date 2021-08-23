@@ -386,7 +386,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="18240">
+    <dxl:Plan Id="0" SpaceSize="16680">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3017.002573" Rows="1.000000" Width="4"/>

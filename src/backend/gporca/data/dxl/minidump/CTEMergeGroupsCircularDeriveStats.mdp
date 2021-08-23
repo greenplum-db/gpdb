@@ -251,7 +251,7 @@
         <dxl:LogicalCTEConsumer CTEId="1" Columns="19,20,21,22"/>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="10">
+    <dxl:Plan Id="0" SpaceSize="12">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000587" Rows="1.000000" Width="16"/>

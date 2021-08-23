@@ -1563,7 +1563,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="50">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="75.123853" Rows="337.000000" Width="4"/>

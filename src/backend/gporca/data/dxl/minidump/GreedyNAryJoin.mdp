@@ -1144,7 +1144,7 @@ EXPLAIN SELECT * FROM t1 INNER JOIN t2 ON a =b INNER JOIN t3 ON b = c;
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="88">
+    <dxl:Plan Id="0" SpaceSize="85">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.748028" Rows="1.000000" Width="12"/>

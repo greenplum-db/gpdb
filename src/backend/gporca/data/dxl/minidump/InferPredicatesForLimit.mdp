@@ -273,7 +273,7 @@ a < 2 should also be outside the limit but not below.
         </dxl:LogicalJoin>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="38">
+    <dxl:Plan Id="0" SpaceSize="52">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000626" Rows="1.000000" Width="4"/>

@@ -333,7 +333,7 @@ ON (a.col = b.col);
         </dxl:LogicalJoin>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1127">
+    <dxl:Plan Id="0" SpaceSize="987">
       <dxl:DMLInsert Columns="0" ActionCol="34" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.011735" Rows="1.000000" Width="4"/>

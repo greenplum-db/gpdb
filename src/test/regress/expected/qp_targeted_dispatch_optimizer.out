@@ -750,19 +750,19 @@ explain select * from table_a where a0=3;
 (5 rows)
 
 explain select a0 from table_a where a0 in (select max(a1) from table_a);
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-         Hash Cond: ((max(table_a.a1)) = table_a_1.a0)
-         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
-               Hash Key: (max(table_a.a1))
-               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (table_a.a0 = (max(table_a_1.a1)))
+         ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-               ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+               ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
+                     Hash Key: (max(table_a_1.a1))
+                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
 select a0 from table_a where a0 in (select max(a1) from table_a);
@@ -788,20 +788,20 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 explain select a0 from table_a where a0 in (select max(a1) from table_a where a0=1);
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-         Hash Cond: ((max(table_a.a1)) = table_a_1.a0)
-         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
-               Hash Key: (max(table_a.a1))
-               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
-                                 Filter: (a0 = 1)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (table_a.a0 = (max(table_a_1.a1)))
+         ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-               ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+               ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
+                     Hash Key: (max(table_a_1.a1))
+                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
+                                       Filter: (a0 = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
 reset test_print_direct_dispatch_info;
@@ -817,18 +817,18 @@ select rank from ( select rank() over ( order by dist_key asc ) as rank , * from
 (1 row)
 
 explain select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
- Result  (cost=0.00..431.01 rows=1 width=8)
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.00 rows=1 width=8)
    Filter: (dist_key = 10)
-   ->  WindowAgg  (cost=0.00..431.01 rows=34 width=12)
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=12)
          Order By: dist_key
-         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=100 width=4)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                Merge Key: dist_key
-               ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                      Sort Key: dist_key
-                     ->  Seq Scan on foo_direct_dispatch  (cost=0.00..431.00 rows=34 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
+                     ->  Seq Scan on foo_direct_dispatch  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
 -- ----------------------------------------------------------------------

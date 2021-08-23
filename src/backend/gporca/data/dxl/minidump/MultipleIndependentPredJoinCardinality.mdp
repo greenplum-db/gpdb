@@ -5753,7 +5753,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="29">
+    <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.651422" Rows="1000.000000" Width="24"/>

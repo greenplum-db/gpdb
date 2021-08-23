@@ -443,7 +443,7 @@
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="274176">
+    <dxl:Plan Id="0" SpaceSize="182784">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5297852.190616" Rows="3.000000" Width="8"/>

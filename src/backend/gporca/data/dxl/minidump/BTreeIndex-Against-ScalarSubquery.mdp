@@ -313,7 +313,7 @@ SELECT * FROM btree_test WHERE a in (select 1);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="22">
+    <dxl:Plan Id="0" SpaceSize="21">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6.000126" Rows="1.000000" Width="4"/>

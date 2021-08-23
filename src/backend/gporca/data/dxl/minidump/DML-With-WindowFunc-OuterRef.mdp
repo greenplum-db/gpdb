@@ -360,7 +360,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalCTAS>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="25">
+    <dxl:Plan Id="0" SpaceSize="38">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="0" VarTypeModList="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.010884" Rows="1.000000" Width="4"/>

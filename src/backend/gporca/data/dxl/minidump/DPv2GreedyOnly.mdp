@@ -5921,7 +5921,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="18">
+    <dxl:Plan Id="0" SpaceSize="15">
       <dxl:HashJoin JoinType="Left">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="228670.202313" Rows="2010720827.932932" Width="32"/>

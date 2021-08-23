@@ -705,7 +705,7 @@
         </dxl:LogicalGroupBy>
       </dxl:LogicalCTAS>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="14">
+    <dxl:Plan Id="0" SpaceSize="17">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="10" VarTypeModList="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="438.394467" Rows="1.000000" Width="8"/>

@@ -1926,7 +1926,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="415">
+    <dxl:Plan Id="0" SpaceSize="455">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.013245" Rows="3.000000" Width="4"/>
@@ -1976,7 +1976,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
               <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="31">
+          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="24">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000149" Rows="21.333333" Width="8"/>
             </dxl:Properties>
@@ -2597,7 +2597,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
               </dxl:TableDescriptor>
             </dxl:TableScan>
           </dxl:Append>
-          <dxl:PartitionSelector RelationMdid="0.247422.1.0" SelectorId="31" ScanId="1" Partitions="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21">
+          <dxl:PartitionSelector RelationMdid="0.247422.1.0" SelectorId="24" ScanId="1" Partitions="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="862.003395" Rows="12.000000" Width="12"/>
             </dxl:Properties>
