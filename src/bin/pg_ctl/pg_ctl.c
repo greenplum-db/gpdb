@@ -458,6 +458,7 @@ free_readfile(char **optlines)
 static pgpid_t
 start_postmaster(void)
 {
+	char		launcher[MAXPGPATH] = "";
 	char		cmd[MAXPGPATH];
 
 #ifndef WIN32
@@ -497,18 +498,26 @@ start_postmaster(void)
 	}
 #endif
 
+	if (wrapper != NULL)
+	{
+		if (wrapper_args != NULL)
+			snprintf(launcher, MAXPGPATH, "%s %s", wrapper, wrapper_args);
+		else
+			snprintf(launcher, MAXPGPATH, "%s", wrapper);
+	}
+
 	/*
 	 * Since there might be quotes to handle here, it is easier simply to pass
 	 * everything to a shell to process them.  Use exec so that the postmaster
 	 * has the same PID as the current child process.
 	 */
 	if (log_file != NULL)
-		snprintf(cmd, MAXPGPATH, "exec \"%s\" %s%s < \"%s\" >> \"%s\" 2>&1",
-				 exec_path, pgdata_opt, post_opts,
+		snprintf(cmd, MAXPGPATH, "exec %s \"%s\" %s%s < \"%s\" >> \"%s\" 2>&1",
+				 launcher, exec_path, pgdata_opt, post_opts,
 				 DEVNULL, log_file);
 	else
-		snprintf(cmd, MAXPGPATH, "exec \"%s\" %s%s < \"%s\" 2>&1",
-				 exec_path, pgdata_opt, post_opts, DEVNULL);
+		snprintf(cmd, MAXPGPATH, "exec %s \"%s\" %s%s < \"%s\" 2>&1",
+				 launcher, exec_path, pgdata_opt, post_opts, DEVNULL);
 
 	(void) execl("/bin/sh", "/bin/sh", "-c", cmd, (char *) NULL);
 

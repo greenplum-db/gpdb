@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Config;
 use TestLib;
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 my $tempdir = TestLib::tempdir;
 my $tempdir_short = TestLib::tempdir_short;
@@ -48,3 +48,27 @@ command_ok([ 'pg_ctl', 'restart', '-D', "$tempdir/data", '-w', '-m', 'fast' ],
 	'pg_ctl restart with server running');
 
 system_or_bail 'pg_ctl', 'stop', '-D', "$tempdir/data", '-m', 'fast';
+
+# gpdb specific: verify that --wrapper and --wrapper-args work as expected
+if (not $windows_os)
+{
+	my $keypair = 'TESTKEY=hello';
+	my $file;
+
+	# launch the server with the env command as a wrapper
+	command_ok([ 'pg_ctl', 'start', '-D', "$tempdir/data", '-w',
+			'--wrapper=env', "--wrapper-args=$keypair",
+			'-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1' ],
+		'pg_ctl start --wrapper');
+
+	# read the pid
+	open($file, '<', "$tempdir/data/postmaster.pid");
+	my $pid = 0 + <$file>;
+	close($file);
+
+	# verify that the envvar is successfully set
+	command_ok([ 'grep', '-z', $keypair, "/proc/$pid/environ" ],
+		'verify wrapper effect');
+
+	system_or_bail 'pg_ctl', 'stop', '-D', "$tempdir/data", '-m', 'fast';
+}
