@@ -56,7 +56,7 @@ CREATE OR REPLACE FUNCTION gp_tablespace_watch_start(dbid int, name text, locati
 AS $$
 import subprocess
 output = '/tmp/gp_temp_tablespaces_dbid%d_%s' % (dbid, name)
-cmd = "/tmp/fswatch.bin/bin/fswatch --latency=0.0001 --event=Created %s | tee -a /tmp/gp_temp_tablespaces_dbid%d.log > %s &" % (location, dbid, output)
+cmd = "/tmp/file_monitor %s | tee -a /tmp/gp_temp_tablespaces_dbid%d.log > %s &" % (location, dbid, output)
 cmd = ["bash", "-c", cmd]
 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 rc = process.wait()
@@ -82,7 +82,7 @@ CREATE OR REPLACE FUNCTION gp_tablespace_watch_stop()
     EXECUTE ON ALL SEGMENTS
 AS $$
 import subprocess
-cmd = "pkill fswatch"
+cmd = "pkill file_monitor"
 cmd = ["bash", "-c", cmd]
 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 process.wait()

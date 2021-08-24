@@ -47,7 +47,7 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 # Build regression test driver
 
-all: pg_regress$(X) scan_flaky_fault_injectors
+all: pg_regress$(X) scan_flaky_fault_injectors file_monitor
 
 pg_regress$(X): pg_regress.o pg_regress_main.o | submake-libpgport
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
@@ -61,6 +61,9 @@ regress_gp.o: override LDFLAGS += -L$(top_builddir)/src/interfaces/libpq
 .PHONY: scan_flaky_fault_injectors
 scan_flaky_fault_injectors:
 	$(top_builddir)/src/test/regress/scan_flaky_fault_injectors.sh
+
+file_monitor:
+	$(CC) -o /tmp/file_monitor $(top_builddir)/src/test/regress/file_monitor.c
 
 twophase_pqexecparams: twophase_pqexecparams.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
@@ -97,7 +100,7 @@ uninstall:
 NAME = regress
 OBJS = regress.o
 
-OBJS += regress_gp.o partindex.o gp_tablespace.o
+OBJS += regress_gp.o partindex.o
 
 include $(top_srcdir)/src/Makefile.shlib
 
