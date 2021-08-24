@@ -2408,6 +2408,10 @@ retry1:
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 							 errmsg("invalid value for option: \"%s\"", GPCONN_TYPE)));
 			}
+			else if (strcmp(nameptr, "diff_options") == 0)
+			{
+				port->diff_options = pstrdup(valptr);
+			}
 			else
 			{
 				/* Assume it's a generic GUC option */

@@ -7353,6 +7353,7 @@ ExecSetVariableStmt(VariableSetStmt *stmt, bool isTopLevel)
 			if (strcmp(stmt->name, "transaction_isolation") == 0)
 				WarnNoTransactionChain(isTopLevel, "RESET TRANSACTION");
 
+			SIMPLE_FAULT_INJECTOR("reset_variable_fault");
 			(void) set_config_option(stmt->name,
 									 NULL,
 									 (superuser() ? PGC_SUSET : PGC_USERSET),

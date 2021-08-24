@@ -1305,6 +1305,33 @@ process_startup_options(Port *port, bool am_superuser)
 
 		SetConfigOption(name, value, gucctx, PGC_S_CLIENT);
 	}
+
+	/* Set GUCs that have been changed in the QD */
+	/* NOTE: this code block will not change the reset_val of the GUCs */
+	if (port->diff_options)
+	{
+		char	  **av;
+		int			maxac;
+		int			ac;
+
+		maxac = 1 + (strlen(port->diff_options) + 1)/2;
+
+		av = (char **) palloc(maxac * sizeof(char *));
+		ac = 0;
+
+		pg_split_opts(av, &ac, port->diff_options);
+
+		av[ac] = NULL;
+		Assert(ac < maxac);
+		for (int i = 0; i < ac; i++)
+		{
+			char *name = NULL;
+			char *val = NULL;
+			ParseLongOption(av[i], &name, &val);
+			SetConfigOption(name, val, gucctx, PGC_S_SESSION);
+		}
+		pfree(av);
+	}
 }
 
 /*
