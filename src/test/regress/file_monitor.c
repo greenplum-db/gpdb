@@ -9,7 +9,7 @@
 static void sig_handler(int signo)
 {
 	fflush(stdout);
-  exit(0);
+	exit(0);
 }
 /* av[1]: dirpath */
 int main(int ac, const char *av[])
@@ -38,10 +38,9 @@ int main(int ac, const char *av[])
 	signal(SIGTERM, sig_handler);
 	while ((n = read(fd, buffer, sizeof(buffer))) > 0) {
 		const struct inotify_event *ev;
+		char *ptr;
 		int count = 0;
-		for (char *ptr = &buffer[0];
-				ptr < buffer + n;
-				ptr += sizeof(*ev) + ev->len) {
+		for (ptr = &buffer[0]; ptr < buffer + n; ptr += sizeof(*ev) + ev->len) {
 			ev = (const struct inotify_event *)ptr;
 			if (ev->wd != wd) {
 				fprintf(stderr, "Unexpected wd = %d, expected wd = %d\n", ev->wd, wd);
@@ -62,7 +61,7 @@ int main(int ac, const char *av[])
 
 int main(int ac, const char *av[])
 {
-  fprintf(stderr, "No Support for non-Linux\n");
-  return -1;
+	fprintf(stderr, "No Support for non-Linux\n");
+	return -1;
 }
 #endif

@@ -29,6 +29,10 @@ ifdef MAX_CONNECTIONS
 MAXCONNOPT += --max-connections=$(MAX_CONNECTIONS)
 endif
 
+UNAME := $(shell uname)
+ifeq ($(UNAME), Linux)
+	EXTRA_TESTS += --schedule=$(srcdir)/linux_schedule
+endif
 # stuff to pass into build of pg_regress
 EXTRADEFS = '-DHOST_TUPLE="$(host_tuple)"' \
 	'-DMAKEPROG="$(MAKE)"' \

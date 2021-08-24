@@ -27,6 +27,11 @@ drop tablespace some_default_tablespace;
 reset default_tablespace;
 reset temp_tablespaces;
 
+
+-- The following test is only available for Linux, because we use inotify
+-- to monitor new files created under tablespaces.
+\! uname
+
 -- When the GUC temp_tablespaces is set, one of the temp tablespaces is used instead of the default tablespace.
 -- create several tablespaces and use them as temp tablespaces
 -- all QD/QEs in one session should have the same temp tablespace
