@@ -48,18 +48,8 @@ create tablespace mytempsp1 location '@testtablespace@_mytempsp1';
 create tablespace mytempsp2 location '@testtablespace@_mytempsp2';
 create tablespace mytempsp3 location '@testtablespace@_mytempsp3';
 create tablespace mytempsp4 location '@testtablespace@_mytempsp4';
-create tablespace mytempsp5 location '@testtablespace@_mytempsp5';
-create tablespace mytempsp6 location '@testtablespace@_mytempsp6';
-create tablespace mytempsp7 location '@testtablespace@_mytempsp7';
-create tablespace mytempsp8 location '@testtablespace@_mytempsp8';
-create tablespace mytempsp9 location '@testtablespace@_mytempsp9';
 -- temp_tablespaces will synchronized to all segments
 set temp_tablespaces=mytempsp0;
--- start_ignore
-\! wget -O /tmp/fswatch-1.16.0.tar.gz  https://github.com/emcrisostomo/fswatch/releases/download/1.16.0/fswatch-1.16.0.tar.gz
-\! tar xzf /tmp/fswatch-1.16.0.tar.gz -C /tmp
-\! bash -c "cd /tmp/fswatch-1.16.0 ; ./configure --prefix=/tmp/fswatch.bin --enable-static=yes --enable-shared=no && make -j16 -s install-exec"
--- end_ignore
 CREATE OR REPLACE FUNCTION gp_tablespace_watch_start(dbid int, name text, location text)
     RETURNS void
     EXECUTE ON ALL SEGMENTS
@@ -307,7 +297,7 @@ select gp_tablespace_watch_log(gp_execution_dbid(), '[SET - use multiple temp ta
 (3 rows)
 
 set statement_mem='2MB';
-set temp_tablespaces=mytempsp0,mytempsp1,mytempsp2,mytempsp3,mytempsp4,mytempsp5,mytempsp6,mytempsp7,mytempsp8,mytempsp9;
+set temp_tablespaces=mytempsp0,mytempsp1,mytempsp2,mytempsp3,mytempsp4;
 with out11 as (
     SELECT * FROM (
       WITH cte(a,b) AS (SELECT a-1, b+1 FROM tts_foo)
@@ -449,8 +439,3 @@ drop tablespace mytempsp1;
 drop tablespace mytempsp2;
 drop tablespace mytempsp3;
 drop tablespace mytempsp4;
-drop tablespace mytempsp5;
-drop tablespace mytempsp6;
-drop tablespace mytempsp7;
-drop tablespace mytempsp8;
-drop tablespace mytempsp9;
