@@ -201,10 +201,8 @@ CCostContext::DeriveStats()
 	exprhdl.DeriveCostContextStats();
 	if (nullptr == exprhdl.Pstats())
 	{
-		GPOS_RAISE(
-			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
-			GPOS_WSZ_LIT(
-				"Could not compute cost since statistics for the group no derived"));
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+				   GPOS_WSZ_LIT("CCostContext"));
 	}
 
 	exprhdl.Pstats()->AddRef();
