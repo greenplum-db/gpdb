@@ -178,7 +178,7 @@ class GpStart(GpTestCase):
         self.subject.logger.info.assert_any_call('Coordinator Started...')
         self.assertEqual(return_code, 0)
 
-     def test_option_coordinator_exits_with_user_abort(self):
+    def test_option_coordinator_exits_with_user_abort(self):
         sys.argv = ["gpstart", "-m"]
         self.mock_userinput.ask_yesno.return_value = False
         self.subject.unix.PgPortIsActive.local.return_value = False
