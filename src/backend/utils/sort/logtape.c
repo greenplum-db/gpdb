@@ -417,6 +417,7 @@ LogicalTapeSetCreate(int ntapes)
 {
 	LogicalTapeSet *lts = LogicalTapeSetCreate_Internal(ntapes);
 	lts->pfile = BufFileCreateTemp("Sort", false /* interXact */);
+	BufFilePledgeSequential(lts->pfile);
 
 	return lts;
 }
@@ -429,6 +430,7 @@ LogicalTapeSetCreate_File(BufFile *ewfile, int ntapes)
 {
 	LogicalTapeSet *lts = LogicalTapeSetCreate_Internal(ntapes);
 	lts->pfile = ewfile;
+	BufFilePledgeSequential(lts->pfile);
 	return lts;
 }
 

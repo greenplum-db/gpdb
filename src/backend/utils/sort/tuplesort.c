@@ -3898,6 +3898,7 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 		state->pfile_rwfile_state = BufFileCreateNamedTemp(statedump,
 														   false /* interXact */,
 														   state->work_set);
+		BufFilePledgeSequential(state->pfile_rwfile_state);
 		Assert(state->pfile_rwfile_state != NULL);
 
 		return state;
