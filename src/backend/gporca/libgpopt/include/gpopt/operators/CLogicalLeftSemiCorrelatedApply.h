@@ -54,7 +54,7 @@ public:
 	}
 
 	CExpression *
-	GetPexprPredicate()
+	GetPexprPredicate() const
 	{
 		return pexprPredicate;
 	}
