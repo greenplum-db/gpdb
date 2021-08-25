@@ -4,6 +4,9 @@
 -- The expectation is "alter resource group" can run successfully since the mirror segment is UP.
 -- After recover the segment, there is no error or blocking.
 
+include: helpers/server_helpers.sql;
+CREATE
+
 -- set these values purely to cut down test time, as default fts trigger is
 -- every min and 5 retries
 alter system set gp_fts_probe_interval to 10;
