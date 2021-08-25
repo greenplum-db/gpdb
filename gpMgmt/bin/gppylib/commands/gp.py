@@ -75,7 +75,7 @@ def getPostmasterPID(hostname, datadir):
     try:
         cmd.run(validateAfter=True)
         sout=cmd.get_results().stdout.lstrip(' ')
-        return int(sout.split('START_CMD_OUTPUT')[1].split()[1])
+        return int(sout.split('START_CMD_OUTPUT\n')[1].split()[1])
     except:
         return -1
 
@@ -1628,7 +1628,7 @@ class IfAddrs:
             args = cmd
 
         result = subprocess.check_output(args).decode()
-        return result.split('START_CMD_OUTPUT')[1].strip().splitlines()
+        return result.split('START_CMD_OUTPUT\n')[1].splitlines()
 
 if __name__ == '__main__':
 
