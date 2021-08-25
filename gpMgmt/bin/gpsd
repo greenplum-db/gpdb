@@ -132,7 +132,7 @@ def dumpStats(cur, inclHLL):
         # determine the actual types of stavalues[1-5], the columns are defined as "anyarray"
         if vals[4][0] == '_':
             # column is an array type, use as is
-            rowTypes = types + [typename] * 5
+            rowTypes = types + ["_text"] * 5
         else:
             # non-array type, make an array type out of it
             rowTypes = types + [typename + '[]'] * 5
