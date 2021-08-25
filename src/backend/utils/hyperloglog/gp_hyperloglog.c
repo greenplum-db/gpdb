@@ -564,6 +564,7 @@ gp_hll_compress_dense(GpHLLCounter hloglog)
     memset(dest,0,data_rawsize + 4);
 
     data = malloc(data_rawsize);
+    memset(data,0,data_rawsize);
     if (data == NULL){
         free(dest);
         ereport(ERROR,
