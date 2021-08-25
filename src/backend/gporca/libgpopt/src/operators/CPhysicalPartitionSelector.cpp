@@ -412,10 +412,8 @@ CPhysicalPartitionSelector::PpfmDerive(CMemoryPool *mp,
 	GPOS_ASSERT(NULL != stats);
 	if (NULL == stats)
 	{
-		GPOS_RAISE(
-			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
-			GPOS_WSZ_LIT(
-				"Could not derive stats for partition selector since group stats not derived"));
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+				   GPOS_WSZ_LIT("CPhysicalPartitionSelector"));
 	}
 	m_pexprCombinedPredicate->AddRef();
 	stats->AddRef();

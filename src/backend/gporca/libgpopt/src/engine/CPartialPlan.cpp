@@ -155,10 +155,8 @@ CPartialPlan::RaiseExceptionIfStatsNull(IStatistics *stats)
 {
 	if (NULL == stats)
 	{
-		GPOS_RAISE(
-			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
-			GPOS_WSZ_LIT(
-				"Could not compute cost of partial plan since statistics for the group not derived"));
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+				   GPOS_WSZ_LIT("CPartialPlan"));
 	}
 }
 
