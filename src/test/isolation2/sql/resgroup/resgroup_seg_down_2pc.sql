@@ -8,8 +8,7 @@
 -- start_ignore
 ! gpconfig -c gp_fts_probe_timeout -v 2;
 ! gpconfig -c gp_fts_probe_interval -v '10s';
-! gpconfig -c gp_resource_manager -v 'group';
-! gpstop -ar;
+! gpstop -ari;
 -- end_ignore
 
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
@@ -84,6 +83,5 @@ $$ language plpgsql;
 -- start_ignore
 ! gpconfig -r gp_fts_probe_timeout;
 ! gpconfig -r gp_fts_probe_interval;
-! gpconfig -r gp_resource_manager;
 ! gpstop -rai;
 -- end_ignore
