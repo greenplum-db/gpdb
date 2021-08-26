@@ -63,7 +63,7 @@ scan_flaky_fault_injectors:
 	$(top_builddir)/src/test/regress/scan_flaky_fault_injectors.sh
 
 file_monitor:
-	$(CC) -o /tmp/file_monitor $(top_builddir)/src/test/regress/file_monitor.c
+	$(CC) $(CPPFLAGS) -I$(GPHOME)/include -o /tmp/file_monitor $(top_builddir)/src/test/regress/file_monitor.c -luv -L$(GPHOME)/lib
 
 twophase_pqexecparams: twophase_pqexecparams.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
