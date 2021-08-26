@@ -23,7 +23,6 @@
 #include "access/nbtree.h"
 #include "access/reloptions.h"
 #include "access/relscan.h"
-#include "access/tableam.h"
 #include "access/sysattr.h"
 #include "access/tableam.h"
 #include "access/tupconvert.h"
@@ -312,6 +311,7 @@ static void ATAocsWriteSegFileNewColumns(
 		AOCSAddColumnDesc idesc, AOCSHeaderScanDesc sdesc,
 		AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot);
 static void ATAocsWriteNewColumns(AlteredTableInfo *tab);
+static void ATAocsACNoRewrite(AlteredTableInfo *tab);
 static AlteredTableInfo *ATGetQueueEntry(List **wqueue, Relation rel);
 static void ATSimplePermissions(Relation rel, int allowed_targets);
 static void ATWrongRelkindError(Relation rel, int allowed_targets);
@@ -508,7 +508,6 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
-
 
 /* ----------------------------------------------------------------
  *		DefineRelation
@@ -4494,6 +4493,94 @@ AlterTableGetLockLevel(List *cmds)
 }
 
 /*
+ * This is the wax off phase of the aoco alter table alter type optimization.
+ *
+ * IF command preparation was successfull, then decide if we should procceed
+ * with optimization. If we should proceed, then remove the AlterType command
+ * from the list. Otherwise, remove the Drop and Add commands.
+ * The reason for needing this, is that once we have committed in succeeding,
+ * then we can not afford to fail after the drop command has been executed.
+ */
+static void
+aoco_optimize_alter_type_cmd(Relation rel, List *wqueue, List *cmds, bool is_partition)
+{
+	AlteredTableInfo *tab;
+	bool shall_we;
+	ListCell *lcmd;
+
+	if (!RelationIsAoCols(rel))
+		return;
+
+	tab = (AlteredTableInfo *) linitial(wqueue);
+	Assert(tab->relid == RelationGetRelid(rel));
+
+	/*
+	 * If we do not have to rewrite the column AND
+	 * we are not part of a partition (either root or child (via wqueue))
+	 * AND not part of the distribution key,
+	 * THEN we can possibly optimize.
+	 */
+	shall_we = !!((tab->rewrite & AT_REWRITE_COLUMN_REWRITE) &&
+							!is_partition && (list_length(wqueue) == 1) &&
+							(!tab->dist_opfamily_changed && !tab->new_opclass));
+
+	/* further all cmds should have aoco_alter_type_norewrite set */
+	foreach(lcmd, cmds)
+	{
+		AlterTableCmd *cmd = (AlterTableCmd *) lfirst(lcmd);
+		shall_we = !!(shall_we && cmd->aoco_alter_type_norewrite);
+		if (!shall_we)
+			break;
+	}
+
+	if (shall_we)
+	{
+		/* We shall optimize, remove the alter type pass */
+		Assert(tab->subcmds[AT_PASS_ALTER_TYPE]);
+		tab->subcmds[AT_PASS_ALTER_TYPE] = NIL; /* Happy leak */
+	}
+	else
+	{
+		ListCell *prev;
+
+restart:
+		/* We shall NOT optimize, wax off the added commands */
+		prev = NULL;
+		foreach(lcmd, cmds)
+		{
+			AlterTableCmd *cmd = (AlterTableCmd *) lfirst(lcmd);
+			if (cmd->aoco_alter_type_norewrite)
+			{
+				switch (cmd->subtype)
+				{
+					case AT_DropColumn:
+						/* intentional fallthrough */
+					case AT_DropColumnRecurse:
+						tab->subcmds[AT_PASS_DROP] = NIL;
+						cmds = list_delete_cell(cmds, lcmd, prev);
+						goto restart;
+						break;
+					case AT_AddColumn:
+						/* intentional fallthrough */
+					case AT_AddColumnRecurse:
+						tab->subcmds[AT_PASS_ADD_COL] = NIL;
+						cmds = list_delete_cell(cmds, lcmd, prev);
+						goto restart;
+						break;
+					case AT_AlterColumnType:
+						cmd->aoco_alter_type_norewrite = false;
+						break;
+					default:
+						/* Should not be reached */
+						elog(ERROR, "aoco internal error");
+				}
+			}
+			prev = lcmd;
+		}
+	}
+}
+
+/*
  * ATController provides top level control over the phases.
  *
  * parsetree is passed in to allow it to be passed to event triggers
@@ -4505,6 +4592,7 @@ ATController(AlterTableStmt *parsetree,
 {
 	List	   *wqueue = NIL;
 	ListCell   *lcmd;
+	bool	is_partition = false;
 
 	cdb_sync_oid_to_segments();
 
@@ -4538,10 +4626,13 @@ ATController(AlterTableStmt *parsetree,
 		foreach(lcmd, cmds)
 		{
 			AlterTableCmd *cmd = (AlterTableCmd *) lfirst(lcmd);
-
+			if (cmd->subtype == AT_PartAdd)
+				is_partition = true;
 			ATPrepCmd(&wqueue, rel, cmd, recurse, false, lockmode);
 		}
 	}
+
+	aoco_optimize_alter_type_cmd(rel, wqueue, cmds, is_partition);
 
 	/* Close the relation, but keep lock until commit */
 	relation_close(rel, NoLock);
@@ -5491,11 +5582,25 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		 * specific to table AM.  Descide the best option to achieve this
 		 * goal.
 		 */
+		
 		if (tab->rewrite & AT_REWRITE_NEW_COLUMNS_ONLY_AOCS)
 		{
 			ATAocsWriteNewColumns(tab);
 			continue;
+		} else if (tab->subcmds[AT_PASS_ADD_COL])
+		{
+			/*
+		 	* If we can not Optimize for the classic method, check
+		 	* if we are part of the aoco alter type optimization
+		 	*/
+			AlterTableCmd *addColumCmd = linitial(tab->subcmds[AT_PASS_ADD_COL]);
+			if (addColumCmd->aoco_alter_type_norewrite)
+			{
+				ATAocsACNoRewrite(tab);
+				continue;
+			}
 		}
+
 		/*
 		 * We only need to rewrite the table if at least one column needs to
 		 * be recomputed, we are adding/removing the OID column, or we are
@@ -5856,6 +5961,110 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 
 	return scancol;
 }
+
+/*
+ * This is the crux of the alter table alter type optimiziation.
+ * The alter type command has been re-writen as drop column add column.
+ * This is the add column part. The main difference from the default case is
+ * that we will need to read the data from the already dropped column, which are
+ * still visible in the current snapshot.
+ *
+ * This operation can not fallback to the 'non' optimized case, since the column
+ * is already dropped. Most of the code is shared with ATAocsNoRewrite.
+ */
+static void
+ATAocsACNoRewrite(AlteredTableInfo *tab)
+{
+	AOCSFileSegInfo **segInfos;
+	EState			 *estate;
+	List			 *addColCmds;
+	NewColumnValue	 *newval;
+	const char		 *basepath;
+	AOCSAddColumnDesc idesc;
+	Relation		  rel;
+	Snapshot		  snapshot;
+	int32			  nseg;
+
+	addColCmds = tab->subcmds[AT_PASS_ADD_COL];
+	Assert(addColCmds);
+
+	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	estate = CreateExecutorState();
+
+	/* The first expression is the preprocessed alter column change type */
+	newval = linitial(tab->newvals);
+	newval->exprstate = ExecPrepareExpr((Expr *)newval->expr, estate);
+
+	rel = heap_open(tab->relid, NoLock);
+	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg);
+	if (nseg > 0)
+		aocs_addcol_emptyvpe(rel, segInfos, nseg, 1);
+
+	if (Gp_role != GP_ROLE_DISPATCH && nseg > 0)
+	{
+		RelFileNodeBackend rnode;
+		TupleTableSlot	  *oldslot;
+		bool			  *proj;
+
+		/* We want the old Description tuple, i.e. before the drop */
+		proj = palloc0(tab->oldDesc->natts * sizeof(*proj));
+		proj[newval->attnum -1] = true;
+
+		/*
+		 * Create new segfiles for new columns for current
+		 * appendonly segment.
+		 */
+		rnode.node = rel->rd_node;
+		rnode.backend = rel->rd_backend;
+		idesc = aocs_addcol_init(rel, 1);
+
+		for (int segindex = 0; segindex < nseg; segindex++)
+		{
+			ExprContext *econtext;
+			AOCSScanDesc sdesc;
+
+			aocs_addcol_newsegfile(idesc, segInfos[segindex], (char *)basepath, rnode);
+
+			oldslot = MakeSingleTupleTableSlot(tab->oldDesc, table_slot_callbacks(rel));
+			sdesc = aocs_beginscan(rel, snapshot, proj, SO_TYPE_SEQSCAN);
+			while (aocs_getnext(sdesc, ForwardScanDirection, oldslot))
+			{
+				Datum newDatum;
+				bool  newDatumIsNull;
+				MemoryContext oldCxt;
+
+				oldCxt = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+				econtext = GetPerTupleExprContext(estate);
+				econtext->ecxt_scantuple = oldslot;
+				newDatum = ExecEvalExpr(newval->exprstate,
+										econtext,
+										&newDatumIsNull);
+				/*
+				 * XXX: Is it possible to fail on NULL values here?
+				 */
+
+				aocs_addcol_insert_datum(idesc, &newDatum, &newDatumIsNull);
+				ResetExprContext(econtext);
+				MemoryContextSwitchTo(oldCxt);
+			}
+			ExecDropSingleTupleTableSlot(oldslot);
+			aocs_endscan(sdesc);
+		}
+		aocs_addcol_finish(idesc);
+	}
+
+	/*
+	if (Gp_role == GP_ROLE_DISPATCH)
+		AORelRemoveHashEntry(tab->relid);
+	*/
+
+	heap_close(rel, NoLock);
+	FreeExecutorState(estate);
+	UnregisterSnapshot(snapshot);
+}
+
+
 
 static void
 ATAocsWriteNewColumns(AlteredTableInfo *tab)

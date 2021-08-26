@@ -2027,6 +2027,8 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	DropBehavior behavior;		/* RESTRICT or CASCADE for DROP cases */
 	bool		missing_ok;		/* skip error if missing? */
 
+	bool		aoco_alter_type_norewrite;		/* GPDB: do not re-write aoco table if possible */
+
 	/*
 	 * Extra information dispatched from QD to QEs in AT_SetDistributedBy and
 	 * AT_ExpandTable

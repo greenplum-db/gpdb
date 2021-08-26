@@ -917,6 +917,7 @@ _readAlterTableCmd(void)
 	READ_NODE_FIELD(transform);
 	READ_ENUM_FIELD(behavior, DropBehavior);
 	READ_BOOL_FIELD(missing_ok);
+	READ_BOOL_FIELD(aoco_alter_type_norewrite);
 
 	READ_INT_FIELD(backendId);
 	READ_NODE_FIELD(policy);
