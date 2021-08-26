@@ -47,7 +47,7 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 # Build regression test driver
 
-all: pg_regress$(X) scan_flaky_fault_injectors file_monitor
+all: pg_regress$(X) scan_flaky_fault_injectors
 
 pg_regress$(X): pg_regress.o pg_regress_main.o | submake-libpgport
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
@@ -211,7 +211,7 @@ installcheck: installcheck-good
 installcheck-small: all
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(EXTRA_TESTS)
 
-installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
+installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test file_monitor
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule $(EXTRA_TESTS)
 
 installcheck-parallel: all tablespace-setup
