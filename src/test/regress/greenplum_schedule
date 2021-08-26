@@ -35,9 +35,7 @@ test: gp_tablespace_with_faults
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
 
-# temp_tablespaces uses inotify to monitor new file under a directory,
-# so, moved it to linux_schedule which is run only on Linux
-#test: temp_tablespaces
+test: temp_tablespaces
 test: default_tablespace
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp
