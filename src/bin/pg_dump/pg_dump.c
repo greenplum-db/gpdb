@@ -6496,6 +6496,23 @@ void
 getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 {
 	PQExpBuffer q = createPQExpBuffer();
+	int			i_attnum;
+	int			i_attname;
+	int			i_atttypname;
+	int			i_atttypmod;
+	int			i_attstattarget;
+	int			i_attstorage;
+	int			i_typstorage;
+	int			i_attisdropped;
+	int			i_attlen;
+	int			i_attalign;
+	int			i_attislocal;
+	int			i_attnotnull;
+	int			i_attoptions;
+	int			i_attcollation;
+	int			i_attcompression;
+	int			i_attfdwoptions;
+	int			i_atthasdef;
 
 	for (int i = 0; i < numTables; i++)
 	{
@@ -6615,27 +6632,45 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		tbinfo->attrdefs = (AttrDefInfo **) pg_malloc(ntups * sizeof(AttrDefInfo *));
 		hasdefaults = false;
 
+		i_attnum = PQfnumber(res, "attnum");
+		i_attname = PQfnumber(res, "attname");
+		i_atttypname = PQfnumber(res, "atttypname");
+		i_atttypmod = PQfnumber(res, "atttypmod");
+		i_attstattarget = PQfnumber(res, "attstattarget");
+		i_attstorage = PQfnumber(res, "attstorage");
+		i_typstorage = PQfnumber(res, "typstorage");
+		i_attisdropped = PQfnumber(res, "attisdropped");
+		i_attlen = PQfnumber(res, "attlen");
+		i_attalign = PQfnumber(res, "attalign");
+		i_attislocal = PQfnumber(res, "attislocal");
+		i_attnotnull = PQfnumber(res, "attnotnull");
+		i_attoptions = PQfnumber(res, "attoptions");
+		i_attcollation = PQfnumber(res, "attcollation");
+		i_attcompression = PQfnumber(res, "attcompression");
+		i_attfdwoptions = PQfnumber(res, "attfdwoptions");
+		i_atthasdef = PQfnumber(res, "atthasdef");
+
 		for (int j = 0; j < ntups; j++)
 		{
-			if (j + 1 != atoi(PQgetvalue(res, j, PQfnumber(res, "attnum"))))
+			if (j + 1 != atoi(PQgetvalue(res, j, i_attnum)))
 				exit_horribly(NULL, "invalid column numbering in table \"%s\"\n",
 					  tbinfo->dobj.name);
-			tbinfo->attnames[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attname")));
-			tbinfo->atttypnames[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "atttypname")));
-			tbinfo->atttypmod[j] = atoi(PQgetvalue(res, j, PQfnumber(res, "atttypmod")));
-			tbinfo->attstattarget[j] = atoi(PQgetvalue(res, j, PQfnumber(res, "attstattarget")));
-			tbinfo->attstorage[j] = *(PQgetvalue(res, j, PQfnumber(res, "attstorage")));
-			tbinfo->typstorage[j] = *(PQgetvalue(res, j, PQfnumber(res, "typstorage")));
-			tbinfo->attisdropped[j] = (PQgetvalue(res, j, PQfnumber(res, "attisdropped"))[0] == 't');
-			tbinfo->attlen[j] = atoi(PQgetvalue(res, j, PQfnumber(res, "attlen")));
-			tbinfo->attalign[j] = *(PQgetvalue(res, j, PQfnumber(res, "attalign")));
-			tbinfo->attislocal[j] = (PQgetvalue(res, j, PQfnumber(res, "attislocal"))[0] == 't');
-			tbinfo->notnull[j] = (PQgetvalue(res, j, PQfnumber(res, "attnotnull"))[0] == 't');
-			tbinfo->attoptions[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attoptions")));
-			tbinfo->attcollation[j] = atooid(PQgetvalue(res, j, PQfnumber(res, "attcollation")));
-			tbinfo->attfdwoptions[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attfdwoptions")));
+			tbinfo->attnames[j] = pg_strdup(PQgetvalue(res, j, i_attname));
+			tbinfo->atttypnames[j] = pg_strdup(PQgetvalue(res, j, i_atttypname));
+			tbinfo->atttypmod[j] = atoi(PQgetvalue(res, j, i_atttypmod));
+			tbinfo->attstattarget[j] = atoi(PQgetvalue(res, j, i_attstattarget));
+			tbinfo->attstorage[j] = *(PQgetvalue(res, j, i_attstorage));
+			tbinfo->typstorage[j] = *(PQgetvalue(res, j, i_typstorage));
+			tbinfo->attisdropped[j] = (PQgetvalue(res, j, i_attisdropped)[0] == 't');
+			tbinfo->attlen[j] = atoi(PQgetvalue(res, j, i_attlen));
+			tbinfo->attalign[j] = *(PQgetvalue(res, j, i_attalign));
+			tbinfo->attislocal[j] = (PQgetvalue(res, j, i_attislocal)[0] == 't');
+			tbinfo->notnull[j] = (PQgetvalue(res, j, i_attnotnull)[0] == 't');
+			tbinfo->attoptions[j] = pg_strdup(PQgetvalue(res, j, i_attoptions));
+			tbinfo->attcollation[j] = atooid(PQgetvalue(res, j, i_attcollation));
+			tbinfo->attfdwoptions[j] = pg_strdup(PQgetvalue(res, j, i_attfdwoptions));
 			tbinfo->attrdefs[j] = NULL; /* fix below */
-			if (PQgetvalue(res, j, PQfnumber(res, "atthasdef"))[0] == 't')
+			if (PQgetvalue(res, j, i_atthasdef)[0] == 't')
 				hasdefaults = true;
 
 			/* these flags will be set in flagInhAttrs() */
@@ -8238,6 +8273,8 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 	char	   *qtypname;
 	char	   *qualtypname;
 	char	   *label;
+	int			i_enumlabel;
+	int			i_oid;
 
 	if (fout->remoteVersion >= 90100)
 		appendPQExpBuffer(query, "SELECT oid, enumlabel "
@@ -8273,10 +8310,12 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 
 	if (!binary_upgrade)
 	{
+		i_enumlabel = PQfnumber(res, "enumlabel");
+
+		/* Labels with server-assigned oids */
 		for (i = 0; i < num; i++)
 		{
-			/* Labels with server-assigned oids */
-			label = PQgetvalue(res, i, PQfnumber(res, "enumlabel"));
+			label = PQgetvalue(res, i, i_enumlabel);
 			if (i > 0)
 				appendPQExpBufferChar(q, ',');
 			appendPQExpBufferStr(q, "\n    ");
@@ -8288,11 +8327,14 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 
 	if (binary_upgrade)
 	{
+		i_oid = PQfnumber(res, "oid");
+		i_enumlabel = PQfnumber(res, "enumlabel");
+
 		/* Labels with dump-assigned (preserved) oids */
 		for (i = 0; i < num; i++)
 		{
-			enum_oid = atooid(PQgetvalue(res, i, PQfnumber(res, "oid")));
-			label = PQgetvalue(res, i, PQfnumber(res, "enumlabel"));
+			enum_oid = atooid(PQgetvalue(res, i, i_oid));
+			label = PQgetvalue(res, i, i_enumlabel);
 
 			if (i == 0)
 				appendPQExpBufferStr(q, "\n-- For binary upgrade, must preserve pg_enum oids\n");
