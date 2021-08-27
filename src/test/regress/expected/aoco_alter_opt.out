@@ -1,0 +1,99 @@
+DROP TABLE IF EXISTS aoco_opt;
+CREATE TABLE aoco_opt (
+    a integer,
+    b integer default 3 NOT NULL encoding(compresstype=zlib,compresslevel=2),
+    c integer,
+    default column encoding (compresstype=RLE_TYPE)
+) WITH (
+    appendonly=true,
+    orientation=column
+) DISTRIBUTED BY (a);
+PREPARE attopts AS SELECT
+    attname,
+    atttypid,
+    pga.attnum,
+    attisdropped,
+    attislocal,
+    attstorage,
+    attinhcount,
+    pge.attoptions
+FROM
+    pg_attribute_encoding pge,
+    pg_attribute pga,
+    pg_class pgc
+WHERE
+    pga.attrelid = pgc.oid AND
+    pga.attnum = pge.attnum AND
+    pge.attrelid = pgc.oid AND
+    pgc.relname = 'aoco_opt'; 
+SELECT relfilenode AS origfilenode FROM pg_class WHERE relname = 'aoco_opt' \gset
+EXECUTE attopts;
+ attname | atttypid | attnum | attisdropped | attislocal | attstorage | attinhcount |                       attoptions                        
+---------+----------+--------+--------------+------------+------------+-------------+---------------------------------------------------------
+ a       |       23 |      1 | f            | t          | p          |           0 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ c       |       23 |      3 | f            | t          | p          |           0 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ b       |       23 |      2 | f            | t          | p          |           0 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+(3 rows)
+
+INSERT INTO aoco_opt SELECT a, a AS b, a AS c FROM generate_series(0, 9) a;
+BEGIN;
+ALTER TABLE aoco_opt ALTER COLUMN b SET DATA TYPE text;
+EXECUTE attopts;
+           attname            | atttypid | attnum | attisdropped | attislocal | attstorage | attinhcount |                       attoptions                        
+------------------------------+----------+--------+--------------+------------+------------+-------------+---------------------------------------------------------
+ a                            |       23 |      1 | f            | t          | p          |           0 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ c                            |       23 |      3 | f            | t          | p          |           0 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ........pg.dropped.2........ |        0 |      2 | t            | t          | p          |           0 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ b                            |       25 |      4 | f            | t          | x          |           0 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+(4 rows)
+
+SELECT relname FROM pg_class WHERE relfilenode = :origfilenode;
+ relname  
+----------
+ aoco_opt
+(1 row)
+
+TABLE aoco_opt;
+ a | c | b 
+---+---+---
+ 5 | 5 | 5
+ 6 | 6 | 6
+ 9 | 9 | 9
+ 2 | 2 | 2
+ 3 | 3 | 3
+ 4 | 4 | 4
+ 7 | 7 | 7
+ 8 | 8 | 8
+ 0 | 0 | 0
+ 1 | 1 | 1
+(10 rows)
+
+-- This will fail due to silently dropped default
+INSERT INTO aoco_opt (a, c) VALUES (10, 10);
+ERROR:  null value in column "b" violates not-null constraint  (seg2 127.0.1.1:7004 pid=13130)
+DETAIL:  Failing row contains (10, 10, null).
+ROLLBACK;
+EXECUTE attopts;
+ attname | atttypid | attnum | attisdropped | attislocal | attstorage | attinhcount |                       attoptions                        
+---------+----------+--------+--------------+------------+------------+-------------+---------------------------------------------------------
+ a       |       23 |      1 | f            | t          | p          |           0 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ c       |       23 |      3 | f            | t          | p          |           0 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ b       |       23 |      2 | f            | t          | p          |           0 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+(3 rows)
+
+TABLE aoco_opt;
+ a | b | c 
+---+---+---
+ 5 | 5 | 5
+ 6 | 6 | 6
+ 9 | 9 | 9
+ 2 | 2 | 2
+ 3 | 3 | 3
+ 4 | 4 | 4
+ 7 | 7 | 7
+ 8 | 8 | 8
+ 0 | 0 | 0
+ 1 | 1 | 1
+(10 rows)
+
+
