@@ -66,7 +66,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         as <codeph>gpfdist</codeph>, which is useful for high speed data loading. </p>
       <note type="warning"> Use of the <codeph>ON SEGMENT</codeph> clause is recommended for expert
         users only.</note>
-      <p>When <codeph>PROGRAM</codeph> is specified, the server executes the given command and reads
+      <p>When <codeph>PROGRAM</codeph> is specified, the server runs the given command and reads
         from the standard output of the program, or writes to the standard input of the program. The
         command must be specified from the viewpoint of the server, and be executable by the <codeph>gpadmin</codeph>
         user.</p>
@@ -81,7 +81,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <codeph>CHECK</codeph>, or <codeph>UNIQUE</codeph> constraint will still be handled in
         'all-or-nothing' input mode. The user can specify the number of error rows acceptable (on a
         per-segment basis), after which the entire <codeph>COPY FROM</codeph> operation will be
-        aborted and no rows will be loaded. The count of error rows is per-segment, not per entire
+        cancelled and no rows will be loaded. The count of error rows is per-segment, not per entire
         load operation. If the per-segment reject limit is not reached, then all rows not containing
         an error will be loaded and any error rows discarded. To keep error rows for further
         examination, specify the <codeph>LOG ERRORS</codeph> clause to capture error log
@@ -134,7 +134,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         </plentry>
         <plentry>
           <pt>PROGRAM '<varname>command</varname>'</pt>
-          <pd>Specify a command to execute. In <codeph>COPY FROM</codeph>, the input is
+          <pd>Specify a command to run. In <codeph>COPY FROM</codeph>, the input is
             read from standard output of the command, and in <codeph>COPY TO</codeph>,
               the output is written to the standard input of the command. The <varname>command</varname> must be specified from
             the viewpoint of the Greenplum Database master host system, and must be executable by
@@ -145,7 +145,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
             passing any user input in the string. </pd>
           <pd>When <codeph>ON SEGMENT</codeph> is specified, the command must be executable on all
             Greenplum Database primary segment hosts by the Greenplum Database administrator user
-              (<codeph>gpadmin</codeph>). The command is executed by each Greenplum segment
+              (<codeph>gpadmin</codeph>). The command is run by each Greenplum segment
             instance. The <codeph>&lt;SEGID></codeph> is required in the
             <varname>command</varname>.</pd>
           <pd>See the <codeph>ON SEGMENT</codeph> clause for information about command syntax
@@ -478,7 +478,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
       <p>When a Greenplum Database user who is not a superuser runs a <codeph>COPY</codeph> command,
         the command can be controlled by a resource queue. The resource queue must be configured
         with the <codeph>ACTIVE_STATEMENTS</codeph> parameter that specifies a maximum limit on the
-        number of queries that can be executed by roles assigned to that queue. Greenplum Database
+        number of queries that can be run by roles assigned to that queue. Greenplum Database
         does not apply a cost value or memory value to a <codeph>COPY</codeph> command, resource
         queues with only cost or memory limits do not affect the running of <codeph>COPY</codeph>
         commands.</p>
@@ -604,11 +604,11 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
                 aspects of the file format. Bits are numbered from 0 (LSB) to 31 (MSB). Note that
                 this field is stored in network byte order (most significant byte first), as are all
                 the integer fields used in the file format. Bits 16-31 are reserved to denote
-                critical file format issues; a reader should abort if it finds an unexpected bit set
-                in this range. Bits 0-15 are reserved to signal backwards-compatible format issues;
-                a reader should simply ignore any unexpected bits set in this range. Currently only
-                one flag is defined, and the rest must be zero (Bit 16: 1 if data has OIDs, 0 if
-                not).</li>
+                critical file format issues; a reader should cancel if it finds an unexpected bit
+                set in this range. Bits 0-15 are reserved to signal backwards-compatible format
+                issues; a reader should simply ignore any unexpected bits set in this range.
+                Currently only one flag is defined, and the rest must be zero (Bit 16: 1 if data has
+                OIDs, 0 if not).</li>
               <li id="bk139315"><b>Header extension area length</b> — 32-bit integer, length in
                 bytes of remainder of header, not including self. Currently, this is zero, and the
                 first tuple follows immediately. Future changes to the format might allow additional

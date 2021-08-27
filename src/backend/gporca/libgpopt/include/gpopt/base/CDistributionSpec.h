@@ -50,7 +50,6 @@ public:
 		EdtRouted,	// data is routed to a segment explicitly specified in the tuple,
 		EdtUniversal,  // data is available everywhere (derived only)
 		EdtNonSingleton,  // data can have any distribution except singleton (required only)
-		EdtExternal,  // data is stored on external storage (derived only)
 
 		EdtSentinel
 	};
@@ -148,6 +147,14 @@ public:
 		return this;
 	}
 
+	// strip off any equivalent columns embedded in the distribution spec
+	// (default implementation doesn't strip anything)
+	virtual CDistributionSpec *
+	StripEquivColumns(CMemoryPool *)
+	{
+		AddRef();
+		return this;
+	}
 	// print
 	virtual IOstream &OsPrint(IOstream &os) const = 0;
 
@@ -161,6 +168,7 @@ public:
 		return CDistributionSpec::EdtSingleton == Edt() ||
 			   CDistributionSpec::EdtStrictSingleton == Edt();
 	}
+
 };	// class CDistributionSpec
 
 // arrays of distribution spec

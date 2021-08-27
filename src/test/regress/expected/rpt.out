@@ -885,6 +885,17 @@ explain (costs off) insert into t_replicate_volatile select nextval('seq_for_ins
  Optimizer: Postgres query optimizer
 (5 rows)
 
+explain (costs off) select a from t_replicate_volatile union all select * from nextval('seq_for_insert_replicated_table');
+                     QUERY PLAN                     
+----------------------------------------------------
+ Append
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT* 1"
+               ->  Seq Scan on t_replicate_volatile
+   ->  Function Scan on nextval
+ Optimizer: Postgres query optimizer
+(6 rows)
+
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
 ERROR:  could not devise a plan (cdbpath.c:2074)
@@ -922,12 +933,97 @@ explain (costs off) select * from t_hashdist cross join (select * from t_replica
  Optimizer: Postgres query optimizer
 (8 rows)
 
+create table rtbl (a int, b int, c int, t text) distributed replicated;
+insert into t_hashdist values (1, 1, 1);
+insert into rtbl values (1, 1, 1, 'rtbl');
+-- The below tests used to do replicated table scan on entry db which contains empty data.
+-- So a motion node is needed to gather replicated table on entry db.
+-- See issue: https://github.com/greenplum-db/gpdb/issues/11945
+-- 1. CTAS when join replicated table with catalog table
+explain (costs off) create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'relname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Redistribute Motion 1:3  (slice2)
+   Hash Key: c.relname
+   ->  Hash Join
+         Hash Cond: ((c.relname)::text = rtbl.t)
+         ->  Seq Scan on pg_class c
+         ->  Hash
+               ->  Gather Motion 1:1  (slice1; segments: 1)
+                     ->  Seq Scan on rtbl
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'relname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select count(*) from tmp; -- should contain 1 row
+ count 
+-------
+     1
+(1 row)
+
+-- 2. Join hashed table with (replicated table join catalog) should return 1 row
+explain (costs off) select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rtbl.a = t_hashdist.a)
+         ->  Redistribute Motion 1:3  (slice2)
+               Hash Key: rtbl.a
+               ->  Hash Join
+                     Hash Cond: ((c.relname)::text = rtbl.t)
+                     ->  Bitmap Heap Scan on pg_class c
+                           ->  Bitmap Index Scan on pg_class_relname_nsp_index
+                     ->  Hash
+                           ->  Gather Motion 1:1  (slice1; segments: 1)
+                                 ->  Seq Scan on rtbl
+         ->  Hash
+               ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
+ relname 
+---------
+ rtbl
+(1 row)
+
+-- 3. Join hashed table with (set operation on catalog and replicated table)
+explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 1:3  (slice2)
+               ->  Subquery Scan on vtest
+                     ->  Append
+                           ->  Bitmap Heap Scan on pg_class
+                                 ->  Bitmap Index Scan on pg_class_oid_index
+                           ->  Gather Motion 1:1  (slice1; segments: 1)
+                                 ->  Subquery Scan on "*SELECT* 2"
+                                       ->  Seq Scan on rtbl
+         ->  Materialize
+               ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(12 rows)
+
 reset optimizer;
 -- start_ignore
 drop schema rpt cascade;
-NOTICE:  drop cascades to 7 other objects
+NOTICE:  drop cascades to 11 other objects
 DETAIL:  drop cascades to table foo
 drop cascades to table bar
+drop cascades to view v_foo
 drop cascades to table baz
 drop cascades to table qux
+drop cascades to table cursor_update
+drop cascades to table minmaxtest
+drop cascades to table t_hashdist
+drop cascades to table t_replicate_volatile
+drop cascades to sequence seq_for_insert_replicated_table
+drop cascades to table rtbl
 -- end_ignore

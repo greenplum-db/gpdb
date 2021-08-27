@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<prices>
+    <pricerecord>
+        <itemnumber>708421</itemnumber>
+        <price>19.99</price>
+    </pricerecord>
+    <pricerecord>
+        <itemnumber>708466</itemnumber>
+        <price>59.25</price>
+    </pricerecord>
+    <pricerecord>
+        <itemnumber>711121</itemnumber>
+        <price>24.99</price>
+    </pricerecord>
+</prices>

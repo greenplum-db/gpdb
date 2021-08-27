@@ -119,12 +119,8 @@ protected:
 		}
 		GPOS_CATCH_EX(ex)
 		{
-			if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-			{
-				gpos::clib::Free(alloc_internal);
-
-				return GPOS_OOM;
-			}
+			gpos::clib::Free(alloc_internal);
+			GPOS_RETHROW(ex);
 		}
 		GPOS_CATCH_END;
 		return GPOS_OK;

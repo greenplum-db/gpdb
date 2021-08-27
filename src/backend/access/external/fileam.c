@@ -96,7 +96,7 @@ static void justifyDatabuf(StringInfo buf);
 static void base16_encode(char *raw, int len, char *encoded);
 static char *get_eol_delimiter(List *params);
 static void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
-				 char *quote, int eol_type, bool header, uint32 scancounter, List *params);
+				 char *quote, EolType eol_type, bool header, uint32 scancounter, List *params);
 
 
 /* ----------------------------------------------------------------
@@ -867,7 +867,9 @@ else \
 		PG_RE_THROW(); /* <-- hope to never get here! */ \
 \
 	truncateEol(&pstate->line_buf, pstate->eol_type); \
-	pstate->cdbsreh->rawdata = pstate->line_buf.data; \
+	pstate->cdbsreh->rawdata->cursor = 0; \
+	pstate->cdbsreh->rawdata->data = pstate->line_buf.data; \
+	pstate->cdbsreh->rawdata->len = pstate->line_buf.len; \
 	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
 	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
 	pstate->cdbsreh->processed++; \
@@ -2234,7 +2236,7 @@ external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char 
 }
 
 static void
-external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, int eol_type, bool header,
+external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, EolType eol_type, bool header,
 						  uint32 scancounter, List *params)
 {
 	time_t		now = time(0);
@@ -2245,7 +2247,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	int			line_delim_len;
 
 	snprintf(extvar->GP_CSVOPT, sizeof(extvar->GP_CSVOPT),
-			"m%dx%dq%dn%dh%d",
+			"m%1dx%3dq%3dn%1dh%1d",
 			csv ? 1 : 0,
 			escape ? 255 & *escape : 0,
 			quote ? 255 & *quote : 0,

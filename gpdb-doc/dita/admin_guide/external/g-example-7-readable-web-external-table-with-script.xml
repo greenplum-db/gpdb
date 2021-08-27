@@ -4,7 +4,7 @@
 <topic id="topic51">
    <title>Example 7—Readable External Web Table with Script</title>
    <body>
-      <p>Creates a readable external web table that executes a script once per segment
+      <p>Creates a readable external web table that runs a script once per segment
                         host:</p>
       <p>
          <codeblock>=# CREATE EXTERNAL WEB TABLE log_output (linenum int, 

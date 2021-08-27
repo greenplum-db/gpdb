@@ -12,7 +12,5 @@
       files from the remote location. </p>
     <p>You can also develop a custom storage plugin with the Greenplum Database Backup/Restore
       Storage Plugin API (Beta). See <xref href="backup-plugin-api.xml"/>.</p>
-    <note>Only the Backup/Restore Storage Plugin API is a Beta feature. The storage plugins are
-      supported features.</note>
   </body>
 </topic>

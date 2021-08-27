@@ -43,12 +43,12 @@
     <title id="jb155843">Managing Workload</title>
     <body>
       <p>A database system has a limited CPU capacity, memory, and disk I/O resources. When multiple
-        workloads compete for access to these resources, database performance suffers. Resource
+        workloads compete for access to these resources, database performance degrades. Resource
         management maximizes system throughput while meeting varied business requirements. Greenplum
-        Database provides resource queues and resource groups to help you manage these 
-        system resources.</p>
+        Database provides resource queues and resource groups to help you manage these system
+        resources.</p>
       <p>Resource queues and resource groups limit resource usage and the total number of
-        concurrent queries executing in the particular queue or group. By assigning database roles
+        concurrent queries running in the particular queue or group. By assigning database roles
         to the appropriate queue or group, administrators can control concurrent user queries
          and prevent system overload. For more information about resource queues and resource
          groups, including selecting the appropriate scheme for your Greenplum Database environment,
@@ -81,7 +81,7 @@
         aggregations, so it takes the most conservative action and does these operations by reading
         and writing from disk. This is significantly slower than doing them in memory.
           <cmdname>ANALYZE</cmdname> collects statistics about the database that the query optimizer
-        needs.<note>When executing an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by
+        needs.<note>When running an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by
           collecting statistics on a column or set of columns referenced by the command. The warning
           is issued on the command line and information is added to the Greenplum Database log file. For information about collecting statistics on table
           columns, see the <cmdname>ANALYZE</cmdname> command in the <cite>Greenplum Database Reference Guide</cite></note></p>
@@ -96,7 +96,7 @@
         <ul>
           <li id="jb176751"><b>Are the optimizer's estimates close to reality?</b> Run
               <codeph>EXPLAIN ANALYZE</codeph> and see if the number of rows the optimizer estimated
-            is close to the number of rows the query operation returned .</li>
+            is close to the number of rows the query operation returned.</li>
           <li id="jb158716"><b>Are selective predicates applied early in the plan?</b> The most
             selective filters should be applied early in the plan so fewer rows move up the plan
             tree.</li>
@@ -218,8 +218,9 @@
             </tbody>
           </tgroup>
         </table>
-        <p>Dimensions listed as unlimited are not intrinsically limited by Greenplum Database. However, they are limited in practice to available disk space
-          and memory/swap space. Performance may suffer when these values are unusually large.</p>
+        <p>Dimensions listed as unlimited are not intrinsically limited by Greenplum Database.
+          However, they are limited in practice to available disk space and memory/swap space.
+          Performance may degrade when these values are unusually large.</p>
         <note type="note">
           <p>There is a maximum limit on the number of objects (tables<ph>,
               indexes,</ph> and views, but not rows) that may exist at one time. This limit is

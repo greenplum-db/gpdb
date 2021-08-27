@@ -6,7 +6,7 @@
     monitoring and administration tasks. </shortdesc>
   <body>
     <p>Greenplum command-line utilities are located in the
-        <filepath><varname>$GPHOME</varname>/bin</filepath> directory and are executed on the master
+        <filepath><varname>$GPHOME</varname>/bin</filepath> directory and are run on the master
       host. Greenplum provides utilities for the following administration tasks:</p>
     <ul id="ul_mtm_tsv_fp">
       <li>Installing Greenplum Database on an array</li>

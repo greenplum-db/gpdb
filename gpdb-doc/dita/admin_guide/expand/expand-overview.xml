@@ -14,7 +14,7 @@
       analytics projects. It is good to provide capacity for growth when a system is initially
       specified, but even if you anticipate high rates of growth, it is generally unwise to invest
       in capacity long before it is required. Database expansion, therefore, is a project that you
-      should expect to have to execute periodically. </p>
+      should expect to have to run periodically. </p>
     <p>When you expand your database, you should expect the following qualities:<ul
         id="ul_tgf_gpg_mr">
         <li>Scalable capacity and performance. When you add resources to a Greenplum Database, the
@@ -36,7 +36,7 @@
           paused and resumed.</li>
       </ul></p>
     <p>The planning and physical aspects of an expansion project are a greater share of the work
-      than expanding the database itself. It will take a multi-discipline team to plan and execute
+      than expanding the database itself. It will take a multi-discipline team to plan and run
       the project. For on-premise installations, space must be acquired and prepared for the new
       servers. The servers must be specified, acquired, installed, cabled, configured, and tested.
       For cloud deployments, similar plans should also be made. <xref

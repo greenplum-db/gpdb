@@ -1,7 +1,0 @@
-create table users_with_check_constraints ( id int, name text check (id>=1 and id<2) );
-CREATE
-
-insert into users_with_check_constraints values (1, 'Joe');
-INSERT 1
-insert into users_with_check_constraints values (2, 'Jane');
-ERROR:  new row for relation "users_with_check_constraints" violates check constraint "users_with_check_constraints_id_check"

@@ -1773,46 +1773,53 @@ fake_outer_params(JoinState *node)
 }
 
 /*
- * Prefetch JoinQual to prevent motion hazard.
+ * Prefetch JoinQual or NonJoinQual to prevent motion hazard.
  *
  * A motion hazard is a deadlock between motions, a classic motion hazard in a
  * join executor is formed by its inner and outer motions, it can be prevented
  * by prefetching the inner plan, refer to motion_sanity_check() for details.
  *
  * A similar motion hazard can be formed by the outer motion and the join qual
- * motion.  A join executor fetches a outer tuple, filters it with the join
- * qual, then repeat the process on all the outer tuples.  When there are
- * motions in both outer plan and the join qual then below state is possible:
+ * motion(or non join qual motion).  A join executor fetches a outer tuple,
+ * filters it with the qual, then repeat the process on all the outer tuples.
+ * When there are motions in both outer plan and the join qual then below state
+ * is possible:
  *
  * 0. processes A and B belong to the join slice, process C belongs to the
- *    outer slice, process D belongs to the JoinQual slice;
+ *    outer slice, process D belongs to the JoinQual(NonJoinQual) slice;
  * 1. A has read the first outer tuple and is fetching tuples from D;
  * 2. D is waiting for ACK from B;
  * 3. B is fetching the first outer tuple from C;
  * 4. C is waiting for ACK from A;
  *
  * So a deadlock is formed A->D->B->C->A.  We can prevent it also by
- * prefetching the join qual.
+ * prefetching the join qual or non join qual
  *
  * An example is demonstrated and explained in test case
  * src/test/regress/sql/deadlock2.sql.
  *
- * Return true if the JoinQual is prefetched.
+ * Return true if the JoinQual or NonJoinQual is prefetched.
  */
 void
-ExecPrefetchJoinQual(JoinState *node)
+ExecPrefetchQual(JoinState *node, bool isJoinQual)
 {
 	EState	   *estate = node->ps.state;
 	ExprContext *econtext = node->ps.ps_ExprContext;
 	PlanState  *inner = innerPlanState(node);
 	PlanState  *outer = outerPlanState(node);
-	List	   *joinqual = node->joinqual;
 	TupleTableSlot *innertuple = econtext->ecxt_innertuple;
 
 	ListCell   *lc = NULL;
 	List       *quals = NIL;
 
-	Assert(joinqual);
+	List   *qual;
+
+	if (isJoinQual)
+		qual = node->joinqual;
+	else
+		qual = node->ps.qual;
+
+	Assert(qual);
 
 	/* Outer tuples should not be fetched before us */
 	Assert(econtext->ecxt_outertuple == NULL);
@@ -1830,13 +1837,13 @@ ExecPrefetchJoinQual(JoinState *node)
 			fake_outer_params(node);
 	}
 
-	quals = flatten_logic_exprs((Node *) joinqual);
+	quals = flatten_logic_exprs((Node *) qual);
 
 	/* Fetch subplan with the fake inner & outer tuples */
 	foreach(lc, quals)
 	{
 		/*
-		 * Force every joinqual is prefech because
+		 * Force every qual is prefech because
 		 * our target is to materialize motion node.
 		 */
 		ExprState  *clause = (ExprState *) lfirst(lc);

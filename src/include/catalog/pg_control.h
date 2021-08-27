@@ -146,7 +146,7 @@ typedef struct ControlFileData
 	 * to simply to store the location of end of backup in standby mode
 	 * That guards against starting standby, aborting it, and restarting with
 	 * an earlier stop location. We can't get promoted unless we've at-least
-	 * replayed upto minRecoveryPoint
+	 * replayed up to minRecoveryPoint
 	 *
 	 * backupStartPoint is the redo pointer of the backup start checkpoint, if
 	 * we are recovering from an online backup and haven't reached the end of

@@ -1020,11 +1020,34 @@ AlterRole(AlterRoleStmt *stmt)
 	 */
 	if (issuper >= 0)
 	{
+		bool isNull;
+		Oid roleResgroup;
+
 		new_record[Anum_pg_authid_rolsuper - 1] = BoolGetDatum(issuper > 0);
 		new_record_repl[Anum_pg_authid_rolsuper - 1] = true;
 
 		new_record[Anum_pg_authid_rolcatupdate - 1] = BoolGetDatum(issuper > 0);
 		new_record_repl[Anum_pg_authid_rolcatupdate - 1] = true;
+
+		roleResgroup = heap_getattr(tuple, Anum_pg_authid_rolresgroup,
+								   pg_authid_dsc, &isNull);
+		if (!isNull)
+		{
+			/*
+			 * change the default resource group accordingly: admin_group
+			 * for superuser and default_group for non-superuser
+			 */
+			if (issuper == 0 && roleResgroup == ADMINRESGROUP_OID)
+			{
+				new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(DEFAULTRESGROUP_OID);
+				new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
+			}
+			else if (issuper > 0 && roleResgroup == DEFAULTRESGROUP_OID)
+			{
+				new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(ADMINRESGROUP_OID);
+				new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
+			}
+		}
 
 		/* get current superuser status */
 		bWas_super = (issuper > 0);

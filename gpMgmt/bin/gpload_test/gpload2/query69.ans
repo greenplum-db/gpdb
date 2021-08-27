@@ -1,0 +1,12 @@
+2021-06-01 11:38:21|INFO|gpload session started 2021-06-01 11:38:21
+2021-06-01 11:38:21|INFO|setting schema 'public' for table 'testspecialchar'
+2021-06-01 11:38:21|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file2.txt" -t 30
+2021-06-01 11:38:21|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
+2021-06-01 11:38:21|INFO|did not find an external table to reuse. creating ext_gpload_reusable_cfb67290_c28a_11eb_a03b_0050569ea4ff
+2021-06-01 11:38:21|ERROR|ERROR:  invalid input syntax for integer: "aaa'qwer'shjhjg'2012-06-01 15:30:30'1'732'834567'45.67'789.123'7.12345'123.456789"  (seg0 slice1 127.0.0.1:6002 pid=11693)
+CONTEXT:  External table ext_gpload_reusable_cfb67290_c28a_11eb_a03b_0050569ea4ff, line 1 of gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file2.txt, column Field1
+ encountered while running INSERT INTO staging_gpload_reusable_a1101b5024707ea34f55e778f329e548 ("Field1","Field#2") SELECT "Field1","Field#2" FROM ext_gpload_reusable_cfb67290_c28a_11eb_a03b_0050569ea4ff
+2021-06-01 11:38:21|INFO|rows Inserted          = 0
+2021-06-01 11:38:21|INFO|rows Updated           = 0
+2021-06-01 11:38:21|INFO|data formatting errors = 0
+2021-06-01 11:38:21|INFO|gpload failed

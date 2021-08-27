@@ -527,15 +527,6 @@ create_scan_plan(PlannerInfo *root, Path *best_path)
 										   : NULL,
 										   plan);
 
-	/**
-	 * If plan has a flow node, ensure all entries of hashExpr
-	 * are in the targetlist.
-	 */
-	if (plan->flow && plan->flow->hashExprs)
-	{
-		plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */ );
-	}
-
 	/*
 	 * If there are any pseudoconstant clauses attached to this node, insert a
 	 * gating Result node that evaluates the pseudoconstants as one-time
@@ -808,6 +799,7 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	{
 		((Join *) plan)->prefetch_inner = false;
 		((Join *) plan)->prefetch_joinqual = false;
+		((Join *) plan)->prefetch_qual = false;
 	}
 
 	plan->flow = cdbpathtoplan_create_flow(root,
@@ -815,15 +807,6 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 			best_path->path.parent ? best_path->path.parent->relids
 					: NULL,
 					  plan);
-
-	/**
-	 * If plan has a flow node, ensure all entries of hashExpr
-	 * are in the targetlist.
-	 */
-	if (plan->flow && plan->flow->hashExprs)
-	{
-		plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */ );
-	}
 
 	/*
 	 * We may set prefetch_joinqual to true if there is
@@ -837,6 +820,18 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 
 		((Join *) plan)->prefetch_joinqual = contain_motion(root,
 															(Node *) joinqual);
+	}
+
+	/*
+	 * Similar for non join qual. If it contains a motion and outer relation
+	 * also contains a motion, then we should set prefetch_qual to true.
+	 */
+	if (((Join *) plan)->prefetch_qual)
+	{
+		List *qual = ((Join *) plan)->plan.qual;
+
+		((Join *) plan)->prefetch_qual = contain_motion(root,
+															(Node *) qual);
 	}
 
 	/*
@@ -3347,6 +3342,14 @@ create_nestloop_plan(PlannerInfo *root,
 		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
+	/*
+	 * Similar for non join qual.
+	 */
+	if (best_path->outerjoinpath &&
+		best_path->outerjoinpath->motionHazard &&
+		join_plan->join.plan.qual != NIL)
+		join_plan->join.prefetch_qual = true;
+
 	return join_plan;
 }
 
@@ -3693,6 +3696,14 @@ create_mergejoin_plan(PlannerInfo *root,
 		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
+	/*
+	 * Similar for non join qual.
+	 */
+	if (best_path->jpath.innerjoinpath &&
+		best_path->jpath.innerjoinpath->motionHazard &&
+		join_plan->join.plan.qual != NIL)
+		join_plan->join.prefetch_qual = true;
+
 	/* Costs of sort and material steps are included in path cost already */
 	copy_path_costsize(root, &join_plan->join.plan, &best_path->jpath.path);
 
@@ -3859,6 +3870,14 @@ create_hashjoin_plan(PlannerInfo *root,
 		best_path->jpath.outerjoinpath->motionHazard &&
 		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
+
+	/*
+	 * Similar for non join qual.
+	 */
+	if (best_path->jpath.outerjoinpath &&
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.plan.qual != NIL)
+		join_plan->join.prefetch_qual = true;
 
 	copy_path_costsize(root, &join_plan->join.plan, &best_path->jpath.path);
 
@@ -5299,10 +5318,10 @@ prepare_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 	 * We will need at most list_length(pathkeys) sort columns; possibly less
 	 */
 	numsortkeys = list_length(pathkeys);
-	sortColIdx = (AttrNumber *) palloc(numsortkeys * sizeof(AttrNumber));
-	sortOperators = (Oid *) palloc(numsortkeys * sizeof(Oid));
-	collations = (Oid *) palloc(numsortkeys * sizeof(Oid));
-	nullsFirst = (bool *) palloc(numsortkeys * sizeof(bool));
+	sortColIdx = (AttrNumber *) palloc0(numsortkeys * sizeof(AttrNumber));
+	sortOperators = (Oid *) palloc0(numsortkeys * sizeof(Oid));
+	collations = (Oid *) palloc0(numsortkeys * sizeof(Oid));
+	nullsFirst = (bool *) palloc0(numsortkeys * sizeof(bool));
 
 	numsortkeys = 0;
 
@@ -7168,18 +7187,18 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 				 */
 				subplan = prep;
 				motion = make_sorted_union_motion(root, subplan, numSortCols, sortColIdx, sortOperators, collations,
-												  nullsFirst, false, numsegments);
+												  nullsFirst, false, numsegments, path->path.locus.locustype);
 			}
 			else
 			{
 				/* Degenerate ordering... build unordered Union Receive */
-				motion = make_union_motion(subplan, false, numsegments);
+				motion = make_union_motion(subplan, false, numsegments, path->path.locus.locustype);
 			}
 		}
 
 		/* Unordered Union Receive */
 		else
-			motion = make_union_motion(subplan, false, numsegments);
+			motion = make_union_motion(subplan, false, numsegments, path->path.locus.locustype);
 	}
 
 	/* Send all of the tuples to all of the QEs in gang above... */

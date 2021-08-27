@@ -44,9 +44,13 @@ protected:
 	// private copy ctor
 	CDistributionSpecRandom(const CDistributionSpecRandom &);
 
+	CColRef *m_gp_segment_id;
+
 public:
 	//ctor
 	CDistributionSpecRandom();
+
+	CDistributionSpecRandom(CColRef *gp_segment_id_);
 
 	// accessor
 	virtual EDistributionType

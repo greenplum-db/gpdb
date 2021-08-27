@@ -63,3 +63,10 @@ CREATE TABLE descending_sequence_insert(a bigint, b bigint);
 INSERT INTO descending_sequence_insert SELECT i, nextval('descending_sequence') FROM generate_series(1, 10)i;
 SELECT * FROM descending_sequence_insert ORDER BY b DESC;
 SELECT * FROM descending_sequence;
+
+-- Test that we don't produce duplicate sequence values
+DROP SEQUENCE IF EXISTS check_no_duplicates;
+CREATE SEQUENCE check_no_duplicates CACHE 20;
+SELECT nextval('check_no_duplicates') FROM gp_dist_random('gp_id');
+SELECT nextval('check_no_duplicates');
+SELECT nextval('check_no_duplicates') FROM gp_dist_random('gp_id');

@@ -1,4 +1,5 @@
 -- \set FETCH_COUNT 100
+SET search_path TO sparse_vector;
 \timing
 Timing is on.
 drop table if exists test;
@@ -294,3 +295,4 @@ select vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9
           5
 (1 row)
 
+SET search_path TO DEFAULT;

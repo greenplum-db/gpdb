@@ -4,7 +4,7 @@
   <title>Best Practices when Creating Views</title>
   <body>
     <p>When defining and using a view, remember that a view is just an SQL statement and is replaced
-      by its definition when the query is executed.</p>
+      by its definition when the query is run.</p>
     <p>These are some common uses of views.</p>
     <ul id="ul_jrc_15l_flb">
       <li>They allow you to have a recurring SQL query or expression in one place for easy

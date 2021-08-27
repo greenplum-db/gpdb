@@ -61,7 +61,7 @@ typedef struct extvar_t
 	char GP_SEG_PORT[11];
 	char GP_SESSION_ID[11];  /* session id */
 	char GP_SEGMENT_COUNT[11]; /* total number of (primary) segs in the system */
- 	char GP_CSVOPT[13]; /* "m.x...q...h." former -q, -h and -x options for gpfdist.*/
+	char GP_CSVOPT[15]; /* "m.x...q...h." former -q, -h and -x options for gpfdist.*/
 
  	/* EOL vars */
  	char* GP_LINE_DELIM_STR;

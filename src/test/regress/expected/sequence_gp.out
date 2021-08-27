@@ -170,3 +170,29 @@ SELECT * FROM descending_sequence;
  descending_sequence | 9223372036854775796 | 9223372036854775806 |           -1 | 9223372036854775806 |         1 |           1 |      22 | f         | t
 (1 row)
 
+-- Test that we don't produce duplicate sequence values
+DROP SEQUENCE IF EXISTS check_no_duplicates;
+NOTICE:  sequence "check_no_duplicates" does not exist, skipping
+CREATE SEQUENCE check_no_duplicates CACHE 20;
+SELECT nextval('check_no_duplicates') FROM gp_dist_random('gp_id');
+ nextval 
+---------
+       1
+      21
+      41
+(3 rows)
+
+SELECT nextval('check_no_duplicates');
+ nextval 
+---------
+      61
+(1 row)
+
+SELECT nextval('check_no_duplicates') FROM gp_dist_random('gp_id');
+ nextval 
+---------
+       2
+      22
+      42
+(3 rows)
+

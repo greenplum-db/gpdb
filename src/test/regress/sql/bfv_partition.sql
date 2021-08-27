@@ -1676,10 +1676,113 @@ SELECT grant_table_in_function();
 -- GrantStmt
 SELECT grant_table_in_function();
 
+-- start_ignore
+DROP ROLE part_acl_owner;
+DROP ROLE part_acl_u1;
+-- end_ignore
+
+
+---
+--- Test dynamic partition selector based on projection of input tuple (postgres
+--- planner case) when search values have explicitly comparable but different
+--- types with partitioning keys (e.g., date and timestamp)
+---
+
+-- Setup
+SET optimizer TO off;
+
+CREATE TABLE t_list (a int, b timestamp)
+PARTITION BY LIST (b) (
+    partition t_list_1 VALUES ('2020-06-01', '2020-07-01', '2020-08-01'),
+    partition t_list_2 VALUES ('2020-09-01', '2020-10-01', '2020-11-01')
+);
+INSERT INTO t_list
+SELECT floor(random() * 1000), ts
+FROM generate_series(1, 1000),
+     generate_series('2020-06-01', '2020-11-01', interval '1 month') ts;
+ANALYZE t_list;
+
+CREATE TABLE t_range (a int, b timestamp)
+PARTITION BY RANGE (b) (
+    START ('2020-06-01') END ('2020-07-31') EVERY (interval '1 month')
+);
+INSERT INTO t_range
+SELECT gen, period
+FROM generate_series(1, 1000) gen,
+     generate_series('2020-06-01', '2020-07-31', interval '1 month') period;
+ANALYZE t_range;
+
+CREATE TABLE t_multilist (a int, b1 timestamp, b2 timestamp)
+PARTITION BY LIST (b1, b2) (
+    PARTITION t_multilist_1 VALUES (
+        ('2020-06-01', '2020-06-01'),
+        ('2020-07-01', '2020-07-01')),
+    PARTITION t_multilist_2 VALUES (
+        ('2020-08-01', '2020-08-01'),
+        ('2020-09-01', '2020-09-01'))
+);
+INSERT INTO t_multilist
+SELECT floor(random() * 1000), ts, ts
+FROM generate_series(1, 1000),
+     generate_series('2020-06-01', '2020-09-01', interval '1 month') ts;
+ANALYZE t_multilist;
+
+CREATE TABLE t_inner_to_join (b date);
+INSERT INTO t_inner_to_join VALUES ('2020-07-01');
+ANALYZE t_inner_to_join;
+
+CREATE TABLE t_inner_to_multijoin (b1 date, b2 date);
+INSERT INTO t_inner_to_multijoin VALUES ('2020-07-01', '2020-07-01');
+ANALYZE t_inner_to_multijoin;
+
+-- Run
+-- Plan has to contain Dynamic Scan in terms of Result node with appropriate
+-- Partition Selector under join:
+--    ->  Nested Loop
+--         Join Filter: <join_condition>
+--         ->  Append
+--               ->  Result
+--                     One-Time Filter: PartSelected
+--                     ->  Seq Scan on t_list_1_prt_t_list_1
+--               ->  Result
+--                     One-Time Filter: PartSelected
+--                     ->  Seq Scan on t_list_1_prt_t_list_2
+--         ->  Materialize
+--               ->  Partition Selector for t_list (dynamic scan id: 1)
+--                     Filter: <join_attributes>
+-- All queries have to return one row
+SELECT COUNT(*) FROM (
+    SELECT DISTINCT b
+    FROM t_inner_to_join
+    WHERE b = '2020-07-01'
+) tf, t_list
+WHERE t_list.b = tf.b;
+
+SELECT COUNT(*) FROM (
+    SELECT DISTINCT b
+    FROM t_inner_to_join
+    WHERE b = '2020-07-01'
+) tf, t_range
+WHERE t_range.b = tf.b;
+
+SELECT COUNT(*) FROM (
+    SELECT DISTINCT b1, b2
+    FROM t_inner_to_multijoin
+    WHERE b1 = '2020-07-01'
+) tf, t_multilist
+WHERE t_multilist.b1 = tf.b1 AND t_multilist.b2 = tf.b2;
+
+-- Cleanup
+DROP TABLE t_list;
+DROP TABLE t_range;
+DROP TABLE t_multilist;
+DROP TABLE t_inner_to_join;
+DROP TABLE t_inner_to_multijoin;
+RESET optimizer;
+
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition cascade;
 DROP USER mpp3641_user;
-DROP ROLE part_acl_owner;
-DROP ROLE part_acl_u1;
 -- end_ignore

@@ -32,21 +32,25 @@ set search_path = deadlock2;
 create table t_inner (c1 int, c2 int);
 create table t_outer (c1 int, c2 int);
 create table t_subplan (c1 int, c2 int);
+create table t_subplan2 (c1 int, c2 int);
 
 -- First load enough data on all the relations to generate redistribute-both
 -- motion instead of broadcast-one motion.
 insert into t_inner select i, i from generate_series(1,:scale) i;
 insert into t_outer select i, i from generate_series(1,:scale) i;
 insert into t_subplan select i, i from generate_series(1,:scale) i;
+insert into t_subplan2 select i, i from generate_series(1,:scale) i;
 analyze t_inner;
 analyze t_outer;
 analyze t_subplan;
+analyze t_subplan2;
 
 -- Then delete all of them and load the real data, do not use TRUNCATE as it
 -- will clear the analyze information.
 delete from t_inner;
 delete from t_outer;
 delete from t_subplan;
+delete from t_subplan2;
 
 -- t_inner is the inner relation, it does not need much data as long as it is
 -- not empty.
@@ -64,6 +68,9 @@ insert into t_outer select :x0, :x0 from generate_series(1,:scale) i;
 -- to hashjoin@slice4@seg1 it has to wait for ACK from it, this can happen
 -- before hashjoin@slice4@seg1 reading from outer@slice1.
 insert into t_subplan select :x0, :x0 from generate_series(1,:scale) i;
+
+-- t_subplan2 is same as t_subplan, used for case of multiple quals
+insert into t_subplan2 select :x0, :x0 from generate_series(1,:scale) i;
 
 -- In the past hash join do the job like this:
 --
@@ -110,3 +117,13 @@ select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
 select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
    and not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1)
    and not exists (select 1 from t_subplan where t_subplan.c2=t_outer.c1);
+
+-- Except JoinQual, NonJoinQual has the similar deadlock issue.
+-- Test NonJoinQual which should also be prefetched.
+select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
+	where (t_inner.c1 is null or not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1));
+
+-- Test NonJoinQual includes multiple motion nodes
+select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
+	where (t_inner.c1 is null or not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1)
+	or not exists (select 0 from t_subplan2 where t_subplan2.c2=t_outer.c1));

@@ -1,5 +1,7 @@
 CREATE EXTENSION gp_sparse_vector;
 
+SET search_path TO sparse_vector;
+
 DROP TABLE IF EXISTS features;
 DROP TABLE IF EXISTS corpus;
 DROP TABLE IF EXISTS documents;
@@ -48,3 +50,5 @@ DROP TABLE corpus;
 DROP TABLE documents;
 DROP TABLE WEIGHTS;
 DROP EXTENSION gp_sparse_vector;
+
+SET search_path TO DEFAULT;

@@ -1,4 +1,6 @@
 --  MPP-21536: Duplicated rows inserted when ORCA is turned on
+create schema bfv_dml;
+set search_path=bfv_dml;
 -- create test table
 create table m();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
@@ -137,7 +139,7 @@ insert into zzz select a,b from m;
 -- that difference in the error DETAIL line
 \set VERBOSITY terse
 update zzz set a=m.b from m where m.a=zzz.b;
-ERROR:  duplicate key value violates unique constraint "zzz_pkey"  (seg1 127.0.0.1:40001 pid=22395)
+ERROR:  duplicate key value violates unique constraint "zzz_pkey"  (seg0 127.0.1.1:6002 pid=109123)
 select * from zzz order by 1, 2;
  a  | b 
 ----+---
@@ -181,14 +183,14 @@ drop table m;
 create table update_pk_test (a int primary key, b int) distributed by (a);
 insert into update_pk_test values(1,1);
 explain update update_pk_test set b = 5;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Update  (cost=0.00..431.07 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=26)
          ->  Split  (cost=0.00..431.00 rows=1 width=22)
                ->  Result  (cost=0.00..431.00 rows=1 width=22)
                      ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 update update_pk_test set b = 5;
@@ -199,8 +201,8 @@ select * from update_pk_test order by 1,2;
 (1 row)
 
 explain update update_pk_test set a = 5;
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
  Update  (cost=0.00..431.07 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=26)
          ->  Sort  (cost=0.00..431.00 rows=1 width=22)
@@ -210,7 +212,7 @@ explain update update_pk_test set a = 5;
                      ->  Split  (cost=0.00..431.00 rows=1 width=22)
                            ->  Result  (cost=0.00..431.00 rows=1 width=22)
                                  ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
 update update_pk_test set a = 5;
@@ -248,6 +250,7 @@ reset optimizer_trace_fallback;
 -- implemented as a "split update", which is really a DELETE and an INSERT.
 --
 CREATE TABLE bfv_dml_trigger_test (id int4, t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 INSERT INTO bfv_dml_trigger_test VALUES (1, 'foo');
 CREATE OR REPLACE FUNCTION bfv_dml_error_func() RETURNS trigger AS
 $$
@@ -334,3 +337,354 @@ delete from tabwithoids RETURNING oid > 1000, tabwithoids;
  t        | (2,foobar)
 (1 row)
 
+--
+-- Verify that DELETE properly redistributes in the case of joins
+--
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+drop table if exists bar;
+NOTICE:  table "bar" does not exist, skipping
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+-- Previously, table foo is defined as  randomly distributed and 
+-- that might lead to flaky result of the explain statement
+-- since random cost. We set policy to random without move the
+-- data after data is all inserted. This method can both have
+-- a random dist table and a stable test result.
+-- Following cases are using the same skill here.
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
+explain delete from foo using bar where foo.a=bar.a;
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.29 rows=4 width=1)
+   ->  Result  (cost=0.00..862.00 rows=4 width=22)
+         ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=4 width=18)
+               ->  Hash Join  (cost=0.00..862.00 rows=4 width=18)
+                     Hash Cond: (foo.a = bar.a)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=18)
+                           Hash Key: foo.a
+                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=18)
+                     ->  Hash  (cost=431.00..431.00 rows=4 width=4)
+                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=4 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+delete from foo using bar where foo.a=bar.a;
+select * from foo;
+ a | b 
+---+---
+(0 rows)
+
+drop table foo;
+drop table bar;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
+explain delete from foo using bar where foo.a = bar.a returning foo.*;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=3.23..6.66 rows=10 width=16)
+   ->  Delete on foo  (cost=3.23..6.66 rows=4 width=16)
+         ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=3.23..6.66 rows=4 width=16)
+               ->  Hash Join  (cost=3.23..6.66 rows=4 width=16)
+                     Hash Cond: (foo.a = bar.a)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.30 rows=4 width=14)
+                           Hash Key: foo.a
+                           ->  Seq Scan on foo  (cost=0.00..3.10 rows=4 width=14)
+                     ->  Hash  (cost=3.10..3.10 rows=4 width=10)
+                           ->  Seq Scan on bar  (cost=0.00..3.10 rows=4 width=10)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+delete from foo using bar where foo.a = bar.a returning foo.*;
+ a  | b 
+----+---
+  4 |  
+  3 |  
+  7 |  
+  5 |  
+  6 |  
+  9 |  
+ 10 |  
+  2 |  
+  8 |  
+  1 |  
+(10 rows)
+
+select * from foo;
+ a | b 
+---+---
+(0 rows)
+
+drop table foo;
+drop table bar;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+explain delete from foo where foo.a=1;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Delete  (cost=0.00..431.03 rows=1 width=1)
+   ->  Result  (cost=0.00..431.00 rows=1 width=22)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
+               Filter: (a = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+delete from foo where foo.a=1;
+drop table foo;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
+explain delete from foo using bar where foo.a=bar.b;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.03 rows=1 width=1)
+   ->  Result  (cost=0.00..862.00 rows=1 width=22)
+         ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
+               Hash Cond: (foo.a = bar.b)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=18)
+               ->  Hash  (cost=431.00..431.00 rows=10 width=4)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4)
+                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=4 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+delete from foo using bar where foo.a=bar.b;
+drop table foo;
+drop table bar;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+-- Turn off redistribute motion for ORCA just for this case.
+-- This is to get a broadcast motion over foo_1 so that no
+-- motion is above the resultrelation foo thus no ExplicitMotion.
+set optimizer_enable_motion_redistribute = off;
+explain delete from foo using foo foo_1 where foo_1.a=foo.a;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.29 rows=4 width=1)
+   ->  Result  (cost=0.00..862.00 rows=4 width=22)
+         ->  Hash Join  (cost=0.00..862.00 rows=4 width=18)
+               Hash Cond: (foo.a = foo_1.a)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=18)
+               ->  Hash  (cost=431.00..431.00 rows=10 width=4)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4)
+                           ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=4 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+delete from foo using foo foo_1 where foo_1.a=foo.a;
+reset optimizer_enable_motion_redistribute;
+drop table foo;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+explain delete from foo;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Delete  (cost=0.00..431.29 rows=4 width=1)
+   ->  Result  (cost=0.00..431.00 rows=4 width=22)
+         ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=18)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+delete from foo;
+drop table foo;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
+explain delete from foo using bar;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..1324037.59 rows=34 width=1)
+   ->  Result  (cost=0.00..1324034.73 rows=34 width=22)
+         ->  Nested Loop  (cost=0.00..1324034.73 rows=34 width=18)
+               Join Filter: true
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=18)
+               ->  Materialize  (cost=0.00..431.00 rows=10 width=1)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=1)
+                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=4 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+delete from foo using bar;
+drop table foo;
+drop table bar;
+create table foo (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+insert into bar select i, i from generate_series(1, 1000)i;
+insert into foo select i,i from generate_series(1, 10)i;
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze	foo;
+analyze	bar;
+set optimizer_enable_motion_redistribute=off;
+explain delete from foo using bar where foo.b=bar.b;
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.56 rows=4 width=1)
+   ->  Result  (cost=0.00..862.27 rows=4 width=22)
+         ->  Hash Join  (cost=0.00..862.27 rows=4 width=18)
+               Hash Cond: (foo.b = bar.b)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=18)
+               ->  Hash  (cost=431.08..431.08 rows=1000 width=4)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=1000 width=4)
+                           ->  Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+delete from foo using bar where foo.b=bar.b;
+drop table foo;
+drop table bar;
+reset optimizer_enable_motion_redistribute;
+create table foo (a int, b int) distributed randomly;
+create table bar (a int, b int) distributed randomly;
+insert into foo (a, b) values (1, 2);
+explain insert into bar select * from foo;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..431.02 rows=1 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+         ->  Result  (cost=0.00..431.00 rows=1 width=12)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+insert into bar select * from foo;
+select * from bar;
+ a | b 
+---+---
+ 1 | 2
+(1 row)
+
+drop table foo;
+drop table bar;
+create table foo (a int, b int) distributed randomly;
+create table bar (a int, b int) distributed randomly;
+insert into foo (a, b) values (1, 2);
+insert into bar (a, b) values (1, 2);
+explain update foo set a=4 from bar where foo.a=bar.a;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..862.07 rows=1 width=1)
+   ->  Result  (cost=0.00..862.00 rows=1 width=26)
+         ->  Split  (cost=0.00..862.00 rows=1 width=22)
+               ->  Result  (cost=0.00..862.00 rows=1 width=22)
+                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=18)
+                           Hash Cond: (foo.a = bar.a)
+                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=18)
+                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                       ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+update foo set a=4 from bar where foo.a=bar.a;
+select * from foo;
+ a | b 
+---+---
+ 4 | 2
+(1 row)
+
+drop table foo;
+drop table bar;
+create table foo (a int, b int) distributed randomly;
+create table bar (a int, b int) distributed randomly;
+create table jazz (a int, b int) distributed randomly;
+insert into foo (a, b) values (1, 2);
+insert into bar (a, b) values (1, 2);
+insert into jazz (a, b) values (1, 2);
+explain insert into foo select bar.a from bar, jazz where bar.a=jazz.a;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..862.02 rows=1 width=4)
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
+         ->  Result  (cost=0.00..862.00 rows=1 width=12)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                     Hash Cond: (bar.a = jazz.a)
+                     ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on jazz  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+insert into foo select bar.a from bar, jazz where bar.a=jazz.a;
+select * from foo;
+ a | b 
+---+---
+ 1 | 2
+ 1 |  
+(2 rows)
+
+drop table foo;
+drop table bar;
+drop table jazz;
+create table foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+create table bar (b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+insert into foo select i from generate_series(1, 10)i;
+insert into bar select i from generate_series(1, 10)i;
+alter table foo set with(REORGANIZE=false) distributed randomly;
+alter table bar set with(REORGANIZE=false) distributed randomly;
+analyze foo;
+analyze bar;
+explain delete from foo using (select a from foo union all select b from bar) v;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..1765384.91 rows=67 width=1)
+   ->  Result  (cost=0.00..1765380.23 rows=67 width=18)
+         ->  Nested Loop  (cost=0.00..1765380.23 rows=67 width=14)
+               Join Filter: true
+               ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=4 width=14)
+               ->  Materialize  (cost=0.00..862.00 rows=20 width=1)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=20 width=1)
+                           ->  Append  (cost=0.00..862.00 rows=7 width=1)
+                                 ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=1)
+                                 ->  Seq Scan on bar  (cost=0.00..431.00 rows=4 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+delete from foo using (select a from foo union all select b from bar) v;
+select * from foo;
+ a 
+---
+(0 rows)
+
+drop table foo;
+drop table bar;

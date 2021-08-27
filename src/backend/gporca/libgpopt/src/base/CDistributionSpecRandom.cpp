@@ -13,6 +13,8 @@
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecRouted.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
@@ -40,6 +42,19 @@ CDistributionSpecRandom::CDistributionSpecRandom()
 		// Const Tables in DML queries
 		MarkDuplicateSensitive();
 	}
+
+	m_gp_segment_id = NULL;
+}
+
+CDistributionSpecRandom::CDistributionSpecRandom(CColRef *gp_segment_id_)
+	: m_is_duplicate_sensitive(false), m_gp_segment_id(gp_segment_id_)
+{
+	if (COptCtxt::PoctxtFromTLS()->FDMLQuery())
+	{
+		// set duplicate sensitive flag to enforce Hash-Distribution of
+		// Const Tables in DML queries
+		MarkDuplicateSensitive();
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -53,15 +68,39 @@ CDistributionSpecRandom::CDistributionSpecRandom()
 BOOL
 CDistributionSpecRandom::Matches(const CDistributionSpec *pds) const
 {
-	if (Edt() != pds->Edt())
+	if (pds->Edt() == CDistributionSpec::EdtRouted)
+	{
+		// This follows a 2x2 decision matrix:
+		// If both gp_segment_ids are null, then it does not match
+		// If one gp_segment_id is null and the other is not, it doesn't match
+		// If both gp_segment_ids are not null, they match iff they are equal
+		const CDistributionSpecRouted *pdsRouted =
+			static_cast<const CDistributionSpecRouted *>(pds);
+		GPOS_ASSERT(pdsRouted != NULL);
+
+		const BOOL localNull = m_gp_segment_id == NULL;
+		const BOOL pdsNull = pdsRouted->Pcr() == NULL;
+
+		if (localNull || pdsNull)
+		{
+			return false;
+		}
+		else
+		{
+			return m_gp_segment_id->Id() == pdsRouted->Pcr()->Id();
+		}
+	}
+	else if (pds->Edt() == CDistributionSpec::EdtRandom)
+	{
+		const CDistributionSpecRandom *pdsRandom =
+			static_cast<const CDistributionSpecRandom *>(pds);
+
+		return pdsRandom->IsDuplicateSensitive() == m_is_duplicate_sensitive;
+	}
+	else
 	{
 		return false;
 	}
-
-	const CDistributionSpecRandom *pdsRandom =
-		dynamic_cast<const CDistributionSpecRandom *>(pds);
-
-	return pdsRandom->IsDuplicateSensitive() == m_is_duplicate_sensitive;
 }
 
 //---------------------------------------------------------------------------
@@ -155,11 +194,11 @@ CDistributionSpecRandom::AppendEnforcers(CMemoryPool *mp,
 		CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 	CDistributionSpecRandom *random_dist_spec = NULL;
 
-	if (expr_dist_spec->Edt() == CDistributionSpec::EdtUniversal)
+	if (CUtils::FDuplicateHazardDistributionSpec(expr_dist_spec))
 	{
 		// the motion node is enforced on top of a child
-		// deriving universal spec, this motion node will be
-		// translated to a result node with hash filter to remove
+		// deriving universal spec or replicated distribution, this motion node
+		// will be translated to a result node with hash filter to remove
 		// duplicates
 		random_dist_spec = GPOS_NEW(mp) CDistributionSpecRandom();
 	}

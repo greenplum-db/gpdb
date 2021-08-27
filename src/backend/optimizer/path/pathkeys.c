@@ -41,7 +41,6 @@
 static PathKey *make_canonical_pathkey(PlannerInfo *root,
 					   EquivalenceClass *eclass, Oid opfamily,
 					   int strategy, bool nulls_first);
-static bool pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys);
 static bool right_merge_direction(PlannerInfo *root, PathKey *pathkey);
 
 static bool op_in_eclass_opfamily(Oid opno, EquivalenceClass *eclass);
@@ -454,7 +453,7 @@ make_canonical_pathkey(PlannerInfo *root,
  * Because the equivclass.c machinery forms only one copy of any EC per query,
  * pointer comparison is enough to decide whether canonical ECs are the same.
  */
-static bool
+bool
 pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys)
 {
 	EquivalenceClass *new_ec = new_pathkey->pk_eclass;

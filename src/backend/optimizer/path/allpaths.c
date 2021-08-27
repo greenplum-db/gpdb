@@ -1691,7 +1691,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		(contain_volatile_functions((Node *) rel->subplan->targetlist) ||
 		 contain_volatile_functions(subquery->havingQual)))
 	{
-		rel->subplan = (Plan *) make_motion_gather(subroot, rel->subplan, NIL);
+		rel->subplan = (Plan *) make_motion_gather(subroot, rel->subplan, NIL, CdbLocusType_SingleQE);
 	}
 
 	rel->subroot = subroot;

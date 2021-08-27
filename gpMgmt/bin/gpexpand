@@ -2360,7 +2360,7 @@ with: gpexpand -i %s
                 """ % (outfile)
 
 
-def sig_handler(sig):
+def sig_handler(sig, arg):
     if _gp_expand is not None:
         _gp_expand.shutdown()
 

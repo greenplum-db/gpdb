@@ -261,8 +261,7 @@ LANGUAGE 'plr';
 --table
 DROP TABLE IF EXISTS wj_model_results_roi;
 CREATE TABLE wj_model_results_roi AS SELECT *
-  FROM wj_plr_RE((SELECT wj_droi2_array),
-  (SELECT cs FROM wj_droi2_array));</codeblock>
+  FROM wj_plr_RE('{1,1,1}', '{"a", "b", "c"}');</codeblock>
         </body>
       </topic>
     </topic>

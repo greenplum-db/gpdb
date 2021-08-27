@@ -35,18 +35,57 @@ Feature: gprecoverseg tests
           And the tablespace is valid
           And the other tablespace is valid
 
+    Scenario Outline: full recovery limits number of parallel processes correctly
+        Given a standard local demo cluster is created
+        And 2 gprecoverseg directory under '/tmp/recoverseg' with mode '0700' is created
+        And a good gprecoverseg input file is created for moving 2 mirrors
+        When the user runs gprecoverseg with input file and additional args "-a -F -v <args>"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should only spawn up to <master_workers> workers in WorkerPool
+        And check if gprecoverseg ran "$GPHOME/bin/lib/gpconfigurenewsegment" 2 times with args "-b <segHost_workers>"
+        And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
+        And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
+        And the segments are synchronized
+
+      Examples:
+        | args      | master_workers | segHost_workers |
+        | -B 1 -b 1 |  1             |  1              |
+        | -B 2 -b 1 |  2             |  1              |
+        | -B 1 -b 2 |  1             |  2              |
+
+    Scenario Outline: Rebalance correctly limits the number of concurrent processes
+      Given the database is running
+      And user stops all primary processes
+      And user can start transactions
+      And the user runs "gprecoverseg -a -v <args>"
+      And gprecoverseg should return a return code of 0
+      And the segments are synchronized
+      When the user runs "gprecoverseg -ra -v <args>"
+      Then gprecoverseg should return a return code of 0
+      And gprecoverseg should only spawn up to <master_workers> workers in WorkerPool
+      And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
+      And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
+      And the segments are synchronized
+
+    Examples:
+      | args      | master_workers | segHost_workers |
+      | -B 1 -b 1 |  1             |  1              |
+      | -B 2 -b 1 |  2             |  1              |
+      | -B 1 -b 2 |  1             |  2              |
+
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+	And the segments are synchronized
 
     Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running
@@ -101,7 +140,7 @@ Feature: gprecoverseg tests
         And we generate the postmaster.pid file with the background pid on "primary" segment
         And the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
@@ -122,7 +161,7 @@ Feature: gprecoverseg tests
         When user can start transactions
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
-        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
@@ -149,6 +188,20 @@ Feature: gprecoverseg tests
           And all the segments are running
           And the segments are synchronized
           And pg_isready reports all primaries are accepting connections
+
+    Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all mirror processes
+        And user can start transactions
+        When the user runs "gprecoverseg -a -s"
+        And gprecoverseg should print "skipping pg_rewind on mirror as recovery.conf is present" to stdout
+        Then gprecoverseg should return a return code of 0
+        And gpAdminLogs directory has no "pg_rewind*" files
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     @demo_cluster
     @concourse_cluster
@@ -235,7 +288,7 @@ Feature: gprecoverseg tests
         Then the saved "mirror" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should not print "Running pg_rewind on failed segments" to stdout
         And all the segments are running
         And the segments are synchronized
 
@@ -356,3 +409,45 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And all the segments are running
           And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: recovering a host with tablespaces succeeds
+        Given the database is running
+
+          # Add data including tablespaces
+          And a tablespace is created with data
+          And database "gptest" exists
+          And the user connects to "gptest" with named connection "default"
+          And the user runs psql with "-c 'CREATE TABLE public.before_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
+          And the user runs psql with "-c 'INSERT INTO public.before_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
+          And the "public.before_host_is_down" table row count in "gptest" is saved
+
+          # Stop one of the nodes as if for hardware replacement and remove any traces as if it was a new node.
+          # Recoverseg requires the host being restored have the same hostname.
+          And the user runs "gpstop -a --host sdw1"
+          And gpstop should return a return code of 0
+          And the user runs remote command "rm -rf /data/gpdata/*" on host "sdw1"
+          And user can start transactions
+
+          # Add data after one of the nodes is down for maintenance
+          And database "gptest" exists
+          And the user connects to "gptest" with named connection "default"
+          And the user runs psql with "-c 'CREATE TABLE public.after_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
+          And the user runs psql with "-c 'INSERT INTO public.after_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
+          And the "public.after_host_is_down" table row count in "gptest" is saved
+
+          # restore the down node onto a node with the same hostname
+          When the user runs "gprecoverseg -a -p sdw1"
+          Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And user can start transactions
+          And the user runs "gprecoverseg -ra"
+          And gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+          And user can start transactions
+
+          # verify the data
+          And the tablespace is valid
+          And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
+          And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data

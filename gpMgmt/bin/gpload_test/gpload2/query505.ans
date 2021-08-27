@@ -1,0 +1,27 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS merge_test;
+DROP TABLE
+CREATE TABLE merge_test(c1 text, c2 text, c3 text, c4 int) DISTRIBUTED BY(c4);
+CREATE TABLE
+INSERT INTO merge_test VALUES ('aaa', 'init', 'init', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-07 18:24:19|INFO|gpload session started 2021-01-07 18:24:19
+2021-01-07 18:24:19|INFO|setting schema 'public' for table 'merge_test'
+2021-01-07 18:24:19|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_mapping_01.txt" -t 30
+2021-01-07 18:24:19|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_3ee5e17a23a38ad043603928f716f1fb
+2021-01-07 18:24:19|INFO|did not find an external table to reuse. creating ext_gpload_reusable_80b1d4d4_50d2_11eb_88dc_7085c2381836
+2021-01-07 18:24:19|INFO|running time: 0.21 seconds
+2021-01-07 18:24:19|INFO|rows Inserted          = 2
+2021-01-07 18:24:19|INFO|rows Updated           = 0
+2021-01-07 18:24:19|INFO|data formatting errors = 0
+2021-01-07 18:24:19|INFO|gpload succeeded
+SELECT * FROM merge_test;
+ c1  |  c2  |   c3   | c4 
+-----+------+--------+----
+ aaa | init | init   |  0
+ aaa | qwer | shjhjg |  1
+ bbb | twob | shpits |  2
+(3 rows)
+

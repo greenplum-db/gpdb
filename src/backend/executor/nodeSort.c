@@ -489,6 +489,7 @@ ExecReScanSort(SortState *node)
 		if (NULL != node->tuplesortstate->sortstore)
 		{
 			tuplesort_end(node->tuplesortstate->sortstore);
+			node->tuplesortstate->sortstore = NULL;
 		}
 
 		/*
@@ -570,6 +571,9 @@ ExecEagerFreeSort(SortState *node)
 void
 ExecSquelchSort(SortState *node)
 {
-	ExecEagerFreeSort(node);
-	ExecSquelchNode(outerPlanState(node));
+	if (!node->delayEagerFree)
+	{
+		ExecEagerFreeSort(node);
+		ExecSquelchNode(outerPlanState(node));
+	}
 }

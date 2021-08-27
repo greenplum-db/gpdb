@@ -100,9 +100,11 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp)
 
 	segrel = heap_open(prel->rd_appendonly->segrelid, RowExclusiveLock);
 
-	InsertFastSequenceEntry(prel->rd_appendonly->segrelid,
-							(int64) segno,
-							0);
+	/*
+	 * Create a new entry in gp_fastsequence or increment
+	 * an existing one (it can exist after transaction rollback).
+	 */
+	GetFastSequences(prel->rd_appendonly->segrelid, (int64) segno, 1, 0);
 
 	values[Anum_pg_aocs_segno - 1] = Int32GetDatum(segno);
 	values[Anum_pg_aocs_vpinfo - 1] = PointerGetDatum(vpinfo);
@@ -113,11 +115,13 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp)
 
 	segtup = heap_form_tuple(RelationGetDescr(segrel), values, nulls);
 
-	frozen_heap_insert(segrel, segtup);
+	simple_heap_insert(segrel, segtup);
 	CatalogUpdateIndexes(segrel, segtup);
 
 	heap_freetuple(segtup);
 	heap_close(segrel, RowExclusiveLock);
+
+	CommandCounterIncrement();
 
 	pfree(vpinfo);
 	pfree(nulls);

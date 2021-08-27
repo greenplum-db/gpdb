@@ -376,7 +376,7 @@ tokenize_file(const char *filename, FILE *file,
 	MemoryContext linecxt;
 	MemoryContext oldcxt;
 
-	linecxt = AllocSetContextCreate(TopMemoryContext,
+	linecxt = AllocSetContextCreate(CurrentMemoryContext,
 									"tokenize file cxt",
 									ALLOCSET_DEFAULT_MINSIZE,
 									ALLOCSET_DEFAULT_INITSIZE,
@@ -1774,7 +1774,8 @@ load_hba(void)
 	FreeFile(file);
 
 	/* Now parse all the lines */
-	hbacxt = AllocSetContextCreate(TopMemoryContext,
+	Assert(PostmasterContext);
+	hbacxt = AllocSetContextCreate(PostmasterContext,
 								   "hba parser context",
 								   ALLOCSET_DEFAULT_MINSIZE,
 								   ALLOCSET_DEFAULT_MINSIZE,
@@ -2148,7 +2149,8 @@ load_ident(void)
 	FreeFile(file);
 
 	/* Now parse all the lines */
-	ident_context = AllocSetContextCreate(TopMemoryContext,
+	Assert(PostmasterContext);
+	ident_context = AllocSetContextCreate(PostmasterContext,
 										  "ident parser context",
 										  ALLOCSET_DEFAULT_MINSIZE,
 										  ALLOCSET_DEFAULT_MINSIZE,

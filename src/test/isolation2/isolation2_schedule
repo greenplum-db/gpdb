@@ -1,9 +1,12 @@
 test: setup
-
+test: cached_plan
+test: gpdispatch
+test: checkpoint_dtx_info
 test: lockmodes
 # Put test prepare_limit near to test lockmodes since both of them reboot the
 # cluster during testing. Usually the 2nd reboot should be faster.
 test: prepare_limit
+test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock query_gp_partitions_view
 test: dml_on_root_locks_all_parts
@@ -90,6 +93,9 @@ test: external_table
 # This test validates that for AO we delay fsync to checkpointer on mirror.
 test: fsync_ao
 
+# Test deadlock situation when waiting on a resource queue lock
+test: resource_queue_deadlock
+
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
@@ -128,6 +134,7 @@ test: uao/select_while_vacuum_serializable2_row
 test: uao/selectinsert_while_vacuum_row
 test: uao/selectinsertupdate_while_vacuum_row
 test: uao/selectupdate_while_vacuum_row
+test: uao/snapshot_eof_row
 test: uao/update_while_vacuum_row
 test: uao/vacuum_self_serializable_row
 test: uao/vacuum_self_serializable2_row
@@ -136,6 +143,7 @@ test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
 test: uao/insert_should_not_use_awaiting_drop_row
+test: uao/bitmapindex_rescan_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
 test: segwalrep/master_xlog_switch
@@ -177,6 +185,7 @@ test: uao/select_while_vacuum_serializable2_column
 test: uao/selectinsert_while_vacuum_column
 test: uao/selectinsertupdate_while_vacuum_column
 test: uao/selectupdate_while_vacuum_column
+test: uao/snapshot_eof_column
 test: uao/update_while_vacuum_column
 test: uao/vacuum_self_serializable_column
 test: uao/vacuum_self_serializable2_column
@@ -185,6 +194,7 @@ test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
 test: uao/insert_should_not_use_awaiting_drop_column
+test: uao/bitmapindex_rescan_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 
@@ -212,6 +222,7 @@ test: segwalrep/dtx_recovery_wait_lsn
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: fts_manual_probe
+test: fts_session_reset
 
 # Reindex tests
 test: reindex/abort_reindex
@@ -263,3 +274,6 @@ test: distributed_transactions
 
 # Test for distributed commit array overflow during replay on standby
 test: standby_replay_dtx_info
+
+# Test for concurrent vacuum with delete
+test: concurrent_vacuum_with_delete

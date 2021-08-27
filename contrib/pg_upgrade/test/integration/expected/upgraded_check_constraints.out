@@ -1,9 +1,0 @@
-select * from users_with_check_constraints;
- id | name 
-----+------
- 1  | Joe  
-(1 row)
-
-insert into users_with_check_constraints values (2, 'Jane');
-ERROR:  new row for relation "users_with_check_constraints" violates check constraint "users_with_check_constraints_id_check"
-DETAIL:  Failing row contains (2, Jane).

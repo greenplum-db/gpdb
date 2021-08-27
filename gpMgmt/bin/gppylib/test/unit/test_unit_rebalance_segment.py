@@ -32,7 +32,7 @@ class RebalanceSegmentsTestCase(GpTestCase):
         self.success_command_mock.get_results.return_value = CommandResult(
             0, "stdout success text", "stderr text", True, False)
 
-        self.subject = GpSegmentRebalanceOperation(Mock(), self._create_gparray_with_2_primary_2_mirrors())
+        self.subject = GpSegmentRebalanceOperation(Mock(), self._create_gparray_with_2_primary_2_mirrors(), 1, 1)
         self.subject.logger = Mock()
 
     def tearDown(self):

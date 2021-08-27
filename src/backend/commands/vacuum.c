@@ -698,7 +698,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		CommitTransactionCommand();
 		return;
 	}
-
+	SIMPLE_FAULT_INJECTOR("vacuum_hold_lock");
 	/*
 	 * Check permissions.
 	 *
@@ -1180,7 +1180,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 					for (int i = 1; i <= attr_cnt; i++)
 					{
 						Form_pg_attribute attr = onerel->rd_att->attrs[i-1];
-						if (attr->attisdropped)
+						if (attr->attisdropped || attr->attstattarget == 0)
 							continue;
 						va_root_attnums = lappend_int(va_root_attnums, i);
 					}
@@ -1561,6 +1561,13 @@ vac_update_relstats_from_list(List *updated_stats)
 	 * explicit about that given the assumptions taken.
 	 */
 	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	/*
+	 * To read latest version of pg_class tuple below, as it was most likely
+	 * updated earlier within same command by earlier call to
+	 * vac_update_relstats().
+	 */
+	CommandCounterIncrement();
 
 	foreach (lc, updated_stats)
 	{

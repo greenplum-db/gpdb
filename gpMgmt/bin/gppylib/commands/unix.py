@@ -606,8 +606,18 @@ class InterfaceAddrs(Command):
 class PgPortIsActive(Command):
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
-        cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
-                 (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
+        try:
+            cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
+                     (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
+        except CommandNotFoundException:
+            try:
+                cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $5}'" % \
+                         (findCmdInPath('ss'), findCmdInPath('grep'), file, findCmdInPath('awk'))
+            except CommandNotFoundException as err:
+                logger.critical(
+                    "Failed to find active tcp port.")
+                raise
+
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     def contains_port(self):
@@ -618,8 +628,8 @@ class PgPortIsActive(Command):
 
         for r in rows:
             val = r.split('.')
-            netstatport = int(val[len(val) - 1])
-            if netstatport == self.port:
+            tcp_port = int(val[len(val) - 1])
+            if tcp_port == self.port:
                 return True
 
         return False

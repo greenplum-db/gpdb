@@ -104,6 +104,18 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit)
 	bool		syncStandbyPresent = false;
 	int			i = 0;
 
+#ifdef FAULT_INJECTOR
+	/*
+	 * If walsender is programmed to skip sending WAL, don't bother waiting.
+	 * Otherwise, tests may block indefinitely.  Tests are typically mindful
+	 * of not performing COMMIT/ABORT operation when walsnd_skip_send fault is
+	 * injected.  This logic is necessary when SyncRepWaitForLSN is called
+	 * from DML (insert/update/delete) code path.
+	 */
+	if (SIMPLE_FAULT_INJECTOR("walsnd_skip_send") == FaultInjectorTypeSkip)
+		return;
+#endif
+
 	/*
 	 * SIGUSR1 is used to wake us up, cannot wait from inside SIGUSR1 handler
 	 * as its non-reentrant, so check for the same and avoid waiting.
@@ -177,7 +189,7 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit)
 		XactCommitLSN <= WalSndCtl->lsn[mode])
 	{
 		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep because xlog upto LSN (%X/%X) which is "
+				"syncrep wait -- Not waiting for syncrep because xlog up to LSN (%X/%X) which is "
 				"greater than this backend's commit LSN (%X/%X) has already "
 				"been replicated.",
 			   (uint32) (WalSndCtl->lsn[mode] >> 32), (uint32) WalSndCtl->lsn[mode],

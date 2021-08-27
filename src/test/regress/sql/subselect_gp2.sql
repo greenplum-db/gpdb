@@ -37,3 +37,13 @@ select * from subselect_t1 where NULL in (select c from subselect_t2) and exists
 -- Planner test to make sure initplan is removed when no param is used
 select * from subselect_t2 where false and exists (select generate_series(1,2));
 
+-- Check delay eager free in squelch functions
+CREATE TABLE subselect2_foo (a int, b int);
+CREATE TABLE subselect2_bar (c int, d int);
+CREATE TABLE subselect2_baz (x int, y int);
+
+INSERT INTO subselect2_foo VALUES (1,1), (1,2);
+INSERT INTO subselect2_bar VALUES (1,1);
+
+SELECT *, (SELECT x FROM subselect2_baz EXCEPT SELECT c FROM subselect2_bar WHERE d = a) FROM subselect2_foo;
+

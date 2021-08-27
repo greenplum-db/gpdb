@@ -63,7 +63,7 @@ PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 				bFirstTimeCall = true;
 
 				/*
-				 * Clear all previous left-over exceptions due to some (unknow) reasons
+				 * Clear all previous left-over exceptions due to some (unknown) reasons
 				 * so that this call will have a fresh start
 				 */
 				PyErr_Clear();

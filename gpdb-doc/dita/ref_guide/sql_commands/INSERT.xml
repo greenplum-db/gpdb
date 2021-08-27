@@ -118,7 +118,7 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
         specified leaf child table. Specifying a child table that is not a leaf child table in the
           <codeph>INSERT</codeph> command is not supported. Execution of other DML commands such as
           <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> on any child table of a partitioned
-        table is not supported. These commands must be executed on the root partitioned table, the
+        table is not supported. These commands must be run on the root partitioned table, the
         table created with the <codeph>CREATE TABLE</codeph> command.</p>For a partitioned table,
       all the child tables are locked during the <codeph>INSERT</codeph> operation when the Global
       Deadlock Detector is not enabled (the default). Only some of the leaf child tables are locked

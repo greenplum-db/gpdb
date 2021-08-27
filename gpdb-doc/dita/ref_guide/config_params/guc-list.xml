@@ -275,6 +275,12 @@
             <li>
               <xref href="#gp_hashjoin_tuples_per_bucket"/>
             </li>
+            <li><xref href="#gp_resgroup_memory_policy"/></li>
+            <li><xref href="#gp_resource_group_bypass"/></li>
+            <li><xref href="#gp_resource_group_cpu_ceiling_enforcement"/></li>
+            <li><xref href="#gp_resource_group_cpu_limit"/></li>
+            <li><xref href="#gp_resource_group_memory_limit"/></li>
+            <li><xref href="#gp_resource_group_queuing_timeout"/></li>
             <li>
               <xref href="#gp_resource_manager"/>
             </li>
@@ -335,6 +341,9 @@
           <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#listen_addresses"/>
+            </li>
+            <li>
+              <xref href="#log_file_mode"/>
             </li>
             <li>
               <xref href="#log_planner_stats"/>
@@ -436,8 +445,9 @@
               <xref href="#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref>
             </li>
-            <li><xref href="#optimizer_force_agg_skew_avoidance" type="section"
-                >optimizer_force_agg_skew_avoidance</xref>
+            <li>
+              <xref href="#optimizer_enable_multiple_distinct_aggs" type="section"
+                >optimizer_enable_multiple_distinct_aggs</xref>
             </li>
             <li>
               <xref href="#optimizer_force_multistage_agg" type="section"
@@ -1258,7 +1268,7 @@
   <topic id="debug_print_parse">
     <title>debug_print_parse</title>
     <body>
-      <p>For each executed query, prints the resulting parse tree. <i>client_min_messages</i> or
+      <p>For each query run, prints the resulting parse tree. <i>client_min_messages</i> or
           <i>log_min_messages</i> must be DEBUG1 or lower.</p>
       <table id="debug_print_parse_table">
         <tgroup cols="3">
@@ -1286,7 +1296,7 @@
   <topic id="debug_print_plan">
     <title>debug_print_plan</title>
     <body>
-      <p>For each executed query, prints the Greenplum parallel query execution plan.
+      <p>For each query run, prints the Greenplum parallel query execution plan.
           <i>client_min_messages</i> or <i>log_min_messages</i> must be DEBUG1 or lower.</p>
       <table id="debug_print_plan_table">
         <tgroup cols="3">
@@ -1314,7 +1324,7 @@
   <topic id="debug_print_prelim_plan">
     <title>debug_print_prelim_plan</title>
     <body>
-      <p>For each executed query, prints the preliminary query plan. <i>client_min_messages</i> or
+      <p>For each query run, prints the preliminary query plan. <i>client_min_messages</i> or
           <i>log_min_messages</i> must be DEBUG1 or lower.</p>
       <table id="debug_print_prelim_plan_table">
         <tgroup cols="3">
@@ -1342,7 +1352,7 @@
   <topic id="debug_print_rewritten">
     <title>debug_print_rewritten</title>
     <body>
-      <p>For each executed query, prints the query rewriter output. <i>client_min_messages</i> or
+      <p>For each query run, prints the query rewriter output. <i>client_min_messages</i> or
           <i>log_min_messages</i> must be DEBUG1 or lower.</p>
       <table id="debug_print_rewritten_table">
         <tgroup cols="3">
@@ -1370,7 +1380,7 @@
   <topic id="debug_print_slice_table">
     <title>debug_print_slice_table</title>
     <body>
-      <p>For each executed query, prints the Greenplum query slice plan. <i>client_min_messages</i>
+      <p>For each query run, prints the Greenplum query slice plan. <i>client_min_messages</i>
         or <i>log_min_messages</i> must be DEBUG1 or lower.</p>
       <table id="debug_print_slice_table_table">
         <tgroup cols="3">
@@ -1491,7 +1501,7 @@
     <body>
       <p>When running at the <codeph>SERIALIZABLE</codeph> isolation level, a deferrable read-only
         SQL transaction may be delayed before it is allowed to proceed. However, once it begins
-        executing it does not incur any of the overhead required to ensure serializability; so
+        running it does not incur any of the overhead required to ensure serializability; so
         serialization code will have no reason to force it to abort because of concurrent updates,
         making this option suitable for long-running read-only transactions.</p>
       <p>This parameter controls the default deferrable status of each new transaction. It currently
@@ -2291,7 +2301,7 @@
           <codeph>none</codeph> option disables statistics collection. The
           <codeph>on_no_stats</codeph> option triggers statistics collection for <codeph>CREATE
           TABLE AS SELECT</codeph>, <codeph>INSERT</codeph>, or <codeph>COPY</codeph> operations
-        that are executed in functions on any table that has no existing statistics.</p>
+        that are run in functions on any table that has no existing statistics.</p>
       <p>The <codeph>on_change</codeph> option triggers statistics collection only when the number
         of rows affected exceeds the threshold defined by
           <codeph>gp_autostats_on_change_threshold</codeph>. Operations in functions that can
@@ -2841,7 +2851,7 @@
           the table to be exchanged, the new default partition, is valid for the default partition.
           For example, the data in the new default partition must not contain data that would be
           valid in other leaf child partitions of the partitioned table. Otherwise, queries against
-          the partitioned table with the exchanged default partition that are executed by GPORCA
+          the partitioned table with the exchanged default partition that are run by GPORCA
           might return incorrect results.</note>
       </p>
       <table id="gp_enable_exchange_default_partition_table">
@@ -2904,7 +2914,7 @@
         improve performance. See <xref href="../../admin_guide/dml.xml#topic_gdd"/><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>.
         The default is <codeph>off</codeph>, the Global Deadlock Detector is disabled. </p>
-      <p>If the Global Deadlock Detector is disabled (the default), Greenplum Database executes
+      <p>If the Global Deadlock Detector is disabled (the default), Greenplum Database runs
         concurrent update and delete operations on a heap table serially.</p>
       <p>If the Global Deadlock Detector is enabled, concurrent updates are permitted and the Global 
         Deadlock Detector determines when a deadlock exists, and
@@ -3276,7 +3286,7 @@
   <topic id="gp_external_enable_exec">
     <title>gp_external_enable_exec</title>
     <body>
-      <p>Enables or disables the use of external tables that execute OS commands or scripts on the
+      <p>Enables or disables the use of external tables that run OS commands or scripts on the
         segment hosts (<codeph>CREATE EXTERNAL TABLE EXECUTE</codeph> syntax). <ph>Must be enabled
           if using the Command Center or MapReduce features.</ph></p>
       <table id="gp_external_enable_exec_table">
@@ -3336,7 +3346,7 @@
     <title>gp_external_enable_filter_pushdown</title>
     <body>
       <p>Enable filter pushdown when reading data from external tables. If pushdown fails, a query
-        is executed without pushing filters to the external data source (instead, Greenplum Database
+        is run without pushing filters to the external data source (instead, Greenplum Database
         applies the same constraints to the result). See <xref
           href="../../admin_guide/external/g-external-tables.xml#topic3"/> for more information.</p>
       <table id="enable_filter_pushdown_table">
@@ -3732,13 +3742,13 @@
       <p>The default value is <codeph>false</codeph>, Greenplum Database returns an error if the
           <codeph>INTO ERROR TABLE</codeph> clause is specified in a command. </p>
       <p>If the value is <codeph>true</codeph>, Greenplum Database ignores the clause, issues a
-        warning, and executes the command without the <codeph>INTO ERROR TABLE</codeph> clause. In
+        warning, and runs the command without the <codeph>INTO ERROR TABLE</codeph> clause. In
         Greenplum Database 5.x and later, you access the error log information with built-in SQL
         functions. See the <codeph><xref href="../sql_commands/CREATE_EXTERNAL_TABLE.xml">CREATE
             EXTERNAL TABLE</xref></codeph> or <codeph><xref href="../sql_commands/COPY.xml"
             >COPY</xref></codeph> command.</p>
       <p>You can set this value to <codeph>true</codeph> to avoid the Greenplum Database error when
-        you run applications that execute <codeph>CREATE EXTERNAL TABLE</codeph> or
+        you run applications that run <codeph>CREATE EXTERNAL TABLE</codeph> or
           <codeph>COPY</codeph> commands that include the Greenplum Database 4.3.x <codeph>INTO
           ERROR TABLE</codeph> clause.</p>
       <table id="table_hnf_2v5_bdb">
@@ -3810,7 +3820,7 @@
         allocates space in shared memory to save query metrics. This memory is organized as a header
         and a list of slots. The number of slots needed depends on the number of concurrent queries
         and the number of execution plan nodes per query. The default value, 5120, is based on a
-        Greenplum Database system that executes a maximum of about 250 concurrent queries with 120
+        Greenplum Database system that runs a maximum of about 250 concurrent queries with 120
         nodes per query. If the <codeph>gp_enable_query_metrics</codeph> configuration parameter is
         off, or if the slots are exhausted, the metrics are maintained in local memory instead of in
         shared memory. </p>
@@ -3929,7 +3939,7 @@
             specify.</li>
         </ul></p>
       <note type="important">If a segment instance hostname is bound to a different IP address at
-        runtime, you must execute <codeph>gpstop -U</codeph> to re-load the
+        runtime, you must run <codeph>gpstop -U</codeph> to re-load the
           <codeph>gp_interconnect_proxy_addresses</codeph> value.</note>
       <p>You must specify the value as a single-quoted string. This <codeph>gpconfig</codeph>
         command sets the value for <codeph>gp_interconnect_proxy_addresses</codeph> as a
@@ -4159,7 +4169,7 @@
         process memory of a segment instance. </p>
       <p>The log entries contain information about the state of rows that are being accessed by an
         SQL statement. The information is used to determine which rows are visible to an SQL
-        transaction when executing multiple simultaneous SQL statements in an MVCC environment.
+        transaction when running multiple simultaneous SQL statements in an MVCC environment.
         Caching distributed transaction log entries locally improves transaction processing speed by
         improving performance of the row visibility determination process.</p>
       <p>The default value is optimal for a wide variety of SQL processing environments. </p>
@@ -4251,10 +4261,10 @@
     <title>gp_max_slices</title>
     <body>
       <p dir="ltr">Specifies the maximum number of slices (portions of a query plan that are
-        executed on segment instances) that can be generated by a query. If the query generates more
+        run on segment instances) that can be generated by a query. If the query generates more
         than the specified number of slices, Greenplum Database returns an error and does not
-        execute the query. The default value is <codeph>0</codeph>, no maximum value. </p>
-      <p>Executing a query that generates a large number of slices might affect Greenplum Database
+        run the query. The default value is <codeph>0</codeph>, no maximum value. </p>
+      <p>Running a query that generates a large number of slices might affect Greenplum Database
         performance. For example, a query that contains <codeph>UNION</codeph> or <codeph>UNION
           ALL</codeph> operators over several complex views can generate a large number of slices.
         You can run <codeph>EXPLAIN ANALYZE</codeph> on the query to view slice statistics for the
@@ -4487,6 +4497,34 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_resource_group_cpu_ceiling_enforcement">
+    <title>gp_resource_group_cpu_ceiling_enforcement</title>
+    <body>
+      <p>Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When
+        disabled, the Elastic mode will be used. </p>
+      <table id="table_wtb_y2g_fpb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
@@ -4633,7 +4671,7 @@
       <note>The <codeph>gp_resqueue_memory_policy</codeph> server configuration parameter is
         enforced only when resource queue-based resource management is active.</note>
       <p>Enables Greenplum memory management features. The distribution algorithm
-          <codeph>eager_free</codeph> takes advantage of the fact that not all operators execute at
+          <codeph>eager_free</codeph> takes advantage of the fact that not all operators run at
         the same time<ph> (in Greenplum Database 4.2 and later)</ph>. The query plan is divided into
         stages and Greenplum Database eagerly frees memory allocated to a previous stage at the end
         of that stage's execution, then allocates the eagerly freed memory to the new stage. </p>
@@ -5272,7 +5310,7 @@
     <title>gp_workfile_limit_files_per_query</title>
     <body>
       <p> Sets the maximum number of temporary spill files (also known as workfiles) allowed per
-        query per segment. Spill files are created when executing a query that requires more memory
+        query per segment. Spill files are created when running a query that requires more memory
         than it is allocated. The current query is terminated when the limit is exceeded. </p>
       <p>Set the value to 0 (zero) to allow an unlimited number of spill files. master session
         reload</p>
@@ -6053,6 +6091,37 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="log_file_mode">
+    <title>log_file_mode</title>
+    <body>
+      <p>On Unix systems this parameter sets the permissions for log files when
+          <codeph>logging_collector</codeph> is enabled. The parameter value is expected to be a
+        numeric mode specified in the format accepted by the <codeph>chmod</codeph> and
+          <codeph>umask</codeph> system calls.</p>
+      <table id="table_s4d_hfj_2qb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">numeric UNIX file permission mode (as accepted by the
+                  <i>chmod</i> or <i>umask</i> commands)</entry>
+              <entry colname="col2">0600</entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -7035,7 +7104,7 @@
         disables the transformation of the predicate into its disjunctive normal form during query
         optimization. </p>
       <p>The default value is 100. </p>
-      <p>For example, when GPORCA is executing a query that contains an <codeph>IN</codeph> clause
+      <p>For example, when GPORCA is running a query that contains an <codeph>IN</codeph> clause
         with more than 100 elements, GPORCA does not transform the predicate into its disjunctive
         normal form during query optimization to reduce optimization time consume less memory. The
         difference in query processing can be seen in the filter condition for the
@@ -7242,8 +7311,8 @@
     <title>optimizer_enable_dml</title>
     <body>
       <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph> (the
-        default), GPORCA attempts to execute DML commands such as <codeph>INSERT</codeph>,
-          <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph>. If GPORCA cannot execute the
+        default), GPORCA attempts to run DML commands such as <codeph>INSERT</codeph>,
+          <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph>. If GPORCA cannot run the
         command, Greenplum Database falls back to the Postgres Planner.</p>
       <p>When set to <codeph>false</codeph>, Greenplum Database always falls back to the Postgres
         Planner when performing DML commands.</p>
@@ -7318,9 +7387,9 @@
   <topic id="optimizer_enable_master_only_queries">
     <title>optimizer_enable_master_only_queries</title>
     <body>
-      <p dir="ltr">When GPORCA is enabled (the default), this parameter allows GPORCA to execute
+      <p dir="ltr">When GPORCA is enabled (the default), this parameter allows GPORCA to run
         catalog queries that run only on the Greenplum Database master. For the default value
-          <codeph>off</codeph>, only the Postgres Planner can execute catalog queries that run only
+          <codeph>off</codeph>, only the Postgres Planner can run catalog queries that run only
         on the Greenplum Database master.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
@@ -7330,6 +7399,42 @@
           href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
       <table id="table_ykk_rg5_gv">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_enable_multiple_distinct_aggs">
+    <title>optimizer_enable_multiple_distinct_aggs</title>
+    <body>
+      <p dir="ltr">When GPORCA is enabled (the default), this parameter allows GPORCA to support
+        Multiple Distinct Qualified Aggregates, such as <codeph>SELECT count(DISTINCT
+          a),sum(DISTINCT b) FROM foo</codeph>. This parameter is disabled by default because its
+        plan is generally suboptimal in comparison to the plan generated by the Postgres
+        planner.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_zct_qn1_bpb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>
@@ -7517,10 +7622,9 @@
           (default 10) tables, this algorithm employs a gradual transition to the
           <codeph>greedy</codeph> method; planning time goes up smoothly as the
           query gets more complicated, and plan quality and execution time only
-          gradually degrade.</li>
+          gradually degrade. <codeph>exhaustive2</codeph> provides a good
+          trade-off between planning time and execution time for many queries.</li>
       </ul>
-      <p>The default value, <codeph>exhaustive2</codeph>, provides a better
-        trade-off between planning time and execution time for most queries.</p>
       <p>Setting this parameter to
           <codeph>query</codeph> or <codeph>greedy</codeph> can generate a suboptimal query plan.
         However, if the administrator is confident that a satisfactory plan is generated with the
@@ -7545,7 +7649,7 @@
           <tbody>
             <row>
               <entry colname="col1">query<p>greedy</p><p>exhaustive</p><p>exhaustive2</p></entry>
-              <entry colname="col2">exhaustive2</entry>
+              <entry colname="col2">exhaustive</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -7753,11 +7857,11 @@
         or <codeph>UNION ALL</codeph> clause. </p>
       <p>When the value is <codeph>off</codeph>, the default, GPORCA generates a query plan where
         each child of an APPEND(UNION) operator is in the same slice as the APPEND operator. During
-        query execution, the children are executed in a sequential manner. </p>
+        query execution, the children are run in a sequential manner. </p>
       <p>When the value is <codeph>on</codeph>, GPORCA generates a query plan where a redistribution
         motion node is under an APPEND(UNION) operator. During query execution, the children and the
         parent APPEND operator are on different slices, allowing the children of the APPEND(UNION)
-        operator to execute in parallel on segment instances.</p>
+        operator to run in parallel on segment instances.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <table id="table_q4c_34y_rw">
@@ -7929,7 +8033,7 @@
     <title>optimizer_use_gpdb_allocators</title>
     <body>
       <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph> (the
-        default), GPORCA uses Greenplum Database memory management when executing queries. When set
+        default), GPORCA uses Greenplum Database memory management when running queries. When set
         to <codeph>false</codeph>, GPORCA uses GPORCA-specific memory management. Greenplum Database
         memory management allows for faster optimization, reduced memory usage during optimization,
         and improves GPORCA support of vmem limits when compared to GPORCA-specific memory
@@ -8025,7 +8129,7 @@
     <title>plan_cache_mode</title>
     <body>
       <p>Prepared statements (either explicitly prepared or implicitly generated, for example by
-        PL/pgSQL) can be executed using <i>custom</i> or <i>generic</i> plans. Custom plans are
+        PL/pgSQL) can be run using <i>custom</i> or <i>generic</i> plans. Custom plans are
         created for each execution using its specific set of parameter values, while generic plans
         do not rely on the parameter values and can be re-used across executions. The use of a
         generic plan saves planning time, but if the ideal plan depends strongly on the parameter
@@ -8035,7 +8139,7 @@
         generic plan is always used.</p>
       <p>The allowed values are <codeph>auto</codeph> (the default),
           <codeph>force_custom_plan</codeph> and <codeph>force_generic_plan</codeph>. This setting
-        is considered when a cached plan is to be executed, not when it is prepared. For more
+        is considered when a cached plan is to be run, not when it is prepared. For more
         information see <codeph><xref href="../sql_commands/PREPARE.xml"/></codeph>.</p>
       <p>The parameter can be set for a database system, an individual database, a session, or a
         query.</p>
@@ -8085,7 +8189,7 @@
       <p>If <codeph><xref href="#pljava_classpath_insecure" format="dita"
             >pljava_classpath_insecure</xref></codeph> is <codeph>false</codeph>, setting the
           <codeph>pljava_classpath</codeph> parameter requires superuser privilege. Setting the
-        classpath in SQL code will fail when the code is executed by a user without superuser
+        classpath in SQL code will fail when the code is run by a user without superuser
         privilege. The <codeph>pljava_classpath</codeph> parameter must have been set previously by
         a superuser or in the <codeph>postgresql.conf</codeph> file. Changing the classpath in the
           <codeph>postgresql.conf</codeph> file requires a reload (<codeph>gpstop -u</codeph>). </p>
@@ -8556,8 +8660,8 @@
           <i>pg_catalog</i>, is always searched, whether it is mentioned in the path or not. When
         objects are created without specifying a particular target schema, they will be placed in
         the first schema listed in the search path. The current effective value of the search path
-        can be examined via the SQL function <i>current_schemas()</i>. <i>current_schemas()</i>
-        shows how the requests appearing in <i>search_path</i> were resolved.</p>
+        can be examined via the SQL function <i>current_schema()</i>. <i>current_schema()</i> shows
+        how the requests appearing in <i>search_path</i> were resolved.</p>
       <table id="search_path_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9466,7 +9570,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           <tbody>
             <row>
               <entry colname="col1">directory path</entry>
-              <entry colname="col2">unset</entry>
+              <entry colname="col2">0777</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -9524,7 +9628,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">numeric UNIX file permission mode (as accepted by the
                   <i>chmod</i> or <i>umask</i> commands)</entry>
-              <entry colname="col2">511</entry>
+              <entry colname="col2">0777</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -9742,7 +9846,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
         value is <codeph>true</codeph>, enable the test.</p>
       <p>If Greenplum Database detects a corruption in the free TID list, the free TID list is
         rebuilt, a warning is logged, and a warning is returned by queries for which the check
-        failed. Greenplum Database attempts to execute the queries. </p>
+        failed. Greenplum Database attempts to run the queries. </p>
       <note otherprops="pivotal">If a warning is returned, please contact VMware Support.</note>
       <table id="table_fkc_4pb_1w">
         <tgroup cols="3">

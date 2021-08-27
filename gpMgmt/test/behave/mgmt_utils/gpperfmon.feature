@@ -19,8 +19,8 @@ Feature: gpperfmon
         Then gpperfmon_install should return a return code of 0
         Then gpperfmon_install should not print "foo" to stdout
         Then gpperfmon_install should print "\*\*\*\*\*\*" to stdout
-        Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
-        Then verify that the last line of the file "pg_hba.conf" in the master data directory contains the string "host     all         gpmon         ::1/128    md5"
+        Then verify that the last line of the file "postgresql.conf" in the master data directory should contain the string "gpperfmon_log_alert_level=warning"
+        Then verify that the last line of the file "pg_hba.conf" in the master data directory should contain the string "host     all         gpmon         ::1/128    md5"
         And verify that there is a "heap" table "database_history" in "gpperfmon"
 
     @gpperfmon_run
@@ -169,7 +169,7 @@ Feature: gpperfmon
         # wait until the latest gpperfmon log file contains the line "partition_age turned off"
         Then wait until the results from boolean sql "SELECT count(*) = 7 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
         When the setting "partition_age = 5" is placed in the configuration file "gpperfmon/conf/gpperfmon.conf"
-        Then verify that the last line of the file "gpperfmon/conf/gpperfmon.conf" in the master data directory contains the string "partition_age = 5"
+        Then verify that the last line of the file "gpperfmon/conf/gpperfmon.conf" in the master data directory should contain the string "partition_age = 5"
         When the user runs command "pkill gpmmon"
         Then wait until the process "gpmmon" is up
         And wait until the process "gpsmon" is up

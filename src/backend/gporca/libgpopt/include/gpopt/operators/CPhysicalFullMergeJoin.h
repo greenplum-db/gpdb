@@ -22,10 +22,11 @@ private:
 
 public:
 	// ctor
-	explicit CPhysicalFullMergeJoin(CMemoryPool *mp,
-									CExpressionArray *outer_merge_clauses,
-									CExpressionArray *inner_merge_clauses,
-									IMdIdArray *hash_opfamilies = NULL);
+	explicit CPhysicalFullMergeJoin(
+		CMemoryPool *mp, CExpressionArray *outer_merge_clauses,
+		CExpressionArray *inner_merge_clauses,
+		IMdIdArray *hash_opfamilies = NULL,
+		CXform::EXformId order_origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	virtual ~CPhysicalFullMergeJoin();

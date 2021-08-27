@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="cv20941">DROP FUNCTION</title><body><p id="sql_command_desc">Removes a function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP FUNCTION [IF EXISTS] name ( [ [argmode] [argname] argtype 
     [, ...] ] ) [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP FUNCTION</codeph> removes the definition of an existing
-function. To execute this command the user must be the owner of the function.
+function. To run this command the user must be the owner of the function.
 The argument types to the function must be specified, since several different
 functions may exist with the same name and different argument lists.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the function does not exist. A notice is
 issued in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing function.</pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,

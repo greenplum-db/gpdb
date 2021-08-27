@@ -37,6 +37,7 @@ enum ExMinor
 	ExmiUnsatisfiedRequiredProperties,
 	ExmiEvalUnsupportedScalarExpr,
 	ExmiCTEProducerConsumerMisAligned,
+	ExmiNoStats,
 
 	ExmiSentinel
 };

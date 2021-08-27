@@ -2,12 +2,10 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="backup-plugin-api" xml:lang="en">
-  <title id="kk1598353">Backup/Restore Storage Plugin API (Beta)</title>
+  <title id="kk1598353">Backup/Restore Storage Plugin API </title>
   <body>
     <p>This topic describes how to develop a custom storage plugin with the Greenplum Database
       Backup/Restore Storage Plugin API.</p>
-    <note type="note">Only the Backup/Restore Storage Plugin API is a Beta feature. The storage
-      plugins are supported features.</note>
     <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and
       integrate a custom backup storage system with the Greenplum Database <xref
         href="../../utility_guide/ref/gpbackup.xml"><codeph>gpbackup</codeph></xref><ph
@@ -98,10 +96,10 @@ options:
         <li>The API provides arguments that specify the execution scope (master host, segment host,
           or segment instance) for a plugin setup or cleanup command. The scope can be one of these
             values.<ul id="ul_rpk_tzt_k2b">
-            <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
-            <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
+            <li><codeph>master</codeph> - Run the plugin once on the master host.</li>
+            <li><codeph>segment_host</codeph> - Run the plugin once on each of the segment
               hosts.</li>
-            <li><codeph>segment</codeph> - Execute the plugin once for each active segment instance
+            <li><codeph>segment</codeph> - Run the plugin once for each active segment instance
               on the host running the segment instance.</li>
           </ul>The Greenplum Database hosts and segment instances are based on the Greenplum
           Database configuration when the back up started. The values <codeph>segment_host</codeph>

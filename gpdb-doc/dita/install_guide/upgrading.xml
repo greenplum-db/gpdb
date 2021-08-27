@@ -38,7 +38,7 @@
               <codeph>gpcheckcat</codeph> utility reports errors, but does not generate a SQL script
             to fix the errors, contact VMware Support. Information for contacting VMware Support
             is at <xref href="https://tanzu.vmware.com/support" scope="external" format="html"
-              class="- topic/xref ">https://support.pivotal.io</xref>.</note></li>
+              class="- topic/xref ">https://tanzu.vmware.com/support</xref>.</note></li>
         <li>If you have configured the Greenplum Platform Extension Framework (PXF) in your previous
           Greenplum Database installation, you must stop the PXF service, and you might need to back up
          PXF configuration files before upgrading to a new version of Greenplum Database. Refer to
@@ -75,7 +75,7 @@
             <codeph>gpadmin</codeph> user's home directory on each master, standby, and segment
           host.</li>
         <li class="- topic/li "><i>If you used <codeph>yum</codeph> or <codeph>apt</codeph> to
-            install Greenplum Database to the default location</i>, execute these commands on each
+            install Greenplum Database to the default location</i>, run these commands on each
           host to upgrade to the new software release. <p>For RHEL/CentOS
             systems:<codeblock>$ sudo yum upgrade ./greenplum-db-&lt;version>-&lt;platform>.rpm</codeblock></p><p>For
             Ubuntu
@@ -86,7 +86,7 @@
               <codeph>/usr/local/greenplum-db</codeph> to point to the new installation
             directory.</p></li>
         <li><i>If you used <codeph>rpm</codeph> to install Greenplum Database to a non-default
-            location on RHEL/CentOS systems</i>, execute <codeph>rpm</codeph> on each host to
+            location on RHEL/CentOS systems</i>, run <codeph>rpm</codeph> on each host to
           upgrade to the new software release and specify the same custom installation directory
           with the <codeph>--prefix</codeph> option. For
             example:<codeblock>$ sudo rpm -U ./greenplum-db-&lt;version>-&lt;platform>.rpm --prefix=&lt;directory></codeblock><p>The
@@ -120,8 +120,8 @@
             file:<codeblock>source /usr/local/greenplum-db-&lt;current_version>/greenplum_path.sh</codeblock><p>to:</p><codeblock>source /usr/local/greenplum-db-&lt;new_version>/greenplum_path.sh</codeblock><p>Or
             if you are sourcing a symbolic link (<codeph>/usr/local/greenplum-db</codeph>) in your
             profile files, update the link to point to the newly installed version. For
-          example:</p><codeblock>$ rm /usr/local/greenplum-db
-$ ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codeblock></li>
+          example:</p><codeblock>$ sudo rm /usr/local/greenplum-db
+$ sudo ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codeblock></li>
         <li class="- topic/li ">Source the environment file you just edited. For
           example:<codeblock>$ source ~/.bashrc</codeblock></li>
         <li class="- topic/li ">After all segment hosts have been upgraded, log in as the
@@ -137,7 +137,7 @@ $ gpstart</codeblock></li>
           the extension documentation for details.<p>Also copy any files that are used by the
             extensions (such as JAR files, shared object files, and libraries) from the previous
             version installation directory to the new version installation directory on the
-            coordinator and segment host systems. </p></li>
+            master and segment host systems. </p></li>
         <li>If you configured PXF in your previous Greenplum Database installation, you may
           need to install PXF in your new Greenplum installation, and you may be required to
           re-initialize the PXF service after you upgrade Greenplum Database. Refer to the <xref
@@ -160,7 +160,7 @@ $ gpstart</codeblock></li>
       <p>If you experience issues during the migration process and have active entitlements for
         Greenplum Database that were purchased through VMware, contact VMware Support. Information
         for contacting VMware Support is at <xref href="https://tanzu.vmware.com/support"
-          scope="external" format="html" class="- topic/xref ">https://support.pivotal.io</xref>. </p>
+          scope="external" format="html" class="- topic/xref ">https://tanzu.vmware.com/support</xref>. </p>
       <p>
         <b class="+ topic/ph hi-d/b ">Be prepared to provide the following information:</b>
       </p>

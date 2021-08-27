@@ -193,7 +193,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <codeph>DISTRIBUTED RANDOMLY</codeph>. </p>
       <p>If the <codeph>DISTRIBUTED REPLICATED</codeph> clause is supplied, Greenplum Database
         distributes all rows of the table to all segments in the Greenplum Database system. This
-        option can be used in cases where user-defined functions must execute on the segments, and
+        option can be used in cases where user-defined functions must run on the segments, and
         the functions require access to all rows of the table. Replicated functions can also be used
         to improve query performance by preventing broadcast motions for the table. The
           <codeph>DISTRIBUTED REPLICATED</codeph> clause cannot be used with the <codeph>PARTITION
@@ -501,13 +501,13 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
               <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
             if <codeph>appendoptimized=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
           <pd><b>checksum</b> — This option is valid only for append-optimized tables
-              (<codeph>appendoptimized=TRUE</codeph>). The value <codeph>TRUE</codeph> is the default and
-            enables CRC checksum validation for append-optimized tables. The checksum is calculated
-            during block creation and is stored on disk. Checksum validation is performed during
-            block reads. If the checksum calculated during the read does not match the stored
-            checksum, the transaction is aborted. If you set the value to <codeph>FALSE</codeph> to
-            disable checksum validation, checking the table data for on-disk corruption will not be
-            performed.</pd>
+              (<codeph>appendoptimized=TRUE</codeph>). The value <codeph>TRUE</codeph> is the
+            default and enables CRC checksum validation for append-optimized tables. The checksum is
+            calculated during block creation and is stored on disk. Checksum validation is performed
+            during block reads. If the checksum calculated during the read does not match the stored
+            checksum, the transaction is cancelled. If you set the value to
+              <codeph>FALSE</codeph> to disable checksum validation, checking the table data for
+            on-disk corruption will not be performed.</pd>
           <pd><b>compresstype</b> — Set to <codeph>ZLIB</codeph> (the default),
               <codeph>ZSTD</codeph>, <codeph>RLE_TYPE</codeph>, or
               <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type of compression used. The
@@ -630,7 +630,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
               type="section" format="dita"
                 ><codeph>gp_create_table_random_default_distribution</codeph></xref>. </pd>
           <pd>The <codeph>DISTRIBUTED REPLICATED</codeph> clause replicates the entire table to all
-            Greenplum Database segment instances. It can be used when it is necessary to execute
+            Greenplum Database segment instances. It can be used when it is necessary to run 
             user-defined functions on segments when the functions require access to all rows in the
             table, or to improve query performance by preventing broadcast motions. </pd>
         </plentry>
@@ -765,8 +765,9 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             implementation.</p></li>
         <li>For append-optimized tables, <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not
           allowed in a repeatable read or serializable transaction and will cause the transaction to
-          abort. <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are
-          not supported with append-optimized tables.</li>
+          end prematurely. <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are not supported
+          with append-optimized tables. <codeph>CLUSTER</codeph> on append-optimized tables is only
+          supported over B-tree indexes.</li>
         <li>To insert data into a partitioned table, you specify the root partitioned table, the
           table created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf
           child table of the partitioned table in an <codeph>INSERT</codeph> command. An error is
@@ -774,7 +775,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           table that is not a leaf child table in the <codeph>INSERT</codeph> command is not
           supported. Execution of other DML commands such as <codeph>UPDATE</codeph> and
             <codeph>DELETE</codeph> on any child table of a partitioned table is not supported.
-          These commands must be executed on the root partitioned table, the table created with the
+          These commands must be run on the root partitioned table, the table created with the
             <codeph>CREATE TABLE</codeph> command.</li>
         <li>The default values for these table storage options can be specified with the server
           configuration parameter <codeph>gp_default_storage_option</codeph>.<ul id="ul_hr1_3m1_tt">

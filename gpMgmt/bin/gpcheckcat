@@ -2,19 +2,22 @@
 '''
 Usage: gpcheckcat [<option>] [dbname]
 
-    -?
-    -B parallel: number of worker threads
-    -g dir     : generate SQL to rectify catalog corruption, put it in dir
-    -p port    : DB port number
-    -P passwd  : DB password
-    -U uname   : DB User Name
-    -v         : verbose
-    -A         : all databases
-    -S option  : shared table options (none, only)
-    -O         : Online
-    -l         : list all tests
-    -R test    : run this particular test
-    -C catname : run cross consistency, FK and ACL tests for this catalog table
+    -? | --help              : help menu
+    -B parallel              : number of worker threads
+    -g dir                   : generate SQL to rectify catalog corruption, put it in dir
+    -p port                  : DB port number
+    -P passwd                : DB password
+    -U uname                 : DB User Name
+    -v                       : verbose
+    -A                       : all databases
+    -S option                : shared table options (none, only)
+    -O                       : Online
+    -l                       : list all tests
+    -R test | 'test1, test2' : run this particular test(s) (quoted, comma seperated list for multiple tests)
+    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma seperated list for multiple tests)
+    -C catname               : run cross consistency, FK and ACL tests for this catalog table
+
+    Test subset options are mutually exclusive, use only one of '-R', '-s', or '-C'.
 
 '''
 import datetime
@@ -118,6 +121,7 @@ class Global():
         self.opt['-O'] = False
 
         self.opt['-R'] = None
+        self.opt['-s'] = None
         self.opt['-C'] = None
         self.opt['-l'] = False
 
@@ -225,14 +229,14 @@ def getalldbs():
 def parseCommandLine():
     try:
         # A colon following the flag indicates an argument is expected
-        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:C:lE')
-    except Exception, e:
+        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:s:C:lE', 'help')
+    except Exception as e:
         usage('Error: ' + str(e))
 
     for (switch, val) in options:
-        if switch == '-?':
+        if switch in ('-?', '--help'):
             usage(0)
-        elif switch[1] in 'pBPUgSRC':
+        elif switch[1] in 'pBPUgSRCs':
             GV.opt[switch] = val
         elif switch[1] in 'vtAOlE':
             GV.opt[switch] = True
@@ -263,6 +267,9 @@ def parseCommandLine():
 
     if GV.opt['-R']:
         logger.debug('Run this test: %s' % GV.opt['-R'])
+
+    if GV.opt['-s']:
+        logger.debug('Skip these tests: %s' % GV.opt['-s'])
 
     if GV.opt['-C']:
         GV.opt['-C'] = GV.opt['-C'].lower()
@@ -1825,7 +1832,7 @@ def removeFastSequence(db):
               """
         curs = db.query(qry)
         for row in curs.dictresult():
-            seg = row['dbid']  # dbid of targetted segment
+            seg = row['dbid']  # dbid of targeted segment
             name = 'gp_fastsequence tuple'  # for comment purposes
             table = 'gp_fastsequence'  # table name
             cols = {'objid': row['objid']}  # column name and value
@@ -3099,9 +3106,6 @@ def runCheckCatname(catalog_table_obj):
 #-------------------------------------------------------------------------------
 def runOneCheck(name):
 
-    if not all_checks.has_key(name):
-        logger.info("'%s' is not a valid test" % (name))
-        raise LookupError
     if GV.opt['-O'] and not all_checks[name]["online"]:
         logger.info("%s: Skip this test in online mode" % (name))
         return
@@ -3121,12 +3125,12 @@ def runOneCheck(name):
 
 
 #-------------------------------------------------------------------------------
-def runAllChecks():
+def runAllChecks(run_tests):
     '''
     perform catalog check for specified database
     '''
     for name in sorted(all_checks, key=lambda x: all_checks[x]["order"]):
-        if all_checks[name]["version"] >= GV.version:
+        if all_checks[name]["version"] >= GV.version and name in run_tests:
             runOneCheck(name)
 
     closeDbs()
@@ -4357,6 +4361,30 @@ def check_gpexpand():
         myprint(msg)
         sys.exit(1)
 
+def check_test_subset_parameter_count():
+    test_option_count = 0
+    if GV.opt['-R']:
+        test_option_count += 1
+    if GV.opt['-s']:
+        test_option_count += 1
+    if GV.opt['-C']:
+        test_option_count += 1
+    if test_option_count > 1:
+        myprint("Error: multiple test subset options are selected. Please pass only one of [-R, -s, -C] if necessary.\n")
+        setError(ERROR_NOREPAIR)
+        sys.exit(GV.retcode)
+    return
+
+def check_test_names_parsed(tests):
+    correct_tests = []
+    for t in tests:
+        if t not in all_checks:
+            myprint("'%s' is not a valid test" % t)
+        else:
+            correct_tests.append(t)
+    return correct_tests
+
+
 def main():
     parseCommandLine()
     if GV.opt['-l']:
@@ -4368,7 +4396,9 @@ def main():
         myprint("Error: only Greenplum database version >= 4.0 are supported\n")
         sys.exit(GV.retcode)
 
-    # gpcheckcat should check gpexpand runnning status
+    check_test_subset_parameter_count()
+
+    # gpcheckcat should check gpexpand running status
     check_gpexpand()
 
     GV.cfg = getGPConfiguration()
@@ -4405,15 +4435,7 @@ def main():
 
         drop_leaked_schemas(leaked_schema_dropper, dbname)
 
-        if GV.opt['-R']:
-            name = GV.opt['-R']
-            try:
-                runOneCheck(name)
-            except LookupError, e:
-                myprint("'%s' is not a valid test\n\n" % (name))
-                setError(ERROR_NOREPAIR)
-                sys.exit(GV.retcode)
-        elif GV.opt['-C']:
+        if GV.opt['-C']:
             namestr = GV.opt['-C']
             try:
                 catalog_table_obj = getCatObj(namestr)
@@ -4422,7 +4444,19 @@ def main():
                 setError(ERROR_NOREPAIR)
                 sys.exit(GV.retcode)
         else:
-            runAllChecks()
+            if GV.opt['-R']:
+                run_names = GV.opt['-R']
+                run_names_array = [x.strip() for x in run_names.split(",")]
+                run_tests = check_test_names_parsed(run_names_array)
+            elif GV.opt['-s']:
+                skip_names = GV.opt['-s']
+                skip_names_array = [x.strip() for x in skip_names.split(",")]
+                skip_tests = check_test_names_parsed(skip_names_array)
+                run_tests = [x for x in all_checks if x not in skip_tests]
+            else:
+                run_tests = all_checks.keys()
+
+            runAllChecks(run_tests)
 
         checkcatReport()
 

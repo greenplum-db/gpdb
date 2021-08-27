@@ -3019,6 +3019,22 @@ looks_like_temp_rel_name(const char *name)
 	return true;
 }
 
+/*
+ * Synchronize all xlog files and pg_wal itself in pg_wal
+ *
+ * This is called at the beginning of recovery.
+ */
+void
+SyncAllXLogFiles(void)
+{
+	/* We can skip this whole thing if fsync is disabled. */
+	if (!enableFsync)
+		return;
+
+	ereport(LOG, (errmsg("Synchronization of the wal directory starts.")));
+	walkdir("pg_xlog", datadir_fsync_fname, false, LOG);
+	ereport(LOG, (errmsg("synchronization of the wal directory finishes.")));
+}
 
 /*
  * Issue fsync recursively on PGDATA and all its contents.

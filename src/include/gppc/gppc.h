@@ -1928,7 +1928,7 @@ __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
  * \code
  *   void callback_function(GppcReportInfo info, void *arg);
  * \endcode
- * The first argument is the report infomation and the second argument is
+ * The first argument is the report information and the second argument is
  * arbitrary pointer that you pass to GppcInstallReportCallback().  This
  * callback will be called in any report event including INFO, NOTICE, etc.
  * In case ERROR occurs, the callback will be flushed automatically,

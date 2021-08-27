@@ -49,10 +49,7 @@ class GpDeleteSystemTestCase(GpTestCase):
 
         self.assertTrue('Backup files exist' in context.exception)
 
-
-    @patch('gpdeletesystem.dbconn.DbURL', return_value=Mock())
-    @patch('gpdeletesystem.gparray.GpArray.initFromCatalog', return_value=Mock())
-    def test_delete_cluster_force_succeeds(self, dbURL, initFromCatalog):
+    def test_delete_cluster_force_failed_to_get_gparray(self):
         setattr(self.options, 'force', True)
         setattr(self.options, 'pgport', 5432)
         os.mkdir(os.path.join(self.tmpDir, 'backups'))

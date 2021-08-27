@@ -1113,7 +1113,11 @@ processResponse(fts_context *context)
 				}
 				else
 				{
-					elog(WARNING, "FTS double fault detected (content=%d) "
+					/*
+					 * Only log here, will handle it later, having an "ERROR"
+					 * keyword here for customer convenience
+					 */
+					elog(WARNING, "ERROR: FTS double fault detected (content=%d) "
 						 "primary dbid=%d, mirror dbid=%d",
 						 primary->config->segindex, primary->config->dbid, mirror->config->dbid);
 					ftsInfo->state = FTS_RESPONSE_PROCESSED;
@@ -1130,7 +1134,11 @@ processResponse(fts_context *context)
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_PROMOTE_FAILED:
-				elog(WARNING, "FTS double fault detected (content=%d) "
+				/*
+				 * Only log here, will handle it later, having an "ERROR"
+				 * keyword here for customer convenience
+				 */
+				elog(WARNING, "ERROR: FTS double fault detected (content=%d) "
 					 "primary dbid=%d, mirror dbid=%d",
 					 primary->config->segindex, primary->config->dbid, mirror->config->dbid);
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
@@ -1138,7 +1146,7 @@ processResponse(fts_context *context)
 			case FTS_PROMOTE_SUCCESS:
 				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 					   "FTS mirror (content=%d, dbid=%d) promotion "
-					   "triggerred successfully",
+					   "triggered successfully",
 					   primary->config->segindex, primary->config->dbid);
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;

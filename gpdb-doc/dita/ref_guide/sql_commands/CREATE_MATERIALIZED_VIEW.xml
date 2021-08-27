@@ -18,7 +18,7 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>CREATE MATERIALIZED VIEW</codeph> defines a materialized view of a query. The query
-        is executed and used to populate the view at the time the command is issued (unless
+        is run and used to populate the view at the time the command is issued (unless
           <codeph>WITH NO DATA</codeph> is used) and can be refreshed using <codeph>REFRESH
           MATERIALIZED VIEW</codeph>.</p>
       <p><codeph>CREATE MATERIALIZED VIEW</codeph> is similar to <codeph>CREATE TABLE AS</codeph>,

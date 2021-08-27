@@ -286,9 +286,9 @@ select greet('hello');
       </body>
     </topic>
     <topic id="topic8" xml:lang="en">
-      <title>Executing and Preparing SQL Queries </title>
+      <title>Running and Preparing SQL Queries </title>
       <body>
-        <p>The PL/Python <codeph>plpy</codeph> module provides two Python functions to execute an
+        <p>The PL/Python <codeph>plpy</codeph> module provides two Python functions to run an
           SQL query and prepare an execution plan for a query, <codeph>plpy.execute</codeph> and
             <codeph>plpy.prepare</codeph>. Preparing the execution plan for a query is useful if you
           run the query from multiple Python functions.</p>
@@ -311,7 +311,7 @@ select greet('hello');
               <li><codeph>status</codeph> which is the <codeph>SPI_execute()</codeph> return
                 value.</li>
             </ul></p>
-          <p>For example, this Python statement in a PL/Python user-defined function executes a
+          <p>For example, this Python statement in a PL/Python user-defined function runs a
             query. </p>
           <codeblock>rv = plpy.execute("SELECT * FROM my_table", 5)</codeblock>
           <p>The <codeph>plpy.execute</codeph> function returns up to 5 rows from
@@ -382,7 +382,7 @@ $$ LANGUAGE plpythonu;</codeblock>
         </ul>
         <p>The message functions <codeph>plpy.error</codeph> and <codeph>plpy.fatal</codeph> raise a
           Python exception which, if uncaught, propagates out to the calling query, causing the
-          current transaction or subtransaction to be aborted. The functions <codeph>raise
+          current transaction or subtransaction to be cancelled. The functions <codeph>raise
             plpy.ERROR(msg)</codeph> and <codeph>raise plpy.FATAL(msg)</codeph> are equivalent to
           calling <codeph>plpy.error</codeph> and <codeph>plpy.fatal</codeph>, respectively. The
           other message functions only generate messages of different priority levels. </p>
@@ -622,7 +622,7 @@ INSERT INTO sales VALUES
  (5, 2014, 1,5, 'europe'),
  (6, 2014, 2,6, 'asia'),
  (7, 2002, 3,7, 'usa') ;</codeblock>
-      <p>This PL/Python UDF executes a <codeph>SELECT</codeph> command that returns 5 rows from the
+      <p>This PL/Python UDF runs a <codeph>SELECT</codeph> command that returns 5 rows from the
         table. The Python function returns the <codeph>REGION</codeph> value from the row specified
         by the input value. In the Python function, the row numbering starts from 0. Valid input for
         the function is an integer between 0 and 4. </p>
@@ -639,7 +639,7 @@ $$ language plpythonu EXECUTE ON MASTER;</codeblock>
       <codeblock>SELECT mypytest(2) ;</codeblock>
       <p>This command deletes the UDF from the database.</p>
       <codeblock>DROP FUNCTION mypytest(integer) ;</codeblock>
-      <p>This example executes the PL/Python function in the previous example as an anonymous block
+      <p>This example runs the PL/Python function in the previous example as an anonymous block
         with the <codeph>DO</codeph> command. In the example, the anonymous block retrieves the
         input value from a temporary table.</p>
       <codeblock>CREATE TEMP TABLE mytemp AS VALUES (2) DISTRIBUTED RANDOMLY;

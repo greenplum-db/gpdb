@@ -69,7 +69,7 @@ where <varname>action</varname> is one of:
         type. However, a superuser can alter ownership of any type.) To add an attribute or alter an attribute type, you must also
         have <codeph>USAGE</codeph> privilege on the data type.</p>
       <p><codeph>ALTER TYPE ... ADD VALUE</codeph> (the form that adds a new value to an enum type)
-        cannot be executed inside a transaction block.</p>
+        cannot be run inside a transaction block.</p>
       <p> Comparisons involving an added enum value will sometimes be slower than comparisons
         involving only original members of the enum type. This will usually only occur if
           <codeph>BEFORE</codeph> or <codeph>AFTER</codeph> is used to set the new value's sort

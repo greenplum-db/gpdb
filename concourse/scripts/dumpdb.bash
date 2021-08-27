@@ -3,7 +3,6 @@ set -e
 set -u
 
 source /usr/local/greenplum-db-devel/greenplum_path.sh
-source /opt/gcc_env.sh
 source ./gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 
 # launch the cluster when necessary

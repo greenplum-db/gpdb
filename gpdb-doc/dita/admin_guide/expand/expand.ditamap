@@ -8,6 +8,6 @@
   <topicref href="expand-nodes.xml"/>
   <topicref href="expand-initialize.xml"/>
   <topicref href="expand-redistribute.xml" type="topic" format="dita"/>
-  <topicref href="expand-rm-schema.xml" type="topic" format="dita"/>
+  <topicref href="expand-post.xml" type="topic" format="dita"/>
  </topicref>
 </map>

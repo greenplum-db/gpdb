@@ -620,7 +620,7 @@ usedByConcurrentTransaction(AOSegfileStatus *segfilestat, int segno)
 							  latestWriteXid))
 	{
 		ereportif(Debug_appendonly_print_segfile_choice, LOG,
-				  (errmsg("usedByConcurrentTransaction: current distributed transaction id %u preceeds latestWriterXid %x of segno %d, so it is considered concurrent",
+				  (errmsg("usedByConcurrentTransaction: current distributed transaction id %u precedes latestWriterXid %x of segno %d, so it is considered concurrent",
 						  getDistributedTransactionId(),
 						  latestWriteXid,
 						  segno)));
@@ -1125,6 +1125,13 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 	AORelHashEntryData *aoentry = NULL;
 	TransactionId CurrentXid = GetTopTransactionId();
 
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("reserved_segno") == FaultInjectorTypeSkip)
+	{
+		return RESERVED_SEGNO;
+	}
+#endif
+
 	switch (Gp_role)
 	{
 		case GP_ROLE_EXECUTE:
@@ -1141,6 +1148,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 		case GP_ROLE_DISPATCH:
 
 			Assert(existingsegno == InvalidFileSegNumber);
+
 
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 					  (errmsg("SetSegnoForWrite: Choosing a segno for append-only "
@@ -1436,7 +1444,7 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 
 	elogif(Debug_appendonly_print_segfile_choice, LOG,
 		   "Get awaiting drop state from segments: "
-		   "releation %s (%d)",
+		   "relation %s (%d)",
 		   RelationGetRelationName(parentrel),
 		   RelationGetRelid(parentrel));
 
@@ -1515,7 +1523,7 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 						awaiting_drop[segno] = true;
 						elogif(Debug_appendonly_print_segfile_choice, LOG,
 							   "Found awaiting drop segment file: "
-							   "releation %s (%d), segno = %d",
+							   "relation %s (%d), segno = %d",
 							   RelationGetRelationName(parentrel),
 							   RelationGetRelid(parentrel),
 							   segno);

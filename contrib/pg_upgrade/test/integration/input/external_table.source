@@ -1,1 +1,0 @@
-CREATE READABLE EXTERNAL TABLE r_t1 (a int, b int) LOCATION ('file://@hostname@@upgrade_test_path@/test-data/external_table_data.csv') FORMAT 'TEXT' (DELIMITER '|');

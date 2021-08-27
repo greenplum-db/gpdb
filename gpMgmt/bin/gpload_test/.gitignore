@@ -4,6 +4,10 @@ gpload/config
 gpload2/config
 gpload2/setup.out
 gpload2/data_file.txt
+gpload2/data_file.txt.gz
+gpload2/data_file1.txt
+gpload2/data_file1.txt.bz2
+gpload2/data_file2.txt
 GPTest.pm
 gpstringsubs.pl
 gpdiff.pl

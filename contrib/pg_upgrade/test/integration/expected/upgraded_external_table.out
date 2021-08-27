@@ -1,6 +1,0 @@
-SELECT * FROM r_t1;
- a | b 
----+---
- 1 | 2 
- 3 | 4 
-(2 rows)

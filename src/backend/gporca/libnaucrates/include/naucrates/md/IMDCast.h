@@ -40,7 +40,8 @@ public:
 		EmdtNone,		 /* failed to find any coercion pathway */
 		EmdtFunc,		 /* apply the specified coercion function */
 		EmdtRelabelType, /* binary-compatible cast, no function */
-		EmdtArrayCoerce	 /* need an ArrayCoerceExpr node */
+		EmdtArrayCoerce, /* need an ArrayCoerceExpr node */
+		EmdtCoerceViaIO	 /* need a CoerceViaIO, no function */
 	};
 
 	// object type

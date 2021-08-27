@@ -1,0 +1,610 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="ih135496">Objects Deprecated in Greenplum 6</title>
+  <abstract>Greenplum Database 6 has deprecated several database objects. These changes can effect
+    the successful upgrade from one major version to another. Review these objects when using
+    Geenplum Upgrade, or Greenplum Backup and Restore. This topic highlight these changes.
+    <p/></abstract>
+  <body>
+    <p>
+      <ul id="ul_tpq_zwq_kr">
+        <li><xref href="#dep_relations" format="dita"/></li>
+        <li><xref href="#dep_columns" format="dita"/></li>
+        <li><xref href="#dep_functions_procedures" format="dita"/></li>
+        <li><xref href="#dep_types_domains_composite" format="dita"/></li>
+        <li><xref href="#dep_operators" format="dita"/></li>
+      </ul>
+    </p>
+  </body>
+  <topic id="dep_relations" xml:lang="en">
+    <title id="in201560">Deprecated Relations</title>
+    <body>
+      <p>The following list includes the Greenplum Database 6 deprecated relations.</p>
+      <ul id="ul_wqp_v33_fqb">
+        <li>gp_toolkit.__gp_localid </li>
+        <li>gp_toolkit.__gp_masterid</li>
+        <li>gp_toolkit.__gp_masterid</li>
+        <li>pg_catalog.gp_configuration</li>
+        <li>pg_catalog.gp_configuration </li>
+        <li>pg_catalog.gp_db_interfaces </li>
+        <li>pg_catalog.gp_fault_strategy </li>
+        <li>pg_catalog.gp_global_sequence </li>
+        <li>pg_catalog.gp_interfaces </li>
+        <li>pg_catalog.gp_persistent_database_node </li>
+        <li>pg_catalog.gp_persistent_filespace_node </li>
+        <li>pg_catalog.gp_persistent_relation_node </li>
+        <li>pg_catalog.gp_persistent_tablespace_node </li>
+        <li>pg_catalog.gp_relation_node </li>
+        <li>pg_catalog.pg_autovacuum </li>
+        <li>pg_catalog.pg_filespace </li>
+        <li>pg_catalog.pg_filespace_entry </li>
+        <li>pg_catalog.pg_listener </li>
+        <li>pg_catalog.pg_window</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="dep_columns">
+    <title>Deprecated Columns </title>
+    <body>
+      <p>The following list includes the Greenplum Database 6 deprecated columns. </p>
+      <ul id="ul_ypx_f4w_2z">
+        <li>gp_toolkit.gp_resgroup_config.proposed_concurrency</li>
+        <li>gp_toolkit.gp_resgroup_config.proposed_memory_limit</li>
+        <li>gp_toolkit.gp_resgroup_config.proposed_memory_shared_quota</li>
+        <li>gp_toolkit.gp_resgroup_config.proposed_memory_spill_ratio</li>
+        <li>gp_toolkit.gp_workfile_entries.current_query</li>
+        <li>gp_toolkit.gp_workfile_entries.directory</li>
+        <li>gp_toolkit.gp_workfile_entries.procpid</li>
+        <li>gp_toolkit.gp_workfile_entries.state</li>
+        <li>gp_toolkit.gp_workfile_entries.workmem</li>
+        <li>gp_toolkit.gp_workfile_usage_per_query.current_query</li>
+        <li>gp_toolkit.gp_workfile_usage_per_query.procpid</li>
+        <li>gp_toolkit.gp_workfile_usage_per_query.state</li>
+        <li>information_schema.triggers.condition_reference_new_row</li>
+        <li>information_schema.triggers.condition_reference_new_table</li>
+        <li>information_schema.triggers.condition_reference_old_row</li>
+        <li>information_schema.triggers.condition_reference_old_table</li>
+        <li>information_schema.triggers.condition_timing</li>
+        <li>pg_catalog.gp_distribution_policy.attrnums</li>
+        <li>pg_catalog.gp_segment_configuration.replication_port</li>
+        <li>pg_catalog.pg_aggregate.agginvprelimfn</li>
+        <li>pg_catalog.pg_aggregate.agginvtransfn</li>
+        <li>pg_catalog.pg_aggregate.aggordered</li>
+        <li>pg_catalog.pg_aggregate.aggprelimfn</li>
+        <li>pg_catalog.pg_am.amcanshrink</li>
+        <li>pg_catalog.pg_am.amgetmulti</li>
+        <li>pg_catalog.pg_am.amindexnulls</li>
+        <li>pg_catalog.pg_amop.amopreqcheck</li>
+        <li>pg_catalog.pg_authid.rolconfig</li>
+        <li>pg_catalog.pg_authid.rolcreaterexthdfs</li>
+        <li>pg_catalog.pg_authid.rolcreatewexthdfs</li>
+        <li>pg_catalog.pg_class.relfkeys</li>
+        <li>pg_catalog.pg_class.relrefs</li>
+        <li>pg_catalog.pg_class.reltoastidxid</li>
+        <li>pg_catalog.pg_class.reltriggers</li>
+        <li>pg_catalog.pg_class.relukeys</li>
+        <li>pg_catalog.pg_database.datconfig</li>
+        <li>pg_catalog.pg_exttable.fmterrtbl</li>
+        <li>pg_catalog.pg_proc.proiswin</li>
+        <li>pg_catalog.pg_resgroupcapability.proposed</li>
+        <li>pg_catalog.pg_rewrite.ev_attr</li>
+        <li>pg_catalog.pg_roles.rolcreaterexthdfs</li>
+        <li>pg_catalog.pg_roles.rolcreatewexthdfs</li>
+        <li>pg_catalog.pg_stat_activity.current_query</li>
+        <li>pg_catalog.pg_stat_activity.procpid</li>
+        <li>pg_catalog.pg_stat_replication.procpid</li>
+        <li>pg_catalog.pg_tablespace.spcfsoid</li>
+        <li>pg_catalog.pg_tablespace.spclocation</li>
+        <li>pg_catalog.pg_tablespace.spcmirlocations</li>
+        <li>pg_catalog.pg_tablespace.spcprilocations</li>
+        <li>pg_catalog.pg_trigger.tgconstrname</li>
+        <li>pg_catalog.pg_trigger.tgisconstraint</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="dep_functions_procedures">
+    <title>Deprecated Functions and Procedures</title>
+    <body>
+      <p>The following list includes the Greenplum Database 6 deprecated functions and procedures. </p>
+      <ul id="ul_rpq_pn3_fqb">
+        <li>gp_toolkit.__gp_aocsseg</li>
+        <li>gp_toolkit.__gp_aocsseg_history</li>
+        <li>gp_toolkit.__gp_aocsseg_name</li>
+        <li>gp_toolkit.__gp_aoseg_history</li>
+        <li>gp_toolkit.__gp_aoseg_name</li>
+        <li>gp_toolkit.__gp_aovisimap</li>
+        <li>gp_toolkit.__gp_aovisimap_entry</li>
+        <li>gp_toolkit.__gp_aovisimap_entry_name</li>
+        <li>gp_toolkit.__gp_aovisimap_hidden_info</li>
+        <li>gp_toolkit.__gp_aovisimap_hidden_info_name</li>
+        <li>gp_toolkit.__gp_aovisimap_name</li>
+        <li>gp_toolkit.__gp_param_local_setting</li>
+        <li>gp_toolkit.__gp_workfile_entries_f</li>
+        <li>gp_toolkit.__gp_workfile_mgr_used_diskspace_f</li>
+        <li>information_schema._pg_keyissubset</li>
+        <li>information_schema._pg_underlying_index</li>
+        <li>pg_catalog.areajoinsel</li>
+        <li>pg_catalog.array_agg_finalfn</li>
+        <li>pg_catalog.bmcostestimate</li>
+        <li>pg_catalog.bmgetmulti</li>
+        <li>pg_catalog.bpchar_pattern_eq</li>
+        <li>pg_catalog.bpchar_pattern_ne</li>
+        <li>pg_catalog.btcostestimate</li>
+        <li>pg_catalog.btgetmulti</li>
+        <li>pg_catalog.btgpxlogloccmp</li>
+        <li>pg_catalog.btname_pattern_cmp</li>
+        <li>pg_catalog.btrescan</li>
+        <li>pg_catalog.contjoinsel</li>
+        <li>pg_catalog.cume_dist_final</li>
+        <li>pg_catalog.cume_dist_prelim</li>
+        <li>pg_catalog.dense_rank_immed</li>
+        <li>pg_catalog.eqjoinsel</li>
+        <li>pg_catalog.first_value</li>
+        <li>pg_catalog.first_value_any</li>
+        <li>pg_catalog.first_value_bit</li>
+        <li>pg_catalog.first_value_bool</li>
+        <li>pg_catalog.first_value_box</li>
+        <li>pg_catalog.first_value_bytea</li>
+        <li>pg_catalog.first_value_char</li>
+        <li>pg_catalog.first_value_cidr</li>
+        <li>pg_catalog.first_value_circle</li>
+        <li>pg_catalog.first_value_float4</li>
+        <li>pg_catalog.first_value_float8</li>
+        <li>pg_catalog.first_value_inet</li>
+        <li>pg_catalog.first_value_int4</li>
+        <li>pg_catalog.first_value_int8</li>
+        <li>pg_catalog.first_value_interval</li>
+        <li>pg_catalog.first_value_line</li>
+        <li>pg_catalog.first_value_lseg</li>
+        <li>pg_catalog.first_value_macaddr</li>
+        <li>pg_catalog.first_value_money</li>
+        <li>pg_catalog.first_value_name</li>
+        <li>pg_catalog.first_value_numeric</li>
+        <li>pg_catalog.first_value_oid</li>
+        <li>pg_catalog.first_value_path</li>
+        <li>pg_catalog.first_value_point</li>
+        <li>pg_catalog.first_value_polygon</li>
+        <li>pg_catalog.first_value_reltime</li>
+        <li>pg_catalog.first_value_smallint</li>
+        <li>pg_catalog.first_value_text</li>
+        <li>pg_catalog.first_value_tid</li>
+        <li>pg_catalog.first_value_time</li>
+        <li>pg_catalog.first_value_timestamp</li>
+        <li>pg_catalog.first_value_timestamptz</li>
+        <li>pg_catalog.first_value_timetz</li>
+        <li>pg_catalog.first_value_varbit</li>
+        <li>pg_catalog.first_value_varchar</li>
+        <li>pg_catalog.first_value_xid</li>
+        <li>pg_catalog.flatfile_update_trigger</li>
+        <li>pg_catalog.float4_avg_accum</li>
+        <li>pg_catalog.float4_avg_decum</li>
+        <li>pg_catalog.float4_decum</li>
+        <li>pg_catalog.float8_amalg</li>
+        <li>pg_catalog.float8_avg</li>
+        <li>pg_catalog.float8_avg_accum</li>
+        <li>pg_catalog.float8_avg_amalg</li>
+        <li>pg_catalog.float8_avg_decum</li>
+        <li>pg_catalog.float8_avg_demalg</li>
+        <li>pg_catalog.float8_decum</li>
+        <li>pg_catalog.float8_demalg</li>
+        <li>pg_catalog.float8_regr_amalg</li>
+        <li>pg_catalog.get_ao_compression_ratio</li>
+        <li>pg_catalog.get_ao_distribution</li>
+        <li>pg_catalog.ginarrayconsistent</li>
+        <li>pg_catalog.gincostestimate</li>
+        <li>pg_catalog.gin_extract_tsquery</li>
+        <li>pg_catalog.gingetmulti</li>
+        <li>pg_catalog.gingettuple</li>
+        <li>pg_catalog.ginqueryarrayextract</li>
+        <li>pg_catalog.ginrescan</li>
+        <li>pg_catalog.gin_tsquery_consistent</li>
+        <li>pg_catalog.gist_box_consistent</li>
+        <li>pg_catalog.gist_circle_consistent</li>
+        <li>pg_catalog.gistcostestimate</li>
+        <li>pg_catalog.gistgetmulti</li>
+        <li>pg_catalog.gist_poly_consistent</li>
+        <li>pg_catalog.gistrescan</li>
+        <li>pg_catalog.gp_activate_standby</li>
+        <li>pg_catalog.gp_add_global_sequence_entry</li>
+        <li>pg_catalog.gp_add_master_standby</li>
+        <li>pg_catalog.gp_add_persistent_database_node_entry</li>
+        <li>pg_catalog.gp_add_persistent_filespace_node_entry</li>
+        <li>pg_catalog.gp_add_persistent_relation_node_entry</li>
+        <li>pg_catalog.gp_add_persistent_tablespace_node_entry</li>
+        <li>pg_catalog.gp_add_relation_node_entry</li>
+        <li>pg_catalog.gp_add_segment</li>
+        <li>pg_catalog.gp_add_segment_mirror</li>
+        <li>pg_catalog.gp_add_segment_persistent_entries</li>
+        <li>pg_catalog.gpaotidin</li>
+        <li>pg_catalog.gpaotidout</li>
+        <li>pg_catalog.gpaotidrecv</li>
+        <li>pg_catalog.gpaotidsend</li>
+        <li>pg_catalog.gp_backup_launch</li>
+        <li>pg_catalog.gp_changetracking_log</li>
+        <li>pg_catalog.gp_dbspecific_ptcat_verification</li>
+        <li>pg_catalog.gp_delete_global_sequence_entry</li>
+        <li>pg_catalog.gp_delete_persistent_database_node_entry</li>
+        <li>pg_catalog.gp_delete_persistent_filespace_node_entry</li>
+        <li>pg_catalog.gp_delete_persistent_relation_node_entry</li>
+        <li>pg_catalog.gp_delete_persistent_tablespace_node_entry</li>
+        <li>pg_catalog.gp_delete_relation_node_entry</li>
+        <li>pg_catalog.gp_nondbspecific_ptcat_verification</li>
+        <li>pg_catalog.gp_persistent_build_all</li>
+        <li>pg_catalog.gp_persistent_build_db</li>
+        <li>pg_catalog.gp_persistent_relation_node_check</li>
+        <li>pg_catalog.gp_persistent_repair_delete</li>
+        <li>pg_catalog.gp_persistent_reset_all</li>
+        <li>pg_catalog.gp_prep_new_segment</li>
+        <li>pg_catalog.gp_quicklz_compress</li>
+        <li>pg_catalog.gp_quicklz_constructor</li>
+        <li>pg_catalog.gp_quicklz_decompress</li>
+        <li>pg_catalog.gp_quicklz_destructor</li>
+        <li>pg_catalog.gp_quicklz_validator</li>
+        <li>pg_catalog.gp_read_backup_file</li>
+        <li>pg_catalog.gp_remove_segment_persistent_entries</li>
+        <li>pg_catalog.gp_restore_launch</li>
+        <li>pg_catalog.gp_statistics_estimate_reltuples_relpages_oid</li>
+        <li>pg_catalog.gp_update_ao_master_stats</li>
+        <li>pg_catalog.gp_update_global_sequence_entry</li>
+        <li>pg_catalog.gp_update_persistent_database_node_entry</li>
+        <li>pg_catalog.gp_update_persistent_filespace_node_entry</li>
+        <li>pg_catalog.gp_update_persistent_relation_node_entry</li>
+        <li>pg_catalog.gp_update_persistent_tablespace_node_entry</li>
+        <li>pg_catalog.gp_update_relation_node_entry</li>
+        <li>pg_catalog.gp_write_backup_file</li>
+        <li>pg_catalog.gpxlogloceq</li>
+        <li>pg_catalog.gpxloglocge</li>
+        <li>pg_catalog.gpxloglocgt</li>
+        <li>pg_catalog.gpxloglocin</li>
+        <li>pg_catalog.gpxlogloclarger</li>
+        <li>pg_catalog.gpxloglocle</li>
+        <li>pg_catalog.gpxlogloclt</li>
+        <li>pg_catalog.gpxloglocne</li>
+        <li>pg_catalog.gpxloglocout</li>
+        <li>pg_catalog.gpxloglocrecv</li>
+        <li>pg_catalog.gpxloglocsend</li>
+        <li>pg_catalog.gpxloglocsmaller</li>
+        <li>pg_catalog.gtsquery_consistent</li>
+        <li>pg_catalog.gtsvector_consistent</li>
+        <li>pg_catalog.hashcostestimate</li>
+        <li>pg_catalog.hashgetmulti</li>
+        <li>pg_catalog.hashrescan</li>
+        <li>pg_catalog.iclikejoinsel</li>
+        <li>pg_catalog.icnlikejoinsel</li>
+        <li>pg_catalog.icregexeqjoinsel</li>
+        <li>pg_catalog.icregexnejoinsel</li>
+        <li>pg_catalog.int24mod</li>
+        <li>pg_catalog.int2_accum</li>
+        <li>pg_catalog.int2_avg_accum</li>
+        <li>pg_catalog.int2_avg_decum</li>
+        <li>pg_catalog.int2_decum</li>
+        <li>pg_catalog.int2_invsum</li>
+        <li>pg_catalog.int42mod</li>
+        <li>pg_catalog.int4_accum</li>
+        <li>pg_catalog.int4_avg_accum</li>
+        <li>pg_catalog.int4_avg_decum</li>
+        <li>pg_catalog.int4_decum</li>
+        <li>pg_catalog.int4_invsum</li>
+        <li>pg_catalog.int8</li>
+        <li>pg_catalog.int8_accum</li>
+        <li>pg_catalog.int8_avg</li>
+        <li>pg_catalog.int8_avg_accum</li>
+        <li>pg_catalog.int8_avg_amalg</li>
+        <li>pg_catalog.int8_avg_decum</li>
+        <li>pg_catalog.int8_avg_demalg</li>
+        <li>pg_catalog.int8_decum</li>
+        <li>pg_catalog.int8_invsum</li>
+        <li>pg_catalog.interval_amalg</li>
+        <li>pg_catalog.interval_decum</li>
+        <li>pg_catalog.interval_demalg</li>
+        <li>pg_catalog.json_each_text</li>
+        <li>pg_catalog.json_extract_path_op</li>
+        <li>pg_catalog.json_extract_path_text_op</li>
+        <li>pg_catalog.lag</li>
+        <li>pg_catalog.lag_any</li>
+        <li>pg_catalog.lag_bit</li>
+        <li>pg_catalog.lag_bool</li>
+        <li>pg_catalog.lag_box</li>
+        <li>pg_catalog.lag_bytea</li>
+        <li>pg_catalog.lag_char</li>
+        <li>pg_catalog.lag_cidr </li>
+        <li>pg_catalog.lag_circle</li>
+        <li>pg_catalog.lag_float4</li>
+        <li>pg_catalog.lag_float8</li>
+        <li>pg_catalog.lag_inet</li>
+        <li>pg_catalog.lag_int4</li>
+        <li>pg_catalog.lag_int8</li>
+        <li>pg_catalog.lag_interval</li>
+        <li>pg_catalog.lag_line</li>
+        <li>pg_catalog.lag_lseg</li>
+        <li>pg_catalog.lag_macaddr</li>
+        <li>pg_catalog.lag_money</li>
+        <li>pg_catalog.lag_name</li>
+        <li>pg_catalog.lag_numeric</li>
+        <li>pg_catalog.lag_oid</li>
+        <li>pg_catalog.lag_path</li>
+        <li>pg_catalog.lag_point</li>
+        <li>pg_catalog.lag_polygon</li>
+        <li>pg_catalog.lag_reltime</li>
+        <li>pg_catalog.lag_smallint</li>
+        <li>pg_catalog.lag_text</li>
+        <li>pg_catalog.lag_tid</li>
+        <li>pg_catalog.lag_time</li>
+        <li>pg_catalog.lag_timestamp</li>
+        <li>pg_catalog.lag_timestamptz</li>
+        <li>pg_catalog.lag_timetz</li>
+        <li>pg_catalog.lag_varbit</li>
+        <li>pg_catalog.lag_varchar</li>
+        <li>pg_catalog.lag_xid</li>
+        <li>pg_catalog.last_value</li>
+        <li>pg_catalog.last_value_any</li>
+        <li>pg_catalog.last_value_bigint</li>
+        <li>pg_catalog.last_value_bit</li>
+        <li>pg_catalog.last_value_bool</li>
+        <li>pg_catalog.last_value_box</li>
+        <li>pg_catalog.last_value_bytea</li>
+        <li>pg_catalog.last_value_char</li>
+        <li>pg_catalog.last_value_cidr</li>
+        <li>pg_catalog.last_value_circle</li>
+        <li>pg_catalog.last_value_float4</li>
+        <li>pg_catalog.last_value_float8</li>
+        <li>pg_catalog.last_value_inet</li>
+        <li>pg_catalog.last_value_int</li>
+        <li>pg_catalog.last_value_interval</li>
+        <li>pg_catalog.last_value_line</li>
+        <li>pg_catalog.last_value_lseg</li>
+        <li>pg_catalog.last_value_macaddr</li>
+        <li>pg_catalog.last_value_money</li>
+        <li>pg_catalog.last_value_name</li>
+        <li>pg_catalog.last_value_numeric</li>
+        <li>pg_catalog.last_value_oid</li>
+        <li>pg_catalog.last_value_path</li>
+        <li>pg_catalog.last_value_point</li>
+        <li>pg_catalog.last_value_polygon</li>
+        <li>pg_catalog.last_value_reltime</li>
+        <li>pg_catalog.last_value_smallint</li>
+        <li>pg_catalog.last_value_text</li>
+        <li>pg_catalog.last_value_tid</li>
+        <li>pg_catalog.last_value_time</li>
+        <li>pg_catalog.last_value_timestamp</li>
+        <li>pg_catalog.last_value_timestamptz</li>
+        <li>pg_catalog.last_value_timetz</li>
+        <li>pg_catalog.last_value_varbit</li>
+        <li>pg_catalog.last_value_varchar</li>
+        <li>pg_catalog.last_value_xid</li>
+        <li>pg_catalog.lead</li>
+        <li>pg_catalog.lead_any</li>
+        <li>pg_catalog.lead_bit</li>
+        <li>pg_catalog.lead_bool</li>
+        <li>pg_catalog.lead_box</li>
+        <li>pg_catalog.lead_bytea</li>
+        <li>pg_catalog.lead_char</li>
+        <li>pg_catalog.lead_cidr</li>
+        <li>pg_catalog.lead_circle</li>
+        <li>pg_catalog.lead_float4</li>
+        <li>pg_catalog.lead_float8</li>
+        <li>pg_catalog.lead_inet</li>
+        <li>pg_catalog.lead_int</li>
+        <li>pg_catalog.lead_int8</li>
+        <li>pg_catalog.lead_interval</li>
+        <li>pg_catalog.lead_lag_frame_maker</li>
+        <li>pg_catalog.lead_line</li>
+        <li>pg_catalog.lead_lseg</li>
+        <li>pg_catalog.lead_macaddr</li>
+        <li>pg_catalog.lead_money</li>
+        <li>pg_catalog.lead_name</li>
+        <li>pg_catalog.lead_numeric</li>
+        <li>pg_catalog.lead_oid</li>
+        <li>pg_catalog.lead_path</li>
+        <li>pg_catalog.lead_point</li>
+        <li>pg_catalog.lead_polygon</li>
+        <li>pg_catalog.lead_reltime</li>
+        <li>pg_catalog.lead_smallint</li>
+        <li>pg_catalog.lead_text</li>
+        <li>pg_catalog.lead_tid</li>
+        <li>pg_catalog.lead_time</li>
+        <li>pg_catalog.lead_timestamp</li>
+        <li>pg_catalog.lead_timestamptz</li>
+        <li>pg_catalog.lead_timetz</li>
+        <li>pg_catalog.lead_varbit</li>
+        <li>pg_catalog.lead_varchar</li>
+        <li>pg_catalog.lead_xid</li>
+        <li>pg_catalog.likejoinsel</li>
+        <li>pg_catalog.max</li>
+        <li>pg_catalog.min</li>
+        <li>pg_catalog.mod</li>
+        <li>pg_catalog.name_pattern_eq</li>
+        <li>pg_catalog.name_pattern_ge</li>
+        <li>pg_catalog.name_pattern_gt</li>
+        <li>pg_catalog.name_pattern_le</li>
+        <li>pg_catalog.name_pattern_lt</li>
+        <li>pg_catalog.name_pattern_ne</li>
+        <li>pg_catalog.neqjoinsel</li>
+        <li>pg_catalog.nlikejoinsel</li>
+        <li>pg_catalog.ntile</li>
+        <li>pg_catalog.ntile_final</li>
+        <li>pg_catalog.ntile_prelim_bigint</li>
+        <li>pg_catalog.ntile_prelim_int</li>
+        <li>pg_catalog.ntile_prelim_numeric</li>
+        <li>pg_catalog.numeric_accum</li>
+        <li>pg_catalog.numeric_amalg</li>
+        <li>pg_catalog.numeric_avg</li>
+        <li>pg_catalog.numeric_avg_accum</li>
+        <li>pg_catalog.numeric_avg_amalg</li>
+        <li>pg_catalog.numeric_avg_decum</li>
+        <li>pg_catalog.numeric_avg_demalg</li>
+        <li>pg_catalog.numeric_decum</li>
+        <li>pg_catalog.numeric_demalg</li>
+        <li>pg_catalog.numeric_stddev_pop</li>
+        <li>pg_catalog.numeric_stddev_samp</li>
+        <li>pg_catalog.numeric_var_pop</li>
+        <li>pg_catalog.numeric_var_samp</li>
+        <li>pg_catalog.percent_rank_final</li>
+        <li>pg_catalog.pg_current_xlog_insert_location</li>
+        <li>pg_catalog.pg_current_xlog_location</li>
+        <li>pg_catalog.pg_cursor</li>
+        <li>pg_catalog.pg_get_expr</li>
+        <li>pg_catalog.pg_lock_status</li>
+        <li>pg_catalog.pg_objname_to_oid</li>
+        <li>pg_catalog.pg_prepared_statement</li>
+        <li>pg_catalog.pg_prepared_xact</li>
+        <li>pg_catalog.pg_relation_size</li>
+        <li>pg_catalog.pg_show_all_settings</li>
+        <li>pg_catalog.pg_start_backup</li>
+        <li>pg_catalog.pg_stat_get_activity</li>
+        <li>pg_catalog.pg_stat_get_backend_txn_start</li>
+        <li>pg_catalog.pg_stat_get_wal_senders</li>
+        <li>pg_catalog.pg_stop_backup</li>
+        <li>pg_catalog.pg_switch_xlog</li>
+        <li>pg_catalog.pg_total_relation_size</li>
+        <li>pg_catalog.pg_xlogfile_name</li>
+        <li>pg_catalog.pg_xlogfile_name_offset</li>
+        <li>pg_catalog.positionjoinsel</li>
+        <li>pg_catalog.rank_immed</li>
+        <li>pg_catalog.regexeqjoinsel</li>
+        <li>pg_catalog.regexnejoinsel</li>
+        <li>pg_catalog.row_number_immed</li>
+        <li>pg_catalog.scalargtjoinsel</li>
+        <li>pg_catalog.scalarltjoinsel</li>
+        <li>pg_catalog.string_agg</li>
+        <li>pg_catalog.string_agg_delim_transfn</li>
+        <li>pg_catalog.string_agg_transfn</li>
+        <li>pg_catalog.text_pattern_eq</li>
+        <li>pg_catalog.text_pattern_ne</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="dep_types_domains_composite">
+    <title>Deprecated Types, Domains, and Composite Types</title>
+    <body>
+      <p>The following list includes the Greenplum Database 6 deprecated types, domains, and
+        composite types. </p>
+      <ul id="ul_omm_sv3_fqb">
+        <li>gp_toolkit.__gp_localid</li>
+        <li>gp_toolkit.__gp_masterid</li>
+        <li>pg_catalog._gpaotid</li>
+        <li>pg_catalog._gpxlogloc</li>
+        <li>pg_catalog.gp_configuration</li>
+        <li>pg_catalog.gp_db_interfaces</li>
+        <li>pg_catalog.gp_fault_strategy</li>
+        <li>pg_catalog.gp_global_sequence</li>
+        <li>pg_catalog.gp_interfaces</li>
+        <li>pg_catalog.gp_persistent_database_node</li>
+        <li>pg_catalog.gp_persistent_filespace_node</li>
+        <li>pg_catalog.gp_persistent_relation_node</li>
+        <li>pg_catalog.gp_persistent_tablespace_node</li>
+        <li>pg_catalog.gp_relation_node</li>
+        <li>pg_catalog.gpaotid</li>
+        <li>pg_catalog.gpxlogloc</li>
+        <li>pg_catalog.nb_classification</li>
+        <li>pg_catalog.pg_autovacuum</li>
+        <li>pg_catalog.pg_filespace</li>
+        <li>pg_catalog.pg_filespace_entry</li>
+        <li>pg_catalog.pg_listener</li>
+        <li>pg_catalog.pg_window</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="dep_operators">
+    <title>Deprecated Operators</title>
+    <body>
+      <p>The following list includes the Greenplum Database 6 deprecated operators. </p>
+      <table frame="all" rowsep="1" colsep="1" id="table_iml_cx3_fqb">
+        <title>Deprecated Operators</title>
+        <tgroup cols="2">
+          <colspec colname="c1" colnum="1" colwidth="1*"/>
+          <colspec colname="c2" colnum="2" colwidth="1.13*"/>
+          <thead>
+            <row>
+              <entry>oprname</entry>
+              <entry>oprcode</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>pg_catalog.#> </entry>
+              <entry> json_extract_path_op</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.#>>  </entry>
+              <entry>json_extract_path_text_op</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.% </entry>
+              <entry>int42mod</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.%</entry>
+              <entry>int24mod</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.&lt; </entry>
+              <entry>gpxlogloclt</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.&lt;= </entry>
+              <entry>gpxloglocle</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.&lt;></entry>
+              <entry>gpxloglocne</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.= </entry>
+              <entry>gpxlogloceq</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.> </entry>
+              <entry>gpxloglocgt</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.>= </entry>
+              <entry>gpxloglocge</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~&lt;=~ </entry>
+              <entry>name_pattern_le</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~&lt;>~</entry>
+              <entry>name_pattern_ne</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~&lt;>~</entry>
+              <entry>bpchar_pattern_ne</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~&lt;>~ </entry>
+              <entry>textne</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~&lt;~ </entry>
+              <entry>name_pattern_lt</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~=~ </entry>
+              <entry>name_pattern_eq</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~=~ </entry>
+              <entry>bpchar_pattern_eq</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~=~ </entry>
+              <entry>texteq</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~>=~ </entry>
+              <entry>name_pattern_ge</entry>
+            </row>
+            <row>
+              <entry>pg_catalog.~>~ </entry>
+              <entry>name_pattern_gt</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+</topic>

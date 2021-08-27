@@ -107,12 +107,12 @@ SELECT m.title || ' ' || m.author || ' ' || m.abstract || ' ' || d.body AS docum
 FROM messages m, docs d
 WHERE mid = did AND mid = 12;</codeblock>
       <note>
-        <p>Actually, in these example queries, <codeph>coalesce</codeph> should be used to prevent a
-          single <codeph>NULL</codeph> attribute from causing a <codeph>NULL</codeph> result for the
+        <p>In these example queries, <codeph>coalesce</codeph> should be used to prevent a single
+            <codeph>NULL</codeph> attribute from causing a <codeph>NULL</codeph> result for the
           whole document.</p>
       </note>
       <p>Another possibility is to store the documents as simple text files in the file system. In
-        this case, the database can be used to store the full text index and to execute searches,
+        this case, the database can be used to store the full text index and to run searches,
         and some unique identifier can be used to retrieve the document from the file system.
         However, retrieving files from outside the database requires superuser permissions or
         special function support, so this is usually less convenient than keeping all the data
@@ -217,43 +217,46 @@ text @@ text</codeblock>
   <section id="gptext">
     <title>Comparing Greenplum Database Text Search with Tanzu Greenplum Text</title>
       <p>Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database
-        MPP platform. VMware also offers Tanzu Greenplum Text, which integrates Greenplum Database with
-        the Apache Solr text search platform. GPText installs an Apache Solr cluster alongside your
-        Greenplum Database cluster and provides Greenplum Database functions you can use to create
-        Solr indexes, query them, and receive results in the database session.</p>
+        MPP platform. VMware also offers Tanzu Greenplum Text, which integrates Greenplum Database
+        with the Apache Solr text search platform. Tanzu Greenplum Text installs an Apache Solr
+        cluster alongside your Greenplum Database cluster and provides Greenplum Database functions
+        you can use to create Solr indexes, query them, and receive results in the database
+        session.</p>
       <p>Both of these systems provide powerful, enterprise-quality document indexing and searching
         services. Greenplum Database text search is immediately available to you, with no need to
         install and maintain additional software. If it meets your applications' requirements, you
         should use it. </p>
-      <p>GPText, with Solr, has many capabilities that are not available with Greenplum Database
-        text search. In particular, GPText is better for advanced text analysis applications.
-        Following are some of the advantages and capabilities available to you when you use GPText
-        for text search applications.</p>
+      <p>Tanzu Greenplum Text, with Solr, has many capabilities that are not available with
+        Greenplum Database text search. In particular, it is better for advanced text analysis
+        applications. Following are some of the advantages and capabilities available to you when
+        you use Tanzu Greenplum Text for text search applications.</p>
       <ul id="ul_ywm_fg1_nfb">
         <li>The Apache Solr cluster can be scaled separately from the database. Solr nodes can be
           deployed on the Greenplum Database hosts or on separate hosts on the network. </li>
         <li>Indexing and search workloads can be moved out of Greenplum Database to Solr to maintain
           database query performance.</li>
-        <li>GPText creates Solr indexes that are split into <i>shards</i>, one per Greenplum
-          Database segment, so the advantages of the Greenplum Database MPP architecture are
-          extended to text search workloads.</li>
+        <li>Tanzu Greenplum Text creates Solr indexes that are split into <i>shards</i>, one per
+          Greenplum Database segment, so the advantages of the Greenplum Database MPP architecture
+          are extended to text search workloads.</li>
         <li>Indexing and searching documents with Solr is very fast and can be scaled by adding more
           Solr nodes to the cluster.</li>
         <li>Document content can be stored in Greenplum Database tables, in the Solr index, or both. </li>
-        <li>Through GPText, Solr can index documents stored as text in Greenplum Database tables, as
-          well as documents in external stores accessible using HTTP, FTP, S3, or HDFS URLs.</li>
+        <li>Through Tanzu Greenplum Text, Solr can index documents stored as text in Greenplum
+          Database tables, as well as documents in external stores accessible using HTTP, FTP, S3,
+          or HDFS URLs.</li>
         <li>Solr automatically recognizes most rich document formats and indexes document content
           and metadata separately.</li>
         <li>Solr indexes are highly customizable. You can customize the text analysis chain down to
           the field level.</li>
         <li>In addition to the large number of languages, tokenizers, and filters available from the
-          Apache project, GPText provides a social media tokenizer, an international text tokenizer,
-          and a universal query parser that understands several common text search syntaxes.</li>
-        <li>The GPText API supports advanced text analysis tools, such as facetting, named entity
-          recognition (NER), and parts of speech (POS) recognition.</li>
+          Apache project, Tanzu Greenplum Text provides a social media tokenizer, an international
+          text tokenizer, and a universal query parser that understands several common text search
+          syntaxes.</li>
+        <li>The Tanzu Greenplum Text API supports advanced text analysis tools, such as facetting,
+          named entity recognition (NER), and parts of speech (POS) recognition.</li>
       </ul>
-      <p>See the <xref href="https://gptext.docs.pivotal.io" format="html" scope="external">GPText
-          Documentation web site</xref> for more information about GPText. </p>
+      <p>See the <xref href="https://gptext.docs.pivotal.io" format="html" scope="external">Tanzu
+          Greenplum Text Documentation web site</xref> for more information. </p>
     </section>
   </body>
 </topic>

@@ -17,9 +17,8 @@
 #include "gpos/common/CEnumSetIter.h"
 #include "gpos/common/CRefCount.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/CPhysicalHashJoin.h"
+#include "gpopt/operators/CPhysical.h"
 #include "gpopt/xforms/CXform.h"
 #include "gpopt/xforms/CXformContext.h"
 #include "gpopt/xforms/CXformResult.h"

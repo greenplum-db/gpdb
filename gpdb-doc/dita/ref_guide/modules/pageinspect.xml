@@ -31,7 +31,7 @@
             scope="external" format="html">pageinspect</xref></codeph> in the PostgreSQL
           documentation for detailed information about the individual functions in this module.</p>
         <note>For <codeph>pageinspect</codeph> functions that read data from a database, the
-          function reads data only from the segment instance where the function is executed. For
+          function reads data only from the segment instance where the function is run. For
           example, the <codeph>get_raw_page()</codeph> function returns a <codeph>block number out
             of range</codeph> error when you try to read data from a user-defined table on the
           Greenplum Database master because there is no data in the table on the master segment. The

@@ -279,7 +279,7 @@ Distributed by: (sale_id)
           column in a query on a replicated table.</p>
           <section>
             <title>Avoiding an Extreme Skew Warning</title>
-            <p>You may receive the following warning message while executing a query that performs a
+            <p>You may receive the following warning message while running a query that performs a
               hash join operation:</p>
             <p>
               <codeph>Extreme skew in the innerside of Hashjoin</codeph>
@@ -302,7 +302,7 @@ Distributed by: (sale_id)
                   base tables. If the filters and distribution keys are the same, consider
                   redistributing some of the base tables with different distribution keys. </li>
                 <li> Check the cardinality of the join keys. If they have low cardinality, try to
-                  rewrite the query with different joining columns or or additional filters on the
+                  rewrite the query with different joining columns or additional filters on the
                   tables to reduce the number of rows. These changes could change the query
                   semantics.</li>
               </ol></p>
@@ -533,7 +533,7 @@ Distributed by: (sale_id)
       <body>
         <p>The Greenplum Database administrative schema <i>gp_toolkit</i> contains views that
           display information about Greenplum Database workfiles. Greenplum Database creates
-          workfiles on disk if it does not have sufficient memory to execute the query in memory.
+          workfiles on disk if it does not have sufficient memory to run the query in memory.
           This information can be used for troubleshooting and tuning queries. The information in
           the views can also be used to specify the values for the Greenplum Database configuration
           parameters <codeph>gp_workfile_limit_per_query</codeph> and
@@ -786,8 +786,8 @@ Distributed by: (sale_id)
         <p>Greenplum Database provides a utility called <codeph>gplogfilter</codeph> can search
           through a Greenplum Database log file for entries matching the specified criteria. By
           default, this utility searches through the Greenplum Database master log file in the
-          default logging location. For example, to display the last three lines of the master log
-          file:</p>
+          default logging location. For example, to display the last three lines of each of the log
+          files under the master directory:</p>
         <p>
           <codeblock>$ gplogfilter -n 3
 </codeblock>

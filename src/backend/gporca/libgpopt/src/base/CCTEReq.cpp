@@ -113,8 +113,8 @@ CCTEReq::CCTEReqEntry::Equals(CCTEReqEntry *pcre) const
 IOstream &
 CCTEReq::CCTEReqEntry::OsPrint(IOstream &os) const
 {
-	os << m_id << (CCTEMap::EctProducer == m_ect ? "p" : "c")
-	   << (m_fRequired ? "" : "(opt)");
+	os << m_id << (CCTEMap::EctProducer == m_ect ? ":p" : ":c")
+	   << (m_fRequired ? " " : "(opt) ");
 
 	if (NULL != m_pdpplan)
 	{
@@ -494,7 +494,6 @@ CCTEReq::OsPrint(IOstream &os) const
 	{
 		CCTEReqEntry *pcre = const_cast<CCTEReqEntry *>(hmcri.Value());
 		pcre->OsPrint(os);
-		os << " ";
 	}
 
 	return os;

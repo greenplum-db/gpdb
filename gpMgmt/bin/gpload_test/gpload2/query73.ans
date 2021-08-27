@@ -1,0 +1,14 @@
+2021-07-29 21:08:32|INFO|gpload session started 2021-07-29 21:08:32
+2021-07-29 21:08:32|INFO|setting schema 'public' for table 'chinese表'
+2021-07-29 21:08:32|ERROR|no mapping for input column "notexist" to output table
+2021-07-29 21:08:32|INFO|rows Inserted          = 0
+2021-07-29 21:08:32|INFO|rows Updated           = 0
+2021-07-29 21:08:32|INFO|data formatting errors = 0
+2021-07-29 21:08:32|INFO|gpload failed
+2021-07-29 21:08:33|INFO|gpload session started 2021-07-29 21:08:33
+2021-07-29 21:08:33|INFO|setting schema 'public' for table 'chinese表'
+2021-07-29 21:08:33|ERROR|no mapping for input column "notexist" to output table
+2021-07-29 21:08:33|INFO|rows Inserted          = 0
+2021-07-29 21:08:33|INFO|rows Updated           = 0
+2021-07-29 21:08:33|INFO|data formatting errors = 0
+2021-07-29 21:08:33|INFO|gpload failed

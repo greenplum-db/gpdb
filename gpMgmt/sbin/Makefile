@@ -6,10 +6,10 @@ include $(top_builddir)/src/Makefile.global
 endif
 
 PYCS= gpconfig_helper.pyc gpoperation.pyc gpsegstop.pyc gpcleansegmentdir.pyc \
-	gpgetstatususingtransition.pyc gpsegstart.pyc
+	gpgetstatususingtransition.pyc gpsegstart.pyc seg_update_pg_hba.pyc
 
 PROGRAMS= gpconfig_helper.py gpoperation.py gpsegstop.py gpcleansegmentdir.py \
-	gpgetstatususingtransition.py gpsegstart.py packcore
+	gpgetstatususingtransition.py gpsegstart.py packcore seg_update_pg_hba.py
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(sbindir)'

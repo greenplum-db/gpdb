@@ -220,7 +220,7 @@ db = ...
               </plentry>
               <plentry>
                 <pt>connect_query</pt>
-                <pd>Query to be executed after a connection is established, but before allowing the
+                <pd>Query to be run after a connection is established, but before allowing the
                   connection to be used by any clients. If the query raises errors, they are logged
                   but ignored otherwise.</pd>
               </plentry>
@@ -269,7 +269,7 @@ db = ...
               <plentry>
                 <pt>logfile</pt>
                 <pd>Specifies the location of the log file. The log file is kept open. After log
-                  rotation execute <codeph>kill -HUP</codeph> or run the <codeph>RELOAD;</codeph>
+                  rotation run <codeph>kill -HUP</codeph> or run the <codeph>RELOAD;</codeph>
                   command in the PgBouncer Administration Console. <p>Default: not set.</p><note> On
                     Windows machines, the service must be stopped and started</note>.</pd>
               </plentry>
@@ -461,7 +461,7 @@ db = ...
                 <pt>application_name_add_host</pt>
                 <pd>Add the client host address and port to the application name setting set on
                   connection start. This helps in identifying the source of bad queries. The setting
-                  is overwritten without detection if the application executes <codeph>SET
+                  is overwritten without detection if the application runs <codeph>SET
                     APPLICATION_NAME</codeph> after connecting. <p>Default: 1</p></pd>
               </plentry>
             </parml>
@@ -852,7 +852,7 @@ DETAIL:
                 are finished. This command is to be used to prepare to restart the database.</pd>
               <pd>If a database name is specified, only that database is paused.</pd>
               <pd>If you run a <codeph>PAUSE <varname>database</varname></codeph> command, and then
-                a <codeph>PAUSE</codeph> command to pause all databases, you must execute two
+                a <codeph>PAUSE</codeph> command to pause all databases, you must run two
                   <codeph>RESUME</codeph> commands, one for all databases, and one for the named
                 database.</pd>
             </plentry>
@@ -1313,7 +1313,7 @@ DETAIL:
         <topic id="LISTS">
           <title>LISTS</title>
           <body>
-            <p>Shows the following PgBouncer statistcs in two columns: the item label and value.</p>
+            <p>Shows the following PgBouncer statistics in two columns: the item label and value.</p>
             <table frame="all" id="table_sqj_2dl_gs">
               <title>Count of PgBouncer Items</title>
               <tgroup cols="2">

@@ -1,5 +1,4 @@
 # protect the default target for this file from the targets in Makefile.global
-# and Makefile.thirdparty
 default: all
 
 top_builddir = ..
@@ -16,6 +15,7 @@ ifeq "$(enable_debug_extensions)" "yes"
 	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
                gp_internal_tools \
+               gp_pitr \
                gp_debug_numsegments \
                gp_inject_fault \
                gp_replica_check \
@@ -24,6 +24,7 @@ else
 	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
                gp_internal_tools \
+               gp_pitr \
                gp_error_handling
 endif
 

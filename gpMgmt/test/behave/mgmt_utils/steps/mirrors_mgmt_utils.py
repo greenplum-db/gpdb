@@ -1,4 +1,6 @@
 from os import path
+from gppylib.commands.base import REMOTE
+import socket
 
 from behave import given, when, then
 from test.behave_utils.utils import *
@@ -15,11 +17,11 @@ class MirrorMgmtContext:
         self.input_file = None
 
     def input_file_path(self):
-        if self.working_directory is None:
+        if not self.working_directory:
             raise Exception("working directory not set")
         if self.input_file is None:
             raise Exception("input file not set")
-        return path.normpath(path.join(self.working_directory,self.input_file))
+        return path.normpath(path.join(self.working_directory[0], self.input_file))
 
 
 def _generate_input_config(spread=False):
@@ -60,15 +62,18 @@ def _write_datadir_config_for_three_mirrors():
     return datadir_config
 
 
-@when("gpaddmirrors adds 3 mirrors")
-def add_three_mirrors(context):
+@when('gpaddmirrors adds 3 mirrors with additional args "{args}"' )
+def add_three_mirrors_with_args(context, args):
     datadir_config = _write_datadir_config_for_three_mirrors()
     mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
     cmd_str = 'gpaddmirrors -o %s -m %s' % (mirror_config_output_file, datadir_config)
     Command('generate mirror_config file', cmd_str).run(validateAfter=True)
-    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % mirror_config_output_file)
-    cmd.run(validateAfter=True)
+    cmd = 'gpaddmirrors -a -v -i %s %s' % (mirror_config_output_file, args)
+    run_gpcommand(context, command=cmd)
 
+@when("gpaddmirrors adds 3 mirrors")
+def add_three_mirrors(context):
+    add_three_mirrors_with_args(context, '')
 
 def add_mirrors(context, options):
     context.mirror_config = _generate_input_config()
@@ -95,7 +100,7 @@ def _get_mirror_count():
 # for the item
 @given('pg_hba file "{filename}" on host "{host}" contains entries for "{search_items}"')
 @then('pg_hba file "{filename}" on host "{host}" contains entries for "{search_items}"')
-def impl(context, search_items, host, filename):
+def impl(context, filename, host, search_items):
     cmd_str = "ssh %s cat %s" % (host, filename)
     cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
     cmd.run(validateAfter=False)
@@ -103,6 +108,11 @@ def impl(context, search_items, host, filename):
     pghba_contents= cmd.get_stdout().strip().split('\n')
     for search_item in search_item_list:
         found = False
+        if search_item == 'samehost':
+            search_hostname = 'samehost'
+            search_ip_addr = ['samehost']
+        else:
+            search_hostname, _, search_ip_addr = socket.gethostbyaddr(search_item)
         for entry in pghba_contents:
             contents = entry.strip()
             # for example: host all all hostname    trust
@@ -111,11 +121,12 @@ def impl(context, search_items, host, filename):
                 if len(tokens) != 5:
                     raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
                 hostname = tokens[3].strip()
-                if search_item == hostname:
+                if (search_item == hostname) or (search_hostname == hostname) or (search_ip_addr[0] in hostname):
                     found = True
                     break
         if not found:
-            raise Exception("entry for expected item %s not existing in pg_hba.conf '%s'" % (search_item, pghba_contents))
+            raise Exception("entry for expected item %s, ip_addr[0] %s not existing in pg_hba.conf '%s'"
+                            % (search_item, search_ip_addr[0], pghba_contents))
 
 
 # ensure pg_hba contains only cidr addresses, exclude mandatory entries for replication samenet if existing
@@ -294,10 +305,16 @@ def impl(context, mirror_config):
                 raise Exception('Expected primaries on %s to all be mirrored to the same host, but they are mirrored to %d different hosts' %
                         (primary_host, num_mirror_hosts))
 
-@given("a gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
-def impl(context, parent_dir, mode):
-    make_temp_dir(context,parent_dir, mode)
-    context.mirror_context.working_directory = context.temp_base_dir
+@given("{num} gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
+@given("{num} gprecoverseg directory under '{parent_dir}' with mode '{mode}' is created")
+def impl(context, num, parent_dir, mode):
+    num_dirs = 1 if num == 'a' else int(num)
+    make_temp_dir(context, parent_dir, mode)
+    context.mirror_context.working_directory = []
+    for i in range(num_dirs):
+        ith_dir = os.path.join(context.temp_base_dir, 'tmp_' + str(i))
+        os.mkdir(ith_dir, int(mode,8))
+        context.mirror_context.working_directory.append(ith_dir)
 
 
 @given("a '{file_type}' gpmovemirrors file is created")
@@ -314,7 +331,7 @@ def impl(context, file_type):
     elif file_type == 'badhost':
         badhost_config = '%s|%s|%s' % ('badhost',
                                        mirror.getSegmentPort(),
-                                       context.mirror_context.working_directory)
+                                       context.mirror_context.working_directory[0])
         contents = '%s %s' % (valid_config, badhost_config)
     elif file_type == 'samedir':
         valid_config_with_same_dir = '%s|%s|%s' % (
@@ -334,7 +351,7 @@ def impl(context, file_type):
         valid_config_with_different_dir = '%s|%s|%s' % (
             mirror.getSegmentHostName(),
             mirror.getSegmentPort(),
-            context.mirror_context.working_directory
+            context.mirror_context.working_directory[0]
         )
         contents = '%s %s' % (valid_config, valid_config_with_different_dir)
     else:
@@ -344,6 +361,26 @@ def impl(context, file_type):
     with open(context.mirror_context.input_file_path(), 'w') as fd:
         fd.write(contents)
 
+@given("a good gpmovemirrors file is created for moving {num} mirrors")
+@given("a good gprecoverseg input file is created for moving {num} mirrors")
+def impl(context, num):
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    contents = ''
+    for i in range(int(num)):
+        mirror = segments[i].mirrorDB
+
+        valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+                                     mirror.getSegmentPort(),
+                                     mirror.getSegmentDataDirectory())
+        valid_config_with_different_dir = '%s|%s|%s' % (
+            mirror.getSegmentHostName(),
+            mirror.getSegmentPort(),
+            context.mirror_context.working_directory[i]
+        )
+        contents += '%s %s\n' % (valid_config, valid_config_with_different_dir)
+    context.mirror_context.input_file = "gpmovemirrors_good_multi.txt"
+    with open(context.mirror_context.input_file_path(), 'w') as fd:
+        fd.write(contents)
 
 @when('the user runs gpmovemirrors')
 def impl(context):
@@ -353,6 +390,12 @@ def impl(context):
 @when('the user runs gpmovemirrors with additional args "{extra_args}"')
 def run_gpmovemirrors(context, extra_args=''):
     cmd = "gpmovemirrors --input=%s %s" % (
+        context.mirror_context.input_file_path(), extra_args)
+    run_gpcommand(context, cmd)
+
+@when('the user runs gprecoverseg with input file and additional args "{extra_args}"')
+def impl(context, extra_args=''):
+    cmd = "gprecoverseg -i %s %s" % (
         context.mirror_context.input_file_path(), extra_args)
     run_gpcommand(context, cmd)
 
@@ -417,3 +460,34 @@ def impl(context, mirror_config):
 
             fd.write(line_template % (old_address, old_port, old_directory, new_address, new_port, new_directory))
         fd.flush()
+
+@then('verify the tablespace directories on host "{host}" for content "{content}" are {status}')
+def impl(context, host, content, status):
+    if status not in ["deleted", "valid"]:
+        raise Exception('Unknown status.  Valid values are "deleted" and "valid"')
+    locations = []
+    existing_dirs =[]
+    dbid = -2
+    with dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False) as conn:
+        oids_query = "SELECT oid FROM pg_tablespace WHERE spcname NOT IN ('pg_default', 'pg_global')"
+        location_query = "SELECT t.tblspc_loc||'/'||c.dbid FROM gp_tablespace_location(%s) t JOIN gp_segment_configuration c ON t.gp_segment_id = c.content WHERE c.content = %s AND c.preferred_role = 'm'"
+
+        oids = [row[0] for row in dbconn.execSQL(conn, oids_query).fetchall()]
+        dbid = dbconn.execSQLForSingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE content = %s AND preferred_role = 'm'" % content)
+        for oid in oids:
+            locations.append(dbconn.execSQLForSingleton(conn, location_query % (oid, content)))
+
+    for location in locations:
+        cmd = Command(name="check tablespace dirs", cmdStr="find %s -name %s -type d -print 2> /dev/null ||true" % (location, dbid), ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+        output = cmd.get_results().stdout.strip()
+        if output != '':
+            existing_dirs.append(output)
+
+    if status == "deleted":
+        if existing_dirs:
+            raise Exception("One or more directories have not been deleted:\n%s" % existing_dirs)
+    else:
+        if existing_dirs != locations:
+            missing_dirs = [d for d in locations if d not in existing_dirs]
+            raise Exception("One or more directories are not present on %s: %s" % (host, missing_dirs))

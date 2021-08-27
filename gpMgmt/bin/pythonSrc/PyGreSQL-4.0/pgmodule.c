@@ -1215,7 +1215,7 @@ pglarge_read(pglargeobject * self, PyObject * args)
 	/* gets arguments */
 	if (!PyArg_ParseTuple(args, "i", &size))
 	{
-		PyErr_SetString(PyExc_TypeError, "read(size), wih size (integer).");
+		PyErr_SetString(PyExc_TypeError, "read(size), with size (integer).");
 		return NULL;
 	}
 

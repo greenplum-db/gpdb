@@ -211,22 +211,26 @@ def dump_tuple_count(cur, oid_str, f_out):
         f_out.writelines(updateStmt)
 
 def dump_stats(cur, oid_str, f_out, inclHLL):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
-        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
+    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, pgs.* ' \
+        'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt, pg_namespace pgtn ' \
         'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) ' \
         'and pgn.nspname NOT LIKE \'pg_temp_%%\' ' \
         'and pgc.oid = pgs.starelid ' \
         'and pga.attrelid = pgc.oid ' \
         'and pga.attnum = pgs.staattnum ' \
         'and pga.atttypid = pgt.oid ' \
+        'and pgt.typnamespace = pgtn.oid ' \
         'ORDER BY pgc.relname, pgs.staattnum' % (oid_str)
 
+    # the outline of the DML used to create stats for one column in pg_statistic
     pstring = '--\n' \
         '-- Table: {0}, Attribute: {1}\n' \
         '--\n' \
         '{2}DELETE FROM pg_statistic WHERE starelid={3} AND staattnum={4};\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
         '{5});\n\n'
+
+    # the types of the columns in the pg_statistic table, except for starelid and stavalues[1-5]
     types = ['smallint',  # staattnum
              'boolean',
              'real',
@@ -255,17 +259,29 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
         starelid = "'%s.%s'::regclass" % (E(vals[1]), E(vals[0]))
         rowVals = ["\t%s" % (starelid)]
         schemaname = vals[1]
+        typeschema = vals[3]
+        typename = vals[4]
+        if typeschema != "pg_catalog":
+            # a type that is not built-in, qualify it with its schema name
+            # and play it safe by double-quoting the identifiers
+            typename = '"%s"."%s"' % (typeschema, typename)
         i = 0
         hll = False
 
-        if vals[3][0] == '_':
-            rowTypes = types + [vals[3]] * 5
+        # determine the actual types of stavalues[1-5], the columns are defined as "anyarray"
+        if vals[4][0] == '_':
+            # column is an array type, use as is
+            rowTypes = types + [typename] * 5
         else:
-            rowTypes = types + [vals[3] + '[]'] * 5
-        for val, typ in zip(vals[5:], rowTypes):
+            # non-array type, make an array type out of it
+            rowTypes = types + [typename + '[]'] * 5
+
+        # create the content of the VALUES clause
+        for val, typ in zip(vals[6:], rowTypes):
             i = i + 1
             str_val = "'%s'" % val
             if i == 10 and (val == 98 or val == 99):
+                # column stakind5 has value 98 or 99 (HLL stats)
                 if inclHLL == False:
                     val = 0
                 hll = True
@@ -273,8 +289,12 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
             if val is None:
                 val = 'NULL'
             elif isinstance(val, (str, unicode)) and val[0] == '{':
-                val = "E'%s'" % E(val)
+                # use an Escape string for array constants and also add one
+                # more layer of backslash escape symbols, since the string
+                # will go through two layers of escape processing
+                val = "E'%s'" % E(val.replace('\\', '\\\\'))
             if i == 25 and hll == True:
+                # the actual HLL value in stavalues5
                 if inclHLL == True:
                     rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
                 else:
@@ -288,7 +308,7 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
         if schemaname != 'pg_catalog':
             linecomment = '-- ' # This will comment out the DELETE query
 
-        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), linecomment, starelid, vals[5], ',\n'.join(rowVals)))
+        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), linecomment, starelid, vals[6], ',\n'.join(rowVals)))
 
 def main():
     parser = parse_cmd_line()

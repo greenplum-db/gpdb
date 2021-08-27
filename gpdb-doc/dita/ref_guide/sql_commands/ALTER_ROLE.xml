@@ -69,7 +69,7 @@ ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname>
               the specified value becomes the session default, overriding whatever setting is
               present in the server configuration file (<codeph>postgresql.conf</codeph>) or has
               been received from the <codeph>postgres</codeph> command line. This only happens at
-              login time; executing <xref href="SET_ROLE.xml#topic1">SET ROLE</xref> or <xref
+              login time; running <xref href="SET_ROLE.xml#topic1">SET ROLE</xref> or <xref
                 href="SET_SESSION_AUTHORIZATION.xml#topic1">SET SESSION AUTHORIZATION</xref> does
               not cause new configuration values to be set. </p><p>Database-specific settings
                 attached to a role override settings for all databases. Settings for specific 
@@ -187,7 +187,7 @@ ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname>
           <pt>DENY deny_point</pt>
           <pt>DENY BETWEEN deny_point AND deny_point</pt>
           <pd>The <codeph>DENY</codeph> and <codeph>DENY BETWEEN</codeph> keywords set time-based
-            constraints that are enforced at login. <codeph>DENY</codeph>sets a day or a day and
+            constraints that are enforced at login. <codeph>DENY</codeph> sets a day or a day and
             time to deny access. <codeph>DENY BETWEEN</codeph> sets an interval during which access
             is denied. Both use the parameter <varname>deny_point</varname> that has following
             format:<codeblock>DAY day [ TIME 'time' ]</codeblock></pd>
@@ -195,11 +195,18 @@ ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname>
               formats:<p>For
               day:</p><codeblock>{'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
 'Saturday' | 0-6 }</codeblock><p>For
-                <codeph>time:</codeph></p><p>{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}</p></pd>
+                <codeph>time:</codeph></p></pd>
+          <pd>
+            <codeblock>{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}</codeblock>
+          </pd>
           <pd>The <codeph>DENY BETWEEN</codeph> clause uses two <varname>deny_point</varname>
-            parameters.</pd>
+            parameters which must indicate day and time.</pd>
           <pd>
             <codeblock>DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname></codeblock>
+          </pd>
+          <pd>For example:</pd>
+          <pd>
+            <codeblock>ALTER USER user1 DENY BETWEEN day 'Sunday' time '00:00' AND day 'Monday' time '00:00'; </codeblock>
           </pd>
           <pd>For more information about time-based constraints and examples, see "Managing Roles
             and Privileges" in the <i>Greenplum Database Administrator Guide</i>.</pd>

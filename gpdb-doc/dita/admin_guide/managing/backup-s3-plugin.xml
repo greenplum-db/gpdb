@@ -5,36 +5,95 @@
   <body>
     <p>The S3 storage plugin application lets you use an Amazon Simple Storage Service (Amazon S3)
       location to store and retrieve backups when you run <codeph><xref
-          href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref></codeph> and
-          <codeph><xref href="../../utility_guide/ref/gprestore.xml"
-        >gprestore</xref></codeph>. Amazon S3 provides secure, durable, highly-scalable object
-      storage.</p>
+          href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref></codeph> and <codeph><xref
+          href="../../utility_guide/ref/gprestore.xml">gprestore</xref></codeph>. Amazon S3 provides
+      secure, durable, highly-scalable object storage. The S3 plugin streams the backup data from a
+      named pipe (FIFO) directly to the S3 bucket without generating local disk I/O.</p>
     <p>The S3 storage plugin can also connect to an Amazon S3 compatible service such as <xref
         href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html" scope="external">Dell
         EMC Elastic Cloud Storage</xref> (ECS) and <xref href="https://www.minio.io/" format="html"
         scope="external">Minio</xref>.</p>
-    <p>To use the S3 storage plugin application, you specify the location of the plugin and the S3
-      login and backup location in a configuration file. When you run <codeph>gpbackup</codeph> or
-        <codeph>gprestore</codeph>, you specify the configuration file with the option
-        <codeph>--plugin-config</codeph>. For information about the configuration file, see <xref
-        href="#topic_ur2_fsn_ndb/s3-plugin-config" format="dita"/>.</p>
-    <p>If you perform a backup operation with the <codeph>gpbackup</codeph> option
-        <codeph>--plugin-config</codeph>, you must also specify the <codeph>--plugin-config</codeph>
-      option when you restore the backup with <codeph>gprestore</codeph>. </p>
+    <section>
+      <title>Prerequisites</title>
+      <p>Using Amazon S3 to back up and restore data requires an Amazon AWS account with access to
+        the Amazon S3 bucket. These are the Amazon S3 bucket permissions required for backing up and
+        restoring data:<ul id="ul_hh5_3mn_h4b">
+          <li><systemoutput>Upload/Delete</systemoutput> for the S3 user ID that uploads the
+            files</li>
+          <li><systemoutput>Open/Download</systemoutput> and <systemoutput>View</systemoutput> for
+            the S3 user ID that accesses the files</li>
+        </ul></p>
+      <p>For information about Amazon S3, see <xref href="https://aws.amazon.com/s3/" format="html"
+          scope="external">Amazon S3</xref>. For information about Amazon S3 regions and endpoints,
+        see <xref href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region"
+          format="html" scope="external">AWS service endpoints</xref>. For information about S3
+        buckets and folders, see the <xref href="https://aws.amazon.com/documentation/s3/"
+          format="html" scope="external">Amazon S3 documentation</xref>. </p>
+    </section>
+    <section>
+      <title>Installing the S3 Storage Plugin</title>
+    </section>
+    <p><ph otherprops="pivotal">The S3 storage plugin is included with the Tanzu Greenplum Backup
+        and Restore release. Use the latest S3 plugin release with the latest Tanzu Backup and
+        Restore, to avoid any incompatibilities. </ph></p>
+    <p><ph otherprops="oss-only">Open Source Greenplum Backup and Restore customers may get the
+        utility from <xref href="https://github.com/greenplum-db/gpbackup-s3-plugin" format="html"
+          scope="external">gpbackup-s3-plugin</xref>. Build the utility following the steps in <xref
+          href=" https://github.com/greenplum-db/gpbackup-s3-plugin#building-and-installing-binaries"
+          format="html" scope="external">Building and Installing the S3 plugin</xref>.</ph></p>
+    <p>The S3 storage plugin application must be in the same location on every Greenplum Database
+      host, for example <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The S3 storage plugin
+      requires a configuration file, installed only on the master host.</p>
+    <section><title>Using the S3 Storage Plugin</title><p>To use the S3 storage plugin application,
+        specify the location of the plugin, the S3 login credentials, and the backup location in a
+        configuration file. For information about the configuration file, see <xref
+          href="#topic_ur2_fsn_ndb/s3-plugin-config" format="dita"/>. </p><p>When running
+          <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>, specify the configuration file
+        with the option
+      <codeph>--plugin-config</codeph>.</p><codeblock>gpbackup --dbname &lt;database-name> --plugin-config /&lt;path-to-config-file>/&lt;s3-config-file>.yaml</codeblock>
+      When you perform a backup operation using <codeph>gpbackup</codeph> with the
+        <codeph>--plugin-config</codeph> option, you must also specify the
+        <codeph>--plugin-config</codeph> option when restoring with <codeph>gprestore</codeph>.
+        <codeblock>gprestore --timestamp &lt;YYYYMMDDHHMMSS> --plugin-config /&lt;path-to-config-file>/&lt;s3-config-file>.yaml</codeblock><p>The
+        S3 plugin stores the backup files in the S3 bucket, in a location similar to:
+        </p><codeblock>&lt;<varname>folder</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock><p>Where
+          <varname>folder</varname> is the location you specified in the S3 configuration file, and
+          <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date and time
+        stamps. </p><p>The S3 storage plugin logs are in
+            <codeph>&lt;gpadmin_home>/gpAdmin/gpbackup_s3_plugin_<varname>timestamp</varname>.log</codeph>
+        on each Greenplum host system. The <varname>timestamp</varname> format is
+          <codeph>YYYYMMDDHHMMSS</codeph>.</p><b> Example</b><p>This is an example S3 storage plugin
+        configuration file, named <codeph>s3-test-config.yaml</codeph>, that is used in the next
+          <codeph>gpbackup</codeph> example
+        command.</p><codeblock>executablepath: $GPHOME/bin/gpbackup_s3_plugin
+options: 
+  region: us-west-2
+  aws_access_key_id: test-s3-user
+  aws_secret_access_key: asdf1234asdf
+  bucket: gpdb-backup
+  folder: test/backup3</codeblock><p>This
+          <codeph>gpbackup</codeph> example backs up the database demo using the S3 storage plugin
+        with absolute path
+        <codeph>/home/gpadmin/s3-test</codeph>.<codeblock>gpbackup --dbname demo --plugin-config /home/gpadmin/s3-test/s3-test-config.yaml</codeblock></p><p>The
+        S3 storage plugin writes the backup files to this S3 location in the AWS region us-west-2. </p><p>
+        <codeblock>gpdb-backup/test/backup3/backups/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+      </p></section>
+    <p>This example restores a specific backup set defined by the <codeph>20201206233124</codeph>
+      timestamp, using the S3 plugin configuration file. </p>
+    <codeblock>gprestore --timestamp 20201206233124 --plugin-config /home/gpadmin/s3-test/s3-test-config.yaml</codeblock>
     <section id="s3-plugin-config">
       <title>S3 Storage Plugin Configuration File Format</title>
       <p>The configuration file specifies the absolute path to the Greenplum Database S3 storage
-        plugin executable, connection credentials, and S3 location. </p>
-      <p>The S3 storage plugin configuration file uses the <xref href="http://yaml.org/spec/1.1/"
-          scope="external" format="html">YAML 1.1</xref> document format and implements its own
-        schema for specifying the location of the Greenplum Database S3 storage plugin, connection
-        credentials, and S3 location and login information. </p>
-      <p>The configuration file must be a valid YAML document. The <codeph>gpbackup</codeph> and
-          <codeph>gprestore</codeph> utilities process the control file document in order and use
-        indentation (spaces) to determine the document hierarchy and the relationships of the
-        sections to one another. The use of white space is significant. White space should not be
-        used simply for formatting purposes, and tabs should not be used at all.</p>
-      <p>This is the structure of a S3 storage plugin configuration file.</p>
+        plugin executable, connection credentials, and S3 location. </p><p>The S3 storage plugin
+        configuration file uses the <xref href="http://yaml.org/spec/1.1/" scope="external"
+          format="html">YAML 1.1</xref> document format and implements its own schema for specifying
+        the location of the Greenplum Database S3 storage plugin, connection credentials, and S3
+        location and login information. </p><p>The configuration file must be a valid YAML document.
+        The <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities process the control
+        file document in order and use indentation (spaces) to determine the document hierarchy and
+        the relationships of the sections to one another. The use of white space is significant.
+        White space should not be used simply for formatting purposes, and tabs should not be used
+        at all.</p><p>This is the structure of a S3 storage plugin configuration file.</p>
       <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_s3_plugin</varname>>
 <xref href="#topic_ur2_fsn_ndb/s3-options" format="dita">options</xref>: 
   <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;<varname>aws-region</varname>>
@@ -43,128 +102,134 @@
   <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;<varname>aws-user-id-key</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;<varname>s3-bucket</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-encryption" format="dita">encryption</xref>: [on|off]</codeblock>
+  <xref href="#topic_ur2_fsn_ndb/s3-encryption" format="dita">encryption</xref>: [on|off]
+  <xref href="#topic_ur2_fsn_ndb/concurrent_requests" format="dita">backup_max_concurrent_requests</xref>: [int]
+    # default value is 6
+  <xref href="#topic_ur2_fsn_ndb/multipart_chunksize" format="dita">backup_multipart_chunksize</xref>: [string] 
+    # default value is 10MB
+  <xref href="#topic_ur2_fsn_ndb/concurrent_requests" format="dita">restore_max_concurrent_requests</xref>: [int]
+    # default value is 6
+  <xref href="#topic_ur2_fsn_ndb/multipart_chunksize" format="dita">restore_multipart_chunksize</xref>: [string] 
+    # default value is 10MB
+  <xref href="#topic_ur2_fsn_ndb/http-proxy" format="dita">http_proxy</xref>:
+        <varname>http://&lt;your_username>:&lt;your_secure_password>@proxy.example.com:proxy_port</varname></codeblock>
+      <note>The S3 storage plugin does not support filtered restore operations and the associated
+          <codeph>restore_subset</codeph> plugin configuration property.</note>
       <parml id="s3-exe-path">
         <plentry>
           <pt>executablepath</pt>
-          <pd>Required. Absolute path to the plugin executable. For example, the Greenplum
-            Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The
-            plugin must be in the same location on every Greenplum Database host.</pd>
+          <pd>Required. Absolute path to the plugin executable. For example, the Tanzu Greenplum
+            installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The plugin
+            must be in the same location on every Greenplum Database host.</pd>
         </plentry>
         <plentry id="s3-options">
           <pt>options</pt>
-          <pd>Required. Begins the S3 storage plugin options section.<parml>
-              <plentry id="s3-region">
-                <pt>region</pt>
-                <pd>Required for AWS S3. If connecting to an S3 compatible service, this option is
-                  not required.</pd>
-              </plentry>
-              <plentry id="s3-endpoint">
-                <pt>endpoint</pt>
-                <pd>Required for an S3 compatible service. Specify this option to connect to an S3
-                  compatible service such as ECS. The plugin connects to the specified S3 endpoint
-                  (hostname or IP address) to access the S3 compatible data store. </pd>
-                <pd>If this option is specified, the plugin ignores the <codeph>region</codeph>
-                  option and does not use AWS to resolve the endpoint. When this option is not
-                  specified, the plugin uses the <codeph>region</codeph> to determine AWS S3
-                  endpoint. </pd>
-              </plentry>
-              <plentry id="s3-id">
-                <pt>aws_access_key_id</pt>
-                <pd>Optional. The S3 ID to access the S3 bucket location that stores backup files. </pd>
-                <pd>If this parameter is not specified, S3 authentication information from the
-                  session environment is used. See <xref href="#topic_ur2_fsn_ndb/s3_notes"
-                    format="dita"/>.</pd>
-              </plentry>
-              <plentry id="s3-key">
-                <pt>aws_secret_access_key</pt>
-                <pd>Required only if you specify <codeph>aws_access_key_id</codeph>. The S3 passcode
-                  for the S3 ID to access the S3 bucket location.</pd>
-              </plentry>
-              <plentry id="s3-bucket">
-                <pt>bucket</pt>
-                <pd>Required. The name of the S3 bucket in the AWS region or S3 compatible data
-                  store. The bucket must exist. </pd>
-              </plentry>
-              <plentry id="s3-location">
-                <pt>folder</pt>
-                <pd>Required. The S3 location for backups. During a backup operation, the plugin
-                  creates the S3 location if it does not exist in the S3 bucket. </pd>
-              </plentry>
-              <plentry id="s3-encryption">
-                <pt>encryption</pt>
-                <pd>Optional. Enable or disable use of Secure Sockets Layer (SSL) when connecting to
-                  an S3 location. Default value is <codeph>on</codeph>, use connections that are
-                  secured with SSL. Set this option to <codeph>off</codeph> to connect to an S3
-                  compatible service that is not configured to use SSL. </pd>
-                <pd>Any value other than <codeph>off</codeph> is treated as <codeph>on</codeph>.
-                </pd>
-              </plentry>
-            </parml></pd>
+          <pd>Required. Begins the S3 storage plugin options section.</pd>
+        </plentry>
+        <plentry id="s3-region">
+          <pt>region</pt>
+          <pd>Required for AWS S3. If connecting to an S3 compatible service, this option is not
+            required.</pd>
+        </plentry>
+        <plentry id="s3-endpoint">
+          <pt>endpoint</pt>
+          <pd>Required for an S3 compatible service. Specify this option to connect to an S3
+            compatible service such as ECS. The plugin connects to the specified S3 endpoint
+            (hostname or IP address) to access the S3 compatible data store. </pd>
+          <pd>If this option is specified, the plugin ignores the <codeph>region</codeph> option and
+            does not use AWS to resolve the endpoint. When this option is not specified, the plugin
+            uses the <codeph>region</codeph> to determine AWS S3 endpoint. </pd>
+        </plentry>
+        <plentry id="s3-id">
+          <pt>aws_access_key_id</pt>
+          <pd>Optional. The S3 ID to access the S3 bucket location that stores backup files. </pd>
+          <pd>If this parameter is not specified, S3 authentication uses information from the
+            session environment. See <codeph><xref href="#topic_ur2_fsn_ndb/s3-key" format="dita"
+                >aws_secret_access_key</xref></codeph></pd>
+        </plentry>
+        <plentry id="s3-key">
+          <pt>aws_secret_access_key</pt>
+          <pd>Required only if you specify <codeph>aws_access_key_id</codeph>. The S3 passcode for
+            the S3 ID to access the S3 bucket location. <p>If <codeph>aws_access_key_id</codeph> and
+                <codeph>aws_secret_access_key</codeph> are not specified in the configuration file,
+              the S3 plugin uses S3 authentication information from the system environment of the
+              session running the backup operation. The S3 plugin searches for the information in
+              these sources, using the first available source.</p><ol id="ol_t5l_txj_z4b">
+              <li>The environment variables <codeph>AWS_ACCESS_KEY_ID</codeph> and
+                  <codeph>AWS_SECRET_ACCESS_KEY</codeph>.</li>
+              <li>The authentication information set with the AWS CLI command <codeph>aws
+                  configure</codeph>.</li>
+              <li>The credentials of the Amazon EC2 IAM role if the backup is run from an EC2
+                instance.</li>
+            </ol></pd>
+        </plentry>
+        <plentry id="s3-bucket">
+          <pt>bucket</pt>
+          <pd>Required. The name of the S3 bucket in the AWS region or S3 compatible data store. The
+            bucket must exist. </pd>
+        </plentry>
+        <plentry id="s3-location">
+          <pt>folder</pt>
+          <pd>Required. The S3 location for backups. During a backup operation, the plugin creates
+            the S3 location if it does not exist in the S3 bucket. </pd>
+        </plentry>
+        <plentry id="s3-encryption">
+          <pt>encryption</pt>
+          <pd>Optional. Enable or disable use of Secure Sockets Layer (SSL) when connecting to an S3
+            location. Default value is <codeph>on</codeph>, use connections that are secured with
+            SSL. Set this option to <codeph>off</codeph> to connect to an S3 compatible service that
+            is not configured to use SSL. </pd>
+          <pd>Any value other than <codeph>off</codeph> is treated as <codeph>on</codeph>. </pd>
+        </plentry>
+        <plentry id="concurrent_requests">
+          <pt>backup_max_concurrent_requests</pt>
+          <pd>Optional. The segment concurrency level for a file artifact within a single
+            backup/upload request. The default value is set to 6. Use this parameter in conjuction
+            with the <codeph>gpbackup --jobs</codeph> flag, to increase your overall backup
+            concurrency. </pd>
+          <pd>Example: In a 4 node cluster, with 12 segments (3 per node), if the
+              <codeph>--jobs</codeph> flag is set to 10, there could be 120 concurrent backup
+            requests. With the <codeph>backup_max_concurrent_requests</codeph> parameter set to 6,
+            the total S3 concurrent upload threads during a single backup session would reach 720
+            (120 x 6). </pd>
+          <pd>
+            <note>If the upload artifact is 10MB (see <codeph><xref
+                  href="#topic_ur2_fsn_ndb/multipart_chunksize" format="dita"
+                  >backup_multipart_chunksize</xref></codeph>), the
+                <codeph>backup_max_concurrent_requests</codeph> parameter would not take effect
+              since the file is smaller than the chunk size.</note>
+          </pd>
+        </plentry>
+        <plentry id="multipart_chunksize">
+          <pt>backup_multipart_chunksize</pt>
+          <pd>Optional. The file chunk size of the S3 multipart upload request in Megabytes (for
+            example 20MB), Gigabytes (for example 1GB), or bytes (for example 1048576B). The default
+            value is 10MB and the minimum value is 5MB (or 5242880B). Use this parameter along with
+            the <codeph>--jobs </codeph>flag and the <codeph>backup_max_concurrent_requests</codeph>
+            parameter to fine tune your backups. Set the chunksize based on your individual segment
+            file size. S3 supports up to 10,000 max total partitions for a single file upload. </pd>
+        </plentry>
+        <plentry>
+          <pt>restore_max_concurrent_requests</pt>
+          <pd>Optional. The level of concurrency for downloading a file artifact within a single
+            restore request. The default value is set to 6. </pd>
+        </plentry>
+        <plentry>
+          <pt>restore_multipart_chunksize</pt>
+          <pd>Optional. The file chunk size of the S3 multipart download request in Megabytes (for
+            example 20MB), Gigabytes (for example 1GB), or bytes (for example 1048576B). The default
+            value is 10MB. Use this parameter along with the
+              <codeph>restore_max_concurrent_requests</codeph> parameter to fine tune your
+            restores.</pd>
+        </plentry>
+        <plentry id="http-proxy">
+          <pt>http_proxy</pt>
+          <pd>Optional. Allow AWS S3 access via a proxy server. The parameter should contain the
+            proxy url in the form of
+              <codeph>http://username:password@proxy.example.com:proxy_port</codeph> or
+              <codeph>http://proxy.example.com:proxy_port</codeph>. </pd>
         </plentry>
       </parml>
-    </section>
-    <section>
-      <title>Example</title>
-      <p>This is an example S3 storage plugin configuration file that is used in the next
-          <codeph>gpbackup</codeph> example command. The name of the file is
-          <codeph>s3-test-config.yaml</codeph>.</p>
-      <codeblock>executablepath: $GPHOME/bin/gpbackup_s3_plugin
-options: 
-  region: us-west-2
-  aws_access_key_id: test-s3-user
-  aws_secret_access_key: asdf1234asdf
-  bucket: gpdb-backup
-  folder: test/backup3</codeblock>
-      <p>This <codeph>gpbackup</codeph> example backs up the database demo using the S3 storage
-        plugin. The absolute path to the S3 storage plugin configuration file is
-          <codeph>/home/gpadmin/s3-test</codeph>.<codeblock>gpbackup --dbname demo --plugin-config /home/gpadmin/s3-test-config.yaml</codeblock></p>
-      <p>The S3 storage plugin writes the backup files to this S3 location in the AWS region
-        us-west-2. </p>
-      <p>
-        <codeblock>gpdb-backup/test/backup3/backups/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
-      </p>
-    </section>
-    <section id="s3_notes">
-      <title>Notes</title>
-      <p>The S3 storage plugin application must be in the same location on every Greenplum Database
-        host. The configuration file is required only on the master host.</p>
-      <p>When you perform a backup with the S3 storage plugin, the plugin stores the backup files in
-        this location in the S3 bucket. </p>
-      <codeblock>&lt;<varname>folder</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
-      <p>Where <varname>folder</varname> is the location you specified in the S3 configuration file,
-        and <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date and
-        time stamps. </p>
-      <p>Using Amazon S3 to back up and restore data requires an Amazon AWS account with access to
-        the Amazon S3 bucket. These are the Amazon S3 bucket permissions required for backing up and
-        restoring data.<ul id="ul_qsv_yh5_ndb">
-          <li><systemoutput>Upload/Delete</systemoutput> for the S3 user ID that uploads the
-            files</li>
-          <li><systemoutput>Open/Download</systemoutput> and <systemoutput>View</systemoutput> for
-            the S3 user ID that accesses the files</li>
-        </ul></p>
-      <p>If <codeph>aws_access_key_id</codeph> and <codeph>aws_secret_access_key</codeph> are not
-        specified in the configuration file, the S3 plugin uses S3 authentication information from
-        the system environment of the session running the backup operation. The S3 plugin searches
-        for the information in these sources, using the first available source.</p>
-      <ol id="ul_mkl_y1l_cgb">
-        <li>The environment variables <codeph>AWS_ACCESS_KEY_ID</codeph> and
-            <codeph>AWS_SECRET_ACCESS_KEY</codeph>.</li>
-        <li>The authentication information set with the AWS CLI command <codeph>aws
-            configure</codeph>.</li>
-        <li>The credentials of the Amazon EC2 IAM role if the backup is run from an EC2
-          instance.</li>
-      </ol>
-      <p>For information about Amazon S3, see <xref href="https://aws.amazon.com/s3/" format="html"
-          scope="external">Amazon S3</xref>.<ul id="ul_g2h_2qn_ndb">
-          <li>For information about Amazon S3 regions and endpoints, see <xref
-              href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region" format="html"
-              scope="external"
-              >http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region</xref>.</li>
-          <li>For information about S3 buckets and folders, see the Amazon S3 documentation <xref
-              href="https://aws.amazon.com/documentation/s3/" format="html" scope="external"
-              >https://aws.amazon.com/documentation/s3/</xref>. </li>
-        </ul></p>
     </section>
   </body>
 </topic>

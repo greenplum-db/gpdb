@@ -279,7 +279,7 @@
     <title id="iq139337">Managing Object Privileges</title>
     <body>
       <p>When an object (table, view, sequence, database, function, language, schema, or tablespace)
-        is created, it is assigned an owner. The owner is normally the role that executed the
+        is created, it is assigned an owner. The owner is normally the role that ran the
         creation statement. For most kinds of objects, the initial state is that only the owner (or
         a superuser) can do anything with the object. To allow other roles to use it, privileges
         must be granted. Greenplum Database supports the following privileges for each
@@ -560,7 +560,7 @@
         text passwords. Anyone who is able to view the <codeph>pg_authid</codeph> table can see hash
         strings, but no passwords. This also ensures that passwords are obscured when the database
         is dumped to backup files.</p>
-      <p>The hash function executes when the password is set by using any of the following
+      <p>The hash function runs when the password is set by using any of the following
           commands:<ul id="ul_e35_rmp_pt">
           <li><codeph>CREATE USER <varname>name</varname> WITH ENCRYPTED PASSWORD
                 '<varname>password</varname>'</codeph></li>
@@ -589,7 +589,7 @@
           <codeph>password_encryption</codeph> configuration variable to <codeph>off</codeph>. Note
         that changing the configuration value has no effect on existing passwords, only newly
         created or updated passwords. </p>
-      <p>To set <codeph>password_encryption</codeph> globally, execute these commands in a shell as
+      <p>To set <codeph>password_encryption</codeph> globally, run these commands in a shell as
         the <codeph>gpadmin</codeph>
         user:<codeblock>$ gpconfig -c password_encryption -v 'off'
 $ gpstop -u</codeblock></p>

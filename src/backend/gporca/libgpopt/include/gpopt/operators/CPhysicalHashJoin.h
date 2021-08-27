@@ -116,7 +116,8 @@ public:
 	// ctor
 	CPhysicalHashJoin(CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 					  CExpressionArray *pdrgpexprInnerKeys,
-					  IMdIdArray *hash_opfamilies = NULL);
+					  IMdIdArray *hash_opfamilies = NULL,
+					  CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
 	virtual ~CPhysicalHashJoin();

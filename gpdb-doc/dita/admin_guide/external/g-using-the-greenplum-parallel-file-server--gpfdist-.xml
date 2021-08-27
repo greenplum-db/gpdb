@@ -112,7 +112,7 @@
             other than the Greenplum Database master or standby master, such as on a machine devoted
             to ETL processing. Running <cmdname>gpfdist</cmdname> on the master or standby master
             can have a performance impact on query execution. To install <cmdname>gpfdist</cmdname>
-            on your ETL server, get it from the <i>Greenplum Load Tools</i> package and follow its
+            on your ETL server, get it from the <i>Greenplum Clients</i> package and follow its
             installation instructions.</p>
       </body>
    </topic>
@@ -146,7 +146,7 @@ $ gpfdist -d /var/load_files2 -p 8082 -l /home/<codeph>gpadmin</codeph>/log2 &am
          <p>
             <codeblock>$ ps -ef | grep gpfdist</codeblock>
          </p>
-         <p>Then kill the process, for example (where 3456 is the process ID in this example):</p>
+         <p>Then stop the process, for example (where 3456 is the process ID in this example):</p>
          <p>
             <codeblock>$ kill 3456
 </codeblock>
@@ -191,9 +191,9 @@ $ gpfdist -d /var/load_files2 -p 8082 -l /home/<codeph>gpadmin</codeph>/log2 &am
             you can generate a core dump the next time a hang occurs to help debug the issue. Set
             the environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of
             seconds of no activity to wait before <codeph>gpfdist</codeph> is forced to exit. When
-            the environment variable is set and <codeph>gpfdist</codeph> hangs, the utility aborts
-            after the specified number of seconds, creates a core dump, and sends abort information
-            to the log file.</p>
+            the environment variable is set and <codeph>gpfdist</codeph> hangs, the utility stops
+            after the specified number of seconds, creates a core dump, and sends relevant
+            information to the log file.</p>
          <p>This example sets the environment variable on a Linux system so that
                <codeph>gpfdist</codeph> exits after 300 seconds (5 minutes) of no
             activity.<codeblock>export GPFDIST_WATCHDOG_TIMER=300</codeblock></p>

@@ -503,7 +503,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Force quoting of all identifiers if requested. */
-	if (quote_all_identifiers && server_version >= 90100)
+	if (quote_all_identifiers && server_version >= 80300)
 		executeCommand(conn, "SET quote_all_identifiers = true");
 
 	fprintf(OPF,"--\n-- Greenplum Database cluster dump\n--\n\n");
@@ -722,8 +722,7 @@ dumpResGroups(PGconn *conn)
 					  "     JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4 "
 					  "     JOIN pg_resgroupcapability t5 ON g.oid = t5.resgroupid AND t5.reslimittype = 5 "
 					  "LEFT JOIN pg_resgroupcapability t6 ON g.oid = t6.resgroupid AND t6.reslimittype = 6 "
-					  "LEFT JOIN pg_resgroupcapability t7 ON g.oid = t7.resgroupid AND t7.reslimittype = 7 "
-					  ";");
+					  "LEFT JOIN pg_resgroupcapability t7 ON g.oid = t7.resgroupid AND t7.reslimittype = 7;");
 
 	res = executeQuery(conn, buf->data);
 
@@ -743,10 +742,10 @@ dumpResGroups(PGconn *conn)
 	 * total cpu_rate_limit and memory_limit should less than 100, so clean
 	 * them before we seting new memory_limit and cpu_rate_limit.
 	 */
-	fprintf(OPF, "ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP default_group SET cpu_rate_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP admin_group SET memory_limit 1;\n");
-	fprintf(OPF, "ALTER RESOURCE GROUP default_group SET memory_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET cpu_rate_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET cpu_rate_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET memory_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET memory_limit 1;\n");
 
 	for (i = 0; i < PQntuples(res); i++)
 	{
@@ -759,7 +758,7 @@ dumpResGroups(PGconn *conn)
 		const char *memory_auditor;
 		const char *cpuset;
 
-		groupname = fmtId(PQgetvalue(res, i, i_groupname));
+		groupname = PQgetvalue(res, i, i_groupname);
 		cpu_rate_limit = PQgetvalue(res, i, i_cpu_rate_limit);
 		concurrency = PQgetvalue(res, i, i_concurrency);
 		memory_limit = PQgetvalue(res, i, i_memory_limit);
@@ -770,28 +769,31 @@ dumpResGroups(PGconn *conn)
 
 		resetPQExpBuffer(buf);
 
-		/* DROP or CREATE default group, so ALTER it  */
 		if (0 == strcmp(groupname, "default_group") || 0 == strcmp(groupname, "admin_group"))
 		{
 			/*
+			 * We can't emit CREATE statements for the built-in groups as they
+			 * will already exist in the target cluster. So emit ALTER
+			 * statements instead.
+			 *
 			 * Default resource groups must have memory_auditor == "vmtracker",
 			 * no need to ALTER it, and we do not support ALTER memory_auditor
 			 * at all.
 			 */
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET concurrency %s;\n",
-							  groupname, concurrency);
+							  fmtId(groupname), concurrency);
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_limit %s;\n",
-							  groupname, memory_limit);
+							  fmtId(groupname), memory_limit);
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_shared_quota %s;\n",
-							  groupname, memory_shared_quota);
+							  fmtId(groupname), memory_shared_quota);
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_spill_ratio %s;\n",
-							  groupname, memory_spill_ratio);
+							  fmtId(groupname), memory_spill_ratio);
 			if (atoi(cpu_rate_limit) >= 0)
 				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_rate_limit %s;\n",
-								  groupname, cpu_rate_limit);
+								  fmtId(groupname), cpu_rate_limit);
 			else
 				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpuset '%s';\n",
-								  groupname, cpuset);
+								  fmtId(groupname), cpuset);
 		}
 		else
 		{
@@ -826,7 +828,7 @@ dumpResGroups(PGconn *conn)
 							  "concurrency=%s, %s=%s, "
 							  "memory_limit=%s, memory_shared_quota=%s, "
 							  "memory_spill_ratio=%s, memory_auditor=%s);\n",
-							  groupname, concurrency, cpu_prop, cpu_setting,
+							  fmtId(groupname), concurrency, cpu_prop, cpu_setting,
 							  memory_limit, memory_shared_quota,
 							  memory_spill_ratio, memory_auditor_name);
 		}

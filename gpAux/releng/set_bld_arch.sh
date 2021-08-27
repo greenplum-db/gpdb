@@ -15,11 +15,6 @@ case "`uname -s`" in
         BLD_ARCH_HOST="$(. /etc/os-release; echo ${ID}${VERSION_ID}_$(uname -p))"
     fi
     ;;
-
-    AIX)
-    BLD_ARCH_HOST="aix`uname -v`_`prtconf | grep 'Processor Type' | awk '{print $3}' | perl -p -i -e 's,PowerPC_POWER.,ppc,'`_`prtconf -k | perl -p -i -e 's,Kernel Type: (\d+)-bit,\1,'`"
-    ;;
-
     *)
     BLD_ARCH_HOST="BLD_ARCH_unknown"
     ;;

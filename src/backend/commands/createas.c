@@ -175,6 +175,8 @@ create_ctas_internal(List *attrList, IntoClause *into, QueryDesc *queryDesc, boo
 	create->relStorage = relstorage;
 	create->ownerid = GetUserId();
 	create->isCtas = true;
+	create->intoQuery = into->viewQuery;
+	create->intoPolicy = queryDesc->plannedstmt->intoPolicy;
 
 	/*
 	 * Create the relation.  (This will error out if there's an existing view,
@@ -422,7 +424,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 	if (query_info_collect_hook)
 		(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);
 	
-	if (into->skipData && !is_matview)
+	if (into->skipData)
 	{
 		/*
 		 * If WITH NO DATA was specified, do not go through the rewriter,
@@ -632,8 +634,13 @@ intorel_initplan(struct QueryDesc *queryDesc, int eflags)
 	
 	/*
 	 * Actually create the target table.
+	 * We also get here with CREATE TABLE AS EXECUTE ... WITH NO DATA. In that
+	 * case, dispatch the creation of the table immediately. Normally, the table
+	 * is created in the initialization of the plan in QEs, but with NO DATA, we
+	 * don't need to dispatch the plan during ExecutorStart().
 	 */
-	intoRelationId = create_ctas_internal(attrList, into, queryDesc, false);
+	intoRelationId = create_ctas_internal(attrList, into, queryDesc,
+										  into->skipData ? true : false);
 
 	/*
 	 * Finally we can open the target table

@@ -388,7 +388,7 @@ TRANSFORMATIONS:
                <plentry id="p_command">
                   <pt>COMMAND</pt>
                   <pd>
-                     <p>Required. Specifies the command <cmdname>gpfdist</cmdname> will execute to
+                     <p>Required. Specifies the command <cmdname>gpfdist</cmdname> will run to
                         perform the transformation. </p>
                      <p>For input transformations, <cmdname>gpfdist</cmdname> invokes the command
                         specified in the <codeph>CONTENT</codeph> setting. The command is expected
@@ -478,10 +478,10 @@ TRANSFORMATIONS:
             <p>By default, the command is run on segment hosts when active segments have output rows
                to process. For example, if each segment host runs four primary segment instances
                that have output rows to process, the command runs four times per segment host. You
-               can optionally limit the number of segment instances that execute the web table
+               can optionally limit the number of segment instances that run the web table
                command. All segments included in the web table definition in the <codeph>ON</codeph>
                clause run the command in parallel.</p>
-            <p>The command that you specify in the external table definition executes from the
+            <p>The command that you specify in the external table definition runs from the
                database and cannot access environment variables from <codeph>.bashrc</codeph> or
                   <codeph>.profile</codeph>. Set environment variables in the
                   <codeph>EXECUTE</codeph> clause. For example:</p>

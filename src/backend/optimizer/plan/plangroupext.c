@@ -257,7 +257,7 @@ static TargetEntry *tlist_member_by_ressortgroupref(List *targetList, int ressor
 
 
 /*
- * Reorder a path key, using given column mappings.
+ * Reorder a path key, using given column mappings and skip the const pathkey.
  */
 static List *
 reorder_pathkeys(PlannerInfo *root,
@@ -290,7 +290,9 @@ reorder_pathkeys(PlannerInfo *root,
 
 		pk = (PathKey *) list_nth(pathkeys, pos);
 
-		result = lappend(result, pk);
+		/* skip the const pathkey */
+		if (!pathkey_is_redundant(pk, result))
+			result = lappend(result, pk);
 	}
 
 	return result;

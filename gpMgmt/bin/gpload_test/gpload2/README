@@ -28,6 +28,3 @@ ssh -R8081:127.0.0.1:8081 -R8082:127.0.0.1:8082 \
 
 Finally start the test by:
 python TEST_REMOTE.py
-
-On AIX7, you need to run:
-python_64 TEST_REMOTE.py

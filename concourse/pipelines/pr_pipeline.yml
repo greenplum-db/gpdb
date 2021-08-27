@@ -27,45 +27,14 @@ resources:
 - name: gpdb6-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
+    tag: latest
 
 - name: gpdb6-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
-
-- name: libquicklz-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: libquicklz-devel-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: libsigar-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/sigar-rhel7_x86_64-(1\.6\.5-.*).targz
-
-- name: python-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/python-(2\.7\.12\+.*).tar.gz
-
-- name: clang_toolchain
-  type: registry-image
-  source:
-    repository: gcr.io/data-orca/clang-toolchain
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test
+    tag: latest
 
 jobs:
 - name: compile_and_test_gpdb
@@ -78,15 +47,6 @@ jobs:
       version: every
     - get: gpdb6-centos7-build
     - get: gpdb6-centos7-test
-    - get: libquicklz-installer
-      resource: libquicklz-centos7
-    - get: libquicklz-devel-installer
-      resource: libquicklz-devel-centos7
-    - get: libsigar-installer
-      resource: libsigar-centos7
-    - get: python-tarball
-      resource: python-centos7
-    - get: clang_toolchain
 
   - put: gpdb_pr
     params:
@@ -121,15 +81,12 @@ jobs:
         inputs: [{ name: gpdb_pr }]
         outputs: [{ name: gpdb_src }]
     - task: check_format
-      image: clang_toolchain
       file: gpdb_src/concourse/tasks/check_format.yml
     - task: compile_gpdb_centos7
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
       image: gpdb6-centos7-build
       params:
         CONFIGURE_FLAGS: ((configure_flags_with_extensions))
-        TARGET_OS: centos
-        TARGET_OS_VERSION: 7
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 

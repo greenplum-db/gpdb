@@ -237,5 +237,6 @@ extern List *truncate_useless_pathkeys(PlannerInfo *root,
 						  RelOptInfo *rel,
 						  List *pathkeys);
 extern bool has_useful_pathkeys(PlannerInfo *root, RelOptInfo *rel);
+extern bool pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys);
 
 #endif   /* PATHS_H */

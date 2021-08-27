@@ -58,7 +58,7 @@
       <p>Greenplum Database PL/Java package is based on the open source PL/Java 1.5.0. Greenplum
         Database PL/Java provides the following features.</p>
       <ul>
-        <li id="pv161029">Ability to execute PL/Java functions with Java 8 or Java 11.</li>
+        <li id="pv161029">Ability to run PL/Java functions with Java 8 or Java 11.</li>
         <li>Ability to specify Java runtime.</li>
         <li id="pv161030">Standardized utilities (modeled after the SQL 2003 proposal) to install
           and maintain Java code in the database.</li>
@@ -82,11 +82,11 @@
         <li id="pv161039">Integration with GNU GCJ on selected platforms.</li>
       </ul>
       <p>A function in SQL will appoint a static method in a Java class. In order for the function
-        to execute, the appointed class must available on the class path specified by the Greenplum
+        to run, the appointed class must available on the class path specified by the Greenplum
         Database server configuration parameter <codeph>pljava_classpath</codeph>. The PL/Java
         extension adds a set of functions that helps installing and maintaining the java classes.
         Classes are stored in normal Java archives, JAR files. A JAR file can optionally contain a
-        deployment descriptor that in turn contains SQL commands to be executed when the JAR is
+        deployment descriptor that in turn contains SQL commands to be run when the JAR is
         deployed or undeployed. The functions are modeled after the standards proposed for SQL
         2003.</p>
       <p>PL/Java implements a standardized way of passing parameters and return values. Complex
@@ -96,10 +96,10 @@
         database to fetch data. When PL/Java functions fetch data, they must use the same
         transactional boundaries that are used by the main function that entered PL/Java execution
         context.</p>
-      <p>PL/Java is optimized for performance. The Java virtual machine executes within the same
+      <p>PL/Java is optimized for performance. The Java virtual machine runs within the same
         process as the backend to minimize call overhead. PL/Java is designed with the objective to
         enable the power of Java to the database itself so that database intensive business logic
-        can execute as close to the actual data as possible.</p>
+        can run as close to the actual data as possible.</p>
       <p>The standard Java Native Interface (JNI) is used when bridging calls between the backend
         and the Java VM.</p>
     </body>
@@ -295,7 +295,7 @@ $ sudo apt install openjdk-&lt;<varname>version</varname>>-jdk</codeblock><p>For
       <p>Perform the following steps as the Greenplum Database administrator
           <codeph>gpadmin</codeph>.</p>
       <ol id="ol_dpn_qr5_b1b">
-        <li id="pv162268">Enable PL/Java in a database by executing the <codeph>CREATE
+        <li id="pv162268">Enable PL/Java in a database by running the <codeph>CREATE
             EXTENSION</codeph> command to register the language. For example, this command enables
           PL/Java in the <codeph>testdb</codeph> database:<codeblock>$ psql -d testdb -c 'CREATE EXTENSION pljava;'</codeblock>
           <note>The PL/Java <codeph>install.sql</codeph> script, used in previous releases to
@@ -656,8 +656,8 @@ public class Bar
             <codeph>org.postgresql.pljava.ResultSetHandle</codeph>. The reason for having two
           interfaces is that they cater for optimal handling of two distinct use cases. The former
           is for cases when you want to dynamically create each row that is to be returned from the
-          SETOF function. The latter makes is in cases where you want to return the result of an
-          executed query. </p>
+          SETOF function. The latter makes sense in cases where you want to return the result of a
+          query after it runs. </p>
       </body>
       <topic id="topic22" xml:lang="en">
         <title>Using the ResultSetProvider Interface</title>
@@ -726,7 +726,7 @@ int increment)
             deliver the RestulSet contents, one tuple at a time, to the caller until a call to
               <codeph>next()</codeph> returns false or the evaluator decides that no more rows are
             needed.</p>
-          <p>Here is an example that executes a query using a statement that it obtained using the
+          <p>Here is an example that runs a query using a statement that it obtained using the
             default connection. The SQL suitable for the deployment descriptor looks like this:</p>
           <codeblock>CREATE FUNCTION javatest.listSupers()
   RETURNS SETOF pg_user
@@ -783,7 +783,7 @@ eateStatement();
         maps to the current transaction can be obtained using the following statement:</p>
       <codeblock>Connection conn = 
   DriverManager.getConnection("jdbc:default:connection"); </codeblock>
-      <p>After obtaining a connection, you can prepare and execute statements similar to other JDBC
+      <p>After obtaining a connection, you can prepare and run statements similar to other JDBC
         connections. These are limitations for the PL/Java JDBC driver:</p>
       <ul>
         <li id="pv157568">The transaction cannot be managed in any way. Thus, you cannot use methods
@@ -816,7 +816,7 @@ eateStatement();
           <codeph>org.postgresql.pljava.ServerException</codeph> (derived from
           <codeph>java.sql.SQLException</codeph>) and the Java try/catch mechanism is synchronized
         with the backend mechanism.</p>
-      <note type="important">You will not be able to continue executing backend functions until your
+      <note type="important">You will not be able to continue running backend functions until your
         function has returned and the error has been propagated when the backend has generated an
         exception unless you have used a savepoint. When a savepoint is rolled back, the exceptional
         condition is reset and you can continue your execution.</note>
@@ -844,7 +844,7 @@ Date(System.currentTimeMillis()));</codeblock>
         configuration setting <codeph>log_min_messages</codeph> to a valid Logger level and that
         outputs all messages using the Greenplum Database backend function <codeph>elog()</codeph>. </p>
       <note>The <codeph>log_min_messages</codeph> setting is read from the database the first time a
-        PL/Java function in a session is executed. On the Java side, the setting does not change
+        PL/Java function in a session is run. On the Java side, the setting does not change
         after the first PL/Java function execution in a specific session until the Greenplum
         Database session that is working with PL/Java is restarted.</note>
       <p>The following mapping apply between the Logger levels and the Greenplum Database backend
@@ -910,8 +910,8 @@ Date(System.currentTimeMillis()));</codeblock>
       <title id="pv157625">Installation</title>
       <body>
         <p>Only a database superuser can install PL/Java. The PL/Java utility functions are
-          installed using SECURITY DEFINER so that they execute with the access permissions that
-          where granted to the creator of the functions.</p>
+          installed using SECURITY DEFINER so that they run with the access permissions that
+          were granted to the creator of the functions.</p>
       </body>
     </topic>
     <topic id="topic30" xml:lang="en">
@@ -923,6 +923,12 @@ Date(System.currentTimeMillis()));</codeblock>
         <p>PL/Java also installs a language handler for the language <codeph>javau</codeph>. This
           version is <i>not trusted</i> and only a superuser can create new functions that use it.
           Any user can call the functions.</p>
+        <p>To install both the trusted and untrusted languages, register the extension by running
+          the <codeph>'CREATE EXTENSION pljava'</codeph> command when <xref href="#topic6"
+            type="topic" format="dita"/>. </p>
+        <p>To install only the trusted language, register the extension by running the
+            <codeph>'CREATE EXTENSION pljavat'</codeph> command when <xref href="#topic6"
+            type="topic" format="dita"/>.</p>
       </body>
     </topic>
   </topic>

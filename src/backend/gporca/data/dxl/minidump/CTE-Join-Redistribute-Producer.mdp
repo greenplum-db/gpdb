@@ -410,7 +410,7 @@ with v as (select * from t1) select * from v v1, v v2 where v1.b=v2.b;
         </dxl:LogicalJoin>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="24">
+    <dxl:Plan Id="0" SpaceSize="20">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.388166" Rows="1000.000000" Width="16"/>

@@ -99,6 +99,7 @@ extern int						memory_spill_ratio;
 
 extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
+extern bool gp_resource_group_cpu_ceiling_enforcement;
 extern double gp_resource_group_memory_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;

@@ -101,7 +101,7 @@
             defining criteria?</b> Choose partitioning criteria that will divide your data as evenly
           as possible. If the partitions contain a relatively equal number of records, query
           performance improves based on the number of partitions created. For example, by dividing a
-          large table into 10 partitions, a query will execute 10 times faster than it would against
+          large table into 10 partitions, a query will run 10 times faster than it would against
           the unpartitioned table, provided that the partitions are designed to support the query's
           criteria.</li>
       </ul>
@@ -304,7 +304,7 @@ PARTITION BY RANGE (year)
         <note type="caution">When you create multi-level partitions on ranges, it is easy to create
           a large number of subpartitions, some containing little or no data. This can add many
           entries to the system tables, which increases the time and memory required to optimize and
-          execute queries. Increase the range interval or choose a different partitioning strategy
+          run queries. Increase the range interval or choose a different partitioning strategy
           to reduce the number of subpartitions created.</note>
       </body>
     </topic>
@@ -344,7 +344,7 @@ GRANT SELECT ON sales TO guest;
           cannot be partitioned. </p>
         <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level
           partitioned tables. If GPORCA is enabled (the default) and the multi-level partitioned
-          table is not uniform, Greenplum Database executes queries against the table with the
+          table is not uniform, Greenplum Database runs queries against the table with the
           Postgres Planner. For information about uniform multi-level partitioned tables, see
             <xref href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
         <p>For information about exchanging a leaf child partition with an external table, see <xref
@@ -353,7 +353,7 @@ GRANT SELECT ON sales TO guest;
           an external table:</p>
         <ul id="ul_byq_wdd_bt">
           <li>Queries that run against partitioned tables that contain external table partitions are
-            executed with the Postgres Planner.</li>
+            run with the Postgres Planner.</li>
           <li>The external table partition is a read only external table. Commands that attempt to
             access or modify data in the external table partition return an error. For example:<ul
               id="ul_ugr_try_bt">
@@ -739,7 +739,7 @@ WITH TABLE jan12;
             default partition, is valid for the default partition. For example, the data in the new
             default partition must not contain data that would be valid in other leaf child
             partitions of the partitioned table. Otherwise, queries against the partitioned table
-            with the exchanged default partition that are executed by GPORCA might return incorrect
+            with the exchanged default partition that are run by GPORCA might return incorrect
             results.</note></p>
       </body>
     </topic>

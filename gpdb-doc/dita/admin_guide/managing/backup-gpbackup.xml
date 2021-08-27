@@ -478,7 +478,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
           following restrictions:<ul id="ul_hts_clc_ccb">
             <li>The tables that you attempt to restore must not already exist in the database.</li>
             <li>If you attempt to restore a schema or table that does not exist in the backup set,
-              the <codeph>gprestore</codeph> does not execute.</li>
+              the <codeph>gprestore</codeph> does not run.</li>
             <li>If you use the <codeph>--include-schema</codeph> option, <codeph>gprestore</codeph>
               cannot restore objects that have dependencies on multiple schemas.</li>
             <li>If you use the <codeph>--include-table-file</codeph> option,

@@ -113,7 +113,7 @@ static void ReceiveTarFile(PGconn *conn, PGresult *res, int rownum);
 static void ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum);
 static void GenerateRecoveryConf(PGconn *conn);
 static void WriteRecoveryConf(void);
-static void BaseBackup(void);
+static void BaseBackup(const char *argv0);
 
 static bool reached_end_position(XLogRecPtr segendpos, uint32 timeline,
 					 bool segment_finished);
@@ -1759,8 +1759,58 @@ build_exclude_list(void)
 	return buf.data;
 }
 
+/*
+ * Sync target data directory to ensure that modifications are safely on disk.
+ *
+ * We do this once, for the whole data directory, for performance reasons.  At
+ * the end of pg_basebackup's run, the kernel is likely to already have flushed
+ * most dirty buffers to disk. Additionally initdb -S uses a two-pass approach
+ * (only initiating writeback in the first pass), which often reduces the
+ * overall amount of IO noticeably.
+ */
 static void
-BaseBackup(void)
+syncTargetDirectory(const char *argv0)
+{
+	int		ret;
+#define MAXCMDLEN (2 * MAXPGPATH)
+	char	exec_path[MAXPGPATH];
+	char	cmd[MAXCMDLEN];
+
+	/* locate initdb binary */
+	if ((ret = find_other_exec(argv0, "initdb",
+							   "initdb (Greenplum Database) " PG_VERSION "\n",
+							   exec_path)) < 0)
+	{
+		char        full_path[MAXPGPATH];
+
+		if (find_my_exec(argv0, full_path) < 0)
+			strlcpy(full_path, progname, sizeof(full_path));
+
+		if (ret == -1)
+			fprintf(stderr, "The program \"initdb\" is needed by %s but was \n"
+							"not found in the same directory as \"%s\".\n"
+							"Check your installation.\n", progname, full_path);
+		else
+			fprintf(stderr, "The program \"initdb\" was found by \"%s\"\n"
+							"but was not the same version as %s.\n"
+							"Check your installation.\n", full_path, progname);
+		disconnect_and_exit(1);
+	}
+
+	/* finally run initdb -S */
+	snprintf(cmd, MAXCMDLEN, "\"%s\" -D \"%s\" -S > \"%s\"",
+			 exec_path, basedir, DEVNULL);
+
+	if (system(cmd) != 0)
+	{
+		fprintf(stderr, "sync of target directory failed\n");
+		disconnect_and_exit(1);
+	}
+}
+
+
+static void
+BaseBackup(const char *argv0)
 {
 	PGresult   *res;
 	char	   *sysidentifier;
@@ -2147,6 +2197,10 @@ BaseBackup(void)
 	PQfinish(conn);
 
 	if (verbose)
+		fprintf(stderr, "%s: sync the target data direcotory\n", progname);
+	syncTargetDirectory(argv0);
+
+	if (verbose)
 		fprintf(stderr, "%s: base backup completed\n", progname);
 }
 
@@ -2524,7 +2578,7 @@ main(int argc, char **argv)
 		free(linkloc);
 	}
 
-	BaseBackup();
+	BaseBackup(argv[0]);
 
 	return 0;
 }

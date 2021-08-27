@@ -162,7 +162,7 @@ FROM pg_depend AS d            -- objects that depend on a table
 WHERE v.relkind = 'v'          -- filter views only
   -- dependency must be a rule depending on a relation
   AND d.classid = 'pg_rewrite'::regclass 
-  AND d.refclassid = 'pg_class'::regclass  -- referenced objects in pg_class (tables and views)
+  AND d.refclassid = 'pg_class'::regclass  -- referenced objects in pg_class -- tables and views
   AND d.deptype = 'n'         -- normal dependency
   -- qualify object
   AND ns.nspname NOT IN ('pg_catalog', 'information_schema', 'gp_toolkit') -- system schemas

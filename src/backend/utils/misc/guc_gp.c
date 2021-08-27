@@ -222,6 +222,7 @@ bool		gp_debug_resqueue_priority = false;
 /* Resource group GUCs */
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
+bool		gp_resource_group_cpu_ceiling_enforcement;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
 
@@ -663,7 +664,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 	{
 		{"gp_enable_direct_dispatch", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable dispatch for single-row-insert targetted mirror-pairs."),
+			gettext_noop("Enable dispatch for single-row-insert targeted mirror-pairs."),
 			gettext_noop("Don't involve the whole cluster if it isn't needed.")
 		},
 		&gp_enable_direct_dispatch,
@@ -774,7 +775,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	{
 		{"gp_enable_groupext_distinct_pruning", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable 3-phase aggregation and join to compute distinct-qualified aggregates"
-						 " on grouping extention queries."),
+						 " on grouping extension queries."),
 			NULL,
 		},
 		&gp_enable_groupext_distinct_pruning,
@@ -785,7 +786,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	{
 		{"gp_enable_groupext_distinct_gather", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable gathering data to a single node to compute distinct-qualified aggregates"
-						 " on grouping extention queries."),
+						 " on grouping extension queries."),
 			NULL,
 		},
 		&gp_enable_groupext_distinct_gather,
@@ -3010,6 +3011,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_resource_group_cpu_ceiling_enforcement", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("If the value is true, ceiling enforcement of CPU will be enabled"),
+			NULL
+		},
+		&gp_resource_group_cpu_ceiling_enforcement,
+		false, NULL, NULL
+	},
+
+	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
@@ -4310,8 +4320,9 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"dtx_phase2_retry_count", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Maximum number of retries during two phase commit after which master PANICs."),
-			NULL,
+			gettext_noop("Maximum number of attempts to finish a prepared transaction."),
+			gettext_noop("The coordinator PANICs if a prepared transaction cannot be"
+						 " committed after this number of attempts."),
 			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&dtx_phase2_retry_count,
@@ -4910,7 +4921,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_join_order,
-		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
+		JOIN_ORDER_EXHAUSTIVE_SEARCH, optimizer_join_order_options,
 		NULL, NULL, NULL
 	},
 

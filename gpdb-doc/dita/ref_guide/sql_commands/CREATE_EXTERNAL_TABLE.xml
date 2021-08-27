@@ -142,7 +142,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         allowed.</p>
       <p>The main difference between regular external tables and external web tables is their data
         sources. Regular readable external tables access static flat files, whereas external web
-        tables access dynamic data sources – either on a web server or by executing OS commands or
+        tables access dynamic data sources – either on a web server or by running OS commands or
         scripts. </p>
       <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.xml"/> for
         detailed information about working with external tables.</p>
@@ -160,12 +160,12 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
           <pt>WEB</pt>
           <pd>Creates a readable or writable external web table definition in Greenplum Database.
             There are two forms of readable external web tables – those that access files via the
-              <codeph>http://</codeph> protocol or those that access data by executing OS commands.
+              <codeph>http://</codeph> protocol or those that access data by running OS commands.
             Writable external web tables output data to an executable program that can accept an
             input stream of data. External web tables are not rescannable during query
             execution.</pd>
           <pd>The <codeph>s3</codeph> protocol does not support external web tables. You can,
-            however, create an external web table that executes a third-party tool to read data from
+            however, create an external web table that runs a third-party tool to read data from
             or write data to S3 directly.</pd>
         </plentry>
         <plentry>
@@ -269,30 +269,30 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         <plentry>
           <pt>EXECUTE <varname>'command'</varname> [ON ...]</pt>
           <pd>Allowed for readable external web tables or writable external tables only. For
-            readable external web tables, specifies the OS command to be executed by the segment
+            readable external web tables, specifies the OS command to be run by the segment
             instances. The <varname>command</varname> can be a single OS command or a script. The
-              <codeph>ON</codeph> clause is used to specify which segment instances will execute the
+              <codeph>ON</codeph> clause is used to specify which segment instances will run the
             given command.<ul id="ul_xd1_wq2_m4">
-              <li id="br150831">ON ALL is the default. The command will be executed by every active
+              <li id="br150831">ON ALL is the default. The command will be run by every active
                 (primary) segment instance on all segment hosts in the Greenplum Database system. If
-                the command executes a script, that script must reside in the same location on all
+                the command runs a script, that script must reside in the same location on all
                 of the segment hosts and be executable by the Greenplum superuser
                   (<codeph>gpadmin</codeph>).</li>
               <li id="br153076">ON MASTER runs the command on the master host only. <note>Logging is
                   not supported for external web tables when the <codeph>ON MASTER</codeph> clause
                   is specified.</note></li>
-              <li id="br150832">ON <varname>number</varname> means the command will be executed by
+              <li id="br150832">ON <varname>number</varname> means the command will be run by
                 the specified number of segments. The particular segments are chosen randomly at
-                runtime by the Greenplum Database system. If the command executes a script, that
+                runtime by the Greenplum Database system. If the command runs a script, that
                 script must reside in the same location on all of the segment hosts and be
                 executable by the Greenplum superuser (<codeph>gpadmin</codeph>). </li>
-              <li id="br150833">HOST means the command will be executed by one segment on each
+              <li id="br150833">HOST means the command will be run by one segment on each
                 segment host (once per segment host), regardless of the number of active segment
                 instances per host. </li>
               <li id="br153082">HOST <varname>segment_hostname</varname> means the command will be
-                executed by all active (primary) segment instances on the specified segment host. </li>
+                run by all active (primary) segment instances on the specified segment host. </li>
               <li id="br153092">SEGMENT <varname>segment_id</varname> means the command will be
-                executed only once by the specified segment. You can determine a segment instance's
+                run only once by the specified segment. You can determine a segment instance's
                 ID by looking at the <varname>content</varname> number in the system catalog table
                   <xref href="../system_catalogs/gp_segment_configuration.xml" type="topic"
                   format="dita"/>. The <varname>content</varname> ID of the Greenplum Database
@@ -518,7 +518,7 @@ LOCATION (
 'file://seghost3/dbfast/external/expenses6.csv' 
 )
 FORMAT 'CSV' ( HEADER );</codeblock>
-      <p>Create a readable external web table that executes a script once per segment host:</p>
+      <p>Create a readable external web table that runs a script once per segment host:</p>
       <codeblock>CREATE EXTERNAL WEB TABLE log_output (linenum int, message 
 text)  EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST 
  FORMAT 'TEXT' (DELIMITER '|');</codeblock>

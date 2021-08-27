@@ -379,7 +379,7 @@ AppendOnlyVisimapStore_GetSegmentFileHiddenTupleCount(
 }
 
 /*
- * Returns the number of hidden tuples in a given releation
+ * Returns the number of hidden tuples in a given relation
  */
 int64
 AppendOnlyVisimapStore_GetRelationHiddenTupleCount(

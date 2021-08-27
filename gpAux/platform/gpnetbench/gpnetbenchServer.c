@@ -82,11 +82,15 @@ static int setupListen(char hostname[], char port[], int protocol) {
 
 	while (addrs != NULL)
 	{
+		struct addrinfo *lastAddrs = NULL;
+
 		fd = socket(addrs->ai_family, SOCK_STREAM, 0);
 		if (fd < 0)
 		{
 			fprintf(stderr, "socket creation failed\n");
+			lastAddrs = addrs;
 			addrs = addrs->ai_next;
+			free(lastAddrs);
 			continue;
 		}
 
@@ -94,7 +98,9 @@ static int setupListen(char hostname[], char port[], int protocol) {
 		{
 			fprintf(stderr, "could not set SO_REUSEADDR\n");
 			close(fd);
+			lastAddrs = addrs;
 			addrs = addrs->ai_next;
+			free(lastAddrs);
 			continue;
 		}
 
@@ -119,7 +125,9 @@ static int setupListen(char hostname[], char port[], int protocol) {
 		else
 			close(fd);
 
+		lastAddrs = addrs;
 		addrs = addrs->ai_next;
+		free(lastAddrs);
 	}
 
 	if (pid < 0)

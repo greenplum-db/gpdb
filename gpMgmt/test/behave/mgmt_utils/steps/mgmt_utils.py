@@ -153,6 +153,7 @@ def impl(context, num_primaries):
 
 
 @given('the user runs psql with "{psql_cmd}" against database "{dbname}"')
+@when('the user runs psql with "{psql_cmd}" against database "{dbname}"')
 @then('the user runs psql with "{psql_cmd}" against database "{dbname}"')
 def impl(context, dbname, psql_cmd):
     cmd = "psql -d %s %s" % (dbname, psql_cmd)
@@ -363,11 +364,20 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
-@given('the user asynchronously sets up to end that process in {secs} seconds')
-def impl(context, secs):
-    command = "sleep %d; kill -9 %d" % (int(secs), context.asyncproc.pid)
+@given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
+@when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
+def impl(context, process_name, secs):
+    if process_name == 'that':
+        command = "sleep %d; kill -9 %d" % (int(secs), context.asyncproc.pid)
+    else:
+        command = "sleep %d; ps ux | grep %s | awk '{print $2}' | xargs kill" % (int(secs), process_name)
     run_async_command(context, command)
 
+
+@when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in gpinitsystem logs')
+def impl(context, process_name, log_msg):
+    command = "while sleep 3; do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; then ps ux | grep %s |awk '{print $2}' | xargs kill ;break 2; fi; done" % (log_msg, process_name)
+    run_async_command(context, command)
 
 @given('the user asynchronously runs "{command}" and the process is saved')
 @when('the user asynchronously runs "{command}" and the process is saved')
@@ -505,6 +515,34 @@ def impl(context, command, out_msg, num):
     count = msg_list.count(out_msg)
     if count != int(num):
         raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
+
+
+def lines_matching_both(in_str, str_1, str_2):
+    lines = [x.strip() for x in in_str.split('\n')]
+    return [x for x in lines if x.count(str_1) and x.count(str_2)]
+
+
+@then('check if {command} ran "{called_command}" {num} times with args "{args}"')
+def impl(context, command, called_command, num, args):
+    run_cmd_out = "Running Command: %s" % called_command
+    matches = lines_matching_both(context.stdout_message, run_cmd_out, args)
+
+    if len(matches) != int(num):
+        raise Exception("Expected %s to occur with %s args %s times. Found %d. \n %s"
+                        % (called_command, args, num, len(matches), context.stdout_message))
+
+
+@then('{command} should only spawn up to {num} workers in WorkerPool')
+def impl(context, command, num):
+    workerPool_out = "WorkerPool() initialized with"
+    matches = lines_matching_both(context.stdout_message, workerPool_out, command)
+
+    for matched_line in matches:
+        iw_re = re.search('initialized with (\d+) workers', matched_line)
+        init_workers = int(iw_re.group(1))
+        if init_workers > int(num):
+            raise Exception("Expected Workerpool for %s to be initialized with %d workers. Found %d. \n %s"
+                            % (command, num, init_workers, context.stdout_message))
 
 
 @given('{command} should return a return code of {ret_code}')
@@ -786,6 +824,28 @@ def impl(context, options):
     context.execute_steps(u'''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
     context.standby_was_activated = True
 
+@then('gpintsystem logs should {contain} lines about running backout script')
+def impl(context, contain):
+    string_to_find = 'Run command bash .*backout_gpinitsystem.* on master to remove these changes$'
+    command = "egrep '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
+    run_command(context, command)
+    if contain == "contain":
+        if has_exception(context):
+            raise context.exception
+        context.gpinit_backout_command = re.search('Run command(.*)on master', context.stdout_message).group(1)
+    elif contain == "not contain":
+        if not has_exception(context):
+            raise Exception("Logs contain lines about running backout script")
+    else:
+        raise Exception("Incorrect step name, only use 'should contain' and 'should not contain'")
+
+@then('the user runs the gpinitsystem backout script')
+def impl(context):
+    command = context.gpinit_backout_command
+    run_command(context, command)
+    if has_exception(context):
+        raise context.exception
+
 @when('the user runs command "{command}" from standby master')
 @then('the user runs command "{command}" from standby master')
 def impl(context, command):
@@ -1039,6 +1099,40 @@ def impl(context, seg):
         context.mseg_hostname = context.mseg.getSegmentHostName()
         context.mseg_dbid = context.mseg.getSegmentDbId()
         context.mseg_data_dir = context.mseg.getSegmentDataDirectory()
+
+
+@given('the cluster configuration has no segments where "{filter}"')
+def impl(context, filter):
+    SLEEP_PERIOD = 5
+    MAX_DURATION = 300
+    MAX_TRIES = MAX_DURATION // SLEEP_PERIOD
+
+    num_tries = 0
+    num_matching = 10
+    while num_matching and num_tries < MAX_TRIES:
+        num_tries += 1
+        time.sleep(SLEEP_PERIOD)
+        context.execute_steps(u'''
+        Given the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    ''')
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+            sql = "SELECT count(*) FROM gp_segment_configuration WHERE %s" % filter
+            num_matching = dbconn.execSQLForSingleton(conn, sql)
+
+    if num_matching:
+        raise Exception("could not achieve desired state")
+
+    context.execute_steps(u'''
+    Given the user runs psql with "-c 'BEGIN; CREATE TEMP TABLE tempt(a int); COMMIT'" against database "postgres"
+    ''')
+
+
+@given('the cluster configuration is saved for "{when}"')
+@then('the cluster configuration is saved for "{when}"')
+def impl(context, when):
+    if not hasattr(context, 'saved_array'):
+        context.saved_array = {}
+    context.saved_array[when] = GpArray.initFromCatalog(dbconn.DbURL())
 
 
 @when('we run a sample background script to generate a pid on "{seg}" segment')
@@ -1393,17 +1487,22 @@ def impl(context, filename, output):
     print contents
     check_stdout_msg(context, output)
 
-@then('verify that the last line of the file "{filename}" in the master data directory contains the string "{output}" escaped')
-def impl(context, filename, output):
-    find_string_in_master_data_directory(context, filename, output, True)
+@then('verify that the last line of the file "{filename}" in the master data directory {contain} the string "{output}"')
+def impl(context, filename, contain, output):
+    return verify_master_file_last_line(context, filename, contain, output, "")
 
+@then('verify that the last line of the file "{filename}" in the master data directory {contain} the string "{output}"{escape}')
+def verify_master_file_last_line(context, filename, contain, output, escape):
+    if contain == 'should contain':
+        valuesShouldExist = True
+    elif contain == 'should not contain':
+        valuesShouldExist = False
+    else:
+        raise Exception("only 'should contain' and 'should not contain' are valid inputs")
 
-@then('verify that the last line of the file "{filename}" in the master data directory contains the string "{output}"')
-def impl(context, filename, output):
-    find_string_in_master_data_directory(context, filename, output)
+    find_string_in_coordinator_data_directory(context, filename, output, valuesShouldExist, (escape == ' escaped'))
 
-
-def find_string_in_master_data_directory(context, filename, output, escapeStr=False):
+def find_string_in_coordinator_data_directory(context, filename, output, valuesShouldExist, escapeStr=False):
     contents = ''
     file_path = os.path.join(master_data_dir, filename)
 
@@ -1414,8 +1513,11 @@ def find_string_in_master_data_directory(context, filename, output, escapeStr=Fa
     if escapeStr:
         output = re.escape(output)
     pat = re.compile(output)
-    if not pat.search(contents):
+    if valuesShouldExist and (not pat.search(contents)):
         err_str = "Expected stdout string '%s' and found: '%s'" % (output, contents)
+        raise Exception(err_str)
+    if (not valuesShouldExist) and pat.search(contents):
+        err_str = "Did not expect stdout string '%s' but found: '%s'" % (output, contents)
         raise Exception(err_str)
 
 
@@ -1485,8 +1587,14 @@ def impl(context, filename, some, output):
 
 
 
-@then('verify that the last line of the file "{filename}" in each segment data directory contains the string "{output}"')
-def impl(context, filename, output):
+@then('verify that the last line of the file "{filename}" in each segment data directory {contain} the string "{output}"')
+def impl(context, filename, contain, output):
+    if contain == 'should contain':
+        valuesShouldExist = True
+    elif contain == 'should not contain':
+        valuesShouldExist = False
+    else:
+        raise Exception("only 'should contain' and 'should not contain' are valid inputs")
     segment_info = []
     try:
         with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
@@ -1504,8 +1612,11 @@ def impl(context, filename, output):
         cmd.run(validateAfter=True)
 
         actual = cmd.get_stdout().decode('utf-8')
-        if output not in actual:
-            raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
+        if valuesShouldExist and (output not in actual):
+                raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
+        if (not valuesShouldExist) and (output in actual):
+            raise Exception('File %s on host %s contains "%s"' % (filepath, host, output))
+
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):
@@ -1889,7 +2000,7 @@ def impl(context):
                               When the user runs "gpstart -a"
                               Then gpstart should return a return code of 0
                               And verify that a role "gpmon" exists in database "gpperfmon"
-                              And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
+                              And verify that the last line of the file "postgresql.conf" in the master data directory should contain the string "gpperfmon_log_alert_level=warning"
                               And verify that there is a "heap" table "database_history" in "gpperfmon"
                               Then wait until the process "gpmmon" is up
                               And wait until the process "gpsmon" is up
@@ -2096,6 +2207,13 @@ def impl(context, location):
             'mv', '{}.bak'.format(greenplum_path), greenplum_path
         ])
 
+@given('all files in gpAdminLogs directory are deleted')
+@then('all files in gpAdminLogs directory are deleted')
+def impl(context):
+    log_dir = _get_gpAdminLogs_directory()
+    files_found = glob.glob('%s/*' % (log_dir))
+    for file in files_found:
+        os.remove(file)
 
 @then('gpAdminLogs directory has no "{expected_file}" files')
 def impl(context, expected_file):
@@ -2620,6 +2738,7 @@ def impl(context):
 
 @given('an FTS probe is triggered')
 @when('an FTS probe is triggered')
+@then('an FTS probe is triggered')
 def impl(context):
     with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
         dbconn.execSQLForSingleton(conn, "SELECT gp_request_fts_probe_scan()")
@@ -2778,6 +2897,16 @@ def impl(context):
         code, message = job.reverify(conn)
         if not code:
             raise Exception(message)
+
+
+
+@given('the "{table_name}" table row count in "{dbname}" is saved')
+def impl(context, table_name, dbname):
+    if 'table_row_count' not in context:
+        context.table_row_count = {}
+    if table_name not in context.table_row_count:
+        context.table_row_count[table_name] = _get_row_count_per_segment(table_name, dbname)
+
 @given('distribution information from table "{table}" with data in "{dbname}" is saved')
 def impl(context, table, dbname):
     context.pre_redistribution_row_count = _get_row_count_per_segment(table, dbname)
@@ -2811,6 +2940,15 @@ def impl(context, table, dbname):
     if relative_std_error > tolerance:
         raise Exception("Unexpected variance for redistributed data in table %s. Relative standard error %f exceeded tolerance factor of %f." %
                 (table, relative_std_error, tolerance))
+
+@then('the row count from table "{table_name}" in "{dbname}" is verified against the saved data')
+def impl(context, table_name, dbname):
+    saved_row_count = context.table_row_count[table_name]
+    current_row_count = _get_row_count_per_segment(table_name, dbname)
+
+    if saved_row_count != current_row_count:
+        raise Exception("%s table in %s has %d rows, expected %d rows." % (table_name, dbname, current_row_count, saved_row_count))
+
 
 @then('distribution information from table "{table1}" and "{table2}" in "{dbname}" are the same')
 def impl(context, table1, table2, dbname):

@@ -2544,6 +2544,7 @@ _readCreateDomainStmt(void)
 
 	READ_NODE_FIELD(domainname);
 	READ_NODE_FIELD(typeName);
+	READ_NODE_FIELD(collClause);
 	READ_NODE_FIELD(constraints);
 
 	READ_DONE();

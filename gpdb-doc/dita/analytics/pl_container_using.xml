@@ -30,7 +30,7 @@
                     container's CPU usage compared to other containers. See <xref
                         href="../utility_guide/ref/plcontainer-configuration.xml" format="dita"/> for further
                     details.</p>
-                <p>You cannot, by default, restrict the number of executing PL/Container container
+                <p>You cannot, by default, restrict the number of running PL/Container container
                     instances, nor can you restrict the total amount of memory or CPU resources that
                     they consume.</p>
             </section>
@@ -92,10 +92,10 @@
                 <p>After you assign a resource group to a PL/Container runtime, all container
                     instances that share the same runtime configuration are subject to the memory
                     limit and the CPU limit that you configured for the group. If you decrease the
-                    memory limit of a PL/Container resource group, queries executing in running
+                    memory limit of a PL/Container resource group, queries running in
                     containers in the group may fail with an out of memory error. If you drop a
                     PL/Container resource group while there are running container instances,
-                    Greenplum Database kills the running containers.</p>
+                    Greenplum Database terminates the running containers.</p>
             </section>
             <section id="topic_resgroupcfg">
                 <title>Configuring Resource Groups for PL/Container</title>
@@ -212,7 +212,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                             <codeph>status()</codeph> are not supported.</li>
                     <li>The PL/Python function <codeph>plpy.SPIError()</codeph> is not
                         supported.</li>
-                    <li>Executing the <codeph>SAVEPOINT</codeph> command with
+                    <li>Running the <codeph>SAVEPOINT</codeph> command with
                         <codeph>plpy.execute()</codeph> is not supported.</li>
                     <li>The <codeph>DO</codeph> command (anonymous code block) is supported only
                         with PL/Container 3 (currently a Beta feature). </li>
@@ -236,7 +236,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                         <codeph>plcontainer</codeph></li>
                 </ul>
                 <p>The <varname>ID</varname> is the name that PL/Container uses to identify a Docker
-                    image. When Greenplum Database executes a UDF on a host, the Docker image on the
+                    image. When Greenplum Database runs a UDF on a host, the Docker image on the
                     host is used to start a Docker container that runs the UDF. In the XML
                     configuration file <codeph>plcontainer_configuration.xml</codeph>, there is a
                         <codeph>runtime</codeph> XML element that contains a corresponding
@@ -252,7 +252,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                     this <codeph>SELECT</codeph> command forces the configuration file to be
                     read.</p>
                 <codeblock>SELECT * FROM plcontainer_refresh_config;</codeblock>
-                <p>Running the command executes a PL/Container function that updates the
+                <p>The command runs a PL/Container function that updates the
                     configuration on the master and segment instances and returns the status of the
                     refresh.<codeblock> gp_segment_id | plcontainer_refresh_local_config
  ---------------+----------------------------------
@@ -303,7 +303,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
  1          | 693a6cb691f1d2881ec0160a44dae2547a0d5b799875d4ec106c09c97da422ea | Up 8 seconds | gpadmin | 12940
  1          | bc9a0c04019c266f6d8269ffe35769d118bfb96ec634549b2b1bd2401ea20158 | Up 2 minutes | gpadmin | 13628
  (2 rows)</codeblock>
-                <p>When Greenplum Database executes a PL/Container UDF, Query Executer (QE)
+                <p>When Greenplum Database runs a PL/Container UDF, Query Executer (QE)
                     processes start Docker containers and reuse them as needed. After a certain
                     amount of idle time, a QE process quits and destroys its Docker containers. You
                     can control the amount of idle time with the Greenplum Database server
@@ -342,7 +342,7 @@ return(log10(100))
 $$ LANGUAGE plcontainer;</codeblock></p>
                 <p>If the <codeph># container</codeph> line in a UDF specifies an ID that is not in
                     the PL/Container configuration file, Greenplum Database returns an error when
-                    you try to execute the UDF.</p>
+                    you try to run the UDF.</p>
             </section>
         
     
@@ -352,14 +352,14 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                 <p>In the Python language container, the module <codeph>plpy</codeph> is
                     implemented. The module contains these methods:</p>
                 <ul id="ul_dtk_xjg_wkb">
-                    <li><codeph>plpy.execute(stmt)</codeph> - Executes the query string
+                    <li><codeph>plpy.execute(stmt)</codeph> - Runs the query string
                             <codeph>stmt</codeph> and returns query result in a list of dictionary
                         objects. To be able to access the result fields ensure your query returns
                         named fields.</li>
                     <li><codeph>plpy.prepare(stmt[, argtypes])</codeph> - Prepares the execution
                         plan for a query. It is called with a query string and a list of parameter
                         types, if you have parameter references in the query.</li>
-                    <li><codeph>plpy.execute(plan[, argtypes])</codeph> - Executes a prepared
+                    <li><codeph>plpy.execute(plan[, argtypes])</codeph> - Runs a prepared
                         plan.</li>
                     <li><codeph>plpy.debug(msg)</codeph> - Sends a DEBUG2 message to the Greenplum
                         Database log.</li>
@@ -453,14 +453,14 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                 <p>In the R language container, the module <codeph>pg.spi</codeph> is implemented.
                     The module contains these methods:</p>
                 <ul id="ul_mqz_t3q_dw">
-                    <li><codeph>pg.spi.exec(stmt)</codeph> - Executes the query string
+                    <li><codeph>pg.spi.exec(stmt)</codeph> - Runs the query string
                             <codeph>stmt</codeph> and returns query result in R
                             <codeph>data.frame</codeph>. To be able to access the result fields make
                         sure your query returns named fields.</li>
                     <li><codeph>pg.spi.prepare(stmt[, argtypes])</codeph> - Prepares the execution
                         plan for a query. It is called with a query string and a list of parameter
                         types if you have parameter references in the query.</li>
-                    <li><codeph>pg.spi.execp(plan[, argtypes])</codeph> - Execute a prepared
+                    <li><codeph>pg.spi.execp(plan[, argtypes])</codeph> - Runs a prepared
                         plan.</li>
                     <li><codeph>pg.spi.debug(msg)</codeph> - Sends a DEBUG2 message to the Greenplum
                         Database log.</li>

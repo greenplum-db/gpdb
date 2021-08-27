@@ -57,7 +57,7 @@
 #include "libpq-fe.h"
 #undef FRONTEND
 #else
-#include "libpq-fe.h"	#include "libpq-fe.h"
+#include "libpq-fe.h"
 #endif /* FRONTEND */
 
 #include "access/htup_details.h"

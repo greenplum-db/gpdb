@@ -77,7 +77,7 @@ Pipeline validated: all jobs accounted for
   Generate Pipeline type: .. : prod
   Pipeline file ............ : ~/workspace/gpdb/concourse/pipelines/gpdb_6X_STABLE-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'aix7', 'win']
+  OS Types ................. : ['centos6', 'centos7', 'win']
   Test sections ............ : ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions', 'Gpperfmon']
   test_trigger ............. : True
 ======================================================================

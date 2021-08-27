@@ -2357,7 +2357,23 @@ XLogSendPhysical(void)
 #ifdef FAULT_INJECTOR
 		/* the walsender skip send WAL to the mirror . */
 		if (SIMPLE_FAULT_INJECTOR("walsnd_skip_send") == FaultInjectorTypeSkip)
+		{
+			if (!WalSndCaughtUp)
+			{
+				/*
+				 * If we have not caugh up, we must wait here.  Otherwise, the
+				 * walsender process keeps spinning the main loop and the csv
+				 * logs are filled with "fault triggered" messages so much that
+				 * in the CI, the disk filled up to 100% within a short time.
+				 */
+				int			wakeEvents;
+
+				wakeEvents = WL_LATCH_SET | WL_POSTMASTER_DEATH | WL_TIMEOUT;
+				WaitLatchOrSocket(&MyWalSnd->latch, wakeEvents,
+								  MyProcPort->sock, 1000);
+			}
 			return;
+		}
 #endif
 
 	if (streamingDoneSending)
@@ -3196,7 +3212,7 @@ WalSndCtlGetXLogCleanUpTo()
 	/*
 	 * we can't return XLogRecPtr smaller than walsnd_xlogCleanUpTo
 	 * because for e.g the checkpoint creation process may have read it
-	 * already and used it to clean xlog seg files upto that point.
+	 * already and used it to clean xlog seg files up to that point.
 	 */
 	if (WalSndCtl->walsnd_xlogCleanUpTo < min_xlogCleanUpTo)
 		WalSndCtl->walsnd_xlogCleanUpTo = min_xlogCleanUpTo;

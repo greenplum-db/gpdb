@@ -3,7 +3,7 @@
 <topic id="topic_th5_5bf_jr">
   <title>Encrypting Data and Database Connections</title>
   <shortdesc>Describes how to encrypt data at rest in the database or in transit over the network,
-    to protect from evesdroppers or man-in-the-middle attacks.</shortdesc>
+    to protect from eavesdroppers or man-in-the-middle attacks.</shortdesc>
   <body>
     <ul id="ul_wxd_dxc_lr">
       <li>Connections between clients and the master database can be encrypted with SSL. This is
@@ -84,7 +84,7 @@
         null. <ol id="ol_wwy_j2d_lr">
           <li>Run <codeph>gpfdist</codeph> with the <codeph>--ssl</codeph> option on the segment
             hosts. </li>
-          <li>Log into the database and execute the following
+          <li>Log into the database and run the following
             command:<codeblock>
 =# CREATE EXTERNAL TABLE ext_expenses 
    ( name text, date date, amount float4, category text, desc1 text )
@@ -217,7 +217,7 @@ FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
           GnuPG website you will find installers for popular Linux distributions and links for
           Windows and Mac OS X installers. </p>
         <ol id="ol_vnm_h54_kr">
-          <li>As root, execute the following command and choose option 1 from the
+          <li>As root, run the following command and choose option 1 from the
             menu:<codeblock># gpg --gen-key 
 gpg (GnuPG) 2.0.14; Copyright (C) 2009 Free Software Foundation, Inc.
 This is free software: you are free to change and redistribute it.

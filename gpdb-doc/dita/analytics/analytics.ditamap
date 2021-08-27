@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Greenplum Integrated Analytics">
-    <topicref href="../../6-15/homenav.html" scope="external" navtitle="Greenplum Database 6.15 Documentation"
+    <topicref href="../../6-17/homenav.html" scope="external" navtitle="Greenplum Database 6.17 Documentation"
         format="html" otherprops="oss-only"/>
-    <topicref href="../../6-15/homenav.html" scope="external" navtitle="Tanzu Greenplum 6.15 Documentation"
+    <topicref href="../../6-17/homenav.html" scope="external" navtitle="Tanzu Greenplum 6.17 Documentation"
         format="html" otherprops="pivotal"/>
     <topicref href="overview.xml" linking="none"/>
     <topicref href="madlib.xml" navtitle="Machine Learning and Deep Learning" linking="none">

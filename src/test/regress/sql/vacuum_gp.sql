@@ -232,3 +232,40 @@ DROP TABLE vac_acl_heap;
 DROP TABLE vac_acl_ao;
 DROP TABLE vac_acl_aocs;
 DROP ROLE non_super_user_vacuum;
+
+-- Test to validate VACUUM FREEZE correctly updates pg_class
+CREATE TABLE vacuum_test_heap_table AS
+SELECT generate_series(1, 10) distributed BY (generate_series);
+DELETE FROM vacuum_test_heap_table;
+
+-- just to bump transaction id
+CREATE TEMP TABLE t1(a int) ON COMMIT DROP distributed BY (a);
+CREATE TEMP TABLE t1(a int) ON COMMIT DROP distributed BY (a);
+
+SELECT gp_segment_id,
+       relname, reltuples, relpages,
+       age(relfrozenxid)
+FROM pg_class
+WHERE relname = 'vacuum_test_heap_table'
+UNION ALL
+SELECT gp_segment_id,
+       relname, reltuples, relpages,
+       age(relfrozenxid)
+FROM gp_dist_random('pg_class')
+WHERE relname = 'vacuum_test_heap_table'
+ORDER BY gp_segment_id;
+
+VACUUM FREEZE vacuum_test_heap_table;
+
+SELECT gp_segment_id,
+       relname, reltuples, relpages,
+       age(relfrozenxid)
+FROM pg_class
+WHERE relname = 'vacuum_test_heap_table'
+UNION ALL
+SELECT gp_segment_id,
+       relname, reltuples, relpages,
+       age(relfrozenxid)
+FROM gp_dist_random('pg_class')
+WHERE relname = 'vacuum_test_heap_table'
+ORDER BY gp_segment_id;

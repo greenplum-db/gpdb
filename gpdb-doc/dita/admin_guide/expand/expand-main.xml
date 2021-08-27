@@ -12,7 +12,7 @@
       consolidate different data warehouses into a single database. Additional computing capacity
       (CPU) may also be needed to accommodate newly added analytics projects. Although it is wise to
       provide capacity for growth when a system is initially specified, it is not generally possible
-      to invest in resources long before they are required. Therefore, you should expect to execute
+      to invest in resources long before they are required. Therefore, you should expect to run
       a database expansion project periodically. </p>
     <p>Because of the Greenplum MPP architecture, when you add resources to the system, the capacity
       and performance are the same as if the system had been originally implemented with the added

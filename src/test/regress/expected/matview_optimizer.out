@@ -529,6 +529,40 @@ DETAIL:  drop cascades to materialized view mvtest_mv_v
 drop cascades to materialized view mvtest_mv_v_2
 drop cascades to materialized view mvtest_mv_v_3
 drop cascades to materialized view mvtest_mv_v_4
+-- Check that unknown literals are converted to "text" in CREATE MATVIEW,
+-- so that we don't end up with unknown-type columns.
+CREATE MATERIALIZED VIEW mv_unspecified_types AS
+  SELECT 42 as i, 42.5 as num, 'foo' as u, 'foo'::unknown as u2, null as n;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+WARNING:  column "u" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+WARNING:  column "u2" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+WARNING:  column "n" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+\d+ mv_unspecified_types
+           Materialized view "public.mv_unspecified_types"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ i      | integer |           | plain   |              | 
+ num    | numeric |           | main    |              | 
+ u      | unknown |           | plain   |              | 
+ u2     | unknown |           | plain   |              | 
+ n      | unknown |           | plain   |              | 
+View definition:
+ SELECT 42 AS i,
+    42.5 AS num,
+    'foo' AS u,
+    'foo' AS u2,
+    NULL::unknown AS n;
+Distributed randomly
+
+SELECT * FROM mv_unspecified_types;
+ i  | num  |  u  | u2  | n 
+----+------+-----+-----+---
+ 42 | 42.5 | foo | foo | 
+(1 row)
+
 -- make sure that create WITH NO DATA does not plan the query (bug #13907)
 create materialized view mvtest_error as select 1/0 as x;  -- fail
 ERROR:  division by zero
@@ -599,3 +633,20 @@ SELECT * FROM mvtest2;
 ERROR:  materialized view "mvtest2" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command.
 ROLLBACK;
+-- make sure refresh mat view will dispatch oid at the final
+-- execution of the mat view's body query. See Github Issue
+-- https://github.com/greenplum-db/gpdb/issues/11956 for details.
+create table t_github_issue_11956(a int, b int) distributed randomly;
+insert into t_github_issue_11956 values (1, 1);
+create function f_github_issue_11956() returns int as
+$$
+select sum(a+b)::int from t_github_issue_11956
+$$
+language sql stable;
+create materialized view mat_view_github_issue_11956
+as
+select * from t_github_issue_11956 where a > f_github_issue_11956()
+distributed randomly;
+refresh materialized view mat_view_github_issue_11956;
+drop materialized view mat_view_github_issue_11956;
+drop table t_github_issue_11956;

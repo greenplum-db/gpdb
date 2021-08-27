@@ -105,7 +105,12 @@
                   <codeph>gpexpand</codeph> must have permissions to create directories in them.
                 </p><p>After you have entered all required information, the utility generates an
                 input file and saves it in the current directory. For
-              example:</p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i></codeblock></li>
+                example:</p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i></codeblock><p>If
+                the Greenplum cluster is configured with tablespaces, the utility automatically
+                generates an additional tablespace mapping file. This file is required for later
+                parsing by the utility so make sure it is present before proceeding with the next
+                step. For example:
+              </p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i>.ts</codeblock></li>
           </ol>
         </section>
       </body>
@@ -202,7 +207,7 @@ sdw5|sdw5-1|60012|/gpdata/mirror/gp10|14|10|m</codeblock>
               example:<codeblock>$ gpexpand -i input_file</codeblock><p>The utility detects if an
               expansion schema exists for the Greenplum Database system. If a
                 <i>gpexpand</i> schema exists, remove it with <codeph>gpexpand -c</codeph>
-              before you start a new expansion operation. See <xref href="expand-rm-schema.xml"
+                before you start a new expansion operation. See <xref href="expand-post.xml#topic_xvp_5p2_hpb"
                 type="topic" format="dita"/>.</p><p>When the new segments are initialized and the
               expansion schema is created, the utility prints a success message and exits. </p></li>
         </ol>

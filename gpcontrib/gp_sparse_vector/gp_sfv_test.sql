@@ -1,3 +1,5 @@
+SET search_path TO sparse_vector;
+
 DROP TABLE IF EXISTS features;
 DROP TABLE IF EXISTS corpus;
 DROP TABLE IF EXISTS documents;
@@ -44,3 +46,5 @@ CREATE TABLE weights AS (SELECT docnum, (a*logidf) tf_idf FROM (SELECT log(count
 
 \qecho Calculate the angular distance between the first document to each other document
 SELECT docnum,trunc((180.*(ACOS(dmin(1.,(tf_idf%*%testdoc)/(l2norm(tf_idf)*l2norm(testdoc))))/(4.*ATAN(1.))))::numeric,2) angular_distance FROM weights,(SELECT tf_idf testdoc FROM weights WHERE docnum = 1 LIMIT 1) foo ORDER BY 1;
+
+SET search_path TO DEFAULT;

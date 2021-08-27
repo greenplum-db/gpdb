@@ -424,15 +424,15 @@ chunksize = 67108864</codeblock></p>
                   <pd>The upload/download speed lower limit, in bytes per second. The default speed
                      is 10240 (10K). If the upload or download speed is slower than the limit for
                      longer than the time specified by <codeph>low_speed_time</codeph>, then the
-                     connection is aborted and retried. After 3 retries, the <codeph>s3</codeph>
+                     connection is stopped and retried. After 3 retries, the <codeph>s3</codeph>
                      protocol returns an error. A value of 0 specifies no lower limit.</pd>
                </plentry>
                <plentry>
                   <pt>low_speed_time</pt>
                   <pd>When the connection speed is less than <codeph>low_speed_limit</codeph>, this
-                     parameter specified the amount of time, in seconds, to wait before aborting an
-                     upload to or a download from the S3 bucket. The default is 60 seconds. A value
-                     of 0 specifies no time limit.</pd>
+                     parameter specified the amount of time, in seconds, to wait before cancelling
+                     an upload to or a download from the S3 bucket. The default is 60 seconds. A
+                     value of 0 specifies no time limit.</pd>
                </plentry>
                <plentry>
                   <pt>proxy</pt>

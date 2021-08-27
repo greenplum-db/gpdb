@@ -209,9 +209,10 @@ public:
 									  const CReqdPropPlan *prppSnd);
 
 	// map input required and derived plan properties into new required plan properties
-	static CReqdPropPlan *PrppRemap(CMemoryPool *mp, CReqdPropPlan *prppInput,
-									CDrvdPropPlan *pdpplanInput,
-									UlongToColRefMap *colref_mapping);
+	static CReqdPropPlan *PrppRemapForCTE(CMemoryPool *mp,
+										  CReqdPropPlan *prppInput,
+										  CDrvdPropPlan *pdpplanInput,
+										  UlongToColRefMap *colref_mapping);
 
 	// print function
 	virtual IOstream &OsPrint(IOstream &os) const;

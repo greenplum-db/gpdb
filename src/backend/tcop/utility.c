@@ -1153,7 +1153,8 @@ ProcessUtilitySlow(Node *parsetree,
 							relOid = DefineRelation((CreateStmt *) stmt,
 													relKind,
 													((CreateStmt *) stmt)->ownerid,
-													relStorage, false, true, NULL);
+													relStorage, false, true,
+													cstmt->intoPolicy);
 
 							/*
 							 * Let NewRelationCreateToastTable decide if this
@@ -1213,12 +1214,33 @@ ProcessUtilitySlow(Node *parsetree,
 																cstmt->is_part_parent);
 							}
 							if (Gp_role == GP_ROLE_DISPATCH)
+							{
 								CdbDispatchUtilityStatement((Node *) stmt,
 															DF_CANCEL_ON_ERROR |
 															DF_NEED_TWO_PHASE |
 															DF_WITH_SNAPSHOT,
 															GetAssignedOidsForDispatch(),
 															NULL);
+							}
+							else
+							{
+								/*
+								 * Greenplum specific behavior
+								 * If intoQuery field is set, it means this is Create Matview.
+								 * To keep catalog consistent, QEs should also store the viewquery.
+								 * The call chain is:
+								 *   create_ctas_nodata()(QD) --> create_ctas_internal()(QD) -->
+								 *   dispatch create stmt(QD) --> ProcessUtilitySlow(on QE) --> StoreViewQuery()(QE).
+								 */
+								if (cstmt->intoQuery)
+								{
+									/* StoreViewQuery scribbles on tree, so make a copy */
+									Query	   *query = (Query *) copyObject(cstmt->intoQuery);
+
+									StoreViewQuery(relOid, query, false);
+								}
+							}
+
 							CommandCounterIncrement();
 							/*
 							 * Deferred statements should be evaluated *after* AO tables

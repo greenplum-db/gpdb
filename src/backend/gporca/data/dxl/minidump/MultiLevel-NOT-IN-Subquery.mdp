@@ -563,7 +563,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
     <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3017.115021" Rows="30.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="3017.014692" Rows="30.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -583,7 +583,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3017.113232" Rows="30.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="3017.012903" Rows="30.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -608,7 +608,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
               </dxl:ParamList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.110678" Rows="27.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.010349" Rows="27.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="18" Alias="i">
@@ -622,9 +622,9 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
                   </dxl:Comparison>
                 </dxl:Filter>
                 <dxl:OneTimeFilter/>
-                <dxl:Result>
+                <dxl:NestedLoopJoin JoinType="LeftAntiSemiJoinNotIn" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1293.044878" Rows="3000.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1293.009757" Rows="27.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="18" Alias="i">
@@ -634,69 +634,13 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
                       <dxl:Ident ColId="19" ColName="j" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:Filter>
-                    <dxl:SubPlan TypeMdid="0.16.1.0" SubPlanType="AllSubPlan">
-                      <dxl:TestExpr>
-                        <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
-                          <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
-                          <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                        </dxl:Comparison>
-                      </dxl:TestExpr>
-                      <dxl:ParamList/>
-                      <dxl:Materialize Eager="true">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000863" Rows="26.953361" Width="4"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="27" Alias="i">
-                            <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000827" Rows="26.953361" Width="4"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="27" Alias="i">
-                              <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:SortingColumnList/>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.000184" Rows="8.984454" Width="4"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="27" Alias="i">
-                                <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
-                                <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                              </dxl:Comparison>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="c">
-                              <dxl:Columns>
-                                <dxl:Column ColId="27" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="30" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="31" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="32" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="33" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="34" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                        </dxl:BroadcastMotion>
-                      </dxl:Materialize>
-                    </dxl:SubPlan>
-                  </dxl:Filter>
-                  <dxl:OneTimeFilter/>
+                  <dxl:Filter/>
+                  <dxl:JoinFilter>
+                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                      <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
+                    </dxl:Comparison>
+                  </dxl:JoinFilter>
                   <dxl:Materialize Eager="true">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.001468" Rows="27.000000" Width="8"/>
@@ -753,7 +697,58 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
                       </dxl:TableScan>
                     </dxl:BroadcastMotion>
                   </dxl:Materialize>
-                </dxl:Result>
+                  <dxl:Materialize Eager="true">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000863" Rows="26.953361" Width="4"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="27" Alias="i">
+                        <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                    <dxl:Filter/>
+                    <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000827" Rows="26.953361" Width="4"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="27" Alias="i">
+                          <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:SortingColumnList/>
+                      <dxl:TableScan>
+                        <dxl:Properties>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000184" Rows="8.984454" Width="4"/>
+                        </dxl:Properties>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="27" Alias="i">
+                            <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
+                        <dxl:Filter>
+                          <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
+                            <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
+                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                          </dxl:Comparison>
+                        </dxl:Filter>
+                        <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="c">
+                          <dxl:Columns>
+                            <dxl:Column ColId="27" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
+                            <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                            <dxl:Column ColId="30" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                            <dxl:Column ColId="31" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                            <dxl:Column ColId="32" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                            <dxl:Column ColId="33" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                            <dxl:Column ColId="34" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                            <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          </dxl:Columns>
+                        </dxl:TableDescriptor>
+                      </dxl:TableScan>
+                    </dxl:BroadcastMotion>
+                  </dxl:Materialize>
+                </dxl:NestedLoopJoin>
               </dxl:Result>
             </dxl:SubPlan>
           </dxl:Filter>

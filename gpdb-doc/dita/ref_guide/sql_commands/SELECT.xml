@@ -135,7 +135,7 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
             <codeph>WITH</codeph>, it is usual to include a <codeph>RETURNING</codeph> clause. It is
           the output of <codeph>RETURNING</codeph>, <i>not</i> the underlying table that the
           statement modifies, that forms the temporary table that is read by the primary query. If
-            <codeph>RETURNING</codeph> is omitted, the statement is still executed, but it produces
+            <codeph>RETURNING</codeph> is omitted, the statement is still run, but it produces
           no output so it cannot be referenced as a table by the primary query. </p><p>For a <codeph>SELECT</codeph> command that includes a
             <codeph>WITH</codeph> clause, the clause can contain at most a single clause that
           modifies table data (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
@@ -144,7 +144,7 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
           specified; if the list of column names is omitted, the names are inferred from the
           subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
-          executed at the same time. </p><p>If <codeph>RECURSIVE</codeph> is specified, it
+          run at the same time. </p><p>If <codeph>RECURSIVE</codeph> is specified, it
           allows a <codeph>SELECT</codeph> subquery to reference itself by name. Such a subquery has
           the general
           form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL | DISTINCT] <varname>recursive_term</varname></codeblock><p>where
@@ -188,9 +188,9 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>This
 SELECT * FROM foo LIMIT 5;</codeblock></p>
         <p>A key property of <codeph>WITH</codeph> queries is that they are evaluated only once per
           execution of the primary query, even if the primary query refers to them more than once.
-          In particular, data-modifying statements are guaranteed to be executed once and only once,
+          In particular, data-modifying statements are guaranteed to be run once and only once,
           regardless of whether the primary query reads all or any of their output.</p>
-        <p>The primary query and the <codeph>WITH</codeph> queries are all (notionally) executed at
+        <p>The primary query and the <codeph>WITH</codeph> queries are all (notionally) run at
           the same time. This implies that the effects of a data-modifying statement in
             <codeph>WITH</codeph> cannot be seen from other parts of the query, other than by
           reading its <codeph>RETURNING</codeph> output. If two such data-modifying statements
@@ -1093,7 +1093,7 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           not defined in the SQL standard.</p></sectiondiv><sectiondiv id="section24"><b>Limited Use
           of STABLE and VOLATILE Functions</b><p>To prevent data from becoming out-of-sync across
           the segments in Greenplum Database, any function classified as <codeph>STABLE</codeph> or
-            <codeph>VOLATILE</codeph> cannot be executed at the segment database level if it
+            <codeph>VOLATILE</codeph> cannot be run at the segment database level if it
           contains SQL or modifies the database in any way. See <codeph><xref
               href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph> for more
           information.</p></sectiondiv></section>

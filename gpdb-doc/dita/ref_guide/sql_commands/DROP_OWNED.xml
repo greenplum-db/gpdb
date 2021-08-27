@@ -7,7 +7,7 @@ to the given roles on objects in the current database or on shared objects (data
 will be revoked.</pd></plentry><plentry><pt>CASCADE</pt><pd>Automatically drop objects that depend on the affected objects.</pd></plentry><plentry><pt>RESTRICT</pt><pd>Refuse to drop the objects owned by a role if any other database
 objects depend on one of the affected objects. This is the default.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>DROP OWNED</codeph> is often used to prepare for the removal
 of one or more roles. Because <codeph>DROP OWNED</codeph> only affects
-the objects in the current database, it is usually necessary to execute
+the objects in the current database, it is usually necessary to run
 this command in each database that contains objects owned by a role that
 is to be removed.</p><p>Using the <codeph>CASCADE</codeph> option may make the command recurse
 to objects owned by other users.</p><p>The <xref href="REASSIGN_OWNED.xml#topic1"><codeph>REASSIGN OWNED</codeph></xref> command is an

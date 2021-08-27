@@ -260,8 +260,8 @@ host    all   dba   192.168.0.0/32  md5</codeblock></li>
             <plentry>
               <pt>Trust</pt>
               <pd>Allows the connection unconditionally, without the need for a password or any
-                other authentication. This entry is commonly used for the <codeph>gpadmin</codeph>
-                role, and for Greenplum utilities (for example <codeph>gpinitsystem</codeph>,
+                other authentication. This entry is required for the <codeph>gpadmin</codeph> role,
+                and for Greenplum utilities (for example <codeph>gpinitsystem</codeph>,
                   <codeph>gpstop</codeph>, or <codeph>gpstart</codeph> amongst others) that need to
                 connect between nodes without prompting for input or a password. </pd>
               <pd>
@@ -518,12 +518,12 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
 </codeblock></p></li>
           </ul></p>
       </section>
-      <section id="openssl_config">
+      <section>
         <title>OpenSSL Configuration</title>
-        <p>Greenplum Database reads the OpenSSL configuration file specified in
-            <codeph>$GP_HOME/etc/openssl.cnf</codeph> by default. You can make changes to the
-          default configuration for OpenSSL by modifying or updating this file and restarting the
-          server.</p>
+        <p>You can make changes to the OpenSSL configuration by updating the
+            <codeph>openssl.cnf</codeph> file under your OpenSSL installation directory, or the file
+          referenced by <codeph>$OPENSSL_CONF</codeph>, if present, and then restarting the
+          Greenplum Database server.</p>
       </section>
       <section id="create_a_cert">
         <title>Creating a Self-Signed Certificate</title>
@@ -586,8 +586,8 @@ rm privkey.pem</codeblock></li>
           </ul></p>
         <p>If Greenplum Database master mirroring is enabled with SSL client authentication, the SSL
           server files <i>should not be placed</i> in the default directory
-            <codeph>$MASTER_DATA_DIRECTORY</codeph>. If an <codeph>initstandby</codeph> operation is
-          performed, the contents of <codeph>$MASTER_DATA_DIRECTORY</codeph> is copied from the
+            <codeph>$MASTER_DATA_DIRECTORY</codeph>. If a <codeph>gpinitstandby</codeph> operation
+          is performed, the contents of <codeph>$MASTER_DATA_DIRECTORY</codeph> is copied from the
           master to the standby master and the incorrect SSL key, and cert files (the master files,
           and not the standby master files) will prevent standby master start up. </p>
         <p>You can specify a different directory for the location of the SSL server files with the
@@ -653,6 +653,10 @@ rm privkey.pem</codeblock></li>
           <li><codeph>sslrootcert</codeph> – <codeph>PGSSLROOTCERT</codeph></li>
           <li><codeph>sslcrl</codeph> – <codeph>PGSSLCRL</codeph> </li>
         </ul></p>
+      <p>For example, run the following command to connect to the <codeph>postgres</codeph> database
+        from <codeph>localhost</codeph> and verify the certificate present in the default location
+        under <codeph>$MASTER_DATA_DIRECTORY</codeph>:
+        <codeblock>psql "sslmode=verify-ca host=localhost dbname=postgres"</codeblock></p>
     </body>
   </topic>
   <topic id="topic_yxp_5h2_jr">

@@ -3,7 +3,8 @@ platform: linux
 image_resource:
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos6-build
+    repository: gcr.io/data-gpdb-public-images/gpdb6-centos6-build
+    tag: latest
 
 inputs:
 - name: gpdb_src

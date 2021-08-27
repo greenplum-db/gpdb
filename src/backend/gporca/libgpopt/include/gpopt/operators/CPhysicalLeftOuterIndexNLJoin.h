@@ -33,6 +33,9 @@ public:
 	// dtor
 	virtual ~CPhysicalLeftOuterIndexNLJoin();
 
+	CEnfdProp::EPropEnforcingType EpetDistribution(
+		CExpressionHandle &exprhdl, const CEnfdDistribution *ped) const;
+
 	// ident accessors
 	virtual EOperatorId
 	Eopid() const

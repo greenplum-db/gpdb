@@ -9,7 +9,8 @@ SYNOPSIS
 
 gpstart [-d <master_data_directory>] [-B <parallel_processes>] 
         [-R] [-m] [-y] [-a] [-t <timeout_seconds>] 
-        [-l logfile_directory] [-v | -q]
+        [-l logfile_directory] [--skip-heap-checksum-validation]
+        [-v | -q]
 
 gpstart -? | -h | --help
 
@@ -34,7 +35,7 @@ If new hosts are added to the system, you must manually remove this file
 from the gpadmin user's home directory. The utility will create a new hosts 
 cache file at the next startup.
 
-Before you can start a Greenplum Database system, you must have initialized 
+Before you can start a Greenplum Database system, you must have initialized
 the system using gpinitsystem first.
 
 
@@ -89,6 +90,15 @@ OPTIONS
   Starts Greenplum Database in restricted mode (only database superusers 
   are allowed to connect).
 
+--skip-heap-checksum-validation
+
+  During startup, the utility does not validate the consistency of the heap checksum setting
+  among the Greenplum Database master and segment instances. The default is to ensure
+  that the heap checksum setting is the same on all instances, either enabled or disabled.
+  Warning: Starting Greenplum Database without this validation could lead
+  to data loss. Use this option to start Greenplum Database only when it is
+  necessary to ignore the heap checksum verification errors to recover data or
+  to troubleshoot the errors.
 
 -t | --timeout <number_of_seconds>
 

@@ -10,7 +10,7 @@
          segments in the Greenplum system run the application or script, whether or not a segment
          has output rows to process.</p>
       <p>Use <codeph>CREATE WRITABLE EXTERNAL WEB TABLE</codeph> to define the external table and
-         specify the application or script to run on the segment hosts. Commands execute from within
+         specify the application or script to run on the segment hosts. Commands run from within
          the database and cannot access environment variables (such as <codeph>$PATH</codeph>). Set
          environment variables in the <codeph>EXECUTE</codeph> clause of your writable external
          table definition. For example:</p>
@@ -23,9 +23,9 @@
     DISTRIBUTED RANDOMLY;
 </codeblock>
       </p>
-      <p>The following Greenplum Database variables are available for use in OS commands executed by
+      <p>The following Greenplum Database variables are available for use in OS commands run by
          a web or writable external table. Set these variables as environment variables in the shell
-         that executes the command(s). They can be used to identify a set of requests made by an
+         that runs the command(s). They can be used to identify a set of requests made by an
          external table statement across the Greenplum Database array of hosts and segment
          instances.</p>
       <table id="du224024">
@@ -42,7 +42,7 @@
             <tbody>
                <row>
                   <entry colname="col1">$GP_CID</entry>
-                  <entry colname="col2">Command count of the transaction executing the external
+                  <entry colname="col2">Command count of the transaction running the external
                      table statement.</entry>
                </row>
                <row>
@@ -66,22 +66,22 @@
                </row>
                <row>
                   <entry colname="col1">$GP_QUERY_STRING</entry>
-                  <entry colname="col2">The SQL command (DML or SQL query) executed by Greenplum
+                  <entry colname="col2">The SQL command (DML or SQL query) run by Greenplum
                      Database.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_SEG_DATADIR</entry>
                   <entry colname="col2">The location of the data directory of the segment instance
-                     executing the external table command.</entry>
+                     running the external table command.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_SEG_PG_CONF</entry>
                   <entry colname="col2">The location of the <codeph>postgresql.conf</codeph> file of
-                     the segment instance executing the external table command.</entry>
+                     the segment instance running the external table command.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_SEG_PORT</entry>
-                  <entry colname="col2">The port number of the segment instance executing the
+                  <entry colname="col2">The port number of the segment instance running the
                      external table command.</entry>
                </row>
                <row>
@@ -91,7 +91,7 @@
                </row>
                <row>
                   <entry colname="col1">$GP_SEGMENT_ID</entry>
-                  <entry colname="col2">The ID number of the segment instance executing the external
+                  <entry colname="col2">The ID number of the segment instance running the external
                      table command (same as <codeph>content</codeph> in
                         <codeph>gp_segment_configuration</codeph>).</entry>
                </row>
@@ -107,11 +107,11 @@
                </row>
                <row>
                   <entry colname="col1">$GP_TIME</entry>
-                  <entry colname="col2">The time the external table command was executed.</entry>
+                  <entry colname="col2">The time the external table command was run.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_USER </entry>
-                  <entry colname="col2">The database user executing the external table
+                  <entry colname="col2">The database user running the external table
                      statement.</entry>
                </row>
                <row>

@@ -1,0 +1,27 @@
+TRUNCATE TABLE
+2021-01-04 16:24:29|INFO|gpload session started 2021-01-04 16:24:29
+2021-01-04 16:24:29|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:24:29|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_02.txt" -t 30
+2021-01-04 16:24:29|INFO|did not find an external table to reuse. creating ext_gpload_reusable_43c33c98_4e66_11eb_bab1_7085c2381836
+2021-01-04 16:24:29|INFO|running time: 0.13 seconds
+2021-01-04 16:24:29|INFO|rows Inserted          = 9
+2021-01-04 16:24:29|INFO|rows Updated           = 0
+2021-01-04 16:24:29|INFO|data formatting errors = 0
+2021-01-04 16:24:29|INFO|gpload succeeded
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-04 16:24:29|INFO|gpload session started 2021-01-04 16:24:29
+2021-01-04 16:24:29|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:24:29|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
+2021-01-04 16:24:29|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_792f8d649ed52bcdd2634ec5c131e975
+2021-01-04 16:24:29|INFO|did not find an external table to reuse. creating ext_gpload_reusable_43e766b8_4e66_11eb_a56f_7085c2381836
+2021-01-04 16:24:30|INFO|running time: 0.22 seconds
+2021-01-04 16:24:30|INFO|rows Inserted          = 0
+2021-01-04 16:24:30|INFO|rows Updated           = 1
+2021-01-04 16:24:30|INFO|data formatting errors = 0
+2021-01-04 16:24:30|INFO|gpload succeeded
+ count 
+-------
+     1
+(1 row)
+

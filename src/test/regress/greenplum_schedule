@@ -20,6 +20,7 @@
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
 # file related tests (like gp_log_system, etc) faster.
 test: gp_toolkit
+test: log_guc
 
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
@@ -37,11 +38,13 @@ test: gp_tablespace
 test: temp_tablespaces
 test: default_tablespace
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy_encoding gp_create_table gp_create_view window_views create_table_like_gp matview_ao prepare_lockmode gpcopy_dispatch
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp
+test: gpcopy_encoding gp_create_table gp_create_view window_views create_table_like_gp matview_ao prepare_lockmode gpcopy_dispatch gp_copy_dtx
 # below test(s) inject faults so each of them need to be in a separate group
 test: gpcopy
 
-test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format misc_jiras direct_dispatch_explain_analyze
+test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format misc_jiras direct_dispatch_explain_analyze
+# below test(s) inject faults so each of them need to be in a separate group
 test: guc_gp
 # namespace_gp test will show diff if concurrent tests use temporary tables.
 # So run it separately.
@@ -119,7 +122,7 @@ test: db_size_functions
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table external_table_create_privs column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
+test: external_table external_table_union_all external_table_create_privs column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
 test: alter_table_set alter_table_gp alter_table_ao subtransaction_visibility oid_consistency udf_exception_blocks
 # below test(s) inject faults so each of them need to be in a separate group
 test: aocs
@@ -168,7 +171,9 @@ test: rpt rpt_joins rpt_tpch rpt_returning
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create
 # temp tables
-test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
+test: bfv_cte bfv_joins bfv_subquery bfv_legacy bfv_temp bfv_dml
+# bfv_planner contains fault inject
+test: bfv_planner
 
 test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_sets_oid
 

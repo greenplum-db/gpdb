@@ -13,7 +13,7 @@
         <section id="section3">
             <title>Description</title>
             <p><codeph>DROP USER MAPPING</codeph> removes an existing user mapping from a foreign
-                server. To execute this command, the current user must be the owner of the server
+                server. To run this command, the current user must be the owner of the server
                 containing the mapping.</p>
         </section>
         <section id="section4">

@@ -823,3 +823,24 @@ create domain testdomain1 as int constraint unsigned check (value > 0);
 alter domain testdomain1 rename constraint unsigned to unsigned_foo;
 alter domain testdomain1 drop constraint unsigned_foo;
 drop domain testdomain1;
+--
+-- Create Domain will dispatch collation
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/12015
+--
+create domain testdomain_issue_12015 as text collate "C";
+select count(distinct (typname, collname))
+from
+(
+  select  typname,
+          (select collname from pg_collation where oid = typcollation)
+  from pg_type where typname = 'testdomain_issue_12015'
+  union all
+  select typname,
+         (select collname from pg_collation where oid = typcollation)
+  from gp_dist_random('pg_type') where typname = 'testdomain_issue_12015'
+)x;
+ count 
+-------
+     1
+(1 row)
+

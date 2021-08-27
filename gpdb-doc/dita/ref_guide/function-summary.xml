@@ -32,7 +32,7 @@
     <title id="in201560">Greenplum Database Function Types</title>
     <body>
       <p>Greenplum Database evaluates functions and operators used in SQL expressions. Some
-        functions and operators are only allowed to execute on the master since they could lead to
+        functions and operators are only allowed to run on the master since they could lead to
         inconsistencies in Greenplum Database segment instances. This table describes the Greenplum
         Database Function Types.</p>
       <table id="in201681">
@@ -79,10 +79,10 @@
         </tgroup>
       </table>
       <p>In Greenplum Database, data is divided up across segments — each segment is a distinct
-        PostgreSQL database. To prevent inconsistent or unexpected results, do not execute functions
+        PostgreSQL database. To prevent inconsistent or unexpected results, do not run functions
         classified as <codeph>VOLATILE</codeph> at the segment level if they contain SQL commands or
         modify the database in any way. For example, functions such as <codeph>setval()</codeph> are
-        not allowed to execute on distributed data in Greenplum Database because they can cause
+        not allowed to run on distributed data in Greenplum Database because they can cause
         inconsistent data between segment instances.</p>
       <p>To ensure data consistency, you can safely use <codeph>VOLATILE</codeph> and
           <codeph>STABLE</codeph> functions in statements that are evaluated on and run from the

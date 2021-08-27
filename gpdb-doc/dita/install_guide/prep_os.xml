@@ -11,11 +11,11 @@
     <ol>
       <li id="ji162035">Make sure your host systems meet the requirements described in <xref
           href="platform-requirements.xml"/>.</li>
-      <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable SELinux and firewall
+      <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable or configure SELinux.</xref></li>
+      <li><xref href="#topic_et2_y22_4nb" format="dita">Disable or configure firewall
           software.</xref></li>
-      <li id="ji162039">
-        <xref href="#topic3" type="topic" format="dita">Set the required operating system
-          parameters.</xref>
+      <li id="ji162039"><xref href="#topic3" type="topic" format="dita">Set the required operating
+          system parameters.</xref>
       </li>
       <li><xref href="#topic_qst_s5t_wy" type="topic" format="dita">Synchronize system
           clocks.</xref></li>
@@ -59,10 +59,12 @@
     </note>
   </body>
   <topic id="topic_sqj_lt1_nfb">
-    <title>Disabling SELinux and Firewall Software</title>
+    <title>Disable or Configure SELinux</title>
     <body>
-      <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must be disabled.
-        Follow these steps:<ol id="ol_ysm_5t1_nfb">
+      <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be
+          <codeph>Disabled</codeph> or configured to allow unconfined access to Greenplum processes,
+        directories, and the gpadmin user. </p>
+      <p>If you choose to disable SELinux:<ol id="ol_ysm_5t1_nfb">
           <li>As the root user, check the status of
             SELinux:<codeblock># sestatus
 SELinuxstatus: disabled</codeblock></li>
@@ -78,18 +80,30 @@ SELinuxstatus: disabled</codeblock></li>
           <li>Reboot the system to apply any changes that you made and verify that SELinux is
             disabled.</li>
         </ol></p>
-      <p>For information about disabling SELinux, see the SELinux documentation.</p>
+      <p>If you choose to enable SELinux in <codeph>Enforcing</codeph> mode, then Greenplum
+        processes and users can operate successfully in the default <codeph>Unconfined</codeph>
+        context. If you require increased SELinux confinement for Greenplum processes and users, you
+        must test your configuration to ensure that there are no functionality or performance
+        impacts to Greenplum Database. See the <xref
+          href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/selinux_users_and_administrators_guide/index"
+          format="html" scope="external">SELinux User's and Administrator's Guide</xref> for
+        detailed information about configuring SELinux and SELinux users.</p>
+    </body>
+  </topic>
+  <topic id="topic_et2_y22_4nb">
+    <title>Disable or Configure Firewall Software</title>
+    <body>
       <p>You should also disable firewall software such as <codeph>iptables</codeph> (on systems
         such as RHEL 6.x and CentOS 6.x ), <codeph>firewalld</codeph> (on systems such as RHEL 7.x
-        and CentOS 7.x), or <codeph>ufw</codeph> (on Ubuntu systems, disabled by default). </p>
-      <p>If you decide to enable <codeph>iptables</codeph> with Greenplum Database for security
-        purposes, see <xref href="enable_iptables.xml#topic1" format="dita"/>.</p>
-      <p>Follow these steps to disable <codeph>iptables</codeph>: <ol id="ul_wrw_3v1_nfb">
+        and CentOS 7.x), or <codeph>ufw</codeph> (on Ubuntu systems, disabled by default). If
+        firewall software is not disabled, you must instead configure your software to allow
+        required communication between Greenplum hosts.</p>
+      <p>To disable <codeph>iptables</codeph>: <ol id="ul_wrw_3v1_nfb">
           <li>As the root user, check the status of
               <codeph>iptables</codeph>:<codeblock># /sbin/chkconfig --list iptables</codeblock><p>If
                 <codeph>iptables</codeph> is disabled, the command output
             is:</p><codeblock>iptables 0:off 1:off 2:off 3:off 4:off 5:off 6:off</codeblock></li>
-          <li>If necessary, execute this command as root to disable
+          <li>If necessary, run this command as root to disable
               <codeph>iptables</codeph>:<codeblock>/sbin/chkconfig iptables off</codeblock><p>You
               will need to reboot your system after applying the change.</p></li>
           <li>For systems with <codeph>firewalld</codeph>, check the status of
@@ -99,12 +113,15 @@ SELinuxstatus: disabled</codeblock></li>
             is:</p><codeblock>* firewalld.service - firewalld - dynamic firewall daemon
    Loaded: loaded (/usr/lib/systemd/system/firewalld.service; disabled; vendor preset: enabled)
    Active: inactive (dead)</codeblock></li>
-          <li>If necessary, execute these commands as root to disable
+          <li>If necessary, run these commands as root to disable
             <codeph>firewalld</codeph>:<codeblock># systemctl stop firewalld.service
 # systemctl disable firewalld.service</codeblock></li>
         </ol></p>
-      <p>For more information about configuring your firewall software, see the documentation for
-        the firewall or your operating system.</p>
+      <p>If you decide to enable <codeph>iptables</codeph> with Greenplum Database for security
+        purposes, see <xref href="enable_iptables.xml#topic1" format="dita"/> for important
+        considerations and example configurations.</p>
+      <p>See the documentation for the firewall or your operating system for additional
+        information.</p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -290,7 +307,7 @@ vm.dirty_ratio = 10</codeblock></p>
         limits by reading the values from the <codeph>limits.conf</codeph> file and then from the
         override file. For information about PAM and user limits, see the documentation on PAM and
           <codeph>pam_limits</codeph>.</p>
-      <p>Execute the <codeph>ulimit -u</codeph> command on each segment host to display the maximum
+      <p>Run the <codeph>ulimit -u</codeph> command on each segment host to display the maximum
         number of processes that are available to each user. Validate that the return value is
         131072.</p>
     </section>
@@ -306,6 +323,7 @@ vm.dirty_ratio = 10</codeblock></p>
       <p>The XFS options can also be set in the <codeph>/etc/fstab</codeph> file. This example entry
         from an <codeph>fstab</codeph> file specifies the XFS options.</p>
       <codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock>
+      <note>You must have root permission to edit the <codeph>/etc/fstab</codeph> file.</note>
     </section>
     <section id="disk_io_settings">
       <title>Disk I/O Settings</title>
@@ -314,13 +332,13 @@ vm.dirty_ratio = 10</codeblock></p>
           <p>Read-ahead value</p>
           <p>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
             16384. To verify the read-ahead value of a disk device:</p>
-          <codeblock># /sbin/blockdev --getra <varname>devname</varname></codeblock>
+          <codeblock># sudo /sbin/blockdev --getra <varname>devname</varname></codeblock>
           <p>For example:</p>
-          <codeblock># /sbin/blockdev --getra /dev/sdb</codeblock>
+          <codeblock># sudo /sbin/blockdev --getra /dev/sdb</codeblock>
           <p>To set blockdev (read-ahead) on a device:</p>
-          <codeblock># /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
+          <codeblock># sudo /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
           <p>For example:</p>
-          <codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
+          <codeblock># sudo /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
           <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
             information about using that command (<codeph>man blockdev</codeph> opens the man
             page).</p>
@@ -390,7 +408,7 @@ vm.dirty_ratio = 10</codeblock></p>
         utility <codeph>grubby</codeph>. This command adds the parameter when run as
         root.<codeblock># grubby --update-kernel=ALL --args="transparent_hugepage=never"</codeblock></p>
       <p>After adding the parameter, reboot the system.</p>
-      <p>For Ubuntu systems, install the <codeph>hugepages</codeph> package and execute this command
+      <p>For Ubuntu systems, install the <codeph>hugepages</codeph> package and run this command
         as root:<codeblock># hugeadm --thp-never</codeblock></p>
       <p>This <cmdname>cat</cmdname> command checks the state of THP. The output indicates that THP
         is
@@ -426,13 +444,14 @@ always [never]</codeblock></p>
             <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
           connections between systems to perform their tasks. In large Greenplum Database
           deployments, cloud deployments, or deployments with a large number of segments per host,
-          these utilities may exceed the hosts' maximum threshold for unauthenticated connections.
+          these utilities may exceed the host's maximum threshold for unauthenticated connections.
           When this occurs, you receive errors such as: <codeph>ssh_exchange_identification:
             Connection closed by remote host</codeph>.</p>
       <p>To increase this connection threshold for your Greenplum Database system, update the SSH
             <codeph>MaxStartups</codeph> and <codeph>MaxSessions</codeph> configuration parameters
           in one of the <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph>
-          SSH daemon configuration files.</p>
+          SSH daemon configuration files. <note>You must have root permission to edit these two
+            files.</note></p>
         <p>If you specify <codeph>MaxStartups</codeph> and <codeph>MaxSessions</codeph> using a
           single integer value, you identify the maximum number of concurrent unauthenticated
           connections (<codeph>MaxStartups</codeph>) and maximum number of open shell, login, or
@@ -464,14 +483,16 @@ MaxSessions 200</codeblock></p>
         example, to add the parameter <codeph>transparent_hugepage=never</codeph> to all kernels on
         a system. <ol id="ol_bxf_g3x_j1b">
           <li>Add the parameter to the <codeph>GRUB_CMDLINE_LINUX</codeph> line in the file
-            parameter in
-            <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
+              parameter in
+                <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=cl/root rd.lvm.lv=cl/swap rhgb quiet <b>transparent_hugepage=never</b>"
-GRUB_DISABLE_RECOVERY="true"</codeblock></li>
+              GRUB_DISABLE_RECOVERY="true"</codeblock><note>You
+                must have root permission to edit the <codeph>/etc/default/grub</codeph>
+                file.</note></li>
           <li>As root, run the <codeph>grub2-mkconfig</codeph> command to update the
             kernels.<codeblock># grub2-mkconfig -o /boot/grub2/grub.cfg</codeblock></li>
           <li>Reboot the system.</li>
@@ -545,30 +566,32 @@ server 10.6.220.20</codeblock></li>
         automate the tasks of creating the <codeph>gpadmin</codeph> user and installing the
         Greenplum Database software on all hosts in the cluster. </note>
       <ol id="ol_k23_3cz_thb">
-        <li>Create the <codeph>gpadmin</codeph> group and user.
-          <note>If you are installing Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to
-            disable IPC object removal by creating the <codeph>gpadmin</codeph> user as a system
-            account, provide both the <codeph>-r</codeph> option (create the user as a system
-            account) and the <codeph>-m</codeph> option (create a home directory) to the
-              <codeph>useradd</codeph> command. On Ubuntu systems, you must use the
-              <codeph>-m</codeph> option with the <codeph>useradd</codeph> command to create a home
-            directory for a user.</note><p>This example creates the <codeph>gpadmin</codeph> group,
-            creates the <codeph>gpadmin</codeph> user as a system account with a home directory and
-            as a member of the <codeph>gpadmin</codeph> group, and creates a password for the
+        <li>Create the <codeph>gpadmin</codeph> group and user. <note>If you are installing
+            Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to disable IPC object removal by
+            creating the <codeph>gpadmin</codeph> user as a system account, provide both the
+              <codeph>-r</codeph> option (create the user as a system account) and the
+              <codeph>-m</codeph> option (create a home directory) to the <codeph>useradd</codeph>
+            command. On Ubuntu systems, you must use the <codeph>-m</codeph> option with the
+              <codeph>useradd</codeph> command to create a home directory for a user.</note><p>This
+            example creates the <codeph>gpadmin</codeph> group, creates the <codeph>gpadmin</codeph>
+            user as a system account with a home directory and as a member of the
+              <codeph>gpadmin</codeph> group, and creates a password for the
             user.<codeblock># groupadd gpadmin
 # useradd gpadmin -r -m -g gpadmin
 # passwd gpadmin
 New password: &lt;changeme&gt;
 Retype new password: &lt;changeme&gt;</codeblock></p>
-          <note>Make sure the <codeph>gpadmin</codeph> user has the same user id (uid) and group id
-            (gid) numbers on each host to prevent problems with scripts or services that use them
-            for identity or permissions. For example, backing up Greenplum databases to some
-            networked filesy stems or storage appliances could fail if the <codeph>gpadmin</codeph>
-            user has different uid or gid numbers on different segment hosts. When you create the
-              <codeph>gpadmin</codeph> group and user, you can use the <codeph>groupadd -g</codeph>
-            option to specify a gid number and the <codeph>useradd -u</codeph> option to specify the
-            uid number. Use the command <codeph>id gpadmin</codeph> to see the uid and gid for the
-              <codeph>gpadmin</codeph> user on the current host.</note></li>
+          <note>You must have root permission to create the <codeph>gpadmin</codeph> group and
+            user.</note><note>Make sure the <codeph>gpadmin</codeph> user has the same user id (uid)
+            and group id (gid) numbers on each host to prevent problems with scripts or services
+            that use them for identity or permissions. For example, backing up Greenplum databases
+            to some networked filesy stems or storage appliances could fail if the
+              <codeph>gpadmin</codeph> user has different uid or gid numbers on different segment
+            hosts. When you create the <codeph>gpadmin</codeph> group and user, you can use the
+              <codeph>groupadd -g</codeph> option to specify a gid number and the <codeph>useradd
+              -u</codeph> option to specify the uid number. Use the command <codeph>id
+              gpadmin</codeph> to see the uid and gid for the <codeph>gpadmin</codeph> user on the
+            current host.</note></li>
         <li>Switch to the <codeph>gpadmin</codeph> user and generate an SSH key pair for the
             <codeph>gpadmin</codeph>
           user.<codeblock>$ su gpadmin
@@ -581,7 +604,7 @@ Enter same passphrase again:
 </codeblock>At
           the passphrase prompts, press Enter so that SSH connections will not require entry of a
           passphrase.</li>
-        <li>(Optional) Grant sudo access to the <codeph>gpadmin</codeph> user.<p>On Red Hat or
+        <li>Grant sudo access to the <codeph>gpadmin</codeph> user.<p>On Red Hat or
             CentOS, run <codeph>visudo</codeph> and uncomment the <codeph>%wheel</codeph> group
             entry.<codeblock>%wheel        ALL=(ALL)       NOPASSWD: ALL</codeblock></p><p>Make sure
             you uncomment the line that has the <codeph>NOPASSWD</codeph> keyword. </p><p>Add the

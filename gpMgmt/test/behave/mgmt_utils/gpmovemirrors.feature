@@ -69,6 +69,27 @@ Feature: Tests for gpmovemirrors
           And verify that mirrors are recognized after a restart
           And the tablespace is valid
 
+    Scenario Outline: gpmovemirrors limits number of parallel processes correctly
+        Given a standard local demo cluster is created
+        And a tablespace is created with data
+        And 2 gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a good gpmovemirrors file is created for moving 2 mirrors
+        When the user runs gpmovemirrors with additional args "<args>"
+        Then gpmovemirrors should return a return code of 0
+        And check if gpmovemirrors ran "$GPHOME/bin/gprecoverseg" 1 times with args "<args>"
+        And gpmovemirrors should only spawn up to <master_workers> workers in WorkerPool
+        And verify the database has mirrors
+        And all the segments are running
+        And the segments are synchronized
+        And verify that mirrors are recognized after a restart
+        And the tablespace is valid
+
+    Examples:
+        | args      | master_workers |
+        | -B 1 -b 1 |  1             |
+        | -B 2 -b 1 |  2             |
+        | -B 1 -b 2 |  1             |
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
@@ -151,6 +172,10 @@ Feature: Tests for gpmovemirrors
           And a sample gpmovemirrors input file is created in "spread" configuration
          When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_spread"
          Then gpmovemirrors should return a return code of 0
+          And verify the tablespace directories on host "sdw2" for content "1" are deleted
+          And verify the tablespace directories on host "sdw1" for content "5" are deleted
+          And verify the tablespace directories on host "sdw3" for content "1" are valid
+          And verify the tablespace directories on host "sdw2" for content "5" are valid
           And verify the database has mirrors
           And all the segments are running
           And the segments are synchronized

@@ -8,7 +8,7 @@
     are unavailable.</shortdesc>
   <body>
     <p>You can use resource management features to limit the number of concurrent queries, the
-      amount of memory used to execute a query, and the relative amount of CPU devoted to processing
+      amount of memory used to run a query, and the relative amount of CPU devoted to processing
       a query. Greenplum Database provides two schemes to manage resources - Resource Queues and
       Resource Groups.</p>
     <note type="important">Significant Greenplum Database performance degradation has been observed

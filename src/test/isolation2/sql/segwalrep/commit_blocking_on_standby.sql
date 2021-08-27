@@ -4,7 +4,7 @@
 -- third-party as external arbiter in case of master/standby.
 --
 -- Scenario1: Commits should block until standby confirms WAL flush
--- upto commit LSN.
+-- up to commit LSN.
 
 -- Check that are starting with a clean slate, standby must be in sync
 -- with master.

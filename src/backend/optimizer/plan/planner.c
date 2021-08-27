@@ -1145,6 +1145,31 @@ inheritance_planner(PlannerInfo *root)
 	bool		locus_ok = TRUE;
 
 	/*
+	 * Greenplum specific behavior
+	 * Greenplum has a special path to handle semjoin,
+	 * planner might add unique_row_id path to first inner join
+	 * and then de-duplicate. The logic is added into
+	 * Greenplum long before, but when merging more code from
+	 * upstream, the old logic does not consider new paths,
+	 * there are two relevant issues:
+	 * https://github.com/greenplum-db/gpdb/issues/3719
+	 * https://github.com/greenplum-db/gpdb/issues/12402
+	 *
+	 * issue-12402 is that while creating a plan for the second append rel,
+	 * it will add pseudo column in rtable of subroot, however, do not
+	 * add it to final_rtable (subroot->rtable of the first append rel),
+	 * so failed to find the corresponding pseudo column in cdbpath_dedup_fixup.
+	 * issue-3719 is that the pseudocols of root->rtable is not null,
+	 * while creating a plan for first append rel, in build_simple_rel 
+	 * 'Assert(!rte->pseudocols)' rel isn't expected to have any pseudo columns yet.
+	 *
+	 * maybe we should enhance the old logic in cdbpath_dedup_fixup,
+	 * but at a stable branch 6X, it seems risky. Here we introduce
+	 * a switch to turn off it in inheritance_planner.
+	 * by disalow unique_rowid_path, the above two issues is ok.
+	 */
+	root->disallow_unique_rowid_path = true;
+	/*
 	 * We generate a modified instance of the original Query for each target
 	 * relation, plan that, and put all the plans into a list that will be
 	 * controlled by a single ModifyTable node.  All the instances share the
@@ -2981,7 +3006,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				}
 				else
 				{
-					result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
+					result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 				}
 				result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 			}
@@ -3070,7 +3095,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
 				result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
-				result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
+				result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 			}
 
 			result_plan = (Plan *) make_unique(result_plan,
@@ -3109,7 +3134,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			 * handling below.
 			 */
 			current_pathkeys = root->sort_pathkeys;
-			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
+			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 		}
 	}
 

@@ -20,11 +20,11 @@ user (the authenticated user) had the superuser privilege. Otherwise,
 the command is accepted only if it specifies the authenticated user name.
 </p><p>The <codeph>DEFAULT</codeph> and <codeph>RESET</codeph> forms reset
 the session and current user identifiers to be the originally authenticated
-user name. These forms may be executed by any user.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>SESSION</pt><pd>Specifies that the command takes effect for the current session.
+user name. These forms may be run by any user.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>SESSION</pt><pd>Specifies that the command takes effect for the current session.
 This is the default.</pd></plentry><plentry><pt>LOCAL</pt><pd>Specifies that the command takes effect for only the current transaction.
 After <codeph>COMMIT</codeph> or <codeph>ROLLBACK</codeph>, the session-level
 setting takes effect again. Note that <codeph>SET LOCAL</codeph> will
-appear to have no effect if it is executed outside of a transaction.</pd></plentry><plentry><pt><varname>rolename</varname></pt><pd>The name of the role to assume.</pd></plentry><plentry><pt>NONE</pt><pt>RESET</pt><pd>Reset the session and current role identifiers to be that of the
+appear to have no effect if it is run outside of a transaction.</pd></plentry><plentry><pt><varname>rolename</varname></pt><pd>The name of the role to assume.</pd></plentry><plentry><pt>NONE</pt><pt>RESET</pt><pd>Reset the session and current role identifiers to be that of the
 role used to log in. </pd></plentry></parml></section><section id="section5"><title>Examples</title><codeblock>SELECT SESSION_USER, CURRENT_USER;
  session_user | current_user 
 --------------+--------------

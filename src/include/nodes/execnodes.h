@@ -2290,6 +2290,7 @@ typedef struct NestLoopState
 	bool		shared_outer;
 	bool		prefetch_inner;
 	bool		prefetch_joinqual;
+	bool		prefetch_qual;
 	bool		reset_inner; /*CDB-OLAP*/
 	bool		require_inner_reset; /*CDB-OLAP*/
 
@@ -2346,6 +2347,7 @@ typedef struct MergeJoinState
 	ExprContext *mj_InnerEContext;
 	bool		prefetch_inner; /* MPP-3300 */
 	bool		prefetch_joinqual;
+	bool		prefetch_qual;
 } MergeJoinState;
 
 /* ----------------
@@ -2404,6 +2406,7 @@ typedef struct HashJoinState
 	bool		hj_InnerEmpty;  /* set to true if inner side is empty */
 	bool		prefetch_inner;
 	bool		prefetch_joinqual;
+	bool		prefetch_qual;
 	bool		hj_nonequijoin;
 
 	/* set if the operator created workfiles */

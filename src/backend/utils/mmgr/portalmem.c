@@ -246,11 +246,16 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 	portal->visible = true;
 	portal->creation_time = GetCurrentStatementStartTimestamp();
 
-	/* set portal id and queue id if have enabled resource scheduling */
-	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
+	if (IsResQueueEnabled())
 	{
-		portal->portalId = ResCreatePortalId(name);
-		portal->queueId = GetResQueueId();
+		/* Only QD needs to set portal id if have enabled resource scheduling */
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			portal->portalId = ResCreatePortalId(name);
+			portal->queueId = GetResQueueId();
+		}
+		else if (Gp_role == GP_ROLE_EXECUTE)
+			portal->queueId = GetResQueueId();
 	}
 	portal->is_extended_query = false; /* default value */
 

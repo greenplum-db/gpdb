@@ -160,6 +160,9 @@ public:
 	virtual CDistributionSpec *PdsCopyWithRemappedColumns(
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
+	// strip off any equivalent columns embedded in the distribution spec
+	virtual CDistributionSpec *StripEquivColumns(CMemoryPool *);
+
 	// append enforcers to dynamic array for the given plan properties
 	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								 CReqdPropPlan *prpp,

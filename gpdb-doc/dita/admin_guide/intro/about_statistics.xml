@@ -26,7 +26,7 @@
       by calculating statistics on samples of large tables. In most cases, the default settings
       provide the information needed to generate correct execution plans for queries. If the
       statistics produced are not producing optimal query execution plans, the administrator can
-      tune configuration parameters to produce more accurate stastistics by increasing the sample
+      tune configuration parameters to produce more accurate statistics by increasing the sample
       size or the granularity of statistics saved in the system catalog. Producing more accurate
       statistics has CPU and storage costs and may not produce better plans, so it is important to
       view explain plans and test query performance to ensure that the additional statistics-related
@@ -36,7 +36,7 @@
     <title>System Statistics</title>
     <body>
       <section><title>Table Size</title><p>The query planner seeks to minimize the disk I/O and
-          network traffic required to execute a query, using estimates of the number of rows that
+          network traffic required to run a query, using estimates of the number of rows that
           must be processed and the number of disk pages the query must access. The data from which
           these estimates are derived are the <codeph>pg_class</codeph> system table columns
             <codeph>reltuples</codeph> and <codeph>relpages</codeph>, which contain the number of
@@ -355,7 +355,7 @@
       <section id="section_cv2_crv_mt"><title>Analyzing Partitioned Tables</title><p>When the
             <codeph>ANALYZE</codeph> command is run on a partitioned table, it analyzes each child
           leaf partition table, one at a time. You can run <codeph>ANALYZE</codeph> on just new or
-          changed partition files to avoid analyzing partitions that have not changed. </p><p>The
+          changed partition tables to avoid analyzing partitions that have not changed. </p><p>The
             <codeph>analyzedb</codeph> command-line utility skips unchanged partitions
           automatically. It also runs concurrent sessions so it can analyze several partitions
           concurrently. It runs five sessions by default, but the number of sessions can be set from
@@ -383,7 +383,7 @@
           on a child leaf partition of the partitioned table and the other child leaf partitions
           have statistics. If the parameter is <codeph>off</codeph>, you must run <codeph>ANALYZE
             ROOTPARTITION</codeph> to collect root partition statistics.</p><p>If you do
-          not intend to execute queries on partitioned tables with GPORCA (setting the server
+          not intend to run queries on partitioned tables with GPORCA (setting the server
           configuration parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#optimizer"
               >optimizer</xref></codeph> to <codeph>off</codeph>), you can also set the server
@@ -410,10 +410,10 @@
           demonstrate that query plans improve with the new target. For example, to raise the
           default statistics target from 100 to 150 you can use the <codeph>gpconfig</codeph>
           utility:<codeblock>gpconfig -c default_statistics_target -v 150</codeblock></p>
-        <p>The statististics target for individual columns can be set with the <codeph>ALTER
+        <p>The statistics target for individual columns can be set with the <codeph>ALTER
             TABLE</codeph> command. For example, some queries can be improved by increasing the
           target for certain columns, especially columns that have irregular distributions. You can
-          set the target to zero for columns that never contribute to query otpimization. When the
+          set the target to zero for columns that never contribute to query optimization. When the
           target is 0, <codeph>ANALYZE</codeph> ignores the column. For example, the following
             <codeph>ALTER TABLE</codeph> command sets the statistics target for the
             <codeph>notes</codeph> column in the <codeph>emp</codeph> table to zero:</p>
@@ -439,15 +439,15 @@
             <li><codeph>none</codeph> disables automatic statistics collection.</li>
             <li><codeph>on_no_stats</codeph> triggers an analyze operation for a table with no
               existing statistics when any of the commands <codeph>CREATE TABLE AS SELECT</codeph>,
-                <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are executed on the table. </li>
+                <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are run on the table. </li>
             <li><codeph>on_change</codeph> triggers an analyze operation when any of the commands
                 <codeph>CREATE TABLE AS SELECT</codeph>, <codeph>UPDATE</codeph>,
                 <codeph>DELETE</codeph>, <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are
-              executed on the table and the number of rows affected exceeds the threshold defined by
+              run on the table and the number of rows affected exceeds the threshold defined by
               the <codeph>gp_autostats_on_change_threshold</codeph> configuration parameter.</li>
           </ul></p>
         <p>The automatic statistics collection mode is set separately for commands that occur within
-          a procedural language function and commands that execute outside of a function:<ul
+          a procedural language function and commands that run outside of a function:<ul
             id="ul_ky4_ncv_mt">
             <li>The <codeph>gp_autostats_mode</codeph> configuration parameter controls automatic
               statistics collection behavior outside of functions and is set to

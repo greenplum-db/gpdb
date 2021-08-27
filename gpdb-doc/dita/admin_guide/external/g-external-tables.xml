@@ -112,7 +112,7 @@
          <li id="du209906">Regular (file-based) external tables access static flat files. Regular
             external tables are rescannable: the data is static while the query runs.</li>
          <li id="du209907">Web (web-based) external tables access dynamic data sources, either on a
-            web server with the <codeph>http://</codeph> protocol or by executing OS commands or
+            web server with the <codeph>http://</codeph> protocol or by running OS commands or
             scripts. External web tables are not rescannable: the data can change while the query
             runs. </li>
       </ul>

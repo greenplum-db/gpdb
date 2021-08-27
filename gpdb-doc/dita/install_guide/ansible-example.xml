@@ -107,7 +107,7 @@ sdw2
       when: "version is not defined or version not in postgres_gp_version.stdout"
 </codeblock>
     </section>
-    <p>When the playbook has executed successfully, you can proceed with <xref
+    <p>When the playbook has run successfully, you can proceed with <xref
         href="create_data_dirs.xml#topic13"/> and <xref href="init_gpdb.xml#topic1"/>.</p>
   </body>
 </topic>

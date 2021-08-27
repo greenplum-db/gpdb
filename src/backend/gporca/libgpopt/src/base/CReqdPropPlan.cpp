@@ -671,33 +671,41 @@ CReqdPropPlan::FEqualForCostBounding(const CReqdPropPlan *prppFst,
 //
 //	@doc:
 //		Map input required and derived plan properties into new required
-//		plan properties
+//		plan properties for the CTE producer
 //
 //---------------------------------------------------------------------------
 CReqdPropPlan *
-CReqdPropPlan::PrppRemap(CMemoryPool *mp, CReqdPropPlan *prppInput,
-						 CDrvdPropPlan *pdpplanInput,
-						 UlongToColRefMap *colref_mapping)
+CReqdPropPlan::PrppRemapForCTE(CMemoryPool *mp, CReqdPropPlan *prppInput,
+							   CDrvdPropPlan *pdpplanInput,
+							   UlongToColRefMap *colref_mapping)
 {
 	GPOS_ASSERT(NULL != colref_mapping);
 	GPOS_ASSERT(NULL != prppInput);
 	GPOS_ASSERT(NULL != pdpplanInput);
 
-	// remap derived sort order to a required sort order
-
+	// Remap derived sort order to a required sort order.
 	COrderSpec *pos = pdpplanInput->Pos()->PosCopyWithRemappedColumns(
 		mp, colref_mapping, false /*must_exist*/);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, prppInput->Peo()->Eom());
 
-	// remap derived distribution only if it can be used as required distribution
+	// Remap derived distribution only if it can be used as required distribution.
+	// Also, fix distribution specs with equivalent columns, since those may come
+	// from different consumers and NOT be equivalent in the producer.
+	// For example:
+	//     with cte as (select a,b from foo where b<10)
+	//     select * from cte x1 join cte x2 on x1.a=x2.b
+	// On the query side, columns x1.a and x2.b are equivalent, but we should NOT
+	// treat columns a and b of the producer as equivalent.
 
 	CDistributionSpec *pdsDerived = pdpplanInput->Pds();
 	CEnfdDistribution *ped = NULL;
 	if (pdsDerived->FRequirable())
 	{
-		CDistributionSpec *pds = pdsDerived->PdsCopyWithRemappedColumns(
+		CDistributionSpec *pdsNoEquiv = pdsDerived->StripEquivColumns(mp);
+		CDistributionSpec *pds = pdsNoEquiv->PdsCopyWithRemappedColumns(
 			mp, colref_mapping, false /*must_exist*/);
 		ped = GPOS_NEW(mp) CEnfdDistribution(pds, prppInput->Ped()->Edm());
+		pdsNoEquiv->Release();
 	}
 	else
 	{

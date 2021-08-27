@@ -93,7 +93,7 @@
           <pd>Sets the priority of queries associated with a resource queue. Queries or statements
             in queues with higher priority levels will receive a larger share of available CPU
             resources in case of contention. Queries in low-priority queues may be delayed while
-            higher priority queries are executed.</pd>
+            higher priority queries are run.</pd>
         </plentry>
       </parml>
     </section>

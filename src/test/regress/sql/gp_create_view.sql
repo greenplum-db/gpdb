@@ -79,3 +79,17 @@ DROP SCHEMA "schema_view\'.gp_dist_random" CASCADE;
 -- correct internal representation
 CREATE TEMP VIEW view_with_array_op_expr AS SELECT '{1}'::int[] = '{2}'::int[];
 SELECT pg_get_viewdef('view_with_array_op_expr');
+
+-- Coerce unknown-type literals to type cstring implicitly
+-- we are checking to see if a cstring explicit cast is not erroneously
+-- generated when the view is created, a explicit one could not be
+-- loaded/created because it's against the Postgres policy.
+CREATE VIEW unknown_v1 AS SELECT '2020-12-13'::unknown AS field_unknown;
+CREATE VIEW unknown_v2 AS SELECT field_unknown::date FROM unknown_v1;
+\d+ unknown_v2
+SELECT * FROM unknown_v2;
+
+-- Check unknown type data not parsed as other layouts
+CREATE TABLE ut1(c1 character varying(20), c2 text);
+CREATE VIEW uv1 AS SELECT 'test', c1 FROM ut1;
+INSERT INTO ut1 SELECT * FROM uv1;

@@ -243,7 +243,7 @@
                 <p> text </p>
               </entry>
               <entry>
-                <p> The slice id (portion of the query plan being executed) </p>
+                <p> The slice id (portion of the query plan being run) </p>
               </entry>
             </row>
             <row>
@@ -498,7 +498,7 @@
         last three lines of each segment log
         file:<codeblock>$ gpssh -f seg_host_file
   => source /usr/local/greenplum-db/greenplum_path.sh
-  => gplogfilter -n 3 /gpdata/gp*/pg_log/gpdb*.csv</codeblock></p>
+  => gplogfilter -n 3 /data*/*/gp*/pg_log/gpdb*.csv</codeblock></p>
       <p> The following are the Greenplum security-related audit (or logging) server configuration
         parameters that are set in the postgresql.conf configuration file:</p>
       <table>

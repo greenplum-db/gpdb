@@ -107,7 +107,8 @@
       <p>If you try to add an incremental backup to a backup set, the backup operation fails if the
           <codeph>gpbackup</codeph> options are not consistent.</p>
       <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utility
-        options, see the <xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref> and <xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref> reference documentation.</p>
+        options, see the <xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref> and <xref
+          href="../../utility_guide/ref/gprestore.xml">gprestore</xref> reference documentation.</p>
       <section id="incr_backup_scenario">
         <title>Example Using Incremental Backup Sets</title>
         <p>Each backup has a timestamp taken when the backup is created. For example, if you create
@@ -253,6 +254,11 @@ Tables backed up:  4 / 4 [======================================================
         <p>The incremental back up set, a full backup and associated incremental backups, must be on
           a single device. For example, the backups in a backup set must all be on a file system or
           must all be on a Data Domain system. </p>
+        <p>If you specify the <codeph>gprestore</codeph> option <codeph>--incremental</codeph> to
+          restore data from a specific incremental backup, you must also specify the
+            <codeph>--data-only</codeph> option. Before performing the restore operation,
+            <codeph>gprestore</codeph> ensures that the tables being restored exist. If a table does
+          not exist, <codeph>gprestore</codeph> returns an error and exits. </p>
         <note type="warning">Changes to the Greenplum Database segment configuration invalidate
           incremental backups. After you change the segment configuration (add or remove segment
           instances), you must create a full backup before you can create an incremental

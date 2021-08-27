@@ -49,7 +49,7 @@
                         to Greenplum Database via a <codeph>return</codeph> statement. Use
                             <codeph>return_next</codeph> for each row returned to avoid this
                         problem.</li>
-                    <li>When a session ends normally, not due to a fatal error, PL/Perl executes any
+                    <li>When a session ends normally, not due to a fatal error, PL/Perl runs any
                             <codeph>END</codeph> blocks that you have defined. No other actions are
                         currently performed. (File handles are not automatically flushed and objects
                         are not automatically destroyed.)</li>
@@ -67,13 +67,13 @@
                 language restricts file system operations, as well as <codeph>require</codeph>,
                     <codeph>use</codeph>, and other statements that could potentially interact with
                 the operating system or database server process. With these restrictions in place,
-                any Greenplum Database user can create and execute functions in the trusted
+                any Greenplum Database user can create and run functions in the trusted
                     <codeph>plperl</codeph> language. </p>
             <p> The PL/Perl untrusted language is named <codeph>plperlu</codeph>. You cannot
                 restrict the operation of functions you create with the <codeph>plperlu</codeph>
                 untrusted language. Only database superusers have privileges to create untrusted
                 PL/Perl user-defined functions. And only database superusers and other database
-                users that are explicitly granted the permissions can execute untrusted PL/Perl
+                users that are explicitly granted the permissions can run untrusted PL/Perl
                 user-defined functions. </p>
             <p> PL/Perl has limitations with respect to communication between interpreters and the
                 number of interpreters running in a single process. Refer to the PostgreSQL <xref
@@ -87,7 +87,7 @@
         <title>Enabling and Removing PL/Perl Support</title>
         <body>
             <p> You must register the PL/Perl language with a database before you can create and
-                execute a PL/Perl user-defined function within that database. To remove PL/Perl
+                run a PL/Perl user-defined function within that database. To remove PL/Perl
                 support, you must explicitly remove the extension from each database in which it was
                 registered. You must be a database superuser or owner to register or remove trusted
                 languages in Greenplum databases. </p>
@@ -301,10 +301,10 @@ SELECT get_var('key1');
                     of another user's PL/Perl functions. Each such interpreter retains its own value
                     of the <codeph>%_SHARED</codeph> variable and other global state. Two PL/Perl
                     functions share the same value of <codeph>%_SHARED</codeph> if and only if they
-                    are executed by the same SQL role. </p>
+                    are run by the same SQL role. </p>
                 <p> There are situations where you must take explicit steps to ensure that PL/Perl
                     functions can share data in <codeph>%_SHARED</codeph>. For example, if an
-                    application executes under multiple SQL roles (via <codeph>SECURITY
+                    application runs under multiple SQL roles (via <codeph>SECURITY
                         DEFINER</codeph> functions, use of <codeph>SET ROLE</codeph>, etc.) in a
                     single session, make sure that functions that need to communicate are owned by
                     the same user, and mark these functions as <codeph>SECURITY DEFINER</codeph>.

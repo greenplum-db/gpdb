@@ -42,7 +42,7 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
         <li>Validate the <codeph>gp_vmem_protect_limit</codeph> configuration parameter at the
           database level. See calculations for the maximum safe setting in <xref
             href="#topic_hhc_z5w_r4/section_r52_rbl_zt" format="dita"/>.</li>
-        <li> Set the memory quota on a resource queue to limit the memory used by queries executed
+        <li> Set the memory quota on a resource queue to limit the memory used by queries run
           within the resource queue</li>
         <li>Use a session setting to reduce the <codeph>statement_mem</codeph> used by specific
           queries</li>
@@ -166,7 +166,7 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
         of the cluster. Queues can be used to limit both the numbers of active queries and the
         amount of memory that can be used by queries in the queue. When a query is submitted to
         Greenplum Database, it is added to a resource queue, which determines if the query should be
-        accepted and when the resources are available to execute it. </p>
+        accepted and when the resources are available to run it. </p>
       <ul id="ul_svy_b3n_1s">
         <li>
           <p>Associate all roles with an administrator-defined resource queue.</p>
@@ -210,7 +210,7 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
           <p>Alter resource queues dynamically to match the real requirements of the queue for the
             workload and time of day. You can script an operational flow that changes based on the
             time of day and type of usage of the system and add <codeph>crontab</codeph> entries to
-            execute the scripts.</p>
+            run the scripts.</p>
         </li>
         <li>
           <p>Use gptoolkit to view resource queue usage and to understand how the queues are

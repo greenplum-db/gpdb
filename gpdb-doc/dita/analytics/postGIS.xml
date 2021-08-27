@@ -277,15 +277,15 @@ CREATE EXTENSION address_standardizer_data_us ;</codeblock></li>
           <ol id="ol_ylb_cgk_zlb">
             <li>If you enabled the address standardizer and sample rules tables, these commands drop
               support for those extensions from the current
-              database.<codeblock dir="ltr">DROP EXTENSION address_standardizer_data_us IF EXISTS;
-DROP EXTENSION address_standardizer IF EXISTS ;</codeblock></li>
+              database.<codeblock dir="ltr">DROP EXTENSION IF EXISTS address_standardizer_data_us;
+DROP EXTENSION IF EXISTS address_standardizer;</codeblock></li>
             <li>If you enabled the TIGER geocoder and the <codeph>fuzzystrmatch</codeph> extension
               to use the TIGER geocoder, these commands drop support for those
-              extensions.<codeblock dir="ltr">DROP EXTENSION postgis_tiger_geocoder IF EXISTS ;
-DROP EXTENSION fuzzystrmatch IF EXISTS ;</codeblock></li>
+              extensions.<codeblock dir="ltr">DROP EXTENSION IF EXISTS postgis_tiger_geocoder;
+DROP EXTENSION IF EXISTS fuzzystrmatch;</codeblock></li>
             <li>Drop support for PostGIS and PostGIS Raster. This command drops support for those
-                extensions.<codeblock>DROP EXTENSION postgis IF EXISTS ;</codeblock><p>If you
-                enabled support for PostGIS and specified a specific schema with the <codeph>CREATE
+                extensions.<codeblock>DROP EXTENSION IF EXISTS postgis;</codeblock><p>If you enabled
+                support for PostGIS and specified a specific schema with the <codeph>CREATE
                   EXTENSION</codeph> command, you can update the <codeph>search_path</codeph> and
                 drop the PostGIS schema if required.</p></li>
           </ol>

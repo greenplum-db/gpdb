@@ -57,7 +57,7 @@ CorrelatedLeftSemiNLJoinWithLimit PushFilterToSemiJoinLeftChild SubqOuterReferen
 
 CAntiSemiJoinTest:
 AntiSemiJoin2Select-1 AntiSemiJoin2Select-2 NOT-IN-NotNullBoth NOT-IN-NullInner NOT-IN-NullOuter
-Correlated-AntiSemiJoin CorrelatedAntiSemiJoin-True Correlated-LASJ-With-Outer-Col
+Correlated-AntiSemiJoin CorrelatedAntiSemiJoin-True Correlated-LASJ-With-Outer-Col NotInToLASJ
 Correlated-LASJ-With-Outer-Const Correlated-LASJ-With-Outer-Expr LeftOuter2InnerUnionAllAntiSemiJoin-Tpcds;
 
 CPredicateTest:
@@ -71,7 +71,8 @@ Join-With-Subq-Preds-1 Non-Hashjoinable-Pred Non-Hashjoinable-Pred-2 Factorized-
 NLJ-DistCol-No-Broadcast NLJ-EqAllCol-No-Broadcast NLJ-EqDistCol-InEqNonDistCol-No-Broadcast
 NLJ-InEqDistCol-EqNonDistCol-Redistribute CorrelatedNLJWithTrueCondition InferPredicatesInnerOfLOJ
 InferredPredicatesConstraintSimplification NoPushdownPredicateWithCTEAnchor
-InferPredicatesForPartSQ InferPredicatesForQuantifiedSQ DoubleNDVCardinalityEquals;
+InferPredicatesForPartSQ InferPredicatesForQuantifiedSQ DoubleNDVCardinalityEquals
+NotWellDefinedDisjunctConjunctPredicates;
 
 CLikeIDFTest:
 LIKE-Pattern-green LIKE-Pattern-green-2 LIKE-Pattern-Empty Nested-Or-Predicates Join-IDF
@@ -150,6 +151,7 @@ StatsFilter-AnyWithNewColStats EquiJoinOnExpr-Supported EquiJoinOnExpr-Unsupport
 
 CICGMiscTest:
 BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashToRandomInsert HJN-DeeperOuter CTAS CTAS-Random CheckAsUser
+CTAS-random-distributed-from-replicated-distributed-table
 ProjectRepeatedColumn1 ProjectRepeatedColumn2 NLJ-BC-Outer-Spool-Inner Self-Comparison Self-Comparison-Nullable
 SelectCheckConstraint ExpandJoinOrder SelectOnBpchar EqualityJoin EffectsOfJoinFilter InnerJoin-With-OuterRefs
 UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality;
@@ -163,6 +165,9 @@ ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll
 UDA-AnyArray InClauseWithMCV CastedInClauseWithMCV FilterScalarCast
 IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements ArrayCmpAnyEmpty ArrayCmpAllEmpty
 ArrayCmpAnyEmptyLessThan;
+
+CCTEPropertiesTest:
+CTE-PushProperties CTE-NoPushProperties;
 
 CProjectTest:
 ProjectWithConstant ProjectWithTextConstant ProjectSetFunction Equivalence-class-project-over-LOJ;
@@ -220,7 +225,7 @@ DPE-with-unsupported-pred DPE-SemiJoin DPE-IN DPE-NOT-IN HJN-DPE-Bitmap-Outer-Ch
 NLJ-Broadcast-DPE-Outer-Child PartTbl-MultiWayJoinWithDPE PartTbl-MultiWayJoinWithDPE-2
 PartTbl-LeftOuterHashJoin-DPE-IsNull PartTbl-LeftOuterNLJoin-DPE-IsNull
 PartTbl-List-DPE-Varchar-Predicates PartTbl-List-DPE-Int-Predicates PartTbl-DPE-PartitionSelectorRewindability
-PartTbl-RightOuterHashJoin-DPE-IsNull SPE-IS-NULL;
+PartTbl-RightOuterHashJoin-DPE-IsNull SPE-IS-NULL JoinOrderDPE;
 
 CSetop1Test:
 ValueScanWithDuplicateAndSelfComparison PushGbBelowNaryUnionAll
@@ -230,7 +235,7 @@ MS-UnionAll-5 MS-UnionAll-6 MS-UnionAll-7 ManyTextUnionsInSubquery;
 CSetop2Test:
 Cascaded-UnionAll-Same-Cols-Order Cascaded-UnionAll-Differing-Cols
 Cascaded-UnionAll-Differing-Cols-Order Union-Over-UnionAll Nested-Setops
-Nested-Setops-2 Except IsNullUnionAllIsNotNull UnionAllWithTruncatedOutput
+Nested-Setops-2 Except InnerJoinOverJoinExcept InnerJoinOverJoinExceptAll IsNullUnionAllIsNotNull UnionAllWithTruncatedOutput
 Union-OuterRefs-Output Union-OuterRefs-Casting-Output
 Union-OuterRefs-InnerChild MS-UnionAll-2;
 
@@ -253,7 +258,7 @@ COuterJoin1Test:
 ExpandNAryJoinGreedyWithLOJOnly NaryWithLojAndNonLojChilds LOJ_bb_mpph LOJ-Condition-False
 LeftJoin-With-Pred-On-Inner LeftJoin-With-Pred-On-Inner2
 LeftJoin-With-Col-Const-Pred LeftJoin-With-Coalesce LOJWithFalsePred LeftJoin-DPv2-With-Select
-DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly;
+DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly LOJ-PushDown;
 
 COuterJoin2Test:
 LOJ-IsNullPred Select-Proj-OuterJoin OuterJoin-With-OuterRefs Join-Disj-Subqs
@@ -317,7 +322,8 @@ ReplicatedTableGroupBy ReplicatedJoinPartitionedTable
 ReplicatedTableInClause ReplicatedTableSequenceInsert;
 
 CTaintedReplicatedTest:
-InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg TaintedReplicatedLimit TaintedReplicatedFilter;
+InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg TaintedReplicatedLimit TaintedReplicatedFilter
+InsertReplicatedIntoSerialHashDistributedTable;
 
 CDqaTest:
 NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute;
@@ -342,7 +348,10 @@ CIndexOnlyScanTest:
 IndexOnlyScan-NoDistKeyInIndex;
 
 CRightJoinTest:
-RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinDPS RightJoinNoDPSNonDistKey RightJoinTVF
+RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinDPS RightJoinNoDPSNonDistKey RightJoinTVF;
+
+CSqlFunctionTest:
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

@@ -27,6 +27,7 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/tlist.h"
 #include "parser/parsetree.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 
@@ -827,11 +828,12 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->outerjoinpath->locus))
 			return;
 
-		path = (Path *) create_unique_rowid_path(root,
-												 parent_rel,
-												 (Path *) new_path,
-												 new_path->outerjoinpath->parent->relids,
-												 required_outer);
+		if (!root->disallow_unique_rowid_path)
+			path = (Path *) create_unique_rowid_path(root,
+													 parent_rel,
+													 (Path *) new_path,
+													 new_path->outerjoinpath->parent->relids,
+													 required_outer);
 	}
 	else if (orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
 	{
@@ -841,11 +843,12 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->innerjoinpath->locus))
 			return;
 
-		path = (Path *) create_unique_rowid_path(root,
-												 parent_rel,
-												 (Path *) new_path,
-												 new_path->innerjoinpath->parent->relids,
-												 required_outer);
+		if (!root->disallow_unique_rowid_path)
+			path = (Path *) create_unique_rowid_path(root,
+													 parent_rel,
+													 (Path *) new_path,
+													 new_path->innerjoinpath->parent->relids,
+													 required_outer);
 	}
 
 	add_path(parent_rel, path);
@@ -1034,6 +1037,25 @@ create_index_path(PlannerInfo *root,
 	RelOptInfo *rel = index->rel;
 	List	   *indexquals,
 			   *indexqualcols;
+
+	/*
+	 * Greenplum specific behavior
+	 * Greenplum has a specical path to handle semjoin,
+	 * planner might add unique_row_id path to first inner join
+	 * and then de-duplicate. The logic is added into
+	 * Greenplum long before, but when merging more code from
+	 * upstream, the old logic does not consider new paths,
+	 * for indexonly path, the var should be changed to the Index's,
+	 * maybe we should enhance the old logic in cdbpath_dedup_fixup,
+	 * but at a stable branch 6X, it seems risky. Here we introduce
+	 * a switch to turn off it when seeing indexonly path.
+	 *
+	 * create_index_path happens when setting base rel, and unique
+	 * rowid path happens when setting joining rels, so the turn-off
+	 * method works.
+	 */
+	if (indexonly)
+		root->disallow_unique_rowid_path = true;
 
 	pathnode->path.pathtype = indexonly ? T_IndexOnlyScan : T_IndexScan;
 	pathnode->path.parent = rel;
@@ -1344,10 +1366,17 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	ListCell   *l;
 	CdbLocusType targetlocustype;
 	CdbPathLocus targetlocus;
-	int			numsegments;
+	int			 numsegments;
 	List	   *subpaths;
 	List	  **subpaths_out;
 	List	   *new_subpaths;
+
+	/*
+	 * Init max_numsegments to slient compiler.
+	 * This variable is only used when result
+	 * locus is partitioned.
+	 */
+	int			max_numsegments = -1;
 
 	if (IsA(pathnode, AppendPath))
 		subpaths_out = &((AppendPath *) pathnode)->subpaths;
@@ -1374,6 +1403,9 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	 * figured out later. We treat also all partitioned types the same for now,
 	 * using Strewn to represent them all, and figure out later if we can mark
 	 * it hashed, or if have to leave it strewn.
+	 *
+	 * We will record the max number of segments of each subpath here for later
+	 * use.
 	 */
 	static const struct
 	{
@@ -1437,8 +1469,13 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		if (l == list_head(subpaths))
 		{
 			targetlocustype = subtype;
+			max_numsegments = CdbPathLocus_NumSegments(subpath->locus);
 			continue;
 		}
+
+		max_numsegments = Max(max_numsegments,
+							  CdbPathLocus_NumSegments(subpath->locus));
+
 		for (i = 0; i < lengthof(append_locus_compatibility_table); i++)
 		{
 			if ((append_locus_compatibility_table[i].a == targetlocustype &&
@@ -1540,10 +1577,11 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 				 * subpaths have different distributed policy, mark it as random
 				 * distributed and set the numsegments to the maximum of all
 				 * subpaths to not missing any tuples.
+				 *
+				 * max_numsegments is computed in the first deduction loop,
+				 * even here we use projectdlocus, the numsegments never change.
 				 */
-				CdbPathLocus_MakeStrewn(&targetlocus,
-										Max(CdbPathLocus_NumSegments(targetlocus),
-											CdbPathLocus_NumSegments(projectedlocus)));
+				CdbPathLocus_MakeStrewn(&targetlocus, max_numsegments);
 				break;
 			}
 		}
@@ -2334,6 +2372,17 @@ create_unique_rowid_path(PlannerInfo *root,
 		 */
 		pathnode->path.rescannable = true;
 	}
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("low_unique_rowid_path_cost") == FaultInjectorTypeSkip)
+	{
+		/*
+		 * Inject a fault to set a very low cost for unique rowid path so that
+		 * planner will choose this if it is in pathlist.
+		 */
+		pathnode->path.total_cost = 1.0;
+	}
+#endif
 
 	return pathnode;
 }                               /* create_unique_rowid_path */

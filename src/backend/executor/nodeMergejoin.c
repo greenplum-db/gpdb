@@ -682,14 +682,20 @@ ExecMergeJoin_guts(MergeJoinState *node)
 	}
 
 	/*
-	 * Prefetch JoinQual to prevent motion hazard.
+	 * Prefetch JoinQual or NonJoinQual to prevent motion hazard.
 	 *
-	 * See ExecPrefetchJoinQual() for details.
+	 * See ExecPrefetchQual() for details.
 	 */
 	if (node->prefetch_joinqual)
 	{
-		ExecPrefetchJoinQual(&node->js);
+		ExecPrefetchQual(&node->js, true);
 		node->prefetch_joinqual = false;
+	}
+
+	if (node->prefetch_qual)
+	{
+		ExecPrefetchQual(&node->js, false);
+		node->prefetch_qual = false;
 	}
 
 	/*
@@ -1577,10 +1583,20 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
 	mergestate->prefetch_joinqual = node->join.prefetch_joinqual;
+	mergestate->prefetch_qual = node->join.prefetch_qual;
 
 	if (Test_print_prefetch_joinqual && mergestate->prefetch_joinqual)
 		elog(NOTICE,
 			 "prefetch join qual in slice %d of plannode %d",
+			 currentSliceId, ((Plan *) node)->plan_node_id);
+
+	/*
+	 * reuse GUC Test_print_prefetch_joinqual to output debug information for
+	 * prefetching non join qual
+	 */
+	if (Test_print_prefetch_joinqual && mergestate->prefetch_qual)
+		elog(NOTICE,
+			 "prefetch non join qual in slice %d of plannode %d",
 			 currentSliceId, ((Plan *) node)->plan_node_id);
 
 	/* Prepare inner operators for rewind after the prefetch */

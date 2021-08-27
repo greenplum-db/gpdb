@@ -136,3 +136,34 @@ SELECT pg_get_viewdef('view_with_array_op_expr');
   SELECT ('{1}'::integer[] = '{2}'::integer[]);
 (1 row)
 
+-- Coerce unknown-type literals to type cstring implicitly
+-- we are checking to see if a cstring explicit cast is not erroneously
+-- generated when the view is created, a explicit one could not be
+-- loaded/created because it's against the Postgres policy.
+CREATE VIEW unknown_v1 AS SELECT '2020-12-13'::unknown AS field_unknown;
+WARNING:  column "field_unknown" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+CREATE VIEW unknown_v2 AS SELECT field_unknown::date FROM unknown_v1;
+\d+ unknown_v2
+                 View "public.unknown_v2"
+    Column     | Type | Modifiers | Storage | Description 
+---------------+------+-----------+---------+-------------
+ field_unknown | date |           | plain   | 
+View definition:
+ SELECT unknown_v1.field_unknown::date AS field_unknown
+   FROM unknown_v1;
+
+SELECT * FROM unknown_v2;
+ field_unknown 
+---------------
+ 12-13-2020
+(1 row)
+
+-- Check unknown type data not parsed as other layouts
+CREATE TABLE ut1(c1 character varying(20), c2 text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE VIEW uv1 AS SELECT 'test', c1 FROM ut1;
+WARNING:  column "?column?" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+INSERT INTO ut1 SELECT * FROM uv1;

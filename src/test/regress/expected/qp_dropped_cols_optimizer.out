@@ -15623,6 +15623,269 @@ SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_numeric_candidate ORDER BY 
  1.000000 | b    |    1 | 1.000000
 (1 row)
 
+-- Test exchange partition contains dropped columns
+DROP TABLE IF EXISTS table_with_leaf_partition_containing_dropped_column;
+NOTICE:  table "table_with_leaf_partition_containing_dropped_column" does not exist, skipping
+DROP TABLE IF EXISTS leaf_table_with_leaf_partition_containing_dropped_column;
+NOTICE:  table "leaf_table_with_leaf_partition_containing_dropped_column" does not exist, skipping
+CREATE TABLE table_with_leaf_partition_containing_dropped_column(a int, b date, z int)
+DISTRIBUTED BY (a) PARTITION BY RANGE(b)
+(
+    START ('2021-04-11'::date) END ('2021-04-12'::date) WITH (tablename='prttab_leaf_containing_dropped_col_part1'),
+    START ('2021-04-12'::date) END ('2021-04-13'::date) WITH (tablename='prttab_leaf_containing_dropped_col_part2')
+);
+NOTICE:  CREATE TABLE will create partition "prttab_leaf_containing_dropped_col_part1" for table "table_with_leaf_partition_containing_dropped_column"
+NOTICE:  CREATE TABLE will create partition "prttab_leaf_containing_dropped_col_part2" for table "table_with_leaf_partition_containing_dropped_column"
+-- Drop a column defined on leaf partition
+CREATE TABLE leaf_table_with_leaf_partition_containing_dropped_column(a int, b date, z1 int, z int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE leaf_table_with_leaf_partition_containing_dropped_column DROP COLUMN z1;
+ALTER TABLE table_with_leaf_partition_containing_dropped_column ALTER PARTITION FOR ('2021-04-11'::date) EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_table_with_leaf_partition_containing_dropped_column;
+CREATE INDEX table_with_leaf_partition_containing_dropped_column_index ON table_with_leaf_partition_containing_dropped_column(a, b);
+EXPLAIN SELECT * FROM table_with_leaf_partition_containing_dropped_column WHERE a>42 and z<42;
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Sequence  (cost=0.00..6.00 rows=1 width=12)
+         ->  Partition Selector for table_with_leaf_partition_containing_dropped_column (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 2 (out of 2)
+         ->  Dynamic Index Scan on table_with_leaf_partition_containing_dropped_column (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=12)
+               Index Cond: (a > 42)
+               Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+SELECT * FROM table_with_leaf_partition_containing_dropped_column WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+EXPLAIN SELECT * FROM prttab_leaf_containing_dropped_col_part1 WHERE a>42 and z<42;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on prttab_leaf_containing_dropped_col_part1  (cost=0.00..431.00 rows=1 width=12)
+         Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+SELECT * FROM prttab_leaf_containing_dropped_col_part1 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+EXPLAIN SELECT * FROM prttab_leaf_containing_dropped_col_part2 WHERE a>42 and z<42;
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Index Scan using prttab_leaf_containing_dropped_col_part2_a_b_idx on prttab_leaf_containing_dropped_col_part2  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: (z < 42)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+SELECT * FROM prttab_leaf_containing_dropped_col_part2 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+-- Test exchange partition contains dropped columns between index columns
+DROP TABLE IF EXISTS table_with_leaf_containing_dropped_column_between_index_columns;
+NOTICE:  table "table_with_leaf_containing_dropped_column_between_index_columns" does not exist, skipping
+DROP TABLE IF EXISTS leaf_containing_dropped_column_between_index_columns;
+NOTICE:  table "leaf_containing_dropped_column_between_index_columns" does not exist, skipping
+CREATE TABLE table_with_leaf_containing_dropped_column_between_index_columns(a int, b date, z int)
+DISTRIBUTED BY (a) PARTITION BY RANGE(b)
+(
+    START ('2021-04-11'::date) END ('2021-04-12'::date) WITH (tablename='leaf_containing_dropped_col_index_part1'),
+    START ('2021-04-12'::date) END ('2021-04-13'::date) WITH (tablename='leaf_containing_dropped_col_index_part2')
+);
+NOTICE:  CREATE TABLE will create partition "leaf_containing_dropped_col_index_part1" for table "table_with_leaf_containing_dropped_column_between_index_columns"
+NOTICE:  CREATE TABLE will create partition "leaf_containing_dropped_col_index_part2" for table "table_with_leaf_containing_dropped_column_between_index_columns"
+-- Drop a column defined ahead of the index column
+CREATE TABLE leaf_containing_dropped_column_between_index_columns(a int, d1  int, b date, z1 int, z int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE leaf_containing_dropped_column_between_index_columns DROP COLUMN z1;
+ALTER TABLE leaf_containing_dropped_column_between_index_columns DROP COLUMN d1;
+ALTER TABLE table_with_leaf_containing_dropped_column_between_index_columns EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_containing_dropped_column_between_index_columns;
+CREATE INDEX table_with_leaf_partition_dropped_col_between_index_cols_index ON table_with_leaf_containing_dropped_column_between_index_columns(a, b);
+EXPLAIN SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
+                                                                          QUERY PLAN                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Sequence  (cost=0.00..6.00 rows=1 width=12)
+         ->  Partition Selector for table_with_leaf_containing_dropped_column_between_index_columns (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 2 (out of 2)
+         ->  Dynamic Index Scan on table_with_leaf_containing_dropped_column_between_index_columns (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=12)
+               Index Cond: (a > 42)
+               Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- FIXME: Test fails on ORCA
+-- SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
+EXPLAIN SELECT * FROM leaf_containing_dropped_col_index_part1 WHERE a>42 and z<42;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on leaf_containing_dropped_col_index_part1  (cost=0.00..431.00 rows=1 width=12)
+         Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+SELECT * FROM leaf_containing_dropped_col_index_part1 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+EXPLAIN SELECT * FROM leaf_containing_dropped_col_index_part2 WHERE a>42 and z<42;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Index Scan using leaf_containing_dropped_col_index_part2_a_b_idx on leaf_containing_dropped_col_index_part2  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: (z < 42)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+SELECT * FROM leaf_containing_dropped_col_index_part2 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+-- Test exchange partition where root contains dropped columns and no dropped columns on the partition
+DROP TABLE IF EXISTS table_with_root_containing_dropped_columns;
+NOTICE:  table "table_with_root_containing_dropped_columns" does not exist, skipping
+DROP TABLE IF EXISTS leaf_containing_no_dropped_columns;
+NOTICE:  table "leaf_containing_no_dropped_columns" does not exist, skipping
+CREATE TABLE table_with_root_containing_dropped_columns(a int, d1  int, b date, z1 int, z int)
+DISTRIBUTED BY (a) PARTITION BY RANGE(b)
+(
+    START ('2021-04-11'::date) END ('2021-04-12'::date) WITH (tablename='leaf_with_root_containing_dropped_columns_part1'),
+    START ('2021-04-12'::date) END ('2021-04-13'::date) WITH (tablename='leaf_with_root_containing_dropped_columns_part2')
+);
+NOTICE:  CREATE TABLE will create partition "leaf_with_root_containing_dropped_columns_part1" for table "table_with_root_containing_dropped_columns"
+NOTICE:  CREATE TABLE will create partition "leaf_with_root_containing_dropped_columns_part2" for table "table_with_root_containing_dropped_columns"
+-- Drop a column defined ahead of the index column
+CREATE TABLE leaf_containing_no_dropped_columns(a int,  b date, z int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE table_with_root_containing_dropped_columns DROP COLUMN z1;
+ALTER TABLE table_with_root_containing_dropped_columns DROP COLUMN d1;
+ALTER TABLE table_with_root_containing_dropped_columns EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_containing_no_dropped_columns;
+CREATE INDEX table_with_root_containing_dropped_columns_index ON table_with_root_containing_dropped_columns(a, b);
+EXPLAIN SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Sequence  (cost=0.00..6.00 rows=1 width=12)
+         ->  Partition Selector for table_with_root_containing_dropped_columns (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 2 (out of 2)
+         ->  Dynamic Index Scan on table_with_root_containing_dropped_columns (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=12)
+               Index Cond: (a > 42)
+               Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- FIXME: Test fails on ORCA
+-- SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
+EXPLAIN SELECT * FROM leaf_with_root_containing_dropped_columns_part1 WHERE a>42 and z<42;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on leaf_with_root_containing_dropped_columns_part1  (cost=0.00..431.00 rows=1 width=12)
+         Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+SELECT * FROM leaf_with_root_containing_dropped_columns_part1 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+EXPLAIN SELECT * FROM leaf_with_root_containing_dropped_columns_part2 WHERE a>42 and z<42;
+                                                                              QUERY PLAN                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Index Scan using leaf_with_root_containing_dropped_columns_part2_a_b_idx on leaf_with_root_containing_dropped_columns_part2  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: (z < 42)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+SELECT * FROM leaf_with_root_containing_dropped_columns_part2 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+-- Test exchange partition where root and the exchanged partition have dropped columns at different locations
+DROP TABLE IF EXISTS table_with_both_containing_dropped_column;
+NOTICE:  table "table_with_both_containing_dropped_column" does not exist, skipping
+DROP TABLE IF EXISTS leaf_containing_dropped_columns_between_index_columns;
+NOTICE:  table "leaf_containing_dropped_columns_between_index_columns" does not exist, skipping
+CREATE TABLE table_with_both_containing_dropped_column(d1 int, a int, b date, z int)
+DISTRIBUTED BY (a) PARTITION BY RANGE(b)
+(
+    START ('2021-04-11'::date) END ('2021-04-12'::date) WITH (tablename='leaf_with_dropped_cols_index_part1'),
+    START ('2021-04-12'::date) END ('2021-04-13'::date) WITH (tablename='leaf_with_dropped_cols_index_part2')
+);
+NOTICE:  CREATE TABLE will create partition "leaf_with_dropped_cols_index_part1" for table "table_with_both_containing_dropped_column"
+NOTICE:  CREATE TABLE will create partition "leaf_with_dropped_cols_index_part2" for table "table_with_both_containing_dropped_column"
+-- Drop columns from root as well as leaf at different locations
+CREATE TABLE leaf_containing_dropped_columns_between_index_columns(a int, d1  int, z1 int, b date, z int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE table_with_both_containing_dropped_column DROP COLUMN d1;
+ALTER TABLE leaf_containing_dropped_columns_between_index_columns DROP COLUMN z1;
+ALTER TABLE leaf_containing_dropped_columns_between_index_columns DROP COLUMN d1;
+ALTER TABLE table_with_both_containing_dropped_column EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_containing_dropped_columns_between_index_columns;
+CREATE INDEX table_with_both_containing_dropped_column_index ON table_with_both_containing_dropped_column(a, b);
+EXPLAIN SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Sequence  (cost=0.00..6.00 rows=1 width=12)
+         ->  Partition Selector for table_with_both_containing_dropped_column (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 2 (out of 2)
+         ->  Dynamic Index Scan on table_with_both_containing_dropped_column (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=12)
+               Index Cond: (a > 42)
+               Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- FIXME: Test fails on ORCA
+-- SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
+EXPLAIN SELECT * FROM leaf_with_dropped_cols_index_part1 WHERE a>42 and z<42;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on leaf_with_dropped_cols_index_part1  (cost=0.00..431.00 rows=1 width=12)
+         Filter: ((a > 42) AND (z < 42))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+SELECT * FROM leaf_with_dropped_cols_index_part1 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
+EXPLAIN SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
+   ->  Index Scan using leaf_with_dropped_cols_index_part2_a_b_idx on leaf_with_dropped_cols_index_part2  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: (z < 42)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
+ a | b | z 
+---+---+---
+(0 rows)
+
 -- As of this writing, pg_dump creates an invalid dump for some of the tables
 -- here. See https://github.com/greenplum-db/gpdb/issues/3598. So we must drop
 -- the tables, or the pg_upgrade test fails.

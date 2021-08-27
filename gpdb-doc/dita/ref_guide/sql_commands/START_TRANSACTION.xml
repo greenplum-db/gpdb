@@ -16,7 +16,7 @@
             <p><codeph>START TRANSACTION</codeph> begins a new transaction block. If the isolation
                 level or read/write mode is specified, the new transaction has those
                 characteristics, as if <codeph><xref href="SET_TRANSACTION.xml#topic1" type="topic"
-                        format="dita"/></codeph> was executed. This is the same as the
+                        format="dita"/></codeph> was run. This is the same as the
                     <codeph>BEGIN</codeph> command.</p>
         </section>
         <section id="section4">
@@ -37,9 +37,9 @@
                             <codeph>READ COMMITTED</codeph>.</pd>
                     <pd><codeph>READ COMMITTED</codeph>, the default isolation level in Greenplum
                         Database, guarantees that a statement can only see rows committed before it
-                        began. The same statement executed twice in a transaction can produce
+                        began. The same statement run twice in a transaction can produce
                         different results if another concurrent transaction commits after the
-                        statement is executed the first time. </pd>
+                        statement is run the first time. </pd>
                     <pd>The <codeph>REPEATABLE READ</codeph> isolation level guarantees that a
                         transaction can only see rows committed before it began. <codeph>REPEATABLE
                             READ</codeph> is the strictest transaction isolation level Greenplum
@@ -47,7 +47,7 @@
                             READ</codeph> isolation level must be prepared to retry transactions due
                         to serialization failures.</pd>
                     <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees
-                        that executing multiple concurrent transactions produces the same effects as
+                        that running multiple concurrent transactions produces the same effects as
                         running the same transactions one at a time. If you specify
                             <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to
                             <codeph>REPEATABLE READ</codeph>.</pd>
@@ -63,7 +63,7 @@
                             <codeph>ALTER</codeph>, and <codeph>DROP</codeph> commands;
                             <codeph>GRANT</codeph>, <codeph>REVOKE</codeph>,
                             <codeph>TRUNCATE</codeph>; and <codeph>EXPLAIN ANALYZE</codeph> and
-                            <codeph>EXECUTE</codeph> if the command they would execute is among
+                            <codeph>EXECUTE</codeph> if the command they would run is among
                         those listed.</pd>
                 </plentry>
             </parml>

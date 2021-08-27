@@ -49,6 +49,8 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/InsertAssertSort.mdp",
 	"../data/dxl/minidump/UpdateRandomDistr.mdp",
 	"../data/dxl/minidump/DeleteRandomDistr.mdp",
+	"../data/dxl/minidump/DeleteRandomlyDistributedTableJoin.mdp",
+	"../data/dxl/minidump/DeleteRandomlyDistributedTable.mdp",
 	"../data/dxl/minidump/InsertConstTuple.mdp",
 	"../data/dxl/minidump/InsertConstTupleVolatileFunction.mdp",
 	"../data/dxl/minidump/InsertConstTupleVolatileFunctionMOTable.mdp",
@@ -95,7 +97,7 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/DML-With-HJ-And-UniversalChild.mdp",
 	"../data/dxl/minidump/DML-With-Join-With-Universal-Child.mdp",
 	"../data/dxl/minidump/DML-With-CorrelatedNLJ-With-Universal-Child.mdp",
-	"../data/dxl/minidump/DML-Function-With-SQL-Access.mdp",
+	"../data/dxl/minidump/DML-Volatile-Function.mdp",
 };
 
 //---------------------------------------------------------------------------

@@ -32,7 +32,7 @@
         </plentry>
         <plentry>
           <pt>-c '<varname>command</varname>' | --command='<varname>command'</varname></pt>
-          <pd>Specifies that <codeph>psql</codeph> is to execute the specified command string, and
+          <pd>Specifies that <codeph>psql</codeph> is to run the specified command string, and
             then exit. This is useful in shell scripts. <varname>command</varname> must be either a
             command string that is completely parseable by the server, or a single backslash
             command. Thus you cannot mix SQL and <codeph>psql</codeph> meta-commands with this
@@ -184,13 +184,13 @@
         </plentry>
         <plentry>
           <pt>-1 | --single-transaction</pt>
-          <pd>When <codeph>psql</codeph> executes a script, adding this option wraps
-              <codeph>BEGIN</codeph>/<codeph>COMMIT</codeph> around the script to execute it as a
+          <pd>When <codeph>psql</codeph> runs a script, adding this option wraps
+              <codeph>BEGIN</codeph>/<codeph>COMMIT</codeph> around the script to run it as a
             single transaction. This ensures that either all the commands complete successfully, or
             no changes are applied.</pd>
           <pd>If the script itself uses <codeph>BEGIN</codeph>, <codeph>COMMIT</codeph>, or
               <codeph>ROLLBACK</codeph>, this option will not have the desired effects. Also, if the
-            script contains any command that cannot be executed inside a transaction block,
+            script contains any command that cannot be run inside a transaction block,
             specifying this option will cause that command (and hence the whole transaction) to
             fail.</pd>
         </plentry>
@@ -310,7 +310,7 @@ testdb=#</codeblock>
         <p>At the prompt, the user may type in SQL commands. Ordinarily, input lines are sent to the
           server when a command-terminating semicolon is reached. An end of line does not terminate
           a command. Thus commands can be spread over several lines for clarity. If the command was
-          sent and executed without error, the results of the command are displayed on the
+          sent and run without error, the results of the command are displayed on the
           screen.</p>
         <p>If untrusted users have access to a database that has not adopted a <xref
             href="https://www.postgresql.org/docs/9.4/ddl-schemas.html#DDL-SCHEMAS-PATTERNS"
@@ -319,7 +319,7 @@ testdb=#</codeblock>
             <codeph>options=-csearch_path=</codeph> to the connection string or issue
             <codeph>SELECT pg_catalog.set_config('search_path', '', false)</codeph> before other
           SQL commands. This consideration is not specific to <codeph>psql</codeph>; it
-          applies to every interface for executing arbitrary SQL commands. </p>
+          applies to every interface for running arbitrary SQL commands. </p>
       </sectiondiv>
     </section>
     <section id="section10">
@@ -385,7 +385,7 @@ testdb=#</codeblock>
             to omitting that parameter. </pd>
           <pd> If the new connection is successfully made, the previous connection is closed. 
             If the connection attempt failed, the previous connection
-            will only be kept if <codeph>psql</codeph> is in interactive mode. When executing a
+            will only be kept if <codeph>psql</codeph> is in interactive mode. When running a
             non-interactive script, processing will immediately stop with an error. This distinction
             was chosen as a user convenience against typos, and a safety mechanism that scripts are
             not accidentally acting on the wrong database.</pd>
@@ -422,7 +422,7 @@ testdb=#</codeblock>
             writes the file and routes the data between the server and the local file system. This
             means that file accessibility and privileges are those of the local user, not the
             server, and no SQL superuser privileges are required.</pd>
-          <pd>When <codeph>program</codeph> is specified, <varname>command</varname> is executed by
+          <pd>When <codeph>program</codeph> is specified, <varname>command</varname> is run by
               <codeph>psql</codeph> and the data from or to <varname>command</varname> is routed
             between the server and the client. This means that the execution privileges are those of
             the local user, not the server, and no SQL superuser privileges are required.</pd>
@@ -737,7 +737,7 @@ testdb=#</codeblock>
           <pd>The new query buffer is then re-parsed according to the normal rules of
               <codeph>psql</codeph>, where the whole buffer is treated as a single line. (Thus you
             cannot make scripts this way. Use <codeph>\i</codeph> for that.) This means also that if
-            the query ends with (or rather contains) a semicolon, it is immediately executed. In
+            the query ends with (or rather contains) a semicolon, it is immediately run. In
             other cases it will merely wait in the query buffer; type semicolon or
               <codeph>\g</codeph> to send it, or <codeph>\r</codeph> to cancel. </pd>
           <pd>If a line number is specified, <codeph>psql</codeph> will position the cursor on the
@@ -799,7 +799,7 @@ testdb=#</codeblock>
         <plentry>
           <pt>\gset [<varname>prefix</varname>]</pt>
           <pd>Sends the current query input buffer to the server and stores the query's output into
-              <codeph>psql</codeph> variables. The query to be executed must return exactly one row.
+              <codeph>psql</codeph> variables. The query to be run must return exactly one row.
             Each column of the row is stored into a separate variable, named the same as the column.
             For
             example:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
@@ -833,7 +833,7 @@ hello 10</codeblock></pd>
         </plentry>
         <plentry>
           <pt>\i | \include <varname>filename</varname></pt>
-          <pd>Reads input from the file <varname>filename</varname> and executes it as though it had
+          <pd>Reads input from the file <varname>filename</varname> and runs it as though it had
             been typed on the keyboard.</pd>
           <pd> If <varname>filename</varname> is <codeph>-</codeph> (hyphen), then standard input is
             read until an EOF indication or <codeph>\q</codeph> meta-command. This can be used to
@@ -845,7 +845,7 @@ hello 10</codeblock></pd>
         <plentry>
           <pt>\ir | \include_relative <varname>filename</varname></pt>
           <pd>The <codeph>\ir</codeph> command is similar to <codeph>\i</codeph>, but resolves
-            relative file names differently. When executing in interactive mode, the two commands
+            relative file names differently. When running in interactive mode, the two commands
             behave identically. However, when invoked from a script, <codeph>\ir</codeph> interprets
             file names relative to the directory in which the script is located, rather than the
             current working directory.</pd>
@@ -1052,7 +1052,7 @@ lo_import 152801</codeblock>
                 is specified it must be either <codeph>on</codeph> or <codeph>off</codeph> which
                 will enable or disable display of a locale-specific character to separate groups of
                 digits to the left of the decimal marker. If <varname>value</varname> is omitted the
-                command toggles between regular and locale-specific numberic output. </li>
+                command toggles between regular and locale-specific numeric output. </li>
               <li id="kb147128"><b><codeph>pager</codeph></b> – Controls the use of a pager for
                 query and <codeph>psql</codeph> help output. If the environment variable
                   <codeph>PAGER</codeph> is set, the output is piped to the specified program.
@@ -1187,7 +1187,7 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
         </plentry>
         <plentry>
           <pt>\watch [<varname>seconds</varname>]</pt>
-          <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
+          <pd>Repeatedly runs the current query buffer (like <codeph>\g</codeph>) until
             interrupted or the query fails. Wait the specified number of seconds (default 2) between
             executions.</pd>
         </plentry>
@@ -1204,7 +1204,7 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
         </plentry>
         <plentry>
           <pt>\! [<varname>command</varname>]</pt>
-          <pd>Escapes to a separate shell or executes the shell command <varname>command</varname>.
+          <pd>Escapes to a separate shell or runs the shell command <varname>command</varname>.
             The arguments are not further interpreted; the shell will see them as-is. In particular,
             the variable substitution rules and backslash escapes do not apply.</pd>
         </plentry>
@@ -1303,7 +1303,7 @@ bar</codeblock>
                 <codeph>END</codeph>. The autocommit-on mode works by issuing an implicit
                 <codeph>BEGIN</codeph> for you, just before any command that is not already in a
               transaction block and is not itself a <codeph>BEGIN</codeph> or other
-              transaction-control command, nor a command that cannot be executed inside a
+              transaction-control command, nor a command that cannot be run inside a
               transaction block (such as <codeph>VACUUM</codeph>). </pd>
             <pd>In autocommit-off mode, you must explicitly abandon any failed transaction by
               entering <codeph>ABORT</codeph> or <codeph>ROLLBACK</codeph>. Also keep in mind that
@@ -1343,7 +1343,7 @@ bar</codeblock>
               similar functionality in your own programs. (To select this behavior on program
               start-up, use the switch <codeph>-E</codeph>.) If you set the variable to the value
                 <codeph>noexec</codeph>, the queries are just shown but are not actually sent to the
-              server and executed.</pd>
+              server and run.</pd>
           </plentry>
           <plentry>
             <pt>ENCODING</pt>
@@ -1406,10 +1406,11 @@ bar</codeblock>
           </plentry>
           <plentry>
             <pt>ON_ERROR_ROLLBACK</pt>
-            <pd>When set to <codeph>on</codeph>, if a statement in a transaction block generates an error, the error is
-              ignored and the transaction continues. When set to <codeph>interactive</codeph>, such errors are only ignored
-              in interactive sessions, and not when reading script files. When unset or set to <codeph>off</codeph>, a
-              statement in a transaction block that generates an error aborts the entire
+            <pd>When set to <codeph>on</codeph>, if a statement in a transaction block generates an
+              error, the error is ignored and the transaction continues. When set to
+                <codeph>interactive</codeph>, such errors are only ignored in interactive sessions,
+              and not when reading script files. When unset or set to <codeph>off</codeph>, a
+              statement in a transaction block that generates an error cancels the entire
               transaction. The error rollback mode works by issuing an implicit
                 <codeph>SAVEPOINT</codeph> for you, just before each command that is in a
               transaction block, and rolls back to the savepoint on error.</pd>
@@ -1681,7 +1682,7 @@ PSQL_EDITOR_LINENUMBER_ARG='--line '</codeblock></pd>
         </plentry>
         <plentry>
           <pt>SHELL</pt>
-          <pd>Command executed by the <codeph>\!</codeph> command.</pd>
+          <pd>Command run by the <codeph>\!</codeph> command.</pd>
         </plentry>
         <plentry>
           <pt>TMPDIR</pt>
@@ -1695,7 +1696,7 @@ PSQL_EDITOR_LINENUMBER_ARG='--line '</codeblock></pd>
         <plentry>
           <pt>psqlrc and ~/.psqlrc</pt>
           <pd>Unless it is passed an <codeph>-X</codeph> or <codeph>-c</codeph> option,
-              <codeph>psql</codeph> attempts to read and execute commands from the system-wide
+              <codeph>psql</codeph> attempts to read and run commands from the system-wide
             startup file (<codeph>psqlrc</codeph>) and then the user's personal startup file
               (<codeph>~/.psqlrc</codeph>), after connecting to the database but before accepting
             normal commands. These files can be used to set up the client and/or the server to

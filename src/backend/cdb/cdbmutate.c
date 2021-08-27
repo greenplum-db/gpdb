@@ -99,7 +99,7 @@ static void assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldno
 static void add_slice_to_motion(Motion *motion,
 					MotionType motionType,
 					List *hashExprs, List *hashOpfamilies, int numsegments,
-					bool isBroadcast);
+					bool isBroadcast, CdbLocusType targetLocus);
 
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
 
@@ -529,31 +529,38 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 				if (GpPolicyIsReplicated(query->intoPolicy))
 				{
+					bool needBroadcast = true;
 					/*
 					 * CdbLocusType_SegmentGeneral is only used by replicated
-					 * table right now, so if both input and target are
-					 * replicated table, no need to add a motion
+					 * table right now, so if both input and target are replicated
+					 * table, no need to add a motion.
+					 * And if plan's data are available on all segment as
+					 * CdbLocusType_General, no motion needed.
+					 * The above two cases have an exception if the plan contains volatile
+					 * target list or havingQual, we can not run it on every segments.
 					 */
+
 					if (plan->flow->flotype == FLOW_SINGLETON &&
-						plan->flow->locustype == CdbLocusType_SegmentGeneral)
+						(plan->flow->locustype == CdbLocusType_General ||
+						 plan->flow->locustype == CdbLocusType_SegmentGeneral))
 					{
-						/* do nothing */
+						if (contain_volatile_functions((Node *) query->targetList) ||
+							contain_volatile_functions(query->havingQual))
+						{
+							plan->flow->locustype = CdbLocusType_SingleQE;
+						}
+						else
+							needBroadcast = plan->flow->numsegments == numsegments ? false : true;
 					}
 
-					/*
-					 * plan's data are available on all segment, no motion
-					 * needed
-					 */
-					if (plan->flow->flotype == FLOW_SINGLETON &&
-						plan->flow->locustype == CdbLocusType_General)
+					if (needBroadcast)
 					{
-						/* do nothing */
+						if (!broadcastPlan(plan, false, false, numsegments))
+							ereport(ERROR,
+									(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+									 errmsg("cannot parallelize that SELECT INTO yet")));
 					}
 
-					if (!broadcastPlan(plan, false, false, numsegments))
-						ereport(ERROR,
-								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								 errmsg("cannot parallelize that SELECT INTO yet")));
 				}
 				else
 				{
@@ -847,7 +854,9 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 				context->sliceDepth == 0)
 				flow->segindex = -1;
 
-			newnode = (Node *) make_union_motion(plan, true, flow->numsegments);
+			newnode = (Node *) make_union_motion(plan, true, flow->numsegments,
+												 flow->segindex == -1 ?
+													CdbLocusType_Entry : CdbLocusType_SingleQE);
 			break;
 
 		case MOVEMENT_BROADCAST:
@@ -860,8 +869,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 												  flow->hashExprs,
 												  flow->hashOpfamilies,
 												  true	/* useExecutorVarFormat */,
-												  flow->numsegments
-				);
+												  flow->numsegments);
 			break;
 
 		case MOVEMENT_EXPLICIT:
@@ -980,7 +988,7 @@ static void
 add_slice_to_motion(Motion *motion,
 					MotionType motionType,
 					List *hashExprs, List *hashOpfamilies, int numsegments,
-					bool isBroadcast)
+					bool isBroadcast, CdbLocusType targetLocus)
 {
 	Oid		   *hashFuncs;
 	ListCell   *expr_cell;
@@ -1025,6 +1033,8 @@ add_slice_to_motion(Motion *motion,
 
 			break;
 		case MOTIONTYPE_FIXED:
+			Assert(targetLocus == CdbLocusType_Null || targetLocus == CdbLocusType_Entry
+				   || targetLocus == CdbLocusType_SingleQE);
 			if (motion->isBroadcast)
 			{
 				/* broadcast */
@@ -1036,10 +1046,13 @@ add_slice_to_motion(Motion *motion,
 			{
 				/* Focus motion */
 				motion->plan.flow = makeFlow(FLOW_SINGLETON, numsegments);
-				motion->plan.flow->locustype = (motion->plan.flow->segindex < 0) ?
-					CdbLocusType_Entry :
-					CdbLocusType_SingleQE;
-
+				if (targetLocus == CdbLocusType_Entry)
+				{
+					motion->plan.flow->locustype = CdbLocusType_Entry;
+					motion->plan.flow->segindex = -1;
+				}
+				else
+					motion->plan.flow->locustype = CdbLocusType_SingleQE;
 			}
 
 			break;
@@ -1062,14 +1075,15 @@ add_slice_to_motion(Motion *motion,
 }
 
 Motion *
-make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments)
+make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments,
+				  CdbLocusType targetLocus)
 {
 	Motion	   *motion;
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false, targetLocus);
 	return motion;
 }
 
@@ -1077,14 +1091,15 @@ Motion *
 make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 						 AttrNumber *sortColIdx, Oid *sortOperators,
 						 Oid *collations, bool *nullsFirst,
-						 bool useExecutorVarFormat, int numsegments)
+						 bool useExecutorVarFormat, int numsegments,
+						 CdbLocusType targetLocus)
 {
 	Motion	   *motion;
 
 	motion = make_motion(root, lefttree,
 						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst,
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false, targetLocus);
 	return motion;
 }
 
@@ -1104,7 +1119,7 @@ make_hashed_motion(Plan *lefttree,
 						 useExecutorVarFormat);
 	add_slice_to_motion(motion, MOTIONTYPE_HASH,
 						hashExprs, hashOpfamilies, numsegments,
-						false);
+						false, CdbLocusType_Null);
 	return motion;
 }
 
@@ -1120,7 +1135,7 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
 
 	add_slice_to_motion(motion, MOTIONTYPE_FIXED,
 						NIL, NIL, numsegments,
-						true);
+						true, CdbLocusType_Null);
 	return motion;
 }
 
@@ -1146,7 +1161,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 
 	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT,
 						NIL, NIL, numsegments,
-						false);
+						false, CdbLocusType_Null);
 	return motion;
 }
 

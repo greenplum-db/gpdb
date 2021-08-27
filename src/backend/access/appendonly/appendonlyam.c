@@ -2076,6 +2076,13 @@ scanToFetchTuple(AppendOnlyFetchDesc aoFetchDesc,
 	}
 }
 
+static void
+resetCurrentBlockInfo(CurrentBlock * currentBlock)
+{
+	currentBlock->have = false;
+	currentBlock->firstRowNum = 0;
+	currentBlock->lastRowNum = 0;
+}
 
 AppendOnlyFetchDesc
 appendonly_fetch_init(Relation relation,
@@ -2231,7 +2238,8 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	 */
 	if (aoFetchDesc->currentBlock.have)
 	{
-		if (segmentFileNum == aoFetchDesc->currentSegmentFile.num &&
+		if (aoFetchDesc->currentSegmentFile.isOpen &&
+			segmentFileNum == aoFetchDesc->currentSegmentFile.num &&
 			segmentFileNum == aoFetchDesc->blockDirectory.currentSegmentFileNum &&
 			segmentFileNum == aoFetchDesc->executorReadBlock.segmentFileNum)
 		{
@@ -2253,7 +2261,7 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 			}
 
 			/*
-			 * Otherwize, if the current Block Directory entry covers the
+			 * Otherwise, if the current Block Directory entry covers the
 			 * request tuples, lets use its information as another performance
 			 * optimization.
 			 */
@@ -2321,8 +2329,6 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 		}
 	}
 
-/* 	resetCurrentBlockInfo(aoFetchDesc); */
-
 	/*
 	 * Open or switch open, if necessary.
 	 */
@@ -2353,6 +2359,9 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 			/* Segment file not in aoseg table.. */
 			/* Must be aborted or deleted and reclaimed. */
 		}
+
+		/* Reset currentBlock info */
+		resetCurrentBlockInfo(&(aoFetchDesc->currentBlock));
 	}
 
 	/*
@@ -2611,7 +2620,14 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	 * Writers uses this since they have exclusive access to the lock acquired
 	 * with LockRelationAppendOnlySegmentFile for the segment-file.
 	 */
-	aoInsertDesc->appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	aoInsertDesc->appendOnlyMetaDataSnapshot = SnapshotSelf;
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("ao_row_insert_init_1") == FaultInjectorTypeSkip)
+	{
+		SIMPLE_FAULT_INJECTOR("ao_row_insert_init_2");
+	}
+#endif
 
 	aoInsertDesc->mt_bind = create_memtuple_binding(RelationGetDescr(rel));
 
@@ -3083,8 +3099,6 @@ appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc)
 	AppendOnlyBlockDirectory_End_forInsert(&(aoInsertDesc->blockDirectory));
 
 	AppendOnlyStorageWrite_FinishSession(&aoInsertDesc->storageWrite);
-
-	UnregisterSnapshot(aoInsertDesc->appendOnlyMetaDataSnapshot);
 
 	pfree(aoInsertDesc->title);
 	pfree(aoInsertDesc);

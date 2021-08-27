@@ -140,6 +140,11 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		if (CdbPathLocus_IsSingleQE(subpath->locus))
 		{
 			/*
+			 * If the subpath requires parameters, we cannot generate Motion atop of it.
+			 */
+			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+				return NULL;
+			/*
 			 * Create CdbMotionPath node to indicate that the slice must be
 			 * dispatched to a singleton gang running on the entry db.  We
 			 * merely use this node to note that the path has 'Entry' locus;
@@ -170,6 +175,11 @@ cdbpath_create_motion_path(PlannerInfo *root,
 
 		if (CdbPathLocus_IsSegmentGeneral(subpath->locus))
 		{
+			/*
+			 * If the subpath requires parameters, we cannot generate Motion atop of it.
+			 */
+			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+				return NULL;
 			/*
 			 * Data is only available on segments, to distingush it with
 			 * CdbLocusType_General, adding a motion to indicated this
@@ -304,6 +314,11 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	/* Does subpath produce same multiset of rows on every qExec of its gang? */
 	else if (CdbPathLocus_IsReplicated(subpath->locus))
 	{
+		/*
+		 * If the subpath requires parameters, we cannot generate Motion atop of it.
+		 */
+		if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+			return NULL;
 		/* No-op if replicated-->replicated. */
 		if (CdbPathLocus_IsReplicated(locus))
 		{

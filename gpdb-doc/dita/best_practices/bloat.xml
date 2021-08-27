@@ -185,9 +185,6 @@ analyzedb -a -s pg_catalog -d $DBNAME</pre></p>
         catalog tables can prevent the need for this more costly procedure.</p>
       <p>These are steps for intensive system catalog maintenance.<ol id="ol_trp_xqs_f2b">
           <li>Stop all catalog activity on the Greenplum Database system.</li>
-          <li>Perform a <codeph>REINDEX</codeph> on the system catalog tables to rebuild the system
-            catalog indexes. This removes bloat in the indexes and improves <codeph>VACUUM</codeph>
-            performance.</li>
           <li>Perform a <codeph>VACUUM FULL</codeph> on the system catalog tables. See the following
             Note.</li>
           <li>Perform an <codeph>ANALYZE</codeph> on the system catalog tables to update the catalog

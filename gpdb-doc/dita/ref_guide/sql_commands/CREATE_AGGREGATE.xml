@@ -111,10 +111,10 @@
         the Greenplum Database open source code.</note>
       <p>You can specify <codeph><varname>combinefunc</varname></codeph> as a method for optimizing
         aggregate execution. By specifying <codeph><varname>combinefunc</varname></codeph>, the
-        aggregate can be executed in parallel on segments first and then on the master. When a
+        aggregate can be run in parallel on segments first and then on the master. When a
         two-level execution is performed, the <codeph><varname>statefunc</varname></codeph> is
-        executed on the segments to generate partial aggregate results, and
-            <codeph><varname>combinefunc</varname></codeph> is executed on the master to aggregate
+        run on the segments to generate partial aggregate results, and
+            <codeph><varname>combinefunc</varname></codeph> is run on the master to aggregate
         the partial results from segments. If single-level aggregation is performed, all the rows
         are sent to the master and the <codeph><varname>statefunc</varname></codeph> is applied to
         the rows.</p>
@@ -446,7 +446,8 @@ Aggregate (cost=1.10..1.11 rows=1 width=32)  
       width=32)
      -&gt; Aggregate (cost=1.04..1.05 rows=1 width=32)
        -&gt; Seq Scan on t1 (cost=0.00..1.03 rows=2 width=8)
- (4 rows)</codeblock>
+ Optimizer: Pivotal Optimizer (GPORCA)
+ (5 rows)</codeblock>
     </section>
     <section id="section8">
       <title>Compatibility</title>

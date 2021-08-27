@@ -91,14 +91,13 @@ eval_part_qual(ExprContext *econtext, TupleTableSlot *inputTuple, List *qualList
  *		Input parameters:
  *		pn: parent PartitionNode
  *		accessMethods: PartitionAccessMethods
- *		root_oid: root table Oid
  *		value: partition key value
  *		exprTypid: type of the expression
  *
  * ----------------------------------------------------------------
  */
 static PartitionRule *
-partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oid root_oid, Datum value, Oid exprTypid, bool isNull)
+partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Datum value, Oid exprTypid, bool isNull)
 {
 	Assert(NULL != pn);
 	Assert(NULL != accessMethods);
@@ -109,25 +108,31 @@ partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oi
 
 	Assert(0 < partAttno);
 
-	Relation	rel = relation_open(root_oid, NoLock);
-	TupleDesc	tupDesc = RelationGetDescr(rel);
-
-	Assert(tupDesc->natts >= partAttno);
-
 	int			i;
 	Datum	   *values = palloc0(partAttno * sizeof(Datum));
 	bool	   *isnull = palloc(partAttno * sizeof(bool));
+	TupleDesc	tupDesc = CreateTemplateTupleDesc(partAttno, false);
 
 	for (i = 0; i < partAttno - 1; i++)
+	{
 		isnull[i] = true;
+
+		/*
+		 * Build tuple descriptor with dummy prefix columns that will not be
+		 * used further in the search of partitions
+		 */
+		TupleDescInitEntry(tupDesc, i+1, NULL, BOOLOID, -1, 0);
+	}
 	isnull[partAttno - 1] = isNull;
 	values[partAttno - 1] = value;
+	TupleDescInitEntry(tupDesc, partAttno, NULL, exprTypid, -1, 0);
 
-	PartitionRule *result = get_next_level_matched_partition(pn, values, isnull, tupDesc, accessMethods, exprTypid);
+	PartitionRule *result = get_next_level_matched_partition(pn, values, isnull,
+			tupDesc, accessMethods);
 
+	FreeTupleDesc(tupDesc);
 	pfree(values);
 	pfree(isnull);
-	relation_close(rel, NoLock);
 
 	return result;
 }
@@ -235,7 +240,7 @@ partition_rules_for_equality_predicate(PartitionSelectorState *node, int level,
 		 */
 		Oid			exprTypid = exprType((Node *) exprState->expr);
 
-		PartitionRule *rule = partition_selection(parentNode, node->accessMethods, ps->relid, value, exprTypid, isNull);
+		PartitionRule *rule = partition_selection(parentNode, node->accessMethods, value, exprTypid, isNull);
 		if (rule)
 			rules = list_append_unique(rules, rule);
 	}

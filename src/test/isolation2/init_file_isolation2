@@ -3,6 +3,14 @@
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
 
+# Ignore pid in fatal error message
+m/Process [0-9]+ will wait/
+s/Process [0-9]+ will wait/Process xxx will wait/
+
+# Ignore line number in error message
+m/cdbdisp_async.c:[0-9]+/
+s/cdbdisp_async.c:[0-9]+/cdbdisp_async.c:xxx/
+
 # remove beginning output of gpconfig
 m/^\d+.*gpconfig.*-\[INFO\]:-/
 s/^\d+.*gpconfig.*-\[INFO\]:-//
@@ -40,6 +48,14 @@ s/^DETAIL:  Process \d+ waits for ShareLock on transaction \d+; blocked by proce
 
 m/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./
 s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./Process PID waits for ShareLock on transaction XID; blocked by process PID./
+
+# For resource queue deadlock
+m/^DETAIL:  Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./
+s/^DETAIL:  Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./DETAIL:  Process PID waits for ExclusiveLock on resource queue OID; blocked by process PID./
+
+# For resource queue deadlock
+m/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d+; blocked by process \d+./
+s/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d+; blocked by process \d+./Process PID waits for ShareUpdateExclusiveLock on relation OID of database OID; blocked by process PID./
 
 m/available \d+ MB/
 s/available \d+ MB//

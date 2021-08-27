@@ -248,6 +248,6 @@ findPartitionMetadataEntry(List *partsMetadata, Oid partOid, PartitionNode **par
 
 extern PartitionRule*
 get_next_level_matched_partition(PartitionNode *partnode, Datum *values, bool *isnull,
-								TupleDesc tupdesc, PartitionAccessMethods *accessMethods, Oid exprTypid);
+								TupleDesc tupdesc, PartitionAccessMethods *accessMethods);
 
 #endif   /* CDBPARTITION_H */

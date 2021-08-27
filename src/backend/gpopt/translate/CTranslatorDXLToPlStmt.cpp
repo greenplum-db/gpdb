@@ -3584,24 +3584,20 @@ CTranslatorDXLToPlStmt::TranslateDXLCTEProducerToSharedScan(
 			&(materialize_plan->startup_cost), &(materialize_plan->total_cost),
 			&(materialize_plan->plan_rows), &(materialize_plan->plan_width));
 
-		// create a target list for the newly added materialize
+		// create a target list for the newly added materialize from the child's target list
+		// materialize does not project, so it must use the child's target list
 		ListCell *lc_target_entry = NULL;
 		materialize_plan->targetlist = NIL;
-		ForEach(lc_target_entry, plan->targetlist)
+		ForEach(lc_target_entry, child_plan->targetlist)
 		{
-			TargetEntry *target_entry = (TargetEntry *) lfirst(lc_target_entry);
-			Expr *expr = target_entry->expr;
-			GPOS_ASSERT(IsA(expr, Var));
+			TargetEntry *te = (TargetEntry *) lfirst(lc_target_entry);
+			Var *var_new = gpdb::MakeVar(
+				OUTER_VAR, te->resno, gpdb::ExprType((Node *) te->expr),
+				gpdb::ExprTypeMod((Node *) te->expr), 0 /* varlevelsup */);
 
-			Var *var = (Var *) expr;
-			Var *var_new = gpdb::MakeVar(OUTER_VAR, var->varattno, var->vartype,
-										 var->vartypmod, 0 /* varlevelsup */);
-			var_new->varnoold = var->varnoold;
-			var_new->varoattno = var->varoattno;
-
-			TargetEntry *te_new = gpdb::MakeTargetEntry(
-				(Expr *) var_new, var->varattno, PStrDup(target_entry->resname),
-				target_entry->resjunk);
+			TargetEntry *te_new =
+				gpdb::MakeTargetEntry((Expr *) var_new, te->resno, /* resno */
+									  te->resname, te->resjunk);
 			materialize_plan->targetlist =
 				gpdb::LAppend(materialize_plan->targetlist, te_new);
 		}
