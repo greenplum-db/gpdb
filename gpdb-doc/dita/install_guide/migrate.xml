@@ -15,9 +15,10 @@
           >gpupgrade</xref>. You cannot upgrade a Greenplum Database 4.3 system directly to
         Greenplum 6.</note>
     </p>
-    <p>This topic identifies known issues you may encounter when moving data from Greenplum 4.3 to
-      Greenplum 6. You can work around these problems by making needed changes to your Greenplum 4.3
-      databases so that you can create backups that can be restored successfully to Greenplum 6. </p>
+    <p>This topic identifies known issues you may encounter when moving data from Greenplum 4.3 or
+      5, to Greenplum 6. You can work around these problems by making needed changes to your
+      Greenplum 4.3 or 5 databases, so that you can create backups that can be restored successfully
+      to Greenplum 6. </p>
     <ul id="ul_uw1_gnb_z3b">
       <li><xref href="#prep-gpdb6" format="dita"/></li>
       <li><xref href="#prep-gpdb4" format="dita"/></li>
@@ -28,73 +29,89 @@
   <topic id="prep-gpdb6">
     <title>Preparing the Greenplum 6 Cluster</title>
     <body>
-      <ul id="ol_rzd_xfb_z3b">
-        <li>Install and initialize a new Greenplum Database 6 cluster using the version 6
-            <codeph>gpinitsystem</codeph> utility. <note><codeph>gprestore</codeph> only supports
-            restoring data to a cluster that has an identical number of hosts and an identical
-            number of segments per host, with each segment having the same
-              <codeph>content_id</codeph> as the segment in the original cluster. <ph
-              otherprops="pivotal">Use <codeph>gpcopy</codeph> if you need to migrate data to a
-              different-sized Greenplum 6 cluster.</ph></note>
-          <note> Set the Greenplum Database 6 timezone to a value that is compatible with your host
-            systems. Setting the Greenplum Database timezone prevents Greenplum Database from
-            selecting a timezone each time the cluster is restarted. See <xref
-              href="localization.xml" format="dita" scope="local">Configuring Timezone and
-              Localization Settings</xref> for more information.</note></li>
-        <li>Install the latest release of the Greenplum Backup and Restore utilities, available to
-          download from <ph otherprops="pivotal"><xref
-              href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore" format="html"
-              scope="external">VMware Tanzu Network</xref></ph><ph otherprops="oss-only"><xref
-              href="https://github.com/greenplum-db/gpbackup/releases" format="html"
-              scope="external">github</xref></ph>.</li>
-        <li>If you intend to install Greenplum Database 6 on the same hardware as your 4.3 system,
-          you will need enough disk space to accommodate over five times the original data set (two
-          full copies of the primary and mirror data sets, plus the original backup data in ASCII
-          format) in order to migrate data with <codeph>gpbackup</codeph> and
-            <codeph>gprestore</codeph>. Keep in mind that the ASCII backup data will require more
-          disk space than the original data, which may be stored in compressed binary format.
-          Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space
-          on each host. <p otherprops="pivotal">If you want to migrate your data on the same
-            hardware but do not have enough free disk space on your host systems,
-              <codeph>gpcopy</codeph> provides the <codeph>--truncate-source-after</codeph> option
-            to truncate each source table after copying the table to the destination cluster and
-            validating that the copy succeeded. This reduces the amount of free space needed to
-            migrate clusters that reside on the same hardware. See <xref scope="peer"
-              href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with gpcopy</xref>
-            for more information.</p></li>
-        <li>Install any external modules used in your Greenplum 4.3 system in the Greenplum 6 system
-          before you restore the backup, for example MADlib or PostGIS. If versions of the external
-          modules are not compatible, you may need to exclude tables that reference them when
-          restoring the Greenplum 4.3 backup to Greenplum 6.</li>
-        <li>The Greenplum 4.3 Oracle Compatibility Functions module is not compatible with Greenplum
-          6. Uninstall the module from Greenplum 4.3 by running the
-            <codeph>uninstall_orafunc.sql</codeph> script before you back up your
-          databases:<codeblock>$ $GPHOME/share/postgresql/contrib/uninstall_orafunc.sql</codeblock>You
-          will also need to drop any dependent database objects that reference compatibility
-          functions.<p>Install the Oracle Compatibility Functions in Greenplum 6 by creating the
-              <codeph>orafce</codeph> module in each database where you require the
-            functions:<codeblock>$ psql -d <varname>dbname</varname> 'CREATE EXTENSION orafce'</codeblock>See
-              <xref href="install_modules.xml#topic_d45_wcw_pgb"/> for information about installing
-              <codeph>orafce</codeph> and other modules.</p></li>
-        <li>When restoring language-based user-defined functions, the shared object file must be in
-          the location specified in the <codeph>CREATE FUNCTION</codeph> SQL command and must have
-          been recompiled on the Greenplum 6 system. This applies to user-defined functions,
-          user-defined types, and any other objects that use custom functions, such as aggregates
-          created with the <codeph>CREATE AGGREGATE</codeph> command.</li>
-        <li>Greenplum 6 provides <i>resource groups</i>, an alternative to managing resources using
-          resource queues. Setting the <codeph>gp_resource_manager</codeph> server configuration
-          parameter to <codeph>queue</codeph> or <codeph>group</codeph> selects the resource
-          management scheme the Greenplum Database system will use. The default is
-            <codeph>queue</codeph>, so no action is required when you move from Greenplum version
-          4.3 to version 6. To more easily transition from resource queues to resource groups, you
-          can set resource groups to allocate and manage memory in a way that is similar to resource
-          queue memory management. To select this feature, set the <codeph>MEMORY_LIMIT</codeph> and
-            <codeph>MEMORY_SPILL_RATIO</codeph> attributes of your resource groups to 0. See <xref
-            href="../admin_guide/workload_mgmt_resgroups.xml" format="dita" scope="peer">Using
-            Resource Groups</xref> for information about enabling and configuring resource
-          groups.</li>
-      </ul>
+      <p>This section covers two options: <ul id="ul_bjz_2h1_tqb">
+          <li>Preparing your Greenplum 6 cluster if you're using <codeph>gpbackup</codeph> and
+              <codeph>gprestore</codeph>. See Using Greenplum Backup/Restore.</li>
+          <li>Preparing your Greenplum 6 cluster if you're using <codeph>gpupgrade</codeph>. See
+            Using Greenplum Upgrade.</li>
+        </ul>
+      </p>
     </body>
+    <topic id="topic_yrt_qh1_tqb">
+      <title>Using Greenplum Backup/Restore</title>
+      <body>
+        <ul id="ul_ppd_yh1_tqb">
+          <li>Install and initialize a new Greenplum Database 6 cluster using the version 6
+              <codeph>gpinitsystem</codeph> utility. <note><codeph>gprestore</codeph> only supports
+              restoring data to a cluster that has an identical number of hosts and an identical
+              number of segments per host, with each segment having the same
+                <codeph>content_id</codeph> as the segment in the original cluster. <ph
+                otherprops="pivotal">Use <codeph>gpcopy</codeph> if you need to migrate data to a
+                different-sized Greenplum 6 cluster.</ph></note>
+            <note> Set the Greenplum Database 6 timezone to a value that is compatible with your
+              host systems. Setting the Greenplum Database timezone prevents Greenplum Database from
+              selecting a timezone each time the cluster is restarted. See <xref
+                href="localization.xml" format="dita" scope="local">Configuring Timezone and
+                Localization Settings</xref> for more information.</note></li>
+          <li>Install the latest release of the Greenplum Backup and Restore utilities, available to
+            download from <ph otherprops="pivotal"><xref
+                href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore" format="html"
+                scope="external">VMware Tanzu Network</xref></ph><ph otherprops="oss-only"><xref
+                href="https://github.com/greenplum-db/gpbackup/releases" format="html"
+                scope="external">github</xref></ph>.</li>
+          <li>If you intend to install Greenplum Database 6 on the same hardware as your 4.3 or 5
+            system, you will need enough disk space to accommodate over five times the original data
+            set (two full copies of the primary and mirror data sets, plus the original backup data
+            in ASCII format) in order to migrate data with <codeph>gpbackup</codeph> and
+              <codeph>gprestore</codeph>. Keep in mind that the ASCII backup data will require more
+            disk space than the original data, which may be stored in compressed binary format.
+            Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space
+            on each host. <p otherprops="pivotal">If you want to migrate your data on the same
+              hardware but do not have enough free disk space on your host systems,
+                <codeph>gpcopy</codeph> provides the <codeph>--truncate-source-after</codeph> option
+              to truncate each source table after copying the table to the destination cluster and
+              validating that the copy succeeded. This reduces the amount of free space needed to
+              migrate clusters that reside on the same hardware. See <xref scope="peer"
+                href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with gpcopy</xref>
+              for more information.</p></li>
+          <li>Install any external modules used in your Greenplum 4.3 system in the Greenplum 6
+            system before you restore the backup, for example MADlib or PostGIS. If versions of the
+            external modules are not compatible, you may need to exclude tables that reference them
+            when restoring the Greenplum 4.3 backup to Greenplum 6.</li>
+          <li>The Greenplum 4.3 Oracle Compatibility Functions module is not compatible with
+            Greenplum 6. Uninstall the module from Greenplum 4.3 by running the
+              <codeph>uninstall_orafunc.sql</codeph> script before you back up your
+            databases:<codeblock>$ $GPHOME/share/postgresql/contrib/uninstall_orafunc.sql</codeblock>You
+            will also need to drop any dependent database objects that reference compatibility
+              functions.<p>Install the Oracle Compatibility Functions in Greenplum 6 by creating the
+                <codeph>orafce</codeph> module in each database where you require the
+              functions:<codeblock>$ psql -d <varname>dbname</varname> 'CREATE EXTENSION orafce'</codeblock>See
+                <xref href="install_modules.xml#topic_d45_wcw_pgb"/> for information about
+              installing <codeph>orafce</codeph> and other modules.</p></li>
+          <li>When restoring language-based user-defined functions, the shared object file must be
+            in the location specified in the <codeph>CREATE FUNCTION</codeph> SQL command and must
+            have been recompiled on the Greenplum 6 system. This applies to user-defined functions,
+            user-defined types, and any other objects that use custom functions, such as aggregates
+            created with the <codeph>CREATE AGGREGATE</codeph> command.</li>
+          <li>Greenplum 6 provides <i>resource groups</i>, an alternative to managing resources
+            using resource queues. Setting the <codeph>gp_resource_manager</codeph> server
+            configuration parameter to <codeph>queue</codeph> or <codeph>group</codeph> selects the
+            resource management scheme the Greenplum Database system will use. The default is
+              <codeph>queue</codeph>, so no action is required when you move from Greenplum version
+            4.3 to version 6. To more easily transition from resource queues to resource groups, you
+            can set resource groups to allocate and manage memory in a way that is similar to
+            resource queue memory management. To select this feature, set the
+              <codeph>MEMORY_LIMIT</codeph> and <codeph>MEMORY_SPILL_RATIO</codeph> attributes of
+            your resource groups to 0. See <xref href="../admin_guide/workload_mgmt_resgroups.xml"
+              format="dita" scope="peer">Using Resource Groups</xref> for information about enabling
+            and configuring resource groups.</li>
+        </ul>
+      </body>
+    </topic>
+    <topic id="topic_hmt_h31_tqb">
+      <title>Using Greenplum Upgrade</title>
+      <body/>
+    </topic>
   </topic>
   <topic id="prep-gpdb4">
     <title>Preparing Greenplum 4.3 and 5 Databases for Backup</title>
