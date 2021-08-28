@@ -27,8 +27,10 @@ run:
       then
         echo "Running workload ${WORKLOAD}"
         cp -rL gp_workloads/${WORKLOAD}/sql sql
-        if [[ $(gunzip -t gp_workloads/${WORKLOAD}/stats_6X.sql.gz) -eq 0 ]]; then
-          gunzip gp_workloads/${WORKLOAD}/stats_6X.sql.gz
+        if test -f gp_workloads/${WORKLOAD}/stats_6X.sql.gz; then
+          if [[ $(gunzip -t gp_workloads/${WORKLOAD}/stats_6X.sql.gz) -eq 0 ]]; then
+            gunzip gp_workloads/${WORKLOAD}/stats_6X.sql.gz
+          fi
         fi
         cp gp_workloads/${WORKLOAD}/schema_6X.sql schema.sql
         cp gp_workloads/${WORKLOAD}/stats_6X.sql stats.sql
