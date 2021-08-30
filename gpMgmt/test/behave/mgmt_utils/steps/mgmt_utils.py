@@ -367,6 +367,13 @@ def impl(context):
     run_cmd(command)
 
 
+@when('the user sets multi-line banner on host')
+def impl(context):
+    file = '/etc/bashrc'
+    command = "echo 'echo -e \"banner test1\\nbanner test2\\nbanner test-3\\nbanner test4\"' >> %s; source %s" % (file, file)
+    run_cmd(command)
+
+
 @given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
 @when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
 def impl(context, process_name, secs):

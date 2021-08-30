@@ -214,6 +214,33 @@ LOG_MSG () {
 		fi
 }
 
+#Function Name: REMOTE_EXECUTE_AND_GET_OUTPUT
+# Input Parameters: Takes 2 parameters
+# Parameter 1 -> Host name to execute the command
+# Parameter 2 -> Command/s to be executed
+# Return value: String output of command execution on spcified remote host
+# Description: This fuction adds a delimeter before executing the commands through ssh.
+# this makes sure that in case if a banner set wrongly using .bashrc in then that gets ignored
+# and we get the required results by ignoring the banner content
+# Limitation: If the token used for separating command output from banner appears in the bash banner or 
+# in command output, in that case only partial command output will be returned. 
+REMOTE_EXECUTE_AND_GET_OUTPUT () {
+  LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+  HOST="$1"
+  CMD="echo 'GP_DELIMITER_FOR_IGNORING_BASH_BANNER';$2"
+  OUTPUT=$( $TRUSTED_SHELL "$HOST" "$CMD" | $AWK '/^GP_DELIMITER_FOR_IGNORING_BASH_BANNER/ {seen = 1} seen {print}' | $TAIL -n +2 )
+  RETVAL=$?
+  if [ $RETVAL -ne 0 ]; then
+ 
+     LOG_MSG "[FATAL]:- Command $CMD on $HOST failed with error status $RETVAL" 2
+  else
+     LOG_MSG "[INFO]:-Completed $TRUSTED_SHELL $HOST $CMD"
+  fi
+  LOG_MSG "[INFO]:-End Function $FUNCNAME"
+  #Return output
+  echo "$OUTPUT"
+}
+
 POSTGRES_VERSION_CHK() {
     LOG_MSG "[INFO]:-Start Function $FUNCNAME"
     HOST=$1;shift
@@ -221,7 +248,7 @@ POSTGRES_VERSION_CHK() {
     CURRENT_VERSION=`$EXPORT_GPHOME; $EXPORT_LIB_PATH; $GPHOME/bin/postgres --gp-version`
     VERSION_MATCH=0
 
-    VER=`$TRUSTED_SHELL $HOST "$EXPORT_GPHOME; $EXPORT_LIB_PATH; $GPHOME/bin/postgres --gp-version"`
+    VER=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$EXPORT_GPHOME; $EXPORT_LIB_PATH; $GPHOME/bin/postgres --gp-version")
     if [ $? -ne 0 ] ; then
 	LOG_MSG "[WARN]:- Failed to obtain postgres version on $HOST" 1
 	VERSION_MATCH=0
@@ -355,11 +382,11 @@ SED_PG_CONF () {
 		trap RETRY ERR
 		RETVAL=0 # RETVAL gets modified in RETRY function whenever the trap is called
 
-		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"|$TAIL -1` -gt 1 ]; then
+		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT  $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME") -gt 1 ]; then
 			LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME on $SED_HOST, will append" 1
 			APPEND=1
 		fi
-		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"|$TAIL -1` -eq 0 ] || [ $APPEND -eq 1 ]; then
+		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME") -eq 0 ] || [ $APPEND -eq 1 ]; then
 			$TRUSTED_SHELL $SED_HOST "$ECHO \"$SUB_TXT\" >> $FILENAME"
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[FATAL]:-Failed to append line $SUB_TXT to $FILENAME on $SED_HOST"
@@ -584,7 +611,7 @@ CHK_FILE () {
 					EXISTS=0
 			fi
 		else
-			EXISTS=`$TRUSTED_SHELL $FILE_HOST "if [ ! -s $FILENAME ] || [ ! -r $FILENAME ];then $ECHO 1;else $ECHO 0;fi"`
+			EXISTS=$( REMOTE_EXECUTE_AND_GET_OUTPUT $FILE_HOST "if [ ! -s $FILENAME ] || [ ! -r $FILENAME ];then $ECHO 1;else $ECHO 0;fi" )
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ];then
 				LOG_MSG "[WARN]:-Failed to obtain details of $FILENAME on $FILE_HOST"
@@ -603,7 +630,7 @@ CHK_DIR () {
 		if [ x"" == x"$DIR_HOST" ];then
 			EXISTS=`if [ -d $DIR_NAME ];then $ECHO 0;else $ECHO 1;fi`
 		else
-			EXISTS=`$TRUSTED_SHELL $DIR_HOST "if [ -d $DIR_NAME ];then $ECHO 0;else $ECHO 1;fi"`
+			EXISTS=$( REMOTE_EXECUTE_AND_GET_OUTPUT $DIR_HOST "if [ -d $DIR_NAME ];then $ECHO 0;else $ECHO 1;fi" )
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ];then
 			LOG_MSG "[WARN]:-Failed to obtain details of $DIR_NAME on $DIR_HOST" 1
@@ -730,7 +757,7 @@ BUILD_COORDINATOR_PG_HBA_FILE () {
         if [ $HBA_HOSTNAMES -eq 0 ];then
             local COORDINATOR_IP_ADDRESS_NO_LOOPBACK=($("$GPHOME"/libexec/ifaddrs --no-loopback))
             if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$COORDINATOR_HOSTNAME" ];then
-                local STANDBY_IP_ADDRESS_NO_LOOPBACK=($($TRUSTED_SHELL $STANDBY_HOSTNAME "$GPHOME"/libexec/ifaddrs --no-loopback))
+                local STANDBY_IP_ADDRESS_NO_LOOPBACK=$( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "'$GPHOME'/libexec/ifaddrs --no-loopback" )
             fi
             for ADDR in "${COORDINATOR_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}"
             do
@@ -835,13 +862,13 @@ GET_PG_PID_ACTIVE () {
 			if [ $RETVAL -ne 0 ];then
 				PID=0
 			else
-				PORT_ARRAY=(`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u`)
+				PORT_ARRAY=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null" |$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u ) )
 				for P_CHK in ${PORT_ARRAY[@]}
 				do
 					if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
 				done
 				#PG_LOCK_NETSTAT=`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$HEAD -1`
-				PG_LOCK_TMP=`$TRUSTED_SHELL $HOST "ls ${PG_LOCK_FILE} 2>/dev/null"|$WC -l`
+				PG_LOCK_TMP=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "ls ${PG_LOCK_FILE} 2>/dev/null|$WC -l" )
 				if [ x"" == x"$PG_LOCK_NETSTAT" ] && [ $PG_LOCK_TMP -eq 0 ];then
 					PID=0
 					LOG_MSG "[INFO]:-No socket connection or lock file $PG_LOCK_FILE found for port=${PORT}"
@@ -854,9 +881,10 @@ GET_PG_PID_ACTIVE () {
 					fi
 					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_NETSTAT" ];then
 					#Have a lock file but no process
-						CAN_READ=`$TRUSTED_SHELL $HOST "if [ -r ${PG_LOCK_FILE} ];then echo 1;else echo 0;fi"`
+						CAN_READ=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "if [ -r ${PG_LOCK_FILE} ];then echo 1;else echo 0;fi" )
+
 						if [ $CAN_READ -eq 1 ];then
-							PID=`$TRUSTED_SHELL $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null"|$AWK '{print $1}'`
+							PID=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null" | $AWK '{print $1}' )
 						else
 							LOG_MSG "[WARN]:-Unable to access ${PG_LOCK_FILE} on $HOST" 1
 						fi
@@ -865,9 +893,9 @@ GET_PG_PID_ACTIVE () {
 					fi
 					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
 					#Have both a lock file and a netstat process
-						CAN_READ=`$TRUSTED_SHELL $HOST "if [ -r ${PG_LOCK_FILE} ];then echo 1;else echo 0;fi"`
+						CAN_READ=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "if [ -r ${PG_LOCK_FILE} ];then echo 1;else echo 0;fi" )
 						if [ $CAN_READ -eq 1 ];then
-							PID=`$TRUSTED_SHELL $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null"|$AWK '{print $1}'`
+							PID=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null"|$AWK '{print $1}' )
 						else
 							LOG_MSG "[WARN]:-Unable to access ${PG_LOCK_FILE} on $HOST" 1
 						fi
