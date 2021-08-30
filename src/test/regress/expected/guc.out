@@ -701,3 +701,12 @@ select myfunc(1), current_setting('regex_flavor');
  extended | extended
 (1 row)
 
+-- GP: assert that we don't support turning on log_lock_waits
+SET log_lock_waits TO on;
+WARNING:  "log_lock_waits": setting is ignored because it is defunct
+SHOW log_lock_waits;
+ log_lock_waits 
+----------------
+ off
+(1 row)
+

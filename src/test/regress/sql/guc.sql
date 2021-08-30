@@ -251,3 +251,7 @@ set regex_flavor = basic;
 select myfunc(0);
 select current_setting('regex_flavor');
 select myfunc(1), current_setting('regex_flavor');
+
+-- GP: assert that we don't support turning on log_lock_waits
+SET log_lock_waits TO on;
+SHOW log_lock_waits;
