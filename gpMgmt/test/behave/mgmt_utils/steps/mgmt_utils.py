@@ -377,10 +377,26 @@ def impl(context, process_name, secs):
     run_async_command(context, command)
 
 
-@when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in gpinitsystem logs')
-def impl(context, process_name, log_msg):
-    command = "while sleep 3; do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; then ps ux | grep %s |awk '{print $2}' | xargs kill ;break 2; fi; done" % (log_msg, process_name)
+@when('the user asynchronously sets up to end gpinitsystem process when {log_msg} is printed in the logs')
+def impl(context, log_msg):
+    command = "while sleep 0.1; " \
+              "do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; " \
+              "then ps ux | grep bin/gpinitsystem |awk '{print $2}' | xargs kill ;break 2; " \
+              "fi; done" % (log_msg)
     run_async_command(context, command)
+
+
+@when('the user asynchronously sets up to end gpcreateseg process when it starts')
+def impl(context):
+    # We keep trying to find the gpcreateseg process using ps,grep
+    # and when we find it, we want to kill it only after the trap for ERROR_EXIT is setup (hence the sleep 1)
+    command = """timeout 10m
+    bash -c "while sleep 0.1;
+    do if ps ux | grep [g]pcreateseg ;
+    then sleep 1 && ps ux | grep [g]pcreateseg |awk '{print \$2}' | xargs kill ;
+    break 2; fi; done" """
+    run_async_command(context, command)
+
 
 @given('the user asynchronously runs "{command}" and the process is saved')
 @when('the user asynchronously runs "{command}" and the process is saved')
@@ -399,6 +415,17 @@ def impl(context, ret_code):
                         "rc: %s\n"
                         "stdout: %s\n"
                         "stderr: %s" % (rc, stdout_value, stderr_value))
+
+
+@when('the user waits until saved async process is completed')
+def impl(context):
+    context.asyncproc.communicate2()
+
+
+@when('the user waits until {process_name} process is completed')
+def impl(context, process_name):
+    wait_process_command = "while ps ux | grep %s | grep -v grep; do sleep 0.1; done;" % process_name
+    run_cmd(wait_process_command)
 
 
 @given('a user runs "{command}" with gphome "{gphome}"')
