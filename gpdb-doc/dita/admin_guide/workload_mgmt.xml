@@ -393,23 +393,29 @@
                 interval at which CPU usage is recalculated for all active statements. The default
                 value for this parameter should be sufficient for typical database operations. </li>
               <li id="iz174445"><codeph>gp_resqueue_priority_cpucores_per_segment</codeph> -
-                Specifies the number of CPU cores allocated per segment instance. The default value
-                is 4 for the master and segments. <p>Each host checks its
+                Specifies the number of CPU cores allocated per primary segment instance on a
+                segment host. The default value
+                is 4 for the master and segment hosts. <p>Each Greenplum host checks its
                   own <codeph>postgresql.conf</codeph> file for the value of this parameter. This
-                  parameter also affects the master node, where it should be set to a value
+                  parameter also affects the master host, where it should be set to a value
                   reflecting the higher ratio of CPU cores. For example, on a cluster that has 10
-                  CPU cores per host and 4 segments per host, you would specify these values for
-                    <codeph>gp_resqueue_priority_cpucores_per_segment</codeph>:</p><p>10 for the
-                  master and standby master. Typically, only the master instance is on the master
-                  host.</p><p>2.5 for segment instances on the segment hosts. </p><p>If the
+                  CPU cores per segment host and 4 primary segments per host, you would specify
+                   the following values for
+                    <codeph>gp_resqueue_priority_cpucores_per_segment</codeph>:</p>
+                  <ul>
+                    <li>10 on the master and standby master hosts. Typically, only a single
+                      master segment instance runs on the master host.</li>
+                    <li>2.5 on each segment host (10 cores divided by 4 primary segments).</li>
+                  </ul>
+                <p>If the
                   parameter value is not set correctly, either the CPU might not be fully utilized,
                   or query prioritization might not work as expected. For example, if the Greenplum
                   Database cluster has fewer than one segment instance per CPU core on your segment
-                  hosts, make sure you adjust this value accordingly. </p><p>Actual CPU core
+                  hosts, make sure that you adjust this value accordingly. </p><p>Actual CPU core
                   utilization is based on the ability of Greenplum Database to parallelize a query
-                  and the resources required to run the query. </p><p>Note: Any CPU core that is
-                  available to the operating system is included in the number of CPU cores. For
-                  example, virtual CPU cores are included in the number of CPU cores.</p></li>
+                  and the resources required to run the query. </p><p>Note: Include any CPU core that is
+                  available to the operating system in the number of CPU cores, including
+                  virtual CPU cores.</p></li>
             </ul></li>
           <li id="iz171977">If you wish to view or change any of the resource management parameter
             values, you can use the <codeph>gpconfig</codeph> utility. </li>
