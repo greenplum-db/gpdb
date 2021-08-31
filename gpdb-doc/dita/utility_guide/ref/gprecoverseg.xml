@@ -134,7 +134,7 @@
           <pd>Specifies the name of a file with the details about failed segments to recover.
               <p>Each line in the config file specifies a segment to recover. This line can have one
               of two formats. In the event of in-place (incremental) recovery, enter one group of
-              colon delimited fields in the line. For example:</p><p>
+              pipe-delimited fields in the line. For example:</p><p>
               <codeblock>failedAddress|failedPort|failedDataDirectory</codeblock>
             </p><p>For recovery to a new location, enter two groups of fields separated by a space
               in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
