@@ -178,6 +178,12 @@ FunctionNext_guts(FunctionScanState *node)
 		if (node->cdb_want_ctid &&
 			!TupIsNull(scanslot))
 		{
+			/*
+			 * if cdb_want_ctid, we transform virtual slot to heaptuple, then do slot_set_ctid_from_fake.
+			 * please refer to the comments in SubqueryNext
+			 */
+			HeapTuple       tuple = ExecFetchSlotHeapTuple(scanslot);
+			scanslot->PRIVATE_tts_heaptuple = tuple;
 			slot_set_ctid_from_fake(scanslot, &node->cdb_fake_ctid);
 		}
 

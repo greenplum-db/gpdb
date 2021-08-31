@@ -457,7 +457,7 @@ set enable_seqscan = off;
 set enable_bitmapscan = off;
 
 create extension if not exists gp_inject_fault;
-select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+select gp_inject_fault_infinite('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 
 explain (costs off)
 select b from t_indexonly_cdbdedup_2 where b in (select b from t_indexonly_cdbdedup_1 where t_indexonly_cdbdedup_1.b = 3) ;
@@ -492,7 +492,7 @@ partition by range (year) (start (2006) end (2007) every (1), default partition 
 
 -- set the cost of unique_rowid_path low.
 create extension if not exists gp_inject_fault;
-select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+select gp_inject_fault_infinite('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 
 -- this case only make sense under planner and this file
 -- if bfv_planner, so turn off orca for it.
@@ -506,6 +506,157 @@ select gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) from gp_segm
 reset optimizer;
 drop table rank_12402;
 drop table rank1_12402;
+
+-- update stmt contains subquery, choose unique_rowid path for semi join of subquery and other table.
+-- issue: https://github.com/greenplum-db/gpdb/issues/12512
+-- test ctid for subquery in update
+drop table if exists t_12512;
+drop table if exists t1_12512;
+drop table if exists t2_12512;
+
+create table t_12512(a int, b int, c int);
+create table t1_12512(a int, b int, c int);
+create table t2_12512(a int, b int, c int);
+
+insert into t_12512 select i,i,i from generate_series(1, 100)i;
+insert into t1_12512 select i,i,i from generate_series(1, 100)i;
+insert into t2_12512 select i,i,i from generate_series(1, 100)i;
+-- choose unique rowid plan
+create extension if not exists gp_inject_fault;
+select gp_inject_fault_infinite('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+explain (costs off)
+update t_12512 set b = 1
+    from
+(
+          select
+            t1_12512.b, sum(t1_12512.a) as x from t1_12512 group by t1_12512.b
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+update t_12512 set b = 1
+    from
+(
+          select
+            t1_12512.b, sum(t1_12512.a) as x from t1_12512 group by t1_12512.b
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+-- test fake ctid for functions
+explain (costs off)
+update t_12512 set b = 1
+    from
+(
+	  select * from pg_backend_pid() x
+
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+update t_12512 set b = 1
+    from
+(
+	  select * from pg_backend_pid() x
+
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+-- test fake ctid for values scan
+explain (costs off)
+update t_12512 set b = 1
+    from
+(
+	  select x from (values (1), (2), (3), (4)) as z(x)
+
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+update t_12512 set b = 1
+    from
+(
+	  select x from (values (1), (2), (3), (4)) as z(x)
+
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+-- test fake ctid for external scan
+
+CREATE OR REPLACE FUNCTION write_to_file_12512() RETURNS integer AS
+   '$libdir/gpextprotocol.so', 'demoprot_export' LANGUAGE C STABLE;
+CREATE OR REPLACE FUNCTION read_from_file_12512() RETURNS integer AS
+    '$libdir/gpextprotocol.so', 'demoprot_import' LANGUAGE C STABLE;
+
+-- declare the protocol name along with in/out funcs
+CREATE PROTOCOL demoprot (
+    readfunc  = read_from_file_12512,
+    writefunc = write_to_file_12512
+);
+
+drop external table if exists ext_w_12512;
+CREATE writable EXTERNAL TABLE ext_w_12512(like t2_12512)
+    LOCATION('demoprot://demotextfile.txt')
+FORMAT 'text'
+DISTRIBUTED BY (a);
+
+INSERT into ext_w_12512 select * from t2_12512;
+drop external table if exists ext_r_12512;
+CREATE  EXTERNAL TABLE ext_r_12512(like t2_12512) LOCATION('demoprot://demotextfile.txt') FORMAT 'text';
+
+explain (costs off)
+update t_12512 set b = 1
+    from
+(
+	  select a x, b from ext_r_12512
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+update t_12512 set b = 1
+    from
+(
+	  select a x, b from ext_r_12512
+)e
+where e.x in
+    (
+    select b from t2_12512
+    )
+;
+
+select gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+drop external table ext_r_12512;
+drop external table ext_w_12512;
+drop  PROTOCOL demoprot;
+drop FUNCTION write_to_file_12512();
+drop FUNCTION read_from_file_12512();
+drop table t_12512;
+drop table t1_12512;
+drop table t2_12512;
 
 -- start_ignore
 drop table if exists bfv_planner_x;
