@@ -229,7 +229,7 @@ newPort|newDataDirectory</codeblock>
           <pd>Sets logging output to verbose.</pd>
         </plentry>
         <plentry>
-          <pt>--version (version)</pt>
+          <pt>--version</pt>
           <pd>Displays the version of this utility.</pd>
         </plentry>
         <plentry>
