@@ -515,14 +515,19 @@ MemoryAccounting_SaveToFile(int currentSliceId)
 void
 MemoryAccounting_SaveToLog()
 {
-	int64 vmem_reserved = VmemTracker_GetMaxReservedVmemBytes();
+	int64 max_vmem_reserved = VmemTracker_GetMaxReservedVmemBytes();
+	int64 vmem_reserved = VmemTracker_GetReservedVmemBytes();
 
 	/* Write the header for the subsequent lines of memory usage information */
 	write_stderr("memory: account_name, account_id, parent_account_id, quota, peak, allocated, freed, current\n");
 
-	write_stderr("memory: %s, %d, %d, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "Vmem",
+	write_stderr("memory: %s, %d, %d, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "CurrentVmem",
 			MEMORY_STAT_TYPE_VMEM_RESERVED /* Id */, MEMORY_STAT_TYPE_VMEM_RESERVED /* Parent Id */,
 			(int64) 0 /* Quota */, vmem_reserved /* Peak */, vmem_reserved /* Allocated */, (int64) 0 /* Freed */, vmem_reserved /* Current */);
+
+	write_stderr("memory: %s, %d, %d, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "MaxVmem",
+			MEMORY_STAT_TYPE_VMEM_RESERVED /* Id */, MEMORY_STAT_TYPE_VMEM_RESERVED /* Parent Id */,
+			(int64) 0 /* Quota */, max_vmem_reserved /* Peak */, max_vmem_reserved /* Allocated */, (int64) 0 /* Freed */, max_vmem_reserved /* Current */);
 
 	write_stderr("memory: %s, %d, %d, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "Peak",
 			MEMORY_STAT_TYPE_MEMORY_ACCOUNTING_PEAK /* Id */, MEMORY_STAT_TYPE_MEMORY_ACCOUNTING_PEAK /* Parent Id */,
