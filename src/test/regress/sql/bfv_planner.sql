@@ -441,6 +441,72 @@ drop table t4_12146;
 
 reset allow_system_table_mods;
 
+-- Test index only scan path not error out when semjoin.
+-- Greenplum might add unique_rowid_path to handle semjoin,
+-- that was introduced in Greenplum long before, and after
+-- merging so many commits from upstream, new logic might
+-- not work well. The following cases test for this.
+create table t_indexonly_cdbdedup_1(a int, b int, c int);
+create table t_indexonly_cdbdedup_2(a int, b int, c int);
+create index on t_indexonly_cdbdedup_2(b);
+
+-- test only make sense under planner and this file
+-- is bfv_planner, so turn off orca for this.
+set optimizer = off;
+set enable_seqscan = off;
+set enable_bitmapscan = off;
+
+create extension if not exists gp_inject_fault;
+select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+explain (costs off)
+select b from t_indexonly_cdbdedup_2 where b in (select b from t_indexonly_cdbdedup_1 where t_indexonly_cdbdedup_1.b = 3) ;
+
+select gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+reset enable_bitmapscan;
+reset enable_seqscan;
+reset optimizer;
+
+-- Test append path not error out when semjoin.
+-- issue1:https://github.com/greenplum-db/gpdb/issues/12402
+-- issue2:https://github.com/greenplum-db/gpdb/issues/3719
+
+-- Greenplum might add unique_rowid_path to handle semjoin, that
+-- was introduced in Greenplum long before, and after merging so
+-- many commits from upstream, new logic might not work well.
+-- We just disallow unique_rowid_path for inheritance_planner.
+
+-- through injecting fault in unique_row_path to make the cost
+-- of unique_rowid low, however, we use a switch to disallow
+-- create unique_rowid plan for inheritance plan.
+-- the two above issues can work well.
+-- The following cases test for this.
+
+--create table
+create table rank_12402 (id int, rank int, year int, value int) distributed by (id)
+partition by range (year) (start (2006) end (2007) every (1), default partition extra );
+
+create table rank1_12402 (id int, rank int, year int, value int) distributed by (id)
+partition by range (year) (start (2006) end (2007) every (1), default partition extra );
+
+-- set the cost of unique_rowid_path low.
+create extension if not exists gp_inject_fault;
+select gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+-- this case only make sense under planner and this file
+-- if bfv_planner, so turn off orca for it.
+set optimizer = off;
+-- It should create a unique_rowid plan.
+-- but it creates a semi-join plan, due to we disallow unique_rowid path in inheritance_planner.
+explain (costs off ) update rank_12402 set rank = 1 where id in (select id from rank1_12402) and value in (select value from rank1_12402);
+
+select gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+reset optimizer;
+drop table rank_12402;
+drop table rank1_12402;
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;

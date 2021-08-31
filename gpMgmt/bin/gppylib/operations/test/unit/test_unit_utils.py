@@ -109,11 +109,11 @@ class UtilsTestCase(GpTestCase):
     def test_RemoteOperation_logger_debug(self, mock_split, mock_cmd, mock_lods, mock_debug):
         # We want to lock down the Command's get_results().stdout.
         cmd_instance = mock_cmd.return_value
-        cmd_instance.get_results.return_value.stdout = 'output'
+        cmd_instance.get_results.return_value.stdout = 'START_CMD_OUTPUT\noutput'
 
         mockRemoteOperation = RemoteOperation(operation=TestOperation(), host="sdw1", msg_ctx="dbid 2")
         mockRemoteOperation.execute()
-        mock_debug.assert_has_calls([mock.call("Output for dbid 2 on host sdw1: output")])
+        mock_debug.assert_has_calls([mock.call("Output for dbid 2 on host sdw1: START_CMD_OUTPUT\noutput")])
 
 if __name__ == '__main__':
     run_tests()

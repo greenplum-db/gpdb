@@ -348,6 +348,9 @@ create view rollup_nested_rowexpr_view as
 select cn, vn, pn, dt, count(distinct dt) from sale group by rollup(cn, (vn, (pn, dt)));
 \d+ rollup_nested_rowexpr_view
 
+-- GroupingFunc with subqueries
+select (select grouping(v1)) from (values ((select 1))) v(v1);
+
 -- GROUP_ID function --
 
 select pn, sum(qty), group_id() from sale group by rollup(pn);

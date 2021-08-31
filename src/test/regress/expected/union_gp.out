@@ -2099,6 +2099,57 @@ select b.model2, f.model, f.last_build_date::date + interval '1year' <= '2021-07
 (1 row)
 
 reset optimizer;
+-- Test when fixing up unkown type for union statement and the var is from outer
+-- subquery. See Github Issue https://github.com/greenplum-db/gpdb/issues/12407
+-- for details.
+create table t_issue_12407(a int, b int, c varchar(32));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t1_issue_12407(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2_issue_12407(a int, b int, c text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t_issue_12407 select i,i,i::varchar(32) from generate_series(1, 10)i;
+insert into t1_issue_12407 select i,i,i from generate_series(1, 10)i;
+insert into t2_issue_12407 select i,i,i::text from generate_series(1, 10)i;
+explain select * from (select 'asdas' tc) xxx left join  t2_issue_12407
+on t2_issue_12407.c = any (array(select xxx.tc union all select t1_issue_12407.a::text from t1_issue_12407));
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Nested Loop Left Join  (cost=10000000000.00..10000000036.80 rows=4 width=42)
+   Join Filter: (t2_issue_12407.c = ANY ((SubPlan 1)))
+   ->  Result  (cost=0.00..0.01 rows=1 width=0)
+   ->  Materialize  (cost=0.00..3.35 rows=4 width=10)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.30 rows=10 width=10)
+               ->  Seq Scan on t2_issue_12407  (cost=0.00..3.10 rows=4 width=10)
+   SubPlan 1  (slice0)
+     ->  Append  (cost=0.00..3.32 rows=4 width=32)
+           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+           ->  Result  (cost=0.00..3.15 rows=4 width=32)
+                 ->  Materialize  (cost=0.00..3.15 rows=4 width=32)
+                       ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..3.10 rows=10 width=32)
+                             ->  Seq Scan on t1_issue_12407  (cost=0.00..3.10 rows=4 width=32)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select * from (select 'str' tc) xxx left join  t2_issue_12407
+on t2_issue_12407.c = any (array(select xxx.tc union all select t1_issue_12407.a::text from t1_issue_12407));
+ tc  | a  | b  | c  
+-----+----+----+----
+ str |  2 |  2 | 2
+ str |  3 |  3 | 3
+ str |  4 |  4 | 4
+ str |  7 |  7 | 7
+ str |  8 |  8 | 8
+ str |  1 |  1 | 1
+ str |  5 |  5 | 5
+ str |  6 |  6 | 6
+ str |  9 |  9 | 9
+ str | 10 | 10 | 10
+(10 rows)
+
 --
 -- Clean up
 --

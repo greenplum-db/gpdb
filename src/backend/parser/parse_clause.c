@@ -2251,6 +2251,9 @@ grouping_rewrite_walker(Node *node, void *context)
 				const char *attname;
 				Var *var = (Var *) node;
 
+				ParseState *pstate = ctx->pstate;
+				Index       levelsup;
+
 				/* Do not allow expressions inside a grouping function. */
 				if (IsA(node, RowExpr))
 					ereport(ERROR,
@@ -2264,9 +2267,13 @@ grouping_rewrite_walker(Node *node, void *context)
 
 				Assert(IsA(node, Var));
 				Assert(var->varno > 0);
-				Assert(var->varno <= list_length(ctx->pstate->p_rtable));
 
-				rte = rt_fetch(var->varno, ctx->pstate->p_rtable);
+				for (levelsup = var->varlevelsup; levelsup > 0; levelsup--)
+					pstate = pstate->parentParseState;
+
+				Assert(var->varno <= list_length(pstate->p_rtable));
+
+				rte = rt_fetch(var->varno, pstate->p_rtable);
 				attname = get_rte_attribute_name(rte, var->varattno);
 
 				ereport(ERROR,

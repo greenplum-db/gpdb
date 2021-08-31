@@ -636,6 +636,23 @@ select b.model2, f.model, f.last_build_date::date + interval '1year' <= '2021-07
 
 reset optimizer;
 
+-- Test when fixing up unkown type for union statement and the var is from outer
+-- subquery. See Github Issue https://github.com/greenplum-db/gpdb/issues/12407
+-- for details.
+create table t_issue_12407(a int, b int, c varchar(32));
+create table t1_issue_12407(a int, b int, c int);
+create table t2_issue_12407(a int, b int, c text);
+
+insert into t_issue_12407 select i,i,i::varchar(32) from generate_series(1, 10)i;
+insert into t1_issue_12407 select i,i,i from generate_series(1, 10)i;
+insert into t2_issue_12407 select i,i,i::text from generate_series(1, 10)i;
+
+explain select * from (select 'asdas' tc) xxx left join  t2_issue_12407
+on t2_issue_12407.c = any (array(select xxx.tc union all select t1_issue_12407.a::text from t1_issue_12407));
+
+select * from (select 'str' tc) xxx left join  t2_issue_12407
+on t2_issue_12407.c = any (array(select xxx.tc union all select t1_issue_12407.a::text from t1_issue_12407));
+
 --
 -- Clean up
 --

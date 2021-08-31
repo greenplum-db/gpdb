@@ -45,14 +45,14 @@ class RemoteOperation(Operation):
         execname = os.path.split(sys.argv[0])[-1]
         pickled_execname = pickle.dumps(execname) 
         pickled_operation = pickle.dumps(self.operation)
-        cmd = Command('pickling an operation', '$GPHOME/sbin/gpoperation.py',
+        cmd = Command('pickling an operation', 'echo "START_CMD_OUTPUT"; $GPHOME/sbin/gpoperation.py',
                       ctxt=REMOTE, remoteHost=self.host, stdin = pickled_execname + pickled_operation)
         cmd.run(validateAfter=True)
         msg =  "Output on host %s: %s" % (self.host, cmd.get_results().stdout)
         if self.msg_ctx:
             msg = "Output for %s on host %s: %s" % (self.msg_ctx, self.host, cmd.get_results().stdout)
         logger.debug(msg)
-        ret = self.operation.ret = pickle.loads(cmd.get_results().stdout)
+        ret = self.operation.ret = pickle.loads(cmd.get_results().stdout.split('START_CMD_OUTPUT\n')[1])
         if isinstance(ret, Exception):
             raise ret
         return ret

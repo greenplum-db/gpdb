@@ -5,11 +5,10 @@ SET_PYTHONHOME="${1:-no}"
 cat <<"EOF"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 if [ ! -L "${SCRIPT_DIR}" ]; then
-	GPDB_DIR=$(basename "${SCRIPT_DIR}")
+    GPHOME=${SCRIPT_DIR}
 else
-	GPDB_DIR=$(basename "$(readlink "${SCRIPT_DIR}")")
+    GPHOME=$(readlink "${SCRIPT_DIR}")
 fi
-GPHOME=$(dirname "${SCRIPT_DIR}")/"${GPDB_DIR}"
 EOF
 
 if [ "${SET_PYTHONHOME}" = "yes" ]; then

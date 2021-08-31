@@ -333,7 +333,7 @@
             <tbody class="- topic/tbody ">
               <row>
                 <entry><xref href="../analytics/pl_java.xml" format="dita" scope="peer">PL/Java</xref></entry>
-                <entry>2.0.2</entry>
+                <entry>2.0.4</entry>
                 <entry>Supports Java 8 and 11.</entry>
               </row>
               <row>

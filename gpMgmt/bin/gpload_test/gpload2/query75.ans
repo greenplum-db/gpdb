@@ -1,25 +1,36 @@
-2021-06-21 16:22:33|INFO|gpload session started 2021-06-21 16:22:33
-2021-06-21 16:22:33|INFO|setting schema 'public' for table 'chinese表'
-2021-06-21 16:22:33|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-06-21 16:22:33|INFO|reusing external table ext_gpload_reusable_d3399c46_d269_11eb_9789_0050569ea4ff
-2021-06-21 16:22:33|ERROR|unexpected error -- backtrace written to log file
-2021-06-21 16:22:33|INFO|rows Inserted          = 0
-2021-06-21 16:22:33|INFO|rows Updated           = 0
-2021-06-21 16:22:33|INFO|data formatting errors = 0
-2021-06-21 16:22:33|INFO|gpload failed
-2021-06-21 16:22:33|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 14
-2021-06-21 16:22:34|INFO|gpload session started 2021-06-21 16:22:34
-2021-06-21 16:22:34|INFO|setting schema 'public' for table 'chinese表'
-2021-06-21 16:22:34|ERROR|no mapping for input column "'列1'" to output table
-2021-06-21 16:22:34|INFO|rows Inserted          = 0
-2021-06-21 16:22:34|INFO|rows Updated           = 0
-2021-06-21 16:22:34|INFO|data formatting errors = 0
-2021-06-21 16:22:34|INFO|gpload failed
-2021-06-21 16:22:34|INFO|gpload session started 2021-06-21 16:22:34
-2021-06-21 16:22:34|INFO|setting schema 'public' for table 'chinese表'
-2021-06-21 16:22:34|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-06-21 16:22:34|ERROR|unexpected error -- backtrace written to log file
-2021-06-21 16:22:34|INFO|rows Inserted          = 0
-2021-06-21 16:22:34|INFO|rows Updated           = 0
-2021-06-21 16:22:34|INFO|data formatting errors = 0
-2021-06-21 16:22:34|INFO|gpload failed
+2021-07-29 21:00:51|INFO|gpload session started 2021-07-29 21:00:51
+2021-07-29 21:00:51|INFO|setting schema 'public' for table 'chinese表'
+2021-07-29 21:00:51|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-29 21:00:51|INFO|did not find an external table to reuse. creating ext_gpload_reusable_0075db36_f06d_11eb_9f82_0050569ea4ff
+2021-07-29 21:00:51|INFO|running time: 0.05 seconds
+2021-07-29 21:00:51|INFO|rows Inserted          = 8
+2021-07-29 21:00:51|INFO|rows Updated           = 0
+2021-07-29 21:00:51|INFO|data formatting errors = 0
+2021-07-29 21:00:51|INFO|gpload succeeded
+2021-07-29 21:00:51|INFO|gpload session started 2021-07-29 21:00:51
+2021-07-29 21:00:51|INFO|setting schema 'public' for table 'chinese表'
+2021-07-29 21:00:51|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-29 21:00:51|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
+2021-07-29 21:00:51|INFO|reusing external table ext_gpload_reusable_0075db36_f06d_11eb_9f82_0050569ea4ff
+2021-07-29 21:00:51|INFO|running time: 0.07 seconds
+2021-07-29 21:00:51|INFO|rows Inserted          = 0
+2021-07-29 21:00:51|INFO|rows Updated           = 8
+2021-07-29 21:00:51|INFO|data formatting errors = 0
+2021-07-29 21:00:51|INFO|gpload succeeded
+2021-07-29 21:00:51|INFO|gpload session started 2021-07-29 21:00:51
+2021-07-29 21:00:51|INFO|setting schema 'public' for table 'chinese表'
+2021-07-29 21:00:51|ERROR|no mapping for input column "'列1'" to output table
+2021-07-29 21:00:51|INFO|rows Inserted          = 0
+2021-07-29 21:00:51|INFO|rows Updated           = 0
+2021-07-29 21:00:51|INFO|data formatting errors = 0
+2021-07-29 21:00:51|INFO|gpload failed
+2021-07-29 21:00:51|INFO|gpload session started 2021-07-29 21:00:51
+2021-07-29 21:00:51|INFO|setting schema 'public' for table 'chinese表'
+2021-07-29 21:00:51|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-29 21:00:51|INFO|reusing staging table staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
+2021-07-29 21:00:51|INFO|reusing external table ext_gpload_reusable_0075db36_f06d_11eb_9f82_0050569ea4ff
+2021-07-29 21:00:51|INFO|running time: 0.07 seconds
+2021-07-29 21:00:51|INFO|rows Inserted          = 0
+2021-07-29 21:00:51|INFO|rows Updated           = 8
+2021-07-29 21:00:51|INFO|data formatting errors = 0
+2021-07-29 21:00:51|INFO|gpload succeeded

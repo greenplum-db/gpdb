@@ -923,6 +923,12 @@ Date(System.currentTimeMillis()));</codeblock>
         <p>PL/Java also installs a language handler for the language <codeph>javau</codeph>. This
           version is <i>not trusted</i> and only a superuser can create new functions that use it.
           Any user can call the functions.</p>
+        <p>To install both the trusted and untrusted languages, register the extension by running
+          the <codeph>'CREATE EXTENSION pljava'</codeph> command when <xref href="#topic6"
+            type="topic" format="dita"/>. </p>
+        <p>To install only the trusted language, register the extension by running the
+            <codeph>'CREATE EXTENSION pljavat'</codeph> command when <xref href="#topic6"
+            type="topic" format="dita"/>.</p>
       </body>
     </topic>
   </topic>

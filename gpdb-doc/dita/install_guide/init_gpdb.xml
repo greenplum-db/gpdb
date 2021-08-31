@@ -240,7 +240,7 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
               caused <codeph>gpinitsystem</codeph> to fail and running the backout script, you
               should be ready to retry initializing your Greenplum Database array.</p>
             <p>The following example shows how to run the backout script:</p>
-            <codeblock>$ sh backout_gpinitsystem_gpadmin_20071031_121053</codeblock>
+            <codeblock>$ bash ~/gpAdminLogs/backout_gpinitsystem_gpadmin_20071031_121053</codeblock>
           </section>
         </body>
       </topic>

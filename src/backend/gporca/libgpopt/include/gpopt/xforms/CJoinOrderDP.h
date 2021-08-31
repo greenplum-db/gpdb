@@ -190,6 +190,12 @@ public:
 	// print function
 	virtual IOstream &OsPrint(IOstream &) const;
 
+	virtual CXform::EXformId
+	EOriginXForm() const
+	{
+		return CXform::ExfExpandNAryJoinDP;
+	}
+
 #ifdef GPOS_DEBUG
 	void DbgPrint();
 #endif

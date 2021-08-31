@@ -580,7 +580,6 @@ def sqlIdentifierCompare(x, y):
        y = quote_unident(y)
     else:
        y = y.lower()
-
     if x == y:
        return True
     else:
@@ -1177,7 +1176,7 @@ class gpload:
                     if argv[0]=='-h':
                         self.options.h = argv[1]
                         argv = argv[2:]
-                    if argv[0]=='--gpfdist_timeout':
+                    elif argv[0]=='--gpfdist_timeout':
                         self.options.gpfdist_timeout = argv[1]
                         argv = argv[2:]
                     elif argv[0]=='-p':
@@ -1887,7 +1886,7 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = d.keys()[0]
-                col_name = self.add_quote_if_not(key)
+                # col_name = self.add_quote_if_not(key)
                 if d[key] is None:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
@@ -1904,7 +1903,7 @@ class gpload:
 
                 # Mark this column as having no mapping, which is important
                 # for do_insert()
-                self.from_columns.append([col_name,d[key].lower(),None, False])
+                self.from_columns.append([key,d[key].lower(),None, False])
         else:
             self.from_columns = self.into_columns
             self.from_cols_from_user = False
@@ -2595,7 +2594,7 @@ class gpload:
 
             # create a string from all reuse conditions for staging tables and ancode it
             conditions_str = self.get_staging_conditions_string(target_table_name, target_columns, distcols)
-            encoding_conditions = hashlib.md5(conditions_str).hexdigest()
+            encoding_conditions = hashlib.md5(conditions_str.encode('utf-8')).hexdigest()
 					
             sql = self.get_reuse_staging_table_query(encoding_conditions)
             resultList = self.db.query(sql.encode('utf-8')).getresult()

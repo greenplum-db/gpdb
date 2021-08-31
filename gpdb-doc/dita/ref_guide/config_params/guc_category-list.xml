@@ -725,6 +725,10 @@
                   >log_error_verbosity</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#log_file_mode" type="section"
+                  >log_file_mode</xref>
+              </p>
+              <p>
                 <xref href="guc-list.xml#log_min_duration_statement" type="section"
                   >log_min_duration_statement</xref>
               </p>

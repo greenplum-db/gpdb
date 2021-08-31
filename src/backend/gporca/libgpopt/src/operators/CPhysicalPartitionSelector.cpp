@@ -18,8 +18,10 @@
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
+
 
 using namespace gpopt;
 
@@ -408,6 +410,11 @@ CPhysicalPartitionSelector::PpfmDerive(CMemoryPool *mp,
 	CPartFilterMap *ppfm = PpfmDeriveCombineRelational(mp, exprhdl);
 	IStatistics *stats = exprhdl.Pstats();
 	GPOS_ASSERT(NULL != stats);
+	if (NULL == stats)
+	{
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+				   GPOS_WSZ_LIT("CPhysicalPartitionSelector"));
+	}
 	m_pexprCombinedPredicate->AddRef();
 	stats->AddRef();
 	ppfm->AddPartFilter(mp, m_scan_id, m_pexprCombinedPredicate, stats);

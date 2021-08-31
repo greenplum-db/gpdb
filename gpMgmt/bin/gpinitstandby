@@ -331,9 +331,7 @@ def check_and_start_standby():
     standby = array.standbyMaster
     gp.start_standbymaster(standby.hostname,
                            standby.datadir,
-                           standby.port,
-                           standby.dbid,
-                           array.getNumSegmentContents())
+                           standby.port)
     logger.info("Successfully started standby master")
 
 #-------------------------------------------------------------------------
@@ -405,9 +403,7 @@ def create_standby(options):
             g_init_standby_state = INIT_STANDBY_STATE_STARTING_STANDBY
             gp.start_standbymaster(standby.hostname,
                                    standby.datadir,
-                                   standby.port,
-                                   standby.dbid,
-                                   array.getNumSegmentContents())
+                                   standby.port)
         except Exception, ex:
             raise GpInitStandbyException('failed to start standby')
 

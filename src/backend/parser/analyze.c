@@ -2174,6 +2174,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	}
 
 	/*
+	 * Greenplum specific behavior:
 	 * Coerce the UNKNOWN type for target entries to its right type here.
 	 */
 	fixup_unknown_vars_in_setop(pstate, sostmt);

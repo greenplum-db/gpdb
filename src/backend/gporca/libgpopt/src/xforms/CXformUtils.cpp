@@ -38,6 +38,7 @@
 #include "gpopt/operators/CLogicalRowTrigger.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalInnerHashJoin.h"
 #include "gpopt/operators/CScalarAssertConstraint.h"
 #include "gpopt/operators/CScalarAssertConstraintList.h"
 #include "gpopt/operators/CScalarBitmapBoolOp.h"
@@ -2758,9 +2759,12 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 				CPhysicalJoin::FHashJoinCompatible(
 					pexprEquality, pexprOuter,
 					pexprInner) &&	// equality is hash-join compatible
-				CUtils::FUsesNullableCol(
+				!CUtils::FUsesNullableCol(
 					mp, pexprEquality,
-					pexprInner))  // equality uses an inner nullable column
+					pexprInner) &&	// equality uses an inner NOT NULL column
+				!CUtils::FUsesNullableCol(
+					mp, pexprEquality,
+					pexprOuter))  // equality uses an outer NOT NULL column
 			{
 				pexprEquality->AddRef();
 				pdrgpexprNew->Append(pexprEquality);
@@ -4815,6 +4819,5 @@ CXformUtils::AddALinearStackOfUnaryExpressions(
 
 	return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
 }
-
 
 // EOF

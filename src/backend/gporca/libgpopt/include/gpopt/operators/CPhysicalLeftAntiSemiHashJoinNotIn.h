@@ -34,10 +34,11 @@ private:
 
 public:
 	// ctor
-	CPhysicalLeftAntiSemiHashJoinNotIn(CMemoryPool *mp,
-									   CExpressionArray *pdrgpexprOuterKeys,
-									   CExpressionArray *pdrgpexprInnerKeys,
-									   IMdIdArray *hash_opfamilies = NULL);
+	CPhysicalLeftAntiSemiHashJoinNotIn(
+		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+		CExpressionArray *pdrgpexprInnerKeys,
+		IMdIdArray *hash_opfamilies = NULL,
+		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// ident accessors
 	virtual EOperatorId

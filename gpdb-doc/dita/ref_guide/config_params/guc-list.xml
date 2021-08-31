@@ -343,6 +343,9 @@
               <xref href="#listen_addresses"/>
             </li>
             <li>
+              <xref href="#log_file_mode"/>
+            </li>
+            <li>
               <xref href="#log_planner_stats"/>
             </li>
             <li>
@@ -6094,6 +6097,37 @@
       </table>
     </body>
   </topic>
+  <topic id="log_file_mode">
+    <title>log_file_mode</title>
+    <body>
+      <p>On Unix systems this parameter sets the permissions for log files when
+          <codeph>logging_collector</codeph> is enabled. The parameter value is expected to be a
+        numeric mode specified in the format accepted by the <codeph>chmod</codeph> and
+          <codeph>umask</codeph> system calls.</p>
+      <table id="table_s4d_hfj_2qb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">numeric UNIX file permission mode (as accepted by the
+                  <i>chmod</i> or <i>umask</i> commands)</entry>
+              <entry colname="col2">0600</entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="log_hostname">
     <title>log_hostname</title>
     <body>
@@ -9536,7 +9570,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           <tbody>
             <row>
               <entry colname="col1">directory path</entry>
-              <entry colname="col2">unset</entry>
+              <entry colname="col2">0777</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -9594,7 +9628,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">numeric UNIX file permission mode (as accepted by the
                   <i>chmod</i> or <i>umask</i> commands)</entry>
-              <entry colname="col2">511</entry>
+              <entry colname="col2">0777</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
