@@ -5592,6 +5592,7 @@ getTypes(Archive *fout, int *numTypes)
 		tyinfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_typname));
 		tyinfo[i].dobj.namespace =
 			findNamespace(atooid(PQgetvalue(res, i, i_typnamespace)));
+		tyinfo[i].ftypname = NULL;	/* may get filled later */
 		tyinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
 		tyinfo[i].typacl = pg_strdup(PQgetvalue(res, i, i_typacl));
 		tyinfo[i].rtypacl = pg_strdup(PQgetvalue(res, i, i_rtypacl));
@@ -20308,12 +20309,11 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int a
  *
  * This does not guarantee to schema-qualify the output, so it should not
  * be used to create the target object name for CREATE or ALTER commands.
- *
- * TODO: there might be some value in caching the results.
  */
 static char *
 getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts)
 {
+	TypeInfo   *typeInfo;
 	char	   *result;
 	PQExpBuffer query;
 	PGresult   *res;
@@ -20330,6 +20330,11 @@ getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts)
 			return pg_strdup("NONE");
 	}
 
+	/* see if we have the result cached in the type's TypeInfo record */
+	typeInfo = findTypeByOid(oid);
+	if (typeInfo && typeInfo->ftypname)
+		return pg_strdup(typeInfo->ftypname);
+
 	query = createPQExpBuffer();
 	appendPQExpBuffer(query, "SELECT pg_catalog.format_type('%u'::pg_catalog.oid, NULL)",
 					  oid);
@@ -20341,6 +20346,10 @@ getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts)
 
 	PQclear(res);
 	destroyPQExpBuffer(query);
+
+	/* cache a copy for later requests */
+	if (typeInfo)
+		typeInfo->ftypname = pg_strdup(result);
 
 	return result;
 }
