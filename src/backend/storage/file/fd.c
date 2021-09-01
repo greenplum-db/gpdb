@@ -2907,13 +2907,15 @@ TempTablespacesAreSet(void)
 int
 GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 {
-	int			i;
+    if (TempTablespacesAreSet()) {
+        int            i;
+        for (i = 0; i < numTempTableSpaces && i < numSpaces; ++i)
+            tableSpaces[i] = tempTableSpaces[i];
 
-	Assert(TempTablespacesAreSet());
-	for (i = 0; i < numTempTableSpaces && i < numSpaces; ++i)
-		tableSpaces[i] = tempTableSpaces[i];
-
-	return i;
+        return i;
+    } else {
+        return 0;
+    }
 }
 
 /*

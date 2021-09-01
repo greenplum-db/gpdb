@@ -305,57 +305,58 @@ execMotionUnsortedReceiver(MotionState *node)
 				motion->motionType == MOTIONTYPE_BROADCAST ||
 				(motion->motionType == MOTIONTYPE_EXPLICIT && motion->segidColIdx > 0));
 
-	Assert(node->ps.state->motionlayer_context);
-	Assert(node->ps.state->interconnect_context);
+    if (node->ps.state->motionlayer_context != NULL && node->ps.state->interconnect_context != NULL) {
+        if (node->stopRequested)
+        {
+            SendStopMessage(node->ps.state->motionlayer_context,
+                            node->ps.state->interconnect_context,
+                            motion->motionID);
+            return NULL;
+        }
 
-	if (node->stopRequested)
-	{
-		SendStopMessage(node->ps.state->motionlayer_context,
-						node->ps.state->interconnect_context,
-						motion->motionID);
-		return NULL;
-	}
+        tuple = RecvTupleFrom(node->ps.state->motionlayer_context,
+                              node->ps.state->interconnect_context,
+                              motion->motionID, ANY_ROUTE);
 
-	tuple = RecvTupleFrom(node->ps.state->motionlayer_context,
-						  node->ps.state->interconnect_context,
-						  motion->motionID, ANY_ROUTE);
+        if (!tuple)
+        {
+    #ifdef CDB_MOTION_DEBUG
+            if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+                elog(DEBUG4, "motionID=%d saw end of stream", motion->motionID);
+    #endif
+            Assert(node->numTuplesFromAMS == node->numTuplesToParent);
+            Assert(node->numTuplesFromChild == 0);
+            Assert(node->numTuplesToAMS == 0);
+            return NULL;
+        }
 
-	if (!tuple)
-	{
-#ifdef CDB_MOTION_DEBUG
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG4, "motionID=%d saw end of stream", motion->motionID);
-#endif
-		Assert(node->numTuplesFromAMS == node->numTuplesToParent);
-		Assert(node->numTuplesFromChild == 0);
-		Assert(node->numTuplesToAMS == 0);
-		return NULL;
-	}
+        node->numTuplesFromAMS++;
+        node->numTuplesToParent++;
 
-	node->numTuplesFromAMS++;
-	node->numTuplesToParent++;
+        /* store it in our result slot and return this. */
+        slot = node->ps.ps_ResultTupleSlot;
 
-	/* store it in our result slot and return this. */
-	slot = node->ps.ps_ResultTupleSlot;
+        slot = ExecStoreMinimalTuple(tuple, slot, true /* shouldFree */ );
 
-	slot = ExecStoreMinimalTuple(tuple, slot, true /* shouldFree */ );
+    #ifdef CDB_MOTION_DEBUG
+        if (node->numTuplesToParent <= 20)
+        {
+            StringInfoData buf;
 
-#ifdef CDB_MOTION_DEBUG
-	if (node->numTuplesToParent <= 20)
-	{
-		StringInfoData buf;
+            initStringInfo(&buf);
+            appendStringInfo(&buf, "   motion%-3d rcv      %5d.",
+                             motion->motionID,
+                             node->numTuplesToParent);
+            formatTuple(&buf, slot, node->outputFunArray);
+            elog(DEBUG3, "%s", buf.data);
+            pfree(buf.data);
+        }
+    #endif
 
-		initStringInfo(&buf);
-		appendStringInfo(&buf, "   motion%-3d rcv      %5d.",
-						 motion->motionID,
-						 node->numTuplesToParent);
-		formatTuple(&buf, slot, node->outputFunArray);
-		elog(DEBUG3, "%s", buf.data);
-		pfree(buf.data);
-	}
-#endif
-
-	return slot;
+        return slot;
+    } else {
+        return NULL;
+    }
 }
 
 
