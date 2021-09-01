@@ -47,5 +47,6 @@ test: timeouts
 test: heap-repeatable-read-vacuum-freeze
 test: heap-repeatable-read-vacuum
 test: ao-repeatable-read-vacuum
+test: vacuum-full-permissions
 
 test: ao-insert-eof create_index_hot udf-insert-deadlock heap-repeatable-read ao-repeatable-read

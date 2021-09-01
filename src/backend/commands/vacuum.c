@@ -1254,6 +1254,39 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 			/* Make a relation list entry for this guy */
 			candidateOid = HeapTupleGetOid(tuple);
 
+			/*
+			 * GPDB: Check permissions.
+			 *
+			 * We do a permissions check here only for VACUUM FULL because the permissions check
+			 * in vacuum_rel() needs AccessExclusiveLock first. Doing it here first prevents
+			 * possible blocking issues such as having a user wait for AccessExclusiveLock even
+			 * though the user does not have permissions and would have skipped.
+			 *
+			 * Note: VACUUM ANALYZE can suffer from the same issue. So we could have ran the
+			 * permissions check for VACUUM ANALYZE here as well. But we opted not to, as with
+			 * ANALYZE the issue is less severe, since ANALYZE grabs a ShareUpdateExclusiveLock
+			 * which is less blocking than the AccessExclusiveLock grabbed by VACUUM FULL.
+			 */
+			if ((vacstmt->options & VACOPT_FULL && Gp_role != GP_ROLE_EXECUTE) &&
+				!(pg_class_ownercheck(candidateOid, GetUserId()) ||
+					(pg_database_ownercheck(MyDatabaseId, GetUserId()) && !classForm->relisshared)))
+			{
+				if (classForm->relisshared)
+					ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only superuser can vacuum it",
+								NameStr(classForm->relname))));
+				else if (classForm->relnamespace == PG_CATALOG_NAMESPACE)
+					ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only superuser or database owner can vacuum it",
+								NameStr(classForm->relname))));
+				else
+					ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only table or database owner can vacuum it",
+								NameStr(classForm->relname))));
+
+				continue;
+			}
+
 			/* Skip non root partition tables if ANALYZE ROOTPARTITION ALL is executed */
 			if ((vacstmt->options & VACOPT_ROOTONLY) && !rel_is_partitioned(candidateOid))
 			{
