@@ -960,6 +960,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	LockRelId			onerelid;
 	MemoryContext		oldctx;
 	VacuumStatsContext stats_context;
+	bool vacfull_on_db;
 
 	vacstmt = copyObject(vacstmt);
 	vacstmt->analyze = false;
@@ -982,6 +983,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	bool truncatePhase = false;
 
 	Assert(vacstmt);
+	vacfull_on_db = vacstmt->full && vacstmt->relation == NULL;
 
 	if (Gp_role != GP_ROLE_EXECUTE)
 	{
@@ -1119,7 +1121,6 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 				continue;
 			}
 		}
-
 
 		vacuumStatement_AssignRelation(vacstmt, relid, relations);
 
@@ -1392,14 +1393,24 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		 */
 		relation_close(onerel, NoLock);
 
-
-		if (list_length(relations) > 1)
+		/*
+		 * Free vacstmt->relation and set it to NULL so that
+		 * subsequent passes (e.g. heap_truncate on 2nd pass
+		 * of VACUUM FULL on a heap table) can execute
+		 * vacuumStatement_AssignRelation() to set
+		 * vacstmt->relation. This is needed because the below
+		 * CommitTransactionCommand() will clobber the
+		 * transaction memory context and leave
+		 * vacstmt->relation as a dangling pointer otherwise.
+		 */
+		if (list_length(relations) > 1 || vacfull_on_db)
 		{
 			pfree(vacstmt->relation->schemaname);
 			pfree(vacstmt->relation->relname);
 			pfree(vacstmt->relation);
 			vacstmt->relation = NULL;
 		}
+
 		vacstmt->appendonly_compaction_vacuum_prepare = false;
 
 		/*
@@ -1630,6 +1641,39 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 
 			/* Make a relation list entry for this guy */
 			candidateOid = HeapTupleGetOid(tuple);
+
+			/*
+			 * GPDB: Check permissions.
+			 *
+			 * We do a permissions check here only for VACUUM FULL because the permissions check
+			 * in vacuum_rel() needs AccessExclusiveLock first. Doing it here first prevents
+			 * possible blocking issues such as having a user wait for AccessExclusiveLock even
+			 * though the user does not have permissions and would have skipped.
+			 *
+			 * Note: VACUUM ANALYZE can suffer from the same issue. So we could have ran the
+			 * permissions check for VACUUM ANALYZE here as well. But we opted not to, as with
+			 * ANALYZE the issue is less severe, since ANALYZE grabs a ShareUpdateExclusiveLock
+			 * which is less blocking than the AccessExclusiveLock grabbed by VACUUM FULL.
+			 */
+			if ((vacstmt->full && Gp_role != GP_ROLE_EXECUTE) &&
+				!(pg_class_ownercheck(candidateOid, GetUserId()) ||
+					(pg_database_ownercheck(MyDatabaseId, GetUserId()) && !classForm->relisshared)))
+			{
+				if (classForm->relisshared)
+					ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only superuser can vacuum it",
+								NameStr(classForm->relname))));
+				else if (classForm->relnamespace == PG_CATALOG_NAMESPACE)
+					ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only superuser or database owner can vacuum it",
+								NameStr(classForm->relname))));
+				else
+					ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only table or database owner can vacuum it",
+								NameStr(classForm->relname))));
+
+				continue;
+			}
 
 			/* Skip non root partition tables if ANALYZE ROOTPARTITION ALL is executed */
 			if (vacstmt->rootonly && !rel_is_partitioned(candidateOid))
