@@ -2220,6 +2220,11 @@ eqjoinsel_inner(Oid operator,
 	nd1 = get_variable_numdistinct(vardata1, &isdefault1);
 	nd2 = get_variable_numdistinct(vardata2, &isdefault2);
 
+	if (vardata1->rel)
+		nd1 = nd1 > vardata1->rel->rows ? vardata1->rel->rows : nd1;
+	if (vardata2->rel)
+		nd2 = nd2 > vardata2->rel->rows ? vardata2->rel->rows : nd2;
+
 	memset(&sslot1, 0, sizeof(sslot1));
 	memset(&sslot2, 0, sizeof(sslot2));
 
