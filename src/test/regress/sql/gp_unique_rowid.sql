@@ -153,14 +153,13 @@ CREATE PROTOCOL demoprot (
     writefunc = write_to_file_12512
 );
 
-drop external table if exists ext_w_12512;
 CREATE writable EXTERNAL TABLE ext_w_12512(like t2_12512)
     LOCATION('demoprot://demotextfile.txt')
 FORMAT 'text'
 DISTRIBUTED BY (a);
 
 INSERT into ext_w_12512 select * from t2_12512;
-drop external table if exists ext_r_12512;
+
 CREATE  EXTERNAL TABLE ext_r_12512(like t2_12512) LOCATION('demoprot://demotextfile.txt') FORMAT 'text';
 
 explain (costs off)
@@ -198,3 +197,8 @@ drop table rank1_12402;
 drop table t_12512;
 drop table t1_12512;
 drop table t2_12512;
+drop external table ext_w_12512;
+drop external table ext_r_12512;
+drop protocol demoprot;
+drop function write_to_file_12512();
+drop function read_from_file_12512();
