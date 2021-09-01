@@ -22,6 +22,9 @@
 test: gp_toolkit
 test: log_guc
 
+# test planner unique_rowid path, with fault inject
+test: gp_unique_rowid
+
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
 # run separately - because slot counter may influenced by other parallel queries
@@ -171,9 +174,7 @@ test: rpt rpt_joins rpt_tpch rpt_returning
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create
 # temp tables
-test: bfv_cte bfv_joins bfv_subquery bfv_legacy bfv_temp bfv_dml
-# bfv_planner contains fault inject
-test: bfv_planner
+test: bfv_cte bfv_joins bfv_planner bfv_subquery bfv_legacy bfv_temp bfv_dml
 
 test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_sets_oid
 
