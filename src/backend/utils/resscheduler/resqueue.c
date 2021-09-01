@@ -560,6 +560,8 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 		return false;
 	}
 
+	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+
 	/*
 	 * Double-check that we are actually holding a lock of the type we want to
 	 * Release.
@@ -570,7 +572,7 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 		elog(DEBUG1, "Resource queue %d: proclock not held", locktag->locktag_field1);
 		RemoveLocalLock(locallock);
 		ResCleanUpLock(lock, proclock, hashcode, false);
-
+		LWLockRelease(ResQueueLock);
 		return false;
 	}
 
@@ -580,8 +582,6 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	MemSet(&portalTag, 0, sizeof(ResPortalTag));
 	portalTag.pid = MyProc->pid;
 	portalTag.portalId = resPortalId;
-
-	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
 	incrementSet = ResIncrementFind(&portalTag);
 	if (!incrementSet)
@@ -1463,6 +1463,15 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 	bool		found;
 
 	Assert(LWLockHeldByMeInMode(ResQueueLock, LW_EXCLUSIVE));
+
+#ifdef FAULT_INJECTOR
+	/* Simulate an out-of-shared-memory error by bypassing the increment hash. */
+	if (FaultInjector_InjectFaultIfSet("res_increment_add_oosm",
+									   DDLNotSpecified,
+									   "",
+									   "") == FaultInjectorTypeSkip)
+		return NULL;
+#endif
 
 	/* Set up the key. */
 	MemSet(&portaltag, 0, sizeof(ResPortalTag));
