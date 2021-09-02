@@ -31,7 +31,7 @@
 
 
 #ifndef IC_PROXY_LOG_LEVEL
-#define IC_PROXY_LOG_LEVEL WARNING
+#define IC_PROXY_LOG_LEVEL LOG
 #endif
 
 #define ic_proxy_alloc(size) palloc(size)

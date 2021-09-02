@@ -193,7 +193,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 				int			family;
 				int			ret;
 
-				ret = ic_proxy_extract_addr(iter->ai_addr, name, sizeof(name),
+				ret = ic_proxy_extract_sockaddr(iter->ai_addr, name, sizeof(name),
 											&port, &family);
 				if (ret == 0)
 					ic_proxy_log(LOG,
