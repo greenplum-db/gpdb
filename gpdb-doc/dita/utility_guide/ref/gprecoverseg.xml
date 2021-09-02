@@ -151,7 +151,9 @@ newPort|newDataDirectory</codeblock>
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16<b>SPACE</b>sdw4-1|50001|/data1/recover1/gpseg16</codeblock>
             <p><b>Obtaining a Sample File</b></p>
             <p>You can use the <codeph>-o</codeph> option to output a sample recovery configuration
-              file to use as a starting point.</p></pd>
+              file to use as a starting point. The output file lists the currently invalid segments
+              and their default recovery location. This file format can be used with
+                <codeph>-i</codeph> option for in-place (incremental) recovery.</p></pd>
         </plentry>
         <plentry>
           <pt>-l <varname>logfile_directory</varname></pt>
