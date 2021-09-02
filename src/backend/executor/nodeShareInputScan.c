@@ -239,6 +239,20 @@ init_tuplestore_state(ShareInputScanState *node)
 				tuplestore_make_shared(ts,
 									   get_shareinput_fileset(),
 									   rwfile_prefix);
+#ifdef FAULT_INJECTOR
+				if (SIMPLE_FAULT_INJECTOR("sisc_xslice_temp_files") == FaultInjectorTypeSkip)
+				{
+					const char *filename = tuplestore_get_buffilename(ts);
+					if (!filename)
+						ereport(NOTICE, (errmsg("sisc_xslice: buffilename is null")));
+					else if (strstr(filename, "base/" PG_TEMP_FILES_DIR) == filename)
+						ereport(NOTICE, (errmsg("sisc_xslice: Use default tablespace")));
+					else if (strstr(filename, "pg_tblspc/") == filename)
+						ereport(NOTICE, (errmsg("sisc_xslice: Use temp tablespace")));
+					else
+						ereport(NOTICE, (errmsg("sisc_xslice: Unexpected prefix of the tablespace path")));
+				}
+#endif
 			}
 			else
 			{

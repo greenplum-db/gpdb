@@ -1581,64 +1581,6 @@ TempTablespacePath(char *path, Oid tablespace)
 }
 
 /*
- * Get full path to a temporary file with given name.
- *
- * This can be used, if you want to create a temporary file,
- * but don't want to use the OpenNamedTemporaryFile function
- * for some reason. For example, if you want to create a FIFO
- * or a directory, rather than a regular file.
- *
- * If 'createdir' is true, the pgsql_tmp directory is created
- * if it doesn't exist yet.
- */
-char *
-GetTempFilePath(const char *filename, bool createdir)
-{
-	char		tempdirpath[MAXPGPATH];
-	char		tempfilepath[MAXPGPATH];
-	Oid			tblspcOid;
-
-	if (MyDatabaseTableSpace)
-		tblspcOid = MyDatabaseTableSpace;
-	else
-		tblspcOid = DEFAULTTABLESPACE_OID;
-
-	/*
-	 * Identify the tempfile directory for this tablespace.
-	 *
-	 * If someone tries to specify pg_global, use pg_default instead.
-	 */
-	if (tblspcOid == DEFAULTTABLESPACE_OID ||
-		tblspcOid == GLOBALTABLESPACE_OID)
-	{
-		/* The default tablespace is {datadir}/base */
-		snprintf(tempdirpath, sizeof(tempdirpath), "base/%s",
-				 PG_TEMP_FILES_DIR);
-	}
-	else
-	{
-		/* All other tablespaces are accessed via symlinks */
-		snprintf(tempdirpath, sizeof(tempdirpath), "pg_tblspc/%u/%s/%s",
-				 tblspcOid, GP_TABLESPACE_VERSION_DIRECTORY, PG_TEMP_FILES_DIR);
-	}
-
-	/*
-	 * We might need to create the tablespace's tempfile directory, if no
-	 * one has yet done so.
-	 *
-	 * Don't check for error from mkdir. It will fail if the directory
-	 * exists already, which is quite likely. If it fails for some other
-	 * reason, we'll bomb out when creating the file in the directory.
-	 */
-	if (createdir)
-		mkdir(tempdirpath, S_IRWXU);
-
-	snprintf(tempfilepath, sizeof(tempfilepath), "%s/%s_%s",
-			 tempdirpath, PG_TEMP_FILE_PREFIX, filename);
-	return pstrdup(tempfilepath);
-}
-
-/*
  * Open a temporary file in a specific tablespace.
  * Subroutine for OpenTemporaryFile, which see for details.
  */
@@ -2917,6 +2859,33 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 }
 
 /*
+ * GetSessionTempTableSpace
+ *
+ * Select temp tablespace for current session to use. It's like
+ * GetNextTempTableSpace in upstream, but it gets the same temp
+ * tablespace in all QD/QE processes in the same session.
+ * A result of InvalidOid means to use the current database's
+ * default tablespace.
+ * NOTE: this function always returns the same tablespace oid
+ * for all backends in the same session. It's a safe implementation
+ * of GetNextTempTableSpace() in MPP.
+ */
+static inline Oid
+GetSessionTempTableSpace(void)
+{
+	if (numTempTableSpaces <= 0)
+		return InvalidOid;
+
+	if (gp_session_id >= 0)
+		return tempTableSpaces[gp_session_id % numTempTableSpaces];
+
+	/* If this session is not MPP, uses the implementation from upstream */
+	if (++nextTempTableSpace >= numTempTableSpaces)
+		nextTempTableSpace = 0;
+	return tempTableSpaces[nextTempTableSpace];
+}
+
+/*
  * GetNextTempTableSpace
  *
  * Select the next temp tablespace to use.  A result of InvalidOid means
@@ -2925,14 +2894,7 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 Oid
 GetNextTempTableSpace(void)
 {
-	if (numTempTableSpaces > 0)
-	{
-		/* Advance nextTempTableSpace counter with wraparound */
-		if (++nextTempTableSpace >= numTempTableSpaces)
-			nextTempTableSpace = 0;
-		return tempTableSpaces[nextTempTableSpace];
-	}
-	return InvalidOid;
+	return GetSessionTempTableSpace();
 }
 
 

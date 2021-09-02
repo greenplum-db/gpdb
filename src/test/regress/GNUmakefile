@@ -161,6 +161,11 @@ tablespace-setup:
         ./testtablespace_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000/ \
 	./testtablespace_default_tablespace \
 	./testtablespace_temp_tablespace \
+	./testtablespace_mytempsp0 \
+	./testtablespace_mytempsp1 \
+	./testtablespace_mytempsp2 \
+	./testtablespace_mytempsp3 \
+	./testtablespace_mytempsp4 \
 	./testtablespace_database_tablespace
 
 

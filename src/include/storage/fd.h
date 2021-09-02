@@ -160,11 +160,8 @@ extern int gp_retry_close(int fd);
 #define PG_TEMP_FILES_DIR "pgsql_tmp"
 #define PG_TEMP_FILE_PREFIX "pgsql_tmp"
 
-extern char *GetTempFilePath(const char *filename, bool createdir);
-
 extern const char *FileGetFilename(File file);
 
 extern void FileSetIsWorkfile(File file);
-extern void FileSetIsTempFile(File file, bool isTempFile);
 
 #endif							/* FD_H */

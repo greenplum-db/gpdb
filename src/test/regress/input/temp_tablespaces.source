@@ -26,3 +26,115 @@ drop tablespace some_temp_tablespace;
 drop tablespace some_default_tablespace;
 reset default_tablespace;
 reset temp_tablespaces;
+
+
+-- When the GUC temp_tablespaces is set, one of the temp tablespaces is used instead of the default tablespace.
+-- create several tablespaces and use them as temp tablespaces
+-- all QD/QEs in one session should have the same temp tablespace
+create tablespace mytempsp0 location '@testtablespace@_mytempsp0';
+create tablespace mytempsp1 location '@testtablespace@_mytempsp1';
+create tablespace mytempsp2 location '@testtablespace@_mytempsp2';
+create tablespace mytempsp3 location '@testtablespace@_mytempsp3';
+create tablespace mytempsp4 location '@testtablespace@_mytempsp4';
+
+CREATE TABLE tts_foo (i int, j int) distributed by(i);
+insert into tts_foo select i, i from generate_series(1,80000)i;
+ANALYZE tts_foo;
+set gp_cte_sharing=on;
+
+-- CASE 1: when temp_tablespaces is set, hashagg and share-input-scan
+-- should honor the GUC and creates temp files under the specified tablespaces.
+
+-- temp_tablespaces will synchronized to all segments
+set temp_tablespaces=mytempsp0,mytempsp1,mytempsp2,mytempsp3,mytempsp4;
+set statement_mem='2MB';
+
+select gp_inject_fault('sisc_xslice_temp_files', 'skip', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+CREATE TEMP TABLE tts_bar as
+WITH a1 as (select * from tts_foo),
+     a2 as (select * from tts_foo)
+    SELECT a1.i xx
+       FROM a1
+         INNER JOIN a2 ON a2.i = a1.i
+         UNION ALL
+         SELECT count(a1.i)
+           FROM a1
+             INNER JOIN a2 ON a2.i = a1.i
+distributed by(xx);
+
+-- Make sure the following fault injector is triggered.
+select gp_wait_until_triggered_fault('sisc_xslice_temp_files', 1, dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+select gp_inject_fault('sisc_xslice_temp_files', 'reset', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+-- test for hash agg
+set statement_mem='1MB';
+
+select gp_inject_fault('hashagg_spill_temp_files', 'skip', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+create temp table tts_hashagg as
+select * from tts_foo group by i, j
+distributed by(i);
+
+-- hashagg should spill on the temp tablespaces specified by temp_tablespaces
+-- Make sure the following fault injector is triggered.
+select gp_wait_until_triggered_fault('hashagg_spill_temp_files', 1, dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+select gp_inject_fault('hashagg_spill_temp_files', 'reset', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+-- CASE 2: when temp_tablespaces is not set, hashagg and share-input-scan
+-- should create temp files under the default tablespaces.
+drop table tts_bar, tts_hashagg;
+set temp_tablespaces='';
+set statement_mem='2MB';
+
+-- The following CTAS query should generate share input scan cross slices.
+select gp_inject_fault('sisc_xslice_temp_files', 'skip', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+CREATE TEMP TABLE tts_bar as
+WITH a1 as (select * from tts_foo),
+     a2 as (select * from tts_foo)
+    SELECT a1.i xx
+       FROM a1
+         INNER JOIN a2 ON a2.i = a1.i
+         UNION ALL
+         SELECT count(a1.i)
+           FROM a1
+             INNER JOIN a2 ON a2.i = a1.i
+distributed by(xx);
+
+-- Make sure the following fault injector is triggered.
+select gp_wait_until_triggered_fault('sisc_xslice_temp_files', 1, dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+select gp_inject_fault('sisc_xslice_temp_files', 'reset', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+-- test for hash agg
+set statement_mem='1MB';
+
+select gp_inject_fault('hashagg_spill_temp_files', 'skip', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+create temp table tts_hashagg as
+select * from tts_foo group by i, j
+distributed by(i);
+
+-- hashagg should spill on the default tablespaces.
+-- Make sure the following fault injector is triggered.
+select gp_wait_until_triggered_fault('hashagg_spill_temp_files', 1, dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+select gp_inject_fault('hashagg_spill_temp_files', 'reset', dbid)
+  from gp_segment_configuration where role='p' and content>=0;
+
+
+drop table tts_foo, tts_bar, tts_hashagg;
+drop tablespace mytempsp0;
+drop tablespace mytempsp1;
+drop tablespace mytempsp2;
+drop tablespace mytempsp3;
+drop tablespace mytempsp4;
