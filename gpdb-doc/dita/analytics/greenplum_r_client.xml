@@ -117,7 +117,7 @@
       <ol>
         <li>Download the package from <ph otherprops="oss-only">the <xref
               href="https://github.com/greenplum-db/GreenplumR/tarball/master" scope="external"
-              format="html">GreenplumR <codeph>github</codeph> repository</xref></ph>
+              format="html">GreenplumR github repository</xref></ph>
           <ph otherprops="pivotal"> the <i>Greenplum Procedural Languages</i> filegroup on <xref
               href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
               >Pivotal Network</xref></ph>. The naming format of the downloaded file is
@@ -276,9 +276,9 @@ Connection  :    1
          <p>GreenplumR supports two functions that allow you to run an R function,
            in-database, on every row of a Greenplum Database table:
            <xref href="https://github.com/greenplum-db/GreenplumR/blob/master/db.gpapply.md"
-             scope="external" format="html"><codeph>db.gpapply()</codeph></xref> and
+             scope="external" format="html">db.gpapply()</xref> and
            <xref href="https://github.com/greenplum-db/GreenplumR/blob/master/db.gptapply.md"
-             scope="external" format="html"><codeph>db.gptapply()</codeph></xref>.
+             scope="external" format="html">db.gptapply()</xref>.
            You can use the Greenplum PL/R or PL/Container procedural language as
            the vehicle in which to run the function.</p>
          <p>The function signatures follow:</p>

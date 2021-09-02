@@ -18,7 +18,7 @@
       <title>Tanzu Greenplum Text</title>
       <p>For advanced text analysis applications, VMWare also offers <xref
           href="http://gptext.docs.pivotal.io/330/topics/intro.html" format="html" scope="external"
-            ><b>Tanzu Greenplum Text</b></xref>, which integrates Greenplum Database with the Apache
+            >Tanzu Greenplum Text</xref>, which integrates Greenplum Database with the Apache
         Solr text search platform. Tanzu Greenplum Text installs an Apache Solr cluster alongside
         your Greenplum Database cluster and provides Greenplum Database functions you can use to
         create Solr indexes, query them, and receive results in the database session.</p>
