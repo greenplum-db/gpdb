@@ -63,11 +63,11 @@ class GpBuild:
             fail_on_error(status)
             status = self._run_gpdb_command("createdb")
             fail_on_error(status)
-            status = self._run_gpdb_command("psql -f schema.sql")
+            status = self._run_gpdb_command("psql -a -f schema.sql")
             fail_on_error(status)
 
             with open("load_stats.txt", "w") as f:
-                status = self._run_gpdb_command("psql -q -f stats.sql", stdout=f)
+                status = self._run_gpdb_command("psql -a -q -f stats.sql", stdout=f)
             if status:
                 with open("load_stats.txt", "r") as f:
                     print f.read()
