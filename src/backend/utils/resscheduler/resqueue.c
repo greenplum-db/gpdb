@@ -49,7 +49,10 @@
 
 static void ResCleanUpLock(LOCK *lock, PROCLOCK *proclock, uint32 hashcode, bool wakeupNeeded);
 
-static ResPortalIncrement *ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner owner);
+static ResPortalIncrement *ResIncrementAdd(ResPortalIncrement *incSet,
+										   PROCLOCK *proclock,
+										   ResourceOwner owner,
+										   ResIncrementAddStatus *status);
 static bool ResIncrementRemove(ResPortalTag *portaltag);
 
 static void ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *incrementSet);
@@ -139,6 +142,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 	ResourceOwner owner;
 	ResQueue	queue;
 	int			status;
+	ResIncrementAddStatus addStatus;
 
 	/* Setup the lock method bits. */
 	Assert(locktag->locktag_lockmethodid == RESOURCE_LOCKMETHOD);
@@ -355,17 +359,27 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 	 * Otherwise, we are going to take a lock, Add an increment to the
 	 * increment hash for this process.
 	 */
-	incrementSet = ResIncrementAdd(incrementSet, proclock, owner);
-	if (!incrementSet)
+	incrementSet = ResIncrementAdd(incrementSet, proclock, owner, &addStatus);
+	if (addStatus != RES_INCREMENT_ADD_OK)
 	{
+		/*
+		 * We have failed to add the increment. So decrement the requested
+		 * counters, relinquish locks and raise the appropriate error.
+		 */
 		lock->nRequested--;
 		lock->requested[lockmode]--;
 		LWLockRelease(ResQueueLock);
 		LWLockRelease(partitionLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				 errmsg("out of shared memory adding portal increments"),
-				 errhint("You may need to increase max_resource_portals_per_transaction.")));
+		if (addStatus == RES_INCREMENT_ADD_OOSM)
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+						errmsg("out of shared memory adding portal increments"),
+						errhint("You may need to increase max_resource_portals_per_transaction.")));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("duplicate portal id %u for proc %d",
+							   incrementSet->portalId, incrementSet->pid)));
 	}
 
 	/*
@@ -1447,15 +1461,20 @@ ResPortalIncrementHashTableInit(void)
 /*
  * ResIncrementAdd -- Add a new increment element to the increment hash.
  *
- * Notes:
- *	Return a pointer to where the new increment is stored, or NULL if we
- *	are out of memory (or if we find a duplicate portalid).
+ * We return the increment added. We return NULL if we are run out of shared
+ * memory. In case there is an existing increment element in the hash table,
+ * we have encountered a duplicate portal - so we return the existing increment
+ * for ERROR reporting purposes. The status output argument is updated to
+ * indicate the outcome of the routine.
  *
  *	The resource queue lightweight lock (ResQueueLock) *must* be held for
  *	this operation.
  */
 static ResPortalIncrement *
-ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner owner)
+ResIncrementAdd(ResPortalIncrement *incSet,
+				PROCLOCK *proclock,
+				ResourceOwner owner,
+				ResIncrementAddStatus *status)
 {
 	ResPortalIncrement *incrementSet;
 	ResPortalTag portaltag;
@@ -1470,7 +1489,10 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 									   DDLNotSpecified,
 									   "",
 									   "") == FaultInjectorTypeSkip)
+	{
+		*status = RES_INCREMENT_ADD_OOSM;
 		return NULL;
+	}
 #endif
 
 	/* Set up the key. */
@@ -1484,6 +1506,7 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 
 	if (!incrementSet)
 	{
+		*status = RES_INCREMENT_ADD_OOSM;
 		return NULL;
 	}
 
@@ -1504,10 +1527,11 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 	{
 		/* We have added this portId before - something has gone wrong! */
 		ResIncrementRemove(&portaltag);
-		elog(WARNING, "duplicate portal id %u for proc %d", incSet->portalId, incSet->pid);
-		incrementSet = NULL;
+		*status = RES_INCREMENT_ADD_DUPLICATE_PORTAL;
+		return incrementSet;
 	}
 
+	*status = RES_INCREMENT_ADD_OK;
 	return incrementSet;
 }
 
