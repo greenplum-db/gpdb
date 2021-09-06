@@ -36,6 +36,7 @@
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
+#include "catalog/pg_authid.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_extension.h"
@@ -85,6 +86,7 @@ typedef struct ExtensionControlFile
 	char	   *schema;			/* target schema (allowed if !relocatable) */
 	bool		relocatable;	/* is ALTER EXTENSION SET SCHEMA supported? */
 	bool		superuser;		/* must be superuser to install? */
+	bool		trusted;		/* allow becoming superuser on the fly? */
 	int			encoding;		/* encoding of the script file, or -1 */
 	List	   *requires;		/* names of prerequisite extensions */
 } ExtensionControlFile;
@@ -548,6 +550,14 @@ parse_extension_control_file(ExtensionControlFile *control,
 						 errmsg("parameter \"%s\" requires a Boolean value",
 								item->name)));
 		}
+		else if (strcmp(item->name, "trusted") == 0)
+		{
+			if (!parse_bool(item->value, &control->trusted))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("parameter \"%s\" requires a Boolean value",
+								item->name)));
+		}
 		else if (strcmp(item->name, "encoding") == 0)
 		{
 			control->encoding = pg_valid_server_encoding(item->value);
@@ -604,6 +614,7 @@ read_extension_control_file(const char *extname)
 	control->name = pstrdup(extname);
 	control->relocatable = false;
 	control->superuser = true;
+	control->trusted = false;
 	control->encoding = -1;
 
 	/*
@@ -794,6 +805,58 @@ is_begin_state(const Node *stmt)
 }
 
 /*
+ * Set up the search path to contain the target schema, then the schemas
+ * of any prerequisite extensions, and nothing else.  In particular this
+ * makes the target schema be the default creation target namespace.
+ *
+ * Note: it might look tempting to use PushOverrideSearchPath for this,
+ * but we cannot do that.  We have to actually set the search_path GUC in
+ * case the extension script examines or changes it.  In any case, the
+ * GUC_ACTION_SAVE method is just as convenient.
+ */
+static void
+set_serach_path_for_extension(List *requiredSchemas, const char *schemaName)
+{
+	StringInfoData pathbuf;
+	ListCell *lc;
+	initStringInfo(&pathbuf);
+	appendStringInfoString(&pathbuf, quote_identifier(schemaName));
+	foreach(lc, requiredSchemas)
+	{
+		Oid			reqschema = lfirst_oid(lc);
+		char	   *reqname = get_namespace_name(reqschema);
+
+		if (reqname)
+			appendStringInfo(&pathbuf, ", %s", quote_identifier(reqname));
+	}
+
+	(void) set_config_option("search_path", pathbuf.data,
+							 PGC_USERSET, PGC_S_SESSION,
+							 GUC_ACTION_SAVE, true, 0);
+}
+
+/*
+ * Policy function: is the given extension trusted for installation by a
+ * non-superuser?
+ *
+ * (Update the errhint logic below if you change this.)
+ */
+static bool
+extension_is_trusted(ExtensionControlFile *control)
+{
+	AclResult	aclresult;
+
+	/* Never trust unless extension's control file says it's okay */
+	if (!control->trusted)
+		return false;
+	/* Allow if user has CREATE privilege on current database */
+	aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CREATE);
+	if (aclresult == ACLCHECK_OK)
+		return true;
+	return false;
+}
+
+/*
  * Execute the appropriate script file for installing or updating the extension
  *
  * This function executes on QD and QE's. On QE's this function only sets up
@@ -816,6 +879,9 @@ execute_extension_script(Node *stmt,
 	int			save_nestlevel;
 	StringInfoData pathbuf;
 	ListCell   *lc;
+	bool		switch_to_superuser = false;
+	Oid			save_userid = 0;
+	int			save_sec_context = 0;
 
 	AssertImply(Gp_role == GP_ROLE_DISPATCH, stmt != NULL &&
 			(nodeTag(stmt) == T_CreateExtensionStmt || nodeTag(stmt) == T_AlterExtensionStmt) &&
@@ -828,21 +894,39 @@ execute_extension_script(Node *stmt,
 	 */
 	if (control->superuser && !superuser())
 	{
-		if (from_version == NULL)
+		if (extension_is_trusted(control))
+			switch_to_superuser = true;
+		else if (from_version == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("permission denied to create extension \"%s\"",
 							control->name),
-					 errhint("Must be superuser to create this extension.")));
+					 control->trusted
+					 ? errhint("Must have CREATE privilege on current database to update this extension.")
+					 : errhint("Must be superuser to update this extension.")));
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("permission denied to update extension \"%s\"",
 							control->name),
-					 errhint("Must be superuser to update this extension.")));
+					 control->trusted
+					 ? errhint("Must have CREATE privilege on current database to update this extension.")
+					 : errhint("Must be superuser to update this extension.")));
 	}
 
 	filename = get_extension_script_filename(control, from_version, version);
+
+	/*
+	 * If installing a trusted extension on behalf of a non-superuser, become
+	 * the bootstrap superuser.  (This switch will be cleaned up automatically
+	 * if the transaction aborts, as will the GUC changes below.)
+	 */
+	if (switch_to_superuser)
+	{
+		GetUserIdAndSecContext(&save_userid, &save_sec_context);
+		SetUserIdAndSecContext(BOOTSTRAP_SUPERUSERID,
+							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+	}
 
 	/*
 	 * Force client_min_messages and log_min_messages to be at least WARNING,
@@ -927,6 +1011,22 @@ execute_extension_script(Node *stmt,
 										CStringGetTextDatum("ng"));
 
 		/*
+		 * If the script uses @extowner@, substitute the calling username.
+		 */
+		if (strstr(c_sql, "@extowner@"))
+		{
+			Oid			uid = switch_to_superuser ? save_userid : GetUserId();
+			const char *userName = GetUserNameFromId(uid);
+			const char *qUserName = quote_identifier(userName);
+
+			t_sql = DirectFunctionCall3Coll(replace_text,
+											C_COLLATION_OID,
+											t_sql,
+											CStringGetTextDatum("@extowner@"),
+											CStringGetTextDatum(qUserName));
+		}
+
+		/*
 		 * If it's not relocatable, substitute the target schema name for
 		 * occurrences of @extschema@.
 		 *
@@ -973,6 +1073,11 @@ execute_extension_script(Node *stmt,
 		 * Restore the GUC variables we set above.
 		 */
 		AtEOXact_GUC(true, save_nestlevel);
+		/*
+		 * Restore authentication state if needed.
+		 */
+		if (switch_to_superuser)
+			SetUserIdAndSecContext(save_userid, save_sec_context);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -984,6 +1089,11 @@ execute_extension_script(Node *stmt,
 	 * Restore the GUC variables we set above.
 	 */
 	AtEOXact_GUC(true, save_nestlevel);
+	/*
+	 * Restore authentication state if needed.
+	 */
+	if (switch_to_superuser)
+		SetUserIdAndSecContext(save_userid, save_sec_context);
 	if (Gp_role == GP_ROLE_DISPATCH && stmt != NULL)
 	{
 		/* We must reset QE CurrentExtensionObject to InvalidOid */
@@ -2149,6 +2259,64 @@ pg_extension_update_paths(PG_FUNCTION_ARGS)
 	tuplestore_donestoring(tupstore);
 
 	return (Datum) 0;
+}
+
+/*
+ * Test whether the given extension exists (not whether it's installed)
+ *
+ * This checks for the existence of a matching control file in the extension
+ * directory.  That's not a bulletproof check, since the file might be
+ * invalid, but this is only used for hints so it doesn't have to be 100%
+ * right.
+ */
+bool
+extension_file_exists(const char *extensionName)
+{
+	bool		result = false;
+	char	   *location;
+	DIR		   *dir;
+	struct dirent *de;
+
+	location = get_extension_control_directory();
+	dir = AllocateDir(location);
+
+	/*
+	 * If the control directory doesn't exist, we want to silently return
+	 * false.  Any other error will be reported by ReadDir.
+	 */
+	if (dir == NULL && errno == ENOENT)
+	{
+		/* do nothing */
+	}
+	else
+	{
+		while ((de = ReadDir(dir, location)) != NULL)
+		{
+			char	   *extname;
+
+			if (!is_extension_control_filename(de->d_name))
+				continue;
+
+			/* extract extension name from 'name.control' filename */
+			extname = pstrdup(de->d_name);
+			*strrchr(extname, '.') = '\0';
+
+			/* ignore it if it's an auxiliary control file */
+			if (strstr(extname, "--"))
+				continue;
+
+			/* done if it matches request */
+			if (strcmp(extname, extensionName) == 0)
+			{
+				result = true;
+				break;
+			}
+		}
+
+		FreeDir(dir);
+	}
+
+	return result;
 }
 
 /*

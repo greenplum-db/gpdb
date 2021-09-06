@@ -564,5 +564,12 @@ SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc @&gt; '{"tags": ["qu
       <productname>PostgreSQL</productname> data type.  Strings are
       compared using the default database collation.
   </para>
+
+  <para>
+   Of these extensions, <literal>jsonb_plperl</literal> is
+   considered <quote>trusted</quote>, that is, it can be installed by
+   non-superusers who have <literal>CREATE</literal> privilege on the
+   current database.  The rest require superuser privilege to install.
+  </para>
  </sect2>
 </sect1>
