@@ -492,6 +492,13 @@ def impl(context, HOST, port, dir, ctxt):
 def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
 
+@then('{command} {state} print "{err_msg}" error message')
+def impl(context, command, state, err_msg):
+    if state == "should not":
+        check_string_not_present_err_msg(context, err_msg)
+    elif state == "should":
+        check_err_msg(context, err_msg)
+
 @when('{command} should print "{out_msg}" escaped to stdout')
 @then('{command} should print "{out_msg}" escaped to stdout')
 @then('{command} should print a "{out_msg}" escaped warning')
@@ -1843,6 +1850,17 @@ def impl(context, query, dbname, host, port):
     cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd)
     cmd.run(validateAfter=True)
     context.stdout_message = cmd.get_stdout()
+
+@when('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
+@then('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
+@given('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
+def impl(context, psql_cmd, dbname, utility_mode):
+    if utility_mode:
+        cmd = "export PGOPTIONS=\'-c gp_role=utility\'; psql -d \'{}\' {};".format(dbname, psql_cmd)
+    else:
+        cmd = "psql -d \'{}\' {};".format(dbname, psql_cmd)
+
+    run_command(context, cmd)
 
 @then('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
 @when('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
