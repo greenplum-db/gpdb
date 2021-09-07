@@ -214,7 +214,7 @@ vm.dirty_bytes = 4294967296</codeblock>
             <codeph>kernel.shmall</codeph> sets the total amount of shared memory, in pages, that
           can be used system wide. <codeph>kernel.shmmax</codeph> sets the maximum size of a single
           shared memory segment in bytes.</p>
-        <p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values based on your
+        <p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmmax</codeph> values based on your
           system's physical memory and page size. In general, the value for both parameters should
           be one half of the system physical memory. </p>
         <p>Use the operating system variables <codeph>_PHYS_PAGES</codeph> and
@@ -222,7 +222,7 @@ vm.dirty_bytes = 4294967296</codeblock>
         <codeblock>kernel.shmall = ( _PHYS_PAGES / 2)
 kernel.shmmax = ( _PHYS_PAGES / 2) * PAGE_SIZE</codeblock>
         <p>To calculate the values for <codeph>kernel.shmall</codeph> and
-            <codeph>kernel.shmax</codeph>, run the following commands using the
+            <codeph>kernel.shmmax</codeph>, run the following commands using the
             <codeph>getconf</codeph> command, which returns the value of an operating system
           variable.</p>
         <codeblock>$ echo $(expr $(getconf _PHYS_PAGES) / 2) 
@@ -236,7 +236,7 @@ $ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
 kernel.shmmax = 810810728448</codeblock>
         <p>If the Greeplum Database coordinator the has a different shared memory configuration than the
           segment hosts, the _PHYS_PAGES and PAGE_SIZE values might differ, and the
-            <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values on the coordinator
+            <codeph>kernel.shmall</codeph> and <codeph>kernel.shmmax</codeph> values on the coordinator
           host will differ from those on the segment hosts.</p>
         <p id="segment_host_memory"><b>Segment Host Memory</b></p>
         <p>The <codeph>vm.overcommit_memory</codeph> Linux kernel parameter is used by the OS to

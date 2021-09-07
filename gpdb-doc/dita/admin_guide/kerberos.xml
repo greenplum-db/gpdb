@@ -169,7 +169,7 @@ $ chmod 400 /home/gpadmin/gpdb-kerberos.keytab</codeblock>
               <codeph>pg_hba.conf</codeph> file.
             <codeblock>$ gpstop -ar</codeblock>         
         </li>
-        <li>Create the gpadmin/admin Greenplum Database superuser role. <codeblock>$ createuser gpadmin/admin2 --superuser</codeblock>
+        <li>Create the gpadmin/admin Greenplum Database superuser role. <codeblock>$ createuser gpadmin/admin --superuser</codeblock>
           <p>The Kerberos keys for this database role are in the keyfile you copied from the KDC
             server.</p>
         </li>
