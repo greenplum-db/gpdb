@@ -18,6 +18,7 @@
 #include "storage/ipc.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
+#include "cdb/cdbutil.h"
 
 #include "ic_proxy_server.h"
 #include "ic_proxy_addr.h"
@@ -384,8 +385,12 @@ ic_proxy_server_ensure_peers(uv_loop_t *loop)
 		if (addr->content >= GpIdentity.segindex)
 			continue;
 		if (addr->dbid == GpIdentity.dbid)
-			continue; /* do not connect to my primary / mirror */
-
+			continue; 
+		/* do not connect to any mirror segment. */
+		GpSegConfigEntry *config = dbid_get_dbinfo(addr->dbid);
+		if (config->role == 'm')
+			continue;
+		
 		/*
 		 * First get the peer with the peer id, then connect to it.  The peer
 		 * can be a placeholder, can be in the progress of a connection, or can
