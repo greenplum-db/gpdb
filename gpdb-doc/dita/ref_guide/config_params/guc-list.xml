@@ -2722,7 +2722,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4100,8 +4100,8 @@
           <codeph>WITH</codeph> clause of a <codeph>SELECT [INTO]</codeph> command, or a
           <codeph>DELETE</codeph>, <codeph>INSERT</codeph> or <codeph>UPDATE</codeph> command. The
         keyword allows a subquery in the <codeph>WITH</codeph> clause of a command to reference
-        itself. The default value is <codeph>false</codeph>, the <codeph>RECURSIVE</codeph> keyword
-        is not allowed in the <codeph>WITH</codeph> clause of a command.</p>
+        itself. The default value is <codeph>true</codeph>, the <codeph>RECURSIVE</codeph> keyword
+        is allowed in the <codeph>WITH</codeph> clause of a command.</p>
       <p>For information about the <codeph>RECURSIVE</codeph> keyword, see the <codeph><xref
             href="../sql_commands/SELECT.xml">SELECT</xref></codeph> command and <xref
           href="../../admin_guide/query/topics/CTE-query.xml"/>.</p>

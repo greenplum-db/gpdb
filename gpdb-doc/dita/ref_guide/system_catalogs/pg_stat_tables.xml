@@ -10,7 +10,7 @@
       contain the same information, but filtered to only show user and system tables
       respectively.</p>
     <table id="table_rxm_tjf_vlb">
-      <title>pg_catalog.pg_stat_all_table View</title>
+      <title>pg_catalog.pg_stat_all_tables View</title>
       <tgroup cols="3">
         <colspec colnum="1" colname="col1" colwidth="131pt"/>
         <colspec colnum="2" colname="col2" colwidth="110pt"/>
