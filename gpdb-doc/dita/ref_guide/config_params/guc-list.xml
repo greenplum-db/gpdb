@@ -9709,7 +9709,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
     <body>
       <p>Size of the buffer that Greenplum Database uses for network communication, such as the
           <codeph>gpfdist</codeph> utility and external web tables (that use http). Valid units are
-          <codeph>kB</codeph> (as in <codeph>128kB</codeph>), <codeph>MB</codeph>,
+          <codeph>KB</codeph> (as in <codeph>128KB</codeph>), <codeph>MB</codeph>,
           <codeph>GB</codeph>, and <codeph>TB</codeph>. Greenplum Database stores data in the buffer
         before writing the data out. For information about <codeph>gpfdist</codeph>, see the
           <cite>Greenplum Database Utility Guide</cite>.</p>
