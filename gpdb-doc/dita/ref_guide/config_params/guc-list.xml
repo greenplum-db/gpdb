@@ -9768,8 +9768,8 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer 10000000 - 2000000000</entry>
-              <entry colname="col2">1000000000</entry>
+              <entry colname="col1">integer 10000000 - INT_MAX</entry>
+              <entry colname="col2">100000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -9797,7 +9797,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer 10000000 - 2000000000</entry>
+              <entry colname="col1">integer 10000000 - INT_MAX</entry>
               <entry colname="col2">500000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
