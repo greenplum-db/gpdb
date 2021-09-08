@@ -1,0 +1,50 @@
+-- start_ignore
+drop database if exists gpsd_db_with_hll;
+-- end_ignore
+create database gpsd_db_with_hll;
+\c gpsd_db_with_hll
+create table minirepro_foo(a int, b int[]);
+insert into minirepro_foo values(1, '{10000, 10000, 10000, 10000}');
+insert into minirepro_foo values(1, '{10000, 10000, 10000, 10000}');
+insert into minirepro_foo values(1, '{10000, 10000, 10000, 10000}');
+analyze minirepro_foo;
+\! echo "select * from minirepro_foo;" > ./data/minirepro_q.sql
+-- start_ignore
+\! minirepro gpsd_db_with_hll -q data/minirepro_q.sql -f data/minirepro.sql
+Connecting to database: host=localhost.localdomain, port=16000, user=gpadmin, db=gpsd_db_with_hll ...
+Extracting metadata from query file data/minirepro_q.sql ...
+psql gpsd_db_with_hll --pset footer --no-psqlrc -Atq -h localhost.localdomain -p 16000 -U gpadmin -f /tmp/20210908204808/toolkit.sql
+Invoking pg_dump to dump DDL ...
+pg_dump -h localhost.localdomain -p 16000 -U gpadmin -sxO gpsd_db_with_hll --relation-oids 16634 --function-oids 0 -f /tmp/20210908204808/pg_dump_out.sql
+Writing schema DDLs ...
+Writing relation and function DDLs ...
+Writing table statistics ...
+Writing column statistics ...
+Attaching raw query text ...
+--- MiniRepro completed! ---
+WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
+Please review output file to ensure it is within corporate policy to transport the output file.
+-- end_ignore
+drop table minirepro_foo;
+\! psql -f data/minirepro.sql gpsd_db_with_hll
+You are now connected to database "gpsd_db_with_hll" as user "gpadmin".
+SET
+SET
+SET
+SET
+SET
+ set_config 
+------------
+ 
+(1 row)
+
+SET
+SET
+SET
+SET
+SET
+CREATE TABLE
+SET
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
