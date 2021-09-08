@@ -29,6 +29,7 @@
 #include "executor/execDynamicScan.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeDynamicBitmapHeapscan.h"
+#include "executor/execUtils.h"
 #include "nodes/execnodes.h"
 #include "utils/hsearch.h"
 #include "parser/parsetree.h"
@@ -79,6 +80,13 @@ ExecInitDynamicBitmapHeapScan(DynamicBitmapHeapScan *node, EState *estate, int e
 									 ALLOCSET_DEFAULT_MAXSIZE);
 
 	/*
+	 * See the same comments in ExecInitDynamicSeqScan.
+	 */
+	state->ss_table = create_ss_cache_for_dynamic_scan("Dynamic BitMapHeapScan",
+													   estate);
+	state->cached_relids = NIL;
+
+	/*
 	 * initialize child nodes.
 	 *
 	 * We will initialize the "sidecar" BitmapHeapScan for each partition, but
@@ -113,6 +121,8 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 	Oid		   *pid;
 	Relation	currentRelation;
 	PlanState  *bhsPlanState;
+	bool        found;
+	ScanOidEntry *soe;
 
 	pid = hash_seq_search(&node->pidStatus);
 	if (pid == NULL)
@@ -128,8 +138,6 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		Instrumentation *instr = scanState->ps.instrument;
 		instr->numPartScanned++;
 	}
-
-	CleanupOnePartition(node);
 
 	currentRelation = scanState->ss_currentRelation = heap_open(currentPartitionOid, AccessShareLock);
 	lastScannedRel = heap_open(node->lastRelOid, AccessShareLock);
@@ -175,8 +183,28 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		pfree(attMap);
 
 	DynamicScan_SetTableOid(&node->ss, currentPartitionOid);
-	node->bhsState = ExecInitBitmapHeapScanForPartition(&plan->bitmapheapscan, estate, node->eflags,
-													 currentRelation);
+
+	soe = (ScanOidEntry *) hash_search(node->ss_table,
+									   &(currentRelation->rd_id),
+									   HASH_ENTER, &found);
+
+	if (!found)
+	{
+		node->bhsState = ExecInitBitmapHeapScanForPartition(&plan->bitmapheapscan, estate, node->eflags,
+															currentRelation);
+		soe->ss = (void *) (node->bhsState);
+		node->cached_relids = lappend_oid(node->cached_relids, currentRelation->rd_id);
+	}
+	else
+	{
+		node->bhsState = (BitmapHeapScanState *) (soe->ss);
+		/*
+		 * Close the relation opened above, since we find it in cache, which measn it was opened before.
+		 */
+		relation_close(currentRelation, NoLock);
+		/* We are to scan the opened scanstate, first rescan it. */
+		ExecReScan((PlanState *) (node->bhsState));
+	}
 
 	/*
 	 * Setup gpmon counters for BitmapHeapScan. Rows count for sidecar partition scan should
@@ -289,11 +317,9 @@ CleanupOnePartition(DynamicBitmapHeapScanState *scanState)
 	if (scanState->bhsState)
 	{
 		/*
-		 * Detach the child node, so that we end just the bitmap heap scan,
-		 * not the children.
+		 * Please refer to the same comments in
+		 * nodeDynamicSeqscan.c:CleanupOnePartition
 		 */
-		outerPlanState(scanState->bhsState) = NULL;
-		ExecEndBitmapHeapScan(scanState->bhsState);
 		scanState->bhsState = NULL;
 	}
 	if ((scanState->scan_state & SCAN_SCAN) != 0)
@@ -331,6 +357,8 @@ ExecEndDynamicBitmapHeapScan(DynamicBitmapHeapScanState *node)
 	DynamicBitmapHeapScanEndCurrentScan(node);
 
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+
+	release_ss_cache_for_dynamic_scan(node->ss_table, node->cached_relids);
 
 	/*
 	 * close down subplans

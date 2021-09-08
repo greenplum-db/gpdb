@@ -1989,6 +1989,10 @@ typedef struct DynamicBitmapHeapScanState
 	 * up previous partition's memory
 	 */
 	MemoryContext partitionMemoryContext;
+
+	/* See comments for the same name fields in DynamicSeqScanState */
+	HTAB         *ss_table;
+	List         *cached_relids;
 	
 } DynamicBitmapHeapScanState;
 
@@ -2253,6 +2257,25 @@ typedef struct DynamicSeqScanState
 	 */
 	MemoryContext partitionMemoryContext;
 
+	/*
+	 * The ss_table and cached relids is to cache the scanstate
+	 * for dynamic scan to avoid huge mem leak. Previously,
+	 * DynamicSeqScan will init the seqscan state for each new
+	 * partition, the memory is allocated in ExecutorState context
+	 * which only reset when the query end. But DynamicSeqScan might
+	 * appear as Nestloop's inner plan, which means it will be rescan
+	 * many many times thus leads to mem leak. We cache the scan state
+	 * to avoid such leak.
+
+	 * See Github Issue: https://github.com/greenplum-db/gpdb/issues/12533.
+	 *
+	 * The key in ss_table is table oid, the value is a pointer
+	 * to the scanstate (stored as void *).
+	 * The cached_relids is all the keys in the hash table, it
+	 * is used when destroying the hashtable for convenience.
+	 */
+	HTAB         *ss_table;
+	List         *cached_relids;
 
 } DynamicSeqScanState;
 
