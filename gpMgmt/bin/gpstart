@@ -100,6 +100,7 @@ class GpStart:
                 if self.interactive:
                     if not userinput.ask_yesno(None, "\nContinue with coordinator-only startup", 'N'):
                         raise UserAbortedException()
+            self.specialMode = 'maintenance'
 
         try:
             # Disable Ctrl-C
