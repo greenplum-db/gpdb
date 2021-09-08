@@ -91,8 +91,7 @@ enum config_group
 	LOGGING_WHEN,
 	LOGGING_WHAT,
 	STATS,
-
-    STATS_ANALYZE,                      /*CDB*/
+	STATS_ANALYZE,                      /*CDB*/
 	STATS_MONITORING,
 	STATS_COLLECTOR,
 	AUTOVACUUM,

@@ -244,6 +244,9 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
+# check autostats
+test: autostats
+
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics
 test: metadata_track
 test: session_reset

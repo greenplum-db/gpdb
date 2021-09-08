@@ -2972,6 +2972,7 @@ autovacuum_do_vac_analyze(autovac_table *tab,
 	/* we pass the OID, but might need this anyway for an error message */
 	vacstmt.relation = &rangevar;
 	vacstmt.va_cols = NIL;
+	vacstmt.auto_stats = false;
 
 	/* Let pgstat know what we're doing */
 	autovac_report_activity(tab);

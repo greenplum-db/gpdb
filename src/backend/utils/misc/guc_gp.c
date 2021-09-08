@@ -3089,6 +3089,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_autostats_allow_nonowner", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("Allow automatic stats collection on tables even for users who are not the owner of the relation."),
+			gettext_noop("If disabled, table statistics will be updated only when tables are modified by the owners of the relations.")
+		},
+		&gp_autostats_allow_nonowner,
+		false,
+		NULL, NULL, NULL
+	},
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -4924,7 +4933,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		JOIN_ORDER_EXHAUSTIVE_SEARCH, optimizer_join_order_options,
 		NULL, NULL, NULL
 	},
-
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, NULL, NULL, NULL

@@ -3151,6 +3151,9 @@ typedef struct VacuumStmt
 	bool appendonly_relation_empty;
 
 	AOVacuumPhase appendonly_phase;
+
+	/* invoked via automatic statistic collection */
+	bool auto_stats;
 } VacuumStmt;
 
 /* ----------------------

@@ -145,6 +145,7 @@
 		"gp_autostats_mode",
 		"gp_autostats_mode_in_functions",
 		"gp_autostats_on_change_threshold",
+		"gp_autostats_allow_nonowner",
 		"gp_cached_segworkers_threshold",
 		"gp_command_count",
 		"gp_connection_send_timeout",

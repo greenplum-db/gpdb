@@ -783,6 +783,11 @@ standard_ProcessUtility(Node *parsetree,
 		case T_VacuumStmt:
 			{
 				VacuumStmt *stmt = (VacuumStmt *) parsetree;
+				/*
+				 * GPDB: this is vacuum/analyze manually, not auto stats. Could
+				 * also have done this in the parser.
+				 */
+				stmt->auto_stats = false;
 
 				/* we choose to allow this during "read only" transactions */
 				PreventCommandDuringRecovery((stmt->options & VACOPT_VACUUM) ?
