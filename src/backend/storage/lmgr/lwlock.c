@@ -131,7 +131,6 @@ LWLockPadded *MainLWLockArray = NULL;
  * extension locks all buffer partitions simultaneously.
  */
 #define MAX_SIMUL_LWLOCKS	200
-#define MAX_FRAME_DEPTH  	64
 
 /* struct representing the LWLocks we're holding */
 typedef struct LWLockHandle
@@ -576,31 +575,6 @@ GetNamedLWLockTranche(const char *tranche_name)
 	/* just to keep compiler quiet */
 	return NULL;
 }
-
-#ifdef LOCK_DEBUG
-
-static void
-LWLockTryLockWaiting(PGPROC *proc, volatile LWLock *l)
-{
-	int 		milliseconds = 0;
-	
-	while(true)
-	{
-		pg_usleep(5000L);
-		if (PGSemaphoreTryLock(&proc->sem))
-		{
-			if (milliseconds >= 750)
-				elog(LOG, "Done waiting on lockid %d", T_ID(l));
-			return;
-		}
-
-		milliseconds += 5;
-		if (milliseconds == 750)
-			elog(LOG, "Waited .75 seconds on lockid %d with no success", T_ID(l));
-	}
-}
-
-#endif
 
 /*
  * Allocate a new tranche ID.
@@ -1267,12 +1241,7 @@ LWLockAcquire(LWLock *lock, LWLockMode mode)
 
 		for (;;)
 		{
-			/* "false" means cannot accept cancel/die interrupt here. */
-#ifndef LOCK_DEBUG
 			PGSemaphoreLock(proc->sem);
-#else
-			LWLockTryLockWaiting(proc, lock);
-#endif
 			if (!proc->lwWaiting)
 				break;
 			extraWaits++;
@@ -1776,12 +1745,7 @@ LWLockRelease(LWLock *lock)
 
 	num_held_lwlocks--;
 	for (; i < num_held_lwlocks; i++)
-	{
 		held_lwlocks[i] = held_lwlocks[i + 1];
-	}
-
-	// Clear out old last entry.
-	held_lwlocks[num_held_lwlocks].lock = 0;
 
 	PRINT_LWDEBUG("LWLockRelease", lock, mode);
 
