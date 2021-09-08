@@ -225,7 +225,7 @@ test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alt
 test: uao_dml/uao_dml_cursor_row uao_dml/uao_dml_select_row uao_dml/uao_dml_cursor_column uao_dml/uao_dml_select_column
 
 
-# diable autovacuum for the test
+# disable autovacuum for the test
 test: disable_autovacuum
 # Run uao[cs]_catalog_tables separately. They run VACUUM FULL on
 # append-optimized tables and assume that no AWAITING_DROP segfiles exist at
@@ -249,6 +249,8 @@ test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
+# check autostats
+test: autostats
 test: enable_autovacuum
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics

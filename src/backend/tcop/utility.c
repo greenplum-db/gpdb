@@ -770,7 +770,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 				PreventCommandDuringRecovery(stmt->is_vacuumcmd ?
 											 "VACUUM" : "ANALYZE");
 				/* forbidden in parallel mode due to CommandIsReadOnly */
-				ExecVacuum(pstate, stmt, isTopLevel);
+				ExecVacuum(pstate, stmt, isTopLevel, false);
 			}
 			break;
 
