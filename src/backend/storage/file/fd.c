@@ -2859,33 +2859,6 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 }
 
 /*
- * GetSessionTempTableSpace
- *
- * Select temp tablespace for current session to use. It's like
- * GetNextTempTableSpace in upstream, but it gets the same temp
- * tablespace in all QD/QE processes in the same session.
- * A result of InvalidOid means to use the current database's
- * default tablespace.
- * NOTE: this function always returns the same tablespace oid
- * for all backends in the same session. It's a safe implementation
- * of GetNextTempTableSpace() in MPP.
- */
-static inline Oid
-GetSessionTempTableSpace(void)
-{
-	if (numTempTableSpaces <= 0)
-		return InvalidOid;
-
-	if (gp_session_id >= 0)
-		return tempTableSpaces[gp_session_id % numTempTableSpaces];
-
-	/* If this session is not MPP, uses the implementation from upstream */
-	if (++nextTempTableSpace >= numTempTableSpaces)
-		nextTempTableSpace = 0;
-	return tempTableSpaces[nextTempTableSpace];
-}
-
-/*
  * GetNextTempTableSpace
  *
  * Select the next temp tablespace to use.  A result of InvalidOid means
@@ -2894,7 +2867,14 @@ GetSessionTempTableSpace(void)
 Oid
 GetNextTempTableSpace(void)
 {
-	return GetSessionTempTableSpace();
+	if (numTempTableSpaces > 0)
+	{
+		/* Advance nextTempTableSpace counter with wraparound */
+		if (++nextTempTableSpace >= numTempTableSpaces)
+			nextTempTableSpace = 0;
+		return tempTableSpaces[nextTempTableSpace];
+	}
+	return InvalidOid;
 }
 
 
