@@ -54,3 +54,42 @@ SELECT *,
         SELECT 1 FROM cte c1, cte c2
         )
         FROM bar;
+
+CREATE TABLE t1 (a int, b int);
+CREATE TABLE t2 (a int);
+
+-- ORCA plan contains a Shared Scan producer with a unsorted Motion below it
+EXPLAIN (COSTS OFF)
+WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 LIMIT 10) SELECT a, 1, 1 FROM cte JOIN t2 USING (a);
+-- This functions returns one more column than expected.
+CREATE OR REPLACE FUNCTION col_mismatch_func1() RETURNS TABLE (field1 int, field2 int)
+LANGUAGE 'plpgsql' VOLATILE STRICT AS
+$$
+DECLARE
+   v_qry text;
+BEGIN
+   v_qry := 'WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 LIMIT 10) SELECT a, 1 , 1 FROM cte JOIN t2 USING (a)';
+  RETURN QUERY EXECUTE v_qry;
+END
+$$;
+
+-- This should only ERROR and should not SIGSEGV
+SELECT col_mismatch_func1();
+
+-- ORCA plan contains a Shared Scan producer with a sorted Motion below it
+EXPLAIN (COSTS OFF)
+WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 ORDER BY b LIMIT 10) SELECT a, 1, 1 FROM cte JOIN t2 USING (a);
+--- This functions returns one more column than expected.
+CREATE OR REPLACE FUNCTION col_mismatch_func2() RETURNS TABLE (field1 int, field2 int)
+    LANGUAGE 'plpgsql' VOLATILE STRICT AS
+$$
+DECLARE
+    v_qry text;
+BEGIN
+    v_qry := 'WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 ORDER BY b LIMIT 10) SELECT a, 1 , 1 FROM cte JOIN t2 USING (a)';
+    RETURN QUERY EXECUTE v_qry;
+END
+$$;
+
+-- This should only ERROR and should not SIGSEGV
+SELECT col_mismatch_func2();
