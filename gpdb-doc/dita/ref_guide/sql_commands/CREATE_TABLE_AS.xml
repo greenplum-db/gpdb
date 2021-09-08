@@ -20,7 +20,7 @@
       <codeblock>   appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}
    orientation={COLUMN|ROW}
-   compresstype={ZLIB|ZSTD|QUICKLZ}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    compresslevel={1-19 | 1}
    fillfactor={10-100}
    [oids=FALSE]</codeblock>
@@ -87,19 +87,36 @@
             heap-storage table.</pd>
           <pd><b>blocksize</b> — Set to the size, in bytes for each block in a table. The <codeph>blocksize
             </codeph> must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default
-            is 32768.</pd>
+            is 32768.  The <codeph>blocksize</codeph>
+            option is valid only if <codeph>appendoptimized=TRUE</codeph>.</pd>
           <pd><b>orientation</b> — Set to <codeph>column</codeph> for column-oriented storage, or
               <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
             if <codeph>appendoptimized=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
-          <pd><b>compresstype</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>, or
-              <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type of compression used. The
+          <pd><b>compresstype</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>, 
+              <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify
+            the type of compression used. The 
             value <codeph>NONE</codeph> disables compression. Zstd provides for both speed or a
             good compression ratio, tunable with the <codeph>compresslevel</codeph> option.
             QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these
             compression types on usual workloads. The <codeph>compresstype</codeph> option is
             valid only if <codeph>appendoptimized=TRUE</codeph>.<note
               type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
-              release of Tanzu Greenplum.</note></pd>
+              release of Tanzu Greenplum.</note>
+            <p>The value <codeph>RLE_TYPE</codeph>, which is supported only if
+                <codeph>orientation</codeph>=<codeph>column</codeph> is specified, enables the
+              run-length encoding (RLE) compression algorithm. RLE compresses data better than the
+              Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many
+              consecutive rows.</p><p>For columns of type <codeph>BIGINT</codeph>,
+                <codeph>INTEGER</codeph>, <codeph>DATE</codeph>, <codeph>TIME</codeph>, or
+                <codeph>TIMESTAMP</codeph>, delta compression is also applied if the
+                <codeph>compresstype</codeph> option is set to <codeph>RLE_TYPE</codeph>
+              compression. The delta compression algorithm is based on the delta between column
+              values in consecutive rows and is designed to improve compression when data is loaded
+              in sorted order or the compression is applied to column data that is in sorted
+              order.</p><p>For information about using table compression, see
+              <xref href="../../admin_guide/ddl/ddl-storage.xml#topic1" type="topic"
+                format="dita">Choosing the Table Storage Model</xref>
+              in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
           <pd><b>compresslevel</b> — For Zstd compression of append-optimized tables, set to an
             integer value from 1 (fastest compression) to 19 (highest compression ratio). For
             zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only
