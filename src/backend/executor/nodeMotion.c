@@ -306,6 +306,7 @@ execMotionUnsortedReceiver(MotionState *node)
 	TupleTableSlot *slot;
 	MinimalTuple tuple;
 	Motion	   *motion = (Motion *) node->ps.plan;
+	EState	   *estate = node->ps.state;
 
 	AssertState(motion->motionType == MOTIONTYPE_GATHER ||
 				motion->motionType == MOTIONTYPE_GATHER_SINGLE ||
@@ -314,7 +315,6 @@ execMotionUnsortedReceiver(MotionState *node)
 				(motion->motionType == MOTIONTYPE_EXPLICIT && motion->segidColIdx > 0));
 
 	Assert(node->ps.state->motionlayer_context);
-	Assert(node->ps.state->interconnect_context);
 
 	if (node->stopRequested)
 	{
@@ -322,6 +322,30 @@ execMotionUnsortedReceiver(MotionState *node)
 						node->ps.state->interconnect_context,
 						motion->motionID);
 		return NULL;
+	}
+
+	if (estate->interconnect_context == NULL)
+	{
+		if (!estate->es_interconnect_is_setup && estate->dispatcherState &&
+			!estate->es_got_eos)
+		{
+			/*
+			 * We could only possibly get here in the following scenario:
+			 * 1. We are QD gracefully aborting a transaction.
+			 * 2. We have torn down the interconnect of the current slice.
+			 * 3. Since an error has happened, we no longer need to finish fetching
+			 * all the tuples, hence squelching the executor subtree.
+			 * 4. We are in the process of ExecSquelchShareInputScan(), and the
+			 * Shared Scan has this Motion below it.
+			 *
+			 * NB: if you need to change this, see also execMotionSortedReceiver()
+			 */
+			ereport(NOTICE,
+					(errmsg("An ERROR must have happened. Stopping a Shared Scan.")));
+			return NULL;
+		}
+		else
+			ereport(ERROR, (errmsg("Interconnect is down unexpectedly.")));
 	}
 
 	tuple = RecvTupleFrom(node->ps.state->motionlayer_context,
@@ -421,6 +445,30 @@ execMotionSortedReceiver(MotionState *node)
 						node->ps.state->interconnect_context,
 						motion->motionID);
 		return NULL;
+	}
+
+	if (estate->interconnect_context == NULL)
+	{
+		if (!estate->es_interconnect_is_setup && estate->dispatcherState &&
+			!estate->es_got_eos)
+		{
+			/*
+			 * We could only possibly get here in the following scenario:
+			 * 1. We are QD gracefully aborting a transaction.
+			 * 2. We have torn down the interconnect of the current slice.
+			 * 3. Since an error has happened, we no longer need to finish fetching
+			 * all the tuples, hence squelching the executor subtree.
+			 * 4. We are in the process of ExecSquelchShareInputScan(), and the
+			 * Shared Scan has this Motion below it.
+			 *
+			 * NB: if you need to change this, see also execMotionUnsortedReceiver()
+			 */
+			ereport(NOTICE,
+					(errmsg("An ERROR must have happened. Stopping a Shared Scan.")));
+			return NULL;
+		}
+		else
+			ereport(ERROR, (errmsg("Interconnect is down unexpectedly.")));
 	}
 
 	/*
