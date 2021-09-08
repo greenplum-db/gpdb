@@ -356,6 +356,50 @@ def impl(context, env_var):
 
     del context.orig_env[env_var]
 
+@given('the user {action} the walsender on the {segment} on content {content}')
+@then('the user {action} the walsender on the {segment} on content {content}')
+def impl(context, action, segment, content):
+    if segment == 'mirror':
+        role = "'m'"
+    elif segment == 'primary':
+        role = "'p'"
+    else:
+        raise Exception('segment role can only be primary or mirror')
+
+    create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
+    execute_sql('postgres', create_fault_query)
+
+    inject_fault_query = "SELECT gp_inject_fault_infinite('wal_sender_loop', '%s', dbid) FROM gp_segment_configuration WHERE content=%s AND role=%s;" % (action, content, role)
+    execute_sql('postgres', inject_fault_query)
+    return
+
+
+@given('the user skips walreceiver flushing on the {segment} on content {content}')
+@then('the user skips walreceiver flushing on the {segment} on content {content}')
+def impl(context, segment, content):
+    if segment == 'mirror':
+        role = "'m'"
+    elif segment == 'primary':
+        role = "'p'"
+    else:
+        raise Exception('segment role can only be primary or mirror')
+
+    create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
+    execute_sql('postgres', create_fault_query)
+
+    inject_fault_query = "SELECT gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid) FROM gp_segment_configuration WHERE content=%s AND role=%s;" % (content, role)
+    execute_sql('postgres', inject_fault_query)
+    return
+
+
+@given('the user waits until all bytes are sent to mirror on content {content}')
+@then('the user waits until all bytes are sent to mirror on content {content}')
+def impl(context, content):
+    host, port = get_primary_segment_host_port_for_content(content)
+    query = "SELECT pg_current_xlog_location() - sent_location FROM pg_stat_replication;"
+    desired_result = 0
+    wait_for_desired_query_result_on_segment(host, port, query, desired_result)
+
 
 @given('the user runs "{command}"')
 @when('the user runs "{command}"')

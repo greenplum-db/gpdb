@@ -723,6 +723,19 @@ def get_primary_segment_host_port():
     return primary_seg_host, primary_seg_port
 
 
+def get_primary_segment_host_port_for_content(content='0'):
+    """
+    return host, port of primary segment for the content id
+    """
+    get_psegment_sql = "SELECT hostname, port FROM gp_segment_configuration WHERE content=%s AND role='p';" % content
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+        cur = dbconn.execSQL(conn, get_psegment_sql)
+        rows = cur.fetchall()
+        primary_seg_host = rows[0][0]
+        primary_seg_port = rows[0][1]
+    return primary_seg_host, primary_seg_port
+
+
 def remove_local_path(dirname):
     list = glob.glob(os.path.join(os.path.curdir, dirname))
     for dir in list:
