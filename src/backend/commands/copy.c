@@ -6495,6 +6495,8 @@ CopyReadLineText(CopyState cstate)
 						// found a new line with '\r\n'
 						raw_buf_ptr++;
 						break;
+					} else {
+						NO_END_OF_COPY_GOTO;
 					}
 				}
 			}
@@ -6586,7 +6588,7 @@ CopyReadLineText(CopyState cstate)
 				 * If we are here, it means we found a backslash followed by
 				 * something other than a period.  In non-CSV mode, anything
 				 * after a backslash is special, so we skip over that second
-				 * character too. If we didn't do that \\. would be
+				 * character too.  If we didn't do that \\. would be
 				 * considered an eof-of copy, while in non-CSV mode it is a
 				 * literal backslash followed by a period.  In CSV mode,
 				 * backslashes are not special, so we want to process the
