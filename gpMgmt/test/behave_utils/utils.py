@@ -760,3 +760,26 @@ def wait_for_unblocked_transactions(context, num_retries=150):
 
     if attempt == num_retries:
         raise Exception('Unable to establish a connection to database !!!')
+
+
+def wait_for_desired_query_result_on_segment(host, port, query, desired_result, num_retries=150):
+    """
+    Tries once a second to check for the desired query result on the segment.
+    Raises an Exception after failing <num_retries> times.
+    """
+    attempt = 0
+    actual_result = None
+    url = dbconn.DbURL(hostname=host, port=port, dbname='template1')
+    while (attempt < num_retries) and (actual_result != desired_result):
+        attempt += 1
+        try:
+            with closing(dbconn.connect(url, utility=True)) as conn:
+                cursor = dbconn.query(conn, query)
+                rows = cursor.fetchall()
+                actual_result = rows[0][0]
+        except Exception as e:
+            print('could not query segment (%s:%s) %s' % (host, port, e))
+        time.sleep(1)
+
+    if attempt == num_retries:
+        raise Exception('Timed out after %s retries' % num_retries)
