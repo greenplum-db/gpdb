@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
 --
--- legacy_string_agg.sql-
+-- gp_legacy_string_agg.sql-
 --    This file creates a string_agg(text) which is deprecated in GPDB6 server.
 --    Instead, users should convert their SQL to use string_agg(text, text).
 --
@@ -10,32 +10,32 @@
 -- Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
 -- Portions Copyright (c) 1994, Regents of the University of California
 --
--- gpcontrib/legacy_string_agg/legacy_string_agg.source
+-- gpcontrib/gp_legacy_string_agg/gp_legacy_string_agg.sql
 --
 ---------------------------------------------------------------------------
 
--- Assume the user defined functions are in _OBJWD_/legacy_string_agg$DLSUFFIX
+-- Assume the user defined functions are in $libdir/gp_legacy_string_agg
 -- (we do not want to assume this is in the dynamic loader search path).
--- Look at $PWD/legacy_string_agg.c for the source.  Note we mark them IMMUTABLE,
+-- Look at gpcontrib/gp_legacy_string_agg/gp_legacy_string_agg.c for the source.  Note we mark them IMMUTABLE,
 -- since they always return the same outputs given the same inputs.
 
 
--- first, define a function legacy_string_agg_transfn (also in legacy_string_agg.c)
-CREATE FUNCTION legacy_string_agg_transfn(internal, text)
+-- first, define a function gp_legacy_string_agg_transfn (also in gp_legacy_string_agg.c)
+CREATE FUNCTION gp_legacy_string_agg_transfn(internal, text)
    RETURNS internal
-   AS '_OBJWD_/legacy_string_agg'
+   AS '$libdir/gp_legacy_string_agg'
    LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION legacy_string_agg_finalfn(internal)
+CREATE FUNCTION gp_legacy_string_agg_finalfn(internal)
    RETURNS text
-   AS '_OBJWD_/legacy_string_agg'
+   AS '$libdir/gp_legacy_string_agg'
    LANGUAGE C IMMUTABLE;
 
 
 -- Creating aggregate functions
 CREATE AGGREGATE string_agg(text)
 (
-     sfunc= legacy_string_agg_transfn,
+     sfunc= gp_legacy_string_agg_transfn,
      stype= internal,
-     finalfunc= legacy_string_agg_finalfn
+     finalfunc= gp_legacy_string_agg_finalfn
 );

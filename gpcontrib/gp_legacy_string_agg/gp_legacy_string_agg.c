@@ -1,5 +1,5 @@
 /*
- * gpcontrib/legacy_string_agg/legacy_string_agg.c
+ * gpcontrib/gp_legacy_string_agg/gp_legacy_string_agg.c
  *
  ******************************************************************************
   This file contains routines that can be bound to a Postgres backend and
@@ -36,7 +36,7 @@ makeStringAggState(FunctionCallInfo fcinfo)
 	if (!AggCheckCallContext(fcinfo, &aggcontext))
 	{
 		/* cannot be called directly because of internal-type argument */
-		elog(ERROR, "legacy_string_agg_transfn called in non-aggregate context");
+		elog(ERROR, "gp_legacy_string_agg_transfn called in non-aggregate context");
 	}
 
 	/*
@@ -78,15 +78,15 @@ cstring_to_text_with_len(const char *s, int len)
  * the same signature as far as C is concerned.  We provide these prototypes
  * just to forestall warnings when compiled with gcc -Wmissing-prototypes.
  */
-PG_FUNCTION_INFO_V1(legacy_string_agg_transfn);
-PG_FUNCTION_INFO_V1(legacy_string_agg_finalfn);
+PG_FUNCTION_INFO_V1(gp_legacy_string_agg_transfn);
+PG_FUNCTION_INFO_V1(gp_legacy_string_agg_finalfn);
 
-Datum		legacy_string_agg_transfn(PG_FUNCTION_ARGS);
-Datum		legacy_string_agg_finalfn(PG_FUNCTION_ARGS);
+Datum		gp_legacy_string_agg_transfn(PG_FUNCTION_ARGS);
+Datum		gp_legacy_string_agg_finalfn(PG_FUNCTION_ARGS);
 
 
 Datum
-legacy_string_agg_transfn(PG_FUNCTION_ARGS)
+gp_legacy_string_agg_transfn(PG_FUNCTION_ARGS)
 {
 	StringInfo state = NULL;
 	state = PG_ARGISNULL(0) ? NULL : (StringInfo) PG_GETARG_POINTER(0);
@@ -108,7 +108,7 @@ legacy_string_agg_transfn(PG_FUNCTION_ARGS)
 }
 
 Datum
-legacy_string_agg_finalfn(PG_FUNCTION_ARGS)
+gp_legacy_string_agg_finalfn(PG_FUNCTION_ARGS)
 {
 	StringInfo state;
 	/* cannot be called directly because of internal-type argument */

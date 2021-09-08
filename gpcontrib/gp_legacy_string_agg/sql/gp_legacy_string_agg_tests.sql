@@ -1,4 +1,4 @@
-CREATE EXTENSION legacy_string_agg;
+CREATE EXTENSION gp_legacy_string_agg;
 
 SELECT string_agg('a') FROM generate_series(1, 10);
 

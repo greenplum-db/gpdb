@@ -9,15 +9,15 @@
 # to build using the surrounding source tree.
 #
 # IDENTIFICATION
-#    gpcontrib/legacy_string_agg/Makefile
+#    gpcontrib/gp_legacy_string_agg/Makefile
 #
 #-------------------------------------------------------------------------
 
-MODULES = legacy_string_agg
-EXTENSION = legacy_string_agg
-DATA = legacy_string_agg--1.0.0.sql
+MODULES = gp_legacy_string_agg
+EXTENSION = gp_legacy_string_agg
+DATA = gp_legacy_string_agg--1.0.0.sql
 
-REGRESS = legacy_string_agg_tests
+REGRESS = gp_legacy_string_agg_tests
 PG_CPPFLAGS = -I$(libpq_srcdir)
 
 ifdef USE_PGXS
@@ -25,13 +25,8 @@ ifdef USE_PGXS
 	PGXS := $(shell $(PG_CONFIG) --pgxs)
 	include $(PGXS)
 else
-	subdir = gpcontrib/legacy_string_agg
+	subdir = gpcontrib/gp_legacy_string_agg
 	top_builddir = ../..
 	include $(top_builddir)/src/Makefile.global
 	include $(top_srcdir)/contrib/contrib-global.mk
 endif
-
-%.sql: %.source
-	rm -f $@; \
-	C=`pwd`; \
-	sed -e "s:_OBJWD_:$$C:g" < $< > $@
