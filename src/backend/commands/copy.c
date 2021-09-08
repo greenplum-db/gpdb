@@ -6446,6 +6446,58 @@ CopyReadLineText(CopyState cstate)
 			 */
 			c2 = copy_raw_buf[raw_buf_ptr];
 
+			/*
+			* We need to recognize the EOL.
+			* Github issue: https://github.com/greenplum-db/gpdb/issues/12454
+			*/
+			if(c2 == '\n')
+			{
+				if(cstate->eol_type == EOL_UNKNOWN)
+				{
+				/* We still do not found the first EOL.
+				* The current '\n' will be recongnized as EOL
+				* in next loop of c1.
+				*/
+					goto not_end_of_copy;
+				}
+				else if(cstate->eol_type == EOL_NL)
+				{
+					// found a new line with '\n'
+					raw_buf_ptr++;
+					break;
+				}
+			}
+			if (c2 == '\r')
+			{
+				if(cstate->eol_type == EOL_UNKNOWN)
+				{
+					goto not_end_of_copy;
+				}
+				else if(cstate->eol_type == EOL_CR)
+				{
+					// found a new line wirh '\r'
+					raw_buf_ptr++;
+					break;
+				}
+				else if(cstate->eol_type == EOL_CRNL)
+				{
+					/*
+					* Because the eol is '\r\n', we need another character c3
+					* which comes after c2 if exists.
+					*/
+					char c3;
+					raw_buf_ptr++;
+					IF_NEED_REFILL_AND_NOT_EOF_CONTINUE(0);
+					IF_NEED_REFILL_AND_EOF_BREAK(0);
+					c3 = copy_raw_buf[raw_buf_ptr];
+					if(c3 == '\n')
+					{
+						// found a new line with '\r\n'
+						raw_buf_ptr++;
+						break;
+					}
+				}
+			}
 			if (c2 == '.')
 			{
 				raw_buf_ptr++;	/* consume the '.' */
@@ -6534,29 +6586,16 @@ CopyReadLineText(CopyState cstate)
 				 * If we are here, it means we found a backslash followed by
 				 * something other than a period.  In non-CSV mode, anything
 				 * after a backslash is special, so we skip over that second
-				 * character too (except the character is EOL, see below).
-				 * If we didn't do that \\. would be
+				 * character too. If we didn't do that \\. would be
 				 * considered an eof-of copy, while in non-CSV mode it is a
 				 * literal backslash followed by a period.  In CSV mode,
 				 * backslashes are not special, so we want to process the
 				 * character after the backslash just like a normal character,
 				 * so we don't increment in those cases.
 				 */
-				if (c2 == '\n' && cstate->eol_type == EOL_NL)
-				{
-					/*
-					* We need to recognize the EOL.
-					* Github issue: https://github.com/greenplum-db/gpdb/issues/12454
-					*/
-					NO_END_OF_COPY_GOTO;
-				}
-				else
-				{
-					raw_buf_ptr++;
-				}
+				raw_buf_ptr++;
 			}
 		}
-
 		/*
 		 * This label is for CSV cases where \. appears at the start of a
 		 * line, but there is more text after it, meaning it was a data value.
