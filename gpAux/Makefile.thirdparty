@@ -22,6 +22,7 @@ endif
 
 rhel6_x86_64_BLD_BITS=64
 rhel7_x86_64_BLD_BITS=64
+rhel8_x86_64_BLD_BITS=64
 BLD_BITS=$($(BLD_ARCH)_BLD_BITS)
 
 # ----------------------------------------------------------------------
