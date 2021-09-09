@@ -146,7 +146,11 @@ AppendOnlyVisiMapEnty_ReadData(AppendOnlyVisimapEntry *visiMapEntry, size_t data
 	}
 
 	bms_free(visiMapEntry->bitmap);
-
+	/*
+	 * We should set visiMapEntry->bitmap to NULL to avoid free
+	 * visiMapEntry->bitmap the second time in AppendOnlyVisimapEntry_Finish.
+	 */
+	visiMapEntry->bitmap = NULL;
 	newWordCount =
 		BitmapDecompress_GetBlockCount(&decompressState);
 	if (newWordCount > 0)
