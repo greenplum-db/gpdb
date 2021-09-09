@@ -1192,8 +1192,9 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * gp_maintenance_conn GUC is set.  We cannot check it until
 	 * process_startup_options parses the GUC.
 	 */
-	if (gp_maintenance_mode && Gp_role == GP_ROLE_DISPATCH &&
-		!(am_superuser && gp_maintenance_conn))
+	if (gp_maintenance_mode && !am_superuser &&
+		((Gp_role == GP_ROLE_DISPATCH && gp_maintenance_conn)
+		|| Gp_role == GP_ROLE_UTILITY))
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("maintenance mode: connected by superuser only")));
