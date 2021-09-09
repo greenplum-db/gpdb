@@ -18,6 +18,7 @@ Execute the following in your terminal:
 
 ```
 mkdir -p "$HOME/.ssh"
+
 cat >> ~/.bash_profile << EOF
 
 # Allow ssh to use the version of python in path, not the system python
@@ -50,6 +51,12 @@ fi
 [ -f ~/.bashrc ] && source ~/.bashrc
 # END SSH agent
 EOF
+```
+
+Then bring `.bash_profile` into effect and allow ssh to use the version of python in path, not the system python.
+
+```
+source ~/.bash_profile
 
 sudo tee -a /etc/ssh/sshd_config << EOF
 # Allow ssh to use the version of python in path, not the system python
@@ -61,7 +68,8 @@ EOF
 
 Currently, the GPDB utilities require that it be possible to `ssh` to localhost
 without using a password.  To verify this, the following command should succeed
-without erroring, or requiring you to enter a password.
+without erroring, or requiring you to enter a password. You can use `hostname` to
+get the hostname of your machine.
 
 ```
 ssh <hostname of your machine>  # e.g., ssh briarwood

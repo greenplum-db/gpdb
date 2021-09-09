@@ -43,15 +43,15 @@ Use dependency script for CentOS.
   `export DEBIAN_FRONTEND=noninteractive`
 
   ```bash
-    ./README.Ubuntu.bash
+    sudo ./README.Ubuntu.bash
   ```
 
 - Ubuntu 18.04 and newer should have use gcc 7 or newer, but you can also enable gcc-7 on older versions of Ubuntu:
 
   ```bash
-  add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  apt-get update
-  apt-get install -y gcc-7 g++-7
+  sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  sudo apt-get update
+  sudo apt-get install -y gcc-7 g++-7
   ```
 
 ## Common Platform Tasks:
@@ -77,7 +77,8 @@ then run command `ldconfig`.
    chmod 600 ~/.ssh/authorized_keys
    ```
 
-1. Verify that you can ssh to your machine name without a password
+1. Verify that you can ssh to your machine name without a password.
+   You can use `hostname` to get the hostname of your machine.
 
    ```bash
     ssh <hostname of your machine>  # e.g., ssh briarwood
