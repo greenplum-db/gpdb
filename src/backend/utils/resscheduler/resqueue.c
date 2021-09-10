@@ -1474,6 +1474,15 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 
 	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
 
+#ifdef FAULT_INJECTOR
+	/* Simulate an out-of-shared-memory error by bypassing the increment hash. */
+	if (FaultInjector_InjectFaultIfSet(ResIncrementAddOOSM,
+									   DDLNotSpecified,
+									   "",
+									   "") == FaultInjectorTypeSkip)
+		return NULL;
+#endif
+
 	/* Set up the key. */
 	MemSet(&portaltag, 0, sizeof(ResPortalTag));
 	portaltag.pid = incSet->pid;

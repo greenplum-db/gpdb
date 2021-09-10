@@ -379,6 +379,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in cdbdisp_finishCommand */
 	_("before_auto_stats"),
 		/* inject fault in auto_stats before running autostats logic */
+	_("res_increment_add_oosm"),
+		/* inject fault in ResIncrementAdd to simulate an out-of-shared-memory ERROR */
 	_("not recognized"),
 };
 
@@ -1091,6 +1093,8 @@ FaultInjector_NewHashEntry(
 			case ProcessStartupPacketFault:
 			case DynamicIndexScanContextReset:
 			case AbortAfterProcarrayEnd:
+
+			case ResIncrementAddOOSM:
 
 				break;
 			default:

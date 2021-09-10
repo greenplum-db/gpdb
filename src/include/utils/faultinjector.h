@@ -259,6 +259,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	BeforeAutoStats,
 
+	ResIncrementAddOOSM,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	
