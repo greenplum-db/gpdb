@@ -132,6 +132,10 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 	}
 	currentPartitionOid = *pid;
 
+	soe = (ScanOidEntry *) hash_search(node->ss_table,
+									   &currentPartitionOid,
+									   HASH_ENTER, &found);
+
 	/* Collect number of partitions scanned in EXPLAIN ANALYZE */
 	if (NULL != scanState->ps.instrument)
 	{
@@ -139,7 +143,16 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		instr->numPartScanned++;
 	}
 
-	currentRelation = scanState->ss_currentRelation = heap_open(currentPartitionOid, AccessShareLock);
+	if (!found)
+	{
+		currentRelation = scanState->ss_currentRelation = heap_open(currentPartitionOid, AccessShareLock);
+	}
+	else
+	{
+		Relation cr = ((BitmapHeapScanState *) (soe->ss))->ss.ss_currentRelation;
+		currentRelation = scanState->ss_currentRelation = cr;
+	}
+
 	lastScannedRel = heap_open(node->lastRelOid, AccessShareLock);
 	lastTupDesc = RelationGetDescr(lastScannedRel);
 	partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
@@ -184,10 +197,6 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 
 	DynamicScan_SetTableOid(&node->ss, currentPartitionOid);
 
-	soe = (ScanOidEntry *) hash_search(node->ss_table,
-									   &(currentRelation->rd_id),
-									   HASH_ENTER, &found);
-
 	if (!found)
 	{
 		node->bhsState = ExecInitBitmapHeapScanForPartition(&plan->bitmapheapscan, estate, node->eflags,
@@ -198,10 +207,6 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 	else
 	{
 		node->bhsState = (BitmapHeapScanState *) (soe->ss);
-		/*
-		 * Close the relation opened above, since we find it in cache, which means it was opened before.
-		 */
-		relation_close(currentRelation, NoLock);
 		/* We are to scan the opened scanstate, first rescan it. */
 		ExecReScan((PlanState *) (node->bhsState));
 	}

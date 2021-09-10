@@ -133,7 +133,20 @@ initNextTableToScan(DynamicSeqScanState *node)
 		instr->numPartScanned++;
 	}
 
-	currentRelation = scanState->ss_currentRelation = heap_open(*pid, AccessShareLock);
+	soe = (ScanOidEntry *) hash_search(node->ss_table,
+									   pid,
+									   HASH_ENTER, &found);
+
+	if (!found)
+	{
+		currentRelation = scanState->ss_currentRelation = heap_open(*pid, AccessShareLock);
+	}
+	else
+	{
+		Relation cr = ((SeqScanState *) (soe->ss))->ss.ss_currentRelation;
+		currentRelation = scanState->ss_currentRelation = cr;
+	}
+
 	lastScannedRel = heap_open(node->lastRelOid, AccessShareLock);
 	lastTupDesc = RelationGetDescr(lastScannedRel);
 	partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
@@ -178,10 +191,6 @@ initNextTableToScan(DynamicSeqScanState *node)
 
 	DynamicScan_SetTableOid(&node->ss, *pid);
 
-	soe = (ScanOidEntry *) hash_search(node->ss_table,
-									   &(currentRelation->rd_id),
-									   HASH_ENTER, &found);
-
 	if (!found)
 	{
 		node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate, node->eflags,
@@ -192,10 +201,6 @@ initNextTableToScan(DynamicSeqScanState *node)
 	else
 	{
 		node->seqScanState = (SeqScanState *) (soe->ss);
-		/*
-		 * Close the relation opened above, since we find it in cache, which means it was opened before.
-		 */
-		relation_close(currentRelation, NoLock);
 		/* We are to scan the opened scanstate, first rescan it. */
 		ExecReScan((PlanState *) (node->seqScanState));
 	}
