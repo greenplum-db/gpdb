@@ -193,7 +193,7 @@ initNextTableToScan(DynamicSeqScanState *node)
 	{
 		node->seqScanState = (SeqScanState *) (soe->ss);
 		/*
-		 * Close the relation opened above, since we find it in cache, which measn it was opened before.
+		 * Close the relation opened above, since we find it in cache, which means it was opened before.
 		 */
 		relation_close(currentRelation, NoLock);
 		/* We are to scan the opened scanstate, first rescan it. */

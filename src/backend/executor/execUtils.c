@@ -2934,7 +2934,7 @@ create_ss_cache_for_dynamic_scan(char *name, EState *estate)
 	hashCtl.hcxt = estate->es_query_cxt;
 
 	return hash_create(name,
-					   INITIAL_NUM_PIDS,
+					   512,
 					   &hashCtl,
 					   HASH_ELEM | HASH_CONTEXT | HASH_FUNCTION);
 }
@@ -2973,7 +2973,7 @@ release_ss_cache_for_dynamic_scan(HTAB *ss_table, List *relids)
 				 * DynamicBitmapHeapScan, so here we should only need to
 				 * consider above kinds of ScanState node.
 				 */
-				elog(ERROR, "unkown planstate %d when release_ss_cache", nodeTag(node));
+				elog(ERROR, "unknown planstate %d when release_ss_cache", nodeTag(node));
 		}
 	}
 
