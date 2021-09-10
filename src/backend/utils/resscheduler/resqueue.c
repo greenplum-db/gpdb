@@ -582,11 +582,11 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	 */
 	if (!(proclock->holdMask & LOCKBIT_ON(lockmode)) || proclock->nLocks <= 0)
 	{
-		LWLockRelease(partitionLock);
 		elog(DEBUG1, "Resource queue %d: proclock not held", locktag->locktag_field1);
 		RemoveLocalLock(locallock);
 		ResCleanUpLock(lock, proclock, hashcode, false);
 		LWLockRelease(ResQueueLock);
+		LWLockRelease(partitionLock);
 		return false;
 	}
 
