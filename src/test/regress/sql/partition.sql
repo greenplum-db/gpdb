@@ -4080,3 +4080,72 @@ RESET ROLE;
 DROP TABLE public.t_part_acl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
 DROP ROLE user_prt_acl;
+
+-- test DynamicSeqScan & DynamicBitmapHeapScan as Nestloop inner correct
+-- we modify some code of Executor to fix memleak issue, this is added to
+-- test that pattern plan still execute well.
+-- See issue https://github.com/greenplum-db/gpdb/issues/12533.
+create table t1_12533 (a int, b int, c text, d int)
+distributed randomly
+partition by range(a)
+(
+   start (1) end (10) every (1),
+   default partition extra
+);
+
+create table t2_12533 (a int, b int, c text, d int)
+distributed randomly
+partition by range(a)
+(
+   start (1) end (10) every (1),
+   default partition extra
+);
+
+create table t1_exchange_12533(a int, e int, f int, b int, c text, d int)
+distributed randomly;
+create table t2_exchange_12533(a int, e int, f int, b int, c text, d int)
+distributed randomly;
+
+-- make sure when ExecDynamicXXXScan will hit the re-map code
+alter table t1_exchange_12533 drop column e;
+alter table t1_exchange_12533 drop column f;
+alter table t2_exchange_12533 drop column e;
+alter table t2_exchange_12533 drop column f;
+
+alter table t1_12533 exchange partition for (1) with table t1_exchange_12533;
+alter table t2_12533 exchange partition for (1) with table t2_exchange_12533;
+
+insert into t1_12533 select  i%15, i, 'abcd'||i::text, i from generate_series(1, 10000)i;
+insert into t2_12533 select * from t1_12533;
+
+create index idx1_12533 ON t1_12533 USING bitmap (b);
+create index idx2_12533 ON t2_12533 USING bitmap (b);
+
+set optimizer_enable_hashjoin = off;
+set optimizer_enable_materialize = off;
+
+-- dynamic bitmapscan plan
+explain
+select count(distinct a.d) from t1_12533 a, t2_12533 b
+where a.c = b.c and a.b < 50 and b.b < 50;
+
+select count(distinct a.d) from t1_12533 a, t2_12533 b
+where a.c = b.c and a.b < 50 and b.b < 50;
+
+--dynamic seqcan plan
+drop index idx1_12533;
+drop index idx2_12533;
+
+explain
+select count(distinct a.d) from t1_12533 a, t2_12533 b
+where a.c = b.c and a.b < 50 and b.b < 50;
+
+select count(distinct a.d) from t1_12533 a, t2_12533 b
+where a.c = b.c and a.b < 50 and b.b < 50;
+
+reset optimizer_enable_tablescan;
+reset optimizer_enable_hashjoin;
+reset optimizer_enable_materialize;
+
+drop table t1_12533;
+drop table t2_12533;
