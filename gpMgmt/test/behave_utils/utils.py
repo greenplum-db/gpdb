@@ -688,7 +688,7 @@ def get_primary_segment_host_port_for_content(content='0'):
     """
     return host, port of primary segment for the content id
     """
-    get_psegment_sql = 'select hostname, port from gp_segment_configuration where content=%s;' % content
+    get_psegment_sql = "SELECT hostname, port FROM gp_segment_configuration WHERE content=%s AND role='p';" % content
     with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
         cur = dbconn.query(conn, get_psegment_sql)
         rows = cur.fetchall()

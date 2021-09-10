@@ -72,6 +72,8 @@ class ReplicationInfoTestCase(unittest.TestCase):
         rows = None
 
         # Try to match the query() query against one of our stored fragments.
+        # If there is an overlap in fragments, we can get wrong results.
+        # Make sure none of the fragments in a test is a subset of another fragment.
         for fragment in self._pg_rows:
             if fragment in query:
                 rows = self._pg_rows[fragment]
@@ -98,7 +100,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
         mock_query.side_effect = self._get_rows_for_query
 
     def mock_pg_current_wal_lsn(self, mock_query, rows):
-        self._pg_rows['pg_current_wal_lsn'] = rows
+        self._pg_rows['SELECT pg_current_wal_lsn'] = rows
         mock_query.side_effect = self._get_rows_for_query
 
     def stub_replication_entry(self, **kwargs):
