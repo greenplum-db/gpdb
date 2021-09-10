@@ -65,6 +65,10 @@ CATEGORY__REPLICATION_INFO = "Replication Info"
 VALUE__REPL_SENT_LOCATION = FieldDefinition("WAL Sent Location", "sent_location", "text")
 VALUE__REPL_FLUSH_LOCATION = FieldDefinition("WAL Flush Location", "flush_location", "text")
 VALUE__REPL_REPLAY_LOCATION = FieldDefinition("WAL Replay Location", "replay_location", "text")
+VALUE__REPL_CURRENT_XLOG_LOCATION = FieldDefinition("Current write location", "current_xlog_location", "text")
+VALUE__REPL_SENT_LEFT = FieldDefinition("Bytes remaining to send to mirror", "sent_left", "int")
+VALUE__REPL_FLUSH_LEFT = FieldDefinition("Bytes received but remain to flush", "flush_left", "int")
+VALUE__REPL_REPLAY_LEFT = FieldDefinition("Bytes received but remain to replay", "replay_left", "int")
 VALUE__REPL_SYNC_REMAINING_BYTES = FieldDefinition("WAL sync remaining bytes", "wal_sync_bytes", "int")
 
 CATEGORY__STATUS = "Status"
@@ -134,6 +138,10 @@ class GpStateData:
             VALUE__REPL_SENT_LOCATION,
             VALUE__REPL_FLUSH_LOCATION,
             VALUE__REPL_REPLAY_LOCATION,
+            VALUE__REPL_CURRENT_XLOG_LOCATION,
+            VALUE__REPL_SENT_LEFT,
+            VALUE__REPL_FLUSH_LEFT,
+            VALUE__REPL_REPLAY_LEFT,
             VALUE__REPL_SYNC_REMAINING_BYTES,
         ]
 
@@ -989,6 +997,7 @@ class GpSystemStateProgram:
         rows = []
         rewind_start_time = None
         rewinding = False
+        current_xlog_location = None
         try:
             url = dbconn.DbURL(hostname=primary.hostname, port=primary.port, dbname='template1')
             conn = dbconn.connect(url, utility=True)
@@ -1000,12 +1009,20 @@ class GpSystemStateProgram:
                            "sent_location - flush_location AS flush_left, "
                            "replay_location, "
                            "sent_location - replay_location AS replay_left, "
-                           "backend_start "
+                           "backend_start, "
+                           "pg_current_xlog_location() - sent_location AS sent_left "
                     "FROM pg_stat_replication;"
                 )
 
                 rows = cursor.fetchall()
                 cursor.close()
+
+                # We need this separately since pg_stat_replication may not return a value if WAL connection is down
+                current_xlog_location_cursor = dbconn.execSQL(conn, "SELECT pg_current_xlog_location();")
+                current_xlog_location_row = current_xlog_location_cursor.fetchall()
+                if current_xlog_location_row:
+                    current_xlog_location = current_xlog_location_row[0][0]
+                current_xlog_location_cursor.close()
 
                 if mirror.isSegmentDown():
                     cursor = dbconn.execSQL(conn,
@@ -1051,6 +1068,11 @@ class GpSystemStateProgram:
         if start_time:
             data.addValue(VALUE__MIRROR_RECOVERY_START, start_time)
 
+        data.addValue(VALUE__REPL_CURRENT_XLOG_LOCATION, current_xlog_location if current_xlog_location else 'Unknown', isWarning=(not current_xlog_location))
+
+        # Set SENT_LEFT to unknown, and if we find a valid WAL connection, set it to correct value
+        data.addValue(VALUE__REPL_SENT_LEFT, 'Unknown', isWarning=True)
+
         # Now fill in the information for the standby connection. There should
         # be exactly one such entry; otherwise we bail.
         standby_connections = [r for r in rows if r[0] == 'gp_walreceiver']
@@ -1062,6 +1084,10 @@ class GpSystemStateProgram:
             return
 
         row = standby_connections[0]
+
+        sent_left = row[8]
+        if sent_left is not None:
+            data.addValue(VALUE__REPL_SENT_LEFT, sent_left, isWarning=False)
 
         GpSystemStateProgram._set_mirror_replication_values(data, mirror,
             state=row[1],
@@ -1102,21 +1128,13 @@ class GpSystemStateProgram:
             # better if we have access to pg_stat_replication.
             data.addValue(VALUE__MIRROR_STATUS, replication_state_to_string(state))
 
-        data.addValue(VALUE__REPL_SENT_LOCATION,
-                      sent_location if sent_location else 'Unknown',
-                      isWarning=(not sent_location))
-
-        if flush_location and flush_left:
-            flush_location += " ({} bytes left)".format(flush_left)
-        data.addValue(VALUE__REPL_FLUSH_LOCATION,
-                      flush_location if flush_location else 'Unknown',
-                      isWarning=(not flush_location))
-
-        if replay_location and replay_left:
-            replay_location += " ({} bytes left)".format(replay_left)
-        data.addValue(VALUE__REPL_REPLAY_LOCATION,
-                      replay_location if replay_location else 'Unknown',
-                      isWarning=(not replay_location))
+        mirror_wal_vars = [(VALUE__REPL_SENT_LOCATION, sent_location),
+                (VALUE__REPL_FLUSH_LOCATION, flush_location),
+                (VALUE__REPL_FLUSH_LEFT, flush_left),
+                (VALUE__REPL_REPLAY_LOCATION, replay_location),
+                (VALUE__REPL_REPLAY_LEFT, replay_left)]
+        for key, val in mirror_wal_vars:
+            data.addValue(key, val if val is not None else 'Unknown', isWarning=(val is None))
 
     def __buildGpStateData(self, gpArray, hostNameToResults):
         data = GpStateData()
