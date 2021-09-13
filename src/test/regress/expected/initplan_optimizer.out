@@ -1,0 +1,217 @@
+-- test cases for init plan
+-- prepare tables
+-- start_ignore
+-- end_ignore
+create table issue_12543_foo(a int, b int, c int) distributed randomly
+partition by range(a)
+(
+   start (1) end (2) every (1),
+   default partition extra
+);
+NOTICE:  CREATE TABLE will create partition "issue_12543_foo_1_prt_extra" for table "issue_12543_foo"
+NOTICE:  CREATE TABLE will create partition "issue_12543_foo_1_prt_2" for table "issue_12543_foo"
+create table issue_12543_bar(a int, b int, c int) distributed randomly;
+insert into issue_12543_bar values(1,4,3),(2,4,3);
+insert into issue_12543_foo values(5,4,3),(7,4,3),(7,5,3),(7,6,4);
+-- CASE 1: single initplan that is not re-used
+explain (costs off)
+select * from issue_12543_bar
+where b < (select count(*) from pg_class);
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on issue_12543_bar
+         Filter: (b < $0)
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Aggregate
+                 ->  Seq Scan on pg_class
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- should print all tuples in issue_12543_bar
+select * from issue_12543_bar
+where b < (select count(*) from pg_class);
+ a | b | c 
+---+---+---
+ 2 | 4 | 3
+ 1 | 4 | 3
+(2 rows)
+
+-- CASE 2: single init-plan that is re-used by several sub-plans
+explain (costs off)
+select * from issue_12543_foo
+where b < (select count(*) from pg_class);
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Aggregate
+                 ->  Seq Scan on pg_class
+         ->  Seq Scan on issue_12543_foo_1_prt_extra
+               Filter: (b < $0)
+         ->  Seq Scan on issue_12543_foo_1_prt_2
+               Filter: (b < $0)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+-- should print all tuples in issue_12543_foo
+select * from issue_12543_foo
+where b < (select count(*) from pg_class);
+ a | b | c 
+---+---+---
+ 7 | 5 | 3
+ 5 | 4 | 3
+ 7 | 6 | 4
+ 7 | 4 | 3
+(4 rows)
+
+-- INIT PLAN that has motion(s)
+-- CASE 3: single init-plan that is re-used by several sub-plans
+-- GPORCA falls back to postgres planner, but keep it here to
+-- compare the results
+explain (costs off)
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Result
+         Filter: (issue_12543_foo.b > (SubPlan 1))
+         ->  Sequence
+               ->  Partition Selector for issue_12543_foo (dynamic scan id: 1)
+                     Partitions selected: 2 (out of 2)
+               ->  Dynamic Seq Scan on issue_12543_foo (dynamic scan id: 1)
+         SubPlan 1  (slice3; segments: 3)
+           ->  Materialize
+                 ->  Broadcast Motion 1:3  (slice2)
+                       ->  Aggregate
+                             ->  Gather Motion 3:1  (slice1; segments: 3)
+                                   ->  Aggregate
+                                         ->  Seq Scan on issue_12543_bar
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
+
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar);
+ a | b | c 
+---+---+---
+ 7 | 6 | 4
+ 7 | 5 | 3
+(2 rows)
+
+-- CASE 4: two init-plans that are both re-used by several sub-plans
+-- GPORCA falls back to postgres planner, but keep it here to
+-- compare the results
+explain (costs off)
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar)
+   or c = (select max(c) from issue_12543_bar);
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)
+   ->  Result
+         Filter: ((issue_12543_foo.b > (max((max(issue_12543_bar_1.b))))) OR (issue_12543_foo.c = (max((max(issue_12543_bar.c))))))
+         ->  Nested Loop Left Join
+               Join Filter: true
+               ->  Nested Loop Left Join
+                     Join Filter: true
+                     ->  Sequence
+                           ->  Partition Selector for issue_12543_foo (dynamic scan id: 1)
+                                 Partitions selected: 2 (out of 2)
+                           ->  Dynamic Seq Scan on issue_12543_foo (dynamic scan id: 1)
+                     ->  Materialize
+                           ->  Broadcast Motion 1:3  (slice4)
+                                 ->  Aggregate
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)
+                                             ->  Aggregate
+                                                   ->  Seq Scan on issue_12543_bar issue_12543_bar_1
+               ->  Materialize
+                     ->  Broadcast Motion 1:3  (slice2)
+                           ->  Aggregate
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                                       ->  Aggregate
+                                             ->  Seq Scan on issue_12543_bar
+ Optimizer: Pivotal Optimizer (GPORCA)
+(24 rows)
+
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar)
+   or c = (select max(c) from issue_12543_bar);
+ a | b | c 
+---+---+---
+ 7 | 5 | 3
+ 7 | 4 | 3
+ 5 | 4 | 3
+ 7 | 6 | 4
+(4 rows)
+
+-- CASE from Github issue 12543
+-- GPORCA falls back to postgres planner, but keep it here to
+-- compare the results
+explain (costs off)
+select * from issue_12543_foo foo
+where foo.a in
+(select b+c from issue_12543_bar bar
+  where a > (select max(b) from issue_12543_bar)
+)
+or
+foo.a in (select b+b from issue_12543_bar);
+                                                                                                                                                                                                                                                                            QUERY PLAN                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)
+   ->  Result
+         Filter: (CASE WHEN ((count("inner".ColRef_0043)) > 0::bigint) THEN CASE WHEN ((sum((CASE WHEN ((issue_12543_foo.a = ((issue_12543_bar_1.b + issue_12543_bar_1.c))) IS NULL) THEN 1 ELSE 0 END))) = (count("inner".ColRef_0043))) THEN NULL::boolean ELSE true END ELSE false END OR CASE WHEN ((count("inner".ColRef_0047)) > 0::bigint) THEN CASE WHEN ((sum((CASE WHEN ((issue_12543_foo.a = ((issue_12543_bar.b + issue_12543_bar.b))) IS NULL) THEN 1 ELSE 0 END))) = (count("inner".ColRef_0047))) THEN NULL::boolean ELSE true END ELSE false END)
+         ->  GroupAggregate
+               Group Key: issue_12543_foo.a, issue_12543_foo.b, issue_12543_foo.c, issue_12543_foo.ctid, issue_12543_foo.tableoid, issue_12543_foo.gp_segment_id, (count("inner".ColRef_0043)), (sum((CASE WHEN ((issue_12543_foo.a = ((issue_12543_bar_1.b + issue_12543_bar_1.c))) IS NULL) THEN 1 ELSE 0 END)))
+               ->  Sort
+                     Sort Key: issue_12543_foo.a, issue_12543_foo.b, issue_12543_foo.c, issue_12543_foo.ctid, issue_12543_foo.tableoid, issue_12543_foo.gp_segment_id, (count("inner".ColRef_0043)), (sum((CASE WHEN ((issue_12543_foo.a = ((issue_12543_bar_1.b + issue_12543_bar_1.c))) IS NULL) THEN 1 ELSE 0 END)))
+                     ->  Result
+                           ->  Nested Loop Left Join
+                                 Join Filter: ((issue_12543_foo.a = ((issue_12543_bar.b + issue_12543_bar.b))) IS NOT FALSE)
+                                 ->  GroupAggregate
+                                       Group Key: issue_12543_foo.a, issue_12543_foo.b, issue_12543_foo.c, issue_12543_foo.ctid, issue_12543_foo.tableoid, issue_12543_foo.gp_segment_id
+                                       ->  Sort
+                                             Sort Key: issue_12543_foo.a, issue_12543_foo.b, issue_12543_foo.c, issue_12543_foo.ctid, issue_12543_foo.tableoid, issue_12543_foo.gp_segment_id
+                                             ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                                   Hash Key: issue_12543_foo.a, issue_12543_foo.b, issue_12543_foo.c, issue_12543_foo.ctid, issue_12543_foo.tableoid, issue_12543_foo.gp_segment_id
+                                                   ->  Result
+                                                         ->  Result
+                                                               ->  Nested Loop Left Join
+                                                                     Join Filter: ((issue_12543_foo.a = ((issue_12543_bar_1.b + issue_12543_bar_1.c))) IS NOT FALSE)
+                                                                     ->  Sequence
+                                                                           ->  Partition Selector for issue_12543_foo (dynamic scan id: 1)
+                                                                                 Partitions selected: 2 (out of 2)
+                                                                           ->  Dynamic Seq Scan on issue_12543_foo (dynamic scan id: 1)
+                                                                     ->  Result
+                                                                           ->  Materialize
+                                                                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                                                       ->  Result
+                                                                                             ->  Seq Scan on issue_12543_bar issue_12543_bar_1
+                                                                                                   Filter: (a > (SubPlan 1))
+                                                                                                   SubPlan 1  (slice4; segments: 3)
+                                                                                                     ->  Materialize
+                                                                                                           ->  Broadcast Motion 1:3  (slice3)
+                                                                                                                 ->  Aggregate
+                                                                                                                       ->  Gather Motion 3:1  (slice2; segments: 3)
+                                                                                                                             ->  Aggregate
+                                                                                                                                   ->  Seq Scan on issue_12543_bar issue_12543_bar_2
+                                 ->  Result
+                                       ->  Materialize
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                   ->  Seq Scan on issue_12543_bar
+ Optimizer: Pivotal Optimizer (GPORCA)
+(42 rows)
+
+select * from issue_12543_foo foo
+where foo.a in
+(select b+c from issue_12543_bar bar
+  where a > (select max(b) from issue_12543_bar)
+)
+or
+foo.a in (select b+b from issue_12543_bar);
+ a | b | c 
+---+---+---
+(0 rows)
+
+drop table issue_12543_foo, issue_12543_bar;

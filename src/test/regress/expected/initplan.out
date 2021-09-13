@@ -1,0 +1,200 @@
+-- test cases for init plan
+-- prepare tables
+-- start_ignore
+-- end_ignore
+create table issue_12543_foo(a int, b int, c int) distributed randomly
+partition by range(a)
+(
+   start (1) end (2) every (1),
+   default partition extra
+);
+NOTICE:  CREATE TABLE will create partition "issue_12543_foo_1_prt_extra" for table "issue_12543_foo"
+NOTICE:  CREATE TABLE will create partition "issue_12543_foo_1_prt_2" for table "issue_12543_foo"
+create table issue_12543_bar(a int, b int, c int) distributed randomly;
+insert into issue_12543_bar values(1,4,3),(2,4,3);
+insert into issue_12543_foo values(5,4,3),(7,4,3),(7,5,3),(7,6,4);
+-- CASE 1: single initplan that is not re-used
+explain (costs off)
+select * from issue_12543_bar
+where b < (select count(*) from pg_class);
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on issue_12543_bar
+         Filter: (b < $0)
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Aggregate
+                 ->  Seq Scan on pg_class
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- should print all tuples in issue_12543_bar
+select * from issue_12543_bar
+where b < (select count(*) from pg_class);
+ a | b | c 
+---+---+---
+ 1 | 4 | 3
+ 2 | 4 | 3
+(2 rows)
+
+-- CASE 2: single init-plan that is re-used by several sub-plans
+explain (costs off)
+select * from issue_12543_foo
+where b < (select count(*) from pg_class);
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Aggregate
+                 ->  Seq Scan on pg_class
+         ->  Seq Scan on issue_12543_foo_1_prt_extra
+               Filter: (b < $0)
+         ->  Seq Scan on issue_12543_foo_1_prt_2
+               Filter: (b < $0)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+-- should print all tuples in issue_12543_foo
+select * from issue_12543_foo
+where b < (select count(*) from pg_class);
+ a | b | c 
+---+---+---
+ 5 | 4 | 3
+ 7 | 5 | 3
+ 7 | 6 | 4
+ 7 | 4 | 3
+(4 rows)
+
+-- INIT PLAN that has motion(s)
+-- CASE 3: single init-plan that is re-used by several sub-plans
+-- GPORCA falls back to postgres planner, but keep it here to
+-- compare the results
+explain (costs off)
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar);
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Append
+         InitPlan 1 (returns $0)  (slice3)
+           ->  Aggregate
+                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                       ->  Aggregate
+                             ->  Seq Scan on issue_12543_bar
+         ->  Seq Scan on issue_12543_foo_1_prt_extra
+               Filter: (b > $0)
+         ->  Seq Scan on issue_12543_foo_1_prt_2
+               Filter: (b > $0)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar);
+ a | b | c 
+---+---+---
+ 7 | 6 | 4
+ 7 | 5 | 3
+(2 rows)
+
+-- CASE 4: two init-plans that are both re-used by several sub-plans
+-- GPORCA falls back to postgres planner, but keep it here to
+-- compare the results
+explain (costs off)
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar)
+   or c = (select max(c) from issue_12543_bar);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Append
+         InitPlan 1 (returns $0)  (slice4)
+           ->  Aggregate
+                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                       ->  Aggregate
+                             ->  Seq Scan on issue_12543_bar
+         InitPlan 2 (returns $1)  (slice5)
+           ->  Aggregate
+                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                       ->  Aggregate
+                             ->  Seq Scan on issue_12543_bar issue_12543_bar_1
+         ->  Seq Scan on issue_12543_foo_1_prt_extra
+               Filter: ((b > $0) OR (c = $1))
+         ->  Seq Scan on issue_12543_foo_1_prt_2
+               Filter: ((b > $0) OR (c = $1))
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select * from issue_12543_foo
+where b > (select max(b) from issue_12543_bar)
+   or c = (select max(c) from issue_12543_bar);
+ a | b | c 
+---+---+---
+ 7 | 6 | 4
+ 5 | 4 | 3
+ 7 | 5 | 3
+ 7 | 4 | 3
+(4 rows)
+
+-- CASE from Github issue 12543
+-- GPORCA falls back to postgres planner, but keep it here to
+-- compare the results
+explain (costs off)
+select * from issue_12543_foo foo
+where foo.a in
+(select b+c from issue_12543_bar bar
+  where a > (select max(b) from issue_12543_bar)
+)
+or
+foo.a in (select b+b from issue_12543_bar);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)
+   ->  Append
+         ->  Seq Scan on issue_12543_foo_1_prt_extra foo
+               Filter: ((hashed SubPlan 2) OR (hashed SubPlan 3))
+               SubPlan 2  (slice6; segments: 3)
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                             ->  Seq Scan on issue_12543_bar bar
+                                   Filter: (a > $0)
+                                   InitPlan 1 (returns $0)  (slice7)
+                                     ->  Aggregate
+                                           ->  Gather Motion 3:1  (slice1; segments: 3)
+                                                 ->  Aggregate
+                                                       ->  Seq Scan on issue_12543_bar
+               SubPlan 3  (slice6; segments: 3)
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                             ->  Seq Scan on issue_12543_bar issue_12543_bar_1
+         ->  Seq Scan on issue_12543_foo_1_prt_2 foo_1
+               Filter: ((hashed SubPlan 2) OR (hashed SubPlan 3))
+               SubPlan 2  (slice6; segments: 3)
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                             ->  Seq Scan on issue_12543_bar bar_1
+                                   Filter: (a > $0)
+                                   InitPlan 1 (returns $0)  (slice7)
+                                     ->  Aggregate
+                                           ->  Gather Motion 3:1  (slice1; segments: 3)
+                                                 ->  Aggregate
+                                                       ->  Seq Scan on issue_12543_bar
+               SubPlan 3  (slice6; segments: 3)
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                             ->  Seq Scan on issue_12543_bar issue_12543_bar_2
+ Optimizer: Postgres query optimizer
+(35 rows)
+
+select * from issue_12543_foo foo
+where foo.a in
+(select b+c from issue_12543_bar bar
+  where a > (select max(b) from issue_12543_bar)
+)
+or
+foo.a in (select b+b from issue_12543_bar);
+ a | b | c 
+---+---+---
+(0 rows)
+
+drop table issue_12543_foo, issue_12543_bar;

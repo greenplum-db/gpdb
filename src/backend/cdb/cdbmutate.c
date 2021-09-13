@@ -17,6 +17,7 @@
 
 #include "access/hash.h"
 #include "access/xact.h"
+#include "nodes/bitmapset.h"
 #include "parser/parsetree.h"	/* for rt_fetch() */
 #include "parser/parse_oper.h"	/* for compatible_oper_opid() */
 #include "utils/relcache.h"		/* RelationGetPartitioningKey() */
@@ -27,6 +28,7 @@
 #include "optimizer/var.h"
 #include "parser/parse_relation.h"
 #include "utils/fmgroids.h"
+#include "utils/hsearch.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/datum.h"
@@ -74,8 +76,13 @@ typedef struct ApplyMotionState
 	int			nextMotionID;
 	int			sliceDepth;
 	bool		containMotionNodes;
-	List	   *initPlans;
+	HTAB	   *planid_subplans;
 } ApplyMotionState;
+struct InitPlanItem
+{
+	int plan_id;
+	List *subplans;
+};
 
 typedef struct
 {
@@ -380,8 +387,10 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	Plan	   *result;
 	ListCell   *cell;
 	GpPolicy   *targetPolicy = NULL;
+	struct InitPlanItem *item;
 	GpPolicyType targetPolicyType = POLICYTYPE_ENTRY;
 	ApplyMotionState state;
+	HASHCTL ctl;
 	bool		needToAssignDirectDispatchContentIds = false;
 	bool		bringResultToDispatcher = false;
 	int			numsegments = getgpsegmentCount();
@@ -394,7 +403,12 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	state.nextMotionID = 1;		/* Start at 1 so zero will mean "unassigned". */
 	state.sliceDepth = 0;
 	state.containMotionNodes = false;
-	state.initPlans = NIL;
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(int);
+	ctl.entrysize = sizeof(struct InitPlanItem);
+	ctl.hash = tag_hash;
+	state.planid_subplans = hash_create("plan_id to subplans", 8, &ctl,
+										 HASH_ELEM | HASH_FUNCTION);
 
 	Assert(is_plan_node((Node *) plan) && IsA(query, Query));
 
@@ -670,15 +684,23 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	}
 
 	Assert(result->nMotionNodes == state.nextMotionID - 1);
-	Assert(result->nInitPlans == list_length(state.initPlans));
+	Assert(result->nInitPlans == hash_get_num_entries(state.planid_subplans));
 
-	/* Assign slice numbers to the initplans. */
-	foreach(cell, state.initPlans)
+	HASH_SEQ_STATUS status;
+	hash_seq_init(&status, state.planid_subplans);
+	while ((item = (struct InitPlanItem *) hash_seq_search(&status)) != NULL)
 	{
-		SubPlan    *subplan = (SubPlan *) lfirst(cell);
-
-		Assert(IsA(subplan, SubPlan) &&subplan->qDispSliceId == 0);
-		subplan->qDispSliceId = state.nextMotionID++;
+		int plan_id = item->plan_id;
+		int sliceId = state.nextMotionID++;
+		List *subplans = item->subplans;
+		Assert(list_length(subplans) > 0);
+		foreach(cell, subplans)
+		{
+			SubPlan *subplan = (SubPlan *) lfirst(cell);
+			Assert(IsA(subplan, SubPlan) && subplan->qDispSliceId == 0 &&
+					subplan->plan_id == plan_id);
+			subplan->qDispSliceId = sliceId;
+		}
 	}
 
 	/*
@@ -730,8 +752,14 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 		 */
 		if (IsA(node, SubPlan) &&((SubPlan *) node)->is_initplan)
 		{
+			bool		found;
 			bool		saveContainMotionNodes = context->containMotionNodes;
 			int			saveSliceDepth = context->sliceDepth;
+			SubPlan		*subplan = (SubPlan *) node;
+			hash_search(context->planid_subplans, &subplan->plan_id,
+						HASH_FIND, &found);
+			if (found)
+				return node;
 
 			/* reset sliceDepth for each init plan */
 			context->sliceDepth = 0;
@@ -750,7 +778,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 	flow = plan->flow;
 
 	saveNextMotionID = context->nextMotionID;
-	saveNumInitPlans = list_length(context->initPlans);
+	saveNumInitPlans = hash_get_num_entries(context->planid_subplans);
 
 	/* Descending into a subquery or a new slice? */
 	saveSliceDepth = context->sliceDepth;
@@ -780,12 +808,19 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 
 		foreach(cell, plan->initPlan)
 		{
+			bool found;
 			subplan = (SubPlan *) lfirst(cell);
 			Assert(IsA(subplan, SubPlan));
 			Assert(root);
 			Assert(planner_subplan_get_plan(root, subplan));
 
-			context->initPlans = lappend(context->initPlans, subplan);
+			struct InitPlanItem *item = hash_search(context->planid_subplans,
+												&subplan->plan_id,
+												HASH_ENTER,
+												&found);
+			if (!found)
+				item->subplans = NIL;
+			item->subplans = lappend(item->subplans, subplan);
 		}
 	}
 
@@ -944,7 +979,7 @@ done:
 	 */
 	plan = (Plan *) newnode;
 	plan->nMotionNodes = context->nextMotionID - saveNextMotionID;
-	plan->nInitPlans = list_length(context->initPlans) - saveNumInitPlans;
+	plan->nInitPlans = hash_get_num_entries(context->planid_subplans) - saveNumInitPlans;
 
 	/*
 	 * Remember if this was a Motion node. This is used at the top of the
