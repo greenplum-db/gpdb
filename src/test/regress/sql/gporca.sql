@@ -3389,6 +3389,37 @@ select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nes
 select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
 
 reset optimizer_trace_fallback;
+--- if the inner child is already distributed on the join column, orca should
+--- not place any motion on the inner child
+CREATE TABLE tone (a int, b int, c int);
+insert into tone select i,i,i from generate_series(1, 10) i;
+ANALYZE tone;
+SET optimizer_enable_hashjoin=off;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+
+--- if the inner child is not distributed on the join column, orca should
+--- redistribute the inner child
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN (SELECT 1+t2.b as b from tone t2) t2 ON t1.a = t2.b;
+SELECT * FROM tone t1 LEFT OUTER JOIN (SELECT 1+t2.b as b from tone t2) t2 ON t1.a = t2.b;
+
+
+--- if the join condition does not involve a simple scalar ident, orca must
+--- broadcast the inner child
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b-t1.a;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b-t1.a;
+
+--- orca should broadcast the inner child if the guc is set off
+SET optimizer_enable_redistribute_nestloop_loj_inner_child=off;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+RESET optimizer_enable_redistribute_nestloop_loj_inner_child;
+RESET optimizer_enable_hashjoin;
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

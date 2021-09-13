@@ -330,6 +330,8 @@ bool		optimizer_enable_groupagg;
 bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
 bool		optimizer_prune_unused_columns;
+bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
+
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -2828,6 +2830,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"optimizer_enable_redistribute_nestloop_loj_inner_child", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable nested loops left join plans with redistributed inner child in the optimizer."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_enable_redistribute_nestloop_loj_inner_child,
+		 true,
+		 NULL, NULL, NULL
+		 },
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
