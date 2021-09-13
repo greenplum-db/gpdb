@@ -684,6 +684,19 @@ def get_primary_segment_host_port():
     return primary_seg_host, primary_seg_port
 
 
+def get_primary_segment_host_port_for_content(content='0'):
+    """
+    return host, port of primary segment for the content id
+    """
+    get_psegment_sql = 'select hostname, port from gp_segment_configuration where content=%s;' % content
+    with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
+        cur = dbconn.query(conn, get_psegment_sql)
+        rows = cur.fetchall()
+        primary_seg_host = rows[0][0]
+        primary_seg_port = rows[0][1]
+    return primary_seg_host, primary_seg_port
+
+
 def remove_local_path(dirname):
     list = glob.glob(os.path.join(os.path.curdir, dirname))
     for dir in list:
@@ -760,3 +773,26 @@ def wait_for_unblocked_transactions(context, num_retries=150):
 
     if attempt == num_retries:
         raise Exception('Unable to establish a connection to database !!!')
+
+
+def wait_for_desired_query_result_on_segment(host, port, query, desired_result, num_retries=150):
+    """
+    Tries once a second to check for the desired query result on the segment.
+    Raises an Exception after failing <num_retries> times.
+    """
+    attempt = 0
+    actual_result = None
+    url = dbconn.DbURL(hostname=host, port=port, dbname='template1')
+    while (attempt < num_retries) and (actual_result != desired_result):
+        attempt += 1
+        try:
+            with closing(dbconn.connect(url, utility=True)) as conn:
+                cursor = dbconn.query(conn, query)
+                rows = cursor.fetchall()
+                actual_result = rows[0][0]
+        except Exception as e:
+            print('could not query segment (%s:%s) %s' % (host, port, e))
+        time.sleep(1)
+
+    if attempt == num_retries:
+        raise Exception('Timed out after %s retries' % num_retries)

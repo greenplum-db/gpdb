@@ -9,6 +9,7 @@ image_resource:
 inputs:
 - name: gpdb_src
 - name: bin_gpdb_centos7
+- name: bin_gpdb_rhel8
 - name: bin_gpdb_ubuntu18.04
 
 outputs:
@@ -24,4 +25,5 @@ run:
   - |
     server_version="$(./gpdb_src/getversion --short)"
     cp bin_gpdb_centos7/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel7_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
+    cp bin_gpdb_rhel8/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
     cp bin_gpdb_ubuntu18.04/bin_gpdb.tar.gz "output/server-build-${server_version}-ubuntu18.04_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
