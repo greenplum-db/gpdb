@@ -15,6 +15,10 @@
 #   hitting max_connections limit on segments.
 #
 
+# copy command
+# copy form a file with different EOL
+test: copy_eol
+
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
