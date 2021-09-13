@@ -323,6 +323,17 @@ CPhysicalJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				dmatch);
 		}
 
+		if ((GPOS_FTRACE(EopttraceEnableRedistributeNLLOJInnerChild) &&
+			 this->Eopid() == COperator::EopPhysicalLeftOuterNLJoin))
+		{
+			CEnfdDistribution *pEnfdHashedDistribution =
+				CPhysicalJoin::PedInnerHashedFromOuterHashed(
+					mp, exprhdl, dmatch, (*pdrgpdpCtxt)[0]);
+			if (pEnfdHashedDistribution)
+				return pEnfdHashedDistribution;
+		}
+
+
 		// otherwise, require inner child to be replicated
 		return GPOS_NEW(mp) CEnfdDistribution(
 			GPOS_NEW(mp)
@@ -333,6 +344,78 @@ CPhysicalJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// no distribution requirement on the outer side
 	return GPOS_NEW(mp) CEnfdDistribution(
 		GPOS_NEW(mp) CDistributionSpecAny(this->Eopid()), dmatch);
+}
+
+CEnfdDistribution *
+CPhysicalJoin::PedInnerHashedFromOuterHashed(
+	CMemoryPool *mp, CExpressionHandle &exprhdl,
+	CEnfdDistribution::EDistributionMatching dmatch, CDrvdProp *outerDrvdProp)
+{
+	// compute a matching distribution based on derived distribution of outer child
+	CDistributionSpec *pdsOuter = CDrvdPropPlan::Pdpplan(outerDrvdProp)->Pds();
+	if (CDistributionSpec::EdtHashed == pdsOuter->Edt())
+	{
+		// require inner child to have matching hashed distribution
+		CExpression *pexprScPredicate =
+			exprhdl.PexprScalarExactChild(2, true /*error_on_null_return*/);
+
+		CExpressionArray *pdrgpexpr =
+			CPredicateUtils::PdrgpexprConjuncts(mp, pexprScPredicate);
+
+		CExpressionArray *pdrgpexprMatching = GPOS_NEW(mp) CExpressionArray(mp);
+		CDistributionSpecHashed *pdshashed =
+			CDistributionSpecHashed::PdsConvert(pdsOuter);
+		CExpressionArray *pdrgpexprHashed = pdshashed->Pdrgpexpr();
+		const ULONG ulSize = pdrgpexprHashed->Size();
+
+		BOOL fSuccess = true;
+		for (ULONG ul = 0; fSuccess && ul < ulSize; ul++)
+		{
+			CExpression *pexpr = (*pdrgpexprHashed)[ul];
+			// get matching expression from predicate for the corresponding outer child
+			// to create CDistributionSpecHashed for inner child
+			CExpression *pexprMatching =
+				CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexpr);
+			// columns on which the inner side must be distributed should not contain any column from the outer side
+			// for ex: t1.a = t2.a + t1.a, in this case we can't request t2.a + t1.a from the inner side
+			// where t1 is outer side and t2 is inner table
+			CColRefSet *pcrsOutputOuter = exprhdl.DeriveOutputColumns(0);
+			fSuccess = NULL != pexprMatching &&
+					   !pexprMatching->DeriveUsedColumns()->FIntersects(
+						   pcrsOutputOuter);
+			if (fSuccess)
+			{
+				IMDId *pmdidTypeInner =
+					CScalar::PopConvert(pexprMatching->Pop())->MdidType();
+				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+				if (md_accessor->RetrieveType(pmdidTypeInner)->IsHashable())
+				{
+					pexprMatching->AddRef();
+					pdrgpexprMatching->Append(pexprMatching);
+				}
+				else
+				{
+					fSuccess = false;
+				}
+			}
+		}
+		pdrgpexpr->Release();
+
+		if (fSuccess)
+		{
+			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
+
+			// create a matching hashed distribution request
+			BOOL fNullsColocated = pdshashed->FNullsColocated();
+			CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)
+				CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
+			pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
+			return GPOS_NEW(mp) CEnfdDistribution(pdshashedEquiv, dmatch);
+		}
+		pdrgpexprMatching->Release();
+	}
+
+	return NULL;
 }
 
 

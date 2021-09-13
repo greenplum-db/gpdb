@@ -3053,6 +3053,35 @@ insert into tone select i,i,i from generate_series(1, 10) i;
 ANALYZE tone;
 
 WITH cte AS (SELECT one(min(a)) from tone) SELECT 1 FROM tone, cte c1;
+--- if the inner child is already distributed on the join column, orca should
+--- not place any motion on the inner child
+SET optimizer_enable_hashjoin=off;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+
+--- if the inner child is not distributed on the join column, orca should 
+--- redistribute the inner child
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN (SELECT 1+t2.b as b from tone t2) t2 ON t1.a = t2.b;
+SELECT * FROM tone t1 LEFT OUTER JOIN (SELECT 1+t2.b as b from tone t2) t2 ON t1.a = t2.b;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b+t2.a+1;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b+t2.a+1;
+
+--- send a broadcast request to the inner child where the inner side clause contains
+--- columns from the outer side
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b-t1.a;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b-t1.a;
+
+--- orca should broadcast the inner child if the guc is set off
+SET optimizer_enable_redistribute_nestloop_loj_inner_child=off;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+RESET optimizer_enable_redistribute_nestloop_loj_inner_child;
+RESET optimizer_enable_hashjoin;
 
 --- optimizer_xform_bind_threshold should limit the search space and quickly
 --- generate a plan (<100ms, but if this GUC is not set it will take minutes to
