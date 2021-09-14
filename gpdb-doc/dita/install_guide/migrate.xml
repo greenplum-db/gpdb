@@ -173,10 +173,15 @@
             <codeph>int4_avg_accum()</codeph> function, you will need to revise your aggregate for
           the new signature. </li>
         <li>The <codeph>string_agg(expression)</codeph> function has been removed from Greenplum 6.
-          The function concatenates text values into a string. You can replace the single argument
+          The function concatenates text values into a string. You can replace the single-argument
           function with the function <codeph>string_agg(expression, delimiter)</codeph> and specify
           an empty string as the <codeph>delimiter</codeph>, for example
-            <codeph>string_agg(txt_col1, '').</codeph></li>
+            <codeph>string_agg(txt_col1, '').</codeph> If updating each <codeph>string_agg()</codeph>
+          function invocation is not immediately feasible in your environment, you may choose
+          to use <xref href="../ref_guide/modules/gp_legacy_string_agg.xml" format="dita"
+            scope="peer">gp_legacy_string_agg</xref>, a Greenplum Database contrib module that
+          implements the legacy single-argument <codeph>string_agg()</codeph> function that
+          was available in Greenplum Database 5.</li>
         <li>The <codeph>offset</codeph> argument of the <codeph>lag(expr, offset[,
             default])</codeph> window function has changed from <codeph>int8</codeph> in Greenplum
           4.3 to <codeph>int4</codeph> in Greenplum 5 and 6.</li>

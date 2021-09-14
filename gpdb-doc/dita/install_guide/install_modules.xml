@@ -34,6 +34,8 @@
                   format="dita">fuzzystrmatch</xref></li>
               <li><xref href="../ref_guide/modules/gp_sparse_vector.xml" type="topic" scope="peer"
                   format="dita">gp_sparse_vector</xref></li>
+              <li><xref href="../ref_guide/modules/gp_legacy_string_agg.xml" type="topic" scope="peer"
+                  format="dita">gp_legacy_string_agg</xref></li>
             </ul>
           </stentry>
           <stentry>
