@@ -8,7 +8,7 @@ from gppylib.db import dbconn
 from gppylib.commands import gp
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from test.behave_utils.utils import *
-import platform
+import platform, shutil
 from behave import given, when, then
 
 
@@ -17,14 +17,23 @@ from behave import given, when, then
 @when('the information of a "{seg}" segment on a remote host is saved')
 @then('the information of a "{seg}" segment on a remote host is saved')
 def impl(context, seg):
-    if seg == "mirror":
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    if seg == "primary":
+        primary_segs = [seg for seg in gparray.getDbList()
+                       if seg.isSegmentPrimary() and seg.getSegmentHostName() != platform.node()]
+        context.remote_pair_primary_segdbId = primary_segs[0].getSegmentDbId()
+        context.remote_pair_primary_segcid = primary_segs[0].getSegmentContentId()
+        context.remote_pair_primary_host = primary_segs[0].getSegmentHostName()
+        context.remote_pair_primary_datadir = primary_segs[0].getSegmentDataDirectory()
+    elif seg == "mirror":
         mirror_segs = [seg for seg in gparray.getDbList()
                        if seg.isSegmentMirror() and seg.getSegmentHostName() != platform.node()]
         context.remote_mirror_segdbId = mirror_segs[0].getSegmentDbId()
         context.remote_mirror_segcid = mirror_segs[0].getSegmentContentId()
         context.remote_mirror_seghost = mirror_segs[0].getSegmentHostName()
         context.remote_mirror_datadir = mirror_segs[0].getSegmentDataDirectory()
+    else:
+        raise Exception('Valid segment types are "primary" and "mirror"')
 
 @given('the information of the corresponding primary segment on a remote host is saved')
 @when('the information of the corresponding primary segment on a remote host is saved')
@@ -56,6 +65,27 @@ def impl(context, seg):
     row_count = getRows('postgres', qry)[0][0]
     if row_count != 1:
         raise Exception('Expected %s segment %s on host %s to be down, but it is running.' % (seg, datadir, seghost))
+
+@then('the saved "{seg}" segment is eventually marked down in config')
+def impl(context, seg):
+    if seg == "mirror":
+        dbid = context.remote_mirror_segdbId
+        seghost = context.remote_mirror_seghost
+        datadir = context.remote_mirror_datadir
+    else:
+        dbid = context.remote_pair_primary_segdbId
+        seghost = context.remote_pair_primary_host
+        datadir = context.remote_pair_primary_datadir
+
+    timeout = 300
+    for i in range(timeout):
+        qry = """select count(*) from gp_segment_configuration where status='d' and hostname='%s' and dbid=%s""" % (seghost, dbid)
+        row_count = getRows('postgres', qry)[0][0]
+        if row_count == 1:
+            return
+        sleep(1)
+
+    raise Exception('Expected %s segment %s on host %s to be down, but it is still running after %d seconds.' % (seg, datadir, seghost, timeout))
 
 @when('user kills a "{seg}" process with the saved information')
 def impl(context, seg):
@@ -338,3 +368,92 @@ def compare_gparray_with_recovered_host(before_gparray, after_gparray, expected_
         msg = "MISMATCH\n\nactual_before:\n{}\n\nexpected_before:\n{}\n\nactual_after:\n{}\n\nexpected_after:\n{}\n".format(
             before_segs, expected_before_segs, after_segs, expected_after_segs)
         raise Exception(msg)
+
+@when('a gprecoverseg input file "{filename}" is created with a different data directory for content {content}')
+def impl(context, filename, content):
+    line = ""
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+        result = dbconn.query(conn, "SELECT port, hostname, datadir FROM gp_segment_configuration WHERE preferred_role='p' AND content = %s;" % content).fetchall()
+        port, hostname, datadir = result[0][0], result[0][1], result[0][2]
+        line = "%s|%s|%s %s|%s|/tmp/newdir" % (hostname, port, datadir, hostname, port)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+def get_current_backout_directory():
+    cdd = os.environ["COORDINATOR_DATA_DIRECTORY"]
+    dirs = glob.glob("%s/gprecoverseg_*_backout" % cdd)
+    if len(dirs) == 0:
+        raise Exception("No backout directory found in %s." % cdd)
+    elif len(dirs) > 1:
+        raise Exception("Multiple backout directories found in %s." % cdd)
+    return dirs[0]
+
+@given('a gprecoverseg backout file exists for content {content}')
+def impl(context, content):
+    backout_dir = get_current_backout_directory()
+    if not os.path.exists("%s/revert_gprecoverseg_catalog_changes.sh" % backout_dir):
+        raise Exception("The main coordinator backout script does not exist.")
+
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+        dbid = dbconn.querySingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE preferred_role='p' AND content = %s;" % content)
+        if not os.path.exists("%s/backout_%s.sql" % (backout_dir, dbid)):
+            raise Exception("The segment backout file for content %s does not exist." % content)
+
+@when('the gprecoverseg backout script is run')
+def impl(context):
+    backout_dir = get_current_backout_directory()
+    context.execute_steps(u'''
+        Then the user runs command "chmod +x {backout_dir}/revert_gprecoverseg_catalog_changes.sh"
+         And the user runs command "bash -c {backout_dir}/revert_gprecoverseg_catalog_changes.sh"
+         And bash should return a return code of 0
+         And user can start transactions
+         And the segments are synchronized
+         '''.format(backout_dir=backout_dir))
+
+@then('the primary for content {content} should have its original data directory in the system configuration')
+def impl(context, content):
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+        datadir = dbconn.querySingleton(conn, "SELECT datadir FROM gp_segment_configuration WHERE preferred_role='p' AND content = %s;" % content)
+        if not datadir == context.remote_pair_primary_datadir:
+            raise Exception("Expected datadir %s, got %s" % (context.remote_pair_primary_datadir, datadir))
+
+@given('the gprecoverseg input file "{filename}" and all backout files are cleaned up')
+@then('the gprecoverseg input file "{filename}" and all backout files are cleaned up')
+def impl(context, filename):
+    if os.path.exists(filename):
+        os.remove(filename)
+    cdd = os.environ["COORDINATOR_DATA_DIRECTORY"]
+    dirs = glob.glob("%s/gprecoverseg_*_backout" % cdd)
+    for backout_dir in dirs:
+        if os.path.exists(backout_dir):
+            shutil.rmtree(backout_dir)
+
+@then('verify there are no gprecoverseg backout files')
+def impl(context):
+    cdd = os.environ["COORDINATOR_DATA_DIRECTORY"]
+    dirs = glob.glob("%s/gprecoverseg_*_backout" % cdd)
+    if len(dirs) > 0:
+        raise Exception("One or more backout directories exist: %s" % dirs)
+
+@then('the gprecoverseg lock directory is removed')
+def impl(context):
+    lock_dir = "%s/gprecoverseg.lock" % os.environ["COORDINATOR_DATA_DIRECTORY"]
+    if os.path.exists(lock_dir):
+        shutil.rmtree(lock_dir)
+
+@then('the gp_configuration_history table should contain a backout entry for the {seg} segment for content {content}')
+def impl(context, seg, content):
+    role = ""
+    if seg == "primary":
+        role = 'p'
+    elif seg == "mirror":
+        role = 'm'
+    else:
+        raise Exception('Valid segment types are "primary" and "mirror"')
+
+    with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+        dbid = dbconn.querySingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, role))
+        num_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+        if num_tuples != 1:
+            raise Exception("Expected configuration history table to contain 1 entry for dbid %d, found %d" % (dbid, num_tuples))

@@ -19,7 +19,7 @@
 from gppylib.mainUtils import *
 
 from optparse import OptionGroup
-import os, sys, signal, time
+import glob, os, sys, signal, shutil, time
 from gppylib import gparray, gplog, userinput, utils
 from gppylib.util import gp_utils
 from gppylib.commands import gp, pg, unix
@@ -355,14 +355,14 @@ class GpRecoverSegmentProgram:
 
             contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
             update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.parallelDegree, contentsToUpdate)
-            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+            if not mirrorBuilder.recover_mirrors(gpEnv, gpArray):
                 self.logger.error("gprecoverseg failed. Please check the output for more details.")
                 sys.exit(1)
 
+            #TODO do this have to be done before fts trigger probe ?
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
                                               len(mirrorBuilder.getMirrorsToBuild()), True)
 
-            self.trigger_fts_probe(port=gpEnv.getMasterPort())
 
             self.logger.info("********************************")
             self.logger.info("Segments successfully recovered.")
@@ -372,12 +372,6 @@ class GpRecoverSegmentProgram:
             self.logger.info("Use 'gpstate -e' to check progress of WAL sync remaining bytes")
 
         sys.exit(0)
-
-    def trigger_fts_probe(self, port=0):
-        self.logger.info('Triggering FTS probe')
-        with dbconn.connect(dbconn.DbURL(port=port)) as conn:
-            res = dbconn.execSQL(conn, "SELECT gp_request_fts_probe_scan()")
-        return res.fetchall()
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]
