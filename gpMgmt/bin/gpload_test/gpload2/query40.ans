@@ -1,51 +1,55 @@
-2021-08-18 10:35:48|INFO|gpload session started 2021-08-18 10:35:48
-2021-08-18 10:35:48|INFO|setting schema 'public' for table 'testspecialchar'
-2021-08-18 10:35:48|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2021-08-18 10:35:48|INFO|did not find an external table to reuse. creating ext_gpload_reusable_ff737544_ffcc_11eb_a0d2_0050569e5d5e
-2021-08-18 10:35:48|ERROR|could not run SQL "create external table ext_gpload_reusable_ff737544_ffcc_11eb_a0d2_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+2021-09-15 08:14:13|INFO|gpload session started 2021-09-15 08:14:13
+2021-09-15 08:14:13|INFO|setting schema 'public' for table 'testspecialchar'
+2021-09-15 08:14:13|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-09-15 08:14:13|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e98b1aa2_15fc_11ec_af50_c6df035ebc1f
+2021-09-15 08:14:13|ERROR|could not run SQL "create external table ext_gpload_reusable_e98b1aa2_15fc_11ec_af50_c6df035ebc1f("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8'
                                                                  ^
+ standard_conforming_strings is set to 'off', please set it to 'on' and try again
 
-2021-08-18 10:35:48|INFO|rows Inserted          = 0
-2021-08-18 10:35:48|INFO|rows Updated           = 0
-2021-08-18 10:35:48|INFO|data formatting errors = 0
-2021-08-18 10:35:48|INFO|gpload failed
-2021-08-18 10:35:49|INFO|gpload session started 2021-08-18 10:35:49
-2021-08-18 10:35:49|INFO|setting schema 'public' for table 'testspecialchar'
-2021-08-18 10:35:49|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2021-08-18 10:35:49|INFO|did not find an external table to reuse. creating ext_gpload_reusable_ff88c8d6_ffcc_11eb_accb_0050569e5d5e
-2021-08-18 10:35:49|ERROR|could not run SQL "create external table ext_gpload_reusable_ff88c8d6_ffcc_11eb_accb_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+2021-09-15 08:14:13|INFO|rows Inserted          = 0
+2021-09-15 08:14:13|INFO|rows Updated           = 0
+2021-09-15 08:14:13|INFO|data formatting errors = 0
+2021-09-15 08:14:13|INFO|gpload failed
+2021-09-15 08:14:13|INFO|gpload session started 2021-09-15 08:14:13
+2021-09-15 08:14:13|INFO|setting schema 'public' for table 'testspecialchar'
+2021-09-15 08:14:14|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-09-15 08:14:14|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e9b85990_15fc_11ec_bbbc_c6df035ebc1f
+2021-09-15 08:14:14|ERROR|could not run SQL "create external table ext_gpload_reusable_e9b85990_15fc_11ec_bbbc_c6df035ebc1f("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8'
                                                                  ^
+ standard_conforming_strings is set to 'off', please set it to 'on' and try again
 
-2021-08-18 10:35:49|INFO|rows Inserted          = 0
-2021-08-18 10:35:49|INFO|rows Updated           = 0
-2021-08-18 10:35:49|INFO|data formatting errors = 0
-2021-08-18 10:35:49|INFO|gpload failed
-2021-08-18 10:35:49|INFO|gpload session started 2021-08-18 10:35:49
-2021-08-18 10:35:49|INFO|setting schema 'public' for table 'testspecialchar'
-2021-08-18 10:35:49|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file2.txt" -t 30
-2021-08-18 10:35:49|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
-2021-08-18 10:35:49|INFO|did not find an external table to reuse. creating ext_gpload_reusable_ff9d47fc_ffcc_11eb_b9ee_0050569e5d5e
-2021-08-18 10:35:49|ERROR|could not run SQL "create external table ext_gpload_reusable_ff9d47fc_ffcc_11eb_b9ee_0050569e5d5e("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file2.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
-LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
+2021-09-15 08:14:14|INFO|rows Inserted          = 0
+2021-09-15 08:14:14|INFO|rows Updated           = 0
+2021-09-15 08:14:14|INFO|data formatting errors = 0
+2021-09-15 08:14:14|INFO|gpload failed
+2021-09-15 08:14:14|INFO|gpload session started 2021-09-15 08:14:14
+2021-09-15 08:14:14|INFO|setting schema 'public' for table 'testspecialchar'
+2021-09-15 08:14:14|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file2.txt" -t 30
+2021-09-15 08:14:14|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
+2021-09-15 08:14:14|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e9e5fe40_15fc_11ec_aecc_c6df035ebc1f
+2021-09-15 08:14:14|ERROR|could not run SQL "create external table ext_gpload_reusable_e9e5fe40_15fc_11ec_aecc_c6df035ebc1f("Field1" bigint,"Field#2" text)location('gpfdist://*:pathto/data_file2.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8'
                                                                  ^
+ could not get standard_conforming_strings, ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ if standard_conforming_strings is set to 'off', please set it to 'on' and try again
 
-2021-08-18 10:35:49|INFO|rows Inserted          = 0
-2021-08-18 10:35:49|INFO|rows Updated           = 0
-2021-08-18 10:35:49|INFO|data formatting errors = 0
-2021-08-18 10:35:49|INFO|gpload failed
-2021-08-18 10:35:49|INFO|gpload session started 2021-08-18 10:35:49
-2021-08-18 10:35:49|INFO|setting schema 'public' for table 'testspecialchar'
-2021-08-18 10:35:49|ERROR|no mapping for input column "'Field1'" to output table
-2021-08-18 10:35:49|INFO|rows Inserted          = 0
-2021-08-18 10:35:49|INFO|rows Updated           = 0
-2021-08-18 10:35:49|INFO|data formatting errors = 0
-2021-08-18 10:35:49|INFO|gpload failed
-2021-08-18 10:35:49|INFO|gpload session started 2021-08-18 10:35:49
-2021-08-18 10:35:49|INFO|setting schema 'public' for table 'testspecialchar'
-2021-08-18 10:35:49|ERROR|no mapping for input column "Field1" to output table
-2021-08-18 10:35:49|INFO|rows Inserted          = 0
-2021-08-18 10:35:49|INFO|rows Updated           = 0
-2021-08-18 10:35:49|INFO|data formatting errors = 0
-2021-08-18 10:35:49|INFO|gpload failed
+2021-09-15 08:14:14|INFO|rows Inserted          = 0
+2021-09-15 08:14:14|INFO|rows Updated           = 0
+2021-09-15 08:14:14|INFO|data formatting errors = 0
+2021-09-15 08:14:14|INFO|gpload failed
+2021-09-15 08:14:14|INFO|gpload session started 2021-09-15 08:14:14
+2021-09-15 08:14:14|INFO|setting schema 'public' for table 'testspecialchar'
+2021-09-15 08:14:14|ERROR|no mapping for input column "'Field1'" to output table
+2021-09-15 08:14:14|INFO|rows Inserted          = 0
+2021-09-15 08:14:14|INFO|rows Updated           = 0
+2021-09-15 08:14:14|INFO|data formatting errors = 0
+2021-09-15 08:14:14|INFO|gpload failed
+2021-09-15 08:14:14|INFO|gpload session started 2021-09-15 08:14:14
+2021-09-15 08:14:14|INFO|setting schema 'public' for table 'testspecialchar'
+2021-09-15 08:14:14|ERROR|no mapping for input column "Field1" to output table
+2021-09-15 08:14:14|INFO|rows Inserted          = 0
+2021-09-15 08:14:14|INFO|rows Updated           = 0
+2021-09-15 08:14:14|INFO|data formatting errors = 0
+2021-09-15 08:14:14|INFO|gpload failed
