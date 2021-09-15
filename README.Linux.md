@@ -3,13 +3,13 @@
 - Install Dependencies
 
   ```bash
-    ./README.CentOS.bash
+  ./README.CentOS.bash
   ```
 
 - If you want to link cmake3 to cmake, run:
 
   ```bash
-    sudo ln -sf /usr/bin/cmake3 /usr/local/bin/cmake
+  sudo ln -sf /usr/bin/cmake3 /usr/local/bin/cmake
   ```
 
 - Make sure that you add `/usr/local/lib` and `/usr/local/lib64` to
@@ -43,7 +43,7 @@ Use dependency script for CentOS.
   `export DEBIAN_FRONTEND=noninteractive`
 
   ```bash
-    sudo ./README.Ubuntu.bash
+  sudo ./README.Ubuntu.bash
   ```
 
 - Ubuntu 18.04 and newer should have use gcc 7 or newer, but you can also enable gcc-7 on older versions of Ubuntu:
@@ -78,10 +78,9 @@ then run command `ldconfig`.
    ```
 
 1. Verify that you can ssh to your machine name without a password.
-   You can use `hostname` to get the hostname of your machine.
 
    ```bash
-    ssh <hostname of your machine>  # e.g., ssh briarwood
+    ssh <hostname of your machine>  # e.g., ssh briarwood (You can use `hostname` to get the hostname of your machine.)
    ```
 
 1. Set up your system configuration by following the installation guide on [docs.greenplum.org](https://docs.greenplum.org)
