@@ -5,10 +5,10 @@ Sierra.
 
 Execute the following, this script will start by caching the `sudo` password:
 
-  ```bash
-  ./README.macOS.bash
-  source ~/.bash_profile
-  ```
+```bash
+./README.macOS.bash
+source ~/.bash_profile
+```
 
 Note: This will install Homebrew if missing
 
@@ -16,42 +16,42 @@ Note: This will install Homebrew if missing
 
 Execute the following in your terminal:
 
-  ```bash
-  mkdir -p "$HOME/.ssh"
-  
-  cat >> ~/.bash_profile << EOF
-  
-  # Allow ssh to use the version of python in path, not the system python
-  # BEGIN SSH agent
-  # from http://stackoverflow.com/questions/18880024/start-ssh-agent-on-login/18915067#18915067
-  SSH_ENV="\$HOME/.ssh/environment"
-  # Refresh the PATH per new session
-  sed -i .bak '/^PATH/d' \${SSH_ENV}
-  echo "PATH=\$PATH" >> \${SSH_ENV}
-  
-  function start_agent {
-      echo "Initialising new SSH agent..."
-      /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "\${SSH_ENV}"
-      echo succeeded
-      chmod 600 "\${SSH_ENV}"
-      source "\${SSH_ENV}" > /dev/null
-      /usr/bin/ssh-add;
-  }
-  
-  # Source SSH settings, if applicable
-  if [ -f "\${SSH_ENV}" ]; then
-      . "\${SSH_ENV}" > /dev/null
-      ps -ef | grep \${SSH_AGENT_PID} 2>/dev/null | grep ssh-agent$ > /dev/null || {
-          start_agent;
-      }
-  else
-      start_agent;
-  fi
-  
-  [ -f ~/.bashrc ] && source ~/.bashrc
-  # END SSH agent
-  EOF
-  ```
+```bash
+mkdir -p "$HOME/.ssh"
+
+cat >> ~/.bash_profile << EOF
+
+# Allow ssh to use the version of python in path, not the system python
+# BEGIN SSH agent
+# from http://stackoverflow.com/questions/18880024/start-ssh-agent-on-login/18915067#18915067
+SSH_ENV="\$HOME/.ssh/environment"
+# Refresh the PATH per new session
+sed -i .bak '/^PATH/d' \${SSH_ENV}
+echo "PATH=\$PATH" >> \${SSH_ENV}
+
+function start_agent {
+    echo "Initialising new SSH agent..."
+    /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "\${SSH_ENV}"
+    echo succeeded
+    chmod 600 "\${SSH_ENV}"
+    source "\${SSH_ENV}" > /dev/null
+    /usr/bin/ssh-add;
+}
+
+# Source SSH settings, if applicable
+if [ -f "\${SSH_ENV}" ]; then
+    . "\${SSH_ENV}" > /dev/null
+    ps -ef | grep \${SSH_AGENT_PID} 2>/dev/null | grep ssh-agent$ > /dev/null || {
+        start_agent;
+    }
+else
+    start_agent;
+fi
+
+[ -f ~/.bashrc ] && source ~/.bashrc
+# END SSH agent
+EOF
+```
 
 Then bring `.bash_profile` into effect and allow ssh to use the version of python in path, not the system python.
 
