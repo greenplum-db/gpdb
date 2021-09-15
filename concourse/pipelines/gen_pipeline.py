@@ -81,11 +81,14 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
 def suggested_git_remote():
     """Try to guess the current git remote"""
     default_remote = "<https://github.com/<github-user>/gpdb>"
-
+    staging_remote = "git@github.com:pivotal/gp-gpdb-staging"
     remote = subprocess.check_output(["git", "ls-remote", "--get-url"]).decode('utf-8').rstrip()
 
     if "greenplum-db/gpdb" in remote:
         return default_remote
+
+    if "pivotal/gp-gpdb-staging" in remote:
+        return staging_remote
 
     if "git@" in remote:
         git_uri = remote.split('@')[1]
@@ -249,10 +252,10 @@ def print_fly_commands(args, git_remote, git_branch):
     pipeline_name = os.path.basename(args.output_filepath).rsplit('.', 1)[0]
 
     print(header(args))
-    if args.directed_release: 
+    if args.directed_release:
         print('NOTE: You can set the directed release pipeline with the following:\n')
         print(gen_pipeline(args, pipeline_name, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
-                           "https://github.com/greenplum-db/gpdb.git", git_branch))
+                           suggested_git_remote(), git_branch))
         return
 
     if args.pipeline_target == 'prod':

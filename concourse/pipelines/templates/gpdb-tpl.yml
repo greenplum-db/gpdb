@@ -567,6 +567,9 @@ resources:
   type: git
   source:
     branch: ((gpdb-git-branch))
+{% if directed_release %}
+    private_key: ((gpdb-staging-deploy-key))
+{% endif %}
     uri: ((gpdb-git-remote))
     ignore_paths:
     - gpdb-doc/*
