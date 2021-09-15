@@ -539,7 +539,8 @@ class GpAddMirrorsProgram:
                     raise UserAbortedException()
 
             update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.batch_size)
-            if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
+            if not mirrorBuilder.add_mirrors(gpEnv, gpArray):
+                logger.error("gpaddmirrors failed. Please check the output for more details.")
                 return 1
 
             logger.info("******************************************************************")

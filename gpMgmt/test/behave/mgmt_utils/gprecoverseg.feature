@@ -757,3 +757,85 @@ Feature: gprecoverseg tests
         And the tablespace is valid
         And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
         And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data
+
+    @concourse_cluster
+    Scenario: gprecoverseg does not create backout scripts if a segment recovery fails before the catalog is changed
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+         When user kills a "primary" process with the saved information
+          And user can start transactions
+         Then the saved "primary" segment is marked down in config
+
+         When all files in gpAdminLogs directory are deleted
+          And the user asynchronously sets up to end gprecoverseg process when "Recovery type" is printed in the logs
+          And the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of -15
+          And verify there are no gprecoverseg backout files
+          And the gprecoverseg lock directory is removed
+
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+         When the user runs "gprecoverseg -r -a"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: gprecoverseg can revert catalog changes after a failed segment recovery
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "newDirectoryFile" and all backout files are cleaned up
+         When user kills a "primary" process with the saved information
+          And user can start transactions
+         Then the saved "primary" segment is marked down in config
+
+         When a gprecoverseg input file "newDirectoryFile" is created with a different data directory for content 0
+          And all files in gpAdminLogs directory are deleted
+          And the user asynchronously sets up to end gprecoverseg process when "Generating configuration backout scripts" is printed in the logs
+          And the user runs "gprecoverseg -i /tmp/newDirectoryFile -a -v"
+         Then gprecoverseg should return a return code of -15
+          And gprecoverseg should print "Recovery Target instance directory   = /tmp/newdir" to stdout
+
+        Given a gprecoverseg backout file exists for content 0
+         When the gprecoverseg backout script is run
+         Then the primary for content 0 should have its original data directory in the system configuration
+          And the gp_configuration_history table should contain a backout entry for the primary segment for content 0
+          And the gprecoverseg lock directory is removed
+          And user can start transactions
+
+        # The backout script should revert the catalog, but still leave the segment down.  If we want
+        # to do a rebalance after a backout instead of after a normal recovery, a restart is recommended.
+        Given the user runs "gpstop -ra"
+          And gpstop should return a return code of 2
+
+         When the user runs "gprecoverseg -r -a"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: gprecoverseg cleans up backout scripts upon successful segment recovery
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "newDirectoryFile" and all backout files are cleaned up
+         When user kills a "primary" process with the saved information
+          And user can start transactions
+         Then the saved "primary" segment is marked down in config
+
+         When a gprecoverseg input file "newDirectoryFile" is created with a different data directory for content 0
+          And the user runs "gprecoverseg -i /tmp/newDirectoryFile -a -v"
+         Then gprecoverseg should return a return code of 0
+         Then gprecoverseg should print "Recovery Target instance directory   = /tmp/newdir" to stdout
+          And gprecoverseg should print "Removing backout directory, as backout scripts are not required after a successful recovery." to stdout
+          And the user runs "gprecoverseg -r -a"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+          And verify there are no gprecoverseg backout files
+

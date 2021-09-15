@@ -539,12 +539,12 @@ def impl(context, process_name, secs):
     run_async_command(context, command)
 
 
-@when('the user asynchronously sets up to end gpinitsystem process when {log_msg} is printed in the logs')
-def impl(context, log_msg):
+@when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in the logs')
+def impl(context, process_name, log_msg):
     command = "while sleep 0.1; " \
-              "do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; " \
-              "then ps ux | grep bin/gpinitsystem |awk '{print $2}' | xargs kill ;break 2; " \
-              "fi; done" % (log_msg)
+              "do if egrep --quiet %s  ~/gpAdminLogs/%s*log ; " \
+              "then ps ux | grep bin/%s |awk '{print $2}' | xargs kill ;break 2; " \
+              "fi; done" % (log_msg, process_name, process_name)
     run_async_command(context, command)
 
 
@@ -2497,6 +2497,7 @@ def impl(context, location):
         ])
 
 @given('all files in gpAdminLogs directory are deleted')
+@when('all files in gpAdminLogs directory are deleted')
 @then('all files in gpAdminLogs directory are deleted')
 def impl(context):
     log_dir = _get_gpAdminLogs_directory()

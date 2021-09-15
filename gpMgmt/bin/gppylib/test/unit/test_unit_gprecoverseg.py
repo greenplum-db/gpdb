@@ -84,6 +84,8 @@ class GpRecoversegTestCase(GpTestCase):
             patch('gppylib.commands.base.WorkerPool', return_value=self.pool),
             patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value={}),
             patch('gppylib.gplog.get_default_logger'),
+            patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.initialize_backout_directory'),
+            patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.remove_backout_directory'),
             patch.object(GpMirrorListToBuild, "__init__", return_value=None),
             patch.object(GpMirrorListToBuild, "buildMirrors"),
             patch.object(GpMirrorListToBuild, "getAdditionalWarnings"),
