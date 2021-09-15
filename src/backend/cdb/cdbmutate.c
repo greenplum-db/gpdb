@@ -76,13 +76,14 @@ typedef struct ApplyMotionState
 	int			nextMotionID;
 	int			sliceDepth;
 	bool		containMotionNodes;
-	HTAB	   *planid_subplans;
+	HTAB	   *planid_subplans; /* hash table for InitPlanItem */
 } ApplyMotionState;
-struct InitPlanItem
+
+typedef struct InitPlanItem
 {
-	int plan_id;
-	List *subplans;
-};
+	int plan_id; /* plan id of the init plan */
+	List *subplans; /* list of subplans that refer to the same init plan */
+} InitPlanItem;
 
 typedef struct
 {
@@ -387,10 +388,11 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	Plan	   *result;
 	ListCell   *cell;
 	GpPolicy   *targetPolicy = NULL;
-	struct InitPlanItem *item;
+	InitPlanItem *item;
 	GpPolicyType targetPolicyType = POLICYTYPE_ENTRY;
 	ApplyMotionState state;
 	HASHCTL ctl;
+	HASH_SEQ_STATUS status;
 	bool		needToAssignDirectDispatchContentIds = false;
 	bool		bringResultToDispatcher = false;
 	int			numsegments = getgpsegmentCount();
@@ -405,7 +407,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	state.containMotionNodes = false;
 	memset(&ctl, 0, sizeof(ctl));
 	ctl.keysize = sizeof(int);
-	ctl.entrysize = sizeof(struct InitPlanItem);
+	ctl.entrysize = sizeof(InitPlanItem);
 	ctl.hash = tag_hash;
 	state.planid_subplans = hash_create("plan_id to subplans", 8, &ctl,
 										 HASH_ELEM | HASH_FUNCTION);
@@ -686,9 +688,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	Assert(result->nMotionNodes == state.nextMotionID - 1);
 	Assert(result->nInitPlans == hash_get_num_entries(state.planid_subplans));
 
-	HASH_SEQ_STATUS status;
 	hash_seq_init(&status, state.planid_subplans);
-	while ((item = (struct InitPlanItem *) hash_seq_search(&status)) != NULL)
+	while ((item = (InitPlanItem *) hash_seq_search(&status)) != NULL)
 	{
 		int plan_id = item->plan_id;
 		int sliceId = state.nextMotionID++;
@@ -702,6 +703,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 			subplan->qDispSliceId = sliceId;
 		}
 	}
+	hash_destroy(state.planid_subplans);
 
 	/*
 	 * Discard subtrees of Query node that aren't needed for execution. Note
@@ -820,7 +822,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 		 */
 		foreach(cell, plan->initPlan)
 		{
-			struct InitPlanItem *item;
+			InitPlanItem *item;
 			bool found;
 			subplan = (SubPlan *) lfirst(cell);
 			Assert(IsA(subplan, SubPlan));

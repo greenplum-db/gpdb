@@ -4756,7 +4756,11 @@ typedef struct
 {
 	plan_tree_base_prefix prefix;
 	EState	   *estate;
-	Bitmapset *unique_init_plans;
+	/*
+	 * record the visited subplans that refer to an init plan,
+	 * to avoid re-visit the motion that is under an init plan.
+	 */
+	Bitmapset *unique_init_plans; 
 	int			currentSliceId;
 } FillSliceTable_cxt;
 
