@@ -19,7 +19,7 @@
 from gppylib.mainUtils import *
 
 from optparse import OptionGroup
-import os, sys, signal, time
+import glob, os, sys, signal, shutil, time
 from contextlib import closing
 
 from gppylib import gparray, gplog, userinput, utils
@@ -351,6 +351,8 @@ class GpRecoverSegmentProgram:
                 sys.exit(1)
 
             self.trigger_fts_probe(port=gpEnv.getCoordinatorPort())
+
+            mirrorBuilder.remove_backout_directory()
 
             self.logger.info("********************************")
             self.logger.info("Segments successfully recovered.")

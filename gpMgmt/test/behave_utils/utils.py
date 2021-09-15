@@ -656,6 +656,16 @@ def are_segments_running():
     return result
 
 
+def is_segment_running(role, contentid):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+    for seg in segments:
+        if seg.getSegmentRole() == role and seg.content == contentid and seg.status != 'u':
+            print("segment is not up - %s" % seg)
+            return False
+    return True
+
+
 def modify_sql_file(file, hostport):
     if os.path.isfile(file):
         for line in fileinput.FileInput(file, inplace=1):

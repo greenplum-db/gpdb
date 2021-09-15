@@ -1,5 +1,6 @@
 import datetime
 import os
+import os.path
 import pipes
 import signal
 import time
@@ -53,7 +54,6 @@ gDatabaseFiles = [
     "postmaster.opts",
     "postmaster.pid",
 ]
-
 
 #
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
@@ -141,6 +141,7 @@ class GpMirrorListToBuild:
             raise Exception('logger argument cannot be None')
 
         self.__logger = logger
+        self.__backout_directory = None
 
     class ProgressCommand(gp.Command):
         """
@@ -178,6 +179,23 @@ class GpMirrorListToBuild:
             self.progressFile = '%s/pg_rewind.%s.dbid%s.out' % (gplog.get_logger_dir(),
                                                                 timeStamp,
                                                                 targetSegment.getSegmentDbId())
+
+    def initialize_backout_directory(self, coordinator_data_dir):
+        backout_timestamp = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
+        self.__backout_directory = "%s/gprecoverseg_%s_backout" % (gplog.get_logger_dir(), backout_timestamp)
+        os.mkdir(self.__backout_directory, mode=0o700)
+        self.__logger.debug("Created backout directory %s" % self.__backout_directory)
+
+    def get_backout_directory(self):
+        return self.__backout_directory
+
+    def get_backout_script_path(self):
+        return "%s/revert_gprecoverseg_catalog_changes.sh" % self.__backout_directory
+
+    def remove_backout_directory(self):
+        self.__logger.debug("Removing backout directory, as backout scripts are not required after a successful recovery.")
+        if self.__backout_directory and os.path.exists(self.__backout_directory):
+            shutil.rmtree(self.__backout_directory)
 
     def _cleanup_before_recovery(self, gpEnv):
         self._stop_failed_segments(gpEnv)
@@ -248,8 +266,6 @@ class GpMirrorListToBuild:
 
         self._validate_gparray(gpArray)
 
-        self._run_recovery()
-
         # should use mainUtils.getProgramName but I can't make it work!
         programName = os.path.split(sys.argv[0])[-1]
 
@@ -257,13 +273,18 @@ class GpMirrorListToBuild:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
             self.__logger.info("Updating configuration with new mirrors")
-            configInterface.getConfigurationProvider().updateSystemConfig(
+            backout_map = configInterface.getConfigurationProvider().updateSystemConfig(
                 gpArray,
                 "%s: segment config for resync" % programName,
                 dbIdToForceMirrorRemoveAdd=self.full_recovery_dbids,
                 useUtilityMode=False,
                 allowPrimary=False
             )
+
+            self.__logger.debug("Generating configuration backout scripts")
+            self.create_backout_scripts(backout_map, gpEnv)
+
+            self._run_recovery()
 
             self.__logger.info("Starting mirrors")
             start_all_successful = self.__startAll(gpEnv, gpArray, self.mirrorsToStart)
@@ -272,6 +293,44 @@ class GpMirrorListToBuild:
             signal.signal(signal.SIGINT, signal.default_int_handler)
 
         return start_all_successful
+
+    def create_backout_scripts(self, backout_map, gpEnv):
+        if len(backout_map) == 0:
+            return
+
+        self.initialize_backout_directory(gpEnv.getCoordinatorDataDir())
+        # Create one script for each segment dbid, so they can be individually removed if that segment succeeds
+        for dbid in backout_map:
+            script_path = "%s/backout_%d.sql" % (self.__backout_directory, dbid)
+            with open(script_path, "w") as fp:
+                fp.write("BEGIN;\n")
+                fp.write("SET allow_system_table_mods=true;\n")
+                for statement in backout_map[dbid]:
+                    fp.write("%s;\n" % statement)
+                fp.write("END;\n")
+
+        # Create a coordinator script that will execute all of the other scripts
+        # We don't clean up the scripts after execution, as that is left to the user
+        # TODO: When gprecoverseg is modified to let segments succeed or fail individually,
+        #       add logic to remove scrips for successful recoveries so that this script
+        #       doesn't revert those as well.
+        backout_script_glob = "%s/backout_*.sql" % self.__backout_directory
+        with open(self.get_backout_script_path(), "w") as fp:
+            fp.write("""#!/bin/bash
+set -e
+for file in {files}; do
+    PGOPTIONS="-c gp_role=utility" psql -d template1 -f "$file"
+done""".format(files=backout_script_glob))
+
+    def remove_postmaster_pid_from_remotehost(self, host, datadir):
+        cmd = base.Command(name = 'remove the postmaster.pid file',
+                           cmdStr = 'rm -f %s/postmaster.pid' % datadir,
+                           ctxt=gp.REMOTE, remoteHost = host)
+        cmd.run()
+
+        return_code = cmd.get_return_code()
+        if return_code != 0:
+            raise ExecutionError("Failed while trying to remove postmaster.pid.", cmd)
 
     def checkForPortAndDirectoryConflicts(self, gpArray):
         """

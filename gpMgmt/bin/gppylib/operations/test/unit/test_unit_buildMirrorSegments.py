@@ -55,6 +55,7 @@ class BuildMirrorsTestCase(GpTestCase):
         buildMirrorSegs_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
         buildMirrorSegs_obj._get_running_postgres_segments = Mock()
         configurationInterface.getConfigurationProvider = Mock()
+        configurationInterface.getConfigurationProvider.return_value.updateSystemConfig.return_value = {} # mock backout_map
 
     def _common_asserts_with_stop_and_logger(self, buildMirrorSegs_obj, expected_logger_msg, expected_segs_to_stop,
                                              expected_segs_to_start, expected_segs_to_markdown, expected_segs_to_update,
