@@ -70,6 +70,16 @@ typedef struct sequence_magic
 	uint32		magic;
 } sequence_magic;
 
+typedef struct SeqTableKey
+{
+	Oid relid;						/* pg_class OID of this sequence */
+	bool called_from_dispatcher;	/* sequence called from dispatcher */
+}
+#if defined(pg_attribute_packed)
+			pg_attribute_packed()
+#endif
+SeqTableKey;
+
 /*
  * We store a SeqTable item for every sequence we have touched in the current
  * session.  This is needed to hold onto nextval/currval state.  (We can't
@@ -78,7 +88,7 @@ typedef struct sequence_magic
  */
 typedef struct SeqTableData
 {
-	Oid			relid;			/* pg_class OID of this sequence (hash key) */
+	SeqTableKey	key;			/* sequence data hash key */
 	Oid			filenode;		/* last seen relfilenode of this sequence */
 	LocalTransactionId lxid;	/* xact in which we last did a seq op */
 	bool		last_valid;		/* do we have a valid "last" value? */
@@ -92,16 +102,6 @@ typedef struct SeqTableData
 typedef SeqTableData *SeqTable;
 
 static HTAB *seqhashtab = NULL; /* hash table for SeqTable items */
-
-typedef struct SeqTableKey
-{
-	Oid relid;
-	bool called_from_dispatcher;
-}
-#if defined(pg_attribute_packed)
-			pg_attribute_packed()
-#endif
-SeqTableKey;
 
 /*
  * last_used_seq is updated by nextval() to point to the last used
@@ -651,7 +651,7 @@ nextval_internal(Oid relid, bool called_from_dispatcher)
 	/* open and AccessShareLock sequence */
 	init_sequence_internal(relid, &elm, &seqrel, called_from_dispatcher);
 
-	if (pg_class_aclcheck(elm->relid, GetUserId(), ACL_UPDATE) != ACLCHECK_OK)
+	if (pg_class_aclcheck(elm->key.relid, GetUserId(), ACL_UPDATE) != ACLCHECK_OK)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied for sequence %s",
@@ -898,8 +898,8 @@ currval_oid(PG_FUNCTION_ARGS)
 	/* open and AccessShareLock sequence */
 	init_sequence(relid, &elm, &seqrel);
 
-	if (pg_class_aclcheck(elm->relid, GetUserId(), ACL_SELECT) != ACLCHECK_OK &&
-		pg_class_aclcheck(elm->relid, GetUserId(), ACL_USAGE) != ACLCHECK_OK)
+	if (pg_class_aclcheck(elm->key.relid, GetUserId(), ACL_SELECT) != ACLCHECK_OK &&
+		pg_class_aclcheck(elm->key.relid, GetUserId(), ACL_USAGE) != ACLCHECK_OK)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied for sequence %s",
@@ -938,7 +938,7 @@ lastval(PG_FUNCTION_ARGS)
 				 errmsg("lastval is not yet defined in this session")));
 
 	/* Someone may have dropped the sequence since the last nextval() */
-	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(last_used_seq->relid)))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(last_used_seq->key.relid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("lastval is not yet defined in this session")));
@@ -948,8 +948,8 @@ lastval(PG_FUNCTION_ARGS)
 	/* nextval() must have already been called for this sequence */
 	Assert(last_used_seq->last_valid);
 
-	if (pg_class_aclcheck(last_used_seq->relid, GetUserId(), ACL_SELECT) != ACLCHECK_OK &&
-		pg_class_aclcheck(last_used_seq->relid, GetUserId(), ACL_USAGE) != ACLCHECK_OK)
+	if (pg_class_aclcheck(last_used_seq->key.relid, GetUserId(), ACL_SELECT) != ACLCHECK_OK &&
+		pg_class_aclcheck(last_used_seq->key.relid, GetUserId(), ACL_USAGE) != ACLCHECK_OK)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied for sequence %s",
@@ -993,7 +993,7 @@ do_setval(Oid relid, int64 next, bool iscalled)
 	/* open and AccessShareLock sequence */
 	init_sequence(relid, &elm, &seqrel);
 
-	if (pg_class_aclcheck(elm->relid, GetUserId(), ACL_UPDATE) != ACLCHECK_OK)
+	if (pg_class_aclcheck(elm->key.relid, GetUserId(), ACL_UPDATE) != ACLCHECK_OK)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied for sequence %s",
@@ -1130,7 +1130,7 @@ open_share_lock(SeqTable seq)
 		PG_TRY();
 		{
 			CurrentResourceOwner = TopTransactionResourceOwner;
-			LockRelationOid(seq->relid, AccessShareLock);
+			LockRelationOid(seq->key.relid, AccessShareLock);
 		}
 		PG_CATCH();
 		{
@@ -1146,7 +1146,7 @@ open_share_lock(SeqTable seq)
 	}
 
 	/* We now know we have AccessShareLock, and can safely open the rel */
-	return relation_open(seq->relid, NoLock);
+	return relation_open(seq->key.relid, NoLock);
 }
 
 /*
