@@ -4958,10 +4958,10 @@ FillSliceTable_walker(Node *node, void *context)
 
 		if (subplan->is_initplan)
 		{
-      /* do not re-visit the init plan */
+			/* do not re-visit the init plan */
 			if (bms_is_member(subplan->plan_id, unique_init_plans))
 				return false;
-			bms_add_member(unique_init_plans, subplan->plan_id);
+			cxt->unique_init_plans = bms_add_member(unique_init_plans, subplan->plan_id);
 			cxt->currentSliceId = subplan->qDispSliceId;
 			result = plan_tree_walker(node, FillSliceTable_walker, cxt);
 			cxt->currentSliceId = parentSliceIndex;
@@ -4992,9 +4992,8 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 
 	cxt.prefix.node = (Node *) stmt;
 	cxt.estate = estate;
-	cxt.unique_init_plans = bms_make_singleton(0);
+	cxt.unique_init_plans = NULL;
 	cxt.currentSliceId = 0;
-	bms_del_member(cxt.unique_init_plans, 0);
 
 	if (stmt->intoClause != NULL || stmt->copyIntoClause != NULL || stmt->refreshClause)
 	{

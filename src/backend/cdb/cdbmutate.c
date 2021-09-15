@@ -756,6 +756,11 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 			bool		saveContainMotionNodes = context->containMotionNodes;
 			int			saveSliceDepth = context->sliceDepth;
 			SubPlan		*subplan = (SubPlan *) node;
+			/*
+			 * If the init-plan refered by `subplan` has been visited, we should
+			 * not re-visit the subplan, or the motions under the init-plan are
+			 * re-counted.
+			 */
 			hash_search(context->planid_subplans, &subplan->plan_id,
 						HASH_FIND, &found);
 			if (found)
@@ -806,18 +811,26 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 		ListCell   *cell;
 		SubPlan    *subplan;
 
+		/*
+		 * Collect all subplans that refer to an init-plan for later usage.
+		 * The subplans that refers to an init-plan update their `qDispSliceId`
+		 * in apply_motion().
+		 * Two or more subplans may refer to the same init-plan, so we group them
+		 * by the plan_id of the init-plan.
+		 */
 		foreach(cell, plan->initPlan)
 		{
+			struct InitPlanItem *item;
 			bool found;
 			subplan = (SubPlan *) lfirst(cell);
 			Assert(IsA(subplan, SubPlan));
 			Assert(root);
 			Assert(planner_subplan_get_plan(root, subplan));
 
-			struct InitPlanItem *item = hash_search(context->planid_subplans,
-												&subplan->plan_id,
-												HASH_ENTER,
-												&found);
+			item = hash_search(context->planid_subplans,
+										&subplan->plan_id,
+										HASH_ENTER,
+										&found);
 			if (!found)
 				item->subplans = NIL;
 			item->subplans = lappend(item->subplans, subplan);
