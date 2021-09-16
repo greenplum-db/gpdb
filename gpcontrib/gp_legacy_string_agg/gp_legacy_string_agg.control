@@ -1,0 +1,3 @@
+comment = 'Legacy one-argument string_agg implementation for Greenplum'
+default_version = '1.0.0'
+relocatable = true

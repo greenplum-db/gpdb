@@ -146,17 +146,16 @@ ALTER TABLE ctas_src DROP COLUMN col2;
 INSERT INTO ctas_src(col1, col3,col4,col5)
     SELECT g, 'a',True,g from generate_series(1,5) g;
 CREATE TABLE ctas_dst as SELECT col1,col3,col4,col5 FROM ctas_src order by 1;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col4' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 -- This will fail to find some of the rows, if they're distributed incorrectly.
 SELECT * FROM ctas_src, ctas_dst WHERE ctas_src.col1 = ctas_dst.col1;
  col1 | col3 | col4 | col5 | col1 | col3 | col4 | col5 
 ------+------+------+------+------+------+------+------
-    1 | a    | t    |    1 |    1 | a    | t    |    1
+    5 | a    | t    |    5 |    5 | a    | t    |    5
     2 | a    | t    |    2 |    2 | a    | t    |    2
     3 | a    | t    |    3 |    3 | a    | t    |    3
     4 | a    | t    |    4 |    4 | a    | t    |    4
-    5 | a    | t    |    5 |    5 | a    | t    |    5
+    1 | a    | t    |    1 |    1 | a    | t    |    1
 (5 rows)
 
 -- Github Issue 9365: https://github.com/greenplum-db/gpdb/issues/9365
@@ -203,8 +202,7 @@ CREATE TABLE ctas_base(a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE TABLE ctas_aocs WITH (appendonly=true, orientation=column) AS SELECT * FROM ctas_base WITH NO DATA;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT * FROM ctas_aocs;
  a | b 
 ---+---
@@ -303,3 +301,29 @@ from
 refresh materialized view sro_mv_issue_11999;
 ERROR:  division by zero
 CONTEXT:  SQL function "mv_action_select_issue_11999" statement 1
+-- Test CTAS + initplan, and an exception was raised in preprocess_initplans
+CREATE OR REPLACE FUNCTION public.exception_func()
+ RETURNS refcursor
+ LANGUAGE plpgsql
+AS $function$declare cname refcursor = 'result'; begin open cname for select 1; raise sqlstate '02000'; return cname; exception when sqlstate '02000' then  return cname; end;$function$;
+SELECT exception_func() INTO TEMPORARY test_tmp1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT * FROM test_tmp1;
+ exception_func 
+----------------
+ result
+(1 row)
+
+CREATE TEMPORARY TABLE test_tmp2 AS SELECT exception_func();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT * FROM test_tmp2;
+ exception_func 
+----------------
+ result
+(1 row)
+
+DROP FUNCTION public.exception_func();
+DROP TABLE test_tmp1;
+DROP TABLE test_tmp2;

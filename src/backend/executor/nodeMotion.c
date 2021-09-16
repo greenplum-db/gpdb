@@ -100,6 +100,14 @@ ExecMotion(PlanState *pstate)
 	MotionState *node = castNode(MotionState, pstate);
 	Motion	   *motion = (Motion *) node->ps.plan;
 
+	/*
+	 * Check for interrupts. Without this we've seen the scenario before that
+	 * it could be quite slow to cancel a query that selects all the tuples
+	 * from a big distributed table because the motion node on QD has no chance
+	 * of checking the cancel signal.
+	 */
+	CHECK_FOR_INTERRUPTS();
+
 	/* sanity check */
  	if (node->stopRequested)
  		ereport(ERROR,

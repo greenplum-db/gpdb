@@ -239,6 +239,20 @@ init_tuplestore_state(ShareInputScanState *node)
 				tuplestore_make_shared(ts,
 									   get_shareinput_fileset(),
 									   rwfile_prefix);
+#ifdef FAULT_INJECTOR
+				if (SIMPLE_FAULT_INJECTOR("sisc_xslice_temp_files") == FaultInjectorTypeSkip)
+				{
+					const char *filename = tuplestore_get_buffilename(ts);
+					if (!filename)
+						ereport(NOTICE, (errmsg("sisc_xslice: buffilename is null")));
+					else if (strstr(filename, "base/" PG_TEMP_FILES_DIR) == filename)
+						ereport(NOTICE, (errmsg("sisc_xslice: Use default tablespace")));
+					else if (strstr(filename, "pg_tblspc/") == filename)
+						ereport(NOTICE, (errmsg("sisc_xslice: Use temp tablespace")));
+					else
+						ereport(NOTICE, (errmsg("sisc_xslice: Unexpected prefix of the tablespace path")));
+				}
+#endif
 			}
 			else
 			{
@@ -454,7 +468,17 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	}
 
 	local_state = list_nth(estate->es_sharenode, node->share_id);
-	local_state->nsharers++;
+
+	/*
+	 * To accumulate the number of CTE consumers executed in this slice.
+	 * This variable will be used by the last finishing CTE consumer
+	 * in current slice, to wake the corresponding CTE producer up for
+	 * cleaning the materialized tuplestore, during squelching.
+	 */
+	if (currentSliceId == node->this_slice_id &&
+		currentSliceId != node->producer_slice_id)
+		local_state->nsharers++;
+
 	if (childState)
 		local_state->childState = childState;
 	sisstate->local_state = local_state;

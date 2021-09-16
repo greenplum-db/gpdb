@@ -2722,7 +2722,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4100,8 +4100,8 @@
           <codeph>WITH</codeph> clause of a <codeph>SELECT [INTO]</codeph> command, or a
           <codeph>DELETE</codeph>, <codeph>INSERT</codeph> or <codeph>UPDATE</codeph> command. The
         keyword allows a subquery in the <codeph>WITH</codeph> clause of a command to reference
-        itself. The default value is <codeph>false</codeph>, the <codeph>RECURSIVE</codeph> keyword
-        is not allowed in the <codeph>WITH</codeph> clause of a command.</p>
+        itself. The default value is <codeph>true</codeph>, the <codeph>RECURSIVE</codeph> keyword
+        is allowed in the <codeph>WITH</codeph> clause of a command.</p>
       <p>For information about the <codeph>RECURSIVE</codeph> keyword, see the <codeph><xref
             href="../sql_commands/SELECT.xml">SELECT</xref></codeph> command and <xref
           href="../../admin_guide/query/topics/CTE-query.xml"/>.</p>
@@ -9721,10 +9721,12 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
   <topic id="writable_external_table_bufsize">
     <title>writable_external_table_bufsize</title>
     <body>
-      <p>Size of the buffer (in KB) that Greenplum Database uses for network communication, such as
-        the <codeph>gpfdist</codeph> utility and external web tables (that use http). Greenplum
-        Database stores data in the buffer before writing the data out. For information about
-          <codeph>gpfdist</codeph>, see the <cite>Greenplum Database Utility Guide</cite>.</p>
+      <p>Size of the buffer that Greenplum Database uses for network communication, such as the
+          <codeph>gpfdist</codeph> utility and external web tables (that use http). Valid units are
+          <codeph>KB</codeph> (as in <codeph>128KB</codeph>), <codeph>MB</codeph>,
+          <codeph>GB</codeph>, and <codeph>TB</codeph>. Greenplum Database stores data in the buffer
+        before writing the data out. For information about <codeph>gpfdist</codeph>, see the
+          <cite>Greenplum Database Utility Guide</cite>.</p>
       <table id="table_writable_external_table_bufsize">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

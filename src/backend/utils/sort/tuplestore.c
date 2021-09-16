@@ -296,6 +296,12 @@ static void writetup_heap(Tuplestorestate *state, void *tup);
 static void *readtup_heap(Tuplestorestate *state, unsigned int len);
 
 
+char *
+tuplestore_get_buffilename(Tuplestorestate *state)
+{
+	return state->myfile ? pstrdup(BufFileGetFilename(state->myfile)) : NULL;
+}
+
 /*
  *		tuplestore_begin_xxx
  *

@@ -42,6 +42,8 @@ struct Instrumentation;                 /* #include "executor/instrument.h" */
  */
 typedef struct Tuplestorestate Tuplestorestate;
 
+extern char * tuplestore_get_buffilename(Tuplestorestate *state);
+
 /*
  * Currently we only need to store MinimalTuples, but it would be easy
  * to support the same behavior for IndexTuples and/or bare Datums.

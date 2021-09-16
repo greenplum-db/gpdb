@@ -1122,6 +1122,9 @@ pg_relation_filenode(PG_FUNCTION_ARGS)
 		case RELKIND_INDEX:
 		case RELKIND_SEQUENCE:
 		case RELKIND_TOASTVALUE:
+		case RELKIND_AOSEGMENTS:
+		case RELKIND_AOBLOCKDIR:
+		case RELKIND_AOVISIMAP:
 			/* okay, these have storage */
 			if (relform->relfilenode)
 				result = relform->relfilenode;

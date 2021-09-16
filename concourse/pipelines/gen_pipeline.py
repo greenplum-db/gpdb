@@ -302,7 +302,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos7'],
-        choices=['centos7', 'ubuntu18.04', 'win'],
+        choices=['centos7', 'rhel8' 'ubuntu18.04', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -417,7 +417,7 @@ def main():
         args.use_ICW_workers = True
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full' or args.directed_release:
-        args.os_types = ['centos6', 'centos7', 'ubuntu18.04', 'win']
+        args.os_types = ['centos6', 'centos7', 'rhel8', 'ubuntu18.04', 'win']
         args.test_sections = [
             'ICW',
             'Replication',

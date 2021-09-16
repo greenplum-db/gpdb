@@ -206,6 +206,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
 	bool		needDtx;
+	List 		*toplevelOidCache = NIL;
 
 	/* sanity checks: queryDesc must not be started already */
 	Assert(queryDesc != NULL);
@@ -581,11 +582,16 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 *
 			 * For details please see github issue https://github.com/greenplum-db/gpdb/issues/10760
 			 */
-			List *toplevelOidCache = NIL;
 			if (queryDesc->ddesc != NULL)
 			{
 				queryDesc->ddesc->sliceTable = estate->es_sliceTable;
-				toplevelOidCache = GetAssignedOidsForDispatch();
+				/*
+				 * For CTAS querys that contain initplan, we need to copy a new oid dispatch list,
+				 * since the preprocess_initplan will start a subtransaction, and if it's rollbacked,
+				 * the memory context of 'Oid dispatch context' will be reset, which will cause invalid
+				 * list reference during the serialization of dispatch_oids when dispatching plan.
+				 */
+				toplevelOidCache = copyObject(GetAssignedOidsForDispatch());
 			}
 
 			/*
@@ -640,6 +646,12 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				CdbDispatchPlan(queryDesc,
 								estate->es_param_exec_vals,
 								needDtx, true);
+			}
+
+			if (toplevelOidCache != NIL)
+			{
+				list_free(toplevelOidCache);
+				toplevelOidCache = NIL;
 			}
 		}
 
@@ -701,6 +713,11 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	}
 	PG_CATCH();
 	{
+		if (toplevelOidCache != NIL)
+		{
+			list_free(toplevelOidCache);
+			toplevelOidCache = NIL;
+		}
 		mppExecutorCleanup(queryDesc);
 		PG_RE_THROW();
 	}

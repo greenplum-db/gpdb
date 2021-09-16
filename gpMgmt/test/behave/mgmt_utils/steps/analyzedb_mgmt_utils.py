@@ -266,8 +266,10 @@ def impl(context, num_dirs, dbname):
 
 @given('the user waits {num_secs} seconds')
 @when('the user waits {num_secs} seconds')
+@then('the user waits {num_secs} seconds')
 @given('the user waits {num_secs} second')
 @when('the user waits {num_secs} second')
+@then('the user waits {num_secs} second')
 def impl(context, num_secs):
     time.sleep(int(num_secs))
 

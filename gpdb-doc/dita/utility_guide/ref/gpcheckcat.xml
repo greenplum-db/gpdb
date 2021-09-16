@@ -27,7 +27,7 @@
 
 <b>gpcheckcat</b>  <b>-l</b> 
 
-<b>gpcheckcat</b> <b>-?</b> 
+<b>gpcheckcat</b> <b>-? | --help</b> 
 </codeblock>
     </section>
     <section id="section3">
@@ -172,7 +172,7 @@
           <pd>The user connecting to Greenplum Database.</pd>
         </plentry>
         <plentry>
-          <pt>-? (help)</pt>
+          <pt>-? | --help</pt>
           <pd>Displays the online help.</pd>
         </plentry>
         <plentry>
