@@ -1148,6 +1148,9 @@ processResults(CdbDispatchResult *dispatchResult)
 			 * (ex: releasing all the locks, etc.), shouldn't attempt to call
 			 * nextval_qd() again.
 			 */
+
+			CHECK_FOR_INTERRUPTS();
+
 			int64 last;
 			int64 cached;
 			int64 increment;
