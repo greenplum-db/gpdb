@@ -409,8 +409,9 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	ctl.keysize = sizeof(int);
 	ctl.entrysize = sizeof(InitPlanItem);
 	ctl.hash = tag_hash;
+	ctl.hcxt = CurrentMemoryContext;
 	state.planid_subplans = hash_create("plan_id to subplans", 8, &ctl,
-										 HASH_ELEM | HASH_FUNCTION);
+										 HASH_ELEM | HASH_CONTEXT | HASH_FUNCTION);
 
 	Assert(is_plan_node((Node *) plan) && IsA(query, Query));
 
