@@ -488,7 +488,7 @@ smgrdounlink(SMgrRelation reln, bool isRedo)
 	 * xact.
 	 */
 	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-        smgrsw[which].smgr_unlink(rnode, InvalidForkNumber, isRedo);
+        smgrsw[which].smgr_unlink(rnode, forknum, isRedo);
 }
 
 /*
