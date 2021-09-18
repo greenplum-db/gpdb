@@ -916,6 +916,9 @@ gpdb::GetComparisonOperator(Oid left_oid, Oid right_oid, unsigned int cmpt)
 {
 	GP_WRAP_START;
 	{
+#ifdef FAULT_INJECTOR
+		SIMPLE_FAULT_INJECTOR("gpdbwrappers_get_comparison_operator");
+#endif
 		/* catalog tables: pg_amop */
 		return get_comparison_operator(left_oid, right_oid, (CmpType) cmpt);
 	}
