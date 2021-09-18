@@ -40,26 +40,29 @@ $query$ AS qry \gset
 -- "wrong result" scenario will not be covered.
 EXPLAIN (COSTS OFF)
 :qry ;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: ((bar.c = jazz.e) AND (foo.b = jazz.f))
-         ->  Hash Join
-               Hash Cond: (bar.c = foo.b)
-               ->  Seq Scan on bar
-               ->  Hash
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: foo.b
-                           ->  Append
+         Hash Cond: (bar.c = jazz.e)
+         ->  Sequence
+               ->  Shared Scan (share slice:id 2:0)
+                     ->  Materialize
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: foo.b
                                  ->  Seq Scan on foo
-                                 ->  Seq Scan on foo foo_1
+               ->  Hash Join
+                     Hash Cond: (bar.c = share0_ref2.b)
+                     ->  Seq Scan on bar
+                     ->  Hash
+                           ->  Append
+                                 ->  Shared Scan (share slice:id 2:0)
+                                 ->  Shared Scan (share slice:id 2:0)
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: jazz.f
-                     ->  Seq Scan on jazz
- Optimizer: Postgres query optimizer
-(17 rows)
+               ->  Seq Scan on jazz
+                     Filter: (e = f)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(20 rows)
 
 SET statement_timeout = '15s';
 :qry ;
