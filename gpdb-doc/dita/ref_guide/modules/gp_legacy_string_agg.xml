@@ -20,7 +20,7 @@
           for more information about registering the module.</ph></p>
       </body>
     </topic>
-    <topic id="topic_doc">
+    <topic id="topic_use">
       <title>Using the Module</title>
       <body>
         <p>The single-argument <codeph>string_agg()</codeph> function has the following
@@ -48,6 +48,18 @@ WARNING:  Deprecated call to string_agg(text), use string_agg(text, text) instea
 --------------
  ccccbbbb
 (1 row)</codeblock>
+      </body>
+    </topic>
+    <topic id="topic_migrate">
+      <title>Migrating to the Two-Argument string_agg() Function</title>
+      <body>
+        <p>Greenplum Database 6 includes a native, two-argument, text input
+          <codeph>string_agg()</codeph> function:</p>
+        <codeblock>string_agg( text, text )</codeblock>
+        <p>The following function invocation is equivalent to the single-argument
+          <codeph>string_agg()</codeph> function that is provided in this module:</p>
+        <codeblock>string_agg( text, '' )</codeblock>
+        <p>You can use this conversion when you are ready to migrate from this contrib module.</p>
       </body>
     </topic>
   </topic>
