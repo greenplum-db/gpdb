@@ -327,7 +327,7 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
         <li>After migrating data you may need to modify SQL scripts, administration scripts, and
           user-defined functions as necessary to account for changes in Greenplum Database version
           6. Review the <xref
-            href="https://gpdb.docs.pivotal.io/latest/relnotes/GPDB_600_README.html" format="html"
+            href="https://gpdb.docs.pivotal.io/6-0/relnotes/gpdb-60-release-notes.html#topic_vwq_bl5_y3b" format="html"
             scope="external">Tanzu Greenplum 6.0.0 Release Notes</xref> for features and changes
           that may necessitate post-migration tasks.</li>
         <li>To use the new Greenplum 6 default hash operator classes, use the command <codeph>ALTER
