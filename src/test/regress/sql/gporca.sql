@@ -3077,6 +3077,30 @@ select a in (
 reset optimizer_xform_bind_threshold;
 reset statement_timeout;
 
+-- an agg of a non-SRF with a nested SRF should be treated as a SRF, the
+-- optimizer must not eliminate the SRF or it can produce incorrect results
+set optimizer_trace_fallback = on;
+create table nested_srf(a text);
+insert into nested_srf values ('abc,def,ghi');
+
+select * from (select regexp_split_to_table((a)::text, ','::text) from nested_srf)a;
+select count(*) from (select regexp_split_to_table((a)::text, ','::text) from nested_srf)a;
+
+select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
+select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
+
+select count(*) from (select trim( case when a!='abc' then  (regexp_split_to_table((a)::text, ','::text)) else ' ' end) from nested_srf)a;
+select count(regexp_split_to_table((a)::text, ','::text)) from nested_srf;
+-- This produces wrong results on planner
+select count(*) from (select trim(coalesce(regexp_split_to_table((a)::text, ','::text),'')) from nested_srf)a;
+
+truncate nested_srf;
+insert into nested_srf values (NULL);
+
+select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
+select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
+
+reset optimizer_trace_fallback;
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
