@@ -311,7 +311,7 @@ char	   *gp_autostats_mode_string;
 int			gp_autostats_mode_in_functions;
 char	   *gp_autostats_mode_in_functions_string;
 int			gp_autostats_on_change_threshold = 100000;
-bool		gp_autostats_allow_nonowner = true;
+bool		gp_autostats_allow_nonowner = false;
 bool		log_autostats = true;
 
 /* --------------------------------------------------------------------------------------------------

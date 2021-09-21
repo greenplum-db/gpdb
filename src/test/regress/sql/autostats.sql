@@ -64,6 +64,7 @@ reset role;
 
 -- GUC should still be disabled, stats should update from 20 to 40
 insert into autostats_test select generate_series(21, 30);
+reset client_min_messages;
 select relname, reltuples from pg_class where relname='autostats_test';
 reset role;
 
@@ -72,3 +73,8 @@ select COUNT(*) from autostats_test;
 
 drop table if exists autostats_test;
 drop user autostats_nonowner;
+
+reset gp_autostats_mode;
+reset gp_autostats_on_change_threshold;
+reset log_autostats;
+reset gp_autostats_allow_nonowner;

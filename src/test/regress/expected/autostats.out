@@ -137,24 +137,25 @@ LOG:  statement: reset role;
 insert into autostats_test select generate_series(21, 30);
 LOG:  statement: insert into autostats_test select generate_series(21, 30);
 LOG:  In mode on_change, command INSERT on (dboid,tableoid)=(XXXXX,XXXXX) modifying 10 tuples caused Auto-ANALYZE.
+reset client_min_messages;
+LOG:  statement: reset client_min_messages;
 select relname, reltuples from pg_class where relname='autostats_test';
-LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
     relname     | reltuples 
 ----------------+-----------
  autostats_test |        40
 (1 row)
 
 reset role;
-LOG:  statement: reset role;
 -- After 4 successful inserts, final row count should also be 40
 select COUNT(*) from autostats_test;
-LOG:  statement: select COUNT(*) from autostats_test;
  count 
 -------
     40
 (1 row)
 
 drop table if exists autostats_test;
-LOG:  statement: drop table if exists autostats_test;
 drop user autostats_nonowner;
-LOG:  statement: drop user autostats_nonowner;
+reset gp_autostats_mode;
+reset gp_autostats_on_change_threshold;
+reset log_autostats;
+reset gp_autostats_allow_nonowner;
