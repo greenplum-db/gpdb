@@ -561,6 +561,7 @@ int			optimizer_array_expansion_threshold;
 int			optimizer_join_order_threshold;
 int			optimizer_join_order;
 int			optimizer_cte_inlining_bound;
+int			optimizer_xform_bind_threshold;
 bool		optimizer_force_multistage_agg;
 bool		optimizer_force_three_stage_scalar_dqa;
 bool		optimizer_force_expanded_distinct_aggs;
@@ -4729,6 +4730,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&optimizer_array_expansion_threshold,
 		100, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"optimizer_xform_bind_threshold", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Maximum number bindings per xform per group expression"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_xform_bind_threshold,
+		0, 0, INT_MAX, NULL, NULL
 	},
 
 	{
