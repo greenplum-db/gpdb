@@ -448,6 +448,18 @@ DECLARE c CURSOR FOR SELECT * FROM aocotest;
 DELETE FROM aocotest WHERE CURRENT OF c;
 ROLLBACK;
 
+-- Negative: cursor with limit/offset against ordinary table
+-- The issue: https://github.com/greenplum-db/gpdb/issues/9838
+CREATE TABLE tidscan_9838(id integer);
+INSERT INTO tidscan_9838 (id) VALUES (1), (2), (3);
+BEGIN;
+DECLARE c CURSOR FOR SELECT ctid, * FROM tidscan_9838 LIMIT 1;
+UPDATE tidscan_9838 SET id = -id WHERE CURRENT OF c;
+ROLLBACK;
+BEGIN;
+DECLARE c CURSOR FOR SELECT ctid, * FROM tidscan_9838 OFFSET 1;
+UPDATE tidscan_9838 SET id = -id WHERE CURRENT OF c;
+ROLLBACK;
 
 --
 -- PL/pgSQL cursors
