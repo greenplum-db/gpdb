@@ -176,7 +176,7 @@ class StartSegmentsOperation:
                                    self.__timeout,
                                    verbose=logging_is_verbose(),
                                    ctxt=base.REMOTE,
-                                   remoteHost=segments[0].getSegmentAddress(),
+                                   remoteHost=segments[0].getSegmentHostName(),
                                    pickledTransitionData=pickledTransitionData,
                                    specialMode=self.__specialMode,
                                    wrapper=self.__wrapper,

@@ -827,7 +827,7 @@ class SegmentTemplate:
         # Map primary and mirror hostnames to expanded segment's contentid
         m = defaultdict(lambda: [])
         for seg in self.gparray.getExpansionSegDbList():
-            m[seg.getSegmentContentId()].append(seg.getSegmentHostName())
+            m[seg.getSegmentContentId()].append(seg.getSegmentAddress())
 
         # Now update the primary's hba config with the corresponding primary
         # and mirror information
