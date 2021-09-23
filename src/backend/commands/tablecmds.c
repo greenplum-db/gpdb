@@ -476,6 +476,7 @@ static void RangeVarCallbackForAlterRelation(const RangeVar *rv, Oid relid,
 											 Oid oldrelid, void *arg);
 
 static void ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd);
+static void ATExecExpandPartitionTablePrepare(Relation rel);
 static void ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd);
 
 static void ATExecSetDistributedBy(Relation rel, Node *node,
@@ -4454,6 +4455,7 @@ AlterTableGetLockLevel(List *cmds)
 
 				/* GPDB additions */
 			case AT_ExpandTable:
+			case AT_ExpandPartitionTablePrepare:
 			case AT_SetDistributedBy:
 				cmd_lockmode = AccessExclusiveLock;
 				break;
@@ -4863,6 +4865,42 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 									RelationGetRelationName(rel)),
 							 errdetail("Root/leaf/interior partitions need to have same numsegments"),
 							 errhint("Call ALTER TABLE EXPAND TABLE on the root table instead")));
+				}
+			}
+
+			ATSimpleRecursion(wqueue, rel, cmd, recurse, lockmode);
+			pass = AT_PASS_MISC;
+			break;
+
+		case AT_ExpandPartitionTablePrepare:
+			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
+
+			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
+			if (!recursing)
+			{
+				if (Gp_role == GP_ROLE_DISPATCH &&
+					rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
+					ereport(ERROR,
+							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							 errmsg("cannot expand partition table prepare \"%s\"",
+									RelationGetRelationName(rel)),
+							 errdetail("table has already been expanded partiton prepare")));
+				if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE || rel->rd_rel->relispartition)
+				{
+					ereport(ERROR,
+							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							 errmsg("cannot expand partition table prepare \"%s\"",
+									RelationGetRelationName(rel)),
+							 errdetail("only root partition can be expanded partition prepare")));
+				}
+
+				if (!GpPolicyIsPartitioned(rel->rd_cdbpolicy))
+				{
+					ereport(ERROR,
+							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							 errmsg("cannot expand partition table prepare \"%s\"",
+									RelationGetRelationName(rel)),
+							 errdetail("only hash/randomly table can be expanded partition prepare")));
 				}
 			}
 
@@ -5297,6 +5335,9 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			break;
 		case AT_ExpandTable:	/* EXPAND TABLE */
 			ATExecExpandTable(wqueue, rel, cmd);
+			break;
+		case AT_ExpandPartitionTablePrepare:	/* EXPAND PARTITION PREPARE */
+			ATExecExpandPartitionTablePrepare(rel);
 			break;
 		case AT_AttachPartition:
 			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
@@ -16289,6 +16330,51 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
 	/* Update numsegments to cluster size */
 	newPolicy->numsegments = getgpsegmentCount();
 	GpPolicyReplace(relid, newPolicy);
+}
+
+/*
+ * ALTER TABLE xxx EXPAND PARTITION PREPARE
+ * 
+ * Update a partition table's "numsegments" value to current cluster size,
+ * change policy type of leaf partitions to randomly,
+ * the policy type of root and interior partitions are the same as before.
+ * 
+ * after we expand partition prepare from 2 segments to 3 segments, 
+ * possible distribution policies of partition table:
+ * a) original policy type is randomly:
+ *    new policy type of all root/interior/leaf partitions are randomly on 3 segments
+ * b) original policy type is hashed:
+ *    new policy type of root/interior partitions are hashed on 3 segments
+ *    and new policy type of leaf partitions are randomly on 3 segments
+ * 
+ * @param rel the parent or child of partition table
+ */
+static void
+ATExecExpandPartitionTablePrepare(Relation rel)
+{
+	GpPolicy *root_dist = GpPolicyCopy(rel->rd_cdbpolicy);
+
+	/* get current cluster size */
+	int new_numsegments = getgpsegmentCount();
+
+	/* change numsegments of policy to current cluster size */
+	root_dist->numsegments = new_numsegments;
+
+	if (GpPolicyIsRandomPartitioned(root_dist)|| rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	{
+		/* we only change numsegments for root/interior/leaf partitions distributed randomly
+		 * and root/interior partitions distributed by hash
+		 */
+		GpPolicyReplace(rel->rd_id, root_dist);
+		rel->rd_cdbpolicy = root_dist;
+	}
+	else
+	{
+		/* we change policy type to randomly for leaf partitions distributed by hash */
+		GpPolicy *random_dist = createRandomPartitionedPolicy(new_numsegments);
+		GpPolicyReplace(rel->rd_id, random_dist);
+		rel->rd_cdbpolicy = random_dist;
+	}
 }
 
 static void
