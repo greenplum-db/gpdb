@@ -60,20 +60,10 @@
               <ul id="ul_fm3_v14_1rb">
                 <li>Whether any segments are down.</li>
                 <li>Whether any primary-mirror segment pairs are out of sync – including information
-                  on how many bytes are remaining to sync (as displayed in the <codeph>Bytes
-                    remaining to send to mirror</codeph> output field). <note><codeph>gpstate -e
-                    </codeph>will not display segment pairs that are in sync.</note></li>
-                <li>Whether any primary-mirror segment pairs are not in their preferred roles. When
-                  there is no connection between a primary segment and its mirror, <codeph>gpstate
-                    -e</codeph> displays <codeph>Unknown</codeph> in the following fields: <ul
-                    id="ul_ehm_z14_1rb">
-                    <li><codeph>Bytes remaining to send to mirror</codeph></li>
-                    <li><codeph>WAL Sent Location</codeph></li>
-                    <li><codeph>WAL Flush Location</codeph></li>
-                    <li><codeph>WAL Replay Location</codeph></li>
-                    <li><codeph>Bytes received but remain to flush</codeph></li>
-                    <li><codeph>Bytes received but remain to replay</codeph></li>
-                  </ul></li>
+                  on how many bytes are remaining to sync (as displayed in the <codeph>WAL sync
+                    remaining bytes</codeph> output field). <note><codeph>gpstate -e </codeph>will
+                    not display segment pairs that are in sync.</note></li>
+                <li>Whether any primary-mirror segment pairs are not in their preferred roles.</li>
               </ul>
             </p>
           </pd>
@@ -113,7 +103,7 @@
         </plentry>
         <plentry>
           <pt>-s (detailed status)</pt>
-          <pd>Optional. Displays detailed status information for the Greenplum Database system.</pd>
+          <pd>Optional. Displays detailed status information about segments. </pd>
         </plentry>
         <plentry>
           <pt>-v (verbose output)</pt>
@@ -131,10 +121,8 @@
         </plentry>
       </parml>
     </section>
-    <section id="section5">
-      <title>Output Field Definitions</title>
-      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for the coordinator:</p>
-      <table id="md138854">
+    <section id="section5"><title>Output Field Definitions</title><p>The following output fields are
+        reported by <codeph>gpstate -s</codeph> for the coordinator:</p><table id="md138854">
         <title>gpstate output data for the coordinator</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="166pt"/>
@@ -160,8 +148,8 @@
             </row>
             <row>
               <entry colname="col1">Coordinator port</entry>
-              <entry colname="col2">port of the coordinator <codeph>postgres</codeph> database listener
-                process</entry>
+              <entry colname="col2">port of the coordinator <codeph>postgres</codeph> database
+                listener process</entry>
             </row>
             <row>
               <entry colname="col1">Coordinator current role</entry>
@@ -169,16 +157,14 @@
                 </p></entry>
             </row>
             <row>
-              <entry colname="col1">Greenplum array configuration
-                type</entry>
+              <entry colname="col1">Greenplum array configuration type</entry>
               <entry colname="col2">Standard = one NIC per host <p>Multi-Home = multiple NICs per
                   host</p></entry>
             </row>
             <row>
-              <entry colname="col1">Greenplum initsystem
-                version</entry>
-              <entry colname="col2">version of Greenplum Database when system was
-                first initialized</entry>
+              <entry colname="col1">Greenplum initsystem version</entry>
+              <entry colname="col2">version of Greenplum Database when system was first
+                initialized</entry>
             </row>
             <row>
               <entry colname="col1">Greenplum current version</entry>
@@ -186,8 +172,8 @@
             </row>
             <row>
               <entry colname="col1">Postgres version</entry>
-              <entry colname="col2">version of PostgreSQL that Greenplum Database is
-                based on</entry>
+              <entry colname="col2">version of PostgreSQL that Greenplum Database is based
+                on</entry>
             </row>
             <row>
               <entry colname="col1">Greenplum mirroring status</entry>
@@ -203,10 +189,8 @@
             </row>
           </tbody>
         </tgroup>
-      </table>
-      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for each primary
-        segment:</p>
-      <table id="md138181">
+      </table><p>The following output fields are reported by <codeph>gpstate -s</codeph> for each
+        primary segment:</p><table id="md138181">
         <title>gpstate output data for primary segments</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="165pt"/>
@@ -249,8 +233,8 @@
               <entry colname="col1">Mirror Status</entry>
               <entry colname="col2">status of a primary/mirror segment
                     pair:<p><varname>Synchronized</varname> = data is up to date on both
-                    </p><p><varname>Not in Sync</varname> = the mirror segment has not caught up to the primary segment
-                    </p></entry>
+                    </p><p><varname>Not in Sync</varname> = the mirror segment has not caught up to
+                  the primary segment </p></entry>
             </row>
             <row>
               <entry colname="col1">Current write location</entry>
@@ -279,10 +263,8 @@
             </row>
           </tbody>
         </tgroup>
-      </table>
-      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for each mirror
-        segment:</p>
-      <table id="table_vx4_syn_1rb">
+      </table><p>The following output fields are reported by <codeph>gpstate -s</codeph> for each
+        mirror segment:</p><table id="table_vx4_syn_1rb">
         <title>gpstate output data for miror segments</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="165pt"/>
@@ -339,8 +321,8 @@
                 data to disk</entry>
             </row>
             <row>
-                <entry colname="col1">WAL Replay Location</entry>
-                <entry colname="col2">Log location up to which the mirror segment has replayed logs
+              <entry colname="col1">WAL Replay Location</entry>
+              <entry colname="col2">Log location up to which the mirror segment has replayed logs
                 locally</entry>
             </row>
             <row>
@@ -371,10 +353,17 @@
             </row>
           </tbody>
         </tgroup>
-      </table>
-      <p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby coordinator
-        replication status:</p>
-      <table id="table_vt5_rvm_ht">
+      </table>When there is no connection between a primary segment and its mirror, <codeph>gpstate
+        -s</codeph> displays <codeph>Unknown</codeph> in the following fields: <ul
+        id="ul_ehm_z14_1rb">
+        <li><codeph>Bytes remaining to send to mirror</codeph></li>
+        <li><codeph>WAL Sent Location</codeph></li>
+        <li><codeph>WAL Flush Location</codeph></li>
+        <li><codeph>WAL Replay Location</codeph></li>
+        <li><codeph>Bytes received but remain to flush</codeph></li>
+        <li><codeph>Bytes received but remain to replay</codeph></li>
+      </ul><p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby
+        coordinator replication status:</p><table id="table_vt5_rvm_ht">
         <title>gpstate output data for coordinator replication</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="165pt"/>
@@ -397,8 +386,8 @@
             </row>
             <row>
               <entry colname="col1">Standby port</entry>
-              <entry colname="col2">port of the standby coordinator <codeph>postgres</codeph> database
-                listener process</entry>
+              <entry colname="col2">port of the standby coordinator <codeph>postgres</codeph>
+                database listener process</entry>
             </row>
             <row>
               <entry colname="col1">Standby PID</entry>
@@ -410,7 +399,6 @@
                   passive</varname>
               </entry>
             </row>
-
             <row>
               <entry colname="col1">WAL Sender State</entry>
               <entry colname="col2">write-ahead log (WAL) streaming state:
@@ -420,7 +408,8 @@
             </row>
             <row>
               <entry colname="col1">Sync state</entry>
-              <entry colname="col2">WAL sender synchronization state: <varname>sync</varname></entry>
+              <entry colname="col2">WAL sender synchronization state:
+                <varname>sync</varname></entry>
             </row>
             <row>
               <entry colname="col1">Sent Location</entry>
@@ -436,8 +425,7 @@
             </row>
           </tbody>
         </tgroup>
-      </table>
-    </section>
+      </table></section>
     <section id="section6">
       <title>Examples</title>
       <p>Show detailed status information of a Greenplum Database system:</p>
