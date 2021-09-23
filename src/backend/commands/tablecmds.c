@@ -4807,16 +4807,30 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					ldistro->numsegments = rel->rd_cdbpolicy->numsegments;
 
 					policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
+					/* can't set the distribution policy of interior table */
+					if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && rel->rd_rel->relispartition)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+								errmsg("can't set the distribution policy of \"%s\"",
+									   RelationGetRelationName(rel)),
+								errhint("Distribution policy can not be set for an interior branch.")));
+					}
 					if (!GpPolicyEqual(policy, rel->rd_cdbpolicy))
 					{
-						/* Reject interior branches of partitioned tables. */
+						/* Reject leaf of partitioned tables if new policy is different of parent table*/
 						if (rel->rd_rel->relispartition)
 						{
-							ereport(ERROR,
+							/* We can only set policy of child table to the same with parent table */
+							Oid parent_oid = get_partition_parent(RelationGetRelid(rel));
+							/* Use AccessShareLock to allow set distributed in parallel */
+							Relation parent_rel = relation_open(parent_oid, AccessShareLock);
+							if (!GpPolicyEqual(policy, parent_rel->rd_cdbpolicy))
+								ereport(ERROR,
 									(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 									 errmsg("can't set the distribution policy of \"%s\"",
 											RelationGetRelationName(rel)),
-									 errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
+									 errhint("Distribution policy of a partition can only be the same as its parent's.")));
 						}
 
 						if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE &&
@@ -4832,7 +4846,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 							{
 								ereport(ERROR,
 										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-										 errmsg("can't set the distribution policy of ONLY \"%s\"",
+										 errmsg("can't set the distribution policy of \"%s\" ONLY",
 												RelationGetRelationName(rel)),
 										 errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
 							}
