@@ -1656,7 +1656,7 @@ WHERE
         """)
         for row in cursor:
             prepare_cmd = """
-                ALTER TABLE %s EXPAND TABLE PREPARE;
+                ALTER TABLE %s EXPAND PARTITION PREPARE;
             """ % (row.relname)
             self.logger.debug(prepare_cmd)
             dbconn.execSQL(table_conn, prepare_cmd, autocommit=False)
