@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_vzy_mkx_bpb">
+<topic id="topic1">
   <title>gpmt</title>
   <body>
     <p> GPMT (Greenplum Magic Tool) provides a set of diagnostic utilities to troubleshoot and

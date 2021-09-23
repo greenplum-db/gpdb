@@ -91,21 +91,22 @@
           <p>
             <xref href="gpload.xml#topic1" type="topic" format="dita"/>
           </p>
-        </stentry>
-        <stentry>
           <p>
             <xref href="gplogfilter.xml#topic1" type="topic" format="dita"/>
           </p>
+        </stentry>
+        <stentry>
           <p>
             <xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/>
           </p>
-        </stentry>
-        <stentry>
           <p>
             <xref href="gpmfr.xml#topic1" type="topic" format="dita"/>
           </p>
           <p>
             <xref href="gpmovemirrors.xml#topic1"/>
+          </p>
+          <p otherprops="pivotal">
+            <xref href="gpmt.xml#topic1" type="topic" format="dita"/>
           </p>
           <p>
             <xref href="gpperfmon_install.xml#topic1"/>

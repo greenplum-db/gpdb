@@ -194,7 +194,7 @@ con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out
                     or system failures.</p>
                 <p>The <codeph>gpmt</codeph> utility command is available in the
                         <codeph>bin</codeph> directory of your Greenplum Database installation. See
-                        <xref href="../utility_guide/ref/gpmt.xml"/> for usage information.</p>
+                        <xref href="../utility_guide/admin_utilities/gpmt.xml"/> for usage information.</p>
             </body>
         </topic>
     </topic>
