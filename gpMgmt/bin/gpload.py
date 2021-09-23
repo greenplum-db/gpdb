@@ -1850,15 +1850,12 @@ class gpload:
                 self.setup_connection(recurse)
             elif errorMessage.find("Connection timed out") != -1 and self.options.max_retries != 0:
                 recurse += 1
-                if self.options.max_retries > 0:
-                    if recurse > self.options.max_retries: # retry failed
-                        self.log(self.ERROR, "could not connect to database after retry %d times, " \
-                            "error message:\n %s" % (recurse-1, errorMessage))
-                    else:
-                        self.log(self.INFO, "retry to connect to database, %d of %d times" % (recurse,
-                            self.options.max_retries))
+                if self.options.max_retries > 0 and recurse > self.options.max_retries: # retry failed
+                    self.log(self.ERROR, "could not connect to database after retry %d times, " \
+                         "error message:\n %s" % (recurse-1, errorMessage))
                 else: # max_retries < 0, retry forever
-                    self.log(self.INFO, "retry to connect to database.")
+                    self.log(self.INFO, "retry to connect to database, %d of %d times" % (recurse,
+                        self.options.max_retries))
                 self.setup_connection(recurse)
             else:
                 self.log(self.ERROR, "could not connect to database: %s. Is " \
