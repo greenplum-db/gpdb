@@ -75,6 +75,7 @@
             <topicref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction_threshold"/>
+            <topicref href="guc-list.xml#gp_autostats_allow_nonowner"/>
             <topicref href="guc-list.xml#gp_autostats_mode"/>
             <topicref href="guc-list.xml#gp_autostats_mode_in_functions"/>
             <topicref href="guc-list.xml#gp_autostats_on_change_threshold"/>

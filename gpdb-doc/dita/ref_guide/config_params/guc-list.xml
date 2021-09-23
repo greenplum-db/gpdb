@@ -156,6 +156,9 @@
               <xref href="#gp_appendonly_compaction_threshold"/>
             </li>
             <li>
+              <xref href="#gp_autostats_allow_nonowner"/>
+            </li>
+            <li>
               <xref href="#gp_autostats_mode"/>
             </li>
             <li>
@@ -2125,6 +2128,41 @@
               <entry colname="col1">integer (%)</entry>
               <entry colname="col2">10</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_autostats_allow_nonowner">
+    <title>gp_autostats_allow_nonowner</title>
+    <body>
+      <p>When <codeph>gp_autostats_mode=on_change</codeph>, Greenplum Database automatically
+        triggers statistics collection on a table after it is modified by its owner.</p>
+      <p>The <codeph>gp_autostats_allow_nonowner</codeph> server configuration parameter
+        determines whether or not to allow Greenplum Database to trigger automatic statistics
+        collection when a table is modified by a non-owner.</p>
+      <p>The default value is <codeph>false</codeph>; Greenplum Database does not trigger
+        automatic statistics collection on a table that is updated by a non-owner.</p>
+      <p>The <codeph>gp_autostats_allow_nonowner</codeph> configuration parameter can be
+        changed only by a superuser.</p>
+      <table id="gp_auto_stats_allow_nonowner_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>

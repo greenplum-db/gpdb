@@ -899,12 +899,17 @@
         <strow>
           <stentry>
             <p>
+              <xref href="guc-list.xml#gp_autostats_allow_nonowner" type="section">gp_autostats_allow_nonowner</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#gp_autostats_mode" type="section">gp_autostats_mode</xref>
             </p>
             <p>
               <xref href="guc-list.xml#gp_autostats_mode_in_functions" type="section"
                 >gp_autostats_mode_in_functions</xref>
             </p>
+          </stentry>
+          <stentry>
             <p>
               <xref href="guc-list.xml#gp_autostats_on_change_threshold" type="section"
                 >gp_autostats_on_change_threshold</xref>
