@@ -6,14 +6,14 @@ CREATE
 CREATE TABLE runaway_query_test_table(a bigint NOT NULL) DISTRIBUTED BY (a);
 CREATE
 
--- Use vmem_protect_limit fault to simulate vmem protect error and force cancel query.
-SELECT gp_inject_fault_infinite('gpdbwrappers_get_comparison_operator', 'vmem_protect_limit', 1);
+-- Use error fault to simulate vmem protect error and force cancel query.
+SELECT gp_inject_fault_infinite('gpdbwrappers_get_comparison_operator', 'error', 1);
  gp_inject_fault_infinite 
 --------------------------
  Success:                 
 (1 row)
 
--- Run query that will trip the vmem protect limit fault.
+-- Following query will trip the fault during ORCA optimization
 EXPLAIN (COSTS OFF) SELECT a FROM runaway_query_test_table WHERE (a = ANY ((ARRAY[42])));
  QUERY PLAN                                    
 -----------------------------------------------
@@ -23,17 +23,8 @@ EXPLAIN (COSTS OFF) SELECT a FROM runaway_query_test_table WHERE (a = ANY ((ARRA
  Optimizer: Postgres query optimizer           
 (4 rows)
 
--- start_ignore
-SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration;
+SELECT gp_inject_fault('all', 'reset', 1);
  gp_inject_fault 
 -----------------
  Success:        
- Success:        
- Success:        
- Success:        
- Success:        
- Success:        
- Success:        
- Success:        
-(8 rows)
--- end_ignore
+(1 row)
