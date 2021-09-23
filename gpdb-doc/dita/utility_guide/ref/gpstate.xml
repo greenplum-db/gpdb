@@ -103,7 +103,7 @@
         </plentry>
         <plentry>
           <pt>-s (detailed status)</pt>
-          <pd>Optional. Displays detailed status information about segments. </pd>
+          <pd>Optional. Displays detailed status information about the Greenplum database system. </pd>
         </plentry>
         <plentry>
           <pt>-v (verbose output)</pt>
