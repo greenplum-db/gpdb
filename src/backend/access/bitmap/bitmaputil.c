@@ -1110,7 +1110,7 @@ _bitmap_log_updateword(Relation rel, Buffer bitmapBuffer, int word_no)
 
 	XLogBeginInsert();
 	XLogRegisterData((char*)&xlBitmapWord, sizeof(xl_bm_updateword));
-	XLogRegisterBuffer(0, bitmapBuffer, REGBUF_STANDARD);
+	XLogRegisterBuffer(0, bitmapBuffer, 0);
 
 	recptr = XLogInsert(RM_BITMAP_ID, XLOG_BITMAP_UPDATEWORD);
 
@@ -1185,10 +1185,10 @@ _bitmap_log_updatewords(Relation rel,
 
 	XLogBeginInsert();
 	XLogRegisterData((char*)&xlBitmapWords, sizeof(xl_bm_updatewords));
-	XLogRegisterBuffer(0, firstBuffer, REGBUF_STANDARD);
+	XLogRegisterBuffer(0, firstBuffer, 0);
 
 	if (BufferIsValid(secondBuffer))
-		XLogRegisterBuffer(1, secondBuffer, REGBUF_STANDARD);
+		XLogRegisterBuffer(1, secondBuffer, 0);
 
 	if (new_lastpage)
 	{
