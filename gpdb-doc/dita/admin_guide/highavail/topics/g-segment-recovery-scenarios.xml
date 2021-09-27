@@ -181,7 +181,7 @@ failedAddress3|failedPort3|failedDataDirectory3</codeblock></li>
               </li>
               <li dir="ltr">
                 <p dir="ltr">have the same hardware and OS configuration as the failed host (same
-                  hostname, OS version, OS configuration parameters must be applied, locales,
+                  hostname, OS version, OS configuration parameters applied, locales,
                   gpadmin user account, data directory locations created, ssh keys exchanged, number
                   of network interfaces, network interface naming convention, and so on)</p>
               </li>
