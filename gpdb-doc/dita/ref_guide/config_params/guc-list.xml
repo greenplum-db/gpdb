@@ -4509,8 +4509,9 @@
     <body>
       <note>The <codeph>gp_resqueue_priority_cpucores_per_segment</codeph> server configuration
         parameter is enforced only when resource queue-based resource management is active.</note>
-      <p>Specifies the number of CPU units allocated to each primary segment instance on a
-        segment host.
+      <p>Specifies the number of CPU units allocated to each segment instance on a
+        segment host. If the segment is configured with primary-mirror segment instance pairs,
+        use the number of primary segment instances on the host in the calculation.
         Include any CPU core that is available to the operating system, including virtual CPU
         cores, in the total number of available cores.</p> 
       <p> For example, if a Greenplum Database cluster has 10-core segment hosts that are

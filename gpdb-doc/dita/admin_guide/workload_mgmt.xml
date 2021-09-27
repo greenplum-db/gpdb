@@ -393,8 +393,10 @@
                 interval at which CPU usage is recalculated for all active statements. The default
                 value for this parameter should be sufficient for typical database operations. </li>
               <li id="iz174445"><codeph>gp_resqueue_priority_cpucores_per_segment</codeph> -
-                Specifies the number of CPU cores allocated per primary segment instance on a
-                segment host. The default value
+                Specifies the number of CPU cores allocated per segment instance on a
+                segment host. If the segment is configured with primary-mirror segment
+                instance pairs, use the
+                number of primary segment instances on the host in the calculation. The default value
                 is 4 for the master and segment hosts. <p>Each Greenplum host checks its
                   own <codeph>postgresql.conf</codeph> file for the value of this parameter. This
                   parameter also affects the master host, where it should be set to a value
