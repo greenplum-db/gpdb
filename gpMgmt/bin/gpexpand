@@ -1632,11 +1632,6 @@ WHERE
         has different numsegments with root partition, we need to expand root
         partition in one shot, so just populate root partition for now.
 
-        TODO:
-        We used to use a tricky but effective way to expand leaf partition in
-        in parallel, that way is still under discussion. Keep the old method
-        here in case we need bring it back someday.
-
         Step1:
            BEGIN;
            Lock all root/interior/leaf partitions
@@ -1665,9 +1660,9 @@ WHERE
         get_status_detail_cmd = """
             SELECT 
                 current_database(), 
-                relid::regclass::text as fq_name, 
-                relid::regclass::oid as tableoid,
-                partrelid::regclass::text as root_partition_name,
+                inhrelid::regclass::text as fq_name, 
+                inhrelid::regclass::oid as tableoid,
+                pg_partition_root(inhparent::regclass) as root_partition_name,
                 2 as rank,
                 false as external_writable,
                 '%s' as undone_status,
@@ -1675,15 +1670,13 @@ WHERE
                 NULL as expansion_finished,
                 %s as source_bytes
             FROM
-                pg_class AS child,
-                pg_class AS parent,
-                pg_partitioned_table,
-                pg_partition_tree(partrelid)
+                pg_inherits a,
+                pg_partitioned_table b,
+                pg_class c 
             WHERE
-                child.oid = relid AND
-                isleaf = TRUE AND
-                parent.oid = partrelid AND
-                parent.relispartition = FALSE
+                a.inhparent = b.partrelid and
+                a.inhrelid = c.oid and
+                c.relkind != 'p';
         """ % (undone_status, src_bytes_str)
         self.logger.debug(get_status_detail_cmd)
 
