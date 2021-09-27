@@ -302,7 +302,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos7'],
-        choices=['centos7', 'rhel8' 'ubuntu18.04', 'win'],
+        choices=['centos7', 'rhel8', 'ubuntu18.04', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
