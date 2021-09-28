@@ -264,6 +264,7 @@ ignore: restore_memory_accounting_default
 test: setup_startup_memory_accounting
 test: oom_startup_memory
 test: restore_memory_accounting_default
+test: runaway_query
 
 # Too many exec accounts test start
 test: setup_too_many_exec_accounts

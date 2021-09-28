@@ -1,0 +1,30 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+CREATE OR REPLACE LANGUAGE plpgsql;
+CREATE
+
+CREATE TABLE runaway_query_test_table(a bigint NOT NULL) DISTRIBUTED BY (a);
+CREATE
+
+-- Use error fault to simulate vmem protect error and force cancel query.
+SELECT gp_inject_fault_infinite('gpdbwrappers_get_comparison_operator', 'error', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- Following query will trip the fault during ORCA optimization
+EXPLAIN (COSTS OFF) SELECT a FROM runaway_query_test_table WHERE (a = ANY ((ARRAY[42])));
+ QUERY PLAN                                    
+-----------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)      
+   ->  Seq Scan on runaway_query_test_table    
+         Filter: (a = ANY ('{42}'::integer[])) 
+ Optimizer: Postgres query optimizer           
+(4 rows)
+
+SELECT gp_inject_fault('all', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
