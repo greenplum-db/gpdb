@@ -1508,7 +1508,7 @@ def chk_local_db_running(datadir, port):
 
        1) /tmp/.s.PGSQL.<PORT> and /tmp/.s.PGSQL.<PORT>.lock
        2) DATADIR/postmaster.pid
-       3) netstat
+       3) ss
 
        Returns tuple in format (postmaster_pid_file_exists, tmpfile_exists, lockfile_exists, port_active, postmaster_pid)
 
@@ -1536,9 +1536,9 @@ def chk_local_db_running(datadir, port):
     tmpfile_exists = os.path.exists("/tmp/.s.PGSQL.%d" % port)
     lockfile_exists = os.path.exists(get_lockfile_name(port))
 
-    netstat_port_active = PgPortIsActive.local('check netstat for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
+    netstat_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
 
-    logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s netstat port: %s  pid: %s" %\
+    logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s ss port: %s  pid: %s" %\
                 (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value))
 
     return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value)

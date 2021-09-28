@@ -98,9 +98,9 @@ class Gpfdist:
             port = self.port
         # deal with the escape issue separately for localhost and remote one
         if self.host in ('127.0.0.1',socket.gethostbyname(socket.gethostname()),socket.gethostname(),'localhost'):
-            cmdStr = "netstat -an |grep %s"%port
+            cmdStr = "ss -an |grep %s"%port
         else:
-            cmdStr = 'gpssh -h %s -e "netstat -an |grep %s"'%(self.host, port)
+            cmdStr = 'gpssh -h %s -e "ss -an |grep %s"'%(self.host, port)
         cmd = Command(self.name, cmdStr, self.ctxt, self.host)
         cmd.run()
         results = cmd.get_results()

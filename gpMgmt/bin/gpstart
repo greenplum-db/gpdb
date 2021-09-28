@@ -302,7 +302,7 @@ class GpStart:
         lockfile = "/tmp/.s.PGSQL.%s" % self.port
         tmpfile_exists = os.path.exists(lockfile)
 
-        netstat_port_active = unix.PgPortIsActive.local('check netstat for coordinator port',
+        netstat_port_active = unix.PgPortIsActive.local('check ss for coordinator port',
                                                         lockfile, self.port)
         if tmpfile_exists and netstat_port_active:
             logger.info("Have lock file %s and a process running on port %s" % (lockfile, self.port))

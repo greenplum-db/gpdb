@@ -227,7 +227,7 @@ class GenericPlatform():
         return findCmdInPath('tar')
 
     def getIfconfigCmd(self):
-        return findCmdInPath('ifconfig')
+        return findCmdInPath('ip') + " a"
 
 
 class LinuxPlatform(GenericPlatform):
@@ -581,8 +581,8 @@ class Hostname(Command):
 class PgPortIsActive(Command):
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
-        cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
-                 (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
+        cmdStr = "%s -an 2>/dev/null |%s '{for (i =1; i<=NF ; i++) if ($i==\"%s\") print $i}'" % \
+                 (findCmdInPath('ss'), findCmdInPath('awk'), file)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     def contains_port(self):
