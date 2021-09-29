@@ -223,6 +223,16 @@ xlog_desc(StringInfo buf, XLogRecord *record)
 						 xlrec.ThisTimeLineID, xlrec.PrevTimeLineID,
 						 timestamptz_to_str(xlrec.end_time));
 	}
+	else if (info == XLOG_OVERWRITE_CONTRECORD)
+	{
+		xl_overwrite_contrecord xlrec;
+
+		memcpy(&xlrec, rec, sizeof(xl_overwrite_contrecord));
+		appendStringInfo(buf, "lsn %X/%X; time %s",
+						 (uint32) (xlrec.overwritten_lsn >> 32),
+						 (uint32) xlrec.overwritten_lsn,
+						 timestamptz_to_str(xlrec.overwrite_time));
+	}
 	else
 		appendStringInfoString(buf, "UNKNOWN");
 }

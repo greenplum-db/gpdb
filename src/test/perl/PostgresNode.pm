@@ -424,6 +424,12 @@ sub init
 	# print $conf "wal_retrieve_retry_interval = '500ms'\n";
 	print $conf "port = $port\n";
 
+	# In GPDB, logging_collector is enabled by default. Disable it, so that
+	# upstream tests behave the same as in PostgreSQL. In particular, the
+	# issues_sql_like() doesn't work if logging_collector is enabled.
+	# Individual tests can override this.
+	print $conf "logging_collector = off\n";
+
 	if ($params{allows_streaming})
 	{
 		print $conf "wal_level = hot_standby\n";
@@ -699,7 +705,7 @@ sub start
 	BAIL_OUT("node \"$name\" is already running") if defined $self->{_pid};
 	print("### Starting node \"$name\"\n");
 	my $ret = TestLib::system_log('pg_ctl', '-w', '-D', $self->data_dir, '-l',
-		$self->logfile, '-o', "-c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0 --logging-collector=on",
+		$self->logfile, '-o', "-c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0",
 		'start');
 
 	if ($ret != 0)
