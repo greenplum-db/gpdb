@@ -191,6 +191,16 @@ def impl(conetxt, tabname):
         dbconn.execSQL(conn, sql)
         conn.commit()
 
+@given('the user create a partition table with name "{tabname}"')
+def impl(conetxt, tabname):
+    dbname = 'gptest'
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+        sql = "create table {tabname}(i int) partition by range(i) (start(0) end(10001) every(1000)) distributed by (i)".format(tabname=tabname)
+        dbconn.execSQL(conn, sql)
+        sql = "INSERT INTO {tabname} SELECT generate_series(1, 10000)".format(tabname=tabname)
+        dbconn.execSQL(conn, sql)
+        conn.commit()
+
 
 @given('the user executes "{sql}" with named connection "{cname}"')
 def impl(context, cname, sql):
@@ -2957,11 +2967,14 @@ def impl(context, table_name, dbname):
 @given('distribution information from table "{table}" with data in "{dbname}" is saved')
 def impl(context, table, dbname):
     context.pre_redistribution_row_count = _get_row_count_per_segment(table, dbname)
+    context.pre_redistribution_dist_policy = _get_dist_policy_per_partition(table, dbname)
 
 @then('distribution information from table "{table}" with data in "{dbname}" is verified against saved data')
 def impl(context, table, dbname):
     pre_distribution_row_count = context.pre_redistribution_row_count
+    pre_redistribution_dist_policy = context.pre_redistribution_dist_policy
     post_distribution_row_count = _get_row_count_per_segment(table, dbname)
+    post_distribution_dist_policy = _get_dist_policy_per_partition(table, dbname)
 
     if len(pre_distribution_row_count) >= len(post_distribution_row_count):
         raise Exception("Failed to redistribute table. Expected to have more than %d segments, got %d segments" % (len(pre_distribution_row_count), len(post_distribution_row_count)))
@@ -2988,6 +3001,14 @@ def impl(context, table, dbname):
         raise Exception("Unexpected variance for redistributed data in table %s. Relative standard error %f exceeded tolerance factor of %f." %
                 (table, relative_std_error, tolerance))
 
+    for i in range(len(post_distribution_dist_policy)):
+        if(post_distribution_dist_policy[i][0] == pre_redistribution_dist_policy[i][0] or \
+           post_distribution_dist_policy[i][1] != pre_redistribution_dist_policy[i][1] or \
+           post_distribution_dist_policy[i][2] != pre_redistribution_dist_policy[i][2]):
+            raise Exception("""Redistributed policy does not match pre-redistribution policy.
+            before expanded: %s, after expanded: %s""" % (",".join(map(str, pre_redistribution_dist_policy[i])), \
+            ",".join(map(str, post_distribution_dist_policy[i]))))
+
 
 @then('the row count from table "{table_name}" in "{dbname}" is verified against the saved data')
 def impl(context, table_name, dbname):
@@ -3011,6 +3032,13 @@ def _get_row_count_per_segment(table, dbname):
         cursor = dbconn.query(conn, query)
         rows = cursor.fetchall()
     return [row[1] for row in rows] # indices are the gp segment id's, so no need to store them explicitly
+
+def _get_dist_policy_per_partition(table, dbname):
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+        query = "select * from gp_distribution_policy where localoid::regclass::text like '%s%%' order by localoid;" % table
+        cursor = dbconn.query(conn, query)
+        rows = cursor.fetchall()
+    return [row[2:5] for row in rows] # we only need numsegments、distkey、distclass
 
 @given('run rollback')
 @then('run rollback')
