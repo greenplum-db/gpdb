@@ -18,6 +18,8 @@
                        'use_concourse_cluster': true},
                       {'name': 'gpinitstandby',
                        'use_concourse_cluster': false},
+                      {'name': 'gp_bash_functions.sh',
+                       'use_concourse_cluster': false},
                       {'name': 'gpcheckcat',
                        'use_concourse_cluster': true},
                       { 'name': 'gpcheckperf',

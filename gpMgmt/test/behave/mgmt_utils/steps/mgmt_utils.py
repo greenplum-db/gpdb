@@ -366,13 +366,62 @@ def impl(context):
     command = "echo 'echo \"banner test\"' >> %s; source %s" % (file, file)
     run_cmd(command)
 
-
 @when('the user sets multi-line banner on host')
 def impl(context):
     file = '/etc/bashrc'
     command = "echo 'echo -e \"banner test1\\nbanner test2\\nbanner test-3\\nbanner test4\"' >> %s; source %s" % (file, file)
     run_cmd(command)
 
+@when('the user sets banner with separator token on host')
+def impl(context):
+    file = '/etc/bashrc'
+    token = 'GP_DELIMITER_FOR_IGNORING_BASH_BANNER'
+    command = "echo 'echo -e \"banner test1\\nbanner %s test2\\nbanner test-3\\nbanner test4\"' >> %s; source %s" % (token, file, file)
+    run_cmd(command)
+
+@given('source gp_bash-functions and run simple echo')
+@then('source gp_bash-functions and run simple echo')
+@when('source gp_bash-functions and run simple echo')
+def impl(context):
+    gp_bash_functions = os.getenv("GPHOME") + '/bin/lib/gp_bash_functions.sh'
+    message = 'Hello World. This is a simple command output'
+    command = "source %s; REMOTE_EXECUTE_AND_GET_OUTPUT localhost \"echo %s\"" %(gp_bash_functions, message)
+    result = run_cmd(command)
+    if(result[0] != 0):
+        raise Exception ("Expected error code is 0. Command returned error code:%s.\nStderr:%s\n" % (result[0], result[2]))
+    if(result[1].strip() != message):
+        raise Exception ("Expected output is: [%s] while received output is: [%s] Return code:%s" %(message, result[1], result[0]))
+
+@given('source gp_bash-functions and run complex command')
+@then('source gp_bash-functions and run complex command')
+@when('source gp_bash-functions and run complex command')
+def impl(context):
+    gp_bash_functions = os.getenv("GPHOME") + '/bin/lib/gp_bash_functions.sh'
+    message = 'Hello World. This is a simple command output'
+    command = "source %s; REMOTE_EXECUTE_AND_GET_OUTPUT localhost \"echo %s; hostname | wc -w | xargs\"" %(gp_bash_functions, message)
+    result = run_cmd(command)
+    if(result[0] != 0):
+        raise Exception ("Expected error code is 0. Command returned error code:%s.\nStderr:%s\n" % (result[0], result[2]))
+
+    message = message + "\n1"
+    if(result[1].strip() != message):
+        raise Exception ("Expected output is: [%s] while received output is:[%s] Return code:%s" %(message, result[1], result[0]))
+
+@given('source gp_bash-functions and run echo with separator token')
+@then('source gp_bash-functions and run echo with separator token')
+@when('source gp_bash-functions and run echo with separator token')
+def impl(context):
+    gp_bash_functions = os.getenv("GPHOME") + '/bin/lib/gp_bash_functions.sh'
+    message = 'Hello World. This is a simple command output'
+    token = 'GP_DELIMITER_FOR_IGNORING_BASH_BANNER'
+    command = "source %s; REMOTE_EXECUTE_AND_GET_OUTPUT localhost \"echo %s; echo %s; echo %s\"" %(gp_bash_functions, message, token, message)
+    result = run_cmd(command)
+    if(result[0] != 0):
+        raise Exception ("Expected error code is 0. Command returned error code:%s.\nStderr:%s\n" % (result[0], result[2]))
+
+    message = "%s\n%s\n%s" %(message, token, message)
+    if(result[1].strip() != message):
+        raise Exception ("Expected output is: [%s] while received output is:[%s] Return code:%s" %(message, result[1], result[0]))
 
 @given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
 @when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
