@@ -1,0 +1,12 @@
+2021-09-23 22:58:25|INFO|gpload session started 2021-09-23 22:58:25
+2021-09-23 23:00:32|INFO|retry to connect to database, 1 of 2 times
+2021-09-23 23:02:39|INFO|retry to connect to database, 2 of 2 times
+2021-09-23 23:04:46|ERROR|could not connect to database after retry 2 times, error message:
+ could not connect to server: Connection timed out
+	Is the server running on host "1.2.3.4" and accepting
+	TCP/IP connections on port 15432?
+
+2021-09-23 23:04:46|INFO|rows Inserted          = 0
+2021-09-23 23:04:46|INFO|rows Updated           = 0
+2021-09-23 23:04:46|INFO|data formatting errors = 0
+2021-09-23 23:04:46|INFO|gpload failed

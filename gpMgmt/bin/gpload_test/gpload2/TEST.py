@@ -48,6 +48,26 @@ def get_ip(hostname=None):
             ipv4 = myip
             return ipv4
 
+
+def run(cmd):
+    """
+    Run a shell command. Return (True, [result]) if OK, or (False, []) otherwise.
+    @params cmd: The command to run at the shell.
+            oFile: an optional output file.
+            mode: What to do if the output file already exists: 'a' = append;
+            'w' = write.  Defaults to append (so that the function is
+            backwards compatible).  Yes, this is passed to the open()
+            function, so you can theoretically pass any value that is
+            valid for the second parameter of open().
+    """
+    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    out = p.communicate()[0]
+    ret = []
+    ret.append(out)
+    rc = False if p.wait() else True
+    return (rc,ret)
+
+
 def getPortMasterOnly(host = 'localhost',master_value = None,
                       user = os.environ.get('USER'),gphome = os.environ['GPHOME'],
                       mdd=os.environ['MASTER_DATA_DIRECTORY'],port = os.environ['PGPORT']):
@@ -95,20 +115,24 @@ PGHOST = os.environ.get("PGHOST")
 if PGHOST is None or PGHOST=="":
     PGHOST = HOST
 
+
+hostNameAddrs = get_ip(HOST)
+masterPort = getPortMasterOnly()
+
 d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
 def write_config_file(mode='insert', reuse_flag='',columns_flag='0',config='config/config_file',columns=None,mapping='0',portNum='8081',database='reuse_gptest',host='localhost',
 formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',header=None,truncate=False,update_columns='n2',match_columns='true',
-log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True,SQL=None, sql_before=None, sql_after=None):
+log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True,SQL=None, sql_before=None, sql_after=None, DB_host=hostNameAddrs):
 
     f = open(mkpath(config),'w')
     f.write("VERSION: 1.0.0.1")
     if database:
         f.write("\nDATABASE: "+database)
     f.write("\nUSER: "+os.environ.get('USER'))
-    f.write("\nHOST: "+hostNameAddrs)
+    f.write("\nHOST: "+DB_host)
     f.write("\nPORT: "+masterPort)
     f.write("\nGPLOAD:")
     f.write("\n   INPUT:")
@@ -285,23 +309,6 @@ def psql_run(ifile = None, ofile = None, cmd = None,
     return run('%s psql -d %s %s %s -U %s %s %s %s' %
                              (PGOPTIONS, dbname, host, port, username, flag, arg, ofile))
 
-def run(cmd):
-    """
-    Run a shell command. Return (True, [result]) if OK, or (False, []) otherwise.
-    @params cmd: The command to run at the shell.
-            oFile: an optional output file.
-            mode: What to do if the output file already exists: 'a' = append;
-            'w' = write.  Defaults to append (so that the function is
-            backwards compatible).  Yes, this is passed to the open()
-            function, so you can theoretically pass any value that is
-            valid for the second parameter of open().
-    """
-    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    out = p.communicate()[0]
-    ret = []
-    ret.append(out)
-    rc = False if p.wait() else True
-    return (rc,ret)
 
 def outFile(fname,outputPath = ''):
     return changeExtFile(fname, ".out", outputPath)
@@ -367,8 +374,6 @@ def copy_data(source='',target=''):
     p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     return p.communicate()
 
-hostNameAddrs = get_ip(HOST)
-masterPort = getPortMasterOnly()
 
 def get_table_name():
     try:
@@ -475,7 +480,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,44):
+        for num in range(1,45):
             f = open(mkpath('query%d.sql' % num),'w')
             f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
             f.close()
@@ -859,6 +864,17 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
         f.close()
         self.doTest(43)
+    
+    def test_44_max_retries(self):
+        "test new feature max_tries"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_01.txt','data_file.txt')
+        write_config_file(formatOpts='text',file='data_file.txt',table='texttable',delimiter="'|'", DB_host='1.2.3.4')
+        f = open(mkpath('query44.sql'),'w')
+        f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest --max_retries 2\n")
+        f.close()
+        self.doTest(44)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

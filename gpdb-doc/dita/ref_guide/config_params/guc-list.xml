@@ -735,8 +735,8 @@
               <xref href="#optimizer_use_gpdb_allocators" format="dita"
                 >optimizer_use_gpdb_allocators</xref></li>
             <li>
-              <xref href="#password_encryption"/>
-            </li>
+              <xref href="#optimizer_xform_bind_threshold" format="dita"
+                >optimizer_xform_bind_threshold</xref></li>
             <li>
               <xref href="#password_hash_algorithm"/>
             </li>
@@ -8610,6 +8610,38 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">false</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_xform_bind_threshold">
+    <title>optimizer_xform_bind_threshold</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls the maximum number of
+        bindings per transform that GPORCA produces per group expression. Setting this
+        parameter limits the number of alternatives that GPORCA creates, in many cases
+        reducing the optimization time and overall memory usage of queries that include
+        deeply nested expressions.</p>
+      <p>The default value is <codeph>0</codeph>, GPORCA produces an unlimited set of bindings.</p>
+      <table id="table_oxbt">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - INT_MAX</entry>
+              <entry colname="col2">0</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

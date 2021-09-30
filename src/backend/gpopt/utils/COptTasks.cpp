@@ -707,6 +707,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 		(ULONG) optimizer_array_expansion_threshold;
 	ULONG join_order_threshold = (ULONG) optimizer_join_order_threshold;
 	ULONG broadcast_threshold = (ULONG) optimizer_penalize_broadcast_threshold;
+	ULONG xform_bind_threshold = (ULONG) optimizer_xform_bind_threshold;
 
 	return GPOS_NEW(mp) COptimizerConfig(
 		GPOS_NEW(mp)
@@ -722,7 +723,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 				  broadcast_threshold,
 				  false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
-				  PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD),
+				  PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD, xform_bind_threshold),
 		GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_DUMMY), OID(F_WINDOW_RANK_OID)));
 }
 

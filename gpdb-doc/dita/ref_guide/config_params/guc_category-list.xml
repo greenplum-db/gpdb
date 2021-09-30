@@ -365,11 +365,11 @@
                 >optimizer_enable_master_only_queries</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_agg_skew_avoidance" type="section"
                 >optimizer_force_agg_skew_avoidance</xref></p>
+          </stentry>
+          <stentry>
             <p><xref href="guc-list.xml#optimizer_force_multistage_agg" type="section"
                 >optimizer_force_multistage_agg</xref>
             </p>
-          </stentry>
-          <stentry>
             <p><xref href="guc-list.xml#optimizer_force_three_stage_scalar_dqa" type="section"
                 >optimizer_force_three_stage_scalar_dqa</xref></p>
             <p><xref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"
@@ -398,6 +398,8 @@
                 >optimizer_sort_factor</xref></p>
             <p><xref href="guc-list.xml#optimizer_use_gpdb_allocators" format="dita"
                 >optimizer_use_gpdb_allocators</xref></p>
+            <p><xref href="guc-list.xml#optimizer_xform_bind_threshold" format="dita"
+                >optimizer_xform_bind_threshold</xref></p>
           </stentry>
         </strow>
       </simpletable>

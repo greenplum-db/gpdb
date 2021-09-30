@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-	<topicref href="../../5280/homenav.html" scope="external"
-		navtitle="Greenplum Database® 5.28 Documentation" format="html" otherprops="oss-only"/>
-	<topicref href="../../5280/homenav.html" scope="external"
-		navtitle="Pivotal Greenplum® 5.28 Documentation" format="html" otherprops="pivotal"/>
+	<topicref href="../../5290/homenav.html" scope="external"
+		navtitle="Greenplum Database® 5.29 Documentation" format="html" otherprops="oss-only"/>
+	<topicref href="../../5290/homenav.html" scope="external"
+		navtitle="Pivotal Greenplum® 5.29 Documentation" format="html" otherprops="pivotal"/>
 	<topicref href="ref_guide.xml" navtitle="Reference Guide">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>

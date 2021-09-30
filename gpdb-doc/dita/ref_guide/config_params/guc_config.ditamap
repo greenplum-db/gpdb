@@ -247,6 +247,7 @@
             <topicref href="guc-list.xml#optimizer_print_optimization_stats"/>
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#optimizer_use_gpdb_allocators"/>
+            <topicref href="guc-list.xml#optimizer_xform_bind_threshold"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
             <topicref href="guc-list.xml#pgcrypto.fips"/>
