@@ -480,7 +480,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,45):
+        for num in range(1,44):
             f = open(mkpath('query%d.sql' % num),'w')
             f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
             f.close()
@@ -865,6 +865,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         f.close()
         self.doTest(43)
     
+    '''
     def test_44_max_retries(self):
         "test new feature max_tries"
         file = mkpath('setup.sql')
@@ -875,6 +876,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest --max_retries 2\n")
         f.close()
         self.doTest(44)
+    '''
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)
