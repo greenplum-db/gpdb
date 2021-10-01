@@ -19,7 +19,7 @@ pgbin="pgsql"
 if [ ! -d "${pgbin}" ] ; then
 	mkdir ${pgbin}
 	if [ ! -d postgresql-10.4 ]; then
-		wget https://ftp.postgresql.org/pub/source/v10.4/postgresql-10.4.tar.gz
+		wget --no-check-certificate https://ftp.postgresql.org/pub/source/v10.4/postgresql-10.4.tar.gz
 		tar -xvf postgresql-10.4.tar.gz
 	fi
 	pushd postgresql-10.4
