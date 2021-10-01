@@ -42,6 +42,17 @@ function setup_gpadmin_user() {
     ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
 }
 
+function move_postgres_for_fdw() {
+    if [ -d postgres_for_fdw ]; then
+        pgfdw_test_dir=gpdb_src/contrib/postgres_fdw/testdata
+        if [ ! -d "${pgfdw_test_dir}" ]; then
+            mkdir -p ${pgfdw_test_dir}
+        fi
+        mv postgres_for_fdw/postgresql-* ${pgfdw_test_dir}/
+        chown -R gpadmin:gpadmin ${pgfdw_test_dir}
+    fi
+}
+
 function _main() {
     if [ -z "${MAKE_TEST_COMMAND}" ]; then
         echo "FATAL: MAKE_TEST_COMMAND is not set"
@@ -66,6 +77,7 @@ function _main() {
     time setup_gpadmin_user
     time make_cluster
     time gen_env
+    time move_postgres_for_fdw
     time run_test
 
     if [ "${TEST_BINARY_SWAP}" == "true" ]; then

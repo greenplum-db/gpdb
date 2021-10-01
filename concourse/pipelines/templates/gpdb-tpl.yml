@@ -1040,6 +1040,15 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/madlib-snowflakes/boost_(1_61_0).tar.gz
 {% endif %}
+{% if "ICW" in test_sections %}
+
+- name: postgres_for_fdw
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/postgres-fdw-dependencies/postgresql-(10.4).tar.gz
+{% endif %}
 
 - name: reduced-frequency-trigger
   type: time
@@ -1407,6 +1416,9 @@ jobs:
         passed: [prepare_binary_swap_gpdb_centos6]
         resource: binary_swap_gpdb_centos6
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos6-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1434,6 +1446,9 @@ jobs:
         resource: bin_gpdb_centos6
         passed: [compile_gpdb_centos6]
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos6-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1456,6 +1471,9 @@ jobs:
         passed: [compile_gpdb_centos6]
         resource: bin_gpdb_centos6
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos6-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1478,6 +1496,9 @@ jobs:
         resource: bin_gpdb_centos6
         passed: [compile_gpdb_centos6]
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos6-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1500,6 +1521,9 @@ jobs:
         resource: bin_gpdb_centos6
         passed: [compile_gpdb_centos6]
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos6-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1523,6 +1547,9 @@ jobs:
         resource: bin_gpdb_centos7
         passed: [compile_gpdb_centos7]
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos7-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1545,6 +1572,9 @@ jobs:
         passed: [compile_gpdb_centos7]
         resource: bin_gpdb_centos7
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos7-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1567,6 +1597,9 @@ jobs:
         resource: bin_gpdb_centos7
         passed: [compile_gpdb_centos7]
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos7-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1589,6 +1622,9 @@ jobs:
         passed: [compile_gpdb_centos7]
         resource: bin_gpdb_centos7
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-centos7-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1625,6 +1661,9 @@ jobs:
         resource: bin_gpdb_centos7
         passed: [compile_gpdb_centos7]
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-oracle7-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1647,6 +1686,9 @@ jobs:
         passed: [compile_gpdb_centos7]
         resource: bin_gpdb_centos7
         trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
       - get: gpdb6-oracle7-test
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1671,6 +1713,9 @@ jobs:
           resource: bin_gpdb_ubuntu18.04
           passed: [compile_gpdb_ubuntu18.04]
           trigger: [[ test_trigger ]]
+        - get: postgres_for_fdw
+          params:
+            unpack: true
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
@@ -1693,6 +1738,9 @@ jobs:
           passed: [compile_gpdb_ubuntu18.04]
           resource: bin_gpdb_ubuntu18.04
           trigger: [[ test_trigger ]]
+        - get: postgres_for_fdw
+          params:
+            unpack: true
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
@@ -1715,6 +1763,9 @@ jobs:
           resource: bin_gpdb_ubuntu18.04
           passed: [compile_gpdb_ubuntu18.04]
           trigger: [[ test_trigger ]]
+        - get: postgres_for_fdw
+          params:
+            unpack: true
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
@@ -1737,6 +1788,9 @@ jobs:
           passed: [compile_gpdb_ubuntu18.04]
           resource: bin_gpdb_ubuntu18.04
           trigger: [[ test_trigger ]]
+        - get: postgres_for_fdw
+          params:
+            unpack: true
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
       {% if use_ICW_workers %}

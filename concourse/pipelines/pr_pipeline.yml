@@ -36,6 +36,13 @@ resources:
     repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test
     tag: latest
 
+- name: postgres_for_fdw
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/postgres-fdw-dependencies/postgresql-(10.4).tar.gz
+
 jobs:
 - name: compile_and_test_gpdb
   public: true
@@ -45,6 +52,9 @@ jobs:
     - get: gpdb_pr
       trigger: true
       version: every
+    - get: postgres_for_fdw
+      params:
+        unpack: true
     - get: gpdb6-centos7-build
     - get: gpdb6-centos7-test
 
