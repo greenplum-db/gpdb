@@ -206,6 +206,7 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 	res = _bitmap_firstbatchwords(scan, ForwardScanDirection);
 
 	scanPos = ((BMScanOpaque)scan->opaque)->bm_currPos;
+	scanPos->bm_result.nextTid = 1;
 
 	/* perhaps this should be in a special context? */
 	is = (IndexStream *)palloc0(sizeof(IndexStream));
@@ -841,13 +842,6 @@ words_get_match(BMBatchWords *words, BMIterateResult *result,
 	int newwordno;
 	uint64 start, end;
 
-	/*
-	 * XXX: We assume that BM_HRL_WORD_SIZE is not greater than
-	 * TBM_BITS_PER_BITMAPWORD for tidbitmap.
-	 */
-	Assert(BM_HRL_WORD_SIZE <= TBM_BITS_PER_BITMAPWORD);
-	Assert(nhrlwords >= 1);
-
 restart:
 	/* compute the first and last tid location for 'blockno' */
 	start = ((uint64)blockno) * BM_MAX_TUPLES_PER_PAGE + 1;
@@ -868,38 +862,72 @@ restart:
 		else
 			return true;
 	}
-
+		
+	/*
+	 * XXX: We assume that BM_HRL_WORD_SIZE is not greater than
+	 * TBM_BITS_PER_BITMAPWORD for tidbitmap.
+	 */
+	Assert(BM_HRL_WORD_SIZE <= TBM_BITS_PER_BITMAPWORD);
+	Assert(nhrlwords >= 1); 
 	Assert((result->nextTid - start) % BM_HRL_WORD_SIZE == 0);
 
-	/* Set the next tid we expected to check */
-	result->nextTid = start;
-
 	/*
-	 * If words->firstTid < result->nextTid, we need to catch up the words
-	 * firstTid for checking to the next tid(start of current block).
-	 * words->firstTid will keep set as result->nextTid before each
-	 * iteration to mark the scanned tids in _bitmap_nextbatchwords.
-	 * Note here that when we read new batchwords from bitmap page, the
-	 * words->firstTid may get set to a tid we already scanned.
-	 * See read_words in bitmapsearch.c.
-	 *
-	 * If the words->firstTid already pass the result->nextTid, then
-	 * we should scan from the words->firstTid. Since the new batchwords's
-	 * start tid exceeds block's start tid.
+	 * find the first tid location in 'words' that is equal to
+	 * 'start'.
 	 */
-	if (words->firstTid < result->nextTid)
-		_bitmap_catchup_to_next_tid(words, result);
-	else if (words->firstTid > result->nextTid)
-		result->nextTid = words->firstTid;
-
-	/*
-	 * If the catch up processd all unmatch words that exceed current block's
-	 * end. Then restart for a new block.
-	 */
-	if (result->nextTid > end)
+	while (words->nwords > 0 && result->nextTid < start)
 	{
-		blockno = result->nextTid / BM_MAX_TUPLES_PER_PAGE;
-		goto restart;
+		BM_HRL_WORD word = words->cwords[result->lastScanWordNo];
+
+		if (IS_FILL_WORD(words->hwords, result->lastScanWordNo))
+		{
+			uint64	fillLength;
+			
+			if (word == 0)
+				fillLength = 1;
+			else
+				fillLength = FILL_LENGTH(word);
+
+			if (GET_FILL_BIT(word) == 1)
+			{
+				if (start - result->nextTid >= fillLength * BM_HRL_WORD_SIZE)
+				{
+					result->nextTid += fillLength * BM_HRL_WORD_SIZE;
+					result->lastScanWordNo++;
+					words->nwords--;
+				}
+				else
+				{
+					words->cwords[result->lastScanWordNo] -=
+						(start - result->nextTid)/BM_HRL_WORD_SIZE;
+					result->nextTid = start;
+				}
+			}
+			else
+			{
+				/*
+				 * This word represents compressed non-matches. If it
+				 * is sufficiently large, we might be able to skip over a 
+				 * large range of blocks which would have no matches
+				 */
+				result->lastScanWordNo++;
+				words->nwords--;
+				
+				if(fillLength * BM_HRL_WORD_SIZE > end - result->nextTid)
+				{
+					result->nextTid += fillLength * BM_HRL_WORD_SIZE;
+					blockno = result->nextTid / BM_MAX_TUPLES_PER_PAGE;
+					goto restart;
+				}
+				result->nextTid += fillLength * BM_HRL_WORD_SIZE;
+			}
+		}
+		else
+		{
+			result->nextTid += BM_HRL_WORD_SIZE;
+			result->lastScanWordNo++;
+			words->nwords--;
+		}
 	}
 
 	/*
@@ -912,10 +940,6 @@ restart:
 		return false;
 	}
 
-	/*
-	 * If the the nextTid is the firstTid, then we exam the leading
-	 * 0 fill words. And skip them.
-	 */
 	if (IS_FILL_WORD(words->hwords, result->lastScanWordNo) &&
 		GET_FILL_BIT(words->cwords[result->lastScanWordNo]) == 0)
 	{
@@ -939,11 +963,7 @@ restart:
 			words->nwords--;
 			
 			if(newentry)
-			{
-				/* Mark the scanned tids */
-				words->firstTid = result->nextTid;
 				goto restart;
-			}
 			else
 				return true;
 		}

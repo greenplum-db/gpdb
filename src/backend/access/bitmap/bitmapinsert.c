@@ -29,7 +29,6 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
-#include "utils/faultinjector.h"
 
 /*
  * The following structure along with BMTIDBuffer are used to buffer
@@ -81,6 +80,8 @@ static void updatesetbit_inpage(Relation rel, uint64 tidnum,
 								bool use_wal);
 static void insertsetbit(Relation rel, BlockNumber lovBlock, OffsetNumber lovOffset,
 			 			 uint64 tidnum, BMTIDBuffer *buf, bool use_wal);
+static uint64 getnumbits(BM_HRL_WORD *contentWords, 
+					     BM_HRL_WORD *headerWords, uint32 nwords);
 static void findbitmappage(Relation rel, BMLOVItem lovitem,
 					   uint64 tidnum,
 					   Buffer *bitmapBufferP, uint64 *firstTidNumberP);
@@ -113,6 +114,28 @@ static uint16 buf_free_mem(Relation rel, BMTIDBuffer *buf,
 static uint16 _bitmap_free_tidbuf(BMTIDBuffer* buf);
 
 #define BUF_INIT_WORDS 8 /* as good a point as any */
+
+
+/*
+ * getnumbits() -- return the number of bits included in the given
+ * 	bitmap words.
+ */
+static uint64
+getnumbits(BM_HRL_WORD *contentWords, BM_HRL_WORD *headerWords, uint32 nwords)
+{
+	uint64	nbits = 0;
+	uint32	i;
+
+	for (i = 0; i < nwords; i++)
+	{
+		if (IS_FILL_WORD(headerWords, i))
+			nbits += FILL_LENGTH(contentWords[i]) * BM_HRL_WORD_SIZE;
+		else
+			nbits += BM_HRL_WORD_SIZE;
+	}
+
+	return nbits;
+}
 
 /*
  * updatesetbit() -- update a set bit in a bitmap.
@@ -925,7 +948,7 @@ updatesetbit_inpage(Relation rel, uint64 tidnum,
 	}
 
 	bitmapOpaque->bm_last_tid_location -=
-		GET_NUM_BITS(words_left.cwords, words_left.hwords, words_left.curword);
+		getnumbits(words_left.cwords, words_left.hwords, words_left.curword);
 
 	if (words_left.curword > 0)
 	{
@@ -953,7 +976,6 @@ updatesetbit_inpage(Relation rel, uint64 tidnum,
 		memcpy(nextBitmap->hwords, words.hwords,
 			   BM_CALC_H_WORDS(nextOpaque->bm_hrl_words_used) * sizeof(BM_HRL_WORD));
 
-		SIMPLE_FAULT_INJECTOR("rearrange_word_to_next_bitmap_page");
 		Assert(new_words.curword == 0);
 	}
 
