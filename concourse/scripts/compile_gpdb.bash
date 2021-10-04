@@ -87,7 +87,7 @@ function include_dependencies() {
 	vendored_headers=(zstd*.h uv.h uv)
 	pkgconfigs=(libzstd.pc libuv.pc quicklz.pc)
 
-	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0})
+	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0} libxerces-c{,-3.1}.so)
 
 	library_search_path+=($(cat /etc/ld.so.conf.d/*.conf | grep -v '#'))
 	library_search_path+=(/lib64 /usr/lib64 /lib /usr/lib)
@@ -142,14 +142,6 @@ function export_gpdb_clients() {
 	popd
 }
 
-function build_xerces() {
-	OUTPUT_DIR="${GPDB_EXT_PATH}"
-	mkdir -p xerces_patch/concourse
-	cp -r gpdb_src/src/backend/gporca/concourse/xerces-c xerces_patch/concourse
-	/usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir="${OUTPUT_DIR}"
-	rm -rf build
-}
-
 function _main() {
 
 	prep_env
@@ -157,7 +149,6 @@ function _main() {
 	## Add CCache Support (?)
 	add_ccache_support "${OS}"
 
-	build_xerces
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"
 	git_info
