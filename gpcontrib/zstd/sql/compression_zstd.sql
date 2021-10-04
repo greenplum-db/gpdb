@@ -11,8 +11,8 @@ SELECT reloptions FROM pg_class WHERE relname = 'zstdtest';
 INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_series(1, 100000) g;
 INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_series(1, 100000) g;
 
--- Check that we actually compressed data
-SELECT get_ao_compression_ratio('zstdtest');
+-- Check that we actually compressed data. With libzstd-1.4.4, the ratio is 2.66. With libzstd-1.3.7, the ratio is 2.62.
+SELECT get_ao_compression_ratio('zstdtest') IN (2.62, 2.66);
 
 -- Check contents, at the beginning of the table and at the end.
 SELECT * FROM zstdtest ORDER BY (id, t) LIMIT 5;
