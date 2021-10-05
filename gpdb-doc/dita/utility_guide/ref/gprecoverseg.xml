@@ -71,7 +71,7 @@
         configured exactly the same as the existing segment hosts. A spare data directory location
         must exist on all currently configured segment hosts and have enough disk space to
         accommodate the failed segments.</p><p>The recovery process marks the segment as up again in
-        the Greenplum Database system catalog, and then initiates the synchronization process to
+        the Greenplum Database system catalog, and then initiates the resynchronization process to
         bring the transactional state of the segment up-to-date with the latest changes. The system
         is online and available during <codeph>Not in Sync</codeph> mode. </p></section>
     <section id="section4">
@@ -200,7 +200,7 @@ newPort|newDataDirectory</codeblock>
             potentially unbalanced state, as some segment hosts may have more active segments than
             is optimal for top system performance. This option rebalances primary and mirror
             segments by returning them to their preferred roles. All segments must be valid and
-            synchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
+            resynchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
             progress queries, they will be cancelled and rolled back.</pd>
         </plentry>
         <plentry>
