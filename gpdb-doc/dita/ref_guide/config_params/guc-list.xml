@@ -4516,7 +4516,7 @@
         cores, in the total number of available cores.</p> 
       <p> For example, if a Greenplum Database cluster has 10-core segment hosts that are
         configured with four primary segments, set the value to 2.5 on each segment host
-        (10 divided by 4 ).
+        (10 divided by 4).
         A master host typically has only a single running master instance, so set the
         value on the master and standby maaster hosts to reflect the usage of all available
         CPU cores, in this case 10. </p>
