@@ -75,9 +75,14 @@
           <codeph>on_change</codeph>: <codeph>CREATE TABLE AS SELECT</codeph>,
           <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, <codeph>INSERT</codeph>, and
           <codeph>COPY</codeph>.</p>
-      <p>Setting <codeph>gp_autostats_allow_nonowner</codeph> to <codeph>true</codeph>
-        follows the rules above, and also instructs Greenplum Database to trigger statistics
-        collection when a table is updated by a non-owner.</p>
+      <p>Setting the <codeph>gp_autostats_allow_nonowner</codeph> server configuration
+        parameter to <codeph>true</codeph> also instructs Greenplum Database to trigger
+        automatic statistics collection on a table when:</p>
+      <ul>
+        <li><codeph>gp_autostats_mode=on_change</codeph> and the table is modified by a non-owner.</li>
+        <li><codeph>gp_autostats_mode=on_no_stats</codeph> and the first user to
+          <codeph>INSERT</codeph> or <codeph>COPY</codeph> into the table is a non-owner.</li>
+      </ul>
       <p>Setting <codeph>gp_autostats_mode</codeph> to <codeph>none</codeph> disables automatics
         statistics collection. </p>
       <p> For partitioned tables, automatic statistics collection is not triggered if data is

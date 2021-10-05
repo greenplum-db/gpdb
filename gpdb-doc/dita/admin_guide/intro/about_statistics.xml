@@ -472,9 +472,13 @@
           that could disrupt the system, so it is not recommended to set it globally. It could be
           useful in a session, for example to automatically analyze a table following a load.</p>
         <p>Setting the <codeph>gp_autostats_allow_nonowner</codeph> server configuration
-          parameter to <codeph>true</codeph> follows the rules above, and instructs Greenplum
-          Database to also trigger statistics collection when a table is updated by a
-          non-owner.</p>
+          parameter to <codeph>true</codeph> also instructs Greenplum Database to trigger
+          automatic statistics collection on a table when:</p>
+        <ul>
+          <li><codeph>gp_autostats_mode=on_change</codeph> and the table is modified by a non-owner.</li>
+          <li><codeph>gp_autostats_mode=on_no_stats</codeph> and the first user to
+            <codeph>INSERT</codeph> or <codeph>COPY</codeph> into the table is a non-owner.</li>
+        </ul>
         <p>To disable automatic statistics collection outside of functions, set the
             <codeph>gp_autostats_mode</codeph> parameter to
           <codeph>none</codeph>:<codeblock>gpconfigure -c gp_autostats_mode -v none</codeblock></p>

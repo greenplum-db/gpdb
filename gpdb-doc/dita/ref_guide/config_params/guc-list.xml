@@ -2137,13 +2137,18 @@
   <topic id="gp_autostats_allow_nonowner">
     <title>gp_autostats_allow_nonowner</title>
     <body>
-      <p>When <codeph>gp_autostats_mode=on_change</codeph>, Greenplum Database automatically
-        triggers statistics collection on a table after it is modified by its owner.</p>
       <p>The <codeph>gp_autostats_allow_nonowner</codeph> server configuration parameter
         determines whether or not to allow Greenplum Database to trigger automatic statistics
         collection when a table is modified by a non-owner.</p>
       <p>The default value is <codeph>false</codeph>; Greenplum Database does not trigger
         automatic statistics collection on a table that is updated by a non-owner.</p>
+      <p>When set to <codeph>true</codeph>, Greenplum Database will also trigger automatic
+         statistics collection on a table when:</p>
+      <ul>
+        <li><codeph>gp_autostats_mode=on_change</codeph> and the table is modified by a non-owner.</li>
+        <li><codeph>gp_autostats_mode=on_no_stats</codeph> and the first user to
+          <codeph>INSERT</codeph> or <codeph>COPY</codeph> into the table is a non-owner.</li>
+      </ul>
       <p>The <codeph>gp_autostats_allow_nonowner</codeph> configuration parameter can be
         changed only by a superuser.</p>
       <table id="gp_auto_stats_allow_nonowner_table">
