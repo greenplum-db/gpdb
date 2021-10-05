@@ -1015,6 +1015,8 @@ processResults(CdbDispatchResult *dispatchResult)
 	if ((elog_geterrcode() == 0) && nextval &&
 		strcmp(nextval->relname, "nextval") == 0)
 	{
+		CHECK_FOR_INTERRUPTS();
+
 		int64 last;
 		int64 cached;
 		int64 increment;
