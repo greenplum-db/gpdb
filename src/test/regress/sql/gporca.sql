@@ -3380,6 +3380,7 @@ select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) f
 
 select count(*) from (select trim( case when a!='abc' then  (regexp_split_to_table((a)::text, ','::text)) else ' ' end) from nested_srf)a;
 select count(*) from (select trim(coalesce(regexp_split_to_table((a)::text, ','::text),'')) from nested_srf)a;
+select count(regexp_split_to_table((a)::text, ','::text)) from nested_srf;
 
 truncate nested_srf;
 insert into nested_srf values (NULL);

@@ -13986,6 +13986,11 @@ ERROR:  set-returning functions are not allowed in COALESCE
 LINE 1: select count(*) from (select trim(coalesce(regexp_split_to_t...
                                                    ^
 HINT:  You might be able to move the set-returning function into a LATERAL FROM item.
+select count(regexp_split_to_table((a)::text, ','::text)) from nested_srf;
+ERROR:  aggregate function calls cannot contain set-returning function calls
+LINE 1: select count(regexp_split_to_table((a)::text, ','::text)) fr...
+                     ^
+HINT:  You might be able to move the set-returning function into a LATERAL FROM item.
 truncate nested_srf;
 insert into nested_srf values (NULL);
 select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
