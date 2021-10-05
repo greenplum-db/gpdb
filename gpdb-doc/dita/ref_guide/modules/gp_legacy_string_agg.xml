@@ -16,7 +16,7 @@
         <p>The <codeph>gp_legacy_string_agg</codeph> module is installed when you install
           Greenplum Database. Before you can use the function defined in the module, you
           must register the <codeph>gp_legacy_string_agg</codeph> extension in each database
-          where you want to use the functions.
+          where you want to use the function.
           <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.xml"
             format="dita" scope="peer">Installing Additional Supplied Modules</xref>
           for more information about registering the module.</ph></p>
