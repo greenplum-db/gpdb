@@ -20,7 +20,7 @@
       <p>The <codeph>gpmovemirrors</codeph> utility moves mirror segment instances to new locations.
         You may want to move mirrors to new locations to optimize distribution or data storage.</p>
       <p>Before moving segments, the utility verifies that they are mirrors, and that their
-        corresponding primary segments are up and are in synchronizing or resynchronizing mode.</p>
+        corresponding primary segments are up and are in Synchronized or Not In Sync mode.</p>
       <p>By default, the utility will prompt you for the file system location(s) where it will move
         the mirror segment data directories.</p>
       <p>You must make sure that the user who runs <codeph>gpmovemirrors</codeph> (the
