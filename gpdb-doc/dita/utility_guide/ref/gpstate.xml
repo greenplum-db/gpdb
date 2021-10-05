@@ -61,7 +61,7 @@
                 <li>Whether any segments are down.</li>
                 <li>Whether any primary-mirror segment pairs are out of sync – including information
                   on how many bytes are remaining to sync (as displayed in the <codeph>WAL sync
-                    remaining bytes</codeph> output field). <note><codeph>gpstate -e </codeph>will
+                    remaining bytes</codeph> output field). <note><codeph>gpstate -e </codeph>does
                     not display segment pairs that are in sync.</note></li>
                 <li>Whether any primary-mirror segment pairs are not in their preferred roles.</li>
               </ul>
@@ -103,7 +103,7 @@
         </plentry>
         <plentry>
           <pt>-s (detailed status)</pt>
-          <pd>Optional. Displays detailed status information about the Greenplum database system. </pd>
+          <pd>Optional. Displays detailed status information about the Greenplum Database system. </pd>
         </plentry>
         <plentry>
           <pt>-v (verbose output)</pt>
@@ -191,7 +191,7 @@
         </tgroup>
       </table><p>The following output fields are reported by <codeph>gpstate -s</codeph> for each
         primary segment:</p><table id="md138181">
-        <title>gpstate output data for primary segments</title>
+        <title>gpstate -s output data for primary segments</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="165pt"/>
           <colspec colnum="2" colname="col2" colwidth="209.25pt"/>
@@ -265,7 +265,7 @@
         </tgroup>
       </table><p>The following output fields are reported by <codeph>gpstate -s</codeph> for each
         mirror segment:</p><table id="table_vx4_syn_1rb">
-        <title>gpstate output data for mirror segments</title>
+        <title>gpstate -s output data for mirror segments</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="165pt"/>
           <colspec colnum="2" colname="col2" colwidth="209.25pt"/>
@@ -353,7 +353,8 @@
             </row>
           </tbody>
         </tgroup>
-      </table>When there is no connection between a primary segment and its mirror, <codeph>gpstate
+      </table>
+      <note>When there is no connection between a primary segment and its mirror, <codeph>gpstate
         -s</codeph> displays <codeph>Unknown</codeph> in the following fields: <ul
         id="ul_ehm_z14_1rb">
         <li><codeph>Bytes remaining to send to mirror</codeph></li>
@@ -362,7 +363,8 @@
         <li><codeph>WAL Replay Location</codeph></li>
         <li><codeph>Bytes received but remain to flush</codeph></li>
         <li><codeph>Bytes received but remain to replay</codeph></li>
-      </ul><p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby
+      </ul></note>
+      <p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby
         coordinator replication status:</p><table id="table_vt5_rvm_ht">
         <title>gpstate output data for coordinator replication</title>
         <tgroup cols="2">
