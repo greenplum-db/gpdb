@@ -203,7 +203,7 @@ failedAddress3|failedPort3|failedDataDirectory3</codeblock></li>
             <li>Run the following command to recover all segments to the new host:
                 <codeblock>gprecoverseg -p &lt;new_host_name></codeblock><p>You may also specify
                 more than one host. However, be sure you do not trigger a double-fault scenario when
-                recovering to two hosts at a time. </p><codeblock>gprecoverseg -p &lt;new_host_name1>, &lt;new_host_name2></codeblock><p>
+                recovering to two hosts at a time. </p><codeblock>gprecoverseg -p &lt;new_host_name1>,&lt;new_host_name2></codeblock><p>
                 <note>In the case of multiple failed segment hosts, you can specify the hosts to
                   recover to with a comma-separated list. However, it is strongly recommended to
                   recover to one host at a time. If you must recover to more than one host at a
