@@ -439,7 +439,7 @@
           performed on the table. For partitioned tables, automatic statistics collection is only
           triggered when the operation is run directly on a leaf table, and then only the leaf table
           is analyzed.</p>
-        <p>Automatic statistics collection is governed a server configuration parameter,
+        <p>Automatic statistics collection is governed by a server configuration parameter,
           and has three modes:<ul id="ul_epn_pcb_mt">
             <li><codeph>none</codeph> disables automatic statistics collection.</li>
             <li><codeph>on_no_stats</codeph> triggers an analyze operation for a table with no
