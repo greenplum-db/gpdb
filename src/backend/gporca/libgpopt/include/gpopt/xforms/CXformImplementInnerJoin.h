@@ -3,13 +3,13 @@
 //	Copyright (C) 2011 EMC Corp.
 //
 //	@filename:
-//		CXformInnerJoin2HashJoin.h
+//		CXformImplementInnerJoin.h
 //
 //	@doc:
-//		Transform inner join to inner Hash Join
+//		Transform inner join to inner Hash/NLJ Join
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformInnerJoin2HashJoin_H
-#define GPOPT_CXformInnerJoin2HashJoin_H
+#ifndef GPOPT_CXformImplementInnerJoin_H
+#define GPOPT_CXformImplementInnerJoin_H
 
 #include "gpos/base.h"
 
@@ -21,37 +21,37 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformInnerJoin2HashJoin
+//		CXformImplementInnerJoin
 //
 //	@doc:
-//		Transform inner join to inner Hash Join
-//		Deprecated in favor of CXformImplementInnerJoin.
+//		Transform inner join to inner Hash Join or Inner Nested Loop Join
+//		(if a Hash Join is not possible)
 //
 //---------------------------------------------------------------------------
-class CXformInnerJoin2HashJoin : public CXformImplementation
+class CXformImplementInnerJoin : public CXformImplementation
 {
 private:
 public:
-	CXformInnerJoin2HashJoin(const CXformInnerJoin2HashJoin &) = delete;
+	CXformImplementInnerJoin(const CXformImplementInnerJoin &) = delete;
 
 	// ctor
-	explicit CXformInnerJoin2HashJoin(CMemoryPool *mp);
+	explicit CXformImplementInnerJoin(CMemoryPool *mp);
 
 	// dtor
-	~CXformInnerJoin2HashJoin() override = default;
+	~CXformImplementInnerJoin() override = default;
 
 	// ident accessors
 	EXformId
 	Exfid() const override
 	{
-		return ExfInnerJoin2HashJoin;
+		return ExfImplementInnerJoin;
 	}
 
 	// return a string for xform name
 	const CHAR *
 	SzId() const override
 	{
-		return "CXformInnerJoin2HashJoin";
+		return "CXformImplementInnerJoin";
 	}
 
 	// compute xform promise for a given expression handle
@@ -61,11 +61,11 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const override;
 
-};	// class CXformInnerJoin2HashJoin
+};	// class CXformImplementInnerJoin
 
 }  // namespace gpopt
 
 
-#endif	// !GPOPT_CXformInnerJoin2HashJoin_H
+#endif	// !GPOPT_CXformImplementInnerJoin_H
 
 // EOF

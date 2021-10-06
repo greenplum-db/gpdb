@@ -1936,7 +1936,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="484">
+    <dxl:Plan Id="0" SpaceSize="264">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="34974.557438" Rows="9548.818729" Width="8"/>

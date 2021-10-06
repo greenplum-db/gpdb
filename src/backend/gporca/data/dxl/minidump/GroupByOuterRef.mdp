@@ -320,7 +320,7 @@ where t.a in (select count(s.i) from s);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="24">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:HashJoin JoinType="In">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000729" Rows="1.000000" Width="12"/>

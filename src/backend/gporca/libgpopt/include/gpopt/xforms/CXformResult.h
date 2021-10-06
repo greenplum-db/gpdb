@@ -61,6 +61,12 @@ public:
 	// print function
 	IOstream &OsPrint(IOstream &os) const;
 
+	ULONG
+	Size() const
+	{
+		return m_pdrgpexpr->Size();
+	}
+
 };	// class CXformResult
 
 // shorthand for printing

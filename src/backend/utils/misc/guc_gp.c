@@ -331,6 +331,7 @@ bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
 bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
+bool		optimizer_force_comprehensive_join_implementation;
 
 
 /* Optimizer plan enumeration related GUCs */
@@ -2840,7 +2841,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 &optimizer_enable_redistribute_nestloop_loj_inner_child,
 		 true,
 		 NULL, NULL, NULL
+	},
+	{
+		{"optimizer_force_comprehensive_join_implementation", PGC_USERSET, QUERY_TUNING_METHOD,
+		 gettext_noop("Explore a nested loop join even if a hash join is possible"),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		 },
+		 &optimizer_force_comprehensive_join_implementation,
+		 false,
+		 NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{
