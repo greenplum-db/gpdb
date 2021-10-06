@@ -40,7 +40,7 @@
             <codeph><xref href="../../../ref_guide/system_catalogs/gp_configuration_history.xml"
           /></codeph> table with the operations performed.</p>
       <p dir="ltr">When there is only an active primary segment and the corresponding mirror is
-        down, the primary goes into the <i>not synchronizing</i> state and continues logging
+        down, the primary goes into the <codeph>Not In Sync </codeph>state and continues logging
         database changes, so the mirror can be synchronized without performing a full copy of data
         from the primary to the mirror.</p>
       <p>Running the <codeph>gpstate</codeph> utility with the <codeph>-e</codeph> option displays
@@ -48,14 +48,14 @@
         options that display information about all primary or mirror segment instances such as
           <codeph>-m</codeph> (mirror instance information) and <codeph>-c</codeph> (primary and
         mirror configuration information) also display information about primary and mirror issues. </p>
-      <p dir="ltr">You can also can see the mode: <codeph>s</codeph> (synchronizing) or
-          <codeph>n</codeph> (not synchronizing) for each segment instance, as well as the status
-          <codeph>u</codeph> (up) or <codeph>d</codeph> (down), in the
+      <p dir="ltr">You can also can see the mode: <codeph>s</codeph> (<codeph>Synchronized</codeph>)
+        or <codeph>n</codeph> (<codeph>Not In Sync</codeph>) for each segment instance, as well as
+        the status <codeph>u</codeph> (up) or <codeph>d</codeph> (down), in the
           <codeph>gp_segment_configuration</codeph> table. </p>
-      <p dir="ltr">The <codeph><xref href="../../../utility_guide/ref/gprecoverseg.xml"
-          /></codeph> utility is used to bring up a mirror that is down. By default,
-          <codeph>gprecoverseg</codeph> performs an incremental recovery, placing the mirror into
-        synchronizing mode, which starts to replay the recorded changes from the primary onto the
+      <p dir="ltr">The <codeph><xref href="../../../utility_guide/ref/gprecoverseg.xml"/></codeph>
+        utility is used to bring up a mirror that is down. By default, <codeph>gprecoverseg</codeph>
+        performs an incremental recovery, placing the mirror segment into <codeph>Not In
+          Sync</codeph> mode, which starts to replay the recorded changes from the primary onto the
         mirror. If the incremental recovery cannot be completed, the recovery fails and
           <codeph>gprecoverseg</codeph> should be run again with the <codeph>-F</codeph> option, to
         perform full recovery. This causes the primary to copy all of the data to the mirror.</p>
@@ -104,14 +104,14 @@
               <entry>Primary</entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>n</codeph><p>(not synchronizing)</p></entry>
+              <entry><codeph>n</codeph><p>(Not In Sync)</p></entry>
               <entry><codeph>d</codeph><p>(down)</p></entry>
             </row>
             <row>
               <entry>Mirror</entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>n</codeph><p>(not synchronizing)</p></entry>
+              <entry><codeph>n</codeph><p>(Not In Sync)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
           </tbody>
@@ -146,14 +146,14 @@
               <entry>Primary</entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronizing)</p></entry>
+              <entry><codeph>s</codeph><p>(<codeph>Not In Sync</codeph>)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
             <row>
               <entry>Mirror</entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronizing)</p></entry>
+              <entry><codeph>s</codeph><p>(<codeph>Not In Sync</codeph>)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
           </tbody>
@@ -182,14 +182,14 @@
               <entry>Primary</entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronized)</p></entry>
+              <entry><codeph>s</codeph><p>(<codeph>Synchronized</codeph>)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
             <row>
               <entry>Mirror</entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronized)</p></entry>
+              <entry><codeph>s</codeph><p>(<codeph>Synchronized</codeph>)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
           </tbody>
@@ -232,8 +232,8 @@
       <p>In addition to the fault checking performed by the FTS, a primary segment that is unable to
         send data to its mirror can change the status of the mirror to down. The primary queues up
         the data and after <codeph>gp_segment_connect_timeout</codeph> seconds passes, indicates a
-        mirror failure, causing the mirror to be marked down and the primary to go into change
-        tracking mode.</p>
+        mirror failure, causing the mirror to be marked down and the primary to go into <codeph>Not In Sync</codeph>
+        mode.</p>
     </section>
   </body>
 </topic>
