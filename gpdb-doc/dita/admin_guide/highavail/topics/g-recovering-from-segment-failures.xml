@@ -9,8 +9,8 @@
       segment goes down, the system automatically becomes nonoperational.</p>
     <p>A segment instance can fail for several reasons, such as a host failure, network failure, or
       disk failure. When a segment instance fails, its status is marked as <i>down</i> in the
-      Greenplum Database system catalog, and its mirror is activated in <codeph>Not In Sync</codeph>
-      mode. In order to bring the failed segment instance back into operation again, you must first
+      Greenplum Database system catalog, and its mirror is activated in <i>change tracking</i> mode.
+      In order to bring the failed segment instance back into operation again, you must first
       correct the problem that made it fail in the first place, and then recover the segment
       instance in Greenplum Database using <codeph>gprecoverseg</codeph>.</p>
     <p>If a segment host is not recoverable and you have lost one or more segment instances with
@@ -34,14 +34,11 @@
         <li id="ki158500">The recovery process brings up the failed segments and identifies the
           changed files that need to be synchronized. The process can take some time; wait for the
           process to complete.</li>
-        <li id="ki164382">After <codeph>gprecoverseg</codeph> completes, the segment goes into
-            <codeph>Not In Sync</codeph> mode and begins copying the changed files. This process
-          runs in the background while the system is online and accepting database requests.</li>
-        <li id="ki158504">When the resynchronization process completes, the segment state is
-            <codeph>Synchronized</codeph>. </li>
-        <li>Once recovered mirror segments move from <codeph>Not In Sync</codeph> to
-            <codeph>Synchronized</codeph> mode they are ready to be returned to their preferred
-          role, as described in the next section.</li>
+        <li id="ki164382">After <codeph>gprecoverseg</codeph> completes, the system goes into
+            <i>Resynchronizing</i> mode and begins copying the changed files. This process runs in
+          the background while the system is online and accepting database requests.</li>
+        <li id="ki158504">When the resynchronization process completes, the system state is
+            <i>Synchronized</i>. </li>
       </ol>
       <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
         instance data is not corrupted, contact VMware Support. </note>
@@ -61,8 +58,8 @@
         <li id="ki165540">Run <codeph>gpstate -e</codeph> to check for unbalanced segments.
           <codeblock>$ gpstate -e</codeblock>
         </li>
-        <li id="ki165577">If any mirrors are in <codeph>Not In Sync</codeph> mode, wait for them to
-          enter <codeph>Synchronized</codeph> mode.</li>
+        <li id="ki165577">If any mirrors are in <i>Resynchronizing</i> mode, wait for them to
+          complete.</li>
         <li id="ki165591">Run <codeph>gprecoverseg</codeph> with the <codeph>-r</codeph> option to
           return the segments to their preferred roles.<codeblock>$ gprecoverseg -r</codeblock>
         </li>
@@ -90,14 +87,15 @@
             segment instance data is not corrupted, contact VMware Support. </note></li>
         <li id="ki165709">After <codeph>gprecoverseg</codeph> completes, use
             <codeph>gpstate</codeph> to check the status of your mirrors and ensure the segment
-          instances have gone from <codeph>Not In Sync</codeph> mode to
-            <codeph>Synchronized</codeph> mode:<codeblock>$ gpstate -m </codeblock></li>
-        <li id="ki165730">If you still have segment instances in <codeph>Not In Sync</codeph> mode,
-          you can run <codeph>gprecoverseg</codeph> with the <codeph>-F</codeph> option to perform a
-          full segment recovery. <note type="warning">A full recovery deletes the data directory of
-            the down segment instance before copying the data from the active (current primary)
-            segment instance. Before performing a full recovery, ensure that the segment failure did
-            not cause data corruption and that any host segment disk issues have been
+          instances have gone from <i>Resynchronizing</i> mode to <i>Synchronized</i>
+          mode:<codeblock>$ gpstate -m </codeblock></li>
+        <li id="ki165730">If you still have segment instances in <i>change tracking</i> mode, you
+          can run <codeph>gprecoverseg</codeph> with the <codeph>-F</codeph> option to perform a
+          full segment recovery.
+          <note type="warning">A full recovery deletes the data directory of the down segment
+            instance before copying the data from the active (current primary) segment instance.
+            Before performing a full recovery, ensure that the segment failure did not cause data
+            corruption and that any host segment disk issues have been
           fixed.</note><codeblock>$ gprecoverseg -F</codeblock></li>
         <li>If needed, return segment instances to their preferred role. See <xref
             href="#topic14/ki155666" format="dita"/>.</li>
