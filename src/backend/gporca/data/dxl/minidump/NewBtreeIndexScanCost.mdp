@@ -4172,7 +4172,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16">
+    <dxl:Plan Id="0" SpaceSize="13">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="4220.745632" Rows="2284199.908555" Width="156"/>

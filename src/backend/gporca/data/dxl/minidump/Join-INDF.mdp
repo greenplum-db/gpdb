@@ -344,7 +344,7 @@ select * from foo, foo2 where foo.a is not distinct from foo2.a;
         </dxl:Not>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16">
+    <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.003542" Rows="9.999994" Width="12"/>

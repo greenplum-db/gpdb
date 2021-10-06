@@ -219,6 +219,9 @@ enum EOptTraceFlag
 	// enable NL Left Join plan alternatives where inner child is redistributed if possible
 	EopttraceEnableRedistributeNLLOJInnerChild = 103041,
 
+	// Explore a nested loop join even if a hash join is possible
+	EopttraceForceComprehensiveJoinImplementation = 103042,
+
 	///////////////////////////////////////////////////////
 	///////////////////// statistics flags ////////////////
 	//////////////////////////////////////////////////////

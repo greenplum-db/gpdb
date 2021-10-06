@@ -3,13 +3,14 @@
 //	Copyright (C) 2011 EMC Corp.
 //
 //	@filename:
-//		CXformInnerJoin2HashJoin.cpp
+//		CXformImplementInnerJoin.cpp
 //
 //	@doc:
-//		Implementation of transform
+//		Transform inner join to inner Hash Join or Inner Nested Loop Join
+//		(if a Hash Join is not possible)
 //---------------------------------------------------------------------------
 
-#include "gpopt/xforms/CXformInnerJoin2HashJoin.h"
+#include "gpopt/xforms/CXformImplementInnerJoin.h"
 
 #include "gpos/base.h"
 
@@ -17,7 +18,6 @@
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalInnerHashJoin.h"
 #include "gpopt/operators/CPhysicalInnerNLJoin.h"
-#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -25,13 +25,13 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformInnerJoin2HashJoin::CXformInnerJoin2HashJoin
+//		CXformImplementInnerJoin::CXformImplementInnerJoin
 //
 //	@doc:
 //		ctor
 //
 //---------------------------------------------------------------------------
-CXformInnerJoin2HashJoin::CXformInnerJoin2HashJoin(CMemoryPool *mp)
+CXformImplementInnerJoin::CXformImplementInnerJoin(CMemoryPool *mp)
 	:  // pattern
 	  CXformImplementation(GPOS_NEW(mp) CExpression(
 		  mp, GPOS_NEW(mp) CLogicalInnerJoin(mp),
@@ -48,32 +48,51 @@ CXformInnerJoin2HashJoin::CXformInnerJoin2HashJoin(CMemoryPool *mp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformInnerJoin2HashJoin::Exfp
+//		CXformImplementInnerJoin::Exfp
 //
 //	@doc:
 //		Compute xform promise for a given expression handle;
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformInnerJoin2HashJoin::Exfp(CExpressionHandle &) const
+CXformImplementInnerJoin::Exfp(CExpressionHandle &exprhdl) const
 {
-	return CXform::ExfpNone;
+	return CXformUtils::ExfpLogicalJoin2PhysicalJoin(exprhdl);
 }
 
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformInnerJoin2HashJoin::Transform
+//		CXformImplementInnerJoin::Transform
 //
 //	@doc:
 //		actual transformation
-//		Deprecated in favor of CXformImplementInnerJoin.
 //
 //---------------------------------------------------------------------------
 void
-CXformInnerJoin2HashJoin::Transform(CXformContext *, CXformResult *,
-									CExpression *) const
+CXformImplementInnerJoin::Transform(CXformContext *pxfctxt,
+									CXformResult *pxfres,
+									CExpression *pexpr) const
 {
+	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
+	GPOS_ASSERT(FCheckPattern(pexpr));
+
+	GPOS_ASSERT(pxfres->Size() == 0);
+
+	if (GPOPT_FENABLED_XFORM(ExfInnerJoin2HashJoin))
+	{
+		CXformUtils::ImplementHashJoin<CPhysicalInnerHashJoin>(pxfctxt, pxfres,
+															   pexpr);
+	}
+
+	if ((GPOS_FTRACE(EopttraceForceComprehensiveJoinImplementation) ||
+		 pxfres->Size() == 0) &&
+		GPOPT_FENABLED_XFORM(ExfInnerJoin2NLJoin))
+	{
+		CXformUtils::ImplementNLJoin<CPhysicalInnerNLJoin>(pxfctxt, pxfres,
+														   pexpr);
+	}
 }
 
 // EOF
