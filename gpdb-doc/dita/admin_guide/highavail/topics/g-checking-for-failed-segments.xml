@@ -6,36 +6,67 @@
   <body>
     <p>With mirroring enabled, you can have failed segment instances in the system without
       interruption of service or any indication that a failure has occurred. You can verify the
-      status of your system using the <codeph>gpstate</codeph> utility. <codeph>gpstate</codeph>
-      provides the status of each individual component of a Greenplum Database system, including
-      primary segments, mirror segments, master, and standby master.</p>
-    <section id="ki155580">
-      <title>To check for failed segments</title>
-      <ol>
-        <li id="ki155584">On the master host, run the <codeph><xref
-              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"
-            /></codeph> utility with the <codeph>-e</codeph> option to show segment instances with
-          error conditions:<codeblock>$ gpstate -e</codeblock><p>If the utility lists
-              <codeph>Segments with Primary and Mirror Roles Switched</codeph>, the segment is not
-            in its <i>preferred role</i> (the role to which it was assigned at system
-            initialization). This means the system is in a potentially unbalanced state, as some
-            segment hosts may have more active segments than is optimal for top system performance.
-            </p><p>Segments that display the <codeph>Config status</codeph> as <codeph>Down</codeph>
-            indicate the corresponding mirror segment is down. </p><p>See <xref
-              href="g-recovering-from-segment-failures.xml#topic14"/> for instructions to fix this
-            situation.</p></li>
-        <li id="ki165350">To get detailed information about failed segments, you can check the
-              <codeph><xref href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"
-            /></codeph> catalog table. For example:<p>
-            <codeblock>$ psql postgres -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock>
-          </p></li>
-        <li id="ki162539">For failed segment instances, note the host, port, preferred role, and
-          data directory. This information will help determine the host and segment instances to
-          troubleshoot.</li>
-        <li id="ki155591">To show information about mirror segment instances,
-          run:<codeblock>$ gpstate -m</codeblock>
-        </li>
+      status of your system using the <codeph>gpstate</codeph> utility, by examing the contents of
+      the <codeph>gp_segment_configuration</codeph> catalog table, or by checking log files.</p>
+    <section id="use_gpstate">
+      <title>Check for failed segments using gpstate</title>
+      <p>The <codeph>gpstate</codeph> utility provides the status of each individual component of a
+        Greenplum Database system, including primary segments, mirror segments, master, and standby
+        master.</p>
+      
+       <p>On the master host, run the <codeph><xref
+              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"/></codeph>
+          utility with the <codeph>-e</codeph> option to show segment instances with error
+            conditions:<codeblock>$ gpstate -e</codeblock>
+         If the utility lists <codeph>Segments
+              with Primary and Mirror Roles Switched</codeph>, the segment is not in its
+              <i>preferred role</i> (the role to which it was assigned at system initialization).
+            This means the system is in a potentially unbalanced state, as some segment hosts may
+            have more active segments than is optimal for top system performance. </p><p>Segments
+            that display the <codeph>Config status</codeph> as <codeph>Down</codeph> indicate the
+            corresponding mirror segment is down. </p><p>See <xref
+              href="g-segment-recovery-scenarios.xml"/> for instructions to fix this
+              situation.</p></section>
+  
+    <section id="select_from_table">
+      <title>Check for failed segments using the gp_segment_configuration table</title> To get
+      detailed information about failed segments, you can check the <codeph><xref
+          href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"/></codeph> catalog
+      table. For example:<p>
+        <codeblock>$ psql postgres -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock>
+      </p> For failed segment instances, note the host, port, preferred role, and data directory.
+      This information will help determine the host and segment instances to troubleshoot. To
+      display information about mirror segment instances, run:<codeblock>$ gpstate -m</codeblock>
+    </section>
+    
+    <section id="check_log_files">
+      <title>Check for failed segments by examining log files</title>
+    
+    </section>
+    <p>Log files can provide information to help determine an error's cause. The master and segment
+      instances each have their own log file in <codeph>log</codeph> of the data directory. The
+      master log file contains the most information and you should always check it first. </p>
+    <p>Use the <codeph><xref href="../../../utility_guide/ref/gplogfilter.xml" type="topic"
+          format="dita"/></codeph> utility to check the Greenplum Database log files for additional
+      information. To check the segment log files, run <codeph>gplogfilter</codeph> on the segment
+      hosts using <codeph><xref href="../../../utility_guide/ref/gpssh.xml" type="topic"
+          format="dita"/></codeph>.</p>
+    <section id="ki170080">
+      <title>To check the log files</title>
+      <ol id="ol_ort_blb_yqb">
+        <li id="ki168755">Use <codeph>gplogfilter</codeph> to check the master log file for
+            <codeph>WARNING</codeph>, <codeph>ERROR</codeph>, <codeph>FATAL</codeph> or
+            <codeph>PANIC</codeph> log level messages:<codeblock>$ gplogfilter -t</codeblock></li>
+        <li id="ki166372">Use <codeph>gpssh</codeph> to check for <codeph>WARNING</codeph>,
+            <codeph>ERROR</codeph>, <codeph>FATAL</codeph>, or <codeph>PANIC</codeph> log level
+          messages on each segment instance. For
+          example:<codeblock>$ gpssh -f seg_hosts_file -e 'source 
+/usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -t 
+/data1/primary/*/log/gpdb*.log' &gt; seglog.out
+</codeblock></li>
       </ol>
     </section>
+        
+
   </body>
 </topic>
