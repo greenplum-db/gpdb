@@ -70,7 +70,7 @@ WHERE mode = 'n' and status = 'u' and content &lt;> -1;</codeblock></p>
                             </row>
                             <row>
                                 <entry>Check for segments that are not operating in their preferred role but are marked as up and <codeph>Synchronized</codeph>.
-                                    role. If any segments are found, the cluster may not be
+                                    If any segments are found, the cluster may not be
                                     balanced. If any rows are returned this should generate a
                                     warning or alert. <p>Recommended frequency: run every 5 to 10
                                         minutes</p><p>Severity: IMPORTANT</p></entry>
