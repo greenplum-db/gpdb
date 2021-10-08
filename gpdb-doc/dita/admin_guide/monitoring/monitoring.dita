@@ -63,13 +63,13 @@ WHERE status = 'd';</codeblock></entry>
                                         database:<codeblock>SELECT * FROM gp_segment_configuration
 WHERE mode = 'n' and status = 'u' and content &lt;> -1;</codeblock></p>
                                 </entry>
-                                <entry>If the query returns rows then the segment is in the process
+                                <entry>If the query returns rows then the segment might be in the process
                                     of moving from  <codeph>Not In Sync</codeph> to
                                         <codeph>Synchronized</codeph> mode. Use <codeph>gpstate
                                         -e</codeph> to track progress.</entry>
                             </row>
                             <row>
-                                <entry>Check for segments that are not operating in their optimal
+                                <entry>Check for segments that are not operating in their preferred role but are marked as up and <codeph>Synchronized</codeph>.
                                     role. If any segments are found, the cluster may not be
                                     balanced. If any rows are returned this should generate a
                                     warning or alert. <p>Recommended frequency: run every 5 to 10
@@ -77,15 +77,12 @@ WHERE mode = 'n' and status = 'u' and content &lt;> -1;</codeblock></p>
                                 <entry>
                                     <p>Execute the following query in the <codeph>postgres</codeph>
                                         database:
-                                        <codeblock>SELECT * FROM gp_segment_configuration
-WHERE preferred_role &lt;&gt; role;</codeblock></p>
+                                        <codeblock>SELECT * FROM gp_segment_configuration WHERE preferred_role &lt;> role  and status = 'u' and mode = 's';</codeblock></p>
+                                    
                                 </entry>
                                 <entry>
-                                    <p>When the segments are not running in their preferred role,
-                                        hosts have uneven numbers of primary segments on each host,
-                                        implying that processing is skewed. Run <codeph>gprecoverseg
-                                            -r</codeph> to bring the segments back into their
-                                        preferred roles.</p>
+                                    <p>When the segments are not running in their preferred role, processing might be skewed. 
+				Run <codeph>gprecoverseg -r</codeph> to bring the segments back into their preferred roles.</p>
                                 </entry>
                             </row>
                             <row>

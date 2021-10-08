@@ -231,7 +231,7 @@
         </parml></p>
       <p>In addition to the fault checking performed by the FTS, a primary segment that is unable to
         send data to its mirror can change the status of the mirror to down. The primary queues up
-        the data and after <codeph>gp_segment_connect_timeout</codeph> seconds passes, indicates a
+        the data and after <codeph>gp_segment_connect_timeout</codeph> seconds pass, indicates a
         mirror failure, causing the mirror to be marked down and the primary to go into <codeph>Not In Sync</codeph>
         mode.</p>
     </section>
