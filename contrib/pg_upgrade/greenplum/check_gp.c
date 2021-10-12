@@ -1026,6 +1026,9 @@ check_large_objects(void)
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
 				pg_fatal("could not open file \"%s\": %s\n", output_path, getErrorText());
 
+			/* We do not list out the objects (like other checks) since we only
+			 * have oids and finding associated tables could be time consuming.
+			 */
 			fprintf(script, "Database %s contains large objects\n", active_db->db_name);
 		}
 
