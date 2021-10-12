@@ -83,10 +83,10 @@ test__MemoryContextContainsGenericAllocation_FalsePositive(void **state)
 	contains = MemoryContextContainsGenericAllocation(mcxt, pointer);
 	assert_false(contains);
 
-	*(MemoryContext *) (((char *) pointer) - sizeof(void *)) = another_mcxt;
+	*(MemoryContext *) (((char *) pointer) - sizeof(void *)) = mcxt;
 
-	// check for a rare case of a false negative when memory just before 
-	// pointer happens to contain the address of the mcxt it's looking for
+	// check for false positive when memory just before pointer happens
+	// to contain the address it's looking for
 	contains = MemoryContextContainsGenericAllocation(mcxt, pointer);
 	assert_false(contains);
 }
@@ -110,8 +110,8 @@ test__MemoryContextContainsGenericAllocation_FalseNegative(void **state)
 
 	*(MemoryContext *) (((char *) pointer) - sizeof(void *)) = another_mcxt;
 
-	// check for a rare case of a false negative when memory just before 
-	// pointer happens to contain the address of the mcxt it's looking for
+	// check for a false negative when memory just before pointer contains
+	// an address it's not looking for
 	bool contains = MemoryContextContainsGenericAllocation(mcxt, pointer);
 	assert_true(contains);
 }
