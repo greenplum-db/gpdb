@@ -15,7 +15,7 @@
       <topicref href="topics/g-detecting-a-failed-segment.xml" type="topic">
          <topicref href="topics/g-checking-for-failed-segments.xml" type="topic"/>
       </topicref>
-      <topicref href="topics/g-segment-recovery-scenarios.xml" type="topic">
+      <topicref href="topics/g-recovering-from-segment-failures.xml" type="topic">
       </topicref>
       <topicref href="topics/g-recovering-a-failed-master.xml" type="topic">
          <topicref href="topics/g-restoring-master-mirroring-after-a-recovery.xml" type="topic"/>
