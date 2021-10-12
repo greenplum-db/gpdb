@@ -36,7 +36,7 @@
             mirror segment fails or becomes inaccessible while the primary is active, the primary
             segment tracks database changes in logs that are applied to the mirror when it is
             recovered. For information about segment fault detection and the recovery process, see
-                <xref href="g-detecting-a-failed-segment.xml#topic9"/>. </p>
+            <xref href="g-detecting-a-failed-segment.xml#topic9"/> and <xref href="g-recovering-from-segment-failures.xml"/>. </p>
         <p>These Greenplum Database system catalog tables contain mirroring and replication
             information. <ul id="ul_nn3_yjm_rdb">
                 <li>The catalog table <codeph><xref
