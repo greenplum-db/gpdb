@@ -1616,16 +1616,24 @@
   <topic id="effective_cache_size">
     <title>effective_cache_size</title>
     <body>
-      <p>Sets the assumption about the effective size of the disk cache that is available to a
-        single query for the Postgres Planner. This is factored into estimates of
-        the cost of using an index; a higher value makes it more likely index scans will be used, a
-        lower value makes it more likely sequential scans will be used. This parameter has no effect
-        on the size of shared memory allocated by a Greenplum server instance, nor does it reserve
+      <p>Sets the assumption about the effective size of the disk cache that is available
+        to a single query for the Postgres Planner. This is factored into estimates of the
+        cost of using an index; a higher value makes it more likely index scans will be used,
+        a lower value makes it more likely sequential scans will be used. When setting this
+        parameter, you should consider both Greenplum Database's shared buffers and the
+        portion of the kernel's disk cache that will be used for data files (though some data
+        might exist in both places). Take also into account the expected number of concurrent
+        queries on different tables, since they will have to share the available space. This
+        parameter has no effect on the size of shared memory allocated by a Greenplum server
+        instance, nor does it reserve
         kernel disk cache; it is used only for estimation purposes.</p>
-      <p>Set this parameter to a number of 32K blocks (for example, <codeph>512</codeph> for 16MB),
-        or specify the size of the effective cache (for example, <codeph>'32MB'</codeph> for 1024
-        blocks). The <codeph>gpconfig</codeph> utility and <codeph>SHOW</codeph> command display the
-        effective cache size value in units such as 'MB' or 'kB'.</p>
+      <p>Set this parameter to a number of
+        <codeph><xref href="#backslash_quote">block_size</xref></codeph> blocks
+        (default 32K) with no units; for example, <codeph>262144</codeph> for 8GB. You can
+        also directly specify the size of the effective cache; for example,
+        <codeph>'1GB'</codeph> specifies a size of 32768 blocks. The
+        <codeph>gpconfig</codeph> utility and <codeph>SHOW</codeph> command display the
+        effective cache size value in units such as 'GB', 'MB', or 'kB'.</p>
       <table id="effective_cache_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -1640,8 +1648,8 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">floating point</entry>
-              <entry colname="col2">512 (16GB)</entry>
+              <entry colname="col1">1 - INT_MAX <i>or</i> number and unit</entry>
+              <entry colname="col2">524288 (16GB)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
