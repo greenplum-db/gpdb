@@ -867,3 +867,16 @@ ANALYZE VERBOSE foo_1_prt_1;
 ANALYZE VERBOSE foo_1_prt_2;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
 RESET gp_autostats_mode;
+
+-- analyze in transaction should merge leaves instead of resampling
+drop table if exists foo;
+create table foo (a int, b date) distributed by (a) partition by range(b) (partition "20210101" start ('20210101'::date) end ('20210201'::date), partition "20210201" start ('20210201'::date) end ('20210301'::date), partition "20210301" start ('20210301'::date) end ('20210401'::date));
+insert into foo select a, '20210101'::date+a from (select generate_series(1,80) a) t1;
+analyze verbose foo;
+
+-- we should see "analyzing "public.foo" inheritance tree" in the output below
+begin;
+truncate foo_1_prt_20210201;
+insert into foo select a, '20210101'::date+a from (select generate_series(31,40) a) t1;
+analyze verbose foo_1_prt_20210201;
+rollback;
