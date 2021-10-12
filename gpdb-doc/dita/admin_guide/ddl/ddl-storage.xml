@@ -185,7 +185,7 @@
             <row>
               <entry colname="col1">Column</entry>
               <entry colname="col2">Column and Table</entry>
-              <entry colname="col3"><codeph>RLE_TYPE</codeph><sup>2</sup>, <codeph>ZLIB</codeph>, <codeph>ZSTD</codeph>, and
+              <entry colname="col3"><codeph>RLE_TYPE</codeph>, <codeph>ZLIB</codeph>, <codeph>ZSTD</codeph>, and
                   <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
           </tbody>
@@ -194,9 +194,6 @@
       <p>
         <note type="note"><sup>1</sup>QuickLZ compression is not available in the open source
           version of Greenplum Database.</note>
-        <note type="note"><sup>2</sup><codeph>RLE_TYPE</codeph> compression is available only
-          for those Greenplum Database tables that you create
-          <codeph>WITH (orientation=column)</codeph>.</note>
       </p>
       <p>When choosing a compression type and level for append-optimized tables, consider these
         factors:</p>
