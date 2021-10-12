@@ -57,6 +57,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 {
 	Node	   *bitmap = NULL;
 	IndexScanDesc scandesc;
+	double		nTuples = 0;
 	bool		doscan;
 
 	/* Make sure we are not leaking a previous bitmap */
@@ -89,7 +90,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	/* Get bitmap from index */
 	while (doscan)
 	{
-		bitmap = index_getbitmap(scandesc, node->biss_result);
+		nTuples += (double) index_getbitmap(scandesc, &bitmap);
 
 		if ((NULL != bitmap) &&
 			!(IsA(bitmap, TIDBitmap) || IsA(bitmap, StreamBitmap)))
@@ -118,9 +119,8 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	}
 
 	/* must provide our own instrumentation support */
-	/* GPDB: Report "1 tuple", actually meaning "1 bitmap" */
 	if (node->ss.ps.instrument)
-		InstrStopNode(node->ss.ps.instrument, 1 /* nTuples */);
+		InstrStopNode(node->ss.ps.instrument, nTuples);
 
 	/* Increment gpmon packet too */
 	if (&node->ss.ps.gpmon_pkt)

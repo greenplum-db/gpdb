@@ -198,7 +198,7 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 {
 	/* We ignore the second argument as we're returning a hash bitmap */
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node		 *bm = (Node *)PG_GETARG_POINTER(1);
+	Node		**bmNodeP = (Node *)PG_GETARG_POINTER(1);
 	IndexStream	 *is;
 	BMScanPosition	scanPos;
 	bool res;
@@ -234,22 +234,28 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 		}
 	}
 
-	if (!bm)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
 	{
 		StreamBitmap *sb = makeNode(StreamBitmap);
 		sb->streamNode = is;
-		bm = (Node *)sb;
+		*bmNodeP = (Node *)sb;
 	}
-	else if (IsA(bm, StreamBitmap))
-	{
-		stream_add_node((StreamBitmap *)bm, is, BMS_OR);
-	}
+	else if (IsA(*bmNodeP, StreamBitmap))
+		stream_add_node((StreamBitmap *)*bmNodeP, is, BMS_OR);
 	else
-	{
 		elog(ERROR, "non stream bitmap");
-	}
 
-	PG_RETURN_POINTER(bm);
+	/*
+	 * XXX We don't have a precise idea of the number of heap tuples
+	 * involved.
+	 */
+	PG_RETURN_INT64(1);
 }
 
 /*

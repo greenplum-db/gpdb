@@ -331,18 +331,28 @@ Datum
 hashgetbitmap(PG_FUNCTION_ARGS)
 {
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node	   *n = (Node *) PG_GETARG_POINTER(1);
+	Node	  **bmNodeP = (Node *) PG_GETARG_POINTER(1);
 	TIDBitmap  *tbm;
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	bool		res;
 	int64		ntids = 0;
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
+	{
+		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L);
-	else if (!IsA(n, TIDBitmap))
+		*bmNodeP = (Node *) tbm;
+	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
 		elog(ERROR, "non hash bitmap");
 	else
-		tbm = (TIDBitmap *) n;
+		tbm = (TIDBitmap *)*bmNodeP;
 
 	res = _hash_first(scan, ForwardScanDirection);
 
@@ -376,7 +386,7 @@ hashgetbitmap(PG_FUNCTION_ARGS)
 		res = _hash_next(scan, ForwardScanDirection);
 	}
 
-	PG_RETURN_POINTER(tbm);
+	PG_RETURN_INT64(ntids);
 }
 
 

@@ -148,7 +148,7 @@ extern ItemPointer index_getnext_tid(IndexScanDesc scan,
 				  ScanDirection direction);
 extern HeapTuple index_fetch_heap(IndexScanDesc scan);
 extern HeapTuple index_getnext(IndexScanDesc scan, ScanDirection direction);
-extern Node *index_getbitmap(IndexScanDesc scan, Node *bitmap);
+extern int64 index_getbitmap(IndexScanDesc scan, Node **bitmapP);
 
 extern IndexBulkDeleteResult *index_bulk_delete(IndexVacuumInfo *info,
 				  IndexBulkDeleteResult *stats,

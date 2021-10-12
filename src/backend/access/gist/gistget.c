@@ -553,21 +553,31 @@ Datum
 gistgetbitmap(PG_FUNCTION_ARGS)
 {
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node	   *n = (Node *) PG_GETARG_POINTER(1);
+	Node	  **bmNodeP = (Node *) PG_GETARG_POINTER(1);
 	TIDBitmap  *tbm;
 	GISTScanOpaque so = (GISTScanOpaque) scan->opaque;
 	int64		ntids = 0;
 	GISTSearchItem fakeItem;
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
+	{
+		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L);
-	else if (!IsA(n, TIDBitmap))
-		elog(ERROR, "non hash bitmap");
+		*bmNodeP = (Node *) tbm;
+	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
+		elog(ERROR, "non gist bitmap");
 	else
-		tbm = (TIDBitmap *) n;
+		tbm = (TIDBitmap *) *bmNodeP;
 
 	if (!so->qual_ok)
-		PG_RETURN_POINTER(tbm);
+		PG_RETURN_INT64(0);
 
 	pgstat_count_index_scan(scan->indexRelation);
 
@@ -597,5 +607,5 @@ gistgetbitmap(PG_FUNCTION_ARGS)
 		pfree(item);
 	}
 
-	PG_RETURN_POINTER(tbm);
+	PG_RETURN_INT64(ntids);
 }

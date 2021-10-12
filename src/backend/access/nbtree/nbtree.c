@@ -570,25 +570,28 @@ Datum
 btgetbitmap(PG_FUNCTION_ARGS)
 {
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node	   *n = (Node *) PG_GETARG_POINTER(1);
+	Node	  **bmNodeP = (Node *) PG_GETARG_POINTER(1);
 	TIDBitmap  *tbm;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	int64		ntids = 0;
 	ItemPointer heapTid;
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
 	{
 		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L);
+		*bmNodeP = (Node *) tbm;
 	}
-	else if (!IsA(n, TIDBitmap))
-	{
-		elog(ERROR, "non hash bitmap");
-	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
+		elog(ERROR, "non btree bitmap");
 	else
-	{
-		tbm = (TIDBitmap *)n;
-	}
+		tbm = (TIDBitmap *)*bmNodeP;
 
 	/*
 	 * If we have any array keys, initialize them.
@@ -597,7 +600,7 @@ btgetbitmap(PG_FUNCTION_ARGS)
 	{
 		/* punt if we have any unsatisfiable array keys */
 		if (so->numArrayKeys < 0)
-			PG_RETURN_POINTER(tbm);
+			PG_RETURN_INT64(ntids);
 
 		_bt_start_array_keys(scan, ForwardScanDirection);
 	}
@@ -635,7 +638,7 @@ btgetbitmap(PG_FUNCTION_ARGS)
 		/* Now see if we have more array keys to deal with */
 	} while (so->numArrayKeys && _bt_advance_array_keys(scan, ForwardScanDirection));
 
-	PG_RETURN_POINTER(tbm);
+	PG_RETURN_INT64(ntids);
 }
 
 /*
