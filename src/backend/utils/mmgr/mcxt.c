@@ -918,25 +918,30 @@ MemoryContextCheck(MemoryContext context)
 
 /*
  * MemoryContextContains
- *		Detect whether an allocated chunk of memory belongs to a given
- *		context or not.
+ *      Detect whether an allocated chunk of memory belongs to a given
+ *      context or not.
  *
- * Note: this test assumes that the pointer was allocated using palloc.
- * If unsure, please use the generic version (MemoryContextContainsGenericAllocation).
- *
- * Caution: this test is reliable as long as the 'pointer' does point to
+ * Caution: this test is reliable as long as 'pointer' does point to
  * a chunk of memory allocated from *some* context.  If 'pointer' points
  * at memory obtained in some other way, there is a small chance of a
- * false-positive result since the bits right before it might look like
- * a valid chunk header by chance. In the latter case (when the memory
- * was not palloc'ed), we are more likely to crash. Please use the generic
- * version of this method if you have any doubt that the tested memory
- * region may not be palloc'ed.
+ * false-positive result, since the bits right before it might look like
+ * a valid chunk header by chance.
  */
-bool
+static bool
 MemoryContextContains(MemoryContext context, void *pointer)
 {
 	StandardChunkHeader *header;
+	/*
+	 * In GPDB, pointer is not guaranteed to always be palloc aligned. Due to
+	 * our use of MemTuples, the pointer may instead point into the palloc'd
+	 * region to an attr offset. Therefore we cannot assume the MemoryContext
+	 * from which the pointer was palloc'd exists in the bytes immediately in
+	 * front of the pointer.
+	 *
+	 * Instead use MemoryContextContainsGenericAllocation() which correctly
+	 * handles the above scenario.
+	 */
+	Assert(false);
 
 	/*
 	 * Try to detect bogus pointers handed to us, poorly though we can.
@@ -961,63 +966,34 @@ MemoryContextContains(MemoryContext context, void *pointer)
 
 /*
  * MemoryContextContainsGenericAllocation
- *		Detects whether a generic (may or may not be allocated by
- *		palloc) chunk of memory belongs to a given context or not.
- *		Note, the "generic" means it will be ready to
- *		handle chunks not allocated using palloc.
  *
- * Caution: this test has the same problem as MemoryContextContains
- * 		where it can falsely detect a chunk belonging to a context,
- * 		while it does not. In addition, it can also falsely conclude
- * 		that a chunk does *not* belong to a context, while in reality
- * 		it does. The latter weakness stems from its versatility to
- * 		handle non-palloc'ed chunks.
+ * Detects whether a generic (may or may not be allocated by palloc) chunk of
+ * memory belongs to a given context or not.  Note, the "generic" means it will
+ * be ready to handle chunks not allocated using palloc, not at the start of an
+ * allocated region, and not necessarily aligned.
+ *
+ * Currently only supports AllocSet, will error out if called on any other type
+ * of MemoryContext (AllocSlab, ALlocGenerate, custom)
+ *
+ * Note for new callers:  This will iterate through the linked list of blocks in the
+ *        context provided; at present there are no functions calling it which would
+ *        be expected to have more than 1 block allocated (or possibly a handful
+ *        of blocks, if there are multiple large aggregate/window functions run
+ *        simultaneously in the same query).  If there were some reason why a new
+ *        caller might pass a context with a large number of blocks (hundreds,
+ *        thousands?) and needs to call this frequently, checking for potential
+ *        performance implications before proceeding is recommended.
  */
 bool
 MemoryContextContainsGenericAllocation(MemoryContext context, void *pointer)
 {
-	StandardChunkHeader *header;
+	if (context->type != T_AllocSetContext)
+		MemoryContextError(ERRCODE_INTERNAL_ERROR,
+			context, CDB_MCXT_WHERE(context),
+			"MemoryContextContainsGenericAllocation is not available for type %u",
+			context->type);
 
-	/*
-	 * Try to detect bogus pointers handed to us, poorly though we can.
-	 * Presumably, a pointer that isn't MAXALIGNED isn't pointing at an
-	 * allocated chunk.
-	 */
-	if (pointer == NULL || pointer != (void *) MAXALIGN(pointer))
-	{
-		return false;
-	}
-
-	/*
-	 * OK, it's probably safe to look at the chunk header.
-	 */
-	header = (StandardChunkHeader *)
-		((char *) pointer - STANDARDCHUNKHEADERSIZE);
-
-	AllocSet set = (AllocSet)context;
-
-	if (header->sharedHeader == set->sharedHeaderList ||
-			(set->sharedHeaderList != NULL && set->sharedHeaderList->next == header->sharedHeader) ||
-			(set->sharedHeaderList != NULL && set->sharedHeaderList->next != NULL && set->sharedHeaderList->next->next == header->sharedHeader))
-	{
-		/*
-		 * At this point we know that one of the sharedHeader pointers of the
-		 * provided context (AllocSet) is the same as the sharedHeader
-		 * pointer of the provided chunk. Therefore, the chunk should
-		 * belong to the AllocSet (with a false positive chance coming
-		 * from some third party allocated memory region having the
-		 * same value as the sharedHeaderList pointer address
-		 */
-		return true;
-	}
-
-	/*
-	 * We might falsely conclude that the chunk does not belong
-	 * to the context, if we fail to match the chunk's sharedHeader
-	 * pointer with one of the leading sharedHeader pointers in the
-	 * context's sharedHeaderList.
-	 */
-	return false;
+	return AllocSetContains(context, pointer);
 }
 
 /*--------------------

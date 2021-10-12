@@ -1820,6 +1820,31 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 }
 
 /*
+ * AllocSetContains
+ *		Detects whether a generic memory pointer belongs to a given context or not.
+ *		Note, the "generic" means it will be ready to handle pointers to any memory region,
+ *		whether allocated using palloc or not, and regardless of their alignment.  This will
+ *		return true if the pointer points to any data structure within a block managed by the
+ *		given memory context.
+ *
+ *		This should be used in place of MemoryContextContains if there is any uncertainty
+ *		about whether the pointer has maximal alignment and points to the beginning of a chunk
+ *		allocated by some MemoryContext
+ */
+bool
+AllocSetContains(MemoryContext context, void *pointer) {
+	Assert(context->type == T_AllocSetContext);
+
+	AllocSet set = (AllocSet) context;
+
+	for (AllocBlock block = set->blocks; block != NULL; block = (AllocBlock) block->next) {
+		if (pointer >= (void *)block && pointer < (void *)UserPtr_GetEndPtr(block))
+			return true;
+	}
+	return false;
+}
+
+/*
  * AllocSetGetChunkSpace
  *		Given a currently-allocated chunk, determine the total space
  *		it occupies (including all memory-allocation overhead).
