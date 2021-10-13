@@ -4756,6 +4756,11 @@ typedef struct
 {
 	plan_tree_base_prefix prefix;
 	EState	   *estate;
+	/*
+	 * record the visited subplans that refer to an init plan,
+	 * to avoid re-visit the motion that is under an init plan.
+	 */
+	Bitmapset *unique_init_plans; 
 	int			currentSliceId;
 } FillSliceTable_cxt;
 
@@ -4802,6 +4807,7 @@ FillSliceTable_walker(Node *node, void *context)
 	FillSliceTable_cxt *cxt = (FillSliceTable_cxt *) context;
 	PlannedStmt *stmt = (PlannedStmt *) cxt->prefix.node;
 	EState	   *estate = cxt->estate;
+	Bitmapset  *unique_init_plans = cxt->unique_init_plans;
 	SliceTable *sliceTable = estate->es_sliceTable;
 	int			parentSliceIndex = cxt->currentSliceId;
 	bool		result;
@@ -4956,6 +4962,10 @@ FillSliceTable_walker(Node *node, void *context)
 
 		if (subplan->is_initplan)
 		{
+			/* do not re-visit the init plan */
+			if (bms_is_member(subplan->plan_id, unique_init_plans))
+				return false;
+			cxt->unique_init_plans = bms_add_member(unique_init_plans, subplan->plan_id);
 			cxt->currentSliceId = subplan->qDispSliceId;
 			result = plan_tree_walker(node, FillSliceTable_walker, cxt);
 			cxt->currentSliceId = parentSliceIndex;
@@ -4986,6 +4996,7 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 
 	cxt.prefix.node = (Node *) stmt;
 	cxt.estate = estate;
+	cxt.unique_init_plans = NULL;
 	cxt.currentSliceId = 0;
 
 	if (stmt->intoClause != NULL || stmt->copyIntoClause != NULL || stmt->refreshClause)
@@ -5011,6 +5022,7 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 	 * SubPlan nodes.
 	 */
 	FillSliceTable_walker((Node *) stmt->planTree, &cxt);
+	bms_free(cxt.unique_init_plans);
 }
 
 

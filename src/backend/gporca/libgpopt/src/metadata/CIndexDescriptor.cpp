@@ -19,6 +19,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CIndexDescriptor);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CIndexDescriptor::CIndexDescriptor

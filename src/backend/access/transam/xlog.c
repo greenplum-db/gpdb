@@ -5457,12 +5457,11 @@ readRecoveryCommandFile(void)
 	}
 	else
 	{
-		/* Currently, standby mode request is a must if recovery.conf file exists. */
-		/* Thus PG upstream code `if (recoveryRestoreCommand == NULL)` ... was removed. */
-		ereport(FATAL,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("recovery command file \"%s\" request for standby mode not specified",
-						RECOVERY_COMMAND_FILE)));
+		if (recoveryRestoreCommand == NULL)
+			ereport(FATAL,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("recovery command file \"%s\" must specify restore_command when standby mode is not enabled",
+							RECOVERY_COMMAND_FILE)));
 	}
 
 	/*

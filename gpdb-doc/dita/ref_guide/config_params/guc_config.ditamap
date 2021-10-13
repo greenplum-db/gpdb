@@ -78,6 +78,7 @@
             <topicref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction_threshold"/>
+            <topicref href="guc-list.xml#gp_autostats_allow_nonowner"/>
             <topicref href="guc-list.xml#gp_autostats_mode"/>
             <topicref href="guc-list.xml#gp_autostats_mode_in_functions"/>
             <topicref href="guc-list.xml#gp_autostats_on_change_threshold"/>
@@ -194,6 +195,7 @@
             <topicref href="guc-list.xml#log_duration"/>
             <topicref href="guc-list.xml#log_error_verbosity"/>
             <topicref href="guc-list.xml#log_executor_stats"/>
+            <topicref href="guc-list.xml#log_file_mode"/>
             <topicref href="guc-list.xml#log_hostname"/>
             <topicref href="guc-list.xml#log_min_duration_statement"/>
             <topicref href="guc-list.xml#log_min_error_statement"/>
@@ -249,6 +251,7 @@
             <topicref href="guc-list.xml#optimizer_print_optimization_stats"/>
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#optimizer_use_gpdb_allocators"/>
+            <topicref href="guc-list.xml#optimizer_xform_bind_threshold"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
             <topicref href="guc-list.xml#plan_cache_mode"/>
@@ -258,6 +261,7 @@
             <topicref href="guc-list.xml#pljava_release_lingering_savepoints"/>
             <topicref href="guc-list.xml#pljava_vmoptions"/>
             <topicref href="guc-list.xml#port"/>
+            <topicref href="guc-list.xml#quote_all_identifiers"/>
             <topicref href="guc-list.xml#random_page_cost"/>
             <topicref href="guc-list.xml#readable_external_table_timeout"/>
             <topicref href="guc-list.xml#repl_catchup_within_range"/>

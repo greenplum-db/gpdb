@@ -356,12 +356,63 @@ def impl(context, env_var):
 
     del context.orig_env[env_var]
 
+@given('the user {action} the walsender on the {segment} on content {content}')
+@then('the user {action} the walsender on the {segment} on content {content}')
+def impl(context, action, segment, content):
+    if segment == 'mirror':
+        role = "'m'"
+    elif segment == 'primary':
+        role = "'p'"
+    else:
+        raise Exception('segment role can only be primary or mirror')
+
+    create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
+    execute_sql('postgres', create_fault_query)
+
+    inject_fault_query = "SELECT gp_inject_fault_infinite('wal_sender_loop', '%s', dbid) FROM gp_segment_configuration WHERE content=%s AND role=%s;" % (action, content, role)
+    execute_sql('postgres', inject_fault_query)
+    return
+
+
+@given('the user skips walreceiver flushing on the {segment} on content {content}')
+@then('the user skips walreceiver flushing on the {segment} on content {content}')
+def impl(context, segment, content):
+    if segment == 'mirror':
+        role = "'m'"
+    elif segment == 'primary':
+        role = "'p'"
+    else:
+        raise Exception('segment role can only be primary or mirror')
+
+    create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
+    execute_sql('postgres', create_fault_query)
+
+    inject_fault_query = "SELECT gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid) FROM gp_segment_configuration WHERE content=%s AND role=%s;" % (content, role)
+    execute_sql('postgres', inject_fault_query)
+    return
+
+
+@given('the user waits until all bytes are sent to mirror on content {content}')
+@then('the user waits until all bytes are sent to mirror on content {content}')
+def impl(context, content):
+    host, port = get_primary_segment_host_port_for_content(content)
+    query = "SELECT pg_current_xlog_location() - sent_location FROM pg_stat_replication;"
+    desired_result = 0
+    wait_for_desired_query_result_on_segment(host, port, query, desired_result)
+
 
 @given('the user runs "{command}"')
 @when('the user runs "{command}"')
 @then('the user runs "{command}"')
 def impl(context, command):
     run_gpcommand(context, command)
+
+
+@when('the user sets banner on host')
+def impl(context):
+    file = '/etc/bashrc'
+    command = "echo 'echo \"banner test\"' >> %s; source %s" % (file, file)
+    run_cmd(command)
 
 
 @given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
@@ -374,10 +425,26 @@ def impl(context, process_name, secs):
     run_async_command(context, command)
 
 
-@when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in gpinitsystem logs')
-def impl(context, process_name, log_msg):
-    command = "while sleep 3; do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; then ps ux | grep %s |awk '{print $2}' | xargs kill ;break 2; fi; done" % (log_msg, process_name)
+@when('the user asynchronously sets up to end gpinitsystem process when {log_msg} is printed in the logs')
+def impl(context, log_msg):
+    command = "while sleep 0.1; " \
+              "do if egrep --quiet %s  ~/gpAdminLogs/gpinitsystem*log ; " \
+              "then ps ux | grep bin/gpinitsystem |awk '{print $2}' | xargs kill ;break 2; " \
+              "fi; done" % (log_msg)
     run_async_command(context, command)
+
+
+@when('the user asynchronously sets up to end gpcreateseg process when it starts')
+def impl(context):
+    # We keep trying to find the gpcreateseg process using ps,grep
+    # and when we find it, we want to kill it only after the trap for ERROR_EXIT is setup (hence the sleep 1)
+    command = """timeout 10m
+    bash -c "while sleep 0.1;
+    do if ps ux | grep [g]pcreateseg ;
+    then sleep 1 && ps ux | grep [g]pcreateseg |awk '{print \$2}' | xargs kill ;
+    break 2; fi; done" """
+    run_async_command(context, command)
+
 
 @given('the user asynchronously runs "{command}" and the process is saved')
 @when('the user asynchronously runs "{command}" and the process is saved')
@@ -396,6 +463,17 @@ def impl(context, ret_code):
                         "rc: %s\n"
                         "stdout: %s\n"
                         "stderr: %s" % (rc, stdout_value, stderr_value))
+
+
+@when('the user waits until saved async process is completed')
+def impl(context):
+    context.asyncproc.communicate2()
+
+
+@when('the user waits until {process_name} process is completed')
+def impl(context, process_name):
+    wait_process_command = "while ps ux | grep %s | grep -v grep; do sleep 0.1; done;" % process_name
+    run_cmd(wait_process_command)
 
 
 @given('a user runs "{command}" with gphome "{gphome}"')
@@ -1005,7 +1083,7 @@ def impl(context, dbname):
     sql = context.text
     execute_sql(dbname, sql)
 
-
+@given('sql "{sql}" is executed in "{dbname}" db')
 @when('sql "{sql}" is executed in "{dbname}" db')
 @then('sql "{sql}" is executed in "{dbname}" db')
 def impl(context, sql, dbname):

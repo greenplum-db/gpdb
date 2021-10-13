@@ -101,6 +101,13 @@ typedef struct ResPortalIncrement
 	Cost		increments[NUM_RES_LIMIT_TYPES];
 } ResPortalIncrement;
 
+typedef enum
+{
+	RES_INCREMENT_ADD_OK,
+	RES_INCREMENT_ADD_OOSM,
+	RES_INCREMENT_ADD_DUPLICATE_PORTAL
+} ResIncrementAddStatus;
+
 typedef struct ResPortalTag
 {
 	int			pid;

@@ -18,6 +18,8 @@
 using namespace gpopt;
 using namespace gpmd;
 
+FORCE_GENERATE_DBGSTR(CColumnDescriptor);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CColumnDescriptor::CColumnDescriptor

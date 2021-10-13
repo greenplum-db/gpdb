@@ -73,7 +73,7 @@ GV = Global()
 
 
 def killall(procname):
-    return 'F=%s && (pkill $F || pkill -f $F || killall -9 $F) > /dev/null 2>&1 || true' % procname
+    return '(pkill %s || killall -9 %s) > /dev/null 2>&1 || true' % (procname[0:15], procname)
 
 
 def strcmd(cmd):

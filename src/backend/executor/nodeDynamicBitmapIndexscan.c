@@ -185,6 +185,12 @@ endCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node)
 		ExecEndBitmapIndexScan(node->bitmapIndexScanState);
 		node->bitmapIndexScanState = NULL;
 	}
+
+	/*
+	 * We should release the memory in each partition context
+	 * when move to next partition.
+	 */
+	MemoryContextReset(node->partitionMemoryContext);
 }
 
 /*

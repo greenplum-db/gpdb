@@ -21,6 +21,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CRange);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CRange::CRange

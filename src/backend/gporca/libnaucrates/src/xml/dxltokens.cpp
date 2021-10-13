@@ -87,6 +87,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		 GPOS_WSZ_LIT("EnforceConstraintsOnDML")},
 		{EdxltokenPushGroupByBelowSetopThreshold,
 		 GPOS_WSZ_LIT("PushGroupByBelowSetopThreshold")},
+		{EdxltokenXformBindThreshold, GPOS_WSZ_LIT("XformBindThreshold")},
 		{EdxltokenWindowOids, GPOS_WSZ_LIT("WindowOids")},
 		{EdxltokenOidRowNumber, GPOS_WSZ_LIT("RowNumber")},
 		{EdxltokenOidRank, GPOS_WSZ_LIT("Rank")},

@@ -13,6 +13,7 @@
 #define GPOPT_COptimizationContext_H
 
 #include "gpos/base.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
 #include "gpopt/base/CReqdPropPlan.h"
@@ -48,7 +49,8 @@ typedef CDynamicPtrArray<COptimizationContext, CleanupRelease>
 //		Optimization context
 //
 //---------------------------------------------------------------------------
-class COptimizationContext : public CRefCount
+class COptimizationContext : public CRefCount,
+							 public DbgPrintMixin<COptimizationContext>
 {
 public:
 	// states of optimization context

@@ -40,7 +40,7 @@
                                         IMPORTANT</p></entry>
                                 <entry>Run the following query in the <codeph>postgres</codeph>
                                     database:<codeblock>SELECT * FROM gp_segment_configuration
-WHERE status &lt;&gt; 'u';</codeblock></entry>
+WHERE status = 'd';</codeblock></entry>
                                 <entry>If the query returns any rows, follow these steps to correct
                                     the problem:<ol id="ol_okh_2cg_rp">
                                         <li>Verify that the hosts with down segments are responsive. </li>
@@ -53,66 +53,36 @@ WHERE status &lt;&gt; 'u';</codeblock></entry>
                                             segments back online.</li>
                                     </ol></entry>
                             </row>
+                          
                             <row>
-                                <entry>Check for segments that are currently in change tracking
-                                    mode. If any rows are returned, this should generate a warning
-                                    or alert.<p>Recommended frequency: run every 5 to 10
-                                        minutes</p><p>Severity: IMPORTANT</p></entry>
-                                <entry>
-                                    <p>Execute the following query in the <codeph>postgres</codeph>
-                                        database:<codeblock>SELECT * FROM gp_segment_configuration
-WHERE mode = 'c';</codeblock></p>
-                                </entry>
-                                <entry>
-                                    <p>If the query returns any rows, follow these steps to correct
-                                        the problem:<ol id="ol_ezt_kcg_rp">
-                                            <li>Verify that hosts with down segments are responsive. </li>
-                                            <li>If hosts are OK, check the
-                                                  <filepath>pg_log</filepath> files for the
-                                                primaries and mirrors of the down segments to
-                                                determine the root cause of the segments going down. </li>
-                                            <li>If no unexpected errors are found, run the
-                                                  <codeph>gprecoverseg</codeph> utility to bring the
-                                                segments back online.</li>
-                                        </ol></p>
-                                </entry>
-                            </row>
-                            <row>
-                                <entry>Check for segments that are currently re-syncing. If rows are
+                                <entry>Check for segments that are up and not in sync. If rows are
                                     returned, this should generate a warning or alert.<p>Recommended
-                                        frequency: run every 5 to 10 minutes</p><p>Severity:
-                                        IMPORTANT</p></entry>
+                                        frequency: run every 5 to 10 minutes</p></entry>
                                 <entry>
                                     <p>Execute the following query in the <codeph>postgres</codeph>
                                         database:<codeblock>SELECT * FROM gp_segment_configuration
-WHERE mode = 'r';</codeblock></p>
+WHERE mode = 'n' and status = 'u' and content &lt;> -1;</codeblock></p>
                                 </entry>
-                                <entry>
-                                    <p>When this query returns rows, it implies that the segments
-                                        are in the process of being re-synched. If the state does
-                                        not change from 'r' to 's', then check the
-                                            <filepath>pg_log</filepath> files from the primaries and
-                                        mirrors of the affected segments for errors.</p>
-                                </entry>
+                                <entry>If the query returns rows then the segment might be in the process
+                                    of moving from  <codeph>Not In Sync</codeph> to
+                                        <codeph>Synchronized</codeph> mode. Use <codeph>gpstate
+                                        -e</codeph> to track progress.</entry>
                             </row>
                             <row>
-                                <entry>Check for segments that are not operating in their optimal
-                                    role. If any segments are found, the cluster may not be
+                                <entry>Check for segments that are not operating in their preferred role but are marked as up and <codeph>Synchronized</codeph>.
+                                    If any segments are found, the cluster may not be
                                     balanced. If any rows are returned this should generate a
                                     warning or alert. <p>Recommended frequency: run every 5 to 10
                                         minutes</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>
                                     <p>Execute the following query in the <codeph>postgres</codeph>
                                         database:
-                                        <codeblock>SELECT * FROM gp_segment_configuration
-WHERE preferred_role &lt;&gt; role;</codeblock></p>
+                                        <codeblock>SELECT * FROM gp_segment_configuration WHERE preferred_role &lt;> role  and status = 'u' and mode = 's';</codeblock></p>
+                                    
                                 </entry>
                                 <entry>
-                                    <p>When the segments are not running in their preferred role,
-                                        hosts have uneven numbers of primary segments on each host,
-                                        implying that processing is skewed. Run <codeph>gprecoverseg
-                                            -r</codeph> to bring the segments back into their
-                                        preferred roles.</p>
+                                    <p>When the segments are not running in their preferred role, processing might be skewed. 
+				Run <codeph>gprecoverseg -r</codeph> to bring the segments back into their preferred roles.</p>
                                 </entry>
                             </row>
                             <row>
@@ -133,26 +103,7 @@ GROUP BY 1;</codeblock></p>
                                         no hardware or networking issue.</p>
                                 </entry>
                             </row>
-                            <row>
-                                <entry>Test the state of master mirroring on a Greenplum Database<ph> 4.2 or
-                                        earlier</ph> cluster. If the value is "Not Synchronized",
-                                    raise an alert or warning.<p>Recommended frequency: run every 5
-                                        to 10 minutes</p><p>Severity: IMPORTANT</p></entry>
-                                <entry>
-                                    <p>Execute the following query in the <codeph>postgres</codeph>
-                                        database:
-                                        <codeblock>SELECT summary_state
-FROM gp_master_mirroring;</codeblock></p>
-                                </entry>
-                                <entry>
-                                    <p>Check the <filepath>pg_log</filepath> from the master and
-                                        standby master for errors. If there are no unexpected errors
-                                        and the machines are up, run the
-                                            <codeph>gpinitstandby</codeph> utility to bring the
-                                        standby online. This requires a database restart on GPDB 4.2
-                                        and earlier.</p>
-                                </entry>
-                            </row>
+                            
                             <row>
                                 <entry>Test the state of master mirroring on Greenplum Database. If
                                     the value is not "STREAMING", raise an alert or

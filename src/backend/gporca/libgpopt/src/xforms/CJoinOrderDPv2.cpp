@@ -32,7 +32,6 @@
 #include "naucrates/md/IMDRelStats.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 
-
 using namespace gpopt;
 
 // how many expressions will we return at the end of the DP phase?
@@ -1806,6 +1805,8 @@ CJoinOrderDPv2::LevelIsFull(ULONG level)
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::CJoinOrderDPv2);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CJoinOrderDPv2::OsPrint
@@ -1979,17 +1980,3 @@ CJoinOrderDPv2::OsPrintProperty(IOstream &os,
 
 	return os;
 }
-
-
-#ifdef GPOS_DEBUG
-void
-CJoinOrderDPv2::DbgPrint()
-{
-	CAutoTrace at(m_mp);
-
-	OsPrint(at.Os());
-}
-#endif
-
-
-// EOF

@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/string/CWStringConst.h"
 
 #include "naucrates/md/IMDId.h"
@@ -39,7 +40,7 @@ typedef CHashMap<ULONG, IDatum, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 //		Base abstract class for datum representation inside optimizer
 //
 //---------------------------------------------------------------------------
-class IDatum : public CRefCount
+class IDatum : public CRefCount, public DbgPrintMixin<IDatum>
 {
 private:
 	// private copy ctor

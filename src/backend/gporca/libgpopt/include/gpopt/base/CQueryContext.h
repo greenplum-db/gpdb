@@ -12,6 +12,7 @@
 #define GPOPT_CQueryContext_H
 
 #include "gpos/base.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CReqdPropRelational.h"
@@ -47,12 +48,9 @@ using namespace gpos;
 //
 //
 //---------------------------------------------------------------------------
-class CQueryContext
+class CQueryContext : public DbgPrintMixin<CQueryContext>
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// required plan properties in optimizer's produced plan
 	CReqdPropPlan *m_prpp;
 
@@ -142,8 +140,6 @@ public:
 #ifdef GPOS_DEBUG
 	// debug print
 	virtual IOstream &OsPrint(IOstream &) const;
-
-	void DbgPrint() const;
 #endif	// GPOS_DEBUG
 
 	// walk the expression and add the mapping between computed column

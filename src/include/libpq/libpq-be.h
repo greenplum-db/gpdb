@@ -191,6 +191,7 @@ typedef struct Port
 	char	   *peer_cn;
 	unsigned long count;
 #endif
+	char	   *diff_options;
 } Port;
 
 

@@ -36,6 +36,8 @@ using namespace gpmd;
 using namespace gpdxl;
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CStatistics);
+
 // default number of rows in relation
 const CDouble CStatistics::DefaultRelationRows(1000.0);
 

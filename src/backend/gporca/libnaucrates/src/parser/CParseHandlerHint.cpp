@@ -108,12 +108,17 @@ CParseHandlerHint::StartElement(const XMLCh *const,	 //element_uri,
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 			EdxltokenPushGroupByBelowSetopThreshold, EdxltokenHint, true,
 			PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD);
+	ULONG xform_bind_threshold =
+		CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenXformBindThreshold, EdxltokenHint, true,
+			XFORM_BIND_THRESHOLD);
 
 	m_hint = GPOS_NEW(m_mp) CHint(
 		min_num_of_parts_to_require_sort_on_insert,
 		join_arity_for_associativity_commutativity, array_expansion_threshold,
 		join_order_dp_threshold, broadcast_threshold, enforce_constraint_on_dml,
-		push_group_by_below_setop_threshold);
+		push_group_by_below_setop_threshold, xform_bind_threshold);
 }
 
 //---------------------------------------------------------------------------

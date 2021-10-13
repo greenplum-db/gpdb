@@ -18,6 +18,7 @@
 #define JOIN_ORDER_DP_THRESHOLD ULONG(10)
 #define BROADCAST_THRESHOLD ULONG(10000000)
 #define PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD ULONG(10)
+#define XFORM_BIND_THRESHOLD ULONG(0)
 
 
 namespace gpopt
@@ -49,6 +50,8 @@ private:
 
 	ULONG m_ulPushGroupByBelowSetopThreshold;
 
+	ULONG m_ulXform_bind_threshold;
+
 	// private copy ctor
 	CHint(const CHint &);
 
@@ -58,7 +61,7 @@ public:
 		  ULONG join_arity_for_associativity_commutativity,
 		  ULONG array_expansion_threshold, ULONG ulJoinOrderDPLimit,
 		  ULONG broadcast_threshold, BOOL enforce_constraint_on_dml,
-		  ULONG push_group_by_below_setop_threshold)
+		  ULONG push_group_by_below_setop_threshold, ULONG xform_bind_threshold)
 		: m_ulMinNumOfPartsToRequireSortOnInsert(
 			  min_num_of_parts_to_require_sort_on_insert),
 		  m_ulJoinArityForAssociativityCommutativity(
@@ -68,7 +71,8 @@ public:
 		  m_ulBroadcastThreshold(broadcast_threshold),
 		  m_fEnforceConstraintsOnDML(enforce_constraint_on_dml),
 		  m_ulPushGroupByBelowSetopThreshold(
-			  push_group_by_below_setop_threshold)
+			  push_group_by_below_setop_threshold),
+		  m_ulXform_bind_threshold(xform_bind_threshold)
 	{
 	}
 
@@ -134,6 +138,13 @@ public:
 		return m_ulPushGroupByBelowSetopThreshold;
 	}
 
+	// Stop generating alternatives for group expression if bindings exceed this threshold
+	ULONG
+	UlXformBindThreshold() const
+	{
+		return m_ulXform_bind_threshold;
+	}
+
 	// generate default hint configurations, which disables sort during insert on
 	// append only row-oriented partitioned tables by default
 	static CHint *
@@ -143,10 +154,11 @@ public:
 			gpos::int_max, /* min_num_of_parts_to_require_sort_on_insert */
 			gpos::int_max, /* join_arity_for_associativity_commutativity */
 			gpos::int_max, /* array_expansion_threshold */
-			JOIN_ORDER_DP_THRESHOLD,			/*ulJoinOrderDPLimit*/
-			BROADCAST_THRESHOLD,				/*broadcast_threshold*/
-			true,								/* enforce_constraint_on_dml */
-			PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD /* push_group_by_below_setop_threshold */
+			JOIN_ORDER_DP_THRESHOLD,			 /*ulJoinOrderDPLimit*/
+			BROADCAST_THRESHOLD,				 /*broadcast_threshold*/
+			true,								 /* enforce_constraint_on_dml */
+			PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD, /* push_group_by_below_setop_threshold */
+			XFORM_BIND_THRESHOLD				 /* xform_bind_threshold */
 		);
 	}
 

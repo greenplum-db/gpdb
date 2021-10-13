@@ -310,6 +310,7 @@ typedef struct PlannerInfo
 	bool		is_split_update;	/* true if UPDATE that modifies
 									 * distribution key columns */
 	bool		is_correlated_subplan; /* true for correlated subqueries nested within subplans */
+	bool		disallow_unique_rowid_path; /* true if we decide not to generate unique rowid path */
 } PlannerInfo;
 
 /*

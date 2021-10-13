@@ -361,14 +361,14 @@ Distributed by: (sale_id)
           Greenplum Database. The view contains session information and information such as the
           database that the session is connected to, the query that the session is currently
           running, and memory consumed by the session processes. </p>
-        <ul id="ul_hwv_bbb_dq" otherprops="op-help">
-          <li>
-            <xref href="#topic_nby_j1b_dq" format="dita"/>
-          </li>
-          <li>
-            <xref href="#topic7" format="dita"/>
-          </li>
-        </ul>
+        <ul id="ul_hwv_bbb_dq">
+        <li>
+          <xref href="#topic_nby_j1b_dq" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic7" format="dita"/>
+        </li>
+      </ul>
       </body>
       <topic id="topic_nby_j1b_dq">
         <title>Creating the session_level_memory_consumption View</title>

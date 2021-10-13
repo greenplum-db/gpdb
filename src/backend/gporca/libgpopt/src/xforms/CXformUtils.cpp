@@ -2759,9 +2759,12 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 				CPhysicalJoin::FHashJoinCompatible(
 					pexprEquality, pexprOuter,
 					pexprInner) &&	// equality is hash-join compatible
-				CUtils::FUsesNullableCol(
+				!CUtils::FUsesNullableCol(
 					mp, pexprEquality,
-					pexprInner))  // equality uses an inner nullable column
+					pexprInner) &&	// equality uses an inner NOT NULL column
+				!CUtils::FUsesNullableCol(
+					mp, pexprEquality,
+					pexprOuter))  // equality uses an outer NOT NULL column
 			{
 				pexprEquality->AddRef();
 				pdrgpexprNew->Append(pexprEquality);

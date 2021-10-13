@@ -26,7 +26,7 @@ def get_unreachable_segment_hosts(hosts, num_workers):
     for item in pool.getCompletedItems():
         result = item.get_results()
         if result.rc == 0:
-            host = result.stdout.strip()
+            host = result.stdout.strip().split('\n')[-1]
             reachable_hosts.add(host)
 
     unreachable_hosts = list(set(hosts).difference(reachable_hosts))

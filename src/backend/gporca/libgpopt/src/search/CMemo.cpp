@@ -610,6 +610,8 @@ CMemo::Trace()
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::CMemo);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMemo::OsPrint
@@ -619,20 +621,18 @@ CMemo::Trace()
 //
 //---------------------------------------------------------------------------
 IOstream &
-CMemo::OsPrint(IOstream &os)
+CMemo::OsPrint(IOstream &os) const
 {
 	CGroup *pgroup = m_listGroups.PtFirst();
 
 	while (NULL != pgroup)
 	{
-		CAutoTrace at(m_mp);
-
 		if (m_pgroupRoot == pgroup)
 		{
-			at.Os() << std::endl << "ROOT ";
+			os << std::endl << "ROOT ";
 		}
 
-		pgroup->OsPrint(at.Os());
+		pgroup->OsPrint(os);
 		pgroup = m_listGroups.Next(pgroup);
 
 		GPOS_CHECK_ABORT;
@@ -808,14 +808,3 @@ CMemo::UlGrpExprs()
 
 	return ulGExprs;
 }
-
-#ifdef GPOS_DEBUG
-void
-CMemo::DbgPrint()
-{
-	CAutoTrace at(m_mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif	// GPOS_DEBUG
-
-// EOF

@@ -435,15 +435,18 @@
           performed on the table. For partitioned tables, automatic statistics collection is only
           triggered when the operation is run directly on a leaf table, and then only the leaf table
           is analyzed.</p>
-        <p>Automatic statistics collection has three modes:<ul id="ul_epn_pcb_mt">
+        <p>Automatic statistics collection is governed by a server configuration parameter,
+          and has three modes:<ul id="ul_epn_pcb_mt">
             <li><codeph>none</codeph> disables automatic statistics collection.</li>
             <li><codeph>on_no_stats</codeph> triggers an analyze operation for a table with no
               existing statistics when any of the commands <codeph>CREATE TABLE AS SELECT</codeph>,
-                <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are run on the table. </li>
+                <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are run on the table by the
+                table owner. </li>
             <li><codeph>on_change</codeph> triggers an analyze operation when any of the commands
                 <codeph>CREATE TABLE AS SELECT</codeph>, <codeph>UPDATE</codeph>,
                 <codeph>DELETE</codeph>, <codeph>INSERT</codeph>, or <codeph>COPY</codeph> are
-              run on the table and the number of rows affected exceeds the threshold defined by
+              run on the table by the table owner, and the number of rows affected exceeds the
+              threshold defined by
               the <codeph>gp_autostats_on_change_threshold</codeph> configuration parameter.</li>
           </ul></p>
         <p>The automatic statistics collection mode is set separately for commands that occur within
@@ -464,6 +467,14 @@
           it. The <codeph>on_change</codeph> mode could trigger large, unexpected analyze operations
           that could disrupt the system, so it is not recommended to set it globally. It could be
           useful in a session, for example to automatically analyze a table following a load.</p>
+        <p>Setting the <codeph>gp_autostats_allow_nonowner</codeph> server configuration
+          parameter to <codeph>true</codeph> also instructs Greenplum Database to trigger
+          automatic statistics collection on a table when:</p>
+        <ul>
+          <li><codeph>gp_autostats_mode=on_change</codeph> and the table is modified by a non-owner.</li>
+          <li><codeph>gp_autostats_mode=on_no_stats</codeph> and the first user to
+            <codeph>INSERT</codeph> or <codeph>COPY</codeph> into the table is a non-owner.</li>
+        </ul>
         <p>To disable automatic statistics collection outside of functions, set the
             <codeph>gp_autostats_mode</codeph> parameter to
           <codeph>none</codeph>:<codeblock>gpconfigure -c gp_autostats_mode -v none</codeblock></p>

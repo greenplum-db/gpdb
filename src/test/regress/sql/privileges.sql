@@ -1068,6 +1068,119 @@ set session role regressuser1;
 drop table dep_priv_test;
 
 
+-- security-restricted operations
+\c -
+CREATE ROLE regress_sro_user;
+
+SET SESSION AUTHORIZATION regress_sro_user;
+CREATE FUNCTION unwanted_grant() RETURNS void LANGUAGE sql AS
+	'GRANT regressgroup2 TO regress_sro_user';
+CREATE FUNCTION mv_action() RETURNS bool LANGUAGE sql AS
+	'DECLARE c CURSOR WITH HOLD FOR SELECT unwanted_grant(); SELECT true';
+-- REFRESH of this MV will queue a GRANT at end of transaction
+CREATE MATERIALIZED VIEW sro_mv AS SELECT mv_action() WITH NO DATA;
+REFRESH MATERIALIZED VIEW sro_mv;
+\c -
+REFRESH MATERIALIZED VIEW sro_mv;
+
+SET SESSION AUTHORIZATION regress_sro_user;
+-- INSERT to this table will queue a GRANT at end of transaction
+CREATE TABLE sro_trojan_table ();
+CREATE FUNCTION sro_trojan() RETURNS trigger LANGUAGE plpgsql AS
+	'BEGIN PERFORM unwanted_grant(); RETURN NULL; END';
+CREATE CONSTRAINT TRIGGER t AFTER INSERT ON sro_trojan_table
+    INITIALLY DEFERRED FOR EACH ROW EXECUTE PROCEDURE sro_trojan();
+-- Now, REFRESH will issue such an INSERT, queueing the GRANT
+CREATE OR REPLACE FUNCTION mv_action() RETURNS bool LANGUAGE sql AS
+	'INSERT INTO sro_trojan_table DEFAULT VALUES; SELECT true';
+REFRESH MATERIALIZED VIEW sro_mv;
+\c -
+REFRESH MATERIALIZED VIEW sro_mv;
+BEGIN; SET allow_segment_DML = ON; SET CONSTRAINTS ALL IMMEDIATE; REFRESH MATERIALIZED VIEW sro_mv; COMMIT;
+
+DROP OWNED BY regress_sro_user;
+DROP ROLE regress_sro_user;
+
+
+-- Test sandbox escape with CVE-2020-25695 on Greenplum.
+--
+-- The idea of CVE-2020-25695 is to make superuser fire a defered
+-- trigger with security invoker function that executes some malicious
+-- code with superuser privileges.
+--
+-- We create a two-step trap for a superuser running a maintenance
+-- operation (ANALYZE) on a "trap" table. First of all we create
+-- an index with stable function and replace it with volatile one after
+-- creation. This index function is invoked by ANALYZE and acts as a
+-- vulnerability firestarter - it inserts data to some table aside ("executor").
+-- "Executor" table has a defered insert trigger with security invoker
+-- function that executes malicious code under superuser. In a current example
+-- we give superuser to our unprivileged user on segments (not on coordinator node).
+
+\c -
+
+CREATE ROLE regress_sro_user;
+SET SESSION AUTHORIZATION regress_sro_user;
+
+CREATE TABLE executor (s varchar) DISTRIBUTED REPLICATED;
+CREATE TABLE trap (a int) WITH(appendonly = true) DISTRIBUTED REPLICATED;
+
+-- Create a "firestarter" stable index funcion
+CREATE OR REPLACE FUNCTION trap_sfunc(integer) RETURNS integer
+LANGUAGE sql IMMUTABLE AS
+'SELECT $1';
+
+CREATE INDEX trap_idx ON trap (trap_sfunc(a));
+
+-- and replace it with volatile security invoker to prodice insert operation on ANALYZE.
+CREATE OR REPLACE FUNCTION trap_sfunc(integer) RETURNS integer
+LANGUAGE sql SECURITY INVOKER AS
+'SET allow_segment_DML = ON; INSERT INTO executor VALUES (current_user); SELECT $1';
+
+-- Populate data in a "trap" table to run ANALYZE on.
+SET allow_segment_DML = ON;
+INSERT INTO trap VALUES(1);
+
+-- Create malicious function to run in defered trigger
+CREATE OR REPLACE FUNCTION executor_sfunc(integer) RETURNS integer
+LANGUAGE sql SECURITY INVOKER AS
+'SET allow_segment_DML = ON; ALTER USER regress_sro_user WITH superuser; SELECT $1';
+
+-- and the trigger itself.
+CREATE OR REPLACE FUNCTION executor_trig_sfunc() RETURNS trigger
+AS $$
+BEGIN PERFORM executor_sfunc(1000); RETURN NEW; END
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER executor_trig
+AFTER INSERT ON executor
+INITIALLY DEFERRED FOR EACH ROW
+EXECUTE PROCEDURE executor_trig_sfunc();
+
+-- Check "regress_sro_user" superuser privileges on segments.
+CREATE OR REPLACE FUNCTION is_superuser_on_segments(username text) RETURNS boolean AS $$
+SELECT rolsuper FROM pg_roles WHERE rolname = $1;
+$$ LANGUAGE sql EXECUTE ON ALL SEGMENTS;
+
+SELECT DISTINCT is_superuser_on_segments('regress_sro_user');
+
+-- Execute a trap with superuser.
+RESET SESSION AUTHORIZATION;
+
+ANALYZE trap;
+
+-- Check "regress_sro_user" superuser privileges on segments.
+SELECT DISTINCT is_superuser_on_segments('regress_sro_user');
+
+DROP TABLE trap;
+DROP TABLE executor;
+DROP FUNCTION trap_sfunc(integer);
+DROP FUNCTION executor_sfunc(integer);
+DROP FUNCTION executor_trig_sfunc();
+DROP FUNCTION is_superuser_on_segments(text);
+DROP ROLE regress_sro_user;
+
+
 -- clean up
 
 \c

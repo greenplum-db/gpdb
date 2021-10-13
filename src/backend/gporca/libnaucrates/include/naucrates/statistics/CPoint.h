@@ -34,7 +34,7 @@ using namespace gpopt;
 //	@doc:
 //		One dimensional point in the datum space
 //---------------------------------------------------------------------------
-class CPoint : public CRefCount
+class CPoint : public CRefCount, public DbgPrintMixin<CPoint>
 {
 private:
 	// private copy ctor

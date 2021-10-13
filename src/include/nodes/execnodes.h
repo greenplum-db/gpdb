@@ -1989,6 +1989,10 @@ typedef struct DynamicBitmapHeapScanState
 	 * up previous partition's memory
 	 */
 	MemoryContext partitionMemoryContext;
+
+	/* See comments for the same name fields in DynamicSeqScanState */
+	HTAB         *ss_table;
+	List         *cached_relids;
 	
 } DynamicBitmapHeapScanState;
 
@@ -2253,6 +2257,25 @@ typedef struct DynamicSeqScanState
 	 */
 	MemoryContext partitionMemoryContext;
 
+	/*
+	 * The ss_table and cached relids is to cache the scanstate
+	 * for dynamic scan to avoid huge mem leak. Previously,
+	 * DynamicSeqScan will init the seqscan state for each new
+	 * partition, the memory is allocated in ExecutorState context
+	 * which only reset when the query end. But DynamicSeqScan might
+	 * appear as Nestloop's inner plan, which means it will be rescan
+	 * many many times thus leads to mem leak. We cache the scan state
+	 * to avoid such leak.
+
+	 * See Github Issue: https://github.com/greenplum-db/gpdb/issues/12533.
+	 *
+	 * The key in ss_table is table oid, the value is a pointer
+	 * to the scanstate (stored as void *).
+	 * The cached_relids is all the keys in the hash table, it
+	 * is used when destroying the hashtable for convenience.
+	 */
+	HTAB         *ss_table;
+	List         *cached_relids;
 
 } DynamicSeqScanState;
 
@@ -2444,6 +2467,7 @@ typedef struct MaterialState
 	void	   *ts_pos;
 	void	   *ts_markpos;
 	void	   *share_lk_ctxt;
+	char	   *share_bufname_prefix;
 } MaterialState;
 
 /* ----------------
@@ -2465,14 +2489,17 @@ typedef struct ShareInputScanState
 
 	void	   *share_lk_ctxt;
 	bool		freed; /* is this node already freed? */
+
+	char	   *share_bufname_prefix;
 } ShareInputScanState;
 
 /* XXX Should move into buf file */
-extern void *shareinput_reader_waitready(int share_id, PlanGenerator planGen);
-extern void *shareinput_writer_notifyready(int share_id, int nsharer_xslice_notify_ready, PlanGenerator planGen);
+extern void *shareinput_init_lk_ctxt(int share_id);
+extern void shareinput_reader_waitready(void *, int share_id, PlanGenerator planGen);
+extern void shareinput_writer_notifyready(void *, int share_id, int nsharer_xslice_notify_ready, PlanGenerator planGen);
 extern void shareinput_reader_notifydone(void *, int share_id);
 extern void shareinput_writer_waitdone(void *, int share_id, int nsharer_xslice_wait_done);
-extern void shareinput_create_bufname_prefix(char* p, int size, int share_id);
+extern char *shareinput_create_bufname_prefix(int share_id);
 
 /* ----------------
  *	 SortState information
@@ -2494,6 +2521,7 @@ typedef struct SortState
 									 * when this node has outputted its last row? */
 
 	void	   *share_lk_ctxt;
+	char	   *share_bufname_prefix;
 
 } SortState;
 

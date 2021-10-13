@@ -106,6 +106,11 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 			1,
 			GPOS_WSZ_WSZLEN(
 				"CTE Producer-Consumer execution locality mismatch")),
+
+		CMessage(CException(gpopt::ExmaGPOPT, gpopt::ExmiNoStats),
+				 CException::ExsevError,
+				 GPOS_WSZ_WSZLEN("Missing group stats in %ls"), 1,
+				 GPOS_WSZ_WSZLEN("Missing group stats")),
 	};
 
 	GPOS_RESULT eres = GPOS_FAILED;

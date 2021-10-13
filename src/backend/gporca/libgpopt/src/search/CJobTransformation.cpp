@@ -196,7 +196,7 @@ CJobTransformation::ScheduleJob(CSchedulerContext *psc,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobTransformation::OsPrint(IOstream &os)
+CJobTransformation::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

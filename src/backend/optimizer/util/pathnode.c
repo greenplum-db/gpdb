@@ -27,6 +27,7 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/tlist.h"
 #include "parser/parsetree.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 
@@ -827,11 +828,12 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->outerjoinpath->locus))
 			return;
 
-		path = (Path *) create_unique_rowid_path(root,
-												 parent_rel,
-												 (Path *) new_path,
-												 new_path->outerjoinpath->parent->relids,
-												 required_outer);
+		if (!root->disallow_unique_rowid_path)
+			path = (Path *) create_unique_rowid_path(root,
+													 parent_rel,
+													 (Path *) new_path,
+													 new_path->outerjoinpath->parent->relids,
+													 required_outer);
 	}
 	else if (orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
 	{
@@ -841,11 +843,12 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->innerjoinpath->locus))
 			return;
 
-		path = (Path *) create_unique_rowid_path(root,
-												 parent_rel,
-												 (Path *) new_path,
-												 new_path->innerjoinpath->parent->relids,
-												 required_outer);
+		if (!root->disallow_unique_rowid_path)
+			path = (Path *) create_unique_rowid_path(root,
+													 parent_rel,
+													 (Path *) new_path,
+													 new_path->innerjoinpath->parent->relids,
+													 required_outer);
 	}
 
 	add_path(parent_rel, path);
@@ -1034,6 +1037,25 @@ create_index_path(PlannerInfo *root,
 	RelOptInfo *rel = index->rel;
 	List	   *indexquals,
 			   *indexqualcols;
+
+	/*
+	 * Greenplum specific behavior
+	 * Greenplum has a specical path to handle semjoin,
+	 * planner might add unique_row_id path to first inner join
+	 * and then de-duplicate. The logic is added into
+	 * Greenplum long before, but when merging more code from
+	 * upstream, the old logic does not consider new paths,
+	 * for indexonly path, the var should be changed to the Index's,
+	 * maybe we should enhance the old logic in cdbpath_dedup_fixup,
+	 * but at a stable branch 6X, it seems risky. Here we introduce
+	 * a switch to turn off it when seeing indexonly path.
+	 *
+	 * create_index_path happens when setting base rel, and unique
+	 * rowid path happens when setting joining rels, so the turn-off
+	 * method works.
+	 */
+	if (indexonly)
+		root->disallow_unique_rowid_path = true;
 
 	pathnode->path.pathtype = indexonly ? T_IndexOnlyScan : T_IndexScan;
 	pathnode->path.parent = rel;
@@ -2350,6 +2372,17 @@ create_unique_rowid_path(PlannerInfo *root,
 		 */
 		pathnode->path.rescannable = true;
 	}
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("low_unique_rowid_path_cost") == FaultInjectorTypeSkip)
+	{
+		/*
+		 * Inject a fault to set a very low cost for unique rowid path so that
+		 * planner will choose this if it is in pathlist.
+		 */
+		pathnode->path.total_cost = 1.0;
+	}
+#endif
 
 	return pathnode;
 }                               /* create_unique_rowid_path */

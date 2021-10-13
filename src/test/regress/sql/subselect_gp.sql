@@ -921,3 +921,142 @@ $$
 LANGUAGE plpgsql NO SQL;
 
 SELECT a, b FROM foo f WHERE EXISTS (SELECT 1 FROM foo f1 WHERE f.b=f1.b AND f1.c > (SELECT my_lookup('a')));
+-- When creating a plan with subplan in ParallelizeSubplan, use the top-level flow
+-- for the corresponding slice instead of the containing the plan node's flow.
+-- This related to issue: https://github.com/greenplum-db/gpdb/issues/12371
+create table extra_flow_dist(a int, b int, c date);
+create table extra_flow_dist1(a int, b int);
+
+insert into extra_flow_dist select i, i, '1949-10-01'::date from generate_series(1, 10)i;
+insert into extra_flow_dist1 select i, i from generate_series(20, 22)i;
+
+-- case 1 subplan with general locus (CTE and subquery)
+explain (costs off) with run_dt as (
+	select
+	(
+	  select c from extra_flow_dist where b = x
+	) dt
+	from (select ( max(1) ) x) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+with run_dt as (
+	select
+	(
+	  select c from extra_flow_dist where b = x
+	) dt
+	from (select ( max(1) ) x) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+create table extra_flow_rand(a int) distributed replicated;
+insert into extra_flow_rand values (1);
+-- case 2 for subplan with segment general locus (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x  -- subplan's outer is the below segment general locus path
+	) dt
+	from (select a x from extra_flow_rand) a  -- segment general locus
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x
+	) dt
+	from (select a x from extra_flow_rand) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+-- case 3 for subplan with entry locus (CTE and subquery)
+explain (costs off) with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x
+	) dt
+	from (select 1 x from pg_trigger limit 1) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+with run_dt as (
+	select
+	(
+		select c from extra_flow_dist where b = x
+	) dt
+	from (select 1 x from pg_trigger limit 1) a
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+-- case 4 subplan with segment general locus without param in subplan (CTE and subquery)
+explain (verbose, costs off) with run_dt as (
+	select x, y dt
+	from (select a x from extra_flow_rand ) a  -- segment general locus
+	left join (select max(1) y) aaa
+	on a.x > any (select random() from extra_flow_dist)  -- subplan's outer is the above segment general locus path
+)
+select * from run_dt, extra_flow_dist1
+where dt < extra_flow_dist1.a;
+
+-- case 5 for subplan with entry locus without param in subplan (CTE and subquery)
+explain (costs off) with run_dt as (
+	select x, y dt
+	from (select tgtype x from pg_trigger ) a
+	left join (select max(1) y) aaa
+	on a.x > any (select random() from extra_flow_dist)
+)
+select * from run_dt, extra_flow_dist1
+where dt < extra_flow_dist1.a;
+
+-- case 6 without CTE, nested subquery
+explain (costs off) select * from (
+	select dt from (
+		select
+		(
+			select c from extra_flow_dist where b = x
+		) dt
+		from (select ( max(1) ) x) a
+		union
+		select
+		(
+			select c from extra_flow_dist where b = x
+		) dt
+		from (select ( max(1) ) x) aa
+	) tbl
+) run_dt,
+extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+-- case 7 function scan with general locus
+CREATE OR REPLACE FUNCTION im() RETURNS
+SETOF integer AS $$
+        BEGIN
+                RETURN QUERY
+                select 1 from generate_series(1, 10);
+        END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+explain (costs off) with run_dt as (
+   select
+   (
+     select c from extra_flow_dist where b = x
+   ) dt
+   from im() x
+)
+select * from run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;
+
+-- case 8 function scan without CTE
+explain (costs off) select * from (select
+   (
+     select c from extra_flow_dist where b = x
+   ) dt
+   from im() x) run_dt, extra_flow_dist1
+where dt < '2010-01-01'::date;

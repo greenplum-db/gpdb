@@ -69,8 +69,21 @@ SubqueryNext(SubqueryScanState *node)
     if (node->cdb_want_ctid &&
         !TupIsNull(slot))
     {
-    	slot_set_ctid_from_fake(slot, &node->cdb_fake_ctid);
-    }
+		/*
+		 * When update statement contains subquery,  add a WholeRowVar to the
+		 * target of the subquery, here slot is a virtual tuple, we assign ctid
+		 * for a virtual tuple in slot_set_ctid_from_fake , however, when doing
+		 * ExecTargetList for WholeRowVar, this slot is formed to heap tuple,
+		 * but heap->t_self is null. when doing ExecTargetList for the target of ctid,
+		 * While the slot is heaptuple, we get ctid from heap->t_selt, an assert in
+		 * slot_getsysattr is tirgged.
+		 * if cdb_want_ctid, we transform virtual slot to heaptuple, then do slot_set_ctid_from_fake.
+		 * details please see https://github.com/greenplum-db/gpdb/issues/12512
+		 */
+		HeapTuple       tuple = ExecFetchSlotHeapTuple(slot);
+		slot->PRIVATE_tts_heaptuple = tuple;
+		slot_set_ctid_from_fake(slot, &node->cdb_fake_ctid);
+	}
 
 	return slot;
 }

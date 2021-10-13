@@ -30,6 +30,7 @@
    [<b>--verbose</b>]
    [<b>--version</b>]
    [<b>--with-stats</b>]
+   [<b>--without-globals</b>]
 
 <b>gpbackup --help</b> </codeblock>
     </section>
@@ -42,10 +43,11 @@
         schema level and table level options to back up all the tables in a schema except for a
         single table. </p>
       <p>By default, <codeph>gpbackup</codeph> backs up objects in the specified database as well as
-        global Greenplum Database system objects. You can optionally supply the
-          <codeph>--with-globals</codeph> option with <codeph>gprestore</codeph> to restore global
-        objects. See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>
-        for additional information.</p>
+        global Greenplum Database system objects. Use <codeph>--without-globals</codeph> to omit
+        global objects. <codeph>gprestore</codeph> does not restore global objects by default; use
+          <codeph>--with-globals</codeph> to restore them. See <xref
+          href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/> for additional
+        information.</p>
       <p>For materialized views, data is not backed up, only the materialized view definition is
         backed up.</p>
       <p><codeph>gpbackup</codeph> stores the object metadata files and DDL files for a backup in
@@ -164,10 +166,9 @@
             you must include that name in double quotes. You can specify this option multiple times.
             You cannot combine this option with the option <codeph>--exclude-schema</codeph>,
               <codeph>--exclude-schema-file</codeph>, or another a table filtering option such as
-              <codeph>--include-table</codeph>.</pd>
-          <pd>You cannot use this option in combination with <codeph>--leaf-partition-data</codeph>.
-            Although you can specify leaf partition names, <codeph>gpbackup</codeph> ignores the
-            partition names.</pd>
+              <codeph>--include-table</codeph>. </pd>
+          <pd>If you specify a leaf partition name, <codeph>gpbackup</codeph> ignores the partition
+            names. The leaf partition is not excluded.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
@@ -181,11 +182,10 @@
             number, or an underscore character, then you must include that name in double quotes.
             You cannot combine this option with the option <codeph>--exclude-schema</codeph>,
               <codeph>--exclude-schema-file</codeph>, or another a table filtering option such as
-              <codeph>--include-table</codeph>.</pd>
-          <pd>You cannot use this option in combination with <codeph>--leaf-partition-data</codeph>.
-            Although you can specify leaf partition names in a file specified with
+              <codeph>--include-table</codeph>.  </pd>
+          <pd>If you specify leaf partition names in a file that is used with
               <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph> ignores the partition
-            names.</pd>
+            names. The leaf partitions are not excluded.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
@@ -216,11 +216,10 @@
           <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
           <pd>Optional. Specifies a table to include in the backup. The table must be in the format
-              <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
-            character other than a lowercase letter, number, or an underscore character, then you
-            must include that name in single quotes. See <xref href="#topic1/table_names"
-              format="dita">Schema and Table Names</xref> for information about characters that are
-            supported in schema and table names.</pd>
+              <codeph>&lt;schema-name>.&lt;table-name></codeph>. For information on specifying
+            special characters in schema and table names, see <xref
+              href="http://docs-lena-gpbackup-globals.cfapps.io/backup-restore/1-18/utility_guide/ref/gpbackup.html#topic1__table_names"
+              format="html" scope="external">Schema and Table Names</xref>.</pd>
           <pd>You can specify this option multiple times. You cannot combine this option with a
             schema filtering option such as <codeph>--include-schema</codeph>, or another table
             filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
@@ -243,8 +242,8 @@
           <pd>Optional. Specifies a text file containing a list of tables to include in the backup.
             Each line in the text file must define a single table using the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
-            lines. See <xref href="#topic1/table_names" format="dita">Schema and Table Names</xref>
-            for information about characters that are supported in schema and table names. </pd>
+            lines. For information on specifying special characters in schema and table names, see
+              <xref href="#topic1/table_names" format="dita">Schema and Table Names</xref>. </pd>
           <pd>Any tables not listed in this file are omitted from the backup set. You cannot combine
             this option with a schema filtering option such as <codeph>--include-schema</codeph>, or
             another table filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
@@ -304,23 +303,41 @@
             backs up tables in a separate transaction. For example, if you specify <codeph>--jobs
               2</codeph>, the utility creates two processes, each process starts a single
             transaction, and the utility backs up the tables in parallel using the two processes.
-            <note type="important">If you specify a value higher than 1, the database must be in a
-              quiescent state while the utility acquires a lock on the tables that are being backed
-              up. If database operations are being performed on tables that are being backed up
-              during the table locking process, consistency between tables that are backed up in
-              different transactions cannot be guaranteed.</note></pd>
+              <note type="important">
+              <p>If you specify a value higher than 1, the database must be in a quiescent state at
+                the very beginning while the utility creates the individual connections, initializes
+                their transaction snapshots, and acquires a lock on the tables that are being backed
+                up. If concurrent database operations are being performed on tables that are being
+                backed up during the transaction snapshot initialization and table locking step,
+                consistency between tables that are backed up in different parallel workers cannot be
+                guaranteed.</p>
+            </note></pd>
           <pd>You cannot use this option in combination with the options
               <codeph>--metadata-only</codeph>, <codeph>--single-data-file</codeph>, or
               <codeph>--plugin-config</codeph>.</pd>
+          <pd><b>Note: </b> When using the <codeph>--jobs</codeph> flag, there is a potential
+            deadlock scenario to generate a <codeph>WARNING</codeph> message in the log files.
+            During the metadata portion of the backup, the main worker process gathers Access Share
+            locks on all the tables in the backup set.  During the data portion of the backup, based
+            on the value of the <codeph>--jobs</codeph> flag, additional workers are created that
+            attempt to take additional Access Share locks on the tables they back up. Between the
+            metadata backup and the data backup, if a third party process (operations like
+              <codeph>TRUNCATE</codeph>, <codeph>DROP</codeph>, <codeph>ALTER</codeph>) attempts to
+            access the same tables and obtain an Exclusive lock, the worker thread identifies the
+            potential deadlock, terminates its process, and hands off the table backup
+            responsibilities to the main worker (that already has an Access Share lock on that
+            particular table). A warning message is logged, similar to: <codeph>[WARNING]:-Worker 5
+              could not acquire AccessShareLock for table public.foo. Terminating worker and
+              deferring table to main worker thread.</codeph></pd>
         </plentry>
-        <plentry>
+        <plentry id="backup_leaf_part">
           <pt><b>--leaf-partition-data</b></pt>
           <pd>Optional. For partitioned tables, creates one data file per leaf partition instead of
             one data file for the entire table (the default). Using this option also enables you to
-            specify individual leaf partitions to include in a backup, with the
-              <codeph>--include-table-file</codeph> option. You cannot use this option in
-            combination with <codeph>--exclude-table-file</codeph> or
-              <codeph>--exclude-table</codeph>.</pd>
+            specify individual leaf partitions to include in or exclude from a backup, with the
+              <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+              <codeph>--exclude-table</codeph>, and <codeph>--exclude-table-file</codeph>
+            options.</pd>
         </plentry>
         <plentry>
           <pt><b>--metadata-only</b></pt>
@@ -372,6 +389,10 @@
           <pd>Optional. Include query plan statistics in the backup set.</pd>
         </plentry>
         <plentry>
+          <pt><b>--without-globals</b></pt>
+          <pd>Optional. Omit the global Greenplum Database system objects during backup.</pd>
+        </plentry>
+        <plentry>
           <pt>--help</pt>
           <pd>Displays the online help.</pd>
         </plentry>
@@ -389,24 +410,30 @@
     </section>
     <section id="table_names">
       <title>Schema and Table Names</title>
-      <p>When specifying the table filtering option <codeph>--include-table</codeph> or
-          <codeph>--include-table-file</codeph> to list tables to be backed up, the
-          <codeph>gpbackup</codeph> utility supports backing up schemas or tables when the name
-        contains upper-case characters or these special characters. </p>
-      <p><codeph> ~ # $ % ^ &amp; * ( ) _ - + [ ] { } > &lt; \ | ; : / ? ! ,</codeph>
+      <p>When using the option <codeph>--include-table</codeph> or
+          <codeph>--include-table-file</codeph> to filter backups, the schema or table names may
+        contain upper-case characters, space ( ), newline (\n), (\t), or any of these special
+        characters: </p>
+      <p><codeph> ~ # $ % ^ &amp; * ( ) _ - + [ ] { } > &lt; \ | ; : / ? ! , " ' </codeph>
       </p>
-      <p>If a name contains an upper-case or special character and is specified on the command line
-        with <codeph>--include-table</codeph>, the name must be enclosed in single quotes.
-        <codeblock>gpbackup --dbname test --include-table 'my#1schema'.'my_$42_Table'</codeblock></p>
-      <p>When the table is listed in a file for use with <codeph>--include-table-file</codeph>,
-        single quotes are not required. For example, this is the contents of a text file that is
-        used with <codeph>--include-table-file</codeph> to back up two
-        tables.<codeblock>my#1schema.my_$42_Table
-my#1schema.my_$590_Table</codeblock></p>
+      <p>For example:</p>
+      <codeblock>public.foo"bar 
+public.foo bar
+public.foo\nbar</codeblock>
       <note>The <codeph>--include-table</codeph> and <codeph>--include-table-file</codeph> options
-        do not support schema or table names that contain the character double quote
-          (<codeph>"</codeph>), period (<codeph>.</codeph>) , newline (<codeph>\n</codeph>), or
-        space (<codeph> </codeph>).</note>
+        do not support schema or table names that contain periods (<codeph>.</codeph>) or evaluated
+        newlines. </note>
+      <p>When the table name has special characters, the name must be enclosed in single
+        quotes:<codeblock>gpbackup --dbname test --include-table 'my#1schema'.'my_$42_Table'</codeblock></p>
+      <p>When the table name contains single quotes, use an escape character for each quote or
+        encapsulate the table name within double quotes. For example:</p>
+      <codeblock>
+gpbackup --dbname test --include-table public.'foo\'bar'
+gpbackup --dbname test --include-table public."foo'bar"</codeblock>
+      <p>When using the option <codeph>--include-table-file</codeph>, the table names in the text
+        file do not require single quotes. For example, the contents of the text file could be
+        similar to:<codeblock>my#1schema.my_$42_Table
+my#1schema.my_$590_Table</codeblock></p>
     </section>
     <section>
       <title>Examples</title>

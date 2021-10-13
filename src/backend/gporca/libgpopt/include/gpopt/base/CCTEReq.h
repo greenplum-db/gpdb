@@ -35,7 +35,7 @@ using namespace gpos;
 //		CTE requirements
 //
 //---------------------------------------------------------------------------
-class CCTEReq : public CRefCount
+class CCTEReq : public CRefCount, public DbgPrintMixin<CCTEReq>
 {
 private:
 	//---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ private:
 	//		A single entry in the CTE requirement
 	//
 	//---------------------------------------------------------------------------
-	class CCTEReqEntry : public CRefCount
+	class CCTEReqEntry : public CRefCount, public DbgPrintMixin<CCTEReqEntry>
 	{
 	private:
 		// cte id

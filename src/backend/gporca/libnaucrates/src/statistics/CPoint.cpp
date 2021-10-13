@@ -19,6 +19,8 @@
 using namespace gpnaucrates;
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CPoint);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPoint::CPoint

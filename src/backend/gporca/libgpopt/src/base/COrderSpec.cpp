@@ -75,6 +75,8 @@ COrderSpec::COrderExpression::Matches(const COrderExpression *poe) const
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::COrderSpec::COrderExpression);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		COrderSpec::COrderExpression::OsPrint
@@ -95,15 +97,6 @@ COrderSpec::COrderExpression::OsPrint(IOstream &os) const
 	return os;
 }
 
-#ifdef GPOS_DEBUG
-void
-COrderSpec::COrderExpression::DbgPrint() const
-{
-	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-	CAutoTrace at(mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif	// GPOS_DEBUG
 
 //---------------------------------------------------------------------------
 //	@function:

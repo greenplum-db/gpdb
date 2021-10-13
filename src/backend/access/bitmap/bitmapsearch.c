@@ -24,8 +24,6 @@
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
-#include "utils/faultinjector.h"
-
 
 typedef struct ItemPos
 {
@@ -34,12 +32,10 @@ typedef struct ItemPos
 } ItemPos;
 
 static void next_batch_words(IndexScanDesc scan);
-static void read_words(Relation rel, Buffer lovBuffer,
-					   OffsetNumber lovOffset,
-					   bool lockLovBuffer,
-					   BMBatchWords *bachWords /* out */,
-					   BlockNumber *nextBlockNoP /* out */,
-					   bool *readLastWords /* out */);
+static void read_words(Relation rel, Buffer lovBuffer, 
+					   OffsetNumber lovOffset, BlockNumber *nextBlockNoP,
+							  BM_HRL_WORD *headerWords, BM_HRL_WORD *words,
+							  uint32 *numOfWordsP, bool *readLastWords);
 static void init_scanpos(IndexScanDesc scan, BMVector bmScanPos,
 					 BlockNumber lovBlock, OffsetNumber lovOffset);
 
@@ -148,16 +144,6 @@ _bitmap_nextbatchwords(IndexScanDesc scan,
 		return false;
 
 	/*
-	 * Set firstTid to retrun for the remain batch words. tid < nextTid should
-	 * already scanned. So move firstTid to nextTid.
-	 * The firstTid may get updated when read new batch words if there only one
-	 * bitmap vector matched, see read_words.
-	 */
-	so->bm_currPos->bm_batchWords->firstTid = so->bm_currPos->bm_result.nextTid;
-	elog(DEBUG2, "BitmapIndexScan next batch words start Tid: " INT64_FORMAT,
-		 so->bm_currPos->bm_batchWords->firstTid);
-
-	/*
 	 * If there are some leftover words from the previous scan, simply
 	 * return them.
 	 */
@@ -170,6 +156,10 @@ _bitmap_nextbatchwords(IndexScanDesc scan,
 	 * content and header bitmap words.
 	 */
 	_bitmap_reset_batchwords(so->bm_currPos->bm_batchWords);
+	so->bm_currPos->bm_batchWords->firstTid = so->bm_currPos->bm_result.nextTid;
+	elog(DEBUG2, "BitmapIndexScan next batch words start Tid: " INT64_FORMAT,
+		 so->bm_currPos->bm_batchWords->firstTid);
+
 	next_batch_words(scan);
 
 	return true;
@@ -221,12 +211,13 @@ next_batch_words(IndexScanDesc scan)
 
 			_bitmap_reset_batchwords(batchWords);
 			read_words(scan->indexRelation,
-					   bmScanPos[i].bm_lovBuffer,
-					   bmScanPos[i].bm_lovOffset,
-					   true /* lockLocBuffer */,
-					   batchWords,
-					   &(bmScanPos[i].bm_nextBlockNo),
-					   &(bmScanPos[i].bm_readLastWords));
+							  bmScanPos[i].bm_lovBuffer,
+							  bmScanPos[i].bm_lovOffset,
+							  &(bmScanPos[i].bm_nextBlockNo),
+							  batchWords->hwords,
+							  batchWords->cwords,
+						  	  &(batchWords->nwords),
+							  &(bmScanPos[i].bm_readLastWords));
 		}
 
 		if (bmScanPos[i].bm_batchWords->nwords > 0)
@@ -276,112 +267,68 @@ next_batch_words(IndexScanDesc scan)
  */
 static void
 read_words(Relation rel, Buffer lovBuffer, OffsetNumber lovOffset,
-		   bool lockLovBuffer, BMBatchWords *batchWords /* out */,
-		   BlockNumber *nextBlockNoP /* out */, bool *readLastWords /* out */)
+				  BlockNumber *nextBlockNoP, BM_HRL_WORD *headerWords, 
+				  BM_HRL_WORD *words, uint32 *numOfWordsP, bool *readLastWords)
 {
 	if (BlockNumberIsValid(*nextBlockNoP))
 	{
-		Buffer			bitmapBuffer;
+		Buffer bitmapBuffer;
+
+		bitmapBuffer = _bitmap_getbuf(rel, *nextBlockNoP, BM_READ);
+
 		Page			bitmapPage;
 		BMBitmap		bitmap;
 		BMBitmapOpaque	bo;
-		uint64			totalTidsInPage;
-		bool			readLOV = false;
 
-		if (lockLovBuffer)
-			LockBuffer(lovBuffer, BM_READ);
-
-		bitmapBuffer = _bitmap_getbuf(rel, *nextBlockNoP, BM_READ);
 		bitmapPage = BufferGetPage(bitmapBuffer);
-
-		elog(LOG, "fetch bitmap page");
 
 		bitmap = (BMBitmap) PageGetContentsMaxAligned(bitmapPage);
 		bo = (BMBitmapOpaque)PageGetSpecialPointer(bitmapPage);
 
+		*numOfWordsP = bo->bm_hrl_words_used;
+		memcpy(headerWords, bitmap->hwords,
+				BM_NUM_OF_HEADER_WORDS * sizeof(BM_HRL_WORD));
+		memcpy(words, bitmap->cwords, sizeof(BM_HRL_WORD) * *numOfWordsP);
+
 		*nextBlockNoP = bo->bm_bitmap_next;
-		batchWords->nwords = bo->bm_hrl_words_used;
+
+		_bitmap_relbuf(bitmapBuffer);
+		
+		*readLastWords = false;
 
 		/*
 		 * If this is the last bitmap page and the total number of words
 		 * in this page is less than or equal to
-		 * BM_NUM_OF_HRL_WORDS_PER_PAGE - 2, we read the last two words from LOV
-		 * and append them into 'batchWords->hwords' and 'batchWords->cwords'.
-		 * This requires hold lock on the lovBuffer to avoid concurrent changes
-		 * on it. Otherwise, release the lock ASAP.
+		 * BM_NUM_OF_HRL_WORDS_PER_PAGE - 2, we read the last two words
+		 * and append them into 'headerWords' and 'words'.
 		 */
+
 		if ((!BlockNumberIsValid(*nextBlockNoP)) &&
-			(batchWords->nwords <= BM_NUM_OF_HRL_WORDS_PER_PAGE - 2))
-			readLOV = true;
-		else
+			(*numOfWordsP <= BM_NUM_OF_HRL_WORDS_PER_PAGE - 2))
 		{
-			if (lockLovBuffer)
-				LockBuffer(lovBuffer, BUFFER_LOCK_UNLOCK);
-		}
+			BM_HRL_WORD	cwords[2];
+			BM_HRL_WORD	hword;
+			BM_HRL_WORD tmp;
+			uint32		nwords;
+			int			offs;
 
-		/*
-		 * Get real next tid and nwordsread in uncompressed order for a
-		 * bitmap index scan on a bitmap page.
-		 * If current bitmap page get rearranged words from previous page
-		 * after release the previous bitmap page and before acquire lock
-		 * on it for read. The expected next tid for current bitmap scan
-		 * will not equal to the current page's start tid. So set to correct
-		 * value.
-		 * The rearrange happens when doing insert on the table and it will
-		 * update a full bitmap pages(except the last page) and generate
-		 * new words.
-		 * Since the page is full, so it'll rearrange the words and move
-		 * the unfit words to next bitmap page.
-		 * This related to issue: https://github.com/greenplum-db/gpdb/issues/11308.
-		 */
-		totalTidsInPage = GET_NUM_BITS(bitmap->cwords, bitmap->hwords,
-									   bo->bm_hrl_words_used);
-		batchWords->firstTid = bo->bm_last_tid_location - totalTidsInPage + 1;
-		batchWords->nwordsread = batchWords->firstTid / BM_HRL_WORD_SIZE;
+			read_words(rel, lovBuffer, lovOffset, nextBlockNoP, &hword, 
+					   cwords, &nwords, readLastWords);
 
-		memcpy(batchWords->hwords, bitmap->hwords,
-			   BM_NUM_OF_HEADER_WORDS * sizeof(BM_HRL_WORD));
-		memcpy(batchWords->cwords, bitmap->cwords,
-			   sizeof(BM_HRL_WORD) * batchWords->nwords);
+			Assert(nwords > 0 && nwords <= 2);
 
-		_bitmap_relbuf(bitmapBuffer);
-		SIMPLE_FAULT_INJECTOR("after_read_one_bitmap_idx_page");
+			memcpy(words + *numOfWordsP, cwords, nwords * sizeof(BM_HRL_WORD));
 
-		*readLastWords = false;
+			offs = *numOfWordsP / BM_HRL_WORD_SIZE;
+			tmp = hword >> *numOfWordsP % BM_HRL_WORD_SIZE;
+			headerWords[offs] |= tmp;
 
-		if (readLOV)
-		{
-			BMBatchWords	tempBWord;
-			BM_HRL_WORD		cwords[2];
-			BM_HRL_WORD		hword;
-			BM_HRL_WORD		tmp;
-			int				offs;
-
-			MemSet(&tempBWord, 0, sizeof(BMBatchWords));
-			tempBWord.cwords = cwords;
-			tempBWord.hwords = &hword;
-
-			read_words(rel, lovBuffer, lovOffset, false /* lockLovBuffer */,
-					   &tempBWord, nextBlockNoP, readLastWords);
-			Assert(tempBWord.nwords > 0 && tempBWord.nwords <= 2);
-
-			// release lock on lovBuffer once we read words from it.
-			if (lockLovBuffer)
-				LockBuffer(lovBuffer, BUFFER_LOCK_UNLOCK);
-
-			memcpy(batchWords->cwords + batchWords->nwords, cwords,
-				   tempBWord.nwords * sizeof(BM_HRL_WORD));
-
-			offs = batchWords->nwords / BM_HRL_WORD_SIZE;
-			tmp = hword >> batchWords->nwords % BM_HRL_WORD_SIZE;
-			batchWords->hwords[offs] |= tmp;
-
-			if (batchWords->nwords % BM_HRL_WORD_SIZE == BM_HRL_WORD_SIZE - 1)
+			if (*numOfWordsP % BM_HRL_WORD_SIZE == BM_HRL_WORD_SIZE - 1)
 			{
-				offs = (batchWords->nwords + 1)/BM_HRL_WORD_SIZE;
-				batchWords->hwords[offs] |= hword << 1;
+				offs = (*numOfWordsP + 1)/BM_HRL_WORD_SIZE;
+				headerWords[offs] |= hword << 1;
 			}
-			batchWords->nwords += tempBWord.nwords;
+			*numOfWordsP += nwords;
 		}
 	}
 	else
@@ -389,8 +336,7 @@ read_words(Relation rel, Buffer lovBuffer, OffsetNumber lovOffset,
 		BMLOVItem	lovItem;
 		Page		lovPage;
 
-		if (lockLovBuffer)
-			LockBuffer(lovBuffer, BM_READ);
+		LockBuffer(lovBuffer, BM_READ);
 
 		lovPage = BufferGetPage(lovBuffer);
 		lovItem = (BMLOVItem) PageGetItem(lovPage, 
@@ -398,22 +344,21 @@ read_words(Relation rel, Buffer lovBuffer, OffsetNumber lovOffset,
 
 		if (lovItem->bm_last_compword != LITERAL_ALL_ONE)
 		{
-			batchWords->nwords = 2;
-			batchWords->hwords[0] = (((BM_HRL_WORD)lovItem->lov_words_header) <<
+			*numOfWordsP = 2;
+			headerWords[0] = (((BM_HRL_WORD)lovItem->lov_words_header) <<
 							  (BM_HRL_WORD_SIZE-2));
-			batchWords->cwords[0] = lovItem->bm_last_compword;
-			batchWords->cwords[1] = lovItem->bm_last_word;
+			words[0] = lovItem->bm_last_compword;
+			words[1] = lovItem->bm_last_word;
 		}
 		else
 		{
-			batchWords->nwords = 1;
-			batchWords->hwords[0] = (((BM_HRL_WORD)lovItem->lov_words_header) <<
-									(BM_HRL_WORD_SIZE-1));
-			batchWords->cwords[0] = lovItem->bm_last_word;
+			*numOfWordsP = 1;
+			headerWords[0] = (((BM_HRL_WORD)lovItem->lov_words_header) <<
+							  (BM_HRL_WORD_SIZE-1));
+			words[0] = lovItem->bm_last_word;
 		}
 
-		if (lockLovBuffer)
-			LockBuffer(lovBuffer, BUFFER_LOCK_UNLOCK);
+		LockBuffer(lovBuffer, BUFFER_LOCK_UNLOCK);
 
 		*readLastWords = true;
 	}
@@ -446,11 +391,6 @@ _bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  __attribute__((unused
 	scanPos->done = false;
 	MemSet(&scanPos->bm_result, 0, sizeof(BMIterateResult));
 
-	/*
-	 * The tid to return always start from 1 which is the first tid of
-	 * first uncompressed word.
-	 */
-	scanPos->bm_result.nextTid = 1;
 
 	for (keyNo = 0; keyNo < scan->numberOfKeys; keyNo++)
 	{

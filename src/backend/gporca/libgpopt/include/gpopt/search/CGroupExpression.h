@@ -34,7 +34,8 @@ using namespace gpos;
 //		Expression representation inside Memo structure
 //
 //---------------------------------------------------------------------------
-class CGroupExpression : public CRefCount
+class CGroupExpression : public CRefCount,
+						 public DbgPrintMixin<CGroupExpression>
 {
 public:
 #ifdef GPOS_DEBUG
@@ -71,9 +72,6 @@ public:
 		ShtCC;
 
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// definition of context hash table accessor
 	typedef CSyncHashtableAccessByKey<CCostContext,	 // entry
 									  OPTCTXT_PTR>
@@ -182,8 +180,7 @@ private:
 
 	//private dummy ctor; used for creating invalid gexpr
 	CGroupExpression()
-		: m_mp(NULL),
-		  m_id(GPOPT_INVALID_GEXPR_ID),
+		: m_id(GPOPT_INVALID_GEXPR_ID),
 		  m_pop(NULL),
 		  m_pdrgpgroup(NULL),
 		  m_pdrgpgroupSorted(NULL),

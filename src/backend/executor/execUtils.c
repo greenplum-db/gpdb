@@ -70,6 +70,8 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/memquota.h"
 #include "executor/instrument.h"
+#include "executor/nodeBitmapHeapscan.h"
+#include "executor/nodeSeqscan.h"
 #include "executor/spi.h"
 #include "utils/elog.h"
 #include "miscadmin.h"
@@ -2916,3 +2918,65 @@ void AssertSliceTableIsValid(SliceTable *st, struct PlannedStmt *pstmt)
 	}
 }
 #endif
+
+/*
+ * Create A HTAB for DynamicXXXScan planstate.
+ * This is invoked when ExecInitDynamicXXXScan.
+ */
+HTAB *
+create_ss_cache_for_dynamic_scan(char *name, EState *estate)
+{
+	HASHCTL hashCtl;
+	MemSet(&hashCtl, 0, sizeof(HASHCTL));
+	hashCtl.keysize = sizeof(Oid);
+	hashCtl.entrysize = sizeof(ScanOidEntry);
+	hashCtl.hash = oid_hash;
+	hashCtl.hcxt = estate->es_query_cxt;
+
+	return hash_create(name,
+					   512,
+					   &hashCtl,
+					   HASH_ELEM | HASH_CONTEXT | HASH_FUNCTION);
+}
+
+/*
+ * Clean up the HTAB for DynamicXXXScan node.
+ * This is invoked when ExecEndPlan.
+ */
+void
+release_ss_cache_for_dynamic_scan(HTAB *ss_table, List *relids)
+{
+	ListCell      *lc;
+	ScanOidEntry  *soe;
+	foreach(lc, relids)
+	{
+		Oid relid = lfirst_oid(lc);
+
+		soe = (ScanOidEntry *) hash_search(ss_table, &(relid), HASH_FIND, NULL);
+		Assert(soe != NULL);
+
+		PlanState *node = (PlanState *) (soe->ss);
+
+		outerPlanState(node) = NULL;
+
+		switch(nodeTag(node))
+		{
+			case T_SeqScanState:
+				ExecEndSeqScan((SeqScanState *) node);
+				break;
+			case T_BitmapHeapScanState:
+				ExecEndBitmapHeapScan((BitmapHeapScanState *) node);
+				break;
+			default:
+				/*
+				 * Currently, we use this hack only for DynamicSeqScan and
+				 * DynamicBitmapHeapScan, so here we should only need to
+				 * consider above kinds of ScanState node.
+				 */
+				elog(ERROR, "unknown planstate %d when release_ss_cache", nodeTag(node));
+		}
+	}
+
+	hash_destroy(ss_table);
+	list_free(relids);
+}

@@ -48,5 +48,6 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
             <pd> Specifies the name of the database to connect to discover what other databases
               should be clustered. If not specified, the <codeph>postgres</codeph> database will
               be used, and if that does not exist, <codeph>template1</codeph> will be used. </pd>
-          </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To cluster the database <codeph>test</codeph>:</p><codeblock>clusterdb test</codeblock><p>To cluster a single table <codeph>foo</codeph> in a database named <codeph>xyzzy</codeph>:</p><codeblock>clusterdb --table foo xyzzyb</codeblock></section><section id="section7"><title>See Also</title><p><ph otherprops="op-print"><codeph>CLUSTER</codeph> in the <i>Greenplum Database Reference
-            Guide</i></ph><ph otherprops="op-help"><codeph><xref href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"/></codeph></ph></p></section></body></topic>
+          </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To cluster the database <codeph>test</codeph>:</p><codeblock>clusterdb test</codeblock><p>To cluster a single table <codeph>foo</codeph> in a database named <codeph>xyzzy</codeph>:</p><codeblock>clusterdb --table foo xyzzyb</codeblock></section><section id="section7"><title>See Also</title><p><ph><codeph>CLUSTER</codeph> in the <i>Greenplum Database Reference
+              Guide</i></ph><ph><codeph><xref href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"
+            /></codeph></ph></p></section></body></topic>

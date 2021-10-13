@@ -4,6 +4,7 @@ import mock
 from pygresql import pgdb
 
 from gppylib import gparray
+from .gp_unittest import GpTestCase
 from gppylib.programs.clsSystemState import *
 from gppylib.commands.unix import CommandNotFoundException
 
@@ -73,6 +74,8 @@ class ReplicationInfoTestCase(unittest.TestCase):
         rows = None
 
         # Try to match the execSQL() query against one of our stored fragments.
+        # If there is an overlap in fragments, we can get wrong results.
+        # Make sure none of the fragments in a test is a subset of another fragment.
         for fragment in self._pg_rows:
             if fragment in query:
                 rows = self._pg_rows[fragment]
@@ -116,6 +119,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
         self._pg_rows['pg_stat_replication'] = rows
         mock_execSQL.side_effect = self._get_rows_for_query
 
+    def mock_pg_current_xlog_location(self, mock_execSQL, xlog_rows):
+        self._pg_rows['SELECT pg_current_xlog_location'] = xlog_rows
+        mock_execSQL.side_effect = self._get_rows_for_query
+
     def stub_replication_entry(self, **kwargs):
         # The row returned here must match the order and contents expected by
         # the pg_stat_replication query performed in _add_replication_info().
@@ -129,7 +136,8 @@ class ReplicationInfoTestCase(unittest.TestCase):
             kwargs.get('flush_left', 0),
             kwargs.get('replay_location', '0/0'),
             kwargs.get('replay_left', 0),
-            kwargs.get('backend_start', None)
+            kwargs.get('backend_start', None),
+            kwargs.get('sent_left', '0')
         )
 
     def mock_pg_stat_activity(self, mock_execSQL, rows):
@@ -166,6 +174,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_adds_unknowns_if_pg_stat_replication_has_no_entries(self, mock_connect, mock_execSQL):
         self.mock_pg_stat_replication(mock_execSQL, [])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -180,6 +189,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
             self.stub_replication_entry(application_name='gp_walreceiver'),
             self.stub_replication_entry(application_name='gp_walreceiver'),
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -198,15 +208,21 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 flush_left=2048,
                 replay_location='0/0000',
                 replay_left=4096,
+                sent_left=1024,
             )
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
+        self.assertEqual('1024', self.data.getStrValue(self.primary, VALUE__REPL_SENT_LEFT))
+
         self.assertEqual('Streaming', self.data.getStrValue(self.mirror, VALUE__MIRROR_STATUS))
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('0/0800 (2048 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('0/0000 (4096 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('0/0800', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
+        self.assertEqual('0/0000', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('2048', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LEFT))
+        self.assertEqual('4096', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LEFT))
 
     @mock.patch('gppylib.db.dbconn.execSQL', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -219,14 +235,20 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 flush_left=0,
                 replay_location='0/1000',
                 replay_left=0,
+                sent_left=0,
             )
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
+
+        self.assertEqual('0', self.data.getStrValue(self.primary, VALUE__REPL_SENT_LEFT))
 
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
         self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('0', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LEFT))
+        self.assertEqual('0', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LEFT))
 
     @mock.patch('gppylib.db.dbconn.execSQL', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -239,19 +261,26 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 flush_left=None,
                 replay_location=None,
                 replay_left=None,
+                sent_left=None,
             )
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
+
+        self.assertEqual('Unknown', self.data.getStrValue(self.primary, VALUE__REPL_SENT_LEFT))
 
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LEFT))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LEFT))
 
     @mock.patch('gppylib.db.dbconn.execSQL', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_closes_connections(self, mock_connect, mock_execSQL):
         self.mock_pg_stat_replication(mock_execSQL, [])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -271,6 +300,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 replay_left=None,
             )
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -291,6 +321,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 backend_start='1970-01-01 00:00:00.000000-00'
             )
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -313,6 +344,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
                 state='streaming',
             ),
         ])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
@@ -323,6 +355,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_displays_status_when_pg_rewind_is_active_and_mirror_is_down(self, mock_connect, mock_execSQL):
         self.mock_pg_stat_replication(mock_execSQL, [])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
         self.mirror.status = gparray.STATUS_DOWN
         self.mock_pg_stat_activity(mock_execSQL, [self.stub_activity_entry()])
 
@@ -334,6 +367,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_does_not_update_mirror_status_when_mirror_is_down_and_there_is_no_recovery_underway(self, mock_connect, mock_execSQL):
         self.mock_pg_stat_replication(mock_execSQL, [])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
         self.mirror.status = gparray.STATUS_DOWN
         self.mock_pg_stat_activity(mock_execSQL, [])
 
@@ -349,6 +383,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     def test_add_replication_info_displays_start_time_when_pg_rewind_is_active_and_mirror_is_down(self, mock_connect, mock_execSQL):
         mock_date = '1970-01-01 00:00:00.000000-00'
         self.mock_pg_stat_replication(mock_execSQL, [self.stub_replication_entry()])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
         self.mock_pg_stat_activity(mock_execSQL, [self.stub_activity_entry(backend_start=mock_date)])
         self.mirror.status = gparray.STATUS_DOWN
 
@@ -360,6 +395,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_does_not_query_pg_stat_activity_when_mirror_is_up(self, mock_connect, mock_execSQL):
         self.mock_pg_stat_replication(mock_execSQL, [])
+        self.mock_pg_current_xlog_location(mock_execSQL, [])
         self.mock_pg_stat_activity(mock_execSQL, [self.stub_activity_entry()])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
@@ -393,6 +429,49 @@ class ReplicationInfoTestCase(unittest.TestCase):
             pass
         self.assertFalse(port_active, "PgPortIsActive.local should be false")
 
+
+class SegmentsReqAttentionTestCase(GpTestCase):
+
+    def setUp(self):
+        coordinator = create_segment(content=-1, dbid=0)
+        self.primary1 = create_primary(content=0, dbid=1)
+        self.primary2 = create_primary(content=1, dbid=2)
+        mirror1 = create_mirror(content=0, dbid=3)
+        mirror2 = create_mirror(content=1, dbid=4)
+        self.gpArray = gparray.GpArray([coordinator, self.primary1, self.primary2, mirror1, mirror2])
+
+        self.data = GpStateData()
+        self.data.beginSegment(self.primary1)
+        self.data.beginSegment(self.primary2)
+
+        self.apply_patches([mock.patch('gppylib.db.dbconn.connect', autospec=True)])
+
+    def test_WalSyncRemainingBytes_multiple_segments_both_catchup(self):
+        m = mock.Mock()
+        m.fetchall.side_effect = [[[100, 'async']], [[10, 'async']]]
+        with mock.patch('gppylib.db.dbconn.execSQL', return_value=m) as mock_execSQL:
+            GpSystemStateProgram._get_unsync_segs_add_wal_remaining_bytes(self.data, self.gpArray)
+            self.assertEqual(mock_execSQL.call_count, 2)
+            self.assertEqual('100', self.data.getStrValue(self.primary1, VALUE__REPL_SYNC_REMAINING_BYTES))
+            self.assertEqual('10', self.data.getStrValue(self.primary2, VALUE__REPL_SYNC_REMAINING_BYTES))
+
+    def test_WalSyncRemainingBytes_multiple_segments_one_sync(self):
+        m = mock.Mock()
+        m.fetchall.side_effect = [[[100, 'async']], [[10, 'sync']]]
+        with mock.patch('gppylib.db.dbconn.execSQL', return_value=m) as mock_execSQL:
+            GpSystemStateProgram._get_unsync_segs_add_wal_remaining_bytes(self.data, self.gpArray)
+            self.assertEqual(mock_execSQL.call_count, 2)
+            self.assertEqual('100', self.data.getStrValue(self.primary1, VALUE__REPL_SYNC_REMAINING_BYTES))
+            self.assertEqual('', self.data.getStrValue(self.primary2, VALUE__REPL_SYNC_REMAINING_BYTES))
+
+    def test_WalSyncRemainingBytes_multiple_segments_one_down(self):
+        m = mock.Mock()
+        m.fetchall.side_effect = [[[100, 'async']], []]
+        with mock.patch('gppylib.db.dbconn.execSQL', return_value=m) as mock_execSQL:
+            GpSystemStateProgram._get_unsync_segs_add_wal_remaining_bytes(self.data, self.gpArray)
+            self.assertEqual(mock_execSQL.call_count, 2)
+            self.assertEqual('100', self.data.getStrValue(self.primary1, VALUE__REPL_SYNC_REMAINING_BYTES))
+            self.assertEqual('Unknown', self.data.getStrValue(self.primary2, VALUE__REPL_SYNC_REMAINING_BYTES))
 
 class GpStateDataTestCase(unittest.TestCase):
     def test_switchSegment_sets_current_segment_correctly(self):

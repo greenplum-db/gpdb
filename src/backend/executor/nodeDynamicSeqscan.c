@@ -25,6 +25,7 @@
 #include "executor/execDynamicScan.h"
 #include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeSeqscan.h"
+#include "executor/execUtils.h"
 #include "utils/hsearch.h"
 #include "parser/parsetree.h"
 #include "utils/memutils.h"
@@ -81,6 +82,15 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
 
+	/*
+	 * Hash table is to store each new partition's scanstate to avoid
+	 * memory leak. We use it when ExecDynamicSeqScan and release all
+	 * when EndPlan.
+	 */
+	state->ss_table = create_ss_cache_for_dynamic_scan("Dynamic SeqScan",
+													   estate);
+	state->cached_relids = NIL;
+
 	return state;
 }
 
@@ -106,6 +116,8 @@ initNextTableToScan(DynamicSeqScanState *node)
 	Oid		   *pid;
 	Relation	currentRelation;
 	PlanState  *ssPlanState;
+	bool        found;
+	ScanOidEntry *soe;
 
 	pid = hash_seq_search(&node->pidStatus);
 	if (pid == NULL)
@@ -121,9 +133,20 @@ initNextTableToScan(DynamicSeqScanState *node)
 		instr->numPartScanned++;
 	}
 
-	CleanupOnePartition(node);
+	soe = (ScanOidEntry *) hash_search(node->ss_table,
+									   pid,
+									   HASH_ENTER, &found);
 
-	currentRelation = scanState->ss_currentRelation = heap_open(*pid, AccessShareLock);
+	if (!found)
+	{
+		currentRelation = scanState->ss_currentRelation = heap_open(*pid, AccessShareLock);
+	}
+	else
+	{
+		Relation cr = ((SeqScanState *) (soe->ss))->ss.ss_currentRelation;
+		currentRelation = scanState->ss_currentRelation = cr;
+	}
+
 	lastScannedRel = heap_open(node->lastRelOid, AccessShareLock);
 	lastTupDesc = RelationGetDescr(lastScannedRel);
 	partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
@@ -167,8 +190,20 @@ initNextTableToScan(DynamicSeqScanState *node)
 		pfree(attMap);
 
 	DynamicScan_SetTableOid(&node->ss, *pid);
-	node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate, node->eflags,
-													 currentRelation);
+
+	if (!found)
+	{
+		node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate, node->eflags,
+														 currentRelation);
+		soe->ss = (void *) (node->seqScanState);
+		node->cached_relids = lappend_oid(node->cached_relids, currentRelation->rd_id);
+	}
+	else
+	{
+		node->seqScanState = (SeqScanState *) (soe->ss);
+		/* We are to scan the opened scanstate, first rescan it. */
+		ExecReScan((PlanState *) (node->seqScanState));
+	}
 
 	/*
 	 * Setup gpmon counters for SeqScan. Rows count for sidecar partition scan should
@@ -273,7 +308,11 @@ CleanupOnePartition(DynamicSeqScanState *scanState)
 
 	if (scanState->seqScanState)
 	{
-		ExecEndSeqScan(scanState->seqScanState);
+		/*
+		 * Since we use the cache hack, we cannot end the subscan
+		 * just set it to NULL and this will lead to the logic
+		 * of initNextTableToScan work.
+		 */
 		scanState->seqScanState = NULL;
 	}
 	if ((scanState->scan_state & SCAN_SCAN) != 0)
@@ -309,6 +348,8 @@ void
 ExecEndDynamicSeqScan(DynamicSeqScanState *node)
 {
 	DynamicSeqScanEndCurrentScan(node);
+
+	release_ss_cache_for_dynamic_scan(node->ss_table, node->cached_relids);
 
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 

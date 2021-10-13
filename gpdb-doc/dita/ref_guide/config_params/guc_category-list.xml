@@ -345,11 +345,11 @@
               >optimizer_enable_multiple_distinct_aggs</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_agg_skew_avoidance" type="section"
                 >optimizer_force_agg_skew_avoidance</xref></p>
+          </stentry>
+          <stentry>
             <p><xref href="guc-list.xml#optimizer_force_multistage_agg" type="section"
                 >optimizer_force_multistage_agg</xref>
             </p>
-          </stentry>
-          <stentry>
             <p><xref href="guc-list.xml#optimizer_force_three_stage_scalar_dqa" type="section"
                 >optimizer_force_three_stage_scalar_dqa</xref></p>
             <p><xref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"
@@ -378,6 +378,8 @@
                 >optimizer_sort_factor</xref></p>
             <p><xref href="guc-list.xml#optimizer_use_gpdb_allocators" format="dita"
                 >optimizer_use_gpdb_allocators</xref></p>
+            <p><xref href="guc-list.xml#optimizer_xform_bind_threshold" format="dita"
+                >optimizer_xform_bind_threshold</xref></p>
           </stentry>
         </strow>
       </simpletable>
@@ -725,6 +727,10 @@
                   >log_error_verbosity</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#log_file_mode" type="section"
+                  >log_file_mode</xref>
+              </p>
+              <p>
                 <xref href="guc-list.xml#log_min_duration_statement" type="section"
                   >log_min_duration_statement</xref>
               </p>
@@ -937,12 +943,17 @@
         <strow>
           <stentry>
             <p>
+              <xref href="guc-list.xml#gp_autostats_allow_nonowner" type="section">gp_autostats_allow_nonowner</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#gp_autostats_mode" type="section">gp_autostats_mode</xref>
             </p>
             <p>
               <xref href="guc-list.xml#gp_autostats_mode_in_functions" type="section"
                 >gp_autostats_mode_in_functions</xref>
             </p>
+          </stentry>
+          <stentry>
             <p>
               <xref href="guc-list.xml#gp_autostats_on_change_threshold" type="section"
                 >gp_autostats_on_change_threshold</xref>
@@ -1345,6 +1356,10 @@
               <p>
                 <xref href="guc-list.xml#escape_string_warning" type="section"
                   >escape_string_warning</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#quote_all_identifiers" type="section"
+                  >quote_all_identifiers</xref>
               </p>
             </stentry>
             <stentry>

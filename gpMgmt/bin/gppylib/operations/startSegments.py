@@ -6,7 +6,6 @@ from gppylib.commands import unix
 from gppylib.commands import gp
 from gppylib.commands import base
 from gppylib.gparray import GpArray
-from gppylib import gphostcache
 from gppylib.commands.gp import SEGMENT_TIMEOUT_DEFAULT
 
 logger = get_default_logger()
@@ -103,22 +102,6 @@ class StartSegmentsOperation:
         segmentsDbids = []
         for seg in segments:
             segmentsDbids.append(seg.getSegmentDbId())
-
-        # check on pingability
-        self.hostcache = gphostcache.GpHostCache(gpArray, self.__workerPool)
-        failedPings=self.hostcache.ping_hosts(self.__workerPool)
-        failedPingDbIds = {}
-        for segment in failedPings:
-            hostName = segment.getSegmentHostName()
-            logger.warning("Skipping startup of segdb on %s directory %s Ping Failed <<<<<<" % \
-                                        (hostName, segment.getSegmentDataDirectory()))
-            if segment.getSegmentDbId() in segmentsDbids:
-               result.addFailure(segment, 'Failed to Ping on host: %s' % hostName, gp.SEGSTART_ERROR_PING_FAILED )
-            failedPingDbIds[segment.getSegmentDbId()] = True
-
-        self.hostcache.log_contents()
-
-        segments = [seg for seg in segments if failedPingDbIds.get(seg.getSegmentDbId()) is None]
 
         # now do the start!
         numNodes = len(gpArray.getHostList())

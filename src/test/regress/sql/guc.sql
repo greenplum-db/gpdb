@@ -312,3 +312,7 @@ drop table public.t1;
 drop type public.ty1;
 drop function n1.drop_table(v_schema character varying, v_table character varying);
 drop schema n1;
+
+-- GP: assert that we don't support turning on log_lock_waits
+SET log_lock_waits TO on;
+SHOW log_lock_waits;

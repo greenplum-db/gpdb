@@ -20,6 +20,12 @@ struct EState;
 struct QueryDesc;
 struct CdbDispatcherState;
 
+typedef struct ScanOidEntry
+{
+	Oid         rel_id;
+	void       *ss;
+} ScanOidEntry;
+
 extern void InitSliceTable(struct EState *estate, int nMotions, int nSubplans);
 extern Slice *getCurrentSlice(struct EState *estate, int sliceIndex);
 extern bool sliceRunsOnQD(Slice *slice);
@@ -37,5 +43,8 @@ extern void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt);
 struct PlannedStmt;
 extern void AssertSliceTableIsValid(SliceTable *st, struct PlannedStmt *pstmt);
 #endif
+
+extern HTAB *create_ss_cache_for_dynamic_scan(char *name, EState *estate);
+extern void  release_ss_cache_for_dynamic_scan(HTAB *reltable, List *relids);
 
 #endif

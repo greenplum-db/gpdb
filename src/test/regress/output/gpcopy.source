@@ -246,11 +246,9 @@ SELECT * FROM copy_regression_text2;
 COPY copy_regression_text3 from stdin with delimiter '|' escape '#';
 COPY copy_regression_text3 from stdin with delimiter '|' escape 'off';
 COPY copy_regression_text3 from stdin with delimiter '|';
--- This works in PostgreSQL, and these days in GPDB as well, but used to not
--- work until GPDB 6. This is just one line, because the newlines are
--- escaped. (Even on PostgreSQL, the COPY documentation recommends not to do
--- this, but let's test it.)
 COPY copy_regression_text3 from stdin with delimiter '|';
+ERROR:  missing data for column "b"
+CONTEXT:  COPY copy_regression_text3, line 2: "and another one\"
 COPY copy_regression_text3 from stdin with delimiter '|';
 SELECT * FROM copy_regression_text3 ORDER BY b,a;
                  a                  | b |      c      |      d      |      e       
@@ -261,13 +259,10 @@ SELECT * FROM copy_regression_text3 ORDER BY b,a;
  a single backslash \ in col a      | 4 | c text data | d text data | e text data
  c:\\file\data\neew\path            | 5 | c text data | d text data | e text data
  the at sign: @                     | 6 | c text data | d text data | e text data
- an embedded linefeed              +| 7 | c text data | d text data | e text data
- and another one                   +|   |             |             | 
-  in column a                       |   |             |             | 
  an embedded linefeed sequence     +| 7 | c text data | d text data | e text data
  in column a                        |   |             |             | 
  a single backslash \ in col a      | 8 | c text data | d text data | e text data
-(9 rows)
+(8 rows)
 
 DROP TABLE copy_regression_text1;
 DROP TABLE copy_regression_text2;

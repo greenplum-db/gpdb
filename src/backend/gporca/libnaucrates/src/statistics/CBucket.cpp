@@ -205,6 +205,8 @@ CBucket::GetOverlapPercentage(const CPoint *point, BOOL include_point) const
 	return CDouble(std::min(res.Get(), DOUBLE(1.0)));
 }
 
+FORCE_GENERATE_DBGSTR(gpnaucrates::CBucket);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CBucket::OsPrint
@@ -246,15 +248,6 @@ CBucket::OsPrint(IOstream &os) const
 
 	return os;
 }
-
-#ifdef GPOS_DEBUG
-void
-CBucket::DbgPrint() const
-{
-	CAutoTrace at(CTask::Self()->Pmp());
-	OsPrint(at.Os());
-}
-#endif
 
 //---------------------------------------------------------------------------
 //	@function:

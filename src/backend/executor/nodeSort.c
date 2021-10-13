@@ -105,19 +105,17 @@ ExecSort(SortState *node)
 
 		if(plannode->share_type == SHARE_SORT_XSLICE)
 		{
-			char rwfile_prefix[100];
 			if(plannode->driver_slice != currentSliceId)
 			{
 				elog(LOG, "Sort exec on CrossSlice, current slice %d", currentSliceId);
 				return NULL;
 			}
 
-			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), plannode->share_id);
-			elog(LOG, "Sort node create shareinput rwfile %s", rwfile_prefix);
+			elog(LOG, "Sort node create shareinput rwfile %s", node->share_bufname_prefix);
 
 			tuplesortstate = tuplesort_begin_heap_file_readerwriter(
 				&node->ss,
-				rwfile_prefix, true,
+				node->share_bufname_prefix, true,
 				tupDesc,
 				plannode->numCols,
 				plannode->sortColIdx,
@@ -222,8 +220,8 @@ ExecSort(SortState *node)
 				{
 					tuplesort_flush(tuplesortstate);
 
-					node->share_lk_ctxt = shareinput_writer_notifyready(plannode->share_id, plannode->nsharer_xslice,
-							estate->es_plannedstmt->planGen);
+					shareinput_writer_notifyready(node->share_lk_ctxt, plannode->share_id,
+												  plannode->nsharer_xslice, estate->es_plannedstmt->planGen);
 				}
 			}
 
@@ -387,6 +385,12 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 		ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, node->share_id, true);
 		snEntry->sharePlan = (Node *)node;
 		snEntry->shareState = (Node *)sortstate;
+
+		if (node->share_type == SHARE_SORT_XSLICE)
+		{
+			sortstate->share_bufname_prefix = shareinput_create_bufname_prefix(node->share_id);
+			sortstate->share_lk_ctxt = shareinput_init_lk_ctxt(node->share_id);
+		}
 	}
 
 	SO1_printf("ExecInitSort: %s\n",

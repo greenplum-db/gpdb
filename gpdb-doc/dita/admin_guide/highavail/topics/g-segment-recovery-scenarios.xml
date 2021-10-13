@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic_segment_recovery_scenarios">
+  <title>Recovering from Segment Failures</title>
+  <body>
+    <p>This topic walks you through what to do when one or more segments or hosts are down and you
+      want to recover the down segments. The recovery path you follow depends primarily which of
+      these 3 scenarios fits your circumstances:</p>
+    <p>
+      <ul id="ul_ibt_fqy_xqb">
+        <li dir="ltr">
+          <p dir="ltr">you want to recover in-place to the current host</p>
+        </li>
+        <li dir="ltr">
+          <p dir="ltr">you want to recover to a different host, within the cluster</p>
+        </li>
+        <li dir="ltr">
+          <p dir="ltr">you want to recover to a new host, outside of the cluster</p>
+        </li>
+      </ul>
+    </p>
+    <p>The steps you follow within these scenarios can vary, depending on:</p>
+    <p>
+      <ul id="ul_h4x_nqy_xqb">
+        <li dir="ltr">
+          <p dir="ltr">whether you want to do an incremental or a full recovery</p>
+        </li>
+        <li dir="ltr">
+          <p dir="ltr">whether you want to recover all segments or just a subset of segments</p>
+        </li>
+      </ul>
+    </p>
+    <p>
+      <note>Incremental recovery is only possible when recovering segments to the current host
+        (in-place recovery).</note>
+    </p>
+    <p>This topic is divided into the following sections:</p>
+    <ul id="ul_z5j_mty_xqb">
+      <li><xref href="#prepare_for_recovery" type="topic" format="dita" class="- topic/xref "/></li>
+      <li><xref href="#recovery_scenarios" type="topic" format="dita" class="- topic/xref "/></li>
+      <li><xref href="#post_recovery" type="topic" format="dita" class="- topic/xref "/></li>
+    </ul>
+  </body>
+  <topic id="prepare_for_recovery">
+    <title>Prerequisites</title>
+    <body>
+      <p>
+        <ul id="ul_z5j_mty_xqb">
+          <li>Mirroring is enabled for all segments.</li>
+          <li dir="ltr">You've already identified which segments have failed. If necessary, see the
+            topic <xref href="g-checking-for-failed-segments.xml"/>. </li>
+          <li>The master host can connect to the segment host. </li>
+          <li>All networking or hardware issues that caused the segment to fail have been
+            resolved.</li>
+        </ul>
+      </p>
+    </body>
+  </topic>
+  <topic id="recovery_scenarios">
+    <title>Recovery Scenarios</title>
+    <body>
+      <p>This section documents the steps for the 3 distinct segment  recovery scenarios. Follow the
+        link to instructions that walk you through each scenario.</p>
+      <p><ul>
+        <li><xref href="#same_host" type="topic" format="dita" class="- topic/xref "/><ul
+              id="ul_xqn_x5p_yqb">
+          <li><xref href="#incremental" type="topic" format="dita" class="- topic/xref "/></li>
+          <li><xref href="#full" type="topic" format="dita" class="- topic/xref "/></li>
+            </ul>
+          </li>
+        <li><xref href="#different_host" type="topic" format="dita" class="- topic/xref "/>
+          </li>
+          <li><xref href="#new_host" type="topic" format="dita" class="- topic/xref "/>
+          </li>
+      </ul></p>
+    </body>
+    <topic id="same_host">
+      <title>Recover In-Place to Current Host</title>
+      <body>
+        <p>When recovering in-place to the current host, you may choose between incremental recovery
+          (the default) and full recovery.</p>
+      </body>
+      <topic id="incremental">
+        <title>Incremental Recovery</title>
+        <body>
+          <p>Follow these steps for incremental recovery:</p>
+          <p>
+            <ol id="ol_hz4_k11_yqb">
+              <li>To recover all segments, run <codeph>gprecoverseg</codeph> with no options:
+                <codeblock>gprecoverseg</codeblock></li>
+              <li>To recover a subset of segments:<ol id="ol_yts_4b1_yqb">
+                  <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
+                    your choice, where each segment to recover has its own line with format
+                      <codeph>failedAddress|failedPort|failedDataDirectory </codeph><p dir="ltr">For
+                      multiple segments, create a new line for each segment you want to recover,
+                      specifying the address, port number and data directory for each down segment.
+                      For example:
+                    </p><codeblock>failedAddress1|failedPort1|failedDataDirectory1
+failedAddress2|failedPort2|failedDataDirectory2
+failedAddress3|failedPort3|failedDataDirectory3</codeblock></li>
+                  <li>Alternatively, generate a sample recovery file using the following command;
+                    you may edit the resulting file if
+                    necessary:<codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></li>
+                  <li>Pass the <codeph>recover_config_file</codeph> to the <codeph>gprecoverseg
+                      -i</codeph> command:
+                    <codeblock>$ gprecoverseg -i /home/gpadmin/recover_config_file  </codeblock></li>
+                </ol></li>
+              <li>Perform the post-recovery tasks summarized in the section <xref
+                  href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+            </ol>
+          </p>
+          
+        </body>
+      </topic>
+      <topic id="full">
+        <title>Full Recovery</title>
+        <body>
+          <p>
+           <ol>
+             <li>To recover all segments, run <codeph>gprecoverseg -F</codeph>:
+                <codeblock>gprecoverseg -F</codeblock></li>
+              <li>To recover specific segments:<ol id="ol_fx1_gg1_yqb">
+                  <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
+                    your choice, where each segment to recover has its own line with following
+                    format:
+                    <codeblock>failedAddress1|failedPort1|failedDataDirectory1<b>&lt;SPACE></b>failedAddress2|failedPort2|failedDataDirectory2</codeblock>
+                    Note the literal <b>SPACE</b> separating the lines. </li>
+                  <li>Alternatively, generate a sample recovery file using the following command and
+                    edit the resulting file to match your desired recovery configuration:
+                    <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></li>
+                  <li>Run the following command, passing in the config file generated in the
+                    previous step: <codeblock>$ gprecoverseg -i recover_config_file</codeblock></li>
+                </ol></li>
+              <li>Perform the post-recovery tasks summarized in the section <xref
+                  href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+           </ol>
+          </p>
+        </body>
+      </topic>
+    </topic>
+    <topic id="different_host">
+      <title>Recover to A Different Host within the Cluster</title>
+      <body>
+        <p>
+          <note>Only full recovery is possible when recovering to a different host in the
+              cluster.</note></p>
+          <p>Follow these steps to recover all segments or just a subset of segments to
+              a different host in the cluster:<ol id="ol_oph_f31_yqb">
+                <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
+              your choice, where each segment to recover has its own line with following format:
+              <codeblock>failedAddress|failedPort|failedDataDirectory<b>&lt;SPACE></b>newAddress|newPort|newDataDirectory</codeblock>
+              Note the literal <b>SPACE</b> separating the details of the down segment from the
+              details of where the segment will be recovered to.<p>Alternatively, generate a sample
+                recovery file using the following command and edit the resulting file to match your
+                desired recovery configuration:
+                <codeblock>$ gprecoverseg -o -p /home/gpadmin/recover_config_file</codeblock></p></li>
+                <li>Run the following command, passing in the config file generated in the previous
+                  step:<codeblock>$ gprecoverseg -i recover_config_file</codeblock></li>
+                <li>Perform the post-recovery tasks summarized in the section <xref
+                    href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+              </ol></p>
+      </body>
+    </topic>
+    <topic id="new_host">
+      <title>Recover to A New Host, Outside of the Cluster</title>
+      <body>
+        <p>Follow these steps if you are planning to do a hardware refresh on the host the segments
+          are running on.</p>
+        <p>
+          <note>Only full recovery is possible when recovering to a new host.</note>
+        </p>
+      </body>
+      <topic id="new_host_requirements">
+        <title>Requirements for New Host</title>
+        <body>
+          <p>The new host must:<ul id="ul_flg_dl1_yqb">
+              <li dir="ltr">
+                <p dir="ltr">have the same Greenplum Database software installed and configured as
+                  the failed host</p>
+              </li>
+              <li dir="ltr">
+                <p dir="ltr">have the same hardware and OS configuration as the failed host (same
+                  hostname, OS version, OS configuration parameters applied, locales,
+                  gpadmin user account, data directory locations created, ssh keys exchanged, number
+                  of network interfaces, network interface naming convention, and so on)</p>
+              </li>
+              <li dir="ltr">
+                <p dir="ltr">have sufficient disk space to accommodate the segments</p>
+              </li>
+              <li dir="ltr">
+                <p dir="ltr">be able to connect password-less with all other existing segments and
+                  Greenplum master.</p>
+              </li>
+            </ul></p>
+        </body>
+      </topic>
+      <topic id="topic_yyj_4gb_yqb">
+        <title>Steps to Recover to a New Host</title>
+        <body>
+          <ol id="ol_zyj_4gb_yqb">
+            <li>Bring up the new host</li>
+            <li>Run the following command to recover all segments to the new host:
+                <codeblock>gprecoverseg -p &lt;new_host_name></codeblock><p>You may also specify
+                more than one host. However, be sure you do not trigger a double-fault scenario when
+                recovering to two hosts at a time. </p><codeblock>gprecoverseg -p &lt;new_host_name1>,&lt;new_host_name2></codeblock><p>
+                <note>In the case of multiple failed segment hosts, you can specify the hosts to
+                  recover to with a comma-separated list. However, it is strongly recommended to
+                  recover to one host at a time. If you must recover to more than one host at a
+                  time, then it is critical to ensure that a double fault scenario does not occur,
+                  in which both the segment primary and corresponding mirror are offline.</note>
+              </p></li>
+            <li>Perform the post-recovery tasks summarized in the section <xref
+                href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+          </ol>
+        </body>
+      </topic>
+    </topic>
+    <topic id="post_recovery">
+      <title>Post-Recovery Tasks</title>
+      <body>
+        <p>Follow these steps once <codeph>gprecoverseg</codeph> has completed:<ol
+            id="ol_oxb_vfb_yqb">
+            <li>Validate segement status and preferred
+              roles:<codeblock>select * from gp_segment_configuration</codeblock></li>
+            <li>Monitor mirror synchronization progress: <codeblock>gpstate -e</codeblock></li>
+            <li>If necessary, run the following command to return segments to their preferred roles:
+              <codeblock>gprecoverseg -r</codeblock></li>
+          </ol></p>
+      </body>
+    </topic>
+  </topic>
+</topic>

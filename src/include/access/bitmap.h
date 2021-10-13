@@ -784,7 +784,6 @@ extern uint64 _bitmap_findnexttid(BMBatchWords *words,
 								  BMIterateResult *result);
 extern void _bitmap_findnexttids(BMBatchWords *words,
 								 BMIterateResult *result, uint32 maxTids);
-extern void _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result);
 #ifdef NOT_USED /* we might use this later */
 extern void _bitmap_intersect(BMBatchWords **batches, uint32 numBatches,
 						   BMBatchWords *result);
@@ -841,29 +840,6 @@ extern bool _bitmap_findvalue(Relation lovHeap, Relation lovIndex,
  */
 extern void bitmap_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void bitmap_desc(StringInfo buf, XLogRecord *record);
-
-/*
- * GET_NUM_BITS() -- return the number of bits included in the given
- * bitmap words.
- */
-static inline uint64
-GET_NUM_BITS(const BM_HRL_WORD *contentWords,
-			 const BM_HRL_WORD *headerWords,
-			 uint32 nwords)
-{
-	uint64	nbits = 0;
-	uint32	i;
-
-	for (i = 0; i < nwords; i++)
-	{
-		if (IS_FILL_WORD(headerWords, i))
-			nbits += FILL_LENGTH(contentWords[i]) * BM_HRL_WORD_SIZE;
-		else
-			nbits += BM_HRL_WORD_SIZE;
-	}
-
-	return nbits;
-}
 
 /* reloptions.c */
 #define BITMAP_MIN_FILLFACTOR		10

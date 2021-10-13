@@ -18,25 +18,27 @@
 <b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> 
              [<b>-p</b> <varname>new_recover_host</varname>[,...]]
 
-<b>gprecoverseg</b> <b>-?</b> | <b>--help</b>
+<b>gprecoverseg</b> <b>-?</b> | <b>-h</b> | <b>--help</b>
+        
+<b>gprecoverseg</b> <b>-v</b> | <b>--verbose</b>
 
 <b>gprecoverseg</b> <b>--version</b></codeblock>
     </section>
     <section id="section3"><title>Description</title>In a system with mirrors enabled, the
         <codeph>gprecoverseg</codeph> utility reactivates a failed segment instance and identifies
       the changed database files that require resynchronization. Once <codeph>gprecoverseg</codeph>
-      completes this process, the system goes into <i>resynchronizing</i> mode until the recovered
-      segment is brought up to date. The system is online and fully operational during
+      completes this process, the system goes into <codeph>Not in Sync</codeph> mode until the
+      recovered segment is brought up to date. The system is online and fully operational during
         resynchronization.<p>During an incremental recovery (the <codeph>-F</codeph> option is not
         specified), if <codeph>gprecoverseg</codeph> detects a segment instance with mirroring
         disabled in a system with mirrors enabled, the utility reports that mirroring is disabled
         for the segment, does not attempt to recover that segment instance, and continues the
         recovery process. </p><p>A segment instance can fail for several reasons, such as a host
         failure, network failure, or disk failure. When a segment instance fails, its status is
-        marked as <i>down</i> in the Greenplum Database system catalog, and its mirror is activated
-        in <i>change tracking</i> mode. In order to bring the failed segment instance back into
-        operation again, you must first correct the problem that made it fail in the first place,
-        and then recover the segment instance in Greenplum Database using
+        marked as <codeph>d</codeph> (down) in the Greenplum Database system catalog, and its mirror
+        is activated in <codeph>Not in Sync</codeph> mode. In order to bring the failed segment
+        instance back into operation again, you must first correct the problem that made it fail in
+        the first place, and then recover the segment instance in Greenplum Database using
           <codeph>gprecoverseg</codeph>.</p><note otherprops="pivotal"> If incremental recovery was
         not successful and the down segment instance data is not corrupted, contact VMware Support.
         </note><p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an
@@ -71,7 +73,7 @@
         accommodate the failed segments.</p><p>The recovery process marks the segment as up again in
         the Greenplum Database system catalog, and then initiates the resynchronization process to
         bring the transactional state of the segment up-to-date with the latest changes. The system
-        is online and available during resynchronization. </p></section>
+        is online and available during <codeph>Not in Sync</codeph> mode. </p></section>
     <section id="section4">
       <title>Options</title>
       <parml>
@@ -100,29 +102,22 @@
           <pt>-F (full recovery)</pt>
           <pd>Optional. Perform a full copy of the active segment instance in order to recover the
             failed segment. The default is to only copy over the incremental changes that occurred
-            while the segment was down.
-            <note type="warning">A full recovery deletes the data directory of the down segment
-              instance before copying the data from the active (current primary) segment instance.
-              Before performing a full recovery, ensure that the segment failure did not cause data
-              corruption and that any host segment disk issues have been fixed.<p>Also, for a full
-                recovery, the utility does not restore custom files that are stored in the segment
-                instance data directory even if the custom files are also in the active segment
-                instance. You must restore the custom files manually. For example, when using the
-                  <codeph>gpfdists</codeph> protocol (<codeph>gpfdist</codeph> with SSL encryption)
-                to manage external data, client certificate files are required in the segment
-                instance <codeph>$PGDATA/gpfdists</codeph> directory. These files are not restored.
-                For information about configuring <codeph>gpfdists</codeph>, see <xref
+            while the segment was down. <note type="warning">A full recovery deletes the data
+              directory of the down segment instance before copying the data from the active
+              (current primary) segment instance. Before performing a full recovery, ensure that the
+              segment failure did not cause data corruption and that any host segment disk issues
+              have been fixed.<p>Also, for a full recovery, the utility does not restore custom
+                files that are stored in the segment instance data directory even if the custom
+                files are also in the active segment instance. You must restore the custom files
+                manually. For example, when using the <codeph>gpfdists</codeph> protocol
+                  (<codeph>gpfdist</codeph> with SSL encryption) to manage external data, client
+                certificate files are required in the segment instance
+                  <codeph>$PGDATA/gpfdists</codeph> directory. These files are not restored. For
+                information about configuring <codeph>gpfdists</codeph>, see <xref
                   href="../../security-guide/topics/Encryption.xml#gpfdist_connections"
-              />.</p></note></pd>
-          <pd>Full recovery can take a long time for large databases, so
-              <codeph>gprecoverseg</codeph> displays a running estimate of the completion progress
-            of the copy for each segment. Progress for each segment is updated once per second,
-            using ANSI escape codes to update the line for each segment in-place. If you are
-            redirecting the <codeph>gprecoverseg</codeph> output to a file, or if the ANSI escape
-            codes do not work correctly on your terminal, you can include the <codeph>-s</codeph>
-            option on the command line to omit the ANSI escape codes. This outputs a new line once
-            per second for each segment. Include the <codeph>--no-progress</codeph> option to
-            completely disable the progress reports.</pd>
+              />.</p></note> Use the <codeph>-s</codeph> option to output a new line once per second
+            for each segment. Alternatively, use the <codeph>--no-progress</codeph> option to
+            completely disable progress reports.</pd>
         </plentry>
         <plentry>
           <pt>--hba-hostnames <varname>boolean</varname></pt>
@@ -138,29 +133,29 @@
         </plentry>
         <plentry>
           <pt>-i <varname>recover_config_file</varname></pt>
-          <pd>Specifies the name of a file with the details about failed segments to recover. Each
-            line in the file is in the following format. The word <b>SPACE</b> indicates the
-            location of a required space. Do not add additional
-                spaces.<codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;<b>SPACE</b> 
-&lt;recovery_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;
-</codeblock><p><b>Comments</b></p><p>Lines
-              beginning with <codeph>#</codeph> are treated as comments and ignored.</p>
-            <p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
-              recover. This line can have one of two formats. In the event of in-place recovery,
-              enter one group of colon delimited fields in the line. For example:</p><p>
+          <pd>Specifies the name of a file with the details about failed segments to recover.
+              <p>Each line in the config file specifies a segment to recover. This line can have one
+              of two formats. In the event of in-place (incremental) recovery, enter one group of
+              pipe-delimited fields in the line. For example:</p><p>
               <codeblock>failedAddress|failedPort|failedDataDirectory</codeblock>
             </p><p>For recovery to a new location, enter two groups of fields separated by a space
               in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
               spaces.</p><p>
               <codeblock>failedAddress|failedPort|failedDataDirectory<b>SPACE</b>newAddress|
 newPort|newDataDirectory</codeblock>
-            </p><p><b>Examples</b></p><p><b>In-place recovery of a single mirror</b></p>
+            </p><p>
+              <note>Lines beginning with <codeph>#</codeph> are treated as comments and
+                ignored.</note>
+            </p><p><b>Examples</b></p><p><b>In-place (incremental) recovery of a single
+              mirror</b></p>
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16</codeblock>
             <p><b>Recovery of a single mirror to a new host</b></p>
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16<b>SPACE</b>sdw4-1|50001|/data1/recover1/gpseg16</codeblock>
             <p><b>Obtaining a Sample File</b></p>
             <p>You can use the <codeph>-o</codeph> option to output a sample recovery configuration
-              file to use as a starting point.</p></pd>
+              file to use as a starting point. The output file lists the currently invalid segments
+              and their default recovery location. This file format can be used with the 
+<codeph>-i</codeph> option for in-place (incremental) recovery.</p></pd>
         </plentry>
         <plentry>
           <pt>-l <varname>logfile_directory</varname></pt>
@@ -168,10 +163,7 @@ newPort|newDataDirectory</codeblock>
         </plentry>
         <plentry>
           <pt>-o <varname>output_recover_config_file</varname></pt>
-          <pd>Specifies a file name and location to output a sample recovery configuration file. The
-            output file lists the currently invalid segments and their default recovery location in
-            the format that is required by the <codeph>-i</codeph> option. Use together with the
-              <codeph>-p</codeph> option to output a sample file for recovering on a different host.
+          <pd>Specifies a file name and location to output a sample recovery configuration file.
             This file can be edited to supply alternate recovery locations if needed. The following
             example outputs the default recovery configuration file:
             <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></pd>
@@ -180,13 +172,9 @@ newPort|newDataDirectory</codeblock>
           <pt>-p <varname>new_recover_host</varname>[,...]</pt>
           <pd>Specifies a spare host outside of the currently configured Greenplum Database array on
             which to recover invalid segments.</pd>
-          <pd>
-            <note type="important">The hostname of the new node needs to match the hostname being
-              recovered.</note>
-          </pd>
           <pd>The spare host must have the Greenplum Database software installed and configured, and
-            have the same hardware and OS configuration as the current segment hosts (same hostname,
-            OS version, locales, <codeph>gpadmin</codeph> user account, data directory locations
+            have the same hardware and OS configuration as the current segment hosts (same OS
+            version, locales, <codeph>gpadmin</codeph> user account, data directory locations
             created, ssh keys exchanged, number of network interfaces, network interface naming
             convention, and so on). Specifically, the Greenplum Database binaries must be installed,
             the spare host must be able to connect password-less with all segments including the
@@ -212,30 +200,30 @@ newPort|newDataDirectory</codeblock>
             potentially unbalanced state, as some segment hosts may have more active segments than
             is optimal for top system performance. This option rebalances primary and mirror
             segments by returning them to their preferred roles. All segments must be valid and
-            synchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
+            resynchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
             progress queries, they will be cancelled and rolled back.</pd>
         </plentry>
         <plentry>
-          <pt>-s </pt>
-          <pd>Show <codeph>pg_basebackup</codeph> progress sequentially instead of in-place. Useful
-            when writing to a file, or if a tty does not support escape sequences. The default is to
-            show progress in-place. </pd>
+          <pt>-s (sequential progress)</pt>
+          <pd>Show <codeph>pg_basebackup</codeph> or <codeph>pg_rewind</codeph> progress
+            sequentially instead of in-place. Useful when writing to a file, or if a tty does not
+            support escape sequences. The default is to show progress in-place. </pd>
         </plentry>
         <plentry>
           <pt>--no-progress</pt>
-          <pd>Suppresses progress reports from the <codeph>pg_basebackup</codeph> utility. The
-            default is to display progress of base backups. </pd>
+          <pd>Suppresses progress reports from the <codeph>pg_basebackup</codeph> or
+              <codeph>pg_rewind</codeph> utility. The default is to display progress. </pd>
         </plentry>
         <plentry>
-          <pt>-v (verbose)</pt>
+          <pt>-v | --verbose</pt>
           <pd>Sets logging output to verbose.</pd>
         </plentry>
         <plentry>
-          <pt>--version (version)</pt>
+          <pt>--version</pt>
           <pd>Displays the version of this utility.</pd>
         </plentry>
         <plentry>
-          <pt>-? (help)</pt>
+          <pt>-? | -h | --help</pt>
           <pd>Displays the online help.</pd>
         </plentry>
       </parml>

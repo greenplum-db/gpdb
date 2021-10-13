@@ -21,6 +21,7 @@
 #include "gpopt/base/COptimizationContext.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysicalAgg.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CBinding.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/xforms/CXformFactory.h"
@@ -28,6 +29,8 @@
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
+
+FORCE_GENERATE_DBGSTR(CGroupExpression);
 
 #define GPOPT_COSTCTXT_HT_BUCKETS 100
 
@@ -48,8 +51,7 @@ CGroupExpression::CGroupExpression(CMemoryPool *mp, COperator *pop,
 								   CXform::EXformId exfid,
 								   CGroupExpression *pgexprOrigin,
 								   BOOL fIntermediate)
-	: m_mp(mp),
-	  m_id(GPOPT_INVALID_GEXPR_ID),
+	: m_id(GPOPT_INVALID_GEXPR_ID),
 	  m_pgexprDuplicate(NULL),
 	  m_pop(pop),
 	  m_pdrgpgroup(pdrgpgroup),
@@ -812,6 +814,9 @@ CGroupExpression::Transform(
 	CBinding binding;
 	CXformContext *pxfctxt = GPOS_NEW(mp) CXformContext(mp);
 
+	COptimizerConfig *optconfig =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+	ULONG bindThreshold = optconfig->GetHint()->UlXformBindThreshold();
 	CExpression *pexprPattern = pxform->PexprPattern();
 	CExpression *pexpr = binding.PexprExtract(mp, this, pexprPattern, NULL);
 	while (NULL != pexpr)
@@ -822,7 +827,8 @@ CGroupExpression::Transform(
 		ulNumResults = pxfres->Pdrgpexpr()->Size() - ulNumResults;
 		PrintXform(mp, pxform, pexpr, pxfres, ulNumResults);
 
-		if (pxform->IsApplyOnce() ||
+		if ((bindThreshold != 0 && (*pulNumberOfBindings) > bindThreshold) ||
+			pxform->IsApplyOnce() ||
 			(0 < pxfres->Pdrgpexpr()->Size() &&
 			 !CXformUtils::FApplyToNextBinding(pxform, pexpr)))
 		{
@@ -1204,7 +1210,7 @@ void
 CGroupExpression::DbgPrintWithProperties()
 {
 	CAutoTraceFlag atf(EopttracePrintGroupProperties, true);
-	CAutoTrace at(m_mp);
+	CAutoTrace at(CTask::Self()->Pmp());
 	(void) this->OsPrint(at.Os());
 }
 #endif	// GPOS_DEBUG

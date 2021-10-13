@@ -1089,7 +1089,8 @@ test__MemoryAccounting_SaveToLog__GeneratesCorrectString(void **state)
 {
 	char *templateString =
 "memory: account_name, account_id, parent_account_id, quota, peak, allocated, freed, current\n\
-memory: Vmem, -1, -1, 0, 0, 0, 0, 0\n\
+memory: CurrentVmem, -1, -1, 0, 0, 0, 0, 0\n\
+memory: MaxVmem, -1, -1, 0, 0, 0, 0, 0\n\
 memory: Peak, -2, -2, 0, %" PRIu64 ", %" PRIu64 ", 0, %" PRIu64 "\n\
 memory: Root, 1, 1, 0, 0, 0, 0, 0\n\
 memory: SharedHeader, 2, 1, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\

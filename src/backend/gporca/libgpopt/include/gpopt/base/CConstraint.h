@@ -58,7 +58,7 @@ typedef CHashMap<ULONG, CConstraint, gpos::HashValue<ULONG>,
 //		Base class for representing constraints
 //
 //---------------------------------------------------------------------------
-class CConstraint : public CRefCount
+class CConstraint : public CRefCount, public DbgPrintMixin<CConstraint>
 {
 public:
 	enum EConstraintType

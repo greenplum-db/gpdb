@@ -286,7 +286,7 @@ CJobGroupExploration::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupExploration::OsPrint(IOstream &os)
+CJobGroupExploration::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

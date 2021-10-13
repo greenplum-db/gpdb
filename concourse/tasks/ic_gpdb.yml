@@ -4,6 +4,8 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
+  - name: postgres_for_fdw
+    optional: true
 outputs:
   - name: sqldump
 params:

@@ -13,6 +13,7 @@ outputs:
 - name: server_tar
 
 params:
+  SERVER_SRC_RC_PREFIX:
   RC_BUILD_TYPE_GCS:
 
 run:
@@ -22,4 +23,4 @@ run:
   - |
     server_version="$(./gpdb_src/getversion --short)"
     echo "Creating a tarball of the source git repo"
-    tar -czf "server_tar/server-src-rc-${server_version}${RC_BUILD_TYPE_GCS}.tar.gz" -C gpdb_src .
+    tar -czf "server_tar/${SERVER_SRC_RC_PREFIX}server-src-rc-${server_version}${RC_BUILD_TYPE_GCS}.tar.gz" -C gpdb_src .

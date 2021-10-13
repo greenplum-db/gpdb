@@ -85,18 +85,14 @@ ExecMaterial(MaterialState *node)
 		 */
 		if(ma->share_type == SHARE_MATERIAL_XSLICE)
 		{
-			char rwfile_prefix[100];
-
 			if(ma->driver_slice != currentSliceId)
 			{
 				elog(LOG, "Material Exec on CrossSlice, current slice %d", currentSliceId);
 				return NULL;
 			}
+			elog(DEBUG1, "Material node creates shareinput rwfile %s", node->share_bufname_prefix);
 
-			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), ma->share_id);
-			elog(DEBUG1, "Material node creates shareinput rwfile %s", rwfile_prefix);
-
-			ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true);
+			ts = ntuplestore_create_readerwriter(node->share_bufname_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true);
 			tsa = ntuplestore_create_accessor(ts, true);
 		}
 		else
@@ -168,9 +164,8 @@ ExecMaterial(MaterialState *node)
 				if (ma->driver_slice == currentSliceId)
 				{
 					ntuplestore_flush(ts);
-
-					node->share_lk_ctxt = shareinput_writer_notifyready(ma->share_id, ma->nsharer_xslice,
-							estate->es_plannedstmt->planGen);
+					shareinput_writer_notifyready(node->share_lk_ctxt, ma->share_id,
+												  ma->nsharer_xslice, estate->es_plannedstmt->planGen);
 				}
 			}
 			return NULL;
@@ -377,6 +372,12 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 		ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, node->share_id, true);
 		snEntry->sharePlan = (Node *) node;
 		snEntry->shareState = (Node *) matstate;
+
+		if (node->share_type == SHARE_MATERIAL_XSLICE)
+		{
+			matstate->share_bufname_prefix = shareinput_create_bufname_prefix(node->share_id);
+			matstate->share_lk_ctxt = shareinput_init_lk_ctxt(node->share_id);
+		}
 	}
 
 	return matstate;
@@ -629,7 +630,7 @@ ExecEagerFreeMaterial(MaterialState *node)
 	 */
 	if (NULL != node->ts_state->matstore)
 	{
-		if (ma->share_type == SHARE_MATERIAL_XSLICE && node->share_lk_ctxt)
+		if (ma->share_type == SHARE_MATERIAL_XSLICE)
 		{
 			/*
 			 * MPP-22682: If this is a producer shared XSLICE, don't free up

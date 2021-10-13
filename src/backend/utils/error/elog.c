@@ -3723,9 +3723,9 @@ append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stacka
 			}
 		}
 
-		if (fd_ok && strlen(cmdresult[0]) > 1)
+		if (!fd_ok || strlen(cmdresult[0]) <= 1)
 		{
-			addr2line_ok = true;
+			addr2line_ok = false;
 		}
 
 		if (fd != NULL)
@@ -3794,7 +3794,9 @@ append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stacka
 				{
 					lineInfo = parenth + 1;
 					parenth = strrchr(lineInfo, ')');
-					*parenth = '\0';
+					if (parenth != NULL) {
+						*parenth = '\0';
+					}
 				}
 
 				/* line info added, print file and line info */

@@ -2623,9 +2623,10 @@ CommitTransaction(void)
 
 	/*
 	 * Do pre-commit processing that involves calling user-defined code, such
-	 * as triggers.  Since closing cursors could queue trigger actions,
-	 * triggers could open cursors, etc, we have to keep looping until there's
-	 * nothing left to do.
+	 * as triggers.  SECURITY_RESTRICTED_OPERATION contexts must not queue an
+	 * action that would run here, because that would bypass the sandbox.
+	 * Since closing cursors could queue trigger actions, triggers could open
+	 * cursors, etc, we have to keep looping until there's nothing left to do.
 	 */
 	for (;;)
 	{
@@ -2643,14 +2644,14 @@ CommitTransaction(void)
 			break;
 	}
 
-	CallXactCallbacks(XACT_EVENT_PRE_COMMIT);
-
 	/*
 	 * The remaining actions cannot call any user-defined code, so it's safe
 	 * to start shutting down within-transaction services.  But note that most
 	 * of this stuff could still throw an error, which would switch us into
 	 * the transaction-abort path.
 	 */
+
+	CallXactCallbacks(XACT_EVENT_PRE_COMMIT);
 
 	/* Shut down the deferred-trigger manager */
 	AfterTriggerEndXact(true);

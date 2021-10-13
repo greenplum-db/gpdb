@@ -139,6 +139,7 @@ install:
 
 before_script:
     - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
+    - ssh-keyscan $(hostname) >> ~/.ssh/known_hosts
     - cp ~/.ssh/{id_rsa.pub,authorized_keys}
     - ccache --zero-stats
 

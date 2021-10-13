@@ -937,6 +937,8 @@ CJoinOrderDP::PexprExpand()
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::CJoinOrderDP);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CJoinOrderDP::OsPrint
@@ -993,16 +995,3 @@ CJoinOrderDP::OsPrint(IOstream &os) const
 
 	return os;
 }
-
-
-#ifdef GPOS_DEBUG
-void
-CJoinOrderDP::DbgPrint()
-{
-	CAutoTrace at(m_mp);
-
-	OsPrint(at.Os());
-}
-#endif
-
-// EOF

@@ -2932,6 +2932,9 @@ View definition:
    FROM sale
   GROUP BY ROLLUP (sale.cn, (sale.vn, sale.pn, sale.dt));
 
+-- GroupingFunc with subqueries
+select (select grouping(v1)) from (values ((select 1))) v(v1);
+ERROR:  column "v"."v1" is not in GROUP BY
 -- GROUP_ID function --
 select pn, sum(qty), group_id() from sale group by rollup(pn);
  pn  | sum  | ?column? 

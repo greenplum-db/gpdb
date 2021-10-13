@@ -17,6 +17,8 @@
 
 using namespace gpopt;
 
+FORCE_GENERATE_DBGSTR(CWindowFrame);
+
 // string encoding of frame specification
 const CHAR rgszFrameSpec[][10] = {"Rows", "Range"};
 GPOS_CPL_ASSERT(CWindowFrame::EfsSentinel == GPOS_ARRAY_SIZE(rgszFrameSpec));

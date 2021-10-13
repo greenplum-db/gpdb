@@ -286,29 +286,53 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 		return;
 
 	/*
-	 * Check permissions --- this should match vacuum's check!
+	 * This permission check is slightly different from the checks in
+	 * get_rel_oids() and vacuumStatement_Relation() due to autostats in GPDB.
+	 *
+	 * analyze_rel can be called in 3 different contexts:  explicitly by the user
+	 * (eg. ANALYZE, VACUUM ANALYZE), implicitly by autovacuum, or implicitly by
+	 * autostats.
+	 *
+	 * In the first case, we always want to make sure the user is the owner of the
+	 * table.  In the autovacuum case, it will be called as superuser so we don't
+	 * really care, but the ownership check should always succeed.  For autostats,
+	 * we only do the check if gp_autostats_allow_nonowner=false, otherwise we can
+	 * proceed with the analyze.
+	 *
+	 * This check happens also when building the relation list to analyze for a
+	 * manual operation, and needs to be done additionally here as ANALYZE could
+	 * happen across multiple transactions where relation ownership could have
+	 * changed in-between.  Make sure to generate only logs for ANALYZE in
+	 * this case.
 	 */
-	if (!(pg_class_ownercheck(RelationGetRelid(onerel), GetUserId()) ||
-		  (pg_database_ownercheck(MyDatabaseId, GetUserId()) && !onerel->rd_rel->relisshared)))
+	if (!(vacstmt->auto_stats && gp_autostats_allow_nonowner))
 	{
-		/* No need for a WARNING if we already complained during VACUUM */
-		if (!(vacstmt->options & VACOPT_VACUUM))
+		if (!(pg_class_ownercheck(RelationGetRelid(onerel), GetUserId()) ||
+			(pg_database_ownercheck(MyDatabaseId, GetUserId()) &&
+				!onerel->rd_rel->relisshared)))
 		{
-			if (onerel->rd_rel->relisshared)
-				ereport(WARNING,
-				 (errmsg("skipping \"%s\" --- only superuser can analyze it",
-						 RelationGetRelationName(onerel))));
-			else if (onerel->rd_rel->relnamespace == PG_CATALOG_NAMESPACE)
-				ereport(WARNING,
-						(errmsg("skipping \"%s\" --- only superuser or database owner can analyze it",
+			/* No need for a WARNING if we already complained during VACUUM */
+			if (!(vacstmt->options & VACOPT_VACUUM))
+			{
+				if (onerel->rd_rel->relisshared)
+					ereport(WARNING,
+						(errmsg(
+								"skipping \"%s\" --- only superuser can analyze it",
 								RelationGetRelationName(onerel))));
-			else
-				ereport(WARNING,
-						(errmsg("skipping \"%s\" --- only table or database owner can analyze it",
+				else if (onerel->rd_rel->relnamespace == PG_CATALOG_NAMESPACE)
+					ereport(WARNING,
+						(errmsg(
+								"skipping \"%s\" --- only superuser or database owner can analyze it",
 								RelationGetRelationName(onerel))));
+				else
+					ereport(WARNING,
+						(errmsg(
+								"skipping \"%s\" --- only table or database owner can analyze it",
+								RelationGetRelationName(onerel))));
+			}
+			relation_close(onerel, ShareUpdateExclusiveLock);
+			return;
 		}
-		relation_close(onerel, ShareUpdateExclusiveLock);
-		return;
 	}
 
 	/*

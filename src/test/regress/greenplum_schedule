@@ -15,12 +15,19 @@
 #   hitting max_connections limit on segments.
 #
 
+# copy command
+# copy form a file with different EOL
+test: copy_eol
+
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
 # file related tests (like gp_log_system, etc) faster.
 test: gp_toolkit
 test: log_guc
+
+# test planner unique_rowid path, with fault inject
+test: gp_unique_rowid
 
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
@@ -171,7 +178,7 @@ test: rpt rpt_joins rpt_tpch rpt_returning
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create
 # temp tables
-test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
+test: bfv_cte bfv_joins bfv_planner bfv_subquery bfv_legacy bfv_temp bfv_dml
 
 test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_sets_oid
 
@@ -240,6 +247,9 @@ test: vacuum_full_ao
 test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
+
+# check autostats
+test: autostats
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics
 test: metadata_track

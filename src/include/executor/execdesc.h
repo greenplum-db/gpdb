@@ -193,6 +193,11 @@ typedef struct QueryDispatchDesc
 	 * set, use default reloptions + gp_default_storage_options.
 	 */
 	bool useChangedAOOpts;
+
+	/*
+	 * Security context flags.
+	 */
+	int     secContext;
 } QueryDispatchDesc;
 
 /*

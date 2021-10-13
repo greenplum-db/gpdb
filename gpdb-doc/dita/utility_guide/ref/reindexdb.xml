@@ -50,6 +50,6 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
           <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>REINDEX</codeph> in the <i>Greenplum Database Reference
-            Guide</i></ph><ph otherprops="op-help"><codeph><xref
-              href="../../ref_guide/sql_commands/REINDEX.xml#topic1"/></codeph></ph></p>
+            Guide</i></ph><ph><codeph><xref href="../../ref_guide/sql_commands/REINDEX.xml#topic1"
+            /></codeph></ph></p>
     </section></body></topic>

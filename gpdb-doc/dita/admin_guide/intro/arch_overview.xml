@@ -64,7 +64,7 @@
       <image height="316px" href="../graphics/highlevel_arch.jpg" placement="break" width="397px"/>
     </fig>
     <p>The following topics describe the components that make up a Greenplum Database system and how
-      they work together. <ul id="ul_cz4_xhy_dq" otherprops="op-help">
+      they work together. <ul id="ul_cz4_xhy_dq">
         <!-- hack for HTML/PDF -->
         <li><xref href="#arch_master" format="dita"/></li>
         <li><xref href="#arch_segments" format="dita"/></li>

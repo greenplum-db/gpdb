@@ -85,10 +85,7 @@ CREATE ROLE</codeblock><p>In the above example, the new password is not actually
         the <codeph>-e</codeph> option is used.</p></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>CREATE ROLE</codeph> in the
-                                                <i>Greenplum Database Reference Guide</i></ph><ph
-                                        otherprops="op-help"><codeph><xref
-                                                  href="../../ref_guide/sql_commands/CREATE_ROLE.xml#topic1"
-                                                /></codeph>,
-                        <codeph><xref
-                                                  href="dropuser.xml#topic1"/></codeph></ph></p>
+            <i>Greenplum Database Reference Guide</i></ph><ph><codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_ROLE.xml#topic1"/></codeph>, <codeph><xref
+              href="dropuser.xml#topic1"/></codeph></ph></p>
                 </section></body></topic>

@@ -117,6 +117,8 @@ CHistogram::SetNullFrequency(CDouble null_freq)
 	m_null_freq = null_freq;
 }
 
+FORCE_GENERATE_DBGSTR(gpnaucrates::CHistogram);
+
 //	print function
 IOstream &
 CHistogram::OsPrint(IOstream &os) const
@@ -152,15 +154,6 @@ CHistogram::OsPrint(IOstream &os) const
 
 	return os;
 }
-
-#ifdef GPOS_DEBUG
-void
-CHistogram::DbgPrint() const
-{
-	CAutoTrace at(CTask::Self()->Pmp());
-	OsPrint(at.Os());
-}
-#endif
 
 // check if histogram is empty
 BOOL

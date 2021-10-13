@@ -503,6 +503,7 @@ cdbdisp_buildUtilityQueryParms(struct Node *stmt,
 	QueryDispatchDesc *qddesc;
 	Query *q;
 	DispatchCommandQueryParms *pQueryParms;
+	Oid save_userid;
 
 	Assert(stmt != NULL);
 	Assert(stmt->type < 1000);
@@ -536,6 +537,7 @@ cdbdisp_buildUtilityQueryParms(struct Node *stmt,
 	{
 		qddesc = makeNode(QueryDispatchDesc);
 		qddesc->oidAssignments = oid_assignments;
+		GetUserIdAndSecContext(&save_userid, &qddesc->secContext);
 
 		serializedQueryDispatchDesc = serializeNode((Node *) qddesc, &serializedQueryDispatchDesc_len,
 													NULL /* uncompressed_size */ );
@@ -573,6 +575,7 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 				sddesc_len,
 				sparams_len,
 				rootIdx;
+	Oid         save_userid;
 
 	rootIdx = RootSliceIndex(queryDesc->estate);
 
@@ -620,6 +623,7 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 		sparams_len = 0;
 	}
 
+	GetUserIdAndSecContext(&save_userid, &queryDesc->ddesc->secContext);
 	sddesc = serializeNode((Node *) queryDesc->ddesc, &sddesc_len, NULL /* uncompressed_size */ );
 
 	pQueryParms->strCommand = queryDesc->sourceText;

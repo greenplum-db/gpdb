@@ -68,7 +68,8 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
 void
 cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 					   const char *gpqeid,
-					   const char *options);
+					   const char *options,
+					   const char *diff_options);
 void
 cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc);
 

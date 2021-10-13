@@ -19,6 +19,7 @@
 
 #include <unistd.h>
 
+#include "gpos/attributes.h"
 #include "gpos/common/clibtypes.h"
 #include "gpos/types.h"
 
