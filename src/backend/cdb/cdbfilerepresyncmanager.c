@@ -1195,8 +1195,8 @@ FileRepPrimary_RunResyncManager(void)
 											   &entry.relFileNode, 
 											   AccessExclusiveLock);
 
-				if (Debug_filerep_print)
-					elog(LOG, "Not adding this entry to hash table %s", entry.fileName);
+				elog(LOG, "Not adding this entry to hash table %s", entry.fileName);
+
 				continue;
 		}
 
@@ -1861,15 +1861,20 @@ FileRepResync_UpdateEntry(
 		status = STATUS_ERROR;
 	}
 
-	if (Debug_filerep_print)
-	{	
-		elog(LOG, "FileRepResync_UpdateEntry() identifier:'%s' state:'%d' resyncCompletedCount:'%d' ",
-			 entry->fileName,
-			 entry->fileRepResyncState,
-			 fileRepResyncShmem->resyncCompletedCount);
-	}
-	
+	elog(LOG, "FileRepResync_UpdateEntry() identifier:'%s' fileRepResyncState:'%d' "
+			  "resyncCompletedCount:'%d' relStorageMgr: '%s' "
+			  "mirrorDataSynchronizationState: '%s' TID: %s "
+			  "serial number: " INT64_FORMAT " mirrorAppendOnlyLossEof: " INT64_FORMAT " mirrorAppendOnlyNewEof: " INT64_FORMAT,
+		entry->fileName,
+		entry->fileRepResyncState,
+		fileRepResyncShmem->resyncCompletedCount,
+		PersistentFileSysRelStorageMgr_Name(entry->relStorageMgr),
+		MirroredRelDataSynchronizationState_Name(entry->mirrorDataSynchronizationState),
+		ItemPointerToString(&entry->persistentTid),
+		entry->persistentSerialNum,
+		entry->mirrorAppendOnlyLossEof,
+		entry->mirrorAppendOnlyNewEof);
 	FileRepResync_LockRelease();
-	
+
 	return status;
 }

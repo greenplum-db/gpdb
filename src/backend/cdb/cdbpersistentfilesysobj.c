@@ -4610,14 +4610,13 @@ static void PersistentFileSysObj_ScanStateAction(
 					}
 					else
 					{
-						if (Debug_persistent_print)
-							elog(Persistent_DebugPrintLevel(),
-								 "StateAction_MarkWholeMirrorFullCopy: Skipping '%s' for full copy, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
-								 PersistentFileSysObjName_ObjectName(&fsObjName),
-								 PersistentFileSysObjState_Name(state),
-								 MirroredObjectExistenceState_Name(mirrorExistenceState),
-								 serialNum,
-								 ItemPointerToString(&persistentTid));
+						elog(LOG,
+							 "StateAction_MarkWholeMirrorFullCopy: Skipping '%s' for full copy, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+							 PersistentFileSysObjName_ObjectName(&fsObjName),
+							 PersistentFileSysObjState_Name(state),
+							 MirroredObjectExistenceState_Name(mirrorExistenceState),
+							 serialNum,
+							 ItemPointerToString(&persistentTid));
 
 					}
 					continue;
@@ -4762,14 +4761,13 @@ static void PersistentFileSysObj_ScanStateAction(
 			}
 			else
 			{
-				if (Debug_persistent_print)
-					elog(Persistent_DebugPrintLevel(),
-						 "StateAction_MirrorReCreate: Skip '%s' mirror re-create, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
-						 PersistentFileSysObjName_ObjectName(&fsObjName),
-						 PersistentFileSysObjState_Name(state),
-						 MirroredObjectExistenceState_Name(mirrorExistenceState),
-						 serialNum,
-						 ItemPointerToString(&persistentTid));
+				elog(LOG,
+					 "StateAction_MirrorReCreate: Skip '%s' mirror re-create, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+					 PersistentFileSysObjName_ObjectName(&fsObjName),
+					 PersistentFileSysObjState_Name(state),
+					 MirroredObjectExistenceState_Name(mirrorExistenceState),
+					 serialNum,
+					 ItemPointerToString(&persistentTid));
 
 				if (filerep_mirrorvalidation_during_resync && (mirrorExistenceState == MirroredObjectExistenceState_MirrorCreated))
 				{
@@ -4859,14 +4857,13 @@ static void PersistentFileSysObj_ScanStateAction(
 			}
 			else
 			{
-				if (Debug_persistent_print)
-					elog(Persistent_DebugPrintLevel(),
-						 "StateAction_MarkMirrorReCreated: Skip '%s' mirror re-create, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
-						 PersistentFileSysObjName_ObjectName(&fsObjName),
-						 PersistentFileSysObjState_Name(state),
-						 MirroredObjectExistenceState_Name(mirrorExistenceState),
-						 serialNum,
-						 ItemPointerToString(&persistentTid));
+				elog(LOG,
+					 "StateAction_MarkMirrorReCreated: Skip '%s' mirror re-created, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+					 PersistentFileSysObjName_ObjectName(&fsObjName),
+					 PersistentFileSysObjState_Name(state),
+					 MirroredObjectExistenceState_Name(mirrorExistenceState),
+					 serialNum,
+					 ItemPointerToString(&persistentTid));
 			}
 			break;
 
@@ -4954,14 +4951,15 @@ static void PersistentFileSysObj_ScanStateAction(
 			}
 			else
 			{
-				if (Debug_persistent_print)
-					elog(Persistent_DebugPrintLevel(),
-						 "StateAction_MirrorReDrop: Skip '%s' mirror re-drop, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
-						 PersistentFileSysObjName_ObjectName(&fsObjName),
-						 PersistentFileSysObjState_Name(state),
-						 MirroredObjectExistenceState_Name(mirrorExistenceState),
-						 serialNum,
-						 ItemPointerToString(&persistentTid));
+				elog(LOG,
+					 "%s: Skip '%s' mirror %s, persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+					 stateAction == StateAction_MirrorReDrop ? "StateAction_MirrorReDrop" : "StateAction_MirrorReDropped",
+					 PersistentFileSysObjName_ObjectName(&fsObjName),
+					 stateAction == StateAction_MirrorReDrop ? "re-drop" : "re-dropped",
+					 PersistentFileSysObjState_Name(state),
+					 MirroredObjectExistenceState_Name(mirrorExistenceState),
+					 serialNum,
+					 ItemPointerToString(&persistentTid));
 			}
 			break;
 
@@ -5711,12 +5709,12 @@ static void PersistentFileSysObj_MarkPageIncremental(
 
 	if (serialNum != persistentSerialNum)
 	{
-		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(),
-				 "PersistentFileSysObj_MarkPageIncremental: Skipping obsolete serial number (input serial number " INT64_FORMAT ", actual serial number " INT64_FORMAT ") at TID %s",
-				 persistentSerialNum,
-				 serialNum,
-				 ItemPointerToString(persistentTid));
+		elog(LOG,
+			 "PersistentFileSysObj_MarkPageIncremental: Skipping %s due to obsolete serial number (input serial number " INT64_FORMAT ", actual serial number " INT64_FORMAT ") at TID %s",
+			 PersistentFileSysObjName_ObjectName(&fsObjName),
+			 persistentSerialNum,
+			 serialNum,
+			 ItemPointerToString(persistentTid));
 
 		heap_freetuple(tupleCopy);
 
@@ -5969,15 +5967,14 @@ bool PersistentFileSysObj_ResynchronizeScan(
 		}
 		else
 		{
-			if (Debug_persistent_print)
-				elog(Persistent_DebugPrintLevel(),
-					 "PersistentFileSysObj_ResynchronizeScan: Skip '%s' -- doesn't need data resynchronization ('%s'), persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
-					 PersistentFileSysObjName_ObjectName(&fsObjName),
-					 MirroredRelDataSynchronizationState_Name(*mirrorDataSynchronizationState),
-					 PersistentFileSysObjState_Name(state),
-					 MirroredObjectExistenceState_Name(mirrorExistenceState),
-					 serialNum,
-					 ItemPointerToString(persistentTid));
+			elog(LOG,
+				 "PersistentFileSysObj_ResynchronizeScan: Skip '%s' -- doesn't need data resynchronization ('%s'), persistent state '%s', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+				 PersistentFileSysObjName_ObjectName(&fsObjName),
+				 MirroredRelDataSynchronizationState_Name(*mirrorDataSynchronizationState),
+				 PersistentFileSysObjState_Name(state),
+				 MirroredObjectExistenceState_Name(mirrorExistenceState),
+				 serialNum,
+				 ItemPointerToString(persistentTid));
 		}
 
 		WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
@@ -6058,7 +6055,17 @@ bool PersistentFileSysObj_ResynchronizeRefetch(
 	READTUPLE_FOR_UPDATE_ERRCONTEXT_POP;
 
 	if (tupleCopy == NULL)
+	{
+		elog(LOG,
+			 "Persistent %u/%u/%u, segment file #%d, tuple at TID %s not found for resynchronize refetch",
+			 relFileNode->spcNode,
+			 relFileNode->dbNode,
+			 relFileNode->relNode,
+			 *segmentFileNum,
+			 ItemPointerToString(persistentTid));
+
 		return false;
+	}
 
 	GpPersistentRelationNode_GetValues(
 									values,
@@ -6086,7 +6093,17 @@ bool PersistentFileSysObj_ResynchronizeRefetch(
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (persistentSerialNum != serialNum)
+	{
+		elog(LOG,
+			 "Found different serial number " INT64_FORMAT " than expected serial number" INT64_FORMAT "(persistent file-system object: %u/%u/%u')",
+			 serialNum,
+			 persistentSerialNum,
+			 relFileNode->spcNode,
+			 relFileNode->dbNode,
+			 relFileNode->relNode);
+
 		return false;
+	}
 
 	return true;
 }
