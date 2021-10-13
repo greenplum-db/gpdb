@@ -249,10 +249,7 @@ kernel.shmmax = 810810728448</codeblock>
           resource group-based resource management or resource queue-based resource management,
           refer to <xref href="../admin_guide/wlmgmt_intro.html" scope="peer" format="dita">Options
             for Configuring Segment Host Memory</xref> in the <cite>Geenplum Database Administrator
-            Guide</cite>. Also refer to the Greenplum Database server configuration parameter
-              <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit"
-              scope="peer">gp_vmem_protect_limit</xref></codeph> in the <cite>Greenplum Database
-            Reference Guide</cite>. </p>
+            Guide</cite>. </p>
         <p id="port_settings"><b>Port Settings</b></p>
         <p>To avoid port conflicts between Greenplum Database and other applications during
           Greenplum initialization, make a note of the port range specified by the operating system
