@@ -4456,7 +4456,7 @@ CUtils::IsExprNDVPreserving(CExpression *pexpr,
 	// go down the expression tree, visiting the child containing a scalar ident until
 	// we found the ident or until we found a non-NDV-preserving function (at which point there
 	// is no more need to check)
-	while (1)
+	while (true)
 	{
 		COperator *pop = curr_expr->Pop();
 		ULONG child_with_scalar_ident = 0;
