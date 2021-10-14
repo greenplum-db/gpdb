@@ -177,7 +177,7 @@ transformGenericOptions(Oid catalogId,
 	 * to handle it. USER MAPPING doesn't have the mpp_execute option.
 	 */
 	if (catalogId != UserMappingRelationId)
-		SeparateOutMppExecute(&resultOptions);
+		SeparateOutCustomForeignOptions(&resultOptions);
 
 	if (OidIsValid(fdwvalidator))
 	{

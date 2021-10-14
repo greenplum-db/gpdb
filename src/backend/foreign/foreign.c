@@ -32,14 +32,19 @@
 extern Datum pg_options_to_table(PG_FUNCTION_ARGS);
 extern Datum postgresql_fdw_validator(PG_FUNCTION_ARGS);
 
-/* Get and separate out the mpp_execute option. */
-char
-SeparateOutMppExecute(List **options)
+
+/* Get and separate out the custom foreign options */
+CustomForeignOptions
+SeparateOutCustomForeignOptions(List **options)
 {
 	ListCell *lc = NULL;
 	ListCell *prev = NULL;
 	char *mpp_execute = NULL;
 	char exec_location = FTEXECLOCATION_NOT_DEFINED;
+	char *segment_number_str = NULL;
+	CustomForeignOptions cfo;
+	cfo.exec_location = FTEXECLOCATION_NOT_DEFINED;
+	cfo.segment_number = -1;
 
 	foreach(lc, *options)
 	{
@@ -69,7 +74,33 @@ SeparateOutMppExecute(List **options)
 		prev = lc;
 	}
 
-	return exec_location;
+
+	prev = NULL;
+	foreach(lc, *options)
+	{
+		DefElem    *def = (DefElem *) lfirst(lc);
+
+		if (strcmp(def->defname, "segment_number") == 0)
+		{
+			segment_number_str = defGetString(def);
+			cfo.segment_number = pg_atoi(segment_number_str, sizeof(int32), 0);
+
+			if (cfo.segment_number <= 0)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("\"%d\" is not a valid segment_number value",
+								cfo.segment_number)));
+			}
+
+			*options = list_delete_cell(*options, lc, prev);
+			break;
+		}
+
+		prev = lc;
+	}
+
+	return cfo;
 }
 
 /*
@@ -83,6 +114,7 @@ GetForeignDataWrapper(Oid fdwid)
 	Datum		datum;
 	HeapTuple	tp;
 	bool		isnull;
+	CustomForeignOptions cfo;
 
 	tp = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid));
 
@@ -108,7 +140,8 @@ GetForeignDataWrapper(Oid fdwid)
 	else
 		fdw->options = untransformRelOptions(datum);
 
-	fdw->exec_location = SeparateOutMppExecute(&fdw->options);
+	cfo = SeparateOutCustomForeignOptions(&fdw->options);
+	fdw->exec_location = cfo.exec_location;
 	if (fdw->exec_location == FTEXECLOCATION_NOT_DEFINED)
 		fdw->exec_location = FTEXECLOCATION_MASTER;
 
@@ -145,6 +178,7 @@ GetForeignServer(Oid serverid)
 	HeapTuple	tp;
 	Datum		datum;
 	bool		isnull;
+	CustomForeignOptions cfo;
 
 	tp = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid));
 
@@ -183,7 +217,10 @@ GetForeignServer(Oid serverid)
 	else
 		server->options = untransformRelOptions(datum);
 
-	server->exec_location = SeparateOutMppExecute(&server->options);
+	cfo = SeparateOutCustomForeignOptions(&server->options);
+	server->exec_location = cfo.exec_location;
+	server->segment_number = cfo.segment_number;
+
 	if (server->exec_location == FTEXECLOCATION_NOT_DEFINED)
 	{
 		ForeignDataWrapper *fdw = GetForeignDataWrapper(server->fdwid);
@@ -274,6 +311,7 @@ GetForeignTable(Oid relid)
 	HeapTuple	tp;
 	Datum		datum;
 	bool		isnull;
+	CustomForeignOptions cfo;
 
 	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tp))
@@ -294,7 +332,9 @@ GetForeignTable(Oid relid)
 	else
 		ft->options = untransformRelOptions(datum);
 
-	ft->exec_location = SeparateOutMppExecute(&ft->options);
+	cfo = SeparateOutCustomForeignOptions(&ft->options);
+	ft->exec_location = cfo.exec_location;
+	ft->segment_number = cfo.segment_number;
 	if (ft->exec_location == FTEXECLOCATION_NOT_DEFINED)
 	{
 		ForeignServer *server = GetForeignServer(ft->serverid);
