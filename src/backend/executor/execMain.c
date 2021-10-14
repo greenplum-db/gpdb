@@ -241,19 +241,21 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		if (queryDesc->plannedstmt->query_mem > 0)
 		{
 			PG_TRY();
-			switch(*gp_resmanager_memory_policy)
 			{
-				case RESMANAGER_MEMORY_POLICY_AUTO:
-					PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
+				switch(*gp_resmanager_memory_policy)
+				{
+					case RESMANAGER_MEMORY_POLICY_AUTO:
+						PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
 													 queryDesc->plannedstmt->query_mem);
-					break;
-				case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
-					PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
+						break;
+					case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
+						PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
 														  queryDesc->plannedstmt->query_mem);
-					break;
-				default:
-					Assert(IsResManagerMemoryPolicyNone());
-					break;
+						break;
+					default:
+						Assert(IsResManagerMemoryPolicyNone());
+						break;
+				}
 			}
 			PG_CATCH();
 			{
@@ -261,7 +263,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				PG_RE_THROW();
 			}
 			PG_END_TRY();
-				
 		}
 	}
 
