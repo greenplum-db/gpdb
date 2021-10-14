@@ -240,6 +240,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		 */
 		if (queryDesc->plannedstmt->query_mem > 0)
 		{
+			PG_TRY();
 			switch(*gp_resmanager_memory_policy)
 			{
 				case RESMANAGER_MEMORY_POLICY_AUTO:
@@ -254,6 +255,13 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 					Assert(IsResManagerMemoryPolicyNone());
 					break;
 			}
+			PG_CATCH();
+			{
+				mppExecutorCleanup(queryDesc);
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
+				
 		}
 	}
 
