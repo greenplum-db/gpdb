@@ -14,6 +14,7 @@ from gppylib.system import faultProberInterface
 from gppylib.system.configurationInterface import GpConfigurationProvider
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
 from gppylib.utils import TableLogger
+from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 
 class Options:
@@ -262,6 +263,12 @@ class GpRecoversegTestCase(GpTestCase):
             self.subject.run()
 
         self.assertEqual(cm.exception.code, 0)
+
+    def test_gprecoverseg_with_mirrorless(self):
+        self.gpArrayMock.hasMirrors = False
+        with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded,
+                                    "GPDB Mirroring replication is not configured for this Greenplum Database instance."):
+            self.subject.run()
 
     def _create_gparray_with_2_primary_2_mirrors(self):
         master = Segment.initFromString(
