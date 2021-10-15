@@ -395,6 +395,53 @@ ConstraintNameIsUsed(ConstraintCategory conCat, Oid objId,
 }
 
 /*
+ * Check whether conname represents a primary/unique key constraint on relation
+ * specified by objId and objNamespace.
+ */
+bool
+IsConstraintPrimaryOrUniqueKey(Oid objId, Oid objNamespace, const char *conname)
+{
+	bool		result;
+	Relation	conDesc;
+	SysScanDesc conscan;
+	ScanKeyData skey[2];
+	HeapTuple	tup;
+
+	conDesc = heap_open(ConstraintRelationId, AccessShareLock);
+
+	result = false;
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_constraint_conname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(conname));
+
+	ScanKeyInit(&skey[1],
+				Anum_pg_constraint_connamespace,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objNamespace));
+
+	conscan = systable_beginscan(conDesc, ConstraintNameNspIndexId, true,
+								 SnapshotNow, 2, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(conscan)))
+	{
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tup);
+		if (con->conrelid == objId &&
+			(con->contype == CONSTRAINT_PRIMARY || con->contype == CONSTRAINT_UNIQUE))
+		{
+			result = true;
+			break;
+		}
+	}
+
+	systable_endscan(conscan);
+	heap_close(conDesc, AccessShareLock);
+
+	return result;
+}
+
+/*
  * Select a nonconflicting name for a new constraint.
  *
  * The objective here is to choose a name that is unique within the

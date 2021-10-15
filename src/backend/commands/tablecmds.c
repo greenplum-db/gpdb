@@ -355,7 +355,7 @@ static RangeVar *make_temp_table_name(Relation rel, BackendId id);
 static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro,
 								List *opts, bool isTmpTableAo,
 								bool useExistingColumnAttributes);
-static void ATPartitionCheck(AlterTableType subtype, Relation rel, bool rejectroot, bool recursing);
+static void ATPartitionCheck(AlterTableCmd *cmd, Relation rel, bool rejectroot, bool recursing);
 static void ATExternalPartitionCheck(AlterTableType subtype, Relation rel, bool recursing);
 
 static char *alterTableCmdString(AlterTableType subtype);
@@ -2953,7 +2953,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			 * recursing.
 			 */
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			/* Performs own recursion */
 			ATPrepAddColumn(wqueue, rel, recurse, cmd);
 			pass = AT_PASS_ADD_COL;
@@ -2974,7 +2974,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			 * rules.
 			 */
 			ATSimplePermissions(rel, true);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			ATPrepColumnDefault(rel, recurse, cmd);
 			pass = ((ColumnDef *)(cmd->def))->raw_default ?
 					AT_PASS_ADD_CONSTR : AT_PASS_DROP;
@@ -2992,7 +2992,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_DropNotNull:	/* ALTER COLUMN DROP NOT NULL */
 			ATSimplePermissions(rel, false);
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			ATSimpleRecursion(wqueue, rel, cmd, recurse);
 			/* No command-specific prep needed */
 			pass = AT_PASS_DROP;
@@ -3002,7 +3002,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
 			ATSimpleRecursion(wqueue, rel, cmd, recurse);
 			if (!cmd->part_expanded)
-				ATPartitionCheck(cmd->subtype, rel, false, recursing);
+				ATPartitionCheck(cmd, rel, false, recursing);
 			/* No command-specific prep needed */
 			pass = AT_PASS_ADD_CONSTR;
 			break;
@@ -3022,7 +3022,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_DropColumnRecurse:
 			ATSimplePermissions(rel, false);
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			/* Recursion occurs during execution phase */
 			/* No command-specific prep needed except saving recurse flag */
 			if (recurse)
@@ -3077,7 +3077,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			 * not ONLY the root.
 			 */
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-			ATPartitionCheck(cmd->subtype, rel, (!recurse && !recursing), recursing);
+			ATPartitionCheck(cmd, rel, (!recurse && !recursing), recursing);
 			/*
 			 * Currently we recurse only for CHECK constraints, never for
 			 * foreign-key constraints.  UNIQUE/PKEY constraints won't be seen
@@ -3102,7 +3102,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			 * not ONLY the root.
 			 */
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-			ATPartitionCheck(cmd->subtype, rel, (!recurse && !recursing), recursing);
+			ATPartitionCheck(cmd, rel, (!recurse && !recursing), recursing);
 			/* Performs own recursion */
 			ATPrepDropConstraint(wqueue, rel, recurse, cmd);
 			pass = AT_PASS_DROP;
@@ -3116,7 +3116,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_AlterColumnType:		/* ALTER COLUMN TYPE */
 			ATSimplePermissions(rel, false);
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			/* Performs own recursion */
 			ATPrepAlterColumnType(wqueue, tab, rel, recurse, recursing, cmd);
 			pass = AT_PASS_ALTER_TYPE;
@@ -3127,7 +3127,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
-					ATPartitionCheck(cmd->subtype, rel, false, recursing);
+					ATPartitionCheck(cmd, rel, false, recursing);
 					if (rel_is_partitioned(RelationGetRelid(rel)))
 					{
 						do_recurse = true;
@@ -3156,7 +3156,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			break;
 		case AT_DropOids:		/* SET WITHOUT OIDS */
 			ATSimplePermissions(rel, false);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			/* Performs own recursion */
 			if (rel->rd_rel->relhasoids)
 			{
@@ -3306,7 +3306,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_DisableTrigAll:
 		case AT_DisableTrigUser:
 			ATSimplePermissions(rel, false);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			/* These commands never recurse */
 			/* No command-specific prep needed */
 			pass = AT_PASS_MISC;
@@ -3318,7 +3318,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_AddInherit:		/* INHERIT / NO INHERIT */
 		case AT_DropInherit:
 			ATSimplePermissions(rel, false);
-			ATPartitionCheck(cmd->subtype, rel, true, recursing);
+			ATPartitionCheck(cmd, rel, true, recursing);
 			/* These commands never recurse */
 			/* No command-specific prep needed */
 			pass = AT_PASS_MISC;
@@ -3326,7 +3326,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			/* CDB: Partitioned Table commands */
 		case AT_PartExchange:			/* Exchange */
 			
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 			
 			if (Gp_role == GP_ROLE_UTILITY)
 				ereport(ERROR,
@@ -3348,7 +3348,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			List			   *source_rels = NIL;
 			Relation			target = NULL;
 
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 
 			if (Gp_role == GP_ROLE_UTILITY)
 				ereport(ERROR,
@@ -3442,7 +3442,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		{
 			AlterPartitionCmd	*pc    	= (AlterPartitionCmd *) cmd->def;
 
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 
 			if (Gp_role == GP_ROLE_UTILITY)
 				ereport(ERROR,
@@ -3961,7 +3961,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_PartAddInternal:		/* internal partition creation */
 		case AT_PartModify:             /* Modify */
 			ATSimplePermissions(rel, false);
-			ATPartitionCheck(cmd->subtype, rel, false, recursing);
+			ATPartitionCheck(cmd, rel, false, recursing);
 				/* XXX XXX XXX */
 			/* This command never recurses */
 			/* No command-specific prep needed */
@@ -5431,7 +5431,7 @@ ATGetQueueEntry(List **wqueue, Relation rel)
  * table, but not on just a part.  These specify rejectroot as false.
  */
 static void
-ATPartitionCheck(AlterTableType subtype, Relation rel, bool rejectroot, bool recursing)
+ATPartitionCheck(AlterTableCmd *cmd, Relation rel, bool rejectroot, bool recursing)
 {
 	if (recursing)
 		return;
@@ -5443,17 +5443,31 @@ ATPartitionCheck(AlterTableType subtype, Relation rel, bool rejectroot, bool rec
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("can't %s \"%s\"; it is a partitioned table or part thereof",
-						alterTableCmdString(subtype),
+						alterTableCmdString(cmd->subtype),
 						RelationGetRelationName(rel))));
 	}
 	else if (rel_is_child_partition(RelationGetRelid(rel)))
 	{
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("can't %s \"%s\"; it is part of a partitioned table",
-						alterTableCmdString(subtype),
-						RelationGetRelationName(rel)),
-				 errhint("You may be able to perform the operation on the partitioned table as a whole.")));
+		/*
+		 * If the GUC is set, don't complain if we are trying to drop a
+		 * primary/unique key constraint on a partition child.
+		 */
+		if (gp_enable_drop_key_constraint_child_partition &&
+			cmd->subtype == AT_DropConstraint &&
+			IsConstraintPrimaryOrUniqueKey(RelationGetRelid(rel),
+										   RelationGetNamespace(rel),
+										   cmd->name))
+		{
+			elog(LOG, "Dropping key constraint %s directly on partition child table %s",
+				 cmd->name, RelationGetRelationName(rel));
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					 errmsg("can't %s \"%s\"; it is part of a partitioned table",
+							alterTableCmdString(cmd->subtype),
+							RelationGetRelationName(rel)),
+					 errhint("You may be able to perform the operation on the partitioned table as a whole.")));
 	}
 }
 

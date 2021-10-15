@@ -3964,3 +3964,53 @@ SELECT * FROM leaf_with_dropped_cols_index_part1 WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
 SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
 
+-- Test adding/dropping constraints to/from partition hierarchies.
+
+CREATE TABLE test_constr_pk (id int)
+    DISTRIBUTED BY (id) PARTITION BY LIST (id) (PARTITION p1 VALUES (1));
+ALTER TABLE test_constr_pk ADD PRIMARY KEY (id);
+
+CREATE TABLE test_constr_uniq (id int)
+    DISTRIBUTED BY (id) PARTITION BY LIST (id) (PARTITION p1 VALUES (1));
+ALTER TABLE test_constr_uniq ADD UNIQUE (id);
+
+CREATE TABLE test_constr_check (id int, f int)
+    DISTRIBUTED BY (id) PARTITION BY LIST (id) (PARTITION p1 VALUES (1));
+ALTER TABLE test_constr_check ADD CHECK (f > 0);
+
+-- Dropping constraints directly on partition children are disallowed. To drop
+-- said constraints, we must drop them from the parent.
+ALTER TABLE test_constr_pk_1_prt_p1 DROP CONSTRAINT test_constr_pk_1_prt_p1_pkey;
+ALTER TABLE test_constr_uniq_1_prt_p1 DROP CONSTRAINT test_constr_uniq_1_prt_p1_id_key;
+ALTER TABLE test_constr_check_1_prt_p1 DROP CONSTRAINT test_constr_check_f_check;
+
+-- Unfortunately, dropping primary key or unique key constraints on the parent
+-- table does not drop the primary key or unique key on the child. Dropping the
+-- check constraint on the parent however, does drop the constraint from the
+-- child.
+ALTER TABLE test_constr_pk DROP CONSTRAINT test_constr_pk_pkey;
+ALTER TABLE test_constr_uniq DROP CONSTRAINT test_constr_uniq_id_key;
+ALTER TABLE test_constr_check DROP CONSTRAINT test_constr_check_f_check;
+SELECT conrelid::regclass as conrelname, conname FROM pg_constraint
+    WHERE conrelid IN ('test_constr_pk_1_prt_p1'::regclass,
+                       'test_constr_uniq_1_prt_p1'::regclass,
+                       'test_constr_check_1_prt_p1'::regclass);
+
+-- Add the CHECK constraint back.
+ALTER TABLE test_constr_check ADD CHECK (f > 0);
+
+-- In order to drop the primary or unique key on the child, we will have to
+-- enable the gp_enable_drop_key_constraint_child_partition GUC.
+SET gp_enable_drop_key_constraint_child_partition TO ON;
+
+-- Now the drops should be allowed (except the CHECK constraint, which should
+-- not be affected by the GUC).
+ALTER TABLE test_constr_pk_1_prt_p1 DROP CONSTRAINT test_constr_pk_1_prt_p1_pkey;
+ALTER TABLE test_constr_uniq_1_prt_p1 DROP CONSTRAINT test_constr_uniq_1_prt_p1_id_key;
+ALTER TABLE test_constr_check_1_prt_p1 DROP CONSTRAINT test_constr_check_f_check;
+SELECT conrelid::regclass as conrelname, conname FROM pg_constraint
+WHERE conrelid IN ('test_constr_pk_1_prt_p1'::regclass,
+                   'test_constr_uniq_1_prt_p1'::regclass,
+                   'test_constr_check_1_prt_p1'::regclass);
+
+RESET gp_enable_drop_key_constraint_child_partition;

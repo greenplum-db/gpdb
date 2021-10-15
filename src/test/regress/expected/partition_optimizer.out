@@ -8318,3 +8318,76 @@ SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
 ---+---+---
 (0 rows)
 
+-- Test adding/dropping constraints to/from partition hierarchies.
+CREATE TABLE test_constr_pk (id int)
+    DISTRIBUTED BY (id) PARTITION BY LIST (id) (PARTITION p1 VALUES (1));
+NOTICE:  CREATE TABLE will create partition "test_constr_pk_1_prt_p1" for table "test_constr_pk"
+ALTER TABLE test_constr_pk ADD PRIMARY KEY (id);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "test_constr_pk_pkey" for table "test_constr_pk"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "test_constr_pk_1_prt_p1_pkey" for table "test_constr_pk_1_prt_p1"
+CREATE TABLE test_constr_uniq (id int)
+    DISTRIBUTED BY (id) PARTITION BY LIST (id) (PARTITION p1 VALUES (1));
+NOTICE:  CREATE TABLE will create partition "test_constr_uniq_1_prt_p1" for table "test_constr_uniq"
+ALTER TABLE test_constr_uniq ADD UNIQUE (id);
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "test_constr_uniq_id_key" for table "test_constr_uniq"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "test_constr_uniq_1_prt_p1_id_key" for table "test_constr_uniq_1_prt_p1"
+CREATE TABLE test_constr_check (id int, f int)
+    DISTRIBUTED BY (id) PARTITION BY LIST (id) (PARTITION p1 VALUES (1));
+NOTICE:  CREATE TABLE will create partition "test_constr_check_1_prt_p1" for table "test_constr_check"
+ALTER TABLE test_constr_check ADD CHECK (f > 0);
+-- Dropping constraints directly on partition children are disallowed. To drop
+-- said constraints, we must drop them from the parent.
+ALTER TABLE test_constr_pk_1_prt_p1 DROP CONSTRAINT test_constr_pk_1_prt_p1_pkey;
+ERROR:  can't drop a constraint from "test_constr_pk_1_prt_p1"; it is part of a partitioned table
+HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ALTER TABLE test_constr_uniq_1_prt_p1 DROP CONSTRAINT test_constr_uniq_1_prt_p1_id_key;
+ERROR:  can't drop a constraint from "test_constr_uniq_1_prt_p1"; it is part of a partitioned table
+HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ALTER TABLE test_constr_check_1_prt_p1 DROP CONSTRAINT test_constr_check_f_check;
+ERROR:  can't drop a constraint from "test_constr_check_1_prt_p1"; it is part of a partitioned table
+HINT:  You may be able to perform the operation on the partitioned table as a whole.
+-- Unfortunately, dropping primary key or unique key constraints on the parent
+-- table does not drop the primary key or unique key on the child. Dropping the
+-- check constraint on the parent however, does drop the constraint from the
+-- child.
+ALTER TABLE test_constr_pk DROP CONSTRAINT test_constr_pk_pkey;
+ALTER TABLE test_constr_uniq DROP CONSTRAINT test_constr_uniq_id_key;
+ALTER TABLE test_constr_check DROP CONSTRAINT test_constr_check_f_check;
+SELECT conrelid::regclass as conrelname, conname FROM pg_constraint
+    WHERE conrelid IN ('test_constr_pk_1_prt_p1'::regclass,
+                       'test_constr_uniq_1_prt_p1'::regclass,
+                       'test_constr_check_1_prt_p1'::regclass);
+         conrelname         |             conname              
+----------------------------+----------------------------------
+ test_constr_pk_1_prt_p1    | test_constr_pk_1_prt_p1_check
+ test_constr_pk_1_prt_p1    | test_constr_pk_1_prt_p1_pkey
+ test_constr_uniq_1_prt_p1  | test_constr_uniq_1_prt_p1_check
+ test_constr_uniq_1_prt_p1  | test_constr_uniq_1_prt_p1_id_key
+ test_constr_check_1_prt_p1 | test_constr_check_1_prt_p1_check
+(5 rows)
+
+-- Add the CHECK constraint back.
+ALTER TABLE test_constr_check ADD CHECK (f > 0);
+-- In order to drop the primary or unique key on the child, we will have to
+-- enable the gp_enable_drop_key_constraint_child_partition GUC.
+SET gp_enable_drop_key_constraint_child_partition TO ON;
+-- Now the drops should be allowed (except the CHECK constraint, which should
+-- not be affected by the GUC).
+ALTER TABLE test_constr_pk_1_prt_p1 DROP CONSTRAINT test_constr_pk_1_prt_p1_pkey;
+ALTER TABLE test_constr_uniq_1_prt_p1 DROP CONSTRAINT test_constr_uniq_1_prt_p1_id_key;
+ALTER TABLE test_constr_check_1_prt_p1 DROP CONSTRAINT test_constr_check_f_check;
+ERROR:  can't drop a constraint from "test_constr_check_1_prt_p1"; it is part of a partitioned table
+HINT:  You may be able to perform the operation on the partitioned table as a whole.
+SELECT conrelid::regclass as conrelname, conname FROM pg_constraint
+WHERE conrelid IN ('test_constr_pk_1_prt_p1'::regclass,
+                   'test_constr_uniq_1_prt_p1'::regclass,
+                   'test_constr_check_1_prt_p1'::regclass);
+         conrelname         |             conname              
+----------------------------+----------------------------------
+ test_constr_pk_1_prt_p1    | test_constr_pk_1_prt_p1_check
+ test_constr_uniq_1_prt_p1  | test_constr_uniq_1_prt_p1_check
+ test_constr_check_1_prt_p1 | test_constr_check_1_prt_p1_check
+ test_constr_check_1_prt_p1 | test_constr_check_f_check
+(4 rows)
+
+RESET gp_enable_drop_key_constraint_child_partition;

@@ -401,6 +401,7 @@ bool		execute_pruned_plan = false;
 /* partitioning GUC */
 bool		gp_partitioning_dynamic_selection_log;
 int			gp_max_partition_level;
+bool		gp_enable_drop_key_constraint_child_partition = false;
 
 /* Upgrade & maintenance GUCs */
 bool		gp_maintenance_mode;
@@ -3103,6 +3104,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cte_inlining,
+		false, NULL, NULL
+	},
+
+	{
+		{"gp_enable_drop_key_constraint_child_partition", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Allow direct drop of a primary or unique constraint on a child partition."),
+		 NULL,
+		 GUC_NO_SHOW_ALL| GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_drop_key_constraint_child_partition,
 		false, NULL, NULL
 	},
 
