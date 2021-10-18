@@ -267,6 +267,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
 	EState	   *estate;
 	MemoryContext oldcontext;
+	Slice *slice0 = NULL;
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
 	bool		needDtx;
@@ -627,6 +628,8 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			queryDesc->plannedstmt->intoClause->skipData)
 			shouldDispatch = false;
 
+		if (estate->es_sliceTable && estate->es_sliceTable->slices)
+			slice0 = (Slice *)list_nth(estate->es_sliceTable->slices, 0);
 		/*
 		 * if in dispatch mode, time to serialize plan and query
 		 * trees, and fire off cdb_exec command to each of the qexecs
@@ -717,7 +720,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 *
 			 * Main plan is parallel, send plan to it.
 			 */
-			if (queryDesc->plannedstmt->planTree->dispatch == DISPATCH_PARALLEL)
+			if (slice0 && (slice0->gangType != GANGTYPE_UNALLOCATED || slice0->children))
 				CdbDispatchPlan(queryDesc, needDtx, true);
 		}
 
@@ -749,9 +752,8 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		else if (exec_identity == GP_ROOT_SLICE)
 		{
 			/* Run a root slice. */
-			if (queryDesc->planstate != NULL &&
-				queryDesc->plannedstmt->planTree->dispatch == DISPATCH_PARALLEL &&
-				queryDesc->plannedstmt->nMotionNodes > 0 &&
+			if (queryDesc->planstate != NULL && slice0 &&
+				(slice0->gangType == GANGTYPE_UNALLOCATED && slice0->children) &&
 				!estate->es_interconnect_is_setup)
 			{
 				Assert(!estate->interconnect_context);
