@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="understanding_segment_recovery">
+  <title>Understanding Segment Recovery</title>
+  <body>
+    <p>This topic provides background information on concepts and principles of segment recovery. If
+      you have down segments and need immediate help recovering them see the instructions in <xref
+        href="g-recovering-from-segment-failures.xml"/>. For information on how Greenplum Database
+      detects that segments are down and an explanation of the Fault Tolerance Server (FTS) that
+      manages down segment tracking, see <xref href="g-detecting-a-failed-segment.xml"/>.</p>
+    <p>This topic is divided into the following sections: <ul id="ul_gcw_b4s_brb">
+        <li><xref href="#recovery_basics" type="topic" format="dita" class="- topic/xref "/></li>
+        <li><xref href="#flow_of_events" type="topic" format="dita" class="- topic/xref "/></li>
+        <li><xref href="#simple_example" type="topic" format="dita" class="- topic/xref "/></li>
+        <li><xref href="#incremental_vs_full" type="topic" format="dita" class="- topic/xref "/></li>
+      </ul></p>
+  </body>
+  <topic id="recovery_basics">
+    <title>Segment Recovery Basics</title>
+    <body>
+      <p>If the master cannot connect to a segment instance, it marks that segment as down in the
+        Greenplum Database <codeph>gp_segment_configuration</codeph> table. The segment instance
+        remains offline until an administrator takes steps to bring the segment back online. The
+        process for recovering a failed segment instance or host depends on the failure cause and
+        whether or not mirroring is enabled. A segment instance can be unavailable for a number of
+        reasons:</p>
+      <ul id="ul_ccj_rks_brb">
+        <li id="ki155624">A segment host is unavailable; for example, due to network or hardware
+          failures.</li>
+        <li id="ki155625">A segment instance is not running; for example, there is no
+            <codeph>postgres</codeph> database listener process.</li>
+        <li id="ki155626">The data directory of the segment instance is corrupt or missing; for
+          example, data is not accessible, the file system is corrupt, or there is a disk
+          failure.</li>
+      </ul>
+      <p>In order to bring the failed segment instance back into operation again, you must correct
+        the problem that made it fail in the first place, and then – if you have mirroring enabled –
+        you can attempt to recover the segment instance from its mirror using the
+          <codeph>gprecoverseg</codeph> utility.  </p>
+    </body>
+  </topic>
+  <topic id="flow_of_events">
+    <title>Segment Recovery: Flow of Events</title>
+    <body>
+      <section><b>When a Primary Segment Goes Down</b></section>
+      <p>The following summarizes the flow of events that follow a <b>primary</b> segment going
+        down:</p>
+      <ol id="ol_qjd_c5c_grb">
+        <li>A primary segment goes down.</li>
+        <li>The Fault Tolerance Server (FTS) detects this and marks the segment as down in the
+            <codeph>gp_segment_configuration</codeph> table.</li>
+        <li>The mirror segment is promoted to primary and starts functioning as primary. The
+          previous primary is demoted to mirror.</li>
+        <li>The user fixes the underlying problem.</li>
+        <li>The user runs <codeph>gprecoverseg</codeph> to bring back the (formerly primary) mirror
+          segment.</li>
+        <li>The synching process occurs: the mirror comes into sync with its primary via WAL
+          synching. Users can check the state of this synching with <codeph>gpstate
+          -e</codeph>.</li>
+        <li>If segments are not in their preferred roles, user runs <codeph>gprecoverseg -r</codeph>
+          to restore them to their preferred roles. </li>
+      </ol>
+      <section><b>When a Mirror Segment Goes Down</b></section>
+      <p>The following summarizes the flow of events that follow a <b>mirror</b> segment going
+        down:</p>
+      <ol id="ol_k1m_f5c_grb">
+        <li>A mirror segment goes down.</li>
+        <li>The Fault Tolerance Server (FTS) detects this and marks the segment as down in the
+            <codeph>gp_segment_configuration</codeph> table.</li>
+        <li>The user fixes the underlying problem.</li>
+        <li>The user runs <codeph>gprecoverseg</codeph> to bring back the (formerly mirror) mirror
+          segment. </li>
+        <li>The synching process occurs: the mirror comes into sync with its primary via WAL
+          synching. Users can check the state of this synching with <codeph>gpstate
+          -e</codeph>.</li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="rebalancing">
+    <title>Rebalancing After Recovery</title>
+    <body>
+      <p>After a segment instance has been recovered, the <codeph>gpstate -e</codeph> command might
+        list primary and mirror segment instances that are switched. This indicates that the system
+        is not balanced (the primary and mirror instances are not in their originally configured
+        roles). If a system is not balanced, there might be skew resulting from the number of active
+        primary segment instances on segment host systems.</p>
+      <p dir="ltr">The <codeph>gp_segment_configuration</codeph> table has columns
+          <codeph>role</codeph> and <codeph>preferred_role</codeph>. These can have values of either
+          <codeph>p</codeph> for primary or <codeph>m</codeph> for mirror. The <codeph>role</codeph>
+        column shows the segment instance current role and the <codeph>preferred_role</codeph> shows
+        the original role of the segment instance. </p>
+      <p dir="ltr">In a balanced system, the <codeph>role</codeph> and
+          <codeph>preferred_role</codeph> matches for all segment instances. When they do not match
+        the system is not balanced. To rebalance the cluster and bring all the segments into their
+        preferred role, run the <codeph>gprecoverseg</codeph> command with the <codeph>-r</codeph>
+        option.</p>
+    </body>
+  </topic>
+  <topic id="simple_example">
+    <title>Simple Failover and Recovery Example</title>
+    <body>
+      <p>Consider a single primary-mirror segment instance pair where the primary segment has failed
+        over to the mirror. The following table shows the segment instance preferred role, role,
+        mode, and status from <codeph>gp_segment_configuration</codeph> table before beginning
+        recovery of the failed primary segment. </p>
+      <p>You can also run <codeph>gpstate -e</codeph> to display any issues with a primary or mirror
+        segment instances. </p>
+      <table frame="all" rowsep="1" colsep="1" id="table_hdk_jst_fgb">
+        <tgroup cols="5">
+          <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+          <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+          <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+          <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+          <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+          <thead>
+            <row>
+              <entry/>
+              <entry><codeph>preferred_role</codeph></entry>
+              <entry><codeph>role</codeph></entry>
+              <entry><codeph>mode</codeph></entry>
+              <entry><codeph>status</codeph></entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>Primary</entry>
+              <entry><codeph>p</codeph><p>(primary)</p></entry>
+              <entry><codeph>m</codeph><p>(mirror)</p></entry>
+              <entry><codeph>n</codeph><p>(not synchronizing)</p></entry>
+              <entry><codeph>d</codeph><p>(down)</p></entry>
+            </row>
+            <row>
+              <entry>Mirror</entry>
+              <entry><codeph>m</codeph><p>(mirror)</p></entry>
+              <entry><codeph>p</codeph><p>(primary)</p></entry>
+              <entry><codeph>n</codeph><p>(not synchronizing)</p></entry>
+              <entry><codeph>u</codeph><p>(up)</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>The segment instance roles are not in their preferred roles, and the primary is down. The
+        mirror is up, the role is now primary, and it is not synchronizing because its mirror, the
+        failed primary, is down. After fixing issues with the segment host and primary segment
+        instance, you use <codeph>gprecoverseg</codeph> to prepare failed segment instances for
+        recovery and initiate synchronization between the primary and mirror instances. </p>
+      <p>Once <codeph>gprecoverseg</codeph> has completed, the segments are in the states shown in
+        the following table where the primary-mirror segment pair is up with the primary and mirror
+        roles reversed from their preferred roles.</p>
+      <table frame="all" rowsep="1" colsep="1" id="table_idk_jst_fgb">
+        <tgroup cols="5">
+          <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+          <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+          <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+          <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+          <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+          <thead>
+            <row>
+              <entry/>
+              <entry><codeph>preferred_role</codeph></entry>
+              <entry><codeph>role</codeph></entry>
+              <entry><codeph>mode</codeph></entry>
+              <entry><codeph>status</codeph></entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>Primary</entry>
+              <entry><codeph>p</codeph><p>(primary)</p></entry>
+              <entry><codeph>m</codeph><p>(mirror)</p></entry>
+              <entry><codeph>s</codeph><p>(synchronizing)</p></entry>
+              <entry><codeph>u</codeph><p>(up)</p></entry>
+            </row>
+            <row>
+              <entry>Mirror</entry>
+              <entry><codeph>m</codeph><p>(mirror)</p></entry>
+              <entry><codeph>p</codeph><p>(primary)</p></entry>
+              <entry><codeph>s</codeph><p>(synchronizing)</p></entry>
+              <entry><codeph>u</codeph><p>(up)</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>The <codeph>gprecoverseg -r</codeph> command rebalances the system by returning the segment
+        roles to their preferred roles.</p>
+      <table frame="all" rowsep="1" colsep="1" id="table_jdk_jst_fgb">
+        <tgroup cols="5">
+          <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+          <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+          <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+          <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+          <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+          <thead>
+            <row>
+              <entry/>
+              <entry><codeph>preferred_role</codeph></entry>
+              <entry><codeph>role</codeph></entry>
+              <entry><codeph>mode</codeph></entry>
+              <entry><codeph>status</codeph></entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>Primary</entry>
+              <entry><codeph>p</codeph><p>(primary)</p></entry>
+              <entry><codeph>p</codeph><p>(primary)</p></entry>
+              <entry><codeph>s</codeph><p>(synchronized)</p></entry>
+              <entry><codeph>u</codeph><p>(up)</p></entry>
+            </row>
+            <row>
+              <entry>Mirror</entry>
+              <entry><codeph>m</codeph><p>(mirror)</p></entry>
+              <entry><codeph>m</codeph><p>(mirror)</p></entry>
+              <entry><codeph>s</codeph><p>(synchronized)</p></entry>
+              <entry><codeph>u</codeph><p>(up)</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="incremental_vs_full">
+    <title>Incremental versus Full Recovery</title>
+    <body>
+      <p>Greenplum database can perform two types of recovery: incremental or full. The default is
+        incremental. </p>
+      <p>By default, <codeph>gprecoverseg</codeph> performs an incremental recovery, placing the
+        mirror into <i>Synchronizing</i> mode, which starts to replay the recorded changes from the
+        primary onto the mirror. If the incremental recovery cannot be completed, the recovery fails
+        and <codeph>gprecoverseg</codeph> should be run again with the <codeph>-F</codeph> option,
+        to perform full recovery. This causes the primary to copy all of the data to the mirror. </p>
+      <p>Unless absolutely necessary, you should perform an incremental recovery rather than a full
+        recovery, as incremental recovery is substantially faster.</p>
+    </body>
+  </topic>
+</topic>

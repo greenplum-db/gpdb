@@ -16,6 +16,8 @@
          <topicref href="topics/g-checking-for-failed-segments.xml" type="topic"/>
          <topicref href="topics/g-checking-the-log-files.xml" type="topic"/>
       </topicref>
+      <topicref href="topics/g-understanding-segment-recovery.xml" type="topic">
+      </topicref>
       <topicref href="topics/g-recovering-a-failed-segment.xml" type="topic">
          <topicref href="topics/g-recovering-from-segment-failures.xml" type="topic">
             <topicref href="topics/g-when-a-segment-host-is-not-recoverable.xml" type="topic"/>
