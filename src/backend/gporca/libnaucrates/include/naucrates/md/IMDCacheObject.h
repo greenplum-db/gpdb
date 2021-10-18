@@ -102,7 +102,7 @@ public:
 #endif
 };
 
-typedef CDynamicPtrArray<IMDCacheObject, CleanupRelease> IMDCacheObjectArray;
+using IMDCacheObjectArray = CDynamicPtrArray<IMDCacheObject, CleanupRelease>;
 
 }  // namespace gpmd
 

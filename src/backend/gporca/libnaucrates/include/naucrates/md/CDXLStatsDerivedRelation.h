@@ -86,8 +86,8 @@ public:
 };
 
 // array of dxl buckets
-typedef CDynamicPtrArray<CDXLStatsDerivedRelation, CleanupRelease>
-	CDXLStatsDerivedRelationArray;
+using CDXLStatsDerivedRelationArray =
+	CDynamicPtrArray<CDXLStatsDerivedRelation, CleanupRelease>;
 }  // namespace gpmd
 
 #endif	// !GPMD_CDXLStatsDerivedRelation_H

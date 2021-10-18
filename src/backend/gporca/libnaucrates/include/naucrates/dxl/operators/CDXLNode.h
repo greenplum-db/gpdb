@@ -28,14 +28,14 @@ class CDXLOperator;
 class CXMLSerializer;
 class CDXLDirectDispatchInfo;
 
-typedef CDynamicPtrArray<CDXLNode, CleanupRelease> CDXLNodeArray;
+using CDXLNodeArray = CDynamicPtrArray<CDXLNode, CleanupRelease>;
 
 // arrays of OID
-typedef CDynamicPtrArray<OID, CleanupDelete> OidArray;
+using OidArray = CDynamicPtrArray<OID, CleanupDelete>;
 
-typedef CHashMap<ULONG, CDXLNode, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupRelease<CDXLNode> >
-	IdToCDXLNodeMap;
+using IdToCDXLNodeMap =
+	CHashMap<ULONG, CDXLNode, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupRelease<CDXLNode>>;
 
 //---------------------------------------------------------------------------
 //	@class:

@@ -41,7 +41,7 @@
 #include "naucrates/md/IMDIndex.h"
 
 // dynamic array of XML strings
-typedef CDynamicPtrArray<XMLCh, CleanupNULL> XMLChArray;
+using XMLChArray = CDynamicPtrArray<XMLCh, CleanupNULL>;
 
 // fwd decl
 namespace gpmd

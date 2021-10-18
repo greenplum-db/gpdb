@@ -86,8 +86,8 @@ private:
 		static INT CmpFunc(const void *val1, const void *val2);
 	};
 
-	typedef CDynamicPtrArray<SPartPropSpecInfo, CleanupRelease>
-		SPartPropSpecInfoArray;
+	using SPartPropSpecInfoArray =
+		CDynamicPtrArray<SPartPropSpecInfo, CleanupRelease>;
 
 	// partition required/derived info, sorted by scanid
 	SPartPropSpecInfoArray *m_part_prop_spec_infos = nullptr;

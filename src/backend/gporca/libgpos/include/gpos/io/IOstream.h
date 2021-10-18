@@ -16,7 +16,7 @@
 namespace gpos
 {
 // wide char ostream
-typedef std::basic_ostream<WCHAR, std::char_traits<WCHAR> > WOSTREAM;
+using WOSTREAM = std::basic_ostream<WCHAR, std::char_traits<WCHAR>>;
 
 //---------------------------------------------------------------------------
 //	@class:

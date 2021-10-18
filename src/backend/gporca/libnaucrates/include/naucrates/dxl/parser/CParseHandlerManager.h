@@ -30,7 +30,7 @@ class CParseHandlerPhysicalOp;
 class CDXLMemoryManager;
 
 // stack of parse handlers
-typedef CStack<CParseHandlerBase> ParseHandlerStack;
+using ParseHandlerStack = CStack<CParseHandlerBase>;
 
 
 //---------------------------------------------------------------------------

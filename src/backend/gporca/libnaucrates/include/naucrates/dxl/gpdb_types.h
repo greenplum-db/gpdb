@@ -15,7 +15,7 @@
 
 using namespace gpos;
 
-typedef ULONG OID;
+using OID = ULONG;
 
 #define GPDB_INT2 OID(21)
 #define GPDB_INT4 OID(23)

@@ -172,8 +172,8 @@ CJoinOrder::CJoinOrder(CMemoryPool *mp, CExpressionArray *all_components,
 	  m_ulComps(0),
 	  m_include_loj_childs(include_loj_childs)
 {
-	typedef SComponent *Pcomp;
-	typedef SEdge *Pedge;
+	using Pcomp = SComponent *;
+	using Pedge = SEdge *;
 
 	const ULONG num_of_nary_children = all_components->Size();
 	INT num_of_lojs = 0;
@@ -293,8 +293,8 @@ CJoinOrder::CJoinOrder(CMemoryPool *mp, CExpressionArray *all_components,
 	  m_ulComps(0),
 	  m_include_loj_childs(false)  // not used by CXformExpandNAryJoinDPv2
 {
-	typedef SComponent *Pcomp;
-	typedef SEdge *Pedge;
+	using Pcomp = SComponent *;
+	using Pedge = SEdge *;
 
 	const ULONG num_of_nary_children = all_components->Size();
 

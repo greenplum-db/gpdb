@@ -41,13 +41,13 @@ class CExpression;
 
 // type definitions
 // array of groups
-typedef CDynamicPtrArray<CGroup, CleanupNULL> CGroupArray;
+using CGroupArray = CDynamicPtrArray<CGroup, CleanupNULL>;
 
 // map required plan props to cost lower bound of corresponding plan
-typedef CHashMap<CReqdPropPlan, CCost, CReqdPropPlan::UlHashForCostBounding,
-				 CReqdPropPlan::FEqualForCostBounding,
-				 CleanupRelease<CReqdPropPlan>, CleanupDelete<CCost> >
-	ReqdPropPlanToCostMap;
+using ReqdPropPlanToCostMap =
+	CHashMap<CReqdPropPlan, CCost, CReqdPropPlan::UlHashForCostBounding,
+			 CReqdPropPlan::FEqualForCostBounding,
+			 CleanupRelease<CReqdPropPlan>, CleanupDelete<CCost>>;
 
 // optimization levels in ascending order,
 // under a given optimization context, group expressions in higher levels
@@ -75,9 +75,7 @@ class CGroup : public CRefCount, public DbgPrintMixin<CGroup>
 
 public:
 	// type definition of optimization context hash table
-	typedef CSyncHashtable<COptimizationContext,  // entry
-						   COptimizationContext /* search key */>
-		ShtOC;
+	using ShtOC = CSyncHashtable<COptimizationContext, COptimizationContext>;
 
 	// states of a group
 	enum EState
@@ -99,19 +97,16 @@ public:
 
 private:
 	// definition of hash table iter
-	typedef CSyncHashtableIter<COptimizationContext,  // entry
-							   COptimizationContext>
-		ShtIter;
+	using ShtIter =
+		CSyncHashtableIter<COptimizationContext, COptimizationContext>;
 
 	// definition of hash table iter accessor
-	typedef CSyncHashtableAccessByIter<COptimizationContext,  // entry
-									   COptimizationContext>
-		ShtAccIter;
+	using ShtAccIter =
+		CSyncHashtableAccessByIter<COptimizationContext, COptimizationContext>;
 
 	// definition of hash table accessor
-	typedef CSyncHashtableAccessByKey<COptimizationContext,	 // entry
-									  COptimizationContext>
-		ShtAcc;
+	using ShtAcc =
+		CSyncHashtableAccessByKey<COptimizationContext, COptimizationContext>;
 
 	//---------------------------------------------------------------------------
 	//	@class:
@@ -152,17 +147,15 @@ private:
 	};	// struct SContextLink
 
 	// map of processed links in TreeMap structure
-	typedef CHashMap<SContextLink, BOOL, SContextLink::HashValue,
-					 SContextLink::Equals, CleanupDelete<SContextLink>,
-					 CleanupDelete<BOOL> >
-		LinkMap;
+	using LinkMap = CHashMap<SContextLink, BOOL, SContextLink::HashValue,
+							 SContextLink::Equals, CleanupDelete<SContextLink>,
+							 CleanupDelete<BOOL>>;
 
 	// map of computed stats objects during costing
-	typedef CHashMap<
+	using OptCtxtToIStatisticsMap = CHashMap<
 		COptimizationContext, IStatistics, COptimizationContext::UlHashForStats,
 		COptimizationContext::FEqualForStats,
-		CleanupRelease<COptimizationContext>, CleanupRelease<IStatistics> >
-		OptCtxtToIStatisticsMap;
+		CleanupRelease<COptimizationContext>, CleanupRelease<IStatistics>>;
 
 	// memory pool
 	CMemoryPool *m_mp;

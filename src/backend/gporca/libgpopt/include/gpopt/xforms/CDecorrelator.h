@@ -31,8 +31,8 @@ class CDecorrelator
 {
 private:
 	// definition of operator processor
-	typedef BOOL(FnProcessor)(CMemoryPool *, CExpression *, BOOL,
-							  CExpression **, CExpressionArray *, CColRefSet *);
+	using FnProcessor = BOOL(CMemoryPool *, CExpression *, BOOL, CExpression **,
+							 CExpressionArray *, CColRefSet *);
 
 	//---------------------------------------------------------------------------
 	//	@struct:

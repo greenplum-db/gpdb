@@ -25,17 +25,17 @@ namespace gpopt
 class CColRefSet;
 
 // short hand for colref set array
-typedef CDynamicPtrArray<CColRefSet, CleanupRelease> CColRefSetArray;
+using CColRefSetArray = CDynamicPtrArray<CColRefSet, CleanupRelease>;
 
 // hash map mapping CColRef -> CColRefSet
-typedef CHashMap<CColRef, CColRefSet, CColRef::HashValue, CColRef::Equals,
-				 CleanupNULL<CColRef>, CleanupRelease<CColRefSet> >
-	ColRefToColRefSetMap;
+using ColRefToColRefSetMap =
+	CHashMap<CColRef, CColRefSet, CColRef::HashValue, CColRef::Equals,
+			 CleanupNULL<CColRef>, CleanupRelease<CColRefSet>>;
 
 // hash map mapping INT -> CColRef
-typedef CHashMap<INT, CColRef, gpos::HashValue<INT>, gpos::Equals<INT>,
-				 CleanupDelete<INT>, CleanupNULL<CColRef> >
-	IntToColRefMap;
+using IntToColRefMap =
+	CHashMap<INT, CColRef, gpos::HashValue<INT>, gpos::Equals<INT>,
+			 CleanupDelete<INT>, CleanupNULL<CColRef>>;
 
 //---------------------------------------------------------------------------
 //	@class:

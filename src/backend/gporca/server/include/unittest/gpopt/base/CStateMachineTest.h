@@ -64,7 +64,7 @@ public:
 	{
 	private:
 		// shorthand for state machine
-		typedef CStateMachine<EStates, esSentinel, EEvents, eeSentinel> SM;
+		using SM = CStateMachine<EStates, esSentinel, EEvents, eeSentinel>;
 
 		// state machine
 		SM m_sm;

@@ -72,7 +72,7 @@ public:
 };
 
 // dynamic arrays over md system id elements
-typedef CDynamicPtrArray<CSystemId, CleanupDelete> CSystemIdArray;
+using CSystemIdArray = CDynamicPtrArray<CSystemId, CleanupDelete>;
 }  // namespace gpmd
 
 

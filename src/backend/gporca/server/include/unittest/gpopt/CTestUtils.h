@@ -86,9 +86,9 @@ using gpmd::CMDIdGPDB;
 class CConstraintInterval;
 class IConstExprEvaluator;
 
-typedef CDynamicPtrArray<CExpression, CleanupNULL> CExpressionJoinsArray;
+using CExpressionJoinsArray = CDynamicPtrArray<CExpression, CleanupNULL>;
 
-typedef BOOL(FnDXLPlanChecker)(CDXLNode *);
+using FnDXLPlanChecker = BOOL(CDXLNode *);
 
 //---------------------------------------------------------------------------
 //	@class:

@@ -92,7 +92,7 @@ public:
 };	// class CStatsPred
 
 // array of filters
-typedef CDynamicPtrArray<CStatsPred, CleanupRelease> CStatsPredPtrArry;
+using CStatsPredPtrArry = CDynamicPtrArray<CStatsPred, CleanupRelease>;
 
 // comparison function for sorting predicates
 INT

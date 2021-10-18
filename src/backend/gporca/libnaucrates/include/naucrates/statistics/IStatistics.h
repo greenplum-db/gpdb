@@ -39,35 +39,33 @@ using namespace gpopt;
 class IStatistics;
 
 // hash map from column id to a histogram
-typedef CHashMap<ULONG, CHistogram, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupDelete<CHistogram> >
-	UlongToHistogramMap;
+using UlongToHistogramMap =
+	CHashMap<ULONG, CHistogram, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupDelete<CHistogram>>;
 
 // iterator
-typedef CHashMapIter<ULONG, CHistogram, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupDelete<CHistogram> >
-	UlongToHistogramMapIter;
+using UlongToHistogramMapIter =
+	CHashMapIter<ULONG, CHistogram, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupDelete<CHistogram>>;
 
 // hash map from column ULONG to CDouble
-typedef CHashMap<ULONG, CDouble, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupDelete<CDouble> >
-	UlongToDoubleMap;
+using UlongToDoubleMap =
+	CHashMap<ULONG, CDouble, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupDelete<CDouble>>;
 
 // iterator
-typedef CHashMapIter<ULONG, CDouble, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupDelete<CDouble> >
-	UlongToDoubleMapIter;
+using UlongToDoubleMapIter =
+	CHashMapIter<ULONG, CDouble, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupDelete<CDouble>>;
 
-typedef CHashMap<ULONG, ULONG, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupDelete<ULONG> >
-	UlongToUlongMap;
+using UlongToUlongMap =
+	CHashMap<ULONG, ULONG, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupDelete<ULONG>>;
 
 // hash maps mapping INT -> ULONG
-typedef CHashMap<INT, ULONG, gpos::HashValue<INT>, gpos::Equals<INT>,
-				 CleanupDelete<INT>, CleanupDelete<ULONG> >
-	IntToUlongMap;
+using IntToUlongMap =
+	CHashMap<INT, ULONG, gpos::HashValue<INT>, gpos::Equals<INT>,
+			 CleanupDelete<INT>, CleanupDelete<ULONG>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -208,7 +206,7 @@ operator<<(IOstream &os, IStatistics &stats)
 }
 
 // dynamic array for derived stats
-typedef CDynamicPtrArray<IStatistics, CleanupRelease> IStatisticsArray;
+using IStatisticsArray = CDynamicPtrArray<IStatistics, CleanupRelease>;
 }  // namespace gpnaucrates
 
 #endif	// !GPNAUCRATES_IStatistics_H

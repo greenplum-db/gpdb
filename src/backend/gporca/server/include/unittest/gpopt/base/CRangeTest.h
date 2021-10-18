@@ -31,7 +31,7 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 class CRangeTest
 {
-	typedef IDatum *(*PfPdatum)(CMemoryPool *mp, INT i);
+	using PfPdatum = IDatum *(*) (CMemoryPool *, INT);
 
 private:
 	static GPOS_RESULT EresInitAndCheckRanges(CMemoryPool *mp, IMDId *mdid,

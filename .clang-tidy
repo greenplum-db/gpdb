@@ -9,6 +9,7 @@ Checks: |
   modernize-use-nullptr,
   modernize-use-default-member-init,
   modernize-use-bool-literals,
+  modernize-use-using
   readability-make-member-function-const,
   readability-non-const-parameter,
   readability-static-accessed-through-instance,

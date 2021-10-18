@@ -80,10 +80,10 @@ class CJobStateMachine
 {
 private:
 	// pointer to job action function
-	typedef TEnumEvent (*PFuncAction)(CSchedulerContext *psc, CJob *pjOwner);
+	using PFuncAction = TEnumEvent (*)(CSchedulerContext *, CJob *);
 
 	// shorthand for state machine
-	typedef CStateMachine<TEnumState, estSentinel, TEnumEvent, eevSentinel> SM;
+	using SM = CStateMachine<TEnumState, estSentinel, TEnumEvent, eevSentinel>;
 
 	// array of actions corresponding to states
 	PFuncAction m_rgPfuncAction[estSentinel];

@@ -25,7 +25,7 @@ using namespace gpmd;
 class CUpperBoundNDVs;
 
 // dynamic array of upper bound ndvs
-typedef CDynamicPtrArray<CUpperBoundNDVs, CleanupDelete> CUpperBoundNDVPtrArray;
+using CUpperBoundNDVPtrArray = CDynamicPtrArray<CUpperBoundNDVs, CleanupDelete>;
 
 //---------------------------------------------------------------------------
 //      @class:

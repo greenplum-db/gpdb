@@ -141,7 +141,7 @@ private:
 
 public:
 	// type definition of function used to cleanup element
-	typedef void (*DestroyEntryFuncPtr)(T *);
+	using DestroyEntryFuncPtr = void (*)(T *);
 
 	// ctor
 	CSyncHashtable<T, K>()
