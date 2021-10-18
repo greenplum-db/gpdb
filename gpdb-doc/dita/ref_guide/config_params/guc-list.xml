@@ -1881,6 +1881,13 @@
         lower value makes it more likely sequential scans will be used. This parameter has no effect
         on the size of shared memory allocated by a Greenplum server instance, nor does it reserve
         kernel disk cache; it is used only for estimation purposes.</p>
+      <p>Set this parameter to a number of
+        <codeph><xref href="#backslash_quote">block_size</xref></codeph> blocks
+        (default 32K) with no units; for example, <codeph>8192</codeph> for 256MB. You can
+        also directly specify the size of the effective cache; for example,
+        <codeph>'1GB'</codeph> specifies a size of 32768 blocks. The
+        <codeph>gpconfig</codeph> utility and <codeph>SHOW</codeph> command display the
+        effective cache size value in units such as 'GB', 'MB', or 'kB'.</p>
       <table id="effective_cache_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -1895,8 +1902,8 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">floating point</entry>
-              <entry colname="col2">512MB</entry>
+              <entry colname="col1">1 - INT_MAX <i>or</i> number and unit</entry>
+              <entry colname="col2">16384 (512MB)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
