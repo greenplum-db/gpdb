@@ -1,5 +1,6 @@
 --- test set 1: multiple files with header and different EOLs ---
 -- with line terminator '\n' (LF)
+SET client_min_messages TO 'warning';
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_with_header_line_lf(date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@') FORMAT 'csv' (HEADER NEWLINE 'LF');
 
@@ -30,3 +31,4 @@ SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf whcrlf, s3re
 DROP EXTERNAL TABLE s3regress_multiple_files_with_header_line_lf;
 DROP EXTERNAL TABLE s3regress_multiple_files_without_header_line_lf;
 DROP EXTERNAL TABLE s3regress_multiple_files_with_header_line_crlf;
+RESET client_min_messages;

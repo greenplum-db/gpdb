@@ -8,7 +8,7 @@ ARCH = $(shell uname -s)
 CPP = g++
 INCLUDES = -I../src -I../include -I../lib
 LDFLAGS = $(COMMON_LINK_OPTIONS)
-CPPFLAGS = $(COMMON_CPP_FLAGS) -g3 -DS3_STANDALONE -fprofile-arcs -ftest-coverage
+CPPFLAGS = $(COMMON_CPP_FLAGS) -g3 -DS3_STANDALONE -fprofile-arcs -ftest-coverage -DS3_UNITTEST
 
 ifeq "$(ARCH)" "Darwin"
 	LDFLAGS += -coverage
