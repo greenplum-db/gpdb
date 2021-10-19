@@ -15,6 +15,8 @@
 #   hitting max_connections limit on segments.
 #
 
+test: gp_dispatch_keepalives
+
 # copy command
 # copy form a file with different EOL
 test: copy_eol
