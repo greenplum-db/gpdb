@@ -38,6 +38,7 @@
 #include "parser/parsetree.h"
 #include "utils/builtins.h"
 #include "utils/bytea.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/pg_locale.h"
 #include "utils/selfuncs.h"
@@ -1632,6 +1633,17 @@ bitmap_and_cost_est(PlannerInfo *root, RelOptInfo *rel, List *paths)
 						  bpath.path.param_info,
 						  (Path *) &apath,
 						  get_loop_count(root, required_outer));
+
+	#ifdef FAULT_INJECTOR
+		/* Simulate an bitmapAnd plan by changing bitmap cost. */
+		if (FaultInjector_InjectFaultIfSet("simulate_bitmap_and",
+									DDLNotSpecified,
+									"",
+									"") == FaultInjectorTypeSkip)
+		{
+			bpath.path.total_cost = 0;
+		}
+	#endif
 
 	return bpath.path.total_cost;
 }

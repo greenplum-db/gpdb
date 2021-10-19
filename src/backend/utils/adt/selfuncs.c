@@ -132,6 +132,7 @@
 #include "utils/bytea.h"
 #include "utils/date.h"
 #include "utils/datum.h"
+#include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/nabstime.h"
@@ -7789,6 +7790,16 @@ bmcostestimate(PG_FUNCTION_ARGS)
 
 	*indexStartupCost = costs.indexStartupCost;
 	*indexTotalCost = costs.indexTotalCost;
+	#ifdef FAULT_INJECTOR
+		/* Simulate an bitmapAnd plan by changing bitmap cost. */
+		if (FaultInjector_InjectFaultIfSet("simulate_bitmap_heap_and",
+									DDLNotSpecified,
+									"",
+									"") == FaultInjectorTypeSkip)
+		{
+			*indexTotalCost = 0;
+		}
+	#endif
 	*indexSelectivity = costs.indexSelectivity;
 	*indexCorrelation = costs.indexCorrelation;
 
