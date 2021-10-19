@@ -28,6 +28,7 @@
 /external_table.out
 /filespace.out
 /gpcopy.out
+/gp_dispatch_keepalives.out
 /gp_tablespace.out
 /gp_tablespace_path_too_long.out
 /gp_tablespace_with_faults.out
