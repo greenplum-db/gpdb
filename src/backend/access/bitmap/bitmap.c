@@ -930,6 +930,17 @@ restart:
 		result->nextTid = words->firstTid;
 
 	/*
+	 * Current words may not contain the expected nextTid, since the
+	 * blockno may skiped several blocks if BitmapAdd choose to skip
+	 * the blockno that can not be matched.
+	 */
+	if (words->firstTid < result->nextTid)
+	{
+		Assert(words->nwords < 1);
+		return false;
+	}
+
+	/*
 	 * If the catch up processd all unmatch words that exceed current block's
 	 * end. Then restart for a new block.
 	 */

@@ -84,6 +84,7 @@ test: ao_upgrade
 test: bitmap_index_concurrent
 test: bitmap_index_crash
 test: bitmap_update_words_backup_block
+test: bitmap_union
 
 # below test utilizes fault injectors so it needs to be in a group by itself
 test: external_table
