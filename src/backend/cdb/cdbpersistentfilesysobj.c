@@ -5710,8 +5710,10 @@ static void PersistentFileSysObj_MarkPageIncremental(
 	if (serialNum != persistentSerialNum)
 	{
 		elog(LOG,
-			 "PersistentFileSysObj_MarkPageIncremental: Skipping %s due to obsolete serial number (input serial number " INT64_FORMAT ", actual serial number " INT64_FORMAT ") at TID %s",
-			 PersistentFileSysObjName_ObjectName(&fsObjName),
+			 "PersistentFileSysObj_MarkPageIncremental: Skipping %u/%u/%u due to obsolete serial number (input serial number " INT64_FORMAT ", actual serial number " INT64_FORMAT ") at TID %s",
+			 relFileNode.spcNode,
+			 relFileNode.dbNode,
+			 relFileNode.relNode,
 			 persistentSerialNum,
 			 serialNum,
 			 ItemPointerToString(persistentTid));
