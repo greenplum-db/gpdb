@@ -21,10 +21,12 @@ brew install apr # gpfdist
 brew install apr-util # gpfdist
 brew install zstd
 brew install pkg-config
-brew install postgresql # install libpq dependency
 brew install perl
 brew link --force apr
 brew link --force apr-util
+
+# Needed for pygresql, or you can source greenplum_path.sh after compiling database and installing python-dependencies then
+brew install postgresql
 
 brew install python3
 
