@@ -140,11 +140,13 @@
           </tbody>
         </tgroup>
       </table>
-      <p>The segment instance roles are not in their preferred roles, and the primary is down. The
-        mirror is up, the role is now primary, and it is not synchronizing because its mirror, the
-        failed primary, is down. After fixing issues with the segment host and primary segment
-        instance, you use <codeph>gprecoverseg</codeph> to prepare failed segment instances for
-        recovery and initiate synchronization between the primary and mirror instances. </p>
+      <p>The primary segment is down and segment instances are not in their preferred roles. The
+        mirror segment is up and its role is now primary. However, it is not synchronized with its
+        mirror (the former primary segment) because that segment is down. You must potentially fix
+        either issues with the host the down segment is running on, issues with the segment instance
+        itself, or both. You then use <codeph>grecoverseg</codeph> to prepare failed segment
+        instances for recovery and initiate synchronization between the primary and mirror
+        instances. </p>
       <p>Once <codeph>gprecoverseg</codeph> has completed, the segments are in the states shown in
         the following table where the primary-mirror segment pair is up with the primary and mirror
         roles reversed from their preferred roles.</p>
@@ -228,10 +230,13 @@
       <p>By default, <codeph>gprecoverseg</codeph> performs an incremental recovery, placing the
         mirror into <i>Synchronizing</i> mode, which starts to replay the recorded changes from the
         primary onto the mirror. If the incremental recovery cannot be completed, the recovery fails
-        and <codeph>gprecoverseg</codeph> should be run again with the <codeph>-F</codeph> option,
+        and you should run  <codeph>gprecoverseg</codeph> again with the <codeph>-F</codeph> option,
         to perform full recovery. This causes the primary to copy all of the data to the mirror. </p>
-      <p>Unless absolutely necessary, you should perform an incremental recovery rather than a full
-        recovery, as incremental recovery is substantially faster.</p>
+      <p>
+        <note>After a failed incremental recovery attempt you must perform a full recovery.</note>
+      </p>
+      <p>Whenever possible, you should perform an incremental recovery rather than a full recovery,
+        as incremental recovery is substantially faster. </p>
       <p>For a more detailed explanation of the differences between incremental and full recovery,
         see the article <xref
           href="https://community.pivotal.io/s/article/5004y00001YA9fI1617805667833?language=en_US"
