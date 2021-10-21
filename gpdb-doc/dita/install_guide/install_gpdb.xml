@@ -13,7 +13,7 @@
         <ul>
           <li otherprops="oss-only"><xref href="#topic_oss" format="dita">Obtain the Greenplum Database Server Software</xref></li>
           <li otherprops="pivotal"><xref href="#topic_download" format="dita">Download the Greenplum Database Server Software</xref></li>
-          <li otherprops="pivotal"><xref href="#topic_verify_sha" format="dita">Verify the Greenplum Database Software Fingerprint</xref></li>
+          <li otherprops="pivotal"><xref href="#topic_verify_sha" format="dita">Verify the Greenplum Database Software</xref></li>
           <li><xref href="#topic_install" format="dita">Install the Greenplum Database Software</xref></li>
           <li><xref href="#topic_dj4_ssr_cmb" format="dita">(Optional) Install to a Non-Default Directory</xref></li>
         </ul>
@@ -56,34 +56,13 @@
       </body>
     </topic>
     <topic id="topic_verify_sha" otherprops="pivotal">
-      <title>Verifying the Greenplum Database Software Fingerprint</title>
+      <title>Verifying the Greenplum Database Software</title>
       <body>
         <p>VMware generates a SHA256 fingerprint for each Greenplum Database software
           download available from Tanzu Network. This fingerprint enables you to verify that
           your downloaded file is unaltered from the original.</p>
-        <p>After you download the <b>Greenplum Database Server</b> package, you can verify
-          the integrity of the software as follows:</p>
-        <ol>
-          <li>On the VMware Tanzu Greenplum <i>Release Download Files</i> page, click the
-            <b>i</b> icon to the right of the <b>Greenplum Database Server</b> package that
-            you downloaded.<p>This action displays a dialog that contains information about
-            the server package, including the <b>File</b> name and the <b>SHA256</b>
-            fingerprint.</p></li>
-          <li>Copy/paste the <b>SHA256</b> to a local file, or keep the Tanzu Network browser
-            tab open.</li>
-          <li>On your local host, open a terminal window, navigate to the download directory,
-            and locate the Greenplum package file that you downloaded from Tanzu Network.</li>
-          <li>Compare the downloaded file name with the <b>File</b> name specified in the
-            Tanzu Network package information, and verify that they are the same.</li>
-          <li>Identify an OS utility that you can use to locally calculate a file checksum.
-            On CentOS, this utility command is named <codeph>sha256sum</codeph>.</li>
-          <li>Run the utility to display the checksum of the package file that you downloaded
-            from Tanzu Network. For example, on CentOS:
-            <codeblock>$ sha256sum greenplum-db-6.18.0-rhel7-x86_64.rpm</codeblock></li>
-          <li>If the command checksum output matches the <b>SHA256</b> fingerprint specified
-            in the Tanzu Network package information, the file was downloaded intact. You
-            can safely proceed to install the software.</li>
-          </ol>
+        <p>Follow the instructions in <xref href="verify_sw.xml#topic1"/> to verify the
+          integrity of the <b>Greenplum Database Server</b> software.</p>
       </body>
     </topic>
     <topic id="topic_install">

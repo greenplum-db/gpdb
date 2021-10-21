@@ -164,6 +164,10 @@
             under Greenplum Procedural Languages. </li>
           <li>As <codeph>gpadmin</codeph>, copy the PL/Container language extension package to the
             master host.</li>
+          <li>Follow the instructions in <xref href="../install_guide/verify_sw.xml#topic1"
+            scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+            to verify the integrity of the <b>Greenplum Procedural Languages PL/Container</b>
+            software.</li>
           <li>Run the package installation
             command:<codeblock>gppkg -i plcontainer-2.1.1-rhel7-x86_64.gppkg</codeblock></li>
           <li>Source the file
@@ -212,6 +216,10 @@ gpconfig -c shared_preload_libraries -v 'diskquota,plc_coordinator'</codeblock><
           <li>If you are using PL/Container 3 Beta, note that this Beta version is compatible only
             with the associated <filepath>plcontainer-r-image-3.0.0-beta-gp6.tar.gz</filepath>
             image.</li>
+          <li>Follow the instructions in <xref href="../install_guide/verify_sw.xml#topic1"
+            scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+            to verify the integrity of the <b>Greenplum Procedural Languages PL/Container Image</b>
+            software.</li>
           <li>
             <p>Use the <codeph>plcontainer image-add</codeph> command to install an image on
               all Greenplum Database hosts. Provide the <codeph>-f</codeph> option to specify

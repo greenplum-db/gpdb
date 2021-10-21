@@ -24,6 +24,7 @@
         </topicref>
         <topicref href="prep_os.xml" navtitle="Configuring Your Systems"/>
         <topicref href="install_gpdb.xml" navtitle="Installing the Greenplum Database Software"/>
+        <topicref href="verify_sw.xml" navtitle="Verifying a Greenplum Database Software Download"/>
         <topicref href="create_data_dirs.xml"/>
         <topicref href="validate.xml" navtitle="Validating Your Systems">
             <topicref href="validate.xml#topic4" navtitle="Validating Network Performance"/>
