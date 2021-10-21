@@ -1162,3 +1162,31 @@ explain (verbose, costs off) select * from (
 extra_flow_dist1
 where dt < '2010-01-01'::date;
 
+-- Check DISTINCT ON clause and ORDER BY clause in SubLink, See https://github.com/greenplum-db/gpdb/issues/12656.
+-- For EXISTS SubLink, we don’t need to care about the data deduplication problem, we can delete DISTINCT ON clause and
+-- ORDER BY clause with confidence, because we only care about whether the data exists.
+-- But for ANY SubLink, wo can't do this, because we not only care about the existence of data, but also the content of
+-- the data.
+create table issue_12656 (
+    i int,
+    j int
+) distributed by (i);
+
+insert into issue_12656 values (1, 10001), (1, 10002);
+
+-- case 1, check basic DISTINCT ON
+explain (costs off, verbose)
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656);
+
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656);
+
+-- case 2, check DISTINCT ON and ORDER BY
+explain (costs off, verbose)
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j asc);
+
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j asc);
+
+explain (costs off, verbose)
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
+
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
