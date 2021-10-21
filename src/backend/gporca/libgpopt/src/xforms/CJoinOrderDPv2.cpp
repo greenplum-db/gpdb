@@ -26,6 +26,7 @@
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CNormalizer.h"
+#include "gpopt/operators/CPhysicalJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
@@ -187,7 +188,9 @@ CJoinOrderDPv2::ComputeCost(SExpressionInfo *expr_info,
 		dCost = dCost + expr_info->m_left_child_expr.GetExprInfo()->m_cost;
 		dCost = dCost + expr_info->m_right_child_expr.GetExprInfo()->m_cost;
 
-		if (CUtils::FCrossJoin(expr_info->m_expr))
+		// if none of the preds are hashable, penalize this join as it will
+		// generate a NLJ (which is penalized in the optimization phase)
+		if (!CUtils::IsHashJoinPossible(m_mp, expr_info->m_expr))
 		{
 			// penalize cross joins, similar to what we do in the optimization phase
 			dCost = dCost * m_cross_prod_penalty;
@@ -1549,7 +1552,7 @@ CJoinOrderDPv2::FindLowestCardTwoWayJoin(JoinOrderPropType prop_type)
 		CDouble group_2_cardinality = group_2->m_cardinality;
 		CExpression *first_expr = (*group_2->m_best_expr_info_array)[0]->m_expr;
 		if (EJoinOrderGreedyAvoidXProd == prop_type &&
-			CUtils::FCrossJoin(first_expr))
+			!CUtils::IsHashJoinPossible(m_mp, first_expr))
 		{
 			group_2_cardinality = group_2_cardinality * m_cross_prod_penalty;
 		}
