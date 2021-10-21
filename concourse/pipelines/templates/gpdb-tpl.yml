@@ -730,6 +730,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/gpdb6/server-rc-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
 
+- name: bin_gpdb_rhel8_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb6/server-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
+
 - name: bin_gpdb_clients_centos6_rc
   type: gcs
   source:
@@ -799,6 +806,13 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/gpdb6/greenplum-db-(.*)-rhel7-x86_64((rc-build-type-gcs)).rpm
+
+- name: gpdb_rpm_installer_rhel8
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb6/greenplum-db-(.*)-rhel8-x86_64((rc-build-type-gcs)).rpm
 
 - name: gpdb_rpm_installer_photon3
   type: gcs
@@ -2879,6 +2893,10 @@ jobs:
         - resource_group_centos7
         - MADlib_Test_orca_centos7
         - MADlib_Test_planner_centos7
+      - get: bin_gpdb_rhel8
+        trigger: true
+        passed:
+        - compile_gpdb_rhel8
       - get: bin_gpdb_photon3
         trigger: true
         passed:
@@ -2927,6 +2945,7 @@ jobs:
         passed:
         - compile_gpdb_centos6
         - compile_gpdb_centos7
+        - compile_gpdb_rhel8
         - compile_gpdb_ubuntu18.04
         - compile_gpdb_photon3
       - get: bin_gpdb_centos6
@@ -2975,6 +2994,9 @@ jobs:
       - get: bin_gpdb_centos7
         trigger: true
         passed: [gate_release_candidate_start]
+      - get: bin_gpdb_rhel8
+        trigger: true
+        passed: [compile_gpdb_rhel8]
       - get: bin_gpdb_ubuntu18.04
         trigger: true
         passed: [gate_release_candidate_start]
@@ -3031,6 +3053,9 @@ jobs:
       - put: bin_gpdb_centos7_rc
         params:
           file: "release_candidates/server-rc-*rhel7*.tar.gz"
+      - put: bin_gpdb_rhel8_rc
+        params:
+          file: "release_candidates/server-rc-*rhel8*.tar.gz"
       - put: bin_gpdb_photon3_rc
         params:
           file: "release_candidates/server-rc-*photon3*.tar.gz"
@@ -3084,6 +3109,11 @@ jobs:
 {% if not build_test_rc_rpm %}
         passed: [gate_release_candidate_start]
 {% endif %}
+      - get: bin_gpdb_rhel8
+        trigger: true
+{% if not build_test_rc_rpm %}
+        passed: [compile_gpdb_rhel8]
+{% endif %}
       - get: bin_gpdb_photon3
         trigger: true
 {% if not build_test_rc_rpm %}
@@ -3091,6 +3121,7 @@ jobs:
 {% endif %}
       - get: gpdb6-centos6-build
       - get: gpdb6-centos7-build
+      - get: gpdb6-rhel8-build
       - get: gpdb6-photon3-build
       - get: greenplum-database-release
       - get: license_file
@@ -3122,6 +3153,20 @@ jobs:
       GPDB_LICENSE: Pivotal Software EULA
       GPDB_URL: https://github.com/greenplum-db/gpdb
       GPDB_OSS: false
+  - task: create_gpdb_rpm_package_rhel8
+    file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
+    image: gpdb6-rhel8-build
+    input_mapping:
+      bin_gpdb: bin_gpdb_rhel8
+    output_mapping:
+      gpdb_rpm_installer: gpdb_rpm_rhel8
+    params:
+      PLATFORM: "rhel8"
+      GPDB_NAME: greenplum-db-6
+      GPDB_RELEASE: 1
+      GPDB_LICENSE: Pivotal Software EULA
+      GPDB_URL: https://github.com/greenplum-db/gpdb
+      GPDB_OSS: false
   - task: create_gpdb_rpm_package_photon3
     file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
     image: gpdb6-photon3-build
@@ -3144,10 +3189,12 @@ jobs:
         - name: gpdb_src
         - name: gpdb_rpm_centos6
         - name: gpdb_rpm_centos7
+        - name: gpdb_rpm_rhel8
         - name: gpdb_rpm_photon3
       outputs:
         - name: renamed_gpdb_rpm_centos6
         - name: renamed_gpdb_rpm_centos7
+        - name: renamed_gpdb_rpm_rhel8
         - name: renamed_gpdb_rpm_photon3
       params:
         RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
@@ -3162,10 +3209,12 @@ jobs:
               # to prevent filename collisions on GCS.
             cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel6-x86_64${RC_BUILD_TYPE_GCS}.rpm
             cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+            cp -v gpdb_rpm_rhel8/*.rpm renamed_gpdb_rpm_rhel8/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-rhel8-x86_64${RC_BUILD_TYPE_GCS}.rpm
             cp -v gpdb_rpm_photon3/*.rpm renamed_gpdb_rpm_photon3/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-photon3-x86_64${RC_BUILD_TYPE_GCS}.rpm
 {% else %}
             cp -v gpdb_rpm_centos6/*.rpm renamed_gpdb_rpm_centos6/greenplum-db-${gpdb_semver}-rhel6-x86_64${RC_BUILD_TYPE_GCS}.rpm
             cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+            cp -v gpdb_rpm_rhel8/*.rpm renamed_gpdb_rpm_rhel8/greenplum-db-${gpdb_semver}-rhel8-x86_64${RC_BUILD_TYPE_GCS}.rpm
             cp -v gpdb_rpm_photon3/*.rpm renamed_gpdb_rpm_photon3/greenplum-db-${gpdb_semver}-photon3-x86_64${RC_BUILD_TYPE_GCS}.rpm
 {% endif %}
   - in_parallel:
@@ -3176,6 +3225,9 @@ jobs:
       - put: gpdb_rpm_installer_centos7
         params:
           file: renamed_gpdb_rpm_centos7/*.rpm
+      - put: gpdb_rpm_installer_rhel8
+        params:
+          file: renamed_gpdb_rpm_rhel8/*.rpm
       - put: gpdb_rpm_installer_photon3
         params:
           file: renamed_gpdb_rpm_photon3/*.rpm
