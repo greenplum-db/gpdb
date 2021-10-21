@@ -208,7 +208,7 @@ SELECT *, pg_typeof(f1) FROM
 
 -- ... unless there's context to suggest differently
 explain verbose select '42' union all select '43';
-                   QUERY PLAN                   
+                   QUERY PLAN
 ------------------------------------------------
  Append  (cost=0.00..0.04 rows=1 width=32)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
@@ -219,7 +219,7 @@ explain verbose select '42' union all select '43';
 (6 rows)
 
 explain verbose select '42' union all select 43;
-                   QUERY PLAN                   
+                   QUERY PLAN
 ------------------------------------------------
  Append  (cost=0.00..0.04 rows=1 width=4)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
@@ -790,7 +790,7 @@ explain (verbose, costs off)
 select * from int4_tbl where
   (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
   (select ten from tenk1 b);
-                                                  QUERY PLAN                                                   
+                                                  QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    Output: int4_tbl.f1
@@ -850,12 +850,13 @@ select * from int4_tbl o where (f1, f1) in
                ->  Subquery Scan on "ANY_subquery"
                      Output: "ANY_subquery".f1, "ANY_subquery".g
                      Filter: ("ANY_subquery".f1 = "ANY_subquery".g)
-                     ->  Result
+                     ->  HashAggregate
                            Output: i.f1, (generate_series(1, 2) / 10)
+                           Group Key: i.f1
                            ->  Seq Scan on public.int4_tbl i
                                  Output: i.f1
  Optimizer: Postgres query optimizer
-(17 rows)
+(18 rows)
 
 select * from int4_tbl o where (f1, f1) in
   (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);

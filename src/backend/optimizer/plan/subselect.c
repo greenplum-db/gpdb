@@ -1394,9 +1394,6 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	Assert(sublink->subLinkType == ANY_SUBLINK);
 	Assert(IsA(subselect, Query));
 
-	cdbsubselect_drop_orderby(subselect);
-	cdbsubselect_drop_distinct(subselect);
-
 	/*
 	 * If deeply correlated, then don't pull it up
 	 */

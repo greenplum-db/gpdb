@@ -77,49 +77,6 @@ static bool is_targetlist_nullable(Query *subq);
 
 #define DUMMY_COLUMN_NAME "zero"
 
-/*
- * cdbsubselect_drop_distinct
- *
- * In an IN, EXISTS, NOT IN or NOT EXISTS subquery, any duplicates in the
- * subselect will not affect the overall result, so we can throw away any
- * DISTINCT clause. Unless there's a LIMIT.
- */
-void
-cdbsubselect_drop_distinct(Query *subselect)
-{
-	if (subselect->limitCount == NULL &&
-		subselect->limitOffset == NULL)
-	{
-		/* Delete DISTINCT. */
-		subselect->distinctClause = NIL;
-
-		/* Delete GROUP BY if subquery has no aggregates and no HAVING. */
-		if (!subselect->hasAggs &&
-			subselect->havingQual == NULL)
-			subselect->groupClause = NIL;
-	}
-}								/* cdbsubselect_drop_distinct */
-
-
-/*
- * cdbsubselect_drop_orderby
- *
- * In a subquery, the order of the rows subselect's results won't make a
- * difference to the overall result, so we can throw away any ORDER BY.
- * Unless there's a LIMIT.
- */
-void
-cdbsubselect_drop_orderby(Query *subselect)
-{
-	if (subselect->limitCount == NULL &&
-		subselect->limitOffset == NULL)
-	{
-		/* Delete ORDER BY. */
-		subselect->sortClause = NIL;
-	}
-}								/* cdbsubselect_drop_orderby */
-
-
 /**
  * Initialize context.
  */
@@ -555,11 +512,6 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 		Query	   *subselect = (Query *) copyObject(sublink->subselect);
 
 		Assert(IsA(subselect, Query));
-
-		/**
-		 * Don't care about order by clause
-		 */
-		cdbsubselect_drop_orderby(subselect);
 
 		/**
 		 * Original subselect must have a single output column (e.g. 10*avg(x) )
@@ -1384,10 +1336,6 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
 
 	if (safe_to_convert_NOTIN(sublink, available_rels))
 	{
-		/* Delete ORDER BY and DISTINCT. */
-		cdbsubselect_drop_orderby(subselect);
-		cdbsubselect_drop_distinct(subselect);
-
 		Assert(list_length(parse->jointree->fromlist) == 1);
 
 		int			subq_indx = add_notin_subquery_rte(parse, subselect);
