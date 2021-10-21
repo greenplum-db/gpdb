@@ -127,14 +127,14 @@
               <entry>Primary</entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>n</codeph><p>(not synchronizing)</p></entry>
+              <entry><codeph>n</codeph><p>(Not In Sync)</p></entry>
               <entry><codeph>d</codeph><p>(down)</p></entry>
             </row>
             <row>
               <entry>Mirror</entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>n</codeph><p>(not synchronizing)</p></entry>
+              <entry><codeph>n</codeph><p>(Not In Sync)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
           </tbody>
@@ -171,14 +171,14 @@
               <entry>Primary</entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronizing)</p></entry>
+              <entry><codeph>s</codeph><p>(Synchronized)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
             <row>
               <entry>Mirror</entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronizing)</p></entry>
+              <entry><codeph>s</codeph><p>(Synchronized)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
           </tbody>
@@ -207,14 +207,14 @@
               <entry>Primary</entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
               <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronized)</p></entry>
+              <entry><codeph>s</codeph><p>(Synchronized)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
             <row>
               <entry>Mirror</entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
               <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>s</codeph><p>(synchronized)</p></entry>
+              <entry><codeph>s</codeph><p>(Synchronized)</p></entry>
               <entry><codeph>u</codeph><p>(up)</p></entry>
             </row>
           </tbody>
