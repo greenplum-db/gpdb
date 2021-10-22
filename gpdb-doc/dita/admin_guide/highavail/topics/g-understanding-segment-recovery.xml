@@ -80,21 +80,13 @@
   <topic id="rebalancing">
     <title>Rebalancing After Recovery</title>
     <body>
-      <p>After a segment instance has been recovered, the <codeph>gpstate -e</codeph> command might
-        list primary and mirror segment instances that are switched. This indicates that the system
-        is not balanced (the primary and mirror instances are not in their originally configured
-        roles). If a system is not balanced, there might be skew resulting from the number of active
-        primary segment instances on segment host systems.</p>
-      <p dir="ltr">The <codeph>gp_segment_configuration</codeph> table has columns
-          <codeph>role</codeph> and <codeph>preferred_role</codeph>. These can have values of either
-          <codeph>p</codeph> for primary or <codeph>m</codeph> for mirror. The <codeph>role</codeph>
-        column shows the segment instance current role and the <codeph>preferred_role</codeph> shows
-        the original role of the segment instance. </p>
-      <p dir="ltr">In a balanced system, the <codeph>role</codeph> and
-          <codeph>preferred_role</codeph> matches for all segment instances. When they do not match
-        the system is not balanced. To rebalance the cluster and bring all the segments into their
-        preferred role, run the <codeph>gprecoverseg</codeph> command with the <codeph>-r</codeph>
-        option.</p>
+      <p>After a segment instance has been recovered, the segments may not be in their preferred
+        roles, which can cause processing to be skewed. The
+          <codeph>gp_segment_configuration</codeph> table has the columns <codeph>role</codeph>
+        (current role) and <codeph>preferred_role</codeph> (original role at the beginning). When a
+        segment's <codeph>role</codeph> and <codeph>preferred_role</codeph> do not match the system
+        is not balanced. To rebalance the cluster and bring all the segments into their preferred
+        roles, run the <codeph>gprecoverseg -r </codeph>command. </p>
     </body>
   </topic>
   <topic id="simple_example">
