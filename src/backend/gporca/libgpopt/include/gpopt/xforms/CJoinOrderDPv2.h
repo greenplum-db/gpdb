@@ -185,6 +185,8 @@ private:
 		{
 		}
 		SGroupAndExpression(const SGroupAndExpression &other) = default;
+		SGroupAndExpression &operator=(const SGroupAndExpression &other) =
+			default;
 		SExpressionInfo *
 		GetExprInfo() const
 		{
