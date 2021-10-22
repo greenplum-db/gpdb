@@ -5687,6 +5687,7 @@ getTypeStorageOptions(Archive *fout, int *numTypes)
 	int			i;
 	PQExpBuffer query = createPQExpBuffer();
 	TypeStorageOptions   *tstorageoptions;
+	int			i_tableoid;
 	int			i_oid;
 	int			i_typname;
 	int			i_typnamespace;
@@ -5704,17 +5705,18 @@ getTypeStorageOptions(Archive *fout, int *numTypes)
 	 * when dumping the type.
 	 */
 	appendPQExpBuffer(query, "SELECT "
-      " CASE WHEN t.oid > 10000 OR substring(t.typname from 1 for 1) = '_' "
-      " THEN  quote_ident(t.typname) "
-      " ELSE  pg_catalog.format_type(t.oid, NULL) "
-      " END   as typname "
-			", t.oid AS oid"
-			", t.typnamespace AS typnamespace"
-			", (%s typowner) as rolname"
-			", array_to_string(a.typoptions, ', ') AS typoptions "
-			" FROM pg_type AS t "
-			" INNER JOIN pg_catalog.pg_type_encoding a ON a.typid = t.oid"
-			" WHERE t.typisdefined = 't'", username_subquery);
+					  "CASE WHEN t.oid > 10000 OR substring(t.typname from 1 for 1) = '_' "
+					  "THEN quote_ident(t.typname) "
+					  "ELSE pg_catalog.format_type(t.oid, NULL) "
+					  "END  as typname, "
+					  "t.tableoid as tableoid, "
+					  "t.oid AS oid, "
+					  "t.typnamespace AS typnamespace, "
+					  "(%s typowner) as rolname, "
+					  "array_to_string(a.typoptions, ', ') AS typoptions "
+					  "FROM pg_type t "
+					  "JOIN pg_catalog.pg_type_encoding a ON a.typid = t.oid "
+					  "WHERE t.typisdefined = 't'", username_subquery);
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -5722,8 +5724,9 @@ getTypeStorageOptions(Archive *fout, int *numTypes)
 
 	tstorageoptions = (TypeStorageOptions *) pg_malloc(ntups * sizeof(TypeStorageOptions));
 
-	i_typname = PQfnumber(res, "typname");
+	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
+	i_typname = PQfnumber(res, "typname");
 	i_typnamespace = PQfnumber(res, "typnamespace");
 	i_typoptions = PQfnumber(res, "typoptions");
 	i_rolname = PQfnumber(res, "rolname");
@@ -5731,9 +5734,10 @@ getTypeStorageOptions(Archive *fout, int *numTypes)
 	for (i = 0; i < ntups; i++)
 	{
 		tstorageoptions[i].dobj.objType = DO_TYPE_STORAGE_OPTIONS;
+		tstorageoptions[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
+		tstorageoptions[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
 		AssignDumpId(&tstorageoptions[i].dobj);
 		tstorageoptions[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_typname));
-		tstorageoptions[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
 		tstorageoptions[i].dobj.namespace = findNamespace(atooid(PQgetvalue(res, i, i_typnamespace)));
 		tstorageoptions[i].typoptions = pg_strdup(PQgetvalue(res, i, i_typoptions));
 		tstorageoptions[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
@@ -19188,12 +19192,10 @@ getExtensionMembership(Archive *fout, ExtensionInfo extinfo[],
 	PQExpBuffer query;
 	PGresult   *res;
 	int			ntups,
-				nextmembers,
 				i;
 	int			i_classid,
 				i_objid,
 				i_refobjid;
-	ExtensionMemberId *extmembers;
 	ExtensionInfo *ext;
 
 	/* Nothing to do if no extensions */
@@ -19218,12 +19220,7 @@ getExtensionMembership(Archive *fout, ExtensionInfo extinfo[],
 	i_objid = PQfnumber(res, "objid");
 	i_refobjid = PQfnumber(res, "refobjid");
 
-	extmembers = (ExtensionMemberId *) pg_malloc(ntups * sizeof(ExtensionMemberId));
-	nextmembers = 0;
-
 	/*
-	 * Accumulate data into extmembers[].
-	 *
 	 * Since we ordered the SELECT by referenced ID, we can expect that
 	 * multiple entries for the same extension will appear together; this
 	 * saves on searches.
@@ -19250,15 +19247,10 @@ getExtensionMembership(Archive *fout, ExtensionInfo extinfo[],
 			continue;
 		}
 
-		extmembers[nextmembers].catId = objId;
-		extmembers[nextmembers].ext = ext;
-		nextmembers++;
+		recordExtensionMembership(objId, ext);
 	}
 
 	PQclear(res);
-
-	/* Remember the data for use later */
-	setExtensionMembership(extmembers, nextmembers);
 
 	destroyPQExpBuffer(query);
 }

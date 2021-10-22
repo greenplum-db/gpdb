@@ -697,27 +697,6 @@ typedef struct _SubscriptionInfo
 } SubscriptionInfo;
 
 /*
- * We build an array of these with an entry for each object that is an
- * extension member according to pg_depend.
- */
-typedef struct _extensionMemberId
-{
-	CatalogId	catId;			/* tableoid+oid of some member object */
-	ExtensionInfo *ext;			/* owning extension */
-} ExtensionMemberId;
-
-/* global decls */
-extern bool force_quotes;		/* double-quotes for identifiers flag */
-
-/* placeholders for comment starting and ending delimiters */
-extern char g_comment_start[10];
-extern char g_comment_end[10];
-
-extern char g_opaque_type[10];	/* name for the opaque type */
-
-extern const char *EXT_PARTITION_NAME_POSTFIX;
-
-/*
  *	common utility functions
  */
 
@@ -742,7 +721,7 @@ extern NamespaceInfo *findNamespaceByOid(Oid oid);
 extern ExtensionInfo *findExtensionByOid(Oid oid);
 extern PublicationInfo *findPublicationByOid(Oid oid);
 
-extern void setExtensionMembership(ExtensionMemberId *extmems, int nextmems);
+extern void recordExtensionMembership(CatalogId catId, ExtensionInfo *ext);
 extern ExtensionInfo *findOwningExtension(CatalogId catalogId);
 
 extern void parseOidArray(const char *str, Oid *array, int arraysize);
