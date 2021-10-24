@@ -285,6 +285,8 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 		write_msg(NULL, "reading rewrite rules\n");
 	getRules(fout, &numRules);
 
+	free(inhinfo);				/* not needed any longer */
+
 	*numTablesPtr = numTables;
 	return tblinfo;
 }

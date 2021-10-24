@@ -9466,6 +9466,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	   *funcsig;		/* identity signature */
 	char	   *funcfullsig = NULL;		/* full signature */
 	char	   *funcsig_tag;
+	char	   *qual_funcsig;
 	char	   *proretset;
 	char	   *prosrc;
 	char	   *probin;
@@ -9625,11 +9626,11 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		}
 	}
 
-	funcsig_tag = format_function_signature(fout, finfo, false);
+	qual_funcsig = psprintf("%s.%s",
+							fmtId(finfo->dobj.namespace->dobj.name),
+							funcsig);
 
-	appendPQExpBuffer(delqry, "DROP FUNCTION %s.%s;\n",
-					  fmtId(finfo->dobj.namespace->dobj.name),
-					  funcsig);
+	appendPQExpBuffer(delqry, "DROP FUNCTION %s;\n", qual_funcsig);
 
 	appendPQExpBuffer(q, "CREATE FUNCTION %s.%s ",
 					  fmtId(finfo->dobj.namespace->dobj.name),
@@ -9829,6 +9830,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	if (funcfullsig)
 		free(funcfullsig);
 	free(funcsig_tag);
+	free(qual_funcsig);
 	if (allargtypes)
 		free(allargtypes);
 	if (argmodes)
@@ -11988,6 +11990,8 @@ dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo)
 	dumpComment(fout, "SERVER", qsrvname,
 				NULL, srvinfo->rolname,
 				srvinfo->dobj.catId, 0, srvinfo->dobj.dumpId);
+
+	PQclear(res);
 
 	free(qsrvname);
 
