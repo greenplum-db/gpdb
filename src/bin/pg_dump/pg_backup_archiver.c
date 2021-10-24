@@ -3508,6 +3508,8 @@ _selectTableAccessMethod(ArchiveHandle *AH, const char *tableam)
 
 	destroyPQExpBuffer(cmd);
 
+	if (AH->currTableAm)
+		free(AH->currTableAm);
 	AH->currTableAm = pg_strdup(want);
 }
 
