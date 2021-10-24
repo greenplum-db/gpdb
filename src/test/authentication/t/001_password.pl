@@ -8,8 +8,8 @@
 
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More;
 if ($windows_os)
 {
@@ -61,7 +61,7 @@ sub test_role
 }
 
 # Initialize primary node
-my $node = PostgresNode->new('primary');
+my $node = PostgreSQL::Test::Cluster->new('primary');
 $node->init;
 $node->start;
 
@@ -97,7 +97,7 @@ test_role($node, 'scram_role', 'md5', 0);
 test_role($node, 'md5_role',   'md5', 0);
 
 # Test .pgpass processing; but use a temp file, don't overwrite the real one!
-my $pgpassfile = "${TestLib::tmp_check}/pgpass";
+my $pgpassfile = "${PostgreSQL::Test::Utils::tmp_check}/pgpass";
 
 delete $ENV{"PGPASSWORD"};
 $ENV{"PGPASSFILE"} = $pgpassfile;

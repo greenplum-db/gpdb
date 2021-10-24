@@ -28,8 +28,8 @@ package SSLServer;
 
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use File::Basename;
 use File::Copy;
 use Test::More;

@@ -6,8 +6,8 @@ use strict;
 use warnings;
 
 use Config;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 
 use Test::More tests => 3;
 
@@ -16,10 +16,10 @@ my ($node, $result);
 #
 # Test set-up
 #
-$node = PostgresNode->new('CIC_test');
+$node = PostgreSQL::Test::Cluster->new('CIC_test');
 $node->init;
 $node->append_conf('postgresql.conf',
-	'lock_timeout = ' . (1000 * $TestLib::timeout_default));
+	'lock_timeout = ' . (1000 * $PostgreSQL::Test::Utils::timeout_default));
 $node->start;
 $node->safe_psql('postgres', q(CREATE EXTENSION amcheck));
 $node->safe_psql('postgres', q(CREATE TABLE tbl(i int)));

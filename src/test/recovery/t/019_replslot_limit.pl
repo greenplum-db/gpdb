@@ -4,8 +4,8 @@
 use strict;
 use warnings;
 
-use TestLib;
-use PostgresNode;
+use PostgreSQL::Test::Utils;
+use PostgreSQL::Test::Cluster;
 
 use File::Path qw(rmtree);
 use Test::More tests => 16;
@@ -14,7 +14,7 @@ use Time::HiRes qw(usleep);
 $ENV{PGDATABASE} = 'postgres';
 
 # Initialize primary node, setting wal-segsize to 1MB
-my $node_primary = PostgresNode->new('primary');
+my $node_primary = PostgreSQL::Test::Cluster->new('primary');
 $node_primary->init(allows_streaming => 1, extra => ['--wal-segsize=1']);
 $node_primary->append_conf('postgresql.conf', qq(
 min_wal_size = 2MB
@@ -34,7 +34,7 @@ my $backup_name = 'my_backup';
 $node_primary->backup($backup_name);
 
 # Create a standby linking to it using the replication slot
-my $node_standby = PostgresNode->new('standby_1');
+my $node_standby = PostgreSQL::Test::Cluster->new('standby_1');
 $node_standby->init_from_backup($node_primary, $backup_name, has_streaming => 1);
 $node_standby->append_conf('postgresql.conf', "primary_slot_name = 'rep1'");
 
@@ -250,7 +250,7 @@ ok($failed, 'check that replication has been broken');
 $node_primary->stop('immediate');
 $node_standby->stop('immediate');
 
-my $node_primary2 = PostgresNode->new('primary2');
+my $node_primary2 = PostgreSQL::Test::Cluster->new('primary2');
 # Greenplum: explicitly set --wal-segsize=16, otherwise test will fail
 # with `"min_wal_size" must be at least twice "wal_segment_size"`` as
 # Greenplum's default wal_segment_size is 64 MB
@@ -274,7 +274,7 @@ max_slot_wal_keep_size = 0
 ));
 $node_primary2->start;
 
-$node_standby = PostgresNode->new('standby_2');
+$node_standby = PostgreSQL::Test::Cluster->new('standby_2');
 $node_standby->init_from_backup($node_primary2, $backup_name,
 	has_streaming => 1);
 $node_standby->append_conf('postgresql.conf', "primary_slot_name = 'rep1'");
@@ -320,7 +320,7 @@ sub find_in_log
 	my ($node, $pat, $off) = @_;
 
 	$off = 0 unless defined $off;
-	my $log = TestLib::slurp_file($node->logfile);
+	my $log = PostgreSQL::Test::Utils::slurp_file($node->logfile);
 	return 0 if (length($log) <= $off);
 
 	$log = substr($log, $off);

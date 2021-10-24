@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use File::Path qw(rmtree);
 use Cwd qw(abs_path realpath);
-use TestLib;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 13;
 
 use FindBin;
@@ -14,11 +14,11 @@ sub run_test
 {
 	my $test_mode = shift;
 
-	my $tablespace_location = "${TestLib::tmp_check}/ts";
+	my $tablespace_location = "${PostgreSQL::Test::Utils::tmp_check}/ts";
 
 	rmtree($tablespace_location);
 	mkdir $tablespace_location;
-	
+
 	RewindTest::setup_cluster($test_mode);
 	RewindTest::start_primary();
 	RewindTest::create_standby($test_mode);

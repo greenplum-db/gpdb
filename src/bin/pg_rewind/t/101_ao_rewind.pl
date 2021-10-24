@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use TestLib;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 17;
 
 use FindBin;
@@ -158,7 +158,7 @@ in primary, before promotion
 		qq(10001
 ),
 		'tail-copy');
-	
+
 	# Permissions on PGDATA should be default
   SKIP:
 	{

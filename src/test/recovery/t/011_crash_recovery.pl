@@ -3,8 +3,8 @@
 #
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More;
 use Config;
 if ($Config{osname} eq 'MSWin32')
@@ -18,7 +18,7 @@ else
 	plan tests => 3;
 }
 
-my $node = PostgresNode->new('primary');
+my $node = PostgreSQL::Test::Cluster->new('primary');
 $node->init(allows_streaming => 1);
 $node->start;
 

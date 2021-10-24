@@ -1,13 +1,13 @@
 # Check if backend stopped after client disconnection
-# FIXME: this test should really be among the src/test/modules tests. 
+# FIXME: this test should really be among the src/test/modules tests.
 # However because currently modules are not recursed into for installcheck,
-# we put this test here for now in order to have it running in pipeline. 
+# we put this test here for now in order to have it running in pipeline.
 # We should move it to modules/connection like 6X once we could run modules tests
 # in pipeline (either let installcheck recurse into modules, or run modules separately).
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More;
 use File::Copy;
 
@@ -31,7 +31,7 @@ my $set_guc_off = q{
 };
 my ($pid, $timed_out);
 
-my $node = PostgresNode->new('node');
+my $node = PostgreSQL::Test::Cluster->new('node');
 $node->init;
 $node->start;
 
@@ -40,7 +40,7 @@ $node->start;
 #########################################################
 
 # Set GUC options, get backend pid and run a long time query
-# Leverage the timeout argument to psql to cause client 
+# Leverage the timeout argument to psql to cause client
 # termination without causing immediate backend termination
 $node->psql('postgres', "$set_guc_on SELECT pg_backend_pid(); $long_query",
             stdout => \$pid, timeout => 1, timed_out => \$timed_out);

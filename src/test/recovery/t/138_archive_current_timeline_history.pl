@@ -14,14 +14,14 @@
 
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 15;
 
 $ENV{PGDATABASE} = 'postgres';
 
 # Initialize primary node
-my $node_primary = PostgresNode->new('primary');
+my $node_primary = PostgreSQL::Test::Cluster->new('primary');
 $node_primary->init(allows_streaming => 1);
 $node_primary->start;
 
@@ -30,7 +30,7 @@ my $backup_name = 'my_backup_1';
 $node_primary->backup($backup_name);
 
 # Create a standby that will be promoted onto timeline 2
-my $node_primary_tli2 = PostgresNode->new('primary_tli2');
+my $node_primary_tli2 = PostgreSQL::Test::Cluster->new('primary_tli2');
 $node_primary_tli2->init_from_backup($node_primary, $backup_name,
 	has_streaming => 1);
 $node_primary_tli2->start;
@@ -110,7 +110,7 @@ $node_primary_tli2->teardown_node;
 # timeline id, startup will fail if the timeline history file is not
 # retrievable from the archive but will not fail if we use 'current'
 # or 'latest'.
-my $node_standby_explicit = PostgresNode->new('standby_explicit');
+my $node_standby_explicit = PostgreSQL::Test::Cluster->new('standby_explicit');
 $node_standby_explicit->init_from_backup($node_primary_tli2, $backup_name,
 	has_restoring => 1, standby => 0);
 $node_standby_explicit->append_conf('postgresql.conf', qq{
@@ -130,7 +130,7 @@ $node_standby_explicit->teardown_node;
 # on the same timeline.  If the timeline history file was not
 # retrievable from the archive, the standby would just log a warning
 # and proceed normally which is not desirable.
-my $node_standby_current = PostgresNode->new('standby_current');
+my $node_standby_current = PostgreSQL::Test::Cluster->new('standby_current');
 $node_standby_current->init_from_backup($node_primary_tli2, $backup_name,
 	has_restoring => 1, standby => 0);
 $node_standby_current->append_conf('postgresql.conf', qq{
@@ -150,7 +150,7 @@ $node_standby_current->teardown_node;
 # onto the same timeline.  If the timeline history file was not
 # retrievable from the archive, the standby would just log a warning
 # and proceed normally which is not desirable.
-my $node_standby_latest = PostgresNode->new('standby_latest');
+my $node_standby_latest = PostgreSQL::Test::Cluster->new('standby_latest');
 $node_standby_latest->init_from_backup($node_primary_tli2, $backup_name,
 	has_restoring => 1, standby => 0);
 $node_standby_latest->append_conf('postgresql.conf', qq{
@@ -169,7 +169,7 @@ standby_sanity_check($node_standby_latest, $restore_point_lsn);
 # history file was not retrievable from the standby node, the cascade
 # standby node would continuously loop trying to re-request the
 # timeline history file and always fail.
-my $node_cascade = PostgresNode->new('cascade');
+my $node_cascade = PostgreSQL::Test::Cluster->new('cascade');
 $node_cascade->init_from_backup($node_primary_tli2, $backup_name,
 	standby => 1);
 $node_cascade->enable_streaming($node_standby_latest);

@@ -2,8 +2,8 @@
 use strict;
 use warnings;
 
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 
 # GPDB: Effectively disable this TAP test. We cannot run PREPARE
 # TRANSACTION in utility-mode. We need at least 1 test so create a
@@ -14,7 +14,7 @@ is(-1, -1, "Disable this TAP test");
 exit;
 
 # Setup primary node
-my $node_primary = PostgresNode->new("primary");
+my $node_primary = PostgreSQL::Test::Cluster->new("primary");
 $node_primary->init(allows_streaming => 1);
 $node_primary->append_conf(
 	'postgresql.conf', qq(
@@ -26,7 +26,7 @@ $node_primary->backup('primary_backup');
 $node_primary->psql('postgres', "CREATE TABLE t_012_tbl (id int)");
 
 # Setup standby node
-my $node_standby = PostgresNode->new('standby');
+my $node_standby = PostgreSQL::Test::Cluster->new('standby');
 $node_standby->init_from_backup($node_primary, 'primary_backup',
 	has_streaming => 1);
 $node_standby->start;

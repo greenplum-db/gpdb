@@ -1238,7 +1238,7 @@ initialize_environment(void)
 		 * won't mess things up.)  Also, set PGPORT to the temp port, and set
 		 * PGHOST depending on whether we are using TCP or Unix sockets.
 		 *
-		 * This list should be kept in sync with TestLib.pm.
+		 * This list should be kept in sync with PostgreSQL/Test/Utils.pm.
 		 */
 		/* PGCLIENTENCODING, see above */
 		unsetenv("PGCONNECT_TIMEOUT");

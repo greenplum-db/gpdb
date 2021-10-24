@@ -3,8 +3,8 @@
 
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 63;
 
 
@@ -82,7 +82,7 @@ sub check_relation_corruption
 }
 
 # Initialize node with checksums disabled.
-my $node = PostgresNode->new('node_checksum');
+my $node = PostgreSQL::Test::Cluster->new('node_checksum');
 $node->init();
 my $pgdata = $node->data_dir;
 

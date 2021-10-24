@@ -1,8 +1,8 @@
 # Tests for various bugs found over time
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 5;
 
 # Bug #15114
@@ -16,11 +16,11 @@ use Test::More tests => 5;
 # fix was to avoid the constant expressions simplification in
 # RelationGetIndexAttrBitmap(), so it's safe to call in more contexts.
 
-my $node_publisher = PostgresNode->new('publisher');
+my $node_publisher = PostgreSQL::Test::Cluster->new('publisher');
 $node_publisher->init(allows_streaming => 'logical');
 $node_publisher->start;
 
-my $node_subscriber = PostgresNode->new('subscriber');
+my $node_subscriber = PostgreSQL::Test::Cluster->new('subscriber');
 $node_subscriber->init(allows_streaming => 'logical');
 $node_subscriber->start;
 
@@ -78,7 +78,7 @@ $node_subscriber->stop('fast');
 # identity set before accepting updates.  If it did not it would cause
 # an error when an update was attempted.
 
-$node_publisher = PostgresNode->new('publisher2');
+$node_publisher = PostgreSQL::Test::Cluster->new('publisher2');
 $node_publisher->init(allows_streaming => 'logical');
 $node_publisher->start;
 
@@ -107,11 +107,11 @@ $node_publisher->stop('fast');
 # target table's relcache was not being invalidated. This leads to skipping
 # UPDATE/DELETE operations during apply on the subscriber side as the columns
 # required to search corresponding rows won't get logged.
-$node_publisher = PostgresNode->new('publisher3');
+$node_publisher = PostgreSQL::Test::Cluster->new('publisher3');
 $node_publisher->init(allows_streaming => 'logical');
 $node_publisher->start;
 
-$node_subscriber = PostgresNode->new('subscriber3');
+$node_subscriber = PostgreSQL::Test::Cluster->new('subscriber3');
 $node_subscriber->init(allows_streaming => 'logical');
 $node_subscriber->start;
 

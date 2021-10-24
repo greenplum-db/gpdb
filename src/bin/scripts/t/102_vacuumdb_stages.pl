@@ -1,10 +1,10 @@
 use strict;
 use warnings;
 
-use PostgresNode;
+use PostgreSQL::Test::Cluster;
 use Test::More tests => 4;
 
-my $node = PostgresNode->new('main');
+my $node = PostgreSQL::Test::Cluster->new('main');
 $node->init;
 $node->start;
 

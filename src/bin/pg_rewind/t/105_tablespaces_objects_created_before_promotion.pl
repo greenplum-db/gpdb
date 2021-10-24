@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use File::Path qw(rmtree);
 use Cwd qw(abs_path realpath);
-use TestLib;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 15;
 
 use FindBin;
@@ -14,11 +14,11 @@ sub run_test
 {
 	my $test_mode = shift;
 
-	my $tablespace_location = "${TestLib::tmp_check}/ts";
+	my $tablespace_location = "${PostgreSQL::Test::Utils::tmp_check}/ts";
 
 	rmtree($tablespace_location);
 	mkdir $tablespace_location;
-	
+
 	RewindTest::setup_cluster($test_mode);
 	RewindTest::start_primary();
 	RewindTest::create_standby($test_mode);
@@ -34,7 +34,7 @@ sub run_test
 	primary_psql("CHECKPOINT");
 
 	RewindTest::promote_standby();
-
+	
 	standby_psql("CREATE TABLE t_heap_after_promotion(i int) TABLESPACE ts");
 	standby_psql("INSERT INTO t_heap_after_promotion VALUES(generate_series(1, 100))");
 	standby_psql("INSERT INTO t_heap VALUES(generate_series(1, 100))");
@@ -62,7 +62,7 @@ sub run_test
 	# correctly
 	$node_primary->start;
 	RewindTest::promote_primary();
-	
+
 	check_query(
 		'SELECT count(*) from t_heap',
 		qq(200
@@ -87,7 +87,7 @@ sub run_test
 		qq(100
 ),
 		't_heap_after_promotion table content');
-	
+
 	RewindTest::clean_rewind_test();
 	return;
 }

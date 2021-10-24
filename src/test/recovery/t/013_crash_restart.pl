@@ -10,8 +10,8 @@
 #
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More;
 use Config;
 use Time::HiRes qw(usleep);
@@ -23,13 +23,13 @@ plan tests => 18;
 # instance being driven by us, add a timeout high enough that it
 # should never trigger even on very slow machines, unless something
 # is really wrong.
-my $psql_timeout = IPC::Run::timer($TestLib::timeout_default);
+my $psql_timeout = IPC::Run::timer($PostgreSQL::Test::Utils::timeout_default);
 
-my $node = PostgresNode->new('primary');
+my $node = PostgreSQL::Test::Cluster->new('primary');
 $node->init(allows_streaming => 1);
 $node->start();
 
-# by default PostgresNode doesn't doesn't restart after a crash
+# by default PostgreSQL::Test::Cluster doesn't doesn't restart after a crash
 $node->safe_psql(
 	'postgres',
 	q[ALTER SYSTEM SET restart_after_crash = 1;
@@ -103,7 +103,7 @@ $monitor_stdout = '';
 $monitor_stderr = '';
 
 # kill once with QUIT - we expect psql to exit, while emitting error message first
-my $ret = TestLib::system_log('pg_ctl', 'kill', 'QUIT', $pid);
+my $ret = PostgreSQL::Test::Utils::system_log('pg_ctl', 'kill', 'QUIT', $pid);
 
 # Exactly process should have been alive to be killed
 is($ret, 0, "killed process with SIGQUIT");
@@ -184,7 +184,7 @@ $monitor_stderr = '';
 
 # kill with SIGKILL this time - we expect the backend to exit, without
 # being able to emit an error message
-$ret = TestLib::system_log('pg_ctl', 'kill', 'KILL', $pid);
+$ret = PostgreSQL::Test::Utils::system_log('pg_ctl', 'kill', 'KILL', $pid);
 is($ret, 0, "killed process with KILL");
 
 # Check that psql sees the server as being terminated. No WARNING,

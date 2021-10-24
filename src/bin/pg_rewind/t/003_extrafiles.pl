@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use TestLib;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 5;
 
 use File::Find;

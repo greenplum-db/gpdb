@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use TestLib;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 7;
 
 use FindBin;

@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use TestLib;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 20;
 
 program_help_ok('pg_config');

@@ -3,12 +3,12 @@
 use strict;
 use warnings;
 
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 1;
 
 # Initialize node to backup
-my $node_to_backup = PostgresNode->new('to_backup');
+my $node_to_backup = PostgreSQL::Test::Cluster->new('to_backup');
 $node_to_backup->init(
 	has_archiving    => 1,
 	allows_streaming => 1);
@@ -38,7 +38,7 @@ $node_to_backup->safe_psql('postgres',
 	"SELECT pg_switch_wal();");
 
 # Create new node from from backup
-my $node_restored = PostgresNode->new('restored');
+my $node_restored = PostgreSQL::Test::Cluster->new('restored');
 my $delay         = 5;
 $node_restored->init_from_backup($node_to_backup, $backup_name,
 	standby => 1, has_restoring => 1);
