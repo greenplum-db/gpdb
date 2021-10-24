@@ -836,27 +836,6 @@ execute_extension_script(Node *stmt,
 			(nodeTag(stmt) == T_CreateExtensionStmt || nodeTag(stmt) == T_AlterExtensionStmt) &&
 			is_begin_state(stmt));
 
-	/*
-	 * Enforce superuser-ness if appropriate.  We postpone this check until
-	 * here so that the flag is correctly associated with the right script(s)
-	 * if it's set in secondary control files.
-	 */
-	if (control->superuser && !superuser())
-	{
-		if (from_version == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("permission denied to create extension \"%s\"",
-							control->name),
-					 errhint("Must be superuser to create this extension.")));
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("permission denied to update extension \"%s\"",
-							control->name),
-					 errhint("Must be superuser to update this extension.")));
-	}
-
 	filename = get_extension_script_filename(control, from_version, version);
 
 	/*
@@ -869,41 +848,6 @@ execute_extension_script(Node *stmt,
 	 * takes care of undoing the setting on error.
 	 */
 	save_nestlevel = NewGUCNestLevel();
-
-	if (client_min_messages < WARNING)
-		(void) set_config_option("client_min_messages", "warning",
-								 PGC_USERSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true, 0, false);
-	if (log_min_messages < WARNING)
-		(void) set_config_option("log_min_messages", "warning",
-								 PGC_SUSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true, 0, false);
-
-	/*
-	 * Set up the search path to contain the target schema, then the schemas
-	 * of any prerequisite extensions, and nothing else.  In particular this
-	 * makes the target schema be the default creation target namespace.
-	 *
-	 * Note: it might look tempting to use PushOverrideSearchPath for this,
-	 * but we cannot do that.  We have to actually set the search_path GUC in
-	 * case the extension script examines or changes it.  In any case, the
-	 * GUC_ACTION_SAVE method is just as convenient.
-	 */
-	initStringInfo(&pathbuf);
-	appendStringInfoString(&pathbuf, quote_identifier(schemaName));
-	foreach(lc, requiredSchemas)
-	{
-		Oid			reqschema = lfirst_oid(lc);
-		char	   *reqname = get_namespace_name(reqschema);
-
-		if (reqname)
-			appendStringInfo(&pathbuf, ", %s", quote_identifier(reqname));
-	}
-
-	(void) set_config_option("search_path", pathbuf.data,
-							 PGC_USERSET, PGC_S_SESSION,
-							 GUC_ACTION_SAVE, true, 0, false);
-
 	/*
 	 * Set creating_extension and related variables so that
 	 * recordDependencyOnCurrentExtension and other functions do the right
@@ -913,6 +857,66 @@ execute_extension_script(Node *stmt,
 	CurrentExtensionObject = extensionOid;
 	PG_TRY();
 	{
+		/*
+		 * Enforce superuser-ness if appropriate.  We postpone this check until
+		 * here so that the flag is correctly associated with the right script(s)
+		 * if it's set in secondary control files.
+		 */
+		/* MPP-31854 and issue:12713 
+ 		 * The errport below should be included in the try{}catch block, otherwise
+ 		 * it will cause the creating_extension in QE be true and false in QD which
+ 		 * may cause the table created by the QEs cannot be removed later.	*/
+		if (control->superuser && !superuser())
+		{
+			if (from_version == NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("permission denied to create extension \"%s\"",
+								control->name),
+						 errhint("Must be superuser to create this extension.")));
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("permission denied to update extension \"%s\"",
+								control->name),
+						 errhint("Must be superuser to update this extension.")));
+		}
+
+
+		if (client_min_messages < WARNING)
+			(void) set_config_option("client_min_messages", "warning",
+									 PGC_USERSET, PGC_S_SESSION,
+									 GUC_ACTION_SAVE, true, 0, false);
+		if (log_min_messages < WARNING)
+			(void) set_config_option("log_min_messages", "warning",
+									 PGC_SUSET, PGC_S_SESSION,
+									 GUC_ACTION_SAVE, true, 0, false);
+
+		/*
+		 * Set up the search path to contain the target schema, then the schemas
+		 * of any prerequisite extensions, and nothing else.  In particular this
+		 * makes the target schema be the default creation target namespace.
+		 *
+		 * Note: it might look tempting to use PushOverrideSearchPath for this,
+		 * but we cannot do that.  We have to actually set the search_path GUC in
+		 * case the extension script examines or changes it.  In any case, the
+		 * GUC_ACTION_SAVE method is just as convenient.
+		 */
+		initStringInfo(&pathbuf);
+		appendStringInfoString(&pathbuf, quote_identifier(schemaName));
+		foreach(lc, requiredSchemas)
+		{
+			Oid			reqschema = lfirst_oid(lc);
+			char	   *reqname = get_namespace_name(reqschema);
+
+			if (reqname)
+				appendStringInfo(&pathbuf, ", %s", quote_identifier(reqname));
+		}
+
+		(void) set_config_option("search_path", pathbuf.data,
+								 PGC_USERSET, PGC_S_SESSION,
+								 GUC_ACTION_SAVE, true, 0, false);
+
 		char	   *c_sql = read_extension_script_file(control, filename);
 		Datum		t_sql;
 
