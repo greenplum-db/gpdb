@@ -4831,12 +4831,16 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 							Oid parent_oid = get_partition_parent(RelationGetRelid(rel));
 							/* Use AccessShareLock to allow set distributed in parallel */
 							Relation parent_rel = relation_open(parent_oid, AccessShareLock);
-							if (!GpPolicyEqual(policy, parent_rel->rd_cdbpolicy))
+							if (!GpPolicyEqualByName(RelationGetDescr(rel), policy,
+													 RelationGetDescr(parent_rel), parent_rel->rd_cdbpolicy))
+							{
 								ereport(ERROR,
 									(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 									 errmsg("can't set the distribution policy of \"%s\"",
 											RelationGetRelationName(rel)),
 									 errhint("Distribution policy of a partition can only be the same as its parent's.")));
+							}
+							relation_close(parent_rel, NoLock);
 						}
 
 						if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE &&
