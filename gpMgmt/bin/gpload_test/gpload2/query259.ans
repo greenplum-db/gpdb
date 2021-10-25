@@ -1,0 +1,9 @@
+2021-10-25 07:07:31|INFO|gpload session started 2021-10-25 07:07:31
+2021-10-25 07:07:31|INFO|setting schema 'public' for table 'texttable2'
+2021-10-25 07:07:31|INFO|started gpfdist -p 8081 -P 8082 -f "/tmp/build/e18b2f02/gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-10-25 07:07:31|INFO|did not find an external table to reuse. creating ext_gpload_reusable_38cea190_3562_11ec_9d95_92812239cffc
+2021-10-25 07:07:31|ERROR|unexpected error -- backtrace written to log file
+2021-10-25 07:07:31|INFO|rows Inserted          = 0
+2021-10-25 07:07:31|INFO|rows Updated           = 0
+2021-10-25 07:07:31|INFO|data formatting errors = 0
+2021-10-25 07:07:31|INFO|gpload failed
