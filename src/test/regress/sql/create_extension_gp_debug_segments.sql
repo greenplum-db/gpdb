@@ -34,3 +34,4 @@ create extension file_fdw;
 create table t_12713(name text);
 \c
 drop table t_12713;
+drop user normal_user_12713;
