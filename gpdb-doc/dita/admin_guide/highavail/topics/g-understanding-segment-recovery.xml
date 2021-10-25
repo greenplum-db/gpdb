@@ -5,7 +5,7 @@
   <title>Understanding Segment Recovery</title>
   <body>
     <p>This topic provides background information on concepts and principles of segment recovery. If
-      you have down segments and need immediate help recovering them see the instructions in <xref
+      you have down segments and need immediate help recovering them, see the instructions in <xref
         href="g-recovering-from-segment-failures.xml"/>. For information on how Greenplum Database
       detects that segments are down and an explanation of the Fault Tolerance Server (FTS) that
       manages down segment tracking, see <xref href="g-detecting-a-failed-segment.xml"/>.</p>
@@ -56,8 +56,9 @@
         <li>The user runs <codeph>gprecoverseg</codeph> to bring back the (formerly primary) mirror
           segment.</li>
         <li>The synching process occurs: the mirror comes into sync with its primary via WAL
-          synching. Users can check the state of this synching with <codeph>gpstate
-          -e</codeph>.</li>
+          synching. Users can check the state of this synching with <codeph>gpstate -e</codeph>. </li>
+        <li>Greenplum Database marks the segments as up (<codeph>u</codeph>) in the
+            <codeph>gp_segment_configuration</codeph> table.</li>
         <li>If segments are not in their preferred roles, user runs <codeph>gprecoverseg -r</codeph>
           to restore them to their preferred roles. </li>
       </ol>
@@ -141,7 +142,9 @@
         instances. </p>
       <p>Once <codeph>gprecoverseg</codeph> has completed, the segments are in the states shown in
         the following table where the primary-mirror segment pair is up with the primary and mirror
-        roles reversed from their preferred roles.</p>
+        roles reversed from their preferred roles. <note>There might be a lag between when
+            <codeph>gprecoverseg</codeph> completes and when the segment status is set to
+            <codeph>u</codeph> (up).</note></p>
       <table frame="all" rowsep="1" colsep="1" id="table_idk_jst_fgb">
         <tgroup cols="5">
           <colspec colname="c1" colnum="1" colwidth="1.0*"/>
