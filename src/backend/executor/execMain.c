@@ -632,8 +632,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		 * slice0 is the root slice of the main plan if the query
 		 * needs to be dispatched.
 		 */
-		if (estate->es_sliceTable && estate->es_sliceTable->slices)
-			slice0 = (Slice *)list_nth(estate->es_sliceTable->slices, 0);
+		slice0 = getCurrentSlice(estate, 0);
 		/*
 		 * if in dispatch mode, time to serialize plan and query
 		 * trees, and fire off cdb_exec command to each of the qexecs
