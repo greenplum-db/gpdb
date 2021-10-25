@@ -73,6 +73,7 @@ extern Gang *AllocateGang(struct CdbDispatcherState *ds, enum GangType type, Lis
 extern void RecycleGang(Gang *gp, bool forceDestroy);
 extern void DisconnectAndDestroyAllGangs(bool resetSession);
 extern void DisconnectAndDestroyUnusedQEs(void);
+extern void DisconnectAndDestroyAllGangsOnly(void);
 
 extern void GpDropTempTables(void);
 extern void ResetAllGangs(void);

@@ -990,7 +990,7 @@ execute_extension_script(Node *stmt,
 			 * 
 			 * So we simply destroy all QEs here to implement the clear logic.
 			 */
-			DisconnectAndDestroyAllGangs(false);
+			DisconnectAndDestroyAllGangsOnly();
 		}
 		PG_RE_THROW();
 	}

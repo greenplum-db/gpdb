@@ -689,6 +689,13 @@ getCdbProcessesForQD(int isPrimary)
 	return list;
 }
 
+/*
+ * This function might have risk if there is named portal and
+ * the invoke chain is before AtAbort_Portals because this
+ * function will remove the MemoryContext CdbComponentsContext,
+ * but later clean up named portals will try to palloc under
+ * the MemoryContext.
+ */
 void
 DisconnectAndDestroyAllGangs(bool resetSession)
 {
@@ -714,6 +721,33 @@ DisconnectAndDestroyAllGangs(bool resetSession)
 		resetSessionForPrimaryGangLoss();
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyAllGangs done");
+}
+
+/*
+ * Similar as DisconnectAndDestroyAllGangs, but does not touch
+ * MemoryContext CdbComponentsContext. Safe to call this if
+ * there might be some namedPortal exists.
+ */
+void
+DisconnectAndDestroyAllGangsOnly(void)
+{
+	if (Gp_role == GP_ROLE_UTILITY)
+		return;
+
+	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyAllGangsOnly");
+
+	/* Destroy CurrentGangCreating before GangContext is reset */
+	if (CurrentGangCreating != NULL)
+	{
+		RecycleGang(CurrentGangCreating, true);
+		CurrentGangCreating = NULL;
+	}
+
+	/* cleanup all out bound dispatcher state */
+	CdbResourceOwnerWalker(CurrentResourceOwner, cdbdisp_cleanupDispatcherHandle);
+	cdbcomponent_cleanupIdleQEs(true);
+
+	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyAllGangsOnly done");
 }
 
 /*

@@ -683,6 +683,11 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 
 	CdbDispatchCopyEnd(c);
 
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("destroy_gang_namedportal_risk_copy") == FaultInjectorTypeSkip)
+		num_bad_connections = 1;
+#endif
+
 	/* If lost contact with segment db, try to reconnect. */
 	if (num_bad_connections > 0)
 	{
@@ -690,7 +695,6 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 		elog(LOG, "COPY signals FTS to probe segments");
 
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
-		DisconnectAndDestroyAllGangs(true);
 
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

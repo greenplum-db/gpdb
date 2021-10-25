@@ -93,9 +93,16 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 		{
 			if (FtsIsSegmentDown(newGangDefinition->db_descriptors[i]->segment_database_info))
 			{
-				DisconnectAndDestroyAllGangs(true);
+				DisconnectAndDestroyAllGangsOnly();
 				elog(ERROR, "gang was lost due to cluster reconfiguration");
 			}
+#ifdef FAULT_INJECTOR
+			if (SIMPLE_FAULT_INJECTOR("destroy_gang_namedportal_risk_creategang") == FaultInjectorTypeSkip)
+			{
+				DisconnectAndDestroyAllGangsOnly();
+				elog(ERROR, "gang was lost due to cluster reconfiguration");
+			}
+#endif
 		}
 	}
 	totalSegs = getgpsegmentCount();

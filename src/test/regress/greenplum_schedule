@@ -287,6 +287,5 @@ test: gangsize gang_reuse
 test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
-test: create_extension_gp_debug_segments
-
+test: cleanup_gang_risk
 # end of tests
