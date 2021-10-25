@@ -24,13 +24,13 @@ select gp_inject_fault('create_function_fail', 'reset', 2);
 --5. try to drop the table
 
 --start_ignore
-drop table if exists t;
-drop user if exists normal_user;
-create user normal_user;
+drop table if exists t_12713;
+drop user if exists normal_user_12713;
+create user normal_user_12713;
 --end_ignore
 
-set role normal_user;
+set role normal_user_12713;
 create extension file_fdw;
-create table t(name text);
+create table t_12713(name text);
 \c
-drop table t;
+drop table t_12713;
