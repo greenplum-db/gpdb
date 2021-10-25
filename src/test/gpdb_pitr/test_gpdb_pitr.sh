@@ -34,10 +34,7 @@ REPLICA_PRIMARY1=$TEMP_DIR/replica_p1
 REPLICA_PRIMARY2=$TEMP_DIR/replica_p2
 REPLICA_PRIMARY3=$TEMP_DIR/replica_p3
 
-ARCHIVE_MASTER=$TEMP_DIR/archive_m
-ARCHIVE_PRIMARY1=$TEMP_DIR/archive_p1
-ARCHIVE_PRIMARY2=$TEMP_DIR/archive_p2
-ARCHIVE_PRIMARY3=$TEMP_DIR/archive_p3
+ARCHIVE_PREFIX=$TEMP_DIR/archive_seg
 
 REPLICA_MASTER_DBID=10
 REPLICA_PRIMARY1_DBID=11
@@ -76,13 +73,12 @@ run_test_isolation2()
 # the new settings.
 echo "Setting up WAL Archiving configurations..."
 for segment_role in MASTER PRIMARY1 PRIMARY2 PRIMARY3; do
-  ARCHIVE_VAR=ARCHIVE_$segment_role
   DATADIR_VAR=$segment_role
   echo "wal_level = hot_standby
 archive_mode = on
-archive_command = 'cp %p ${!ARCHIVE_VAR}/%f'" >> ${!DATADIR_VAR}/postgresql.conf
-  mkdir -p ${!ARCHIVE_VAR}
+archive_command = 'cp %p ${ARCHIVE_PREFIX}%c/%f'" >> ${!DATADIR_VAR}/postgresql.conf
 done
+mkdir -p ${ARCHIVE_PREFIX}{-1,0,1,2}
 gpstop -ar -q
 
 # Create the basebackups which will be our replicas for Point-In-Time
@@ -115,10 +111,9 @@ gpstop -a -q
 # mirrors to replicate to.
 echo "Creating recovery.conf files in the replicas and starting them up..."
 for segment_role in MASTER PRIMARY1 PRIMARY2 PRIMARY3; do
-  ARCHIVE_VAR=ARCHIVE_$segment_role
   REPLICA_VAR=REPLICA_$segment_role
   echo "standby_mode = 'on'
-restore_command = 'cp ${!ARCHIVE_VAR}/%f %p'
+restore_command = 'cp ${ARCHIVE_PREFIX}%c/%f %p'
 recovery_target_name = 'test_restore_point'
 primary_conninfo = ''" > ${!REPLICA_VAR}/recovery.conf
   echo "" > ${!REPLICA_VAR}/postgresql.auto.conf

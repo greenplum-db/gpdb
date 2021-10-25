@@ -94,6 +94,8 @@
             <entry colname="col3"/>
             <entry colname="col4">Type of compression used to compress append-optimized tables.
               Valid values are:<ul id="ul_mrr_hwj_f1b">
+                <li><codeph>none</codeph> (no compression)</li>
+                <li><codeph>rle_type</codeph> (run-length encoding compression)</li>
                 <li><codeph>zlib</codeph> (gzip compression)</li>
                 <li><codeph>zstd</codeph> (Zstandard compression)</li>
                 <li otherprops="pivotal"><codeph>quicklz</codeph><sup>1</sup></li>

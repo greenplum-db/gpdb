@@ -170,14 +170,14 @@ newPort|newDataDirectory</codeblock>
         </plentry>
         <plentry>
           <pt>-p <varname>new_recover_host</varname>[,...]</pt>
-          <pd>Specifies a spare host outside of the currently configured Greenplum Database array on
+          <pd>Specifies a new host outside of the currently configured Greenplum Database array on
             which to recover invalid segments.</pd>
-          <pd>The spare host must have the Greenplum Database software installed and configured, and
+          <pd>The new host must have the Greenplum Database software installed and configured, and
             have the same hardware and OS configuration as the current segment hosts (same OS
             version, locales, <codeph>gpadmin</codeph> user account, data directory locations
             created, ssh keys exchanged, number of network interfaces, network interface naming
             convention, and so on). Specifically, the Greenplum Database binaries must be installed,
-            the spare host must be able to connect password-less with all segments including the
+            the new host must be able to connect password-less with all segments including the
             Greenplum master, and any other Greenplum Database specific OS configuration parameters
             must be applied.</pd>
           <pd>
@@ -239,7 +239,7 @@ newPort|newDataDirectory</codeblock>
       <codeblock>$ gpstate -e</codeblock>
       <p>Then, if necessary, rebalance the segments:</p><codeblock>$ gprecoverseg -r</codeblock>
       <p><b>Example 3: Recover Failed Segments to a Separate Host</b></p>
-      <p>Recover any failed segment instances to a newly configured spare segment host:</p>
+      <p>Recover any failed segment instances to a newly configured new segment host:</p>
         <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
     </section>
     <section id="section6">

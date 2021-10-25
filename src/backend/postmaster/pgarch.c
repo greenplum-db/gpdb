@@ -49,6 +49,11 @@
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 
+/*
+ * GPDB specific imports:
+ */
+#include "cdb/cdbvars.h"
+#include "utils/builtins.h"
 
 /* ----------
  * Timer definitions.
@@ -534,6 +539,8 @@ pgarch_archiveXlog(char *xlog)
 	const char *sp;
 	int			rc;
 
+	char		contentid[12];	/* sign, 10 digits and '\0' */
+
 	snprintf(pathname, MAXPGPATH, XLOGDIR "/%s", xlog);
 
 	/*
@@ -560,6 +567,14 @@ pgarch_archiveXlog(char *xlog)
 					/* %f: filename of source file */
 					sp++;
 					strlcpy(dp, xlog, endp - dp);
+					dp += strlen(dp);
+					break;
+				case 'c':
+					/* GPDB: %c: contentId of segment */
+					Assert(GpIdentity.segindex != UNINITIALIZED_GP_IDENTITY_VALUE);
+					sp++;
+					pg_ltoa(GpIdentity.segindex, contentid);
+					strlcpy(dp, contentid, endp - dp);
 					dp += strlen(dp);
 					break;
 				case '%':

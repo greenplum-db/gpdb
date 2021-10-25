@@ -833,3 +833,15 @@ INSERT INTO foo SELECT i%10 FROM generate_series(0, 100) i WHERE i%2 = 0;
 ALTER TABLE foo ALTER COLUMN a SET STATISTICS 5;
 ANALYZE foo;
 SELECT array_length(most_common_vals, 1), array_length(most_common_freqs, 1), array_length(histogram_bounds, 1) FROM pg_stats WHERE tablename = 'foo' AND attname = 'a';
+
+-- analyze in transaction should merge leaves instead of resampling
+drop table if exists foo;
+create table foo (a int, b date) distributed by (a) partition by range(b) (partition "20210101" start ('20210101'::date) end ('20210201'::date), partition "20210201" start ('20210201'::date) end ('20210301'::date), partition "20210301" start ('20210301'::date) end ('20210401'::date));
+insert into foo select a, '20210101'::date+a from (select generate_series(1,80) a) t1;
+analyze verbose foo;
+
+begin;
+truncate foo_1_prt_20210201;
+insert into foo select a, '20210101'::date+a from (select generate_series(31,40) a) t1;
+analyze verbose foo_1_prt_20210201;
+rollback;

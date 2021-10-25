@@ -600,15 +600,6 @@ SET statement_mem='10 MB';</codeblock></p>
         <p>Complete the following tasks on each node in your Greenplum Database cluster to set up
           cgroups for use with resource groups:</p>
         <ol>
-          <li>If you are running the SuSE 11+ operating system on your Greenplum Database cluster
-            nodes, you must enable swap accounting on each node and restart your Greenplum Database
-            cluster. The <codeph>swapaccount</codeph> kernel boot parameter governs the swap
-            accounting setting on SuSE 11+ systems. After setting this boot parameter, you must
-            reboot your systems. For details, refer to the <xref
-              href="https://www.suse.com/releasenotes/x86_64/SUSE-SLES/11-SP2/#fate-310471"
-              format="html" scope="external">Cgroup Swap Control</xref> discussion in the SuSE 11
-            release notes. You must be the superuser or have <codeph>sudo</codeph> access to
-            configure kernel boot parameters and reboot systems. </li>
           <li>Create the Greenplum Database cgroups configuration file
               <codeph>/etc/cgconfig.d/gpdb.conf</codeph>. You must be the superuser or have
               <codeph>sudo</codeph> access to create this file:
@@ -653,10 +644,6 @@ sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
                 <codeblock>sudo yum install libcgroup
 sudo service cgconfig start </codeblock>
               </li>
-              <li> SuSE 11+ systems:
-                <codeblock>sudo zypper install libcgroup-tools
-sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
-              </li>
             </ul>
           </li>
           <li>Identify the <codeph>cgroup</codeph> directory mount point for the node:
@@ -675,11 +662,10 @@ ls -l &lt;cgroup_mount_point&gt;/memory/gpdb</codeblock>
           </li>
           <li>To automatically recreate Greenplum Database required cgroup hierarchies and
             parameters when your system is restarted, configure your system to enable the Linux
-            cgroup service daemon <codeph>cgconfig.service</codeph> (Redhat/CentOS 7.x and SuSE 11+)
-            or <codeph>cgconfig</codeph> (Redhat/CentOS 6.x) at node start-up. For example,
-            configure one of the following cgroup service commands in your preferred service
-            auto-start tool: <ul>
-              <li>Redhat/CentOS 7.x and SuSE11+ systems: <codeblock>sudo systemctl enable cgconfig.service</codeblock>
+            cgroup service daemon <codeph>cgconfig.service</codeph> (Redhat/CentOS 7.x) or
+              <codeph>cgconfig</codeph> (Redhat/CentOS 6.x) at node start-up. For example, configure
+            one of the following cgroup service commands in your preferred service auto-start tool: <ul>
+              <li>Redhat/CentOS 7.x systems: <codeblock>sudo systemctl enable cgconfig.service</codeblock>
                 <p>To start the service immediately (without having to reboot)
                   enter:<codeblock>sudo systemctl start cgconfig.service</codeblock></p></li>
               <li>Redhat/CentOS 6.x systems: <codeblock>sudo chkconfig cgconfig on</codeblock></li>

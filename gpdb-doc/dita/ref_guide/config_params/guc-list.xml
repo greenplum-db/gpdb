@@ -6518,7 +6518,7 @@
             <row>
               <entry colname="col1">Integer</entry>
               <entry colname="col2">-1</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -6988,7 +6988,7 @@
             <row>
               <entry colname="col1">number of kilobytes</entry>
               <entry colname="col2">2MB</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -7225,7 +7225,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p><p>superuser</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -8639,7 +8639,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -9498,7 +9498,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">true</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -10196,8 +10196,8 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer 10000000 - 2000000000</entry>
-              <entry colname="col2">1000000000</entry>
+              <entry colname="col1">integer 10000000 - INT_MAX</entry>
+              <entry colname="col2">100000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -10225,7 +10225,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer 10000000 - 2000000000</entry>
+              <entry colname="col1">integer 10000000 - INT_MAX</entry>
               <entry colname="col2">500000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>

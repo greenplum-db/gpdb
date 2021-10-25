@@ -201,7 +201,7 @@ static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
 			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
-			 BlockNumber blkno, bool skipFsync, bool is_appendoptimized, ExtensionBehavior behavior);
+			 BlockNumber blkno, bool skipFsync, ExtensionBehavior behavior, bool *is_seg0);
 static BlockNumber _mdnblocks(SMgrRelation reln, ForkNumber forknum,
 		   MdfdVec *seg);
 
@@ -573,7 +573,7 @@ mdextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 						relpath(reln->smgr_rnode, forknum),
 						InvalidBlockNumber)));
 
-	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, false, EXTENSION_CREATE);
+	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, EXTENSION_CREATE, NULL);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
 
@@ -715,7 +715,7 @@ mdprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
 	off_t		seekpos;
 	MdfdVec    *v;
 
-	v = _mdfd_getseg(reln, forknum, blocknum, false, false, EXTENSION_FAIL);
+	v = _mdfd_getseg(reln, forknum, blocknum, false, EXTENSION_FAIL, NULL);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
 
@@ -742,7 +742,7 @@ mdread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 										reln->smgr_rnode.node.relNode,
 										reln->smgr_rnode.backend);
 
-	v = _mdfd_getseg(reln, forknum, blocknum, false, false, EXTENSION_FAIL);
+	v = _mdfd_getseg(reln, forknum, blocknum, false, EXTENSION_FAIL, NULL);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
 
@@ -817,7 +817,7 @@ mdwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 										 reln->smgr_rnode.node.relNode,
 										 reln->smgr_rnode.backend);
 
-	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, false, EXTENSION_FAIL);
+	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, EXTENSION_FAIL, NULL);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
 
@@ -1069,6 +1069,7 @@ mdsync(void)
 	uint64		elapsed;
 	uint64		longest = 0;
 	uint64		total_elapsed = 0;
+	bool		is_seg0 = false;
 
 	/*
 	 * This is only called during checkpoints, and checkpoints should only
@@ -1255,10 +1256,20 @@ mdsync(void)
 					 */
 					reln = smgropen(entry->rnode, InvalidBackendId);
 
-					/* Attempt to open and fsync the target segment */
-					seg = _mdfd_getseg(reln, forknum,
-							 (BlockNumber) segno * (BlockNumber) RELSEG_SIZE,
-									   false, entry->is_ao_segnos, EXTENSION_RETURN_NULL);
+					if (entry->is_ao_segnos)
+					{
+						/*
+						 * For AO table, only access what the segno denoted, instead
+						 * of the chain to the target segment as HEAP.
+						 */
+						seg = _mdfd_openseg(reln, forknum, segno, 0);
+					}
+					else
+					{
+						seg = _mdfd_getseg(reln, forknum,
+								(BlockNumber) segno * (BlockNumber) RELSEG_SIZE,
+										false, EXTENSION_RETURN_NULL, &is_seg0);
+					}
 
 					INSTR_TIME_SET_CURRENT(sync_start);
 
@@ -1286,6 +1297,7 @@ mdsync(void)
 
 					/* Compute file name for use in message */
 					save_errno = errno;
+					segno = (is_seg0 ? 0 : segno);
 					path = _mdfd_segpath(reln, forknum, (BlockNumber) segno);
 					errno = save_errno;
 
@@ -1916,26 +1928,25 @@ _mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
  */
 static MdfdVec *
 _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
-			 bool skipFsync, bool is_ao_segno, ExtensionBehavior behavior)
+			 bool skipFsync, ExtensionBehavior behavior, bool *is_seg0)
 {
 	MdfdVec    *v = mdopen(reln, forknum, behavior);
 	BlockNumber targetseg;
 	BlockNumber nextsegno;
 
 	if (!v)
+	{
+		if (is_seg0 != NULL)
+			*is_seg0 = true;
+
 		return NULL;			/* only possible if EXTENSION_RETURN_NULL */
+	}
 
 	targetseg = blkno / ((BlockNumber) RELSEG_SIZE);
-	/*
-	 * Append-optimized segment files are not numbered consecutively on disk.
-	 * E.g. it is perfectly valid for .129 file to exist without .2 to .128
-	 * files.  Therefore, we need to run this loop exactly once for AO.
-	 */
-	for (nextsegno = is_ao_segno ? targetseg : 1;
-		 nextsegno <= targetseg;
-		 nextsegno++)
+
+	for (nextsegno = 1; nextsegno <= targetseg; nextsegno++)
 	{
-		Assert(is_ao_segno || (nextsegno == v->mdfd_segno + 1));
+		Assert(nextsegno == v->mdfd_segno + 1);
 
 		if (v->mdfd_chain == NULL)
 		{
