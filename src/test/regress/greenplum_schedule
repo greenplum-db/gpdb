@@ -288,8 +288,5 @@ test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
 test: create_extension_gp_debug_segments
-# create a table after create extension failed with normal user and try to drop it later.
-test: create_extension_with_normal_user_pre
-test: create_extension_with_normal_user
 
 # end of tests

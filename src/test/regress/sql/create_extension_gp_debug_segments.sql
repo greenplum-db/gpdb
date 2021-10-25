@@ -13,3 +13,24 @@ create extension gp_debug_numsegments;
 
 select gp_inject_fault('create_function_fail', 'reset', 2);
 
+--
+-- Tests for cannot drop table after create extension with normal user
+-- The issue: https://github.com/greenplum-db/gpdb/issues/12713
+--
+--1. use normal user to create extension
+--2. create a table
+--3. quit psql
+--4. reconnect
+--5. try to drop the table
+
+--start_ignore
+drop table if exists t;
+drop user if exists normal_user;
+create user normal_user;
+--end_ignore
+
+set role normal_user;
+create extension file_fdw;
+create table t(name text);
+\c
+drop table t;

@@ -862,10 +862,10 @@ execute_extension_script(Node *stmt,
 		 * here so that the flag is correctly associated with the right script(s)
 		 * if it's set in secondary control files.
 		 */
-		/* MPP-31854 and issue:12713 
- 		 * The errport below should be included in the try{}catch block, otherwise
- 		 * it will cause the creating_extension in QE be true and false in QD which
- 		 * may cause the table created by the QEs cannot be removed later.	*/
+		/* issue:12713
+		 * The errport below should be included in the try{}catch block, otherwise
+		 * it will cause the creating_extension in QE be true and false in QD which
+		 * may cause the table created by the QEs cannot be removed later.	*/
 		if (control->superuser && !superuser())
 		{
 			if (from_version == NULL)
