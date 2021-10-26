@@ -4,11 +4,11 @@
 <topic id="understanding_segment_recovery">
   <title>Understanding Segment Recovery</title>
   <body>
-    <p>This topic provides background information on concepts and principles of segment recovery. If
-      you have down segments and need immediate help recovering them, see the instructions in <xref
-        href="g-recovering-from-segment-failures.xml"/>. For information on how Greenplum Database
-      detects that segments are down and an explanation of the Fault Tolerance Server (FTS) that
-      manages down segment tracking, see <xref href="g-detecting-a-failed-segment.xml"/>.</p>
+    <p>This topic provides background information about concepts and principles of segment recovery.
+      If you have down segments and need immediate help recovering them, see the instructions in
+        <xref href="g-recovering-from-segment-failures.xml"/>. For information on how Greenplum
+      Database detects that segments are down and an explanation of the Fault Tolerance Server (FTS)
+      that manages down segment tracking, see <xref href="g-detecting-a-failed-segment.xml"/>.</p>
     <p>This topic is divided into the following sections: <ul id="ul_gcw_b4s_brb">
         <li><xref href="#recovery_basics" type="topic" format="dita" class="- topic/xref "/></li>
         <li><xref href="#flow_of_events" type="topic" format="dita" class="- topic/xref "/></li>
@@ -22,9 +22,9 @@
       <p>If the master cannot connect to a segment instance, it marks that segment as down in the
         Greenplum Database <codeph>gp_segment_configuration</codeph> table. The segment instance
         remains offline until an administrator takes steps to bring the segment back online. The
-        process for recovering a failed segment instance or host depends on the failure cause and
-        whether or not mirroring is enabled. A segment instance can be unavailable for a number of
-        reasons:</p>
+        process for recovering a down segment instance or host depends on the cause of the failure
+        and on whether or not mirroring is enabled. A segment instance can be marked as down for a
+        number of reasons:</p>
       <ul id="ul_ccj_rks_brb">
         <li id="ki155624">A segment host is unavailable; for example, due to network or hardware
           failures.</li>
@@ -34,10 +34,10 @@
           example, data is not accessible, the file system is corrupt, or there is a disk
           failure.</li>
       </ul>
-      <p>In order to bring the failed segment instance back into operation again, you must correct
-        the problem that made it fail in the first place, and then – if you have mirroring enabled –
-        you can attempt to recover the segment instance from its mirror using the
-          <codeph>gprecoverseg</codeph> utility.  </p>
+      <p>In order to bring the down segment instance back into operation again, you must correct the
+        problem that made it fail in the first place, and then – if you have mirroring enabled – you
+        can attempt to recover the segment instance from its mirror using the
+          <codeph>gprecoverseg</codeph> utility. </p>
     </body>
   </topic>
   <topic id="flow_of_events">
@@ -55,8 +55,9 @@
         <li>The user fixes the underlying problem.</li>
         <li>The user runs <codeph>gprecoverseg</codeph> to bring back the (formerly primary) mirror
           segment.</li>
-        <li>The synching process occurs: the mirror comes into sync with its primary via WAL
-          synching. Users can check the state of this synching with <codeph>gpstate -e</codeph>. </li>
+        <li>The WAL synchronization process ensures that the mirror segment data is synchronized
+          with the primary segment data. Users can check the state of this synching with
+            <codeph>gpstate -e</codeph>. </li>
         <li>Greenplum Database marks the segments as up (<codeph>u</codeph>) in the
             <codeph>gp_segment_configuration</codeph> table.</li>
         <li>If segments are not in their preferred roles, user runs <codeph>gprecoverseg -r</codeph>
@@ -73,8 +74,7 @@
         <li>The user runs <codeph>gprecoverseg</codeph> to bring back the (formerly mirror) mirror
           segment. </li>
         <li>The synching process occurs: the mirror comes into sync with its primary via WAL
-          synching. Users can check the state of this synching with <codeph>gpstate
-          -e</codeph>.</li>
+          synching. You can check the state of this synching with <codeph>gpstate -e</codeph>.</li>
       </ol>
     </body>
   </topic>
@@ -86,8 +86,8 @@
           <codeph>gp_segment_configuration</codeph> table has the columns <codeph>role</codeph>
         (current role) and <codeph>preferred_role</codeph> (original role at the beginning). When a
         segment's <codeph>role</codeph> and <codeph>preferred_role</codeph> do not match the system
-        is not balanced. To rebalance the cluster and bring all the segments into their preferred
-        roles, run the <codeph>gprecoverseg -r </codeph>command. </p>
+        may not be balanced. To rebalance the cluster and bring all the segments into their
+        preferred roles, run the <codeph>gprecoverseg -r </codeph>command. </p>
     </body>
   </topic>
   <topic id="simple_example">
@@ -95,7 +95,7 @@
     <body>
       <p>Consider a single primary-mirror segment instance pair where the primary segment has failed
         over to the mirror. The following table shows the segment instance preferred role, role,
-        mode, and status from <codeph>gp_segment_configuration</codeph> table before beginning
+        mode, and status from the <codeph>gp_segment_configuration</codeph> table before beginning
         recovery of the failed primary segment. </p>
       <p>You can also run <codeph>gpstate -e</codeph> to display any issues with a primary or mirror
         segment instances. </p>
@@ -137,10 +137,10 @@
         mirror segment is up and its role is now primary. However, it is not synchronized with its
         mirror (the former primary segment) because that segment is down. You must potentially fix
         either issues with the host the down segment is running on, issues with the segment instance
-        itself, or both. You then use <codeph>grecoverseg</codeph> to prepare failed segment
+        itself, or both. You then use <codeph>gprecoverseg</codeph> to prepare failed segment
         instances for recovery and initiate synchronization between the primary and mirror
         instances. </p>
-      <p>Once <codeph>gprecoverseg</codeph> has completed, the segments are in the states shown in
+      <p>After <codeph>gprecoverseg</codeph> has completed, the segments are in the states shown in
         the following table where the primary-mirror segment pair is up with the primary and mirror
         roles reversed from their preferred roles. <note>There might be a lag between when
             <codeph>gprecoverseg</codeph> completes and when the segment status is set to
@@ -225,8 +225,8 @@
       <p>By default, <codeph>gprecoverseg</codeph> performs an incremental recovery, placing the
         mirror into <i>Synchronizing</i> mode, which starts to replay the recorded changes from the
         primary onto the mirror. If the incremental recovery cannot be completed, the recovery fails
-        and you should run  <codeph>gprecoverseg</codeph> again with the <codeph>-F</codeph> option,
-        to perform full recovery. This causes the primary to copy all of the data to the mirror. </p>
+        and you should run <codeph>gprecoverseg</codeph> again with the <codeph>-F</codeph> option,
+        to perform full recovery. This causes the primary to copy all of its data to the mirror. </p>
       <p>
         <note>After a failed incremental recovery attempt you must perform a full recovery.</note>
       </p>
