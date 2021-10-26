@@ -31,6 +31,8 @@ select gp_inject_fault('create_function_fail', 'reset', 2);
 --4. reconnect
 --5. try to drop the table
 --start_ignore
+drop extension if exists file_fdw;
+NOTICE:  extension "file_fdw" does not exist, skipping
 drop table if exists t_12713;
 NOTICE:  table "t_12713" does not exist, skipping
 drop user if exists normal_user_12713;
