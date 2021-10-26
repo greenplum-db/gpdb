@@ -222,8 +222,8 @@ LOG_MSG () {
 # Description: This fuction adds a delimeter before executing the commands through ssh.
 # this makes sure that in case if a banner set wrongly using .bashrc in then that gets ignored
 # and we get the required results by ignoring the banner content
-# Limitation: If the token used for separating command output from banner appears in the bash banner or 
-# in command output, in that case only partial command output will be returned. 
+# Limitation: If the token used for separating command output from banner appears in the begining
+# of the line in command output/banner output, in that case only partial command output will be returned
 REMOTE_EXECUTE_AND_GET_OUTPUT () {
   LOG_MSG "[INFO]:-Start Function $FUNCNAME"
   HOST="$1"

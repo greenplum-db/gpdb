@@ -339,7 +339,6 @@ def impl(context, env_var):
     if env_var in os.environ:
         del os.environ[env_var]
 
-
 @then('{env_var} environment variable should be restored')
 def impl(context, env_var):
     if not hasattr(context, 'orig_env'):
@@ -353,44 +352,36 @@ def impl(context, env_var):
     del context.orig_env[env_var]
 
 
+
+def backup_bashrc():
+    file = '~/.bashrc'
+    backup_fle = '~/.bashrc.backup'
+    if (os.path.isfile(file)):
+        command = "cp -f %s %s.backup" % (file, backup_fle)
+        result = run_cmd(command)
+        if (result[0] != 0):
+            raise Exception("Error while backing up bashrc file. STDERR:%s" % (result[2]))
+    return
+
+
+
+def restore_bashrc():
+    file = '~/.bashrc'
+    backup_fle = '~/.bashrc.backup'
+    if (os.path.isfile(backup_fle)):
+        command = "mv -f %s.backup %s" % (backup_fle, file)
+    else:
+        command = "rm -f %s" % (file)
+    result = run_cmd(command)
+    if (result[0] != 0):
+        raise Exception('Error while restoring up bashrc file. ')
+
+
 @given('the user runs "{command}"')
 @when('the user runs "{command}"')
 @then('the user runs "{command}"')
 def impl(context, command):
     run_gpcommand(context, command)
-
-@when('backup the current bashrc file')
-@given('backup the current bashrc file')
-def impl(context):
-    file = '~/.bashrc'
-    if not hasattr(context, 'original_bashrc_not_present'):
-        context.original_bashrc_not_present = 0;
-    if( os.path.isfile(file)):
-        command = "cp -f %s %s.backup" % (file, file)
-        result = run_cmd(command)
-        if (result[0] != 0):
-            raise Exception("Error while backing up bashrc file. STDERR:%s"% (result[2]))
-    else:
-        context.original_bashrc_not_present = 1;
-        return
-
-@then('restore back bashrc file')
-def impl(context):
-    file = '~/.bashrc'
-    if(context.original_bashrc_not_present):
-        command = "rm -rf %s" % (file)
-    else:
-        command = "mv -f %s.backup %s" % (file, file)
-    result = run_cmd(command)
-    if (result[0] != 0):
-        raise Exception('Error while restoring up bashrc file. ')
-
-def restore_bacshrc():
-    file = '~/.bashrc'
-    command = "mv -f %s.backup %s" % (file, file)
-    result = run_cmd(command)
-    if (result[0] != 0):
-        raise Exception('Error while restoring up bashrc file. ')
 
 @when('the user sets banner on host')
 def impl(context):
@@ -398,7 +389,6 @@ def impl(context):
     command = "echo 'echo \"banner test\"' >> %s; source %s" % (file, file)
     result = run_cmd(command)
     if(result[0] != 0):
-        restore_bacshrc()
         raise Exception("Error while updating the bashrc file:%s. STDERR:"% (file))
 
 @when('the user sets multi-line banner on host')
@@ -407,17 +397,15 @@ def impl(context):
     command = "echo 'echo -e \"banner test1\\nbanner test2\\nbanner test-3\\nbanner test4\"' >> %s; source %s" % (file, file)
     result = run_cmd(command)
     if(result[0] != 0):
-        restore_bacshrc()
         raise Exception("Error while updating the bashrc file:%s. STDERR:"% (file))
 
 @when('the user sets banner with separator token on host')
 def impl(context):
     file = '~/.bashrc'
     token = 'GP_DELIMITER_FOR_IGNORING_BASH_BANNER'
-    command = "echo 'echo -e \"banner test1\\nbanner %s test2\\nbanner test-3\\nbanner test4\"' >> %s; source %s" % (token, file, file)
+    command = "echo 'echo -e \"banner test1\\nbanner %s test2\\nbanner test-3\\nbanner test4\\nbanner test5 %s\"' >> %s; source %s" % (token, token, file, file)
     result = run_cmd(command)
     if(result[0] != 0):
-        restore_bacshrc()
         raise Exception("Error while updating the bashrc file:%s. STDERR:"% (file))
 
 @given('source gp_bash_functions and run simple echo')
@@ -429,10 +417,8 @@ def impl(context):
     command = "source %s; REMOTE_EXECUTE_AND_GET_OUTPUT localhost \"echo %s\"" %(gp_bash_functions, message)
     result = run_cmd(command)
     if(result[0] != 0):
-        restore_bacshrc()
         raise Exception ("Expected error code is 0. Command returned error code:%s.\nStderr:%s\n" % (result[0], result[2]))
     if(result[1].strip() != message):
-        restore_bacshrc()
         raise Exception ("Expected output is: [%s] while received output is: [%s] Return code:%s" %(message, result[1], result[0]))
 
 @given('source gp_bash_functions and run complex command')
@@ -444,12 +430,10 @@ def impl(context):
     command = "source %s; REMOTE_EXECUTE_AND_GET_OUTPUT localhost \"echo %s; hostname | wc -w | xargs\"" %(gp_bash_functions, message)
     result = run_cmd(command)
     if(result[0] != 0):
-        restore_bacshrc()
         raise Exception ("Expected error code is 0. Command returned error code:%s.\nStderr:%s\n" % (result[0], result[2]))
 
     message = message + "\n1"
     if(result[1].strip() != message):
-        restore_bacshrc()
         raise Exception ("Expected output is: [%s] while received output is:[%s] Return code:%s" %(message, result[1], result[0]))
 
 @given('source gp_bash_functions and run echo with separator token')
@@ -462,12 +446,10 @@ def impl(context):
     command = "source %s; REMOTE_EXECUTE_AND_GET_OUTPUT localhost \"echo %s; echo %s; echo %s\"" %(gp_bash_functions, message, token, message)
     result = run_cmd(command)
     if(result[0] != 0):
-        restore_bacshrc()
         raise Exception ("Expected error code is 0. Command returned error code:%s.\nStderr:%s\n" % (result[0], result[2]))
 
     message = "%s\n%s\n%s" %(message, token, message)
     if(result[1].strip() != message):
-        restore_bacshrc()
         raise Exception ("Expected output is: [%s] while received output is:[%s] Return code:%s" %(message, result[1], result[0]))
 
 @given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
