@@ -400,7 +400,17 @@ CBucketTest::EresUnittest_CBucketIntersect()
 			CDouble(0.00010000000000000002),
 			CDouble(100),
 		},	 // exact match with ubs differ in closure
-	};
+		{
+			0, 5,	 true,	true,		CDouble(0), CDouble(0), 0,
+			5, true, false, CDouble(0), CDouble(0), true,		0,
+			5, true, false, CDouble(0), CDouble(0),
+		},	 // overlaps but both buckets are empty
+		{
+			0, 5,	 true,	true,		CDouble(0.1), CDouble(100), 0,
+			5, true, false, CDouble(0), CDouble(0),	  true,			0,
+			5, true, false, CDouble(0), CDouble(0),
+		},
+	};	 // overlaps but one bucket is empty
 
 	const ULONG length = GPOS_ARRAY_SIZE(rgBucketsIntersectTestElem);
 	for (ULONG ul = 0; ul < length; ul++)
