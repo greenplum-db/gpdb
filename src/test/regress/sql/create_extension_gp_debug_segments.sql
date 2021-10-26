@@ -24,6 +24,7 @@ select gp_inject_fault('create_function_fail', 'reset', 2);
 --5. try to drop the table
 
 --start_ignore
+drop extension if exists postgres_fdw;
 drop table if exists t_12713;
 drop user if exists normal_user_12713;
 create user normal_user_12713;
