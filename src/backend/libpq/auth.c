@@ -35,6 +35,7 @@
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "libpq/md5.h"
+#include "libpq/be-gssapi-common.h"
 #include "miscadmin.h"
 #include "pgtime.h"
 #include "postmaster/postmaster.h"
@@ -1030,6 +1031,7 @@ pg_GSS_recvauth(Port *port)
 	int			ret;
 	StringInfoData buf;
 	gss_buffer_desc gbuf;
+	gss_cred_id_t proxy;
 
 	/*
 	 * GSS auth is not supported for protocol versions before 3, because it
@@ -1082,7 +1084,7 @@ pg_GSS_recvauth(Port *port)
 	 * Initialize sequence with an empty context
 	 */
 	port->gss->ctx = GSS_C_NO_CONTEXT;
-
+	proxy = NULL;
 	/*
 	 * Loop through GSSAPI message exchange. This exchange can consist of
 	 * multiple messags sent in both directions. First message is always from
@@ -1131,7 +1133,7 @@ pg_GSS_recvauth(Port *port)
 										  &port->gss->outbuf,
 										  &gflags,
 										  NULL,
-										  NULL);
+										  &proxy);
 
 		/* gbuf no longer used */
 		pfree(buf.data);
@@ -1140,6 +1142,10 @@ pg_GSS_recvauth(Port *port)
 			 "minor: %d, outlen: %u, outflags: %x",
 			 maj_stat, min_stat,
 			 (unsigned int) port->gss->outbuf.length, gflags);
+
+		CHECK_FOR_INTERRUPTS();
+		if (proxy != NULL)
+			pg_store_proxy_credential(proxy);
 
 		if (port->gss->outbuf.length != 0)
 		{
