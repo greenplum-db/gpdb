@@ -2428,7 +2428,7 @@ keep_going:						/* We will come back to here until there is
 		if (conn->gpconntype &&
 			(strcmp(conn->gpconntype, GPCONN_TYPE_FTS) == 0 ||
 			 strcmp(conn->gpconntype, GPCONN_TYPE_FAULT) == 0 ||
-			 strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) == 0))
+			 strcmp(conn->gpconntype, GPCONN_TYPE_DEFAULT) == 0))
 		{
 			/*
 			 * GPDB uses the high bits of the major version to indicate special
@@ -2436,8 +2436,8 @@ keep_going:						/* We will come back to here until there is
 			 */
 			conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
 
-			/* hide the internal gpconntype option, let it only affect the pversion */
-			if (strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) == 0)
+			/* hide the default gpconntype option, let it only affect the pversion */
+			if (strcmp(conn->gpconntype, GPCONN_TYPE_DEFAULT) == 0)
 			{
 				free(conn->gpconntype);
 				conn->gpconntype = NULL;

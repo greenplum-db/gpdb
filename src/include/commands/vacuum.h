@@ -229,6 +229,7 @@ typedef struct VacuumParams
 										 * default value depends on reloptions */
 	VacOptTernaryValue truncate;	/* Truncate empty pages at the end,
 									 * default value depends on reloptions */
+	bool auto_stats;      /* invoked via automatic statistic collection */
 } VacuumParams;
 
 typedef struct
@@ -268,7 +269,7 @@ extern int	vacuum_multixact_freeze_table_age;
 
 
 /* in commands/vacuum.c */
-extern void ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel);
+extern void ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_stats);
 extern void vacuum(List *relations, VacuumParams *params,
 				   BufferAccessStrategy bstrategy, bool isTopLevel);
 extern void vac_open_indexes(Relation relation, LOCKMODE lockmode,

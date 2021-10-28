@@ -79,6 +79,7 @@ static void
 get_timestamp(char *strfbuf, int length)
 {
 	pg_time_t	stamp_time;
+	struct pg_tm	tm;
 	char		msbuf[8];
 	struct timeval tv;
 
@@ -93,7 +94,7 @@ get_timestamp(char *strfbuf, int length)
 #else
 				"%Y-%m-%d %H:%M:%S        ",
 #endif
-				pg_localtime(&stamp_time, log_timezone));
+				pg_localtime_thread_safe(&stamp_time, log_timezone, &tm));
 
 	/* 'paste' milliseconds into place... */
 	sprintf(msbuf, ".%06d", (int) (tv.tv_usec));

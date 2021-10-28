@@ -44,4 +44,7 @@ s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./P
 m/available \d+ MB/
 s/available \d+ MB//
 
+m/\(cdbdisp_async\.c\:\d+\)/
+s/\(cdbdisp_async\.c:\d+\)/\(cdbdisp_async\.c:LINE_NUM\)/
+
 -- end_matchsubs

@@ -27,18 +27,18 @@
     <section id="section3"><title>Description</title>In a system with mirrors enabled, the
         <codeph>gprecoverseg</codeph> utility reactivates a failed segment instance and identifies
       the changed database files that require resynchronization. Once <codeph>gprecoverseg</codeph>
-      completes this process, the system goes into <i>resynchronizing</i> mode until the recovered
-      segment is brought up to date. The system is online and fully operational during
+      completes this process, the system goes into <codeph>Not in Sync</codeph> mode until the
+      recovered segment is brought up to date. The system is online and fully operational during
         resynchronization.<p>During an incremental recovery (the <codeph>-F</codeph> option is not
         specified), if <codeph>gprecoverseg</codeph> detects a segment instance with mirroring
         disabled in a system with mirrors enabled, the utility reports that mirroring is disabled
         for the segment, does not attempt to recover that segment instance, and continues the
         recovery process. </p><p>A segment instance can fail for several reasons, such as a host
         failure, network failure, or disk failure. When a segment instance fails, its status is
-        marked as <i>down</i> in the Greenplum Database system catalog, and its mirror is activated
-        in <i>change tracking</i> mode. In order to bring the failed segment instance back into
-        operation again, you must first correct the problem that made it fail in the first place,
-        and then recover the segment instance in Greenplum Database using
+        marked as <codeph>d</codeph> (down) in the Greenplum Database system catalog, and its mirror
+        is activated in <codeph>Not in Sync</codeph> mode. In order to bring the failed segment
+        instance back into operation again, you must first correct the problem that made it fail in
+        the first place, and then recover the segment instance in Greenplum Database using
           <codeph>gprecoverseg</codeph>.</p><note otherprops="pivotal"> If incremental recovery was
         not successful and the down segment instance data is not corrupted, contact VMware Support.
         </note><p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an
@@ -73,7 +73,7 @@
         accommodate the failed segments.</p><p>The recovery process marks the segment as up again in
         the Greenplum Database system catalog, and then initiates the resynchronization process to
         bring the transactional state of the segment up-to-date with the latest changes. The system
-        is online and available during resynchronization. </p></section>
+        is online and available during <codeph>Not in Sync</codeph> mode. </p></section>
     <section id="section4">
       <title>Options</title>
       <parml>
@@ -170,14 +170,14 @@ newPort|newDataDirectory</codeblock>
         </plentry>
         <plentry>
           <pt>-p <varname>new_recover_host</varname>[,...]</pt>
-          <pd>Specifies a spare host outside of the currently configured Greenplum Database array on
+          <pd>Specifies a new host outside of the currently configured Greenplum Database array on
             which to recover invalid segments.</pd>
-          <pd>The spare host must have the Greenplum Database software installed and configured, and
+          <pd>The new host must have the Greenplum Database software installed and configured, and
             have the same hardware and OS configuration as the current segment hosts (same OS
             version, locales, <codeph>gpadmin</codeph> user account, data directory locations
             created, ssh keys exchanged, number of network interfaces, network interface naming
             convention, and so on). Specifically, the Greenplum Database binaries must be installed,
-            the spare host must be able to connect password-less with all segments including the
+            the new host must be able to connect password-less with all segments including the
             Greenplum master, and any other Greenplum Database specific OS configuration parameters
             must be applied.</pd>
           <pd>
@@ -200,7 +200,7 @@ newPort|newDataDirectory</codeblock>
             potentially unbalanced state, as some segment hosts may have more active segments than
             is optimal for top system performance. This option rebalances primary and mirror
             segments by returning them to their preferred roles. All segments must be valid and
-            synchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
+            resynchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
             progress queries, they will be cancelled and rolled back.</pd>
         </plentry>
         <plentry>
@@ -239,7 +239,7 @@ newPort|newDataDirectory</codeblock>
       <codeblock>$ gpstate -e</codeblock>
       <p>Then, if necessary, rebalance the segments:</p><codeblock>$ gprecoverseg -r</codeblock>
       <p><b>Example 3: Recover Failed Segments to a Separate Host</b></p>
-      <p>Recover any failed segment instances to a newly configured spare segment host:</p>
+      <p>Recover any failed segment instances to a newly configured new segment host:</p>
         <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
     </section>
     <section id="section6">

@@ -65,3 +65,4 @@ TwophaseCommitLock				55
 ShareInputScanLock				56
 FTSReplicationStatusLock			57
 GxidBumpLock						58
+ParallelCursorEndpointLock			59

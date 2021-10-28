@@ -116,7 +116,7 @@ static void vac_update_relstats_from_list(List *updated_stats);
  * happen in vacuum().
  */
 void
-ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel)
+ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_stats)
 {
 	VacuumParams params;
 	bool		verbose = false;
@@ -243,6 +243,8 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel)
 
 	/* user-invoked vacuum never uses this parameter */
 	params.log_min_duration = -1;
+
+	params.auto_stats = auto_stats;
 
 	/* Now go through the common routine */
 	vacuum(vacstmt->rels, &params, NULL, isTopLevel);

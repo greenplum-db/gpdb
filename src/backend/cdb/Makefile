@@ -11,7 +11,7 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
-SUBDIRS := motion dispatcher
+SUBDIRS := motion dispatcher endpoint
 
 
 OBJS = cdbappendonlystorageformat.o \

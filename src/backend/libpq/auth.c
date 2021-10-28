@@ -47,12 +47,14 @@
 #include "cdb/cdbvars.h"
 #include "pgtime.h"
 #include "postmaster/postmaster.h"
+#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/datetime.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
+#include "cdb/cdbendpoint.h"
 
 extern bool gp_reject_internal_tcp_conn;
 
@@ -365,6 +367,159 @@ auth_failed(Port *port, int status, char *logdetail)
 }
 
 /*
+ * Return true if command line contains gp_retrieve_conn=true
+ */
+static bool
+cmd_options_include_retrieve_conn(char* cmd_options)
+{
+	char	  **av;
+	int			maxac;
+	int			ac;
+	int			flag;
+	bool		ret = false;
+
+	if (!cmd_options)
+		return false;
+
+	maxac = 2 + (strlen(cmd_options) + 1) / 2;
+
+	av = (char **) palloc(maxac * sizeof(char *));
+	ac = 0;
+
+	av[ac++] = "dummy";
+
+	pg_split_opts(av, &ac, cmd_options);
+
+	av[ac] = NULL;
+
+#ifdef HAVE_INT_OPTERR
+	/*
+	 * Turn this off because it's either printed to stderr and not the log
+	 * where we'd want it, or argv[0] is now "--single", which would make for
+	 * a weird error message.  We print our own error message below.
+	 */
+	opterr = 0;
+#endif
+
+	while ((flag = getopt(ac, av, "c:-:")) != -1)
+	{
+		switch (flag)
+		{
+			case 'c':
+			case '-':
+				{
+					char *name, *value;
+					ParseLongOption(optarg, &name, &value);
+					if (!value)
+					{
+						if (flag == '-')
+							ereport(ERROR,
+									(errcode(ERRCODE_SYNTAX_ERROR),
+									 errmsg("--%s requires a value",
+											optarg)));
+						else
+							ereport(ERROR,
+									(errcode(ERRCODE_SYNTAX_ERROR),
+									 errmsg("-c %s requires a value",
+											optarg)));
+					}
+
+					/*
+					 * Only check if gp_role is set to retrieve, but do not
+					 * break in case there are more than one such option.
+					 */
+					if ((guc_name_compare(name, "gp_retrieve_conn") == 0) &&
+						!parse_bool(value, &ret))
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("invalid value for guc gp_retrieve_conn: \"%s\"",
+										value)));
+					}
+
+					free(name);
+					free(value);
+					break;
+				}
+
+			default:
+				break;
+		}
+	}
+
+	/*
+	 * Reset getopt(3) library so that it will work correctly in subprocesses
+	 * or when this function is called a second time with another array.
+	 */
+	optind = 1;
+#ifdef HAVE_INT_OPTRESET
+	optreset = 1;	/* some systems need this too */
+#endif
+
+	return ret;
+}
+
+static bool
+guc_options_include_retrieve_conn(List *guc_options)
+{
+	ListCell   *gucopts;
+	bool		ret = false;
+
+	gucopts = list_head(guc_options);
+	while (gucopts)
+	{
+		char       *name;
+		char       *value;
+
+		name = lfirst(gucopts);
+		gucopts = lnext(gucopts);
+
+		value = lfirst(gucopts);
+		gucopts = lnext(gucopts);
+
+		if (guc_name_compare(name, "gp_retrieve_conn") == 0)
+		{
+			/* Do not break in case there are more than one such option. */
+			if (!parse_bool(value, &ret))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("invalid value for guc gp_retrieve_conn: \"%s\"",
+								value)));
+
+		}
+	}
+
+	return ret;
+}
+
+/*
+ * Retrieve role directly uses the token of PARALLEL RETRIEVE CURSOR as password to authenticate.
+ */
+static void
+retrieve_conn_authentication(Port *port)
+{
+	char	   *passwd;
+	Oid        owner_uid;
+	const char *msg1 = "Failed to Retrieve the authentication password";
+	const char *msg2 = "Authentication failure (Wrong password or no endpoint for the user)";
+
+	sendAuthRequest(port, AUTH_REQ_PASSWORD, NULL, 0);
+	passwd = recv_password_packet(port);
+	if (passwd == NULL)
+		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD), errmsg("%s", msg1)));
+
+	/*
+	 * verify that the username is same as the owner of PARALLEL RETRIEVE CURSOR and the
+	 * password is the token
+	 */
+	owner_uid = get_role_oid(port->user_name, false);
+	if (!AuthEndpoint(owner_uid, passwd))
+		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD), errmsg("%s", msg2)));
+
+	FakeClientAuthentication(port);
+}
+
+/*
  * Special client authentication for QD to QE connections. This is run at the
  * QE. This is non-trivial because a QE some times runs at the master (i.e., an
  * entry-DB for things like master only tables).
@@ -475,6 +630,19 @@ ClientAuthentication(Port *port)
 {
 	int			status = STATUS_ERROR;
 	char	   *logdetail = NULL;
+
+	/*
+	 * For parallel retrieve cursor,
+	 * retrieve token authentication is performed.
+	 */
+	retrieve_conn_authenticated = false;
+	if (cmd_options_include_retrieve_conn(port->cmdline_options) ||
+		guc_options_include_retrieve_conn(port->guc_options))
+	{
+		retrieve_conn_authentication(port);
+		retrieve_conn_authenticated = true;
+		return;
+	}
 
 	/*
 	 * If this is a QD to QE connection, we might be able to short circuit

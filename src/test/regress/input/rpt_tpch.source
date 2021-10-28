@@ -1,5 +1,6 @@
 CREATE SCHEMA rpt_tpch;
 SET SEARCH_PATH to rpt_tpch;
+SET extra_float_digits to -3;
 
 CREATE TABLE heap_customer (
     c_custkey integer NOT NULL,

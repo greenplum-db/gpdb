@@ -927,6 +927,12 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data,
 		}
 		else if (available == 0)
 		{
+			if(QueryFinishPending)
+			{
+				*bytes_written = sent;
+				return SHM_MQ_QUERY_FINISH;
+			}
+
 			/*
 			 * Since mq->mqh_counterparty_attached is known to be true at this
 			 * point, mq_receiver has been set, and it can't change once set.
@@ -1156,6 +1162,9 @@ shm_mq_wait_internal(shm_mq *mq, PGPROC **ptr, BackgroundWorkerHandle *handle)
 	{
 		BgwHandleStatus status;
 		pid_t		pid;
+
+		if (QueryFinishPending)
+			break;
 
 		/* Acquire the lock just long enough to check the pointer. */
 		SpinLockAcquire(&mq->mq_mutex);

@@ -156,6 +156,9 @@
               <xref href="#gp_appendonly_compaction_threshold"/>
             </li>
             <li>
+              <xref href="#gp_autostats_allow_nonowner"/>
+            </li>
+            <li>
               <xref href="#gp_autostats_mode"/>
             </li>
             <li>
@@ -481,6 +484,9 @@
               <xref href="#optimizer_use_gpdb_allocators" format="dita"
                 >optimizer_use_gpdb_allocators</xref></li>
             <li>
+              <xref href="#optimizer_xform_bind_threshold" format="dita"
+                >optimizer_xform_bind_threshold</xref></li>
+            <li>
               <p>
                 <xref href="#plan_cache_mode"/></p>
             </li>
@@ -504,6 +510,9 @@
             </li>
             <li>
               <xref href="#port"/>
+            </li>
+            <li>
+              <xref href="#quote_all_identifiers"/>
             </li>
             <li>
               <xref href="#random_page_cost"/>
@@ -2125,6 +2134,46 @@
               <entry colname="col1">integer (%)</entry>
               <entry colname="col2">10</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_autostats_allow_nonowner">
+    <title>gp_autostats_allow_nonowner</title>
+    <body>
+      <p>The <codeph>gp_autostats_allow_nonowner</codeph> server configuration parameter
+        determines whether or not to allow Greenplum Database to trigger automatic statistics
+        collection when a table is modified by a non-owner.</p>
+      <p>The default value is <codeph>false</codeph>; Greenplum Database does not trigger
+        automatic statistics collection on a table that is updated by a non-owner.</p>
+      <p>When set to <codeph>true</codeph>, Greenplum Database will also trigger automatic
+         statistics collection on a table when:</p>
+      <ul>
+        <li><codeph>gp_autostats_mode=on_change</codeph> and the table is modified by a non-owner.</li>
+        <li><codeph>gp_autostats_mode=on_no_stats</codeph> and the first user to
+          <codeph>INSERT</codeph> or <codeph>COPY</codeph> into the table is a non-owner.</li>
+      </ul>
+      <p>The <codeph>gp_autostats_allow_nonowner</codeph> configuration parameter can be
+        changed only by a superuser.</p>
+      <table id="gp_auto_stats_allow_nonowner_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4509,11 +4558,17 @@
     <body>
       <note>The <codeph>gp_resqueue_priority_cpucores_per_segment</codeph> server configuration
         parameter is enforced only when resource queue-based resource management is active.</note>
-      <p>Specifies the number of CPU units allocated per segment instance. For example, if a
-        Greenplum Database cluster has 10-core segment hosts that are configured with four segments,
-        set the value for the segment instances to 2.5. For the master instance, the value would be
-        10. A master host typically has only the master instance running on it, so the value for the
-        master should reflect the usage of all available CPU cores. </p>
+      <p>Specifies the number of CPU units allocated to each segment instance on a
+        segment host. If the segment is configured with primary-mirror segment instance pairs,
+        use the number of primary segment instances on the host in the calculation.
+        Include any CPU core that is available to the operating system, including virtual CPU
+        cores, in the total number of available cores.</p> 
+      <p> For example, if a Greenplum Database cluster has 10-core segment hosts that are
+        configured with four primary segments, set the value to 2.5 on each segment host
+        (10 divided by 4).
+        A master host typically has only a single running master instance, so set the
+        value on the master and standby maaster hosts to reflect the usage of all available
+        CPU cores, in this case 10. </p>
       <p>Incorrect settings can result in CPU under-utilization or query prioritization not working
         as designed. </p>
       <table id="gp_resqueue_priority_cpucores_per_segment_table">
@@ -6238,7 +6293,7 @@
             <row>
               <entry colname="col1">Integer</entry>
               <entry colname="col2">-1</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -6674,7 +6729,7 @@
             <row>
               <entry colname="col1">number of kilobytes</entry>
               <entry colname="col2">2MB</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -6911,7 +6966,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p><p>superuser</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -7794,6 +7849,38 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_xform_bind_threshold">
+    <title>optimizer_xform_bind_threshold</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls the maximum number of
+        bindings per transform that GPORCA produces per group expression. Setting this
+        parameter limits the number of alternatives that GPORCA creates, in many cases
+        reducing the optimization time and overall memory usage of queries that include
+        deeply nested expressions.</p>
+      <p>The default value is <codeph>0</codeph>, GPORCA produces an unlimited set of bindings.</p>
+      <table id="table_oxbt">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - INT_MAX</entry>
+              <entry colname="col2">0</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="password_encryption">
     <title>password_encryption</title>
     <body>
@@ -8061,6 +8148,36 @@
       </table>
     </body>
   </topic>
+  <topic id="quote_all_identifiers">
+    <title>quote_all_identifiers</title>
+    <body>
+      <p>Ensures that all identifiers are quoted, even if they are not keywords, when the database
+        generates SQL. See also the <codeph>--quote-all-identifiers</codeph> option of <codeph><xref
+            href="../../utility_guide/ref/pg_dump.xml"/></codeph> and <codeph><xref
+            href="../../utility_guide/ref/pg_dumpall.xml"/></codeph>.</p>
+      <table id="table_umd_ds4_brb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="random_page_cost">
     <title>random_page_cost</title>
     <body>
@@ -8213,7 +8330,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -9071,7 +9188,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">true</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -9770,8 +9887,8 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer 10000000 - 2000000000</entry>
-              <entry colname="col2">1000000000</entry>
+              <entry colname="col1">integer 10000000 - INT_MAX</entry>
+              <entry colname="col2">100000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -9799,7 +9916,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer 10000000 - 2000000000</entry>
+              <entry colname="col1">integer 10000000 - INT_MAX</entry>
               <entry colname="col2">500000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>

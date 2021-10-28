@@ -881,6 +881,7 @@ _readQueryDispatchDesc(void)
 	READ_NODE_FIELD(oidAssignments);
 	READ_NODE_FIELD(sliceTable);
 	READ_NODE_FIELD(cursorPositions);
+	READ_STRING_FIELD(parallelCursorName);
 	READ_BOOL_FIELD(useChangedAOOpts);
 	READ_INT_FIELD(secContext);
 	READ_DONE();

@@ -2,6 +2,7 @@ import os
 
 from gppylib.test.unit.gp_unittest import *
 from gppylib.mainUtils import PIDLockFile, PIDLockHeld
+from gppylib.mainUtils import parseStatusLine
 
 
 class MainUtilsTestCase(GpTestCase):
@@ -53,6 +54,27 @@ class MainUtilsTestCase(GpTestCase):
         else:
             os.wait()
             self.lock.release()
+
+    def test_accept_double_dash_in_data_dir_name_for_start(self):
+        line = 'STATUS--DIR:/Users/shrakesh/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoData--Dir1--STARTED:True--REASONCODE:0--REASON:Start Succeeded'
+        reasonStr, started = parseStatusLine(line, isStart=True)[1:3]
+        self.assertTrue(started)
+        self.assertEqual(reasonStr, 'Start Succeeded')
+
+
+    def test_accept_double_dash_in_data_dir_name_for_stop(self):
+        line = 'STATUS--DIR:/Users/shrakesh/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoData--Dir1--STOPPED:True--REASON:Shutdown Succeeded'
+        reasonStr, stopped = parseStatusLine(line, isStop=True)[1:3]
+        self.assertTrue(stopped)
+        self.assertEqual(reasonStr, 'Shutdown Succeeded')
+
+
+    def test_accept_double_dash_in_data_dir_name_for_excep(self):
+        line = 'STATUS--DIR:/Users/shrakesh/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoData--Dir1--STOPPED:True--REASON:Shutdown Succeeded'
+
+        with self.assertRaises(Exception):
+            parseStatusLine(line)
+
 
     def test_childPID_can_not_remove_parent_lock(self):
         with self.lock:

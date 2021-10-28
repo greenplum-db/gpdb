@@ -65,15 +65,24 @@
         planner adds an <codeph>ANALYZE</codeph> step to the query. </p>
       <p>By default, <codeph>gp_autostats_mode</codeph> is <codeph>on_no_stats</codeph>, which
         triggers statistics collection for <codeph>CREATE TABLE AS SELECT</codeph>,
-          <codeph>INSERT</codeph>, or <codeph>COPY</codeph> operations on any table that has no
-        existing statistics. </p>
+          <codeph>INSERT</codeph>, or <codeph>COPY</codeph> operations invoked by the table
+        owner on any table that has no existing statistics. </p>
       <p>Setting <codeph>gp_autostats_mode</codeph> to <codeph>on_change</codeph> triggers
         statistics collection only when the number of rows affected exceeds the threshold defined by
           <codeph>gp_autostats_on_change_threshold</codeph>, which has a default value of
-        2147483647. Operations that can trigger automatic statistics collection with
-          <codeph>on_change</codeph> are: <codeph>CREATE TABLE AS SELECT</codeph>,
+        2147483647. The following operations invoked on a table by its owner can trigger
+        automatic statistics collection with
+          <codeph>on_change</codeph>: <codeph>CREATE TABLE AS SELECT</codeph>,
           <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, <codeph>INSERT</codeph>, and
           <codeph>COPY</codeph>.</p>
+      <p>Setting the <codeph>gp_autostats_allow_nonowner</codeph> server configuration
+        parameter to <codeph>true</codeph> also instructs Greenplum Database to trigger
+        automatic statistics collection on a table when:</p>
+      <ul>
+        <li><codeph>gp_autostats_mode=on_change</codeph> and the table is modified by a non-owner.</li>
+        <li><codeph>gp_autostats_mode=on_no_stats</codeph> and the first user to
+          <codeph>INSERT</codeph> or <codeph>COPY</codeph> into the table is a non-owner.</li>
+      </ul>
       <p>Setting <codeph>gp_autostats_mode</codeph> to <codeph>none</codeph> disables automatics
         statistics collection. </p>
       <p> For partitioned tables, automatic statistics collection is not triggered if data is

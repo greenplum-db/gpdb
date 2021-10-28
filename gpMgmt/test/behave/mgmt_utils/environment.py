@@ -170,7 +170,7 @@ def after_scenario(context, scenario):
                         context.permissions_to_restore_path_to)
 
     if 'gpstate' in context.feature.tags:
-        create_fault_query = "CREATE extension IF NOT EXISTS gp_inject_fault;"
+        create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
         execute_sql('postgres', create_fault_query)
         reset_fault_query = "SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration WHERE status='u';"
         execute_sql('postgres', reset_fault_query)

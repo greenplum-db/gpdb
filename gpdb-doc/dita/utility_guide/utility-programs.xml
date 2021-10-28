@@ -35,7 +35,7 @@
                     Packages. (See the Note following the table.) All utilities are installed when
                     you install the Greenplum Database server, unless specifically identified by a
                     superscript.</ph></p>
-            <simpletable frame="all" relcolwidth="1.0* 1.0* 1.0*" otherprops="op-help">
+            <simpletable frame="all" relcolwidth="1.0* 1.0* 1.0*">
                 <strow>
                     <stentry>
                         <p><xref href="ref/analyzedb.xml" type="topic" format="dita"/></p>
@@ -71,7 +71,8 @@
                             /></p>
                         <p><xref href="ref/gpinitsystem.xml#topic1" type="topic" format="dita"/></p>
                         <p otherprops="pivotal">
-                            <xref href="https://greenplum.docs.pivotal.io/streaming-server/1-5/ref/gpss-ref.html"
+                            <xref
+                                href="https://greenplum.docs.pivotal.io/streaming-server/1-5/ref/gpss-ref.html"
                                 format="html" scope="external">gpkafka</xref><sup>4</sup></p>
                         <p><xref href="ref/gpload.xml#topic1" type="topic" format="dita"/><sup
                                 otherprops="pivotal">3</sup></p>
@@ -104,12 +105,13 @@
                             >3</sup></p>
                         <p><xref href="ref/pg_restore.xml#topic1"/></p>
                         <p><xref href="ref/plcontainer.xml#topic1" type="topic" format="dita"/></p>
-                        <p><xref href="ref/plcontainer-configuration.xml#topic1" type="topic" format="dita"/></p>
+                        <p><xref href="ref/plcontainer-configuration.xml#topic1" type="topic"
+                                format="dita"/></p>
                         <p><xref href="ref/psql.xml#topic1"/><sup otherprops="pivotal">3</sup></p>
                         <p><xref href="../../pxf/5-15/ref/pxf.html" format="html" scope="external"
-                            >pxf</xref></p>
+                                >pxf</xref></p>
                         <p><xref href="../../pxf/5-15/ref/pxf-cluster.html" format="html"
-                            scope="external">pxf cluster</xref></p>
+                                scope="external">pxf cluster</xref></p>
                         <p><xref href="ref/reindexdb.xml#topic1"/></p>
                         <p><xref href="ref/vacuumdb.xml#topic1"/></p>
                     </stentry>

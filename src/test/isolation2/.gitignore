@@ -6,6 +6,8 @@ regression.out
 # Local binaries and symbolic links
 /extended_protocol_test
 /pg_isolation2_regress
+/test_parallel_retrieve_cursor_extended_query
+/test_parallel_retrieve_cursor_extended_query_error
 /atmsort.pm
 /explain.pm
 /GPTest.pm

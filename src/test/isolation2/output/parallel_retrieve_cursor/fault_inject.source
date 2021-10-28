@@ -1,0 +1,724 @@
+-- @Description Tests with faut inject
+--
+DROP TABLE IF EXISTS t1;
+DROP
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+CREATE
+insert into t1 select generate_series(1,100);
+INSERT 100
+
+--------- Test1: fault injection end-point shared memory slot full on QE
+2: SELECT gp_inject_fault('alloc_endpoint_slot_full', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SELECT gp_inject_fault('alloc_endpoint_slot_full', 'skip', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+-- should report error on seg0
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+ERROR:  failed to allocate endpoint
+1: ROLLBACK;
+ROLLBACK
+-- test same error on another session
+3: BEGIN;
+BEGIN
+3: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+ERROR:  failed to allocate endpoint
+3: ROLLBACK;
+ROLLBACK
+-- reset the fault injection
+2: SELECT gp_inject_fault('alloc_endpoint_slot_full_reset', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SELECT gp_inject_fault('alloc_endpoint_slot_full_reset', 'skip', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+--should work as normal
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+*U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1' or endpointname='DUMMYENDPOINTNAME';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  Retrieve auth token is invalid
+
+
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 22 
+ 24 
+ 27 
+ 29 
+ 34 
+ 37 
+ 39 
+ 41 
+ 42 
+ 45 
+ 51 
+ 53 
+ 54 
+ 55 
+ 59 
+ 60 
+ 65 
+ 66 
+ 70 
+ 75 
+ 77 
+ 80 
+ 81 
+ 84 
+ 90 
+ 92 
+ 93 
+ 94 
+ 97 
+ 99 
+(38 rows)
+
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 31 
+ 35 
+ 36 
+ 38 
+ 40 
+ 44 
+ 46 
+ 47 
+ 48 
+ 49 
+ 50 
+ 57 
+ 61 
+ 64 
+ 68 
+ 69 
+ 71 
+ 72 
+ 74 
+ 76 
+ 78 
+ 79 
+ 83 
+ 86 
+ 87 
+ 88 
+ 89 
+ 91 
+ 95 
+ 98 
+(37 rows)
+
+ a   
+-----
+ 5   
+ 6   
+ 9   
+ 10  
+ 11  
+ 13  
+ 14  
+ 17  
+ 21  
+ 25  
+ 28  
+ 32  
+ 33  
+ 43  
+ 52  
+ 56  
+ 58  
+ 62  
+ 63  
+ 67  
+ 73  
+ 82  
+ 85  
+ 96  
+ 100 
+(25 rows)
+
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+1: CLOSE c1;
+CLOSE
+-- check no endpoint info
+1: SELECT auth_token,state FROM gp_endpoints() WHERE cursorname='c1' or endpointname='DUMMYENDPOINTNAME';
+ auth_token | state 
+------------+-------
+(0 rows)
+-- check no token info on QE after close PARALLEL RETRIEVE CURSOR
+*U: SELECT * FROM gp_segment_endpoints() WHERE cursorname='c1' or endpointname='DUMMYENDPOINTNAME';
+ auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+(0 rows)
+
+1: ROLLBACK;
+ROLLBACK
+
+--- Test2: fault inject while retrieving tuples from endpoint
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id2 | token_id | host_id | port_id | READY
+ endpoint_id2 | token_id | host_id | port_id | READY
+ endpoint_id2 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+0U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+0R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+ERROR:  canceling statement due to user request
+
+1<:  <... completed>
+ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"
+
+1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+(0 rows)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+ERROR:  The endpoint endpoint_id2 does not exist in the session
+
+2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+(0 rows)
+2R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+ERROR:  The endpoint endpoint_id2 does not exist in the session
+
+1<:  <... completed>
+FAILED:  Execution failed
+1: ROLLBACK;
+ROLLBACK
+1: SELECT auth_token,state FROM gp_endpoints() WHERE cursorname='c1';
+ auth_token | state 
+------------+-------
+(0 rows)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Test3: fault inject at the 5th time while retrieving tuples from endpoint
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 3);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', '', '', '', 5, 5, 0, 3::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id3 | token_id | host_id | port_id | READY
+ endpoint_id3 | token_id | host_id | port_id | READY
+ endpoint_id3 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
+ERROR:  canceling statement due to user request
+
+1<:  <... completed>
+ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"
+
+0U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+(0 rows)
+0R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
+ERROR:  The endpoint endpoint_id3 does not exist in the session
+
+2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+(0 rows)
+2R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
+ERROR:  The endpoint endpoint_id3 does not exist in the session
+
+1<:  <... completed>
+FAILED:  Execution failed
+1: ROLLBACK;
+ROLLBACK
+1: SELECT auth_token,state FROM gp_endpoints() WHERE cursorname='c1';
+ auth_token | state 
+------------+-------
+(0 rows)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 3);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Test4: error inject at the 5th time while retrieving tuples from endpoint
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'error', '', '', '', 5, 5, 0, 2::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id4 | token_id | host_id | port_id | READY
+ endpoint_id4 | token_id | host_id | port_id | READY
+ endpoint_id4 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 31 
+ 35 
+ 36 
+ 38 
+ 40 
+ 44 
+ 46 
+ 47 
+ 48 
+ 49 
+ 50 
+ 57 
+ 61 
+ 64 
+ 68 
+ 69 
+ 71 
+ 72 
+ 74 
+ 76 
+ 78 
+ 79 
+ 83 
+ 86 
+ 87 
+ 88 
+ 89 
+ 91 
+ 95 
+ 98 
+(37 rows)
+
+0U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+0R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
+ERROR:  fault triggered, fault name:'fetch_tuples_from_endpoint' fault type:'error'
+
+1<:  <... completed>
+ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"  (seg0 127.0.0.1:25432 pid=31406)
+
+2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+(0 rows)
+2R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
+ERROR:  The endpoint endpoint_id4 does not exist in the session
+
+1<:  <... completed>
+FAILED:  Execution failed
+1: ROLLBACK;
+ROLLBACK
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Test5: error inject at the 5th time while retrieving tuples from endpoint. other retrieve session still retrieving.
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 3);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 4);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 2::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 4::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', '', '', '', 5, 5, 0, 3::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id5 | token_id | host_id | port_id | READY
+ endpoint_id5 | token_id | host_id | port_id | READY
+ endpoint_id5 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+0U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+0R&: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";  <waiting ...>
+
+2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+2R&: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";  <waiting ...>
+
+1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
+ERROR:  canceling statement due to user request
+
+1<:  <... completed>
+ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"
+
+0R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+2R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+
+1<:  <... completed>
+FAILED:  Execution failed
+1: ROLLBACK;
+ROLLBACK
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 3);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 4);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Test6: close PARALLEL RETRIEVE CURSOR during retrieve
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 2::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 4::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 3::smallint);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id7 | token_id | host_id | port_id | READY
+ endpoint_id7 | token_id | host_id | port_id | READY
+ endpoint_id7 | token_id | host_id | port_id | READY
+(3 rows)
+
+0U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+0R&: @pre_run 'set_endpoint_variable @ENDPOINT7': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT7";  <waiting ...>
+
+1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+1R&: @pre_run 'set_endpoint_variable @ENDPOINT7': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT7";  <waiting ...>
+
+2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+2R&: @pre_run 'set_endpoint_variable @ENDPOINT7': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT7";  <waiting ...>
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+ finished 
+----------
+ f        
+(1 row)
+1: CLOSE c1;
+CLOSE
+
+0R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+1R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+2R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+ERROR:  cursor "c1" does not exist
+1: END;
+END
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 3);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 4);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+DROP TABLE t1;
+DROP
+
+-- Test7: error inject at the 1000th time while retrieving tuples from endpoint. other retrieve session finished.
+DROP TABLE IF EXISTS t2;
+DROP
+CREATE TABLE t2 (a INT) DISTRIBUTED by (a);
+CREATE
+insert into t2 select generate_series(1,10000);
+INSERT 10000
+
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', '', '', '', 1000, 1000, 0, dbid) FROM gp_segment_configuration WHERE content=1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 900, 900, 2, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=2 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 800, 800, 2, dbid) FROM gp_segment_configuration WHERE content=2 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t2;
+DECLARE
+1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id6 | token_id | host_id | port_id | READY
+ endpoint_id6 | token_id | host_id | port_id | READY
+ endpoint_id6 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+0U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+0R&: @pre_run 'set_endpoint_variable @ENDPOINT6': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT6";  <waiting ...>
+
+2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+2R&: @pre_run 'set_endpoint_variable @ENDPOINT6': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT6";  <waiting ...>
+
+1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
+ state 
+-------
+ READY 
+(1 row)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT6': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT6";
+ERROR:  canceling statement due to user request
+
+1<:  <... completed>
+ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"
+
+0R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+2R<:  <... completed>
+ERROR:  endpoint is not available because the parallel retrieve cursor was aborted (cdbendpointretrieve.c:245)
+
+1<:  <... completed>
+FAILED:  Execution failed
+1: ROLLBACK;
+ROLLBACK
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=2 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+DROP TABLE t2;
+DROP

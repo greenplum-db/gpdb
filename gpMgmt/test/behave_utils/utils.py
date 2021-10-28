@@ -160,10 +160,23 @@ def check_err_msg(context, err_msg):
     if not hasattr(context, 'exception'):
         raise Exception('An exception was not raised and it was expected')
     pat = re.compile(err_msg)
-    if not pat.search(context.error_message):
-        err_str = "Expected error string '%s' and found: '%s'" % (err_msg, context.error_message)
+    actual = context.error_message
+    if type(actual) is bytes:
+        actual = actual.decode()
+    if not pat.search(actual):
+        err_str = "Expected error string '%s' and found: '%s'" % (err_msg, actual)
         raise Exception(err_str)
 
+def check_string_not_present_err_msg(context, err_msg):
+    if not hasattr(context, 'exception'):
+        raise Exception('An exception was not raised and it was expected')
+    pat = re.compile(err_msg)
+    actual = context.error_message
+    if type(actual) is bytes:
+        actual = actual.decode()
+    if pat.search(actual):
+        err_str = "Did not expect error string '%s' but found: '%s'" % (err_msg, actual)
+        raise Exception(err_str)
 
 def check_return_code(context, ret_code):
     if context.ret_code != int(ret_code):
@@ -688,7 +701,7 @@ def get_primary_segment_host_port_for_content(content='0'):
     """
     return host, port of primary segment for the content id
     """
-    get_psegment_sql = 'select hostname, port from gp_segment_configuration where content=%s;' % content
+    get_psegment_sql = "SELECT hostname, port FROM gp_segment_configuration WHERE content=%s AND role='p';" % content
     with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
         cur = dbconn.query(conn, get_psegment_sql)
         rows = cur.fetchall()

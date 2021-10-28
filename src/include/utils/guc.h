@@ -514,6 +514,7 @@ extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 extern bool optimizer_enable_mergejoin;
 extern bool optimizer_prune_unused_columns;
+extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
@@ -545,6 +546,7 @@ extern int optimizer_join_order;
 extern int optimizer_join_arity_for_associativity_commutativity;
 extern int optimizer_cte_inlining_bound;
 extern int optimizer_push_group_by_below_setop_threshold;
+extern int optimizer_xform_bind_threshold;
 extern bool optimizer_force_multistage_agg;
 extern bool optimizer_force_three_stage_scalar_dqa;
 extern bool optimizer_force_expanded_distinct_aggs;

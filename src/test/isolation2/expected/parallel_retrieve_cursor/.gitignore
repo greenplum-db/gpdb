@@ -1,0 +1,13 @@
+corner.out
+explain.out
+extended_query.out
+fault_inject.out
+privilege.out
+replicated_table.out
+retrieve_quit_check.out
+retrieve_quit_wait.out
+security.out
+special_query.out
+status_check.out
+status_wait.out
+syntax.out

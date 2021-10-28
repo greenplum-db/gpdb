@@ -1,3 +1,11 @@
+---
+name: "\U0001F41B Bug Report"
+about: As a user, I want to report a bug.
+labels: "type: bug"
+---
+
+## Bug Report
+
 ### Greenplum version or build
 
 ### OS version and uname -a
@@ -11,4 +19,3 @@
 ### Actual behavior
 
 ### Step to reproduce the behavior
-

@@ -639,6 +639,13 @@ PortalStart(Portal portal, ParamListInfo params,
 					queryDesc->portal_name = (portal->name ? pstrdup(portal->name) : (char *) NULL);
 				}
 
+				if (PortalIsParallelRetrieveCursor(portal))
+				{
+					if (queryDesc->ddesc == NULL)
+						queryDesc->ddesc = makeNode(QueryDispatchDesc);
+					queryDesc->ddesc->parallelCursorName = queryDesc->portal_name;
+				}
+
 				queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 				if (Gp_role == GP_ROLE_DISPATCH)

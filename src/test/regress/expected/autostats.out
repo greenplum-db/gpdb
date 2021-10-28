@@ -1,0 +1,161 @@
+-- start_matchsubs
+-- m/^LOG:  In mode on_change, command INSERT.* modifying 10 tuples caused Auto-ANALYZE./
+-- s/\(dboid,tableoid\)=\(\d+,\d+\)/\(dboid,tableoid\)=\(XXXXX,XXXXX\)/
+-- m/LOG:  Auto-stats did not issue ANALYZE on tableoid \d+ since the user does not have table-owner level permissions./
+-- s/tableoid \d+/tableoid XXXXX/
+-- end_matchsubs
+-- start_matchignore
+-- m/^LOG: .*Feature not supported: Non-default collation./
+-- m/^LOG:.*ERROR,"PG exception raised"/
+-- end_matchignore
+set gp_autostats_mode=on_change;
+set gp_autostats_on_change_threshold=9;
+set log_autostats=on;
+set client_min_messages=log;
+drop table if exists autostats_test;
+LOG:  statement: drop table if exists autostats_test;
+NOTICE:  table "autostats_test" does not exist, skipping
+create table autostats_test (a INTEGER);
+LOG:  statement: create table autostats_test (a INTEGER);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+drop user if exists autostats_nonowner;
+LOG:  statement: drop user if exists autostats_nonowner;
+NOTICE:  role "autostats_nonowner" does not exist, skipping
+create user autostats_nonowner;
+LOG:  statement: create user autostats_nonowner;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+-- Make sure rel_tuples starts at zero
+select relname, reltuples from pg_class where relname='autostats_test';
+LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |         0
+(1 row)
+
+-- Try it with gp_autostats_allow_nonowner GUC enabled, but as a non-owner
+-- without INSERT permission.  Should fail with permission denied, without
+-- triggering autostats collection
+set gp_autostats_allow_nonowner=on;
+LOG:  statement: set gp_autostats_allow_nonowner=on;
+set role=autostats_nonowner;
+LOG:  statement: set role=autostats_nonowner;
+insert into autostats_test select generate_series(1, 10);
+LOG:  statement: insert into autostats_test select generate_series(1, 10);
+LOG:  An exception was encountered during the execution of statement: insert into autostats_test select generate_series(1, 10);
+ERROR:  permission denied for table autostats_test
+select relname, reltuples from pg_class where relname='autostats_test';
+LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |         0
+(1 row)
+
+reset role;
+LOG:  statement: reset role;
+-- Try it with GUC enabled, after granting INSERT, stats should update to 10
+grant insert on table autostats_test to autostats_nonowner;
+LOG:  statement: grant insert on table autostats_test to autostats_nonowner;
+set role=autostats_nonowner;
+LOG:  statement: set role=autostats_nonowner;
+insert into autostats_test select generate_series(11, 20);
+LOG:  statement: insert into autostats_test select generate_series(11, 20);
+LOG:  In mode on_change, command INSERT on (dboid,tableoid)=(XXXXX,XXXXX) modifying 10 tuples caused Auto-ANALYZE.
+select relname, reltuples from pg_class where relname='autostats_test';
+LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |        10
+(1 row)
+
+-- Try running analyze manually as nonowner, should fail
+set role=autostats_nonowner;
+LOG:  statement: set role=autostats_nonowner;
+analyze autostats_test;
+LOG:  statement: analyze autostats_test;
+WARNING:  skipping "autostats_test" --- only table or database owner can analyze it
+select relname, reltuples from pg_class where relname='autostats_test';
+LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |        10
+(1 row)
+
+-- Try to disable allow_nonowner GUC as ordinary user, should fail
+set gp_autostats_allow_nonowner=off;
+LOG:  statement: set gp_autostats_allow_nonowner=off;
+LOG:  An exception was encountered during the execution of statement: set gp_autostats_allow_nonowner=off;
+ERROR:  permission denied to set parameter "gp_autostats_allow_nonowner"
+show gp_autostats_allow_nonowner;
+LOG:  statement: show gp_autostats_allow_nonowner;
+ gp_autostats_allow_nonowner 
+-----------------------------
+ on
+(1 row)
+
+-- GUC should still be enabled, stats should update to 20
+insert into autostats_test select generate_series(21, 30);
+LOG:  statement: insert into autostats_test select generate_series(21, 30);
+LOG:  In mode on_change, command INSERT on (dboid,tableoid)=(XXXXX,XXXXX) modifying 10 tuples caused Auto-ANALYZE.
+select relname, reltuples from pg_class where relname='autostats_test';
+LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |        20
+(1 row)
+
+reset role;
+LOG:  statement: reset role;
+-- Change allow_nonowner GUC as admin, should work
+set gp_autostats_allow_nonowner=off;
+LOG:  statement: set gp_autostats_allow_nonowner=off;
+show gp_autostats_allow_nonowner;
+LOG:  statement: show gp_autostats_allow_nonowner;
+ gp_autostats_allow_nonowner 
+-----------------------------
+ off
+(1 row)
+
+-- GUC should be disabled, stats should not update
+set role=autostats_nonowner;
+LOG:  statement: set role=autostats_nonowner;
+insert into autostats_test select generate_series(31, 40);
+LOG:  statement: insert into autostats_test select generate_series(31, 40);
+LOG:  In mode on_change, command INSERT on (dboid,tableoid)=(XXXXX,XXXXX) modifying 10 tuples caused Auto-ANALYZE.
+LOG:  Auto-stats did not issue ANALYZE on tableoid XXXXX since the user does not have table-owner level permissions.
+select relname, reltuples from pg_class where relname='autostats_test';
+LOG:  statement: select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |        20
+(1 row)
+
+reset role;
+LOG:  statement: reset role;
+-- Try to enable allow_nonowner GUC as ordinary user, should fail
+-- GUC should still be disabled, stats should update from 20 to 40
+insert into autostats_test select generate_series(21, 30);
+LOG:  statement: insert into autostats_test select generate_series(21, 30);
+LOG:  In mode on_change, command INSERT on (dboid,tableoid)=(XXXXX,XXXXX) modifying 10 tuples caused Auto-ANALYZE.
+reset client_min_messages;
+LOG:  statement: reset client_min_messages;
+select relname, reltuples from pg_class where relname='autostats_test';
+    relname     | reltuples 
+----------------+-----------
+ autostats_test |        40
+(1 row)
+
+reset role;
+-- After 4 successful inserts, final row count should also be 40
+select COUNT(*) from autostats_test;
+ count 
+-------
+    40
+(1 row)
+
+drop table if exists autostats_test;
+drop user autostats_nonowner;
+reset gp_autostats_mode;
+reset gp_autostats_on_change_threshold;
+reset log_autostats;
+reset gp_autostats_allow_nonowner;

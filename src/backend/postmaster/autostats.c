@@ -53,17 +53,21 @@ autostats_issue_analyze(Oid relationOid)
 	VacuumRelation *relation;
 	ParseState *pstate;
 
-	/*
-	 * If this user does not own the table, then auto-stats will not issue the
-	 * analyze.
-	 */
-	if (!(pg_class_ownercheck(relationOid, GetUserId()) ||
-		  (pg_database_ownercheck(MyDatabaseId, GetUserId()) && !IsSharedRelation(relationOid))))
+	if (!gp_autostats_allow_nonowner)
 	{
-		elog(DEBUG3, "Auto-stats did not issue ANALYZE on tableoid %d since the user does not have table-owner level permissions.",
-			 relationOid);
+		/*
+		 * If this user does not own the table, then auto-stats will not issue the
+		 * analyze.  This check will be skipped if gp_autostats_allow_nonowner=true
+		 */
+		if (!(pg_class_ownercheck(relationOid, GetUserId()) ||
+			 (pg_database_ownercheck(MyDatabaseId, GetUserId()) && !IsSharedRelation(relationOid))))
+		{
+			if (log_autostats)
+				elog(LOG, "Auto-stats did not issue ANALYZE on tableoid %d since the user does not have table-owner level permissions.",
+				relationOid);
 
-		return;
+				return;
+		}
 	}
 
 	/* Set up an ANALYZE command */
@@ -76,7 +80,7 @@ autostats_issue_analyze(Oid relationOid)
 	pstate = make_parsestate(NULL);
 	pstate->p_sourcetext = NULL;
 
-	ExecVacuum(pstate, analyzeStmt, false);
+	ExecVacuum(pstate, analyzeStmt, false, true);
 
 	free_parsestate(pstate);
 	pfree(analyzeStmt);

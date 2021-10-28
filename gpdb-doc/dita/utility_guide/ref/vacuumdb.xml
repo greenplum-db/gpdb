@@ -150,11 +150,10 @@
     <section id="section8">
       <title>See Also</title>
       <p>
-        <ph otherprops="op-print"><codeph>VACUUM</codeph> and <codeph>ANALYZE</codeph> in the
-            <i>Greenplum Database Reference Guide</i></ph>
-        <ph otherprops="op-help"><codeph><xref href="../../ref_guide/sql_commands/VACUUM.xml#topic1"
-            /></codeph>, <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"
-            /></codeph></ph>
+        <ph><codeph>VACUUM</codeph> and <codeph>ANALYZE</codeph> in the <i>Greenplum Database
+            Reference Guide</i></ph>
+        <ph><codeph><xref href="../../ref_guide/sql_commands/VACUUM.xml#topic1"/></codeph>,
+              <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"/></codeph></ph>
       </p>
     </section>
   </body>

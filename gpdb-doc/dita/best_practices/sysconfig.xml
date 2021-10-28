@@ -71,12 +71,7 @@ MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
         <codeblock>* soft  nofile 524288
 * hard  nofile 524288
 * soft  nproc 131072
-* hard  nproc 131072</codeblock></p><p>Enable
-        core files output to a known location and make sure <codeph>limits.conf</codeph> allows core
-        files.
-        <codeblock>kernel.core_pattern = /var/core/core.%h.%t
-# grep core /etc/security/limits.conf  
-* soft  core unlimited</codeblock></p></section>
+* hard  nproc 131072</codeblock></p></section>
     <section id="os_mem_config">
       <title>OS Memory Configuration</title>
       <p>The Linux sysctl <codeph>vm.overcommit_memory</codeph> and

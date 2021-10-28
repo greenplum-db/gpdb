@@ -45,7 +45,7 @@ def show_all_installed(gphome):
     name = x[0].lower()
     if 'ubuntu' in name:
         return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print $1}'" % gphome
-    elif 'centos' in name:
+    elif 'centos' in name or 'rhel' in name:
         return "rpm -qa --dbpath %s/share/packages/database" % gphome
     else:
         raise Exception('UNKNOWN platform: %s' % str(x))
@@ -55,7 +55,7 @@ def remove_native_package_command(gphome, full_gppkg_name):
     name = x[0].lower()
     if 'ubuntu' in name:
         return 'fakeroot dpkg --force-not-root --log=/dev/null --instdir=%s --admindir=%s/share/packages/database/deb -r %s' % (gphome, gphome, full_gppkg_name)
-    elif 'centos' in name:
+    elif 'centos' in name or 'rhel' in name:
         return 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, gphome)
     else:
         raise Exception('UNKNOWN platform: %s' % str(x))
@@ -562,6 +562,13 @@ def impl(context, HOST, port, dir, ctxt):
 @then('{command} should print "{err_msg}" error message')
 def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
+
+@then('{command} {state} print "{err_msg}" error message')
+def impl(context, command, state, err_msg):
+    if state == "should not":
+        check_string_not_present_err_msg(context, err_msg)
+    elif state == "should":
+        check_err_msg(context, err_msg)
 
 @when('{command} should print "{out_msg}" escaped to stdout')
 @then('{command} should print "{out_msg}" escaped to stdout')
@@ -1914,6 +1921,17 @@ def impl(context, query, dbname, host, port):
     cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd)
     cmd.run(validateAfter=True)
     context.stdout_message = cmd.get_stdout()
+
+@when('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
+@then('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
+@given('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
+def impl(context, psql_cmd, dbname, utility_mode):
+    if utility_mode:
+        cmd = "export PGOPTIONS=\'-c gp_role=utility\'; psql -d \'{}\' {};".format(dbname, psql_cmd)
+    else:
+        cmd = "psql -d \'{}\' {};".format(dbname, psql_cmd)
+
+    run_command(context, cmd)
 
 @then('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
 @when('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')

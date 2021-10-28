@@ -1,122 +1,233 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic14">
-  <title>Recovering From Segment Failures</title>
+<topic id="topic_segment_recovery_scenarios">
+  <title>Recovering from Segment Failures</title>
   <body>
-    <p>Segment host failures usually cause multiple segment failures: all primary or mirror segment
-      instances on the host are marked as down and nonoperational. If mirroring is not enabled and a
-      segment goes down, the system automatically becomes nonoperational.</p>
-    <p>A segment instance can fail for several reasons, such as a host failure, network failure, or
-      disk failure. When a segment instance fails, its status is marked as <i>down</i> in the
-      Greenplum Database system catalog, and its mirror is activated in <i>change tracking</i> mode.
-      In order to bring the failed segment instance back into operation again, you must first
-      correct the problem that made it fail in the first place, and then recover the segment
-      instance in Greenplum Database using <codeph>gprecoverseg</codeph>.</p>
-    <p>If a segment host is not recoverable and you have lost one or more segment instances with
-      mirroring enabled, you can attempt to recover a segment instance from its mirror. See <xref
-        href="g-when-a-segment-host-is-not-recoverable.xml"/>. You can also recreate your Greenplum
-      Database system from backup files. See <xref href="../../managing/backup-main.xml"/>. </p>
-    <section id="ki155642">
-      <title>To recover with mirroring enabled</title>
-      <ol>
-        <li id="ki155643">Ensure you can connect to the segment host from the master host. For
-          example:<codeblock>$ ping <i>failed_seg_host_address</i></codeblock>
+    <p>This topic walks you through what to do when one or more segments or hosts are down and you
+      want to recover the down segments. The recovery path you follow depends primarily which of
+      these 3 scenarios fits your circumstances:</p>
+    <p>
+      <ul id="ul_ibt_fqy_xqb">
+        <li dir="ltr">
+          <p dir="ltr">you want to recover in-place to the current host</p>
         </li>
-        <li id="ki155645">Troubleshoot the problem that prevents the master host from connecting to
-          the segment host. For example, the host machine may need to be restarted or replaced.</li>
-        <li id="ki155646">After the host is online and you can connect to it, run the <codeph><xref
-              href="../../../utility_guide/ref/gprecoverseg.xml"
-            >gprecoverseg</xref></codeph> utility from the master host to reactivate the failed
-          segment instances and start the process of synchronizing the master and mirror instances.
-          For example:<codeblock>$ gprecoverseg</codeblock>
+        <li dir="ltr">
+          <p dir="ltr">you want to recover to a different host, within the cluster</p>
         </li>
-        <li id="ki158500">The recovery process brings up the failed segments and identifies the
-          changed files that need to be synchronized. The process can take some time; wait for the
-          process to complete.</li>
-        <li id="ki164382">After <codeph>gprecoverseg</codeph> completes, the system goes into
-            <i>Resynchronizing</i> mode and begins copying the changed files. This process runs in
-          the background while the system is online and accepting database requests.</li>
-        <li id="ki158504">When the resynchronization process completes, the system state is
-            <i>Synchronized</i>. </li>
-      </ol>
-      <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
-        instance data is not corrupted, contact VMware Support. </note>
-    </section>
-    <section id="ki155666">
-      <title>To return all segments to their preferred role</title>
-      <p>When a primary segment instance goes down, the mirror activates and becomes the primary
-        segment. After running <codeph>gprecoverseg</codeph>, the currently active segment instance
-        remains the primary and the failed segment becomes the mirror. The segment instances are not
-        returned to the preferred role that they were given at system initialization time. This
-        means that the system could be in a potentially unbalanced state if segment hosts have more
-        active segments than is optimal for top system performance. </p>
-      <p>All segments must be online and fully synchronized to rebalance the system. Database
-        sessions remain connected during rebalancing, but queries in progress are canceled and
-        rolled back. </p>
-      <ol>
-        <li id="ki165540">Run <codeph>gpstate -e</codeph> to check for unbalanced segments.
-          <codeblock>$ gpstate -e</codeblock>
+        <li dir="ltr">
+          <p dir="ltr">you want to recover to a new host, outside of the cluster</p>
         </li>
-        <li id="ki165577">If any mirrors are in <i>Resynchronizing</i> mode, wait for them to
-          complete.</li>
-        <li id="ki165591">Run <codeph>gprecoverseg</codeph> with the <codeph>-r</codeph> option to
-          return the segments to their preferred roles.<codeblock>$ gprecoverseg -r</codeblock>
+      </ul>
+    </p>
+    <p>The steps you follow within these scenarios can vary, depending on:</p>
+    <p>
+      <ul id="ul_h4x_nqy_xqb">
+        <li dir="ltr">
+          <p dir="ltr">whether you want to do an incremental or a full recovery</p>
         </li>
-        <li id="ki166668">After rebalancing, run <codeph>gpstate -e</codeph> to confirm all segments
-          are in their preferred roles.<codeblock>$ gpstate -e</codeblock>
+        <li dir="ltr">
+          <p dir="ltr">whether you want to recover all segments or just a subset of segments</p>
         </li>
-      </ol>
-    </section>
-    <section id="sec-df">
-      <title>To recover from a double fault</title>
-      <p>In a double fault, both a primary segment and its mirror are down. This can occur if
-        hardware failures on different segment hosts happen simultaneously. Greenplum Database is
-        unavailable if a double fault occurs. </p>
-      <p>To recover from a double fault.</p>
-      <ol>
-        <li>Troubleshoot the problem that caused the double fault and ensure that the segment hosts
-          are operational and are accessible from the master host.</li>
-        <li id="ki165670">Restart Greenplum Database. The <codeph><xref
-              href="../../../utility_guide/ref/gpstop.xml" type="topic" format="dita"
-              >gpstop</xref></codeph> option <codeph>-r</codeph> stops and restarts the
-          system.<codeblock>$ gpstop -r</codeblock></li>
-        <li id="ki165671">After the system restarts, run <codeph>gprecoverseg</codeph> to reactivate
-          the failed segment instances.<codeblock>$ gprecoverseg</codeblock>
-          <note otherprops="pivotal"> If incremental recovery was not successful and the down
-            segment instance data is not corrupted, contact VMware Support. </note></li>
-        <li id="ki165709">After <codeph>gprecoverseg</codeph> completes, use
-            <codeph>gpstate</codeph> to check the status of your mirrors and ensure the segment
-          instances have gone from <i>Resynchronizing</i> mode to <i>Synchronized</i>
-          mode:<codeblock>$ gpstate -m </codeblock></li>
-        <li id="ki165730">If you still have segment instances in <i>change tracking</i> mode, you
-          can run <codeph>gprecoverseg</codeph> with the <codeph>-F</codeph> option to perform a
-          full segment recovery.
-          <note type="warning">A full recovery deletes the data directory of the down segment
-            instance before copying the data from the active (current primary) segment instance.
-            Before performing a full recovery, ensure that the segment failure did not cause data
-            corruption and that any host segment disk issues have been
-          fixed.</note><codeblock>$ gprecoverseg -F</codeblock></li>
-        <li>If needed, return segment instances to their preferred role. See <xref
-            href="#topic14/ki155666" format="dita"/>.</li>
-      </ol>
-    </section>
-    <section>
-      <title><ph>To recover without mirroring enabled</ph></title>
-      <ol id="ol_lb2_rkq_kr">
-        <li id="ki155667">Ensure you can connect to the segment host from the master host. For
-          example:<codeblock>$ ping <varname>failed_seg_host_address</varname></codeblock>
-        </li>
-        <li id="ki155669">Troubleshoot the problem that is preventing the master host from
-          connecting to the segment host. For example, the host machine may need to be
-          restarted.</li>
-        <li id="ki155670">After the host is online, verify that you can connect to it and restart
-          Greenplum Database. The <codeph>gpstop</codeph> option <codeph>-r</codeph> stops and
-          restarts the system:<codeblock>$ gpstop -r </codeblock></li>
-        <li id="ki155681">Run the <codeph>gpstate</codeph> utility to verify that all segment
-          instances are online:<codeblock>$ gpstate</codeblock>
-        </li>
-      </ol>
-    </section>
+      </ul>
+    </p>
+    <p>
+      <note>Incremental recovery is only possible when recovering segments to the current host
+        (in-place recovery).</note>
+    </p>
+    <p>This topic is divided into the following sections:</p>
+    <ul id="ul_z5j_mty_xqb">
+      <li><xref href="#prepare_for_recovery" type="topic" format="dita" class="- topic/xref "/></li>
+      <li><xref href="#recovery_scenarios" type="topic" format="dita" class="- topic/xref "/></li>
+      <li><xref href="#post_recovery" type="topic" format="dita" class="- topic/xref "/></li>
+    </ul>
   </body>
+  <topic id="prepare_for_recovery">
+    <title>Prerequisites</title>
+    <body>
+      <p>
+        <ul id="ul_z5j_mty_xqb">
+          <li>Mirroring is enabled for all segments.</li>
+          <li dir="ltr">You've already identified which segments have failed. If necessary, see the
+            topic <xref href="g-checking-for-failed-segments.xml"/>. </li>
+          <li>The master host can connect to the segment host. </li>
+          <li>All networking or hardware issues that caused the segment to fail have been
+            resolved.</li>
+        </ul>
+      </p>
+    </body>
+  </topic>
+  <topic id="recovery_scenarios">
+    <title>Recovery Scenarios</title>
+    <body>
+      <p>This section documents the steps for the 3 distinct segment  recovery scenarios. Follow the
+        link to instructions that walk you through each scenario.</p>
+      <p><ul>
+        <li><xref href="#same_host" type="topic" format="dita" class="- topic/xref "/><ul
+              id="ul_xqn_x5p_yqb">
+          <li><xref href="#incremental" type="topic" format="dita" class="- topic/xref "/></li>
+          <li><xref href="#full" type="topic" format="dita" class="- topic/xref "/></li>
+            </ul>
+          </li>
+        <li><xref href="#different_host" type="topic" format="dita" class="- topic/xref "/>
+          </li>
+          <li><xref href="#new_host" type="topic" format="dita" class="- topic/xref "/>
+          </li>
+      </ul></p>
+    </body>
+    <topic id="same_host">
+      <title>Recover In-Place to Current Host</title>
+      <body>
+        <p>When recovering in-place to the current host, you may choose between incremental recovery
+          (the default) and full recovery.</p>
+      </body>
+      <topic id="incremental">
+        <title>Incremental Recovery</title>
+        <body>
+          <p>Follow these steps for incremental recovery:</p>
+          <p>
+            <ol id="ol_hz4_k11_yqb">
+              <li>To recover all segments, run <codeph>gprecoverseg</codeph> with no options:
+                <codeblock>gprecoverseg</codeblock></li>
+              <li>To recover a subset of segments:<ol id="ol_yts_4b1_yqb">
+                  <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
+                    your choice, where each segment to recover has its own line with format
+                      <codeph>failedAddress|failedPort|failedDataDirectory </codeph><p dir="ltr">For
+                      multiple segments, create a new line for each segment you want to recover,
+                      specifying the address, port number and data directory for each down segment.
+                      For example:
+                    </p><codeblock>failedAddress1|failedPort1|failedDataDirectory1
+failedAddress2|failedPort2|failedDataDirectory2
+failedAddress3|failedPort3|failedDataDirectory3</codeblock></li>
+                  <li>Alternatively, generate a sample recovery file using the following command;
+                    you may edit the resulting file if
+                    necessary:<codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></li>
+                  <li>Pass the <codeph>recover_config_file</codeph> to the <codeph>gprecoverseg
+                      -i</codeph> command:
+                    <codeblock>$ gprecoverseg -i /home/gpadmin/recover_config_file  </codeblock></li>
+                </ol></li>
+              <li>Perform the post-recovery tasks summarized in the section <xref
+                  href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+            </ol>
+          </p>
+          
+        </body>
+      </topic>
+      <topic id="full">
+        <title>Full Recovery</title>
+        <body>
+          <p>
+           <ol>
+             <li>To recover all segments, run <codeph>gprecoverseg -F</codeph>:
+                <codeblock>gprecoverseg -F</codeblock></li>
+              <li>To recover specific segments:<ol id="ol_fx1_gg1_yqb">
+                  <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
+                    your choice, where each segment to recover has its own line with following
+                    format:
+                    <codeblock>failedAddress1|failedPort1|failedDataDirectory1<b>&lt;SPACE></b>failedAddress2|failedPort2|failedDataDirectory2</codeblock>
+                    Note the literal <b>SPACE</b> separating the lines. </li>
+                  <li>Alternatively, generate a sample recovery file using the following command and
+                    edit the resulting file to match your desired recovery configuration:
+                    <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock></li>
+                  <li>Run the following command, passing in the config file generated in the
+                    previous step: <codeblock>$ gprecoverseg -i recover_config_file</codeblock></li>
+                </ol></li>
+              <li>Perform the post-recovery tasks summarized in the section <xref
+                  href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+           </ol>
+          </p>
+        </body>
+      </topic>
+    </topic>
+    <topic id="different_host">
+      <title>Recover to A Different Host within the Cluster</title>
+      <body>
+        <p>
+          <note>Only full recovery is possible when recovering to a different host in the
+              cluster.</note></p>
+          <p>Follow these steps to recover all segments or just a subset of segments to
+              a different host in the cluster:<ol id="ol_oph_f31_yqb">
+                <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
+              your choice, where each segment to recover has its own line with following format:
+              <codeblock>failedAddress|failedPort|failedDataDirectory<b>&lt;SPACE></b>newAddress|newPort|newDataDirectory</codeblock>
+              Note the literal <b>SPACE</b> separating the details of the down segment from the
+              details of where the segment will be recovered to.<p>Alternatively, generate a sample
+                recovery file using the following command and edit the resulting file to match your
+                desired recovery configuration:
+                <codeblock>$ gprecoverseg -o -p /home/gpadmin/recover_config_file</codeblock></p></li>
+                <li>Run the following command, passing in the config file generated in the previous
+                  step:<codeblock>$ gprecoverseg -i recover_config_file</codeblock></li>
+                <li>Perform the post-recovery tasks summarized in the section <xref
+                    href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+              </ol></p>
+      </body>
+    </topic>
+    <topic id="new_host">
+      <title>Recover to A New Host, Outside of the Cluster</title>
+      <body>
+        <p>Follow these steps if you are planning to do a hardware refresh on the host the segments
+          are running on.</p>
+        <p>
+          <note>Only full recovery is possible when recovering to a new host.</note>
+        </p>
+      </body>
+      <topic id="new_host_requirements">
+        <title>Requirements for New Host</title>
+        <body>
+          <p>The new host must:<ul id="ul_flg_dl1_yqb">
+              <li dir="ltr">
+                <p dir="ltr">have the same Greenplum Database software installed and configured as
+                  the failed host</p>
+              </li>
+              <li dir="ltr">
+                <p dir="ltr">have the same hardware and OS configuration as the failed host (same
+                  hostname, OS version, OS configuration parameters applied, locales,
+                  gpadmin user account, data directory locations created, ssh keys exchanged, number
+                  of network interfaces, network interface naming convention, and so on)</p>
+              </li>
+              <li dir="ltr">
+                <p dir="ltr">have sufficient disk space to accommodate the segments</p>
+              </li>
+              <li dir="ltr">
+                <p dir="ltr">be able to connect password-less with all other existing segments and
+                  Greenplum master.</p>
+              </li>
+            </ul></p>
+        </body>
+      </topic>
+      <topic id="topic_yyj_4gb_yqb">
+        <title>Steps to Recover to a New Host</title>
+        <body>
+          <ol id="ol_zyj_4gb_yqb">
+            <li>Bring up the new host</li>
+            <li>Run the following command to recover all segments to the new host:
+                <codeblock>gprecoverseg -p &lt;new_host_name></codeblock><p>You may also specify
+                more than one host. However, be sure you do not trigger a double-fault scenario when
+                recovering to two hosts at a time. </p><codeblock>gprecoverseg -p &lt;new_host_name1>,&lt;new_host_name2></codeblock><p>
+                <note>In the case of multiple failed segment hosts, you can specify the hosts to
+                  recover to with a comma-separated list. However, it is strongly recommended to
+                  recover to one host at a time. If you must recover to more than one host at a
+                  time, then it is critical to ensure that a double fault scenario does not occur,
+                  in which both the segment primary and corresponding mirror are offline.</note>
+              </p></li>
+            <li>Perform the post-recovery tasks summarized in the section <xref
+                href="#post_recovery" type="topic" format="dita" class="- topic/xref "/>.</li>
+          </ol>
+        </body>
+      </topic>
+    </topic>
+    <topic id="post_recovery">
+      <title>Post-Recovery Tasks</title>
+      <body>
+        <p>Follow these steps once <codeph>gprecoverseg</codeph> has completed:<ol
+            id="ol_oxb_vfb_yqb">
+            <li>Validate segement status and preferred
+              roles:<codeblock>select * from gp_segment_configuration</codeblock></li>
+            <li>Monitor mirror synchronization progress: <codeblock>gpstate -e</codeblock></li>
+            <li>If necessary, run the following command to return segments to their preferred roles:
+              <codeblock>gprecoverseg -r</codeblock></li>
+          </ol></p>
+      </body>
+    </topic>
+  </topic>
 </topic>

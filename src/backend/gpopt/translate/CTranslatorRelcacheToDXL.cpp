@@ -393,7 +393,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		distr_op_families = RetrieveRelDistributionOpFamilies(mp, gp_policy);
 	}
 
-	convert_hash_to_random = false;
+	convert_hash_to_random = gpdb::IsChildPartDistributionMismatched(rel.get());
 
 	// collect relation indexes
 	md_index_info_array = RetrieveRelIndexInfo(mp, rel.get());

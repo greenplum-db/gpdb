@@ -1069,6 +1069,9 @@ class GpSystemStateProgram:
 
         data.addValue(VALUE__REPL_CURRENT_LSN, current_wal_lsn if current_wal_lsn else 'Unknown', isWarning=(not current_wal_lsn))
 
+        # Set SENT_LEFT to unknown, and if we find a valid WAL connection, set it to correct value
+        data.addValue(VALUE__REPL_SENT_LEFT, 'Unknown', isWarning=True)
+
         # Now fill in the information for the standby connection. There should
         # be exactly one such entry; otherwise we bail.
         standby_connections = [r for r in rows if r[0] == 'gp_walreceiver']
@@ -1083,9 +1086,7 @@ class GpSystemStateProgram:
 
         sent_left = row[8]
         if sent_left is not None:
-            data.addValue(VALUE__REPL_SENT_LEFT, sent_left)
-        else:
-            data.addValue(VALUE__REPL_SENT_LEFT, 'Unknown', isWarning=True)
+            data.addValue(VALUE__REPL_SENT_LEFT, sent_left, isWarning=False)
 
         GpSystemStateProgram._set_mirror_replication_values(data, mirror,
             state=row[1],

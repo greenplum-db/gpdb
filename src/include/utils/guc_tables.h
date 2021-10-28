@@ -96,8 +96,7 @@ enum config_group
 	LOGGING_WHAT,
 	PROCESS_TITLE,
 	STATS,
-
-    STATS_ANALYZE,                      /*CDB*/
+	STATS_ANALYZE,                      /*CDB*/
 	STATS_MONITORING,
 	STATS_COLLECTOR,
 	AUTOVACUUM,

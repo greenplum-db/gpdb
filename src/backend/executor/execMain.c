@@ -106,6 +106,7 @@
 #include "cdb/memquota.h"
 #include "cdb/cdbtargeteddispatch.h"
 #include "cdb/cdbutil.h"
+#include "cdb/cdbendpoint.h"
 
 
 /* Hooks for plugins to get control in ExecutorStart/Run/Finish/End */
@@ -790,6 +791,8 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	DestReceiver *dest;
 	bool		sendTuples;
 	MemoryContext oldcontext;
+	EndpointExecState *endpointExecState = NULL;
+
 	/*
 	 * NOTE: Any local vars that are set in the PG_TRY block and examined in the
 	 * PG_CATCH block should be declared 'volatile'. (setjmp shenanigans)
@@ -909,6 +912,32 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 		}
 		else if (exec_identity == GP_ROOT_SLICE)
 		{
+			bool isParallelRetrieveCursor = false;
+			DestReceiver *endpointDest = NULL;
+
+			isParallelRetrieveCursor = (queryDesc->ddesc &&
+										queryDesc->ddesc->parallelCursorName &&
+										queryDesc->ddesc->parallelCursorName[0]);
+
+			/*
+			 * When run a root slice, and it is a PARALLEL RETRIEVE CURSOR, it means
+			 * QD become the end point for connection. It is true, for
+			 * instance, SELECT * FROM foo LIMIT 10, and the result should
+			 * go out from QD.
+			 *
+			 * For the scenario: endpoint on QE, the query plan is changed,
+			 * the root slice also exists on QE.
+			 */
+			if (isParallelRetrieveCursor)
+			{
+				endpointExecState = allocEndpointExecState();
+				SetupEndpointExecState(queryDesc->tupDesc,
+									   queryDesc->ddesc->parallelCursorName,
+									   endpointExecState);
+				endpointDest = endpointExecState->dest;
+				(endpointDest->rStartup)(endpointDest, operation, queryDesc->tupDesc);
+			}
+
 			/*
 			 * Run a root slice
 			 * It corresponds to the "normal" path through the executor
@@ -920,10 +949,10 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 						queryDesc->planstate,
 						queryDesc->plannedstmt->parallelModeNeeded,
 						operation,
-						sendTuples,
+						isParallelRetrieveCursor ? true : sendTuples,
 						count,
 						direction,
-						dest,
+						isParallelRetrieveCursor? endpointDest : dest,
 						execute_once);
 		}
 		else
@@ -970,6 +999,9 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	/*
 	 * shutdown tuple receiver, if we started it
 	 */
+	if (endpointExecState != NULL)
+		DestroyEndpointExecState(endpointExecState);
+
 	if (sendTuples)
 		dest->rShutdown(dest);
 

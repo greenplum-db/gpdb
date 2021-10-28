@@ -213,6 +213,7 @@ typedef struct PlannerGlobal
 	/* GPDB: flags to support COPY's IGNORE EXTERNAL PARTITIONS option. */
 	bool		skip_foreign_partitions;	/* don't expand foreign partitions */
 	bool		foreign_partition_was_skipped; /* foreign partition was skipped */
+	bool		is_parallel_cursor;
 
 	/*
 	 * Slice table. Built by cdbllize_build_slice_table() near the end of

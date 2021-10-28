@@ -2851,7 +2851,18 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 {
 	int			i;
 
-	Assert(TempTablespacesAreSet());
+	/*
+	 * GPDB: This function is called only by SharedFileSetInit(), in which
+	 * we call PrepareTempTablespaces() just before this function. In upstream
+	 * Postgres, we would only go through this code path inside a transaction.
+	 * However, in GPDB, SharedFileSetInit() may also get called in the process
+	 * of ExecSquelchShareInputScan(), which could happen during abort
+	 * transaction. If we are not in a transaction, PrepareTempTablespaces()
+	 * would have to return early without setting the temp tablespaces. The
+	 * shared fileset in this case will be writen in the default table space
+	 * rather than the temp tablespaces.
+	 */
+	Assert(TempTablespacesAreSet() || IsAbortInProgress());
 	for (i = 0; i < numTempTableSpaces && i < numSpaces; ++i)
 		tableSpaces[i] = tempTableSpaces[i];
 

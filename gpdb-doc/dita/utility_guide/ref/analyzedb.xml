@@ -277,7 +277,7 @@ LANGUAGE plpythonu VOLATILE;</codeblock></p>
       <p>
         <ph otherprops="op-print"><cmdname>ANALYZE</cmdname> in the <cite>Greenplum Database
             Reference Guide</cite></ph>
-        <ph otherprops="op-help">
+        <ph>
           <codeph>
             <xref href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"/>
           </codeph>

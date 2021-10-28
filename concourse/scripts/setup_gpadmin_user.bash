@@ -69,17 +69,12 @@ create_gpadmin_if_not_existing() {
 setup_gpadmin_user() {
   groupadd supergroup
   case "$TEST_OS" in
-    centos)
+    centos*)
       user_add_cmd="/usr/sbin/useradd -G supergroup,tty gpadmin"
       create_gpadmin_if_not_existing ${user_add_cmd}
       ;;
-    ubuntu)
+    ubuntu*)
       user_add_cmd="/usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash"
-      create_gpadmin_if_not_existing ${user_add_cmd}
-      ;;
-    sles)
-      # create a default group gpadmin, and add user gpadmin to group gapdmin, supergroup, tty
-      user_add_cmd="/usr/sbin/useradd -U -G supergroup,tty gpadmin"
       create_gpadmin_if_not_existing ${user_add_cmd}
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
@@ -91,24 +86,25 @@ setup_gpadmin_user() {
 }
 
 setup_sshd() {
-  if [ ! "$TEST_OS" = 'ubuntu' ]; then
-    test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
-  fi
   test -e /etc/ssh/ssh_host_rsa_key || ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
   test -e /etc/ssh/ssh_host_dsa_key || ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
-
-  # For Centos 7, disable looking for host key types that older Centos versions don't support.
-  sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
-  sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
-
   # See https://gist.github.com/gasi/5691565
   sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
   # Disable password authentication so builds never hang given bad keys
   sed -ri 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
 
+  case "$TEST_OS" in
+    centos7)
+      test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
+      # For Centos 7, disable looking for host key types that older Centos versions don't support.
+      sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
+      sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
+      ;;
+  esac
+
   setup_ssh_for_user root
 
-  if [ "$TEST_OS" = 'ubuntu' ]; then
+  if [[ "$TEST_OS" == *"ubuntu"* ]]; then
     mkdir -p /var/run/sshd
     chmod 0755 /var/run/sshd
   fi
@@ -120,22 +116,22 @@ setup_sshd() {
 }
 
 determine_os() {
-  if [ -f /etc/redhat-release ] ; then
-    echo "centos"
-    return
+  local name version
+  if [ -f /etc/redhat-release ]; then
+    name="centos"
+    version=$(sed </etc/redhat-release 's/.*release *//' | cut -f1 -d.)
+  elif [ -f /etc/SuSE-release ]; then
+    name="sles"
+    version=$(awk -F " *= *" '$1 == "VERSION" { print $2 }' /etc/SuSE-release)
+  elif grep -q ubuntu /etc/os-release ; then
+    name="ubuntu"
+    version=$(awk -F " *= *" '$1 == "VERSION_ID" { print $2 }' /etc/os-release | tr -d \")
+  else
+    echo "Could not determine operating system type" >/dev/stderr
+    exit 1
   fi
-  if grep -q ID=ubuntu /etc/os-release ; then
-    echo "ubuntu"
-    return
-  fi
-  if grep -q 'ID="sles"' /etc/os-release ; then
-    echo "sles"
-    return
-  fi
-  echo "Could not determine operating system type" >/dev/stderr
-  exit 1
+  echo "${name}${version}"
 }
-
 # Set the "Set-User-ID" bit of ping, or else gpinitsystem will error by following message:
 # [FATAL]:-Unknown host d6f9f630-65a3-4c98-4c03-401fbe5dd60b: ping: socket: Operation not permitted
 # This is needed in centos7, sles12sp5, but not for ubuntu18.04

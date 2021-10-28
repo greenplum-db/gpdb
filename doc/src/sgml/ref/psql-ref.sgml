@@ -1363,39 +1363,13 @@ testdb=&gt;
 
 
       <varlistentry>
-<<<<<<< HEAD
-        <term><literal>\dD[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <listitem>
-        <para>
-        Lists domains. If <replaceable
-        class="parameter">pattern</replaceable>
-        is specified, only domains whose names match the pattern are shown.
-        By default, only user-created objects are shown;  supply a
-        pattern or the <literal>S</literal> modifier to include system
-        objects.
-        If <literal>+</literal> is appended to the command name, each object
-        is listed with its associated permissions and description.
-        </para>
-        </listitem>
-      </varlistentry>
-
-
-      <varlistentry>
-        <term><literal>\dE[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <term><literal>\di[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <term><literal>\dP[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <term><literal>\dm[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <term><literal>\ds[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <term><literal>\dt[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-        <term><literal>\dv[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-=======
         <term><literal>\dE[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\di[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dP[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dm[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\ds[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dt[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dv[S+] [ <link linkend="app-psql-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 
         <listitem>
         <para>
@@ -4403,24 +4377,6 @@ $endif
    </varlistentry>
 
    <varlistentry>
-<<<<<<< HEAD
-    <term><envar>PAGER</envar></term>
-
-    <listitem>
-     <para>
-      If the query results do not fit on the screen, they are piped
-      through this command.  Typical values are
-      <literal>more</literal> or <literal>less</literal>.  The default
-      is platform-dependent.  Use of the pager can be disabled by setting
-      <envar>PAGER</envar> to empty, or by using pager-related options of
-      the <command>\pset</command> command.
-     </para>
-    </listitem>
-   </varlistentry>
-
-   <varlistentry>
-=======
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
     <term><envar>PGDATABASE</envar></term>
     <term><envar>PGHOST</envar></term>
     <term><envar>PGPORT</envar></term>
