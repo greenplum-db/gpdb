@@ -38,6 +38,7 @@
 #include "catalog/storage_database.h"
 #include "commands/async.h"
 #include "commands/dbcommands.h"
+#include "commands/extension.h"
 #include "commands/resgroupcmds.h"
 #include "commands/tablecmds.h"
 #include "commands/trigger.h"
@@ -3391,6 +3392,10 @@ AbortTransaction(void)
 
 	/* Make sure we have a valid memory context and resource owner */
 	AtAbort_Memory();
+
+	if (Gp_role == GP_ROLE_EXECUTE)
+		ResetExtensionCreatingGlobalVarsOnQE();
+
 	AtAbort_ResourceOwner();
 
 	/*
@@ -5661,6 +5666,15 @@ AbortOutOfAnyTransaction(void)
 
 	/* Ensure we're not running in a doomed memory context */
 	AtAbort_Memory();
+
+	/*
+	 * Greenplum specific behavior:
+	 * Some QEs might already be in Abort State, they still need
+	 * to reset Extension related global vars, so we invoke them
+	 * here (not AbortTransction).
+	 */
+	if (Gp_role == GP_ROLE_EXECUTE)
+		ResetExtensionCreatingGlobalVarsOnQE();
 
 	/*
 	 * Get out of any transaction or nested transaction

@@ -5034,10 +5034,6 @@ PostgresMain(int argc, char *argv[],
 		/* We don't have a transaction command open anymore */
 		xact_started = false;
 
-		/* When QE error in creating extension, we must reset CurrentExtensionObject */
-		creating_extension = false;
-		CurrentExtensionObject = InvalidOid;
-
 		/* Inform Vmem tracker that the current process has finished cleanup */
 		RunawayCleaner_RunawayCleanupDoneForProcess(false /* ignoredCleanup */);
 
