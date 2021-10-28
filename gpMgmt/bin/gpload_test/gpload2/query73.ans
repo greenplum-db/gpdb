@@ -1,14 +1,14 @@
-2021-05-24 17:37:12|INFO|gpload session started 2021-05-24 17:37:12
-2021-05-24 17:37:12|INFO|setting schema 'public' for table 'chinese表'
-2021-05-24 17:37:12|ERROR|no mapping for input column ""notexist"" to output table
-2021-05-24 17:37:12|INFO|rows Inserted          = 0
-2021-05-24 17:37:12|INFO|rows Updated           = 0
-2021-05-24 17:37:12|INFO|data formatting errors = 0
-2021-05-24 17:37:12|INFO|gpload failed
-2021-05-24 17:37:12|INFO|gpload session started 2021-05-24 17:37:12
-2021-05-24 17:37:12|INFO|setting schema 'public' for table 'chinese表'
-2021-05-24 17:37:12|ERROR|no mapping for input column ""notexist"" to output table
-2021-05-24 17:37:12|INFO|rows Inserted          = 0
-2021-05-24 17:37:12|INFO|rows Updated           = 0
-2021-05-24 17:37:12|INFO|data formatting errors = 0
-2021-05-24 17:37:12|INFO|gpload failed
+2021-08-10 14:56:45|INFO|gpload session started 2021-08-10 14:56:45
+2021-08-10 14:56:45|INFO|setting schema 'public' for table 'chinese表'
+2021-08-10 14:56:45|ERROR|no mapping for input column "notexist" to output table
+2021-08-10 14:56:45|INFO|rows Inserted          = 0
+2021-08-10 14:56:45|INFO|rows Updated           = 0
+2021-08-10 14:56:45|INFO|data formatting errors = 0
+2021-08-10 14:56:45|INFO|gpload failed
+2021-08-10 14:56:45|INFO|gpload session started 2021-08-10 14:56:45
+2021-08-10 14:56:45|INFO|setting schema 'public' for table 'chinese表'
+2021-08-10 14:56:45|ERROR|no mapping for input column "notexist" to output table
+2021-08-10 14:56:45|INFO|rows Inserted          = 0
+2021-08-10 14:56:45|INFO|rows Updated           = 0
+2021-08-10 14:56:45|INFO|data formatting errors = 0
+2021-08-10 14:56:45|INFO|gpload failed

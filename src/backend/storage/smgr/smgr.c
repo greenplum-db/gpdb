@@ -428,70 +428,6 @@ smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
 }
 
 /*
- *	smgrdounlink() -- Immediately unlink all forks of a relation.
- *
- *		All forks of the relation are removed from the store.  This should
- *		not be used during transactional operations, since it can't be undone.
- *
- *		If isRedo is true, it is okay for the underlying file(s) to be gone
- *		already.
- */
-void
-smgrdounlink(SMgrRelation reln, bool isRedo)
-{
-	RelFileNodeBackend rnode = reln->smgr_rnode;
-	int			which = reln->smgr_which;
-	ForkNumber	forknum;
-
-	/* Close the forks at smgr level */
-	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-		smgrsw[which].smgr_close(reln, forknum);
-
-	/*
-	 * Get rid of any remaining buffers for the relation.  bufmgr will just
-	 * drop them without bothering to write the contents.
-	 *
-	 * Apart from relstorage == RELSTORAGE_HEAP do any other RELSTOARGE type
-	 * expected to have buffers in shared memory ? Can check only for
-	 * RELSTORAGE_HEAP below.
-	 */
-	/*
-	 * GPDB_12_MERGE_FIXME: Really we only need to DropRelFileNodesAllBuffers
-	 * when for a tableam that has relations in shared buffers. But for things
-	 * like AO, this doesn't seem to apply. Do we need a way to detect HEAP or
-	 * work this into the tableam interface?
-	 */
-	DropRelFileNodesAllBuffers(&rnode, 1);
-
-	/*
-	 * It'd be nice to tell the stats collector to forget it immediately, too.
-	 * But we can't because we don't know the OID (and in cases involving
-	 * relfilenode swaps, it's not always clear which table OID to forget,
-	 * anyway).
-	 */
-
-	/*
-	 * Send a shared-inval message to force other backends to close any
-	 * dangling smgr references they may have for this rel.  We should do this
-	 * before starting the actual unlinking, in case we fail partway through
-	 * that step.  Note that the sinval message will eventually come back to
-	 * this backend, too, and thereby provide a backstop that we closed our
-	 * own smgr rel.
-	 */
-	CacheInvalidateSmgr(rnode);
-
-	/*
-	 * Delete the physical file(s).
-	 *
-	 * Note: smgr_unlink must treat deletion failure as a WARNING, not an
-	 * ERROR, because we've already decided to commit or abort the current
-	 * xact.
-	 */
-	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-        smgrsw[which].smgr_unlink(rnode, InvalidForkNumber, isRedo);
-}
-
-/*
  *	smgrdounlinkall() -- Immediately unlink all forks of all given relations
  *
  *		All forks of all given relations are removed from the store.  This
@@ -500,9 +436,6 @@ smgrdounlink(SMgrRelation reln, bool isRedo)
  *
  *		If isRedo is true, it is okay for the underlying file(s) to be gone
  *		already.
- *
- *		This is equivalent to calling smgrdounlink for each relation, but it's
- *		significantly quicker so should be preferred when possible.
  */
 void
 smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)

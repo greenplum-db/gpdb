@@ -1,40 +1,40 @@
-2021-01-11 10:57:13|INFO|gpload session started 2021-01-11 10:57:13
-2021-01-11 10:57:13|INFO|setting schema 'public' for table 'chinese表'
-2021-01-11 10:57:13|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2021-01-11 10:57:13|INFO|reusing external table ext_gpload_reusable_b2dfa2d6_53b8_11eb_80b7_00505698707d
-2021-01-11 10:57:13|INFO|running time: 0.07 seconds
-2021-01-11 10:57:13|INFO|rows Inserted          = 8
-2021-01-11 10:57:13|INFO|rows Updated           = 0
-2021-01-11 10:57:13|INFO|data formatting errors = 0
-2021-01-11 10:57:13|INFO|gpload succeeded
+2021-08-10 14:56:46|INFO|gpload session started 2021-08-10 14:56:46
+2021-08-10 14:56:46|INFO|setting schema 'public' for table 'chinese表'
+2021-08-10 14:56:46|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-08-10 14:56:46|INFO|did not find an external table to reuse. creating ext_gpload_reusable_2092c476_f9a8_11eb_b503_0050569e2380
+2021-08-10 14:56:46|INFO|running time: 0.06 seconds
+2021-08-10 14:56:46|INFO|rows Inserted          = 8
+2021-08-10 14:56:46|INFO|rows Updated           = 0
+2021-08-10 14:56:46|INFO|data formatting errors = 0
+2021-08-10 14:56:46|INFO|gpload succeeded
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '列1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-2021-01-11 10:57:13|INFO|gpload session started 2021-01-11 10:57:13
-2021-01-11 10:57:13|INFO|setting schema 'public' for table 'chinese表'
-2021-01-11 10:57:13|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2021-01-11 10:57:14|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
-2021-01-11 10:57:14|INFO|reusing external table ext_gpload_reusable_b2dfa2d6_53b8_11eb_80b7_00505698707d
-2021-01-11 10:57:14|ERROR|unexpected error -- backtrace written to log file
-2021-01-11 10:57:14|INFO|rows Inserted          = 0
-2021-01-11 10:57:14|INFO|rows Updated           = 40
-2021-01-11 10:57:14|INFO|data formatting errors = 0
-2021-01-11 10:57:14|INFO|gpload failed
-2021-01-11 10:57:14|INFO|gpload session started 2021-01-11 10:57:14
-2021-01-11 10:57:14|INFO|setting schema 'public' for table 'chinese表'
-2021-01-11 10:57:14|ERROR|no mapping for input column "'列1'" to output table
-2021-01-11 10:57:14|INFO|rows Inserted          = 0
-2021-01-11 10:57:14|INFO|rows Updated           = 0
-2021-01-11 10:57:14|INFO|data formatting errors = 0
-2021-01-11 10:57:14|INFO|gpload failed
+2021-08-10 14:56:46|INFO|gpload session started 2021-08-10 14:56:46
+2021-08-10 14:56:46|INFO|setting schema 'public' for table 'chinese表'
+2021-08-10 14:56:46|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-08-10 14:56:46|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
+2021-08-10 14:56:46|INFO|reusing external table ext_gpload_reusable_2092c476_f9a8_11eb_b503_0050569e2380
+2021-08-10 14:56:46|ERROR|unexpected error -- backtrace written to log file
+2021-08-10 14:56:46|INFO|rows Inserted          = 0
+2021-08-10 14:56:46|INFO|rows Updated           = 8
+2021-08-10 14:56:46|INFO|data formatting errors = 0
+2021-08-10 14:56:46|INFO|gpload failed
+2021-08-10 14:56:46|INFO|gpload session started 2021-08-10 14:56:46
+2021-08-10 14:56:46|INFO|setting schema 'public' for table 'chinese表'
+2021-08-10 14:56:46|ERROR|no mapping for input column "'列1'" to output table
+2021-08-10 14:56:46|INFO|rows Inserted          = 0
+2021-08-10 14:56:46|INFO|rows Updated           = 0
+2021-08-10 14:56:46|INFO|data formatting errors = 0
+2021-08-10 14:56:46|INFO|gpload failed
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '列1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-2021-01-11 10:57:14|INFO|gpload session started 2021-01-11 10:57:14
-2021-01-11 10:57:14|INFO|setting schema 'public' for table 'chinese表'
-2021-01-11 10:57:14|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2021-01-11 10:57:14|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
-2021-01-11 10:57:14|INFO|reusing external table ext_gpload_reusable_b2dfa2d6_53b8_11eb_80b7_00505698707d
-2021-01-11 10:57:14|ERROR|unexpected error -- backtrace written to log file
-2021-01-11 10:57:14|INFO|rows Inserted          = 0
-2021-01-11 10:57:14|INFO|rows Updated           = 40
-2021-01-11 10:57:14|INFO|data formatting errors = 0
-2021-01-11 10:57:14|INFO|gpload failed
+2021-08-10 14:56:46|INFO|gpload session started 2021-08-10 14:56:46
+2021-08-10 14:56:46|INFO|setting schema 'public' for table 'chinese表'
+2021-08-10 14:56:46|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-08-10 14:56:46|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
+2021-08-10 14:56:46|INFO|reusing external table ext_gpload_reusable_2092c476_f9a8_11eb_b503_0050569e2380
+2021-08-10 14:56:46|ERROR|unexpected error -- backtrace written to log file
+2021-08-10 14:56:46|INFO|rows Inserted          = 0
+2021-08-10 14:56:46|INFO|rows Updated           = 8
+2021-08-10 14:56:46|INFO|data formatting errors = 0
+2021-08-10 14:56:46|INFO|gpload failed

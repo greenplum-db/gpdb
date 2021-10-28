@@ -334,8 +334,111 @@ insert into t_sql_value_function1 values(2, now());
 explain (costs off) insert into t_sql_value_function2 values(now());
 insert into t_sql_value_function2 values(now());
 
+-- Convert policy of root to random when one of its children has a different distribution policy.
+-- The only allowed difference between parent and children is for the parent to be hash distributed,
+-- and its child part to be randomly distributed.
+create table t_hash_partition
+(
+    r_regionkey integer not null,
+    r_name char(25)
+)
+partition by range (r_regionkey)
+(
+    partition region1 start (0),
+    partition region2 start (3),
+    partition region3 start (5) end (8)
+);
+
+set allow_system_table_mods=true;
+
+-- select: root & leaf are all the same hash dist, will direct dispatch
+begin;
+select * from t_hash_partition where r_regionkey=1;
+select * from t_hash_partition_1_prt_region1 where r_regionkey=1;
+abort;
+
+-- delete: root & leaf are all the same hash dist, will direct dispatch
+begin;
+-- orca does not handle direct dispatch for DELETE or UPDATE now
+-- also orca does not handle DELETE/UPDATE for partitioned tables now.
+explain (costs off) delete from t_hash_partition where r_regionkey=1;
+delete from t_hash_partition where r_regionkey=1;
+abort;
+
+begin;
+-- orca does not handle direct dispatch for DELETE or UPDATE now
+delete from t_hash_partition_1_prt_region1 where r_regionkey=1;
+abort;
+
+-- update: root & leaf are all the same hash dist, will direct dispatch
+begin;
+-- orca does not handle direct dispatch for DELETE or UPDATE now
+-- also orca does not handle DELETE/UPDATE for partitioned tables now.
+explain (costs off) update t_hash_partition set r_name = 'CHINA' where r_regionkey=1;
+update t_hash_partition set r_name = 'CHINA' where r_regionkey=1;
+abort;
+
+begin;
+-- orca does not handle direct dispatch for DELETE or UPDATE now
+update t_hash_partition_1_prt_region1 set r_name = 'CHINA' where r_regionkey=1;
+abort;
+
+-- insert
+begin;
+-- only consider target's policy, will direct dispatch
+insert into t_hash_partition values(1,'CHINA');
+-- leaf is also hash dist, will direct dispatch
+insert into t_hash_partition_1_prt_region1 values(1,'CHINA');
+abort;
+
+-- can not alter distributed of child partition, we change one child policy to random
+update gp_distribution_policy set distkey='',distclass='' where localoid::regclass::text = 't_hash_partition_1_prt_region1';
+
+-- select
+begin;
+-- root & leaf policy mismatch, will not direct dispatch
+select * from t_hash_partition where r_regionkey=1;
+-- the leaf is randomly dist now, will not direct dispatch
+select * from t_hash_partition_1_prt_region1 where r_regionkey=1;
+abort;
+
+-- delete
+begin;
+-- root & leaf policy mismatch, will not direct dispatch
+delete from t_hash_partition where r_regionkey=1;
+abort;
+
+begin;
+-- this leaf is randomly dist, will not direct dispatch
+delete from t_hash_partition_1_prt_region1 where r_regionkey=1;
+abort;
+
+-- update
+begin;
+-- root & leaf policy mismatch, will not direct dispatch
+update t_hash_partition set r_name = 'CHINA' where r_regionkey=1;
+abort;
+
+begin;
+-- this leaf is randomly dist, will not direct dispatch
+update t_hash_partition_1_prt_region1 set r_name = 'CHINA' where r_regionkey=1;
+abort;
+
+-- insert
+begin;
+-- only consider target's policy, will direct dispatch
+insert into t_hash_partition values(1,'CHINA');
+abort;
+
+begin;
+-- this leaf is randomly dist, will not direct dispatch
+insert into t_hash_partition_1_prt_region1 values(1,'CHINA');
+abort;
+
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
+set allow_system_table_mods=off;
 
 begin;
 drop table if exists direct_test;
@@ -351,5 +454,7 @@ drop table if exists MPP_22019_b;
 
 drop table if exists t_sql_value_function1;
 drop table if exists t_sql_value_function2;
+
+drop table if exists t_hash_partition;
 
 commit;

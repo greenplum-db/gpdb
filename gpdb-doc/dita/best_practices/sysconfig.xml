@@ -71,12 +71,7 @@ MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
         <codeblock>* soft  nofile 524288
 * hard  nofile 524288
 * soft  nproc 131072
-* hard  nproc 131072</codeblock></p><p>Enable
-        core files output to a known location and make sure <codeph>limits.conf</codeph> allows core
-        files.
-        <codeblock>kernel.core_pattern = /var/core/core.%h.%t
-# grep core /etc/security/limits.conf  
-* soft  core unlimited</codeblock></p></section>
+* hard  nproc 131072</codeblock></p></section>
     <section id="os_mem_config">
       <title>OS Memory Configuration</title>
       <p>The Linux sysctl <codeph>vm.overcommit_memory</codeph> and
@@ -141,11 +136,14 @@ kernel.shmall = 197951838</codeblock>
         amount of memory that all active postgres processes for a single segment can consume at any
         given time. Queries that exceed this amount will fail. Use the following calculations to
         estimate a safe value for <codeph>gp_vmem_protect_limit</codeph>.<ol id="ol_osx_srq_kv">
-          <li>Calculate <codeph>gp_vmem</codeph>, the host memory available to Greenplum Database,
-            using this
-            formula:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7</codeblock>where
-              <codeph>SWAP</codeph> is the host's swap space in GB and <codeph>RAM</codeph> is the
-            RAM installed on the host in GB.</li>
+          <li>Calculate <codeph>gp_vmem</codeph>, the host memory available to Greenplum
+              Database.<ul id="ul_ftf_yw5_rqb">
+              <li>If the total system memory is less than 256 GB, use this
+                formula:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7</codeblock></li>
+              <li>If the total system memory is equal to or greater than 256 GB, use this formula:
+                <codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.17</codeblock></li>
+            </ul>where <codeph>SWAP</codeph> is the host's swap space in GB and <codeph>RAM</codeph>
+            is the RAM installed on the host in GB.</li>
           <li>Calculate <codeph>max_acting_primary_segments</codeph>. This is the maximum number of
             primary segments that can be running on a host when mirror segments are activated due to
             a segment or host failure on another host in the cluster. With mirrors arranged in a
@@ -161,8 +159,13 @@ kernel.shmall = 197951838</codeblock>
         </ol>
       </p>
       <p dir="ltr">For scenarios where a large number of workfiles are generated, adjust the
-        calculation for <codeph>gp_vmem</codeph> to account for the
-        workfiles:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <varname>total_#_workfiles</varname>))) / 1.7</codeblock></p>
+        calculation for <codeph>gp_vmem</codeph> to account for the workfiles.<ul
+          id="ul_v54_ymb_sqb">
+          <li>If the total system memory is less than 256
+            GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <varname>total_#_workfiles</varname>))) / 1.7</codeblock></li>
+          <li>If the total system memory is equal to or greater than 256
+            GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <varname>total_#_workfiles</varname>))) / 1.17</codeblock></li>
+        </ul></p>
       <p dir="ltr">For information about monitoring and managing workfile usage, see the
           <i>Greenplum Database Administrator Guide</i>.</p>
       <p dir="ltr">You can calculate the value of the <codeph>vm.overcommit_ratio</codeph> operating

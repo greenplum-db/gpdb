@@ -90,6 +90,11 @@ protected:
 								   CExpression *pexprPredOuter,
 								   CExpression *pexprPredInner);
 
+	static CEnfdDistribution *PedInnerHashedFromOuterHashed(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CEnfdDistribution::EDistributionMatching dmatch,
+		CDrvdProp *outerDrvdProp);
+
 public:
 	// match function
 	BOOL Matches(COperator *pop) const override;

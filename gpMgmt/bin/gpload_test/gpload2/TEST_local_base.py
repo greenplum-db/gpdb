@@ -444,11 +444,11 @@ def drop_tables():
         name = i[1]
         match = re.search('ext_gpload',name)
         if match:
-            queryString = f'DROP EXTERNAL TABLE "{schema}"."{name}";'
+            queryString = 'DROP EXTERNAL TABLE "%s"."%s";'%(schema, name)
             db.query(queryString.encode('utf-8'))
 
         else:
-            queryString = f'DROP TABLE "{schema}"."{name}";'
+            queryString = 'DROP TABLE "%s"."%s";'%(schema, name)
             db.query(queryString.encode('utf-8'))
 
 class PSQLError(Exception):

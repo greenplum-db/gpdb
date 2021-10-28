@@ -7,6 +7,7 @@ from gppylib.commands import gp
 from gppylib.commands import base
 from gppylib.gparray import GpArray
 from gppylib.commands.gp import SEGMENT_TIMEOUT_DEFAULT
+from gppylib.mainUtils import parseStatusLine
 
 logger = get_default_logger()
 
@@ -203,25 +204,7 @@ class StartSegmentsOperation:
                 lines = cmdout.split('\n')
                 for line in lines:
                     if line.startswith("STATUS"):
-                        fields=line.split('--')
-
-                        index = 1
-                        dir = fields[index].split(':')[1]
-                        index += 1
-
-                        started = fields[index].split(':')[1]
-                        index += 1
-
-                        reasonCode = gp.SEGSTART_ERROR_UNKNOWN_ERROR
-                        if fields[index].startswith("REASONCODE:"):
-                            reasonCode = int(fields[index].split(":")[1])
-                            index += 1
-
-                        # The funny join and splits are because Reason could have colons or -- in the text itself
-                        reasonStr = "--".join(fields[index:])
-                        reasonArr = reasonStr.split(':')
-                        reasonArr = reasonArr[1:]
-                        reasonStr = ":".join(reasonArr)
+                        reasonCode, reasonStr, started, dir = parseStatusLine(line, isStart=True)
 
                         if started.lower() == 'false':
                             success=False

@@ -274,7 +274,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
  * Add one GUC to the option string.
  */
 static void
-addOneOption(StringInfo string, struct config_generic *guc)
+addOneOption(StringInfo option, StringInfo diff, struct config_generic *guc)
 {
 	Assert(guc && (guc->flags & GUC_GPDB_NEED_SYNC));
 	switch (guc->vartype)
@@ -283,30 +283,36 @@ addOneOption(StringInfo string, struct config_generic *guc)
 			{
 				struct config_bool *bguc = (struct config_bool *) guc;
 
-				appendStringInfo(string, " -c %s=%s", guc->name, *(bguc->variable) ? "true" : "false");
+				appendStringInfo(option, " -c %s=%s", guc->name, (bguc->reset_val) ? "true" : "false");
+				if (bguc->reset_val != *bguc->variable)
+					appendStringInfo(diff, " %s=%s", guc->name, *(bguc->variable) ? "true" : "false");
 				break;
 			}
 		case PGC_INT:
 			{
 				struct config_int *iguc = (struct config_int *) guc;
 
-				appendStringInfo(string, " -c %s=%d", guc->name, *iguc->variable);
+				appendStringInfo(option, " -c %s=%d", guc->name, iguc->reset_val);
+				if (iguc->reset_val != *iguc->variable)
+					appendStringInfo(diff, " %s=%d", guc->name, *iguc->variable);
 				break;
 			}
 		case PGC_REAL:
 			{
 				struct config_real *rguc = (struct config_real *) guc;
 
-				appendStringInfo(string, " -c %s=%f", guc->name, *rguc->variable);
+				appendStringInfo(option, " -c %s=%f", guc->name, rguc->reset_val);
+				if (rguc->reset_val != *rguc->variable)
+					appendStringInfo(diff, " %s=%f", guc->name, *rguc->variable);
 				break;
 			}
 		case PGC_STRING:
 			{
 				struct config_string *sguc = (struct config_string *) guc;
-				const char *str = *sguc->variable;
+				const char *str = sguc->reset_val;
 				int			i;
 
-				appendStringInfo(string, " -c %s=", guc->name);
+				appendStringInfo(option, " -c %s=", guc->name);
 
 				/*
 				 * All whitespace characters must be escaped. See
@@ -315,20 +321,32 @@ addOneOption(StringInfo string, struct config_generic *guc)
 				for (i = 0; str[i] != '\0'; i++)
 				{
 					if (isspace((unsigned char) str[i]))
-						appendStringInfoChar(string, '\\');
+						appendStringInfoChar(option, '\\');
 
-					appendStringInfoChar(string, str[i]);
+					appendStringInfoChar(option, str[i]);
+				}
+				if (strcmp(str, *sguc->variable) != 0)
+				{
+					const char *p = *sguc->variable;
+					appendStringInfo(diff, " %s=", guc->name);
+					for (i = 0; p[i] != '\0'; i++)
+					{
+						if (isspace((unsigned char) p[i]))
+							appendStringInfoChar(diff, '\\');
+
+						appendStringInfoChar(diff, p[i]);
+					}
 				}
 				break;
 			}
 		case PGC_ENUM:
 			{
 				struct config_enum *eguc = (struct config_enum *) guc;
-				int			value = *eguc->variable;
+				int			value = eguc->reset_val;
 				const char *str = config_enum_lookup_by_value(eguc, value);
 				int			i;
 
-				appendStringInfo(string, " -c %s=", guc->name);
+				appendStringInfo(option, " -c %s=", guc->name);
 
 				/*
 				 * All whitespace characters must be escaped. See
@@ -338,9 +356,21 @@ addOneOption(StringInfo string, struct config_generic *guc)
 				for (i = 0; str[i] != '\0'; i++)
 				{
 					if (isspace((unsigned char) str[i]))
-						appendStringInfoChar(string, '\\');
+						appendStringInfoChar(option, '\\');
 
-					appendStringInfoChar(string, str[i]);
+					appendStringInfoChar(option, str[i]);
+				}
+				if (value != *eguc->variable)
+				{
+					const char *p = config_enum_lookup_by_value(eguc, *eguc->variable);
+					appendStringInfo(diff, " %s=", guc->name);
+					for (i = 0; p[i] != '\0'; i++)
+					{
+						if (isspace((unsigned char) p[i]))
+							appendStringInfoChar(diff, '\\');
+
+						appendStringInfoChar(diff, p[i]);
+					}
 				}
 				break;
 			}
@@ -348,24 +378,46 @@ addOneOption(StringInfo string, struct config_generic *guc)
 }
 
 /*
- * Add GUCs to option string.
+ * Add GUCs to option/diff_options string.
+ *
+ * `options` is a list of reset_val of the GUCs, not the GUC's current value.
+ * `diff_options` is a list of the GUCs' current value. If the GUC is unchanged,
+ * `diff_options` will omit it.
+ *
+ * In process_startup_options(), `options` is used to set the GUCs with
+ * PGC_S_CLIENT as its guc source. Then, `diff_options` is used to set the GUCs
+ * with PGC_S_SESSION as its guc source.
+ *
+ * With PGC_S_CLIENT, SetConfigOption() will set the GUC's reset_val
+ * when processing `options`, so the reset_val of the involved GUCs on all QD
+ * and QEs are the same.
+ *
+ * After applying `diff_options`, the GUCs' current value is set to the same
+ * value as the QD and the reset_val of the GUC will not change.
+ *
+ * At last, both the reset_val and current value of the GUC are consistent,
+ * even after RESET.
+ *
+ * See addOneOption() and process_startup_options() for more details.
  */
-char *
-makeOptions(void)
+void
+makeOptions(char **options, char **diff_options)
 {
 	struct config_generic **gucs = get_guc_variables();
 	int			ngucs = get_num_guc_variables();
 	CdbComponentDatabaseInfo *qdinfo = NULL;
-	StringInfoData string;
+	StringInfoData optionsStr;
+	StringInfoData diffStr;
 	int			i;
 
-	initStringInfo(&string);
+	initStringInfo(&optionsStr);
+	initStringInfo(&diffStr);
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
-	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->config->hostip);
-	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->config->port);
+	appendStringInfo(&optionsStr, " -c gp_qd_hostname=%s", qdinfo->config->hostip);
+	appendStringInfo(&optionsStr, " -c gp_qd_port=%d", qdinfo->config->port);
 
 	for (i = 0; i < ngucs; ++i)
 	{
@@ -375,10 +427,11 @@ makeOptions(void)
 			(guc->context == PGC_USERSET ||
 			 guc->context == PGC_BACKEND ||
 			 IsAuthenticatedUserSuperUser()))
-			addOneOption(&string, guc);
+			addOneOption(&optionsStr, &diffStr, guc);
 	}
 
-	return string.data;
+	*options = optionsStr.data;
+	*diff_options = diffStr.data;
 }
 
 /*

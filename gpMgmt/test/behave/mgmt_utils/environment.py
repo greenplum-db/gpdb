@@ -5,7 +5,7 @@ import behave
 
 from test.behave_utils.utils import drop_database_if_exists, start_database_if_not_started,\
                                             create_database, \
-                                            run_command, check_user_permissions, run_gpcommand
+                                            run_command, check_user_permissions, run_gpcommand, execute_sql
 from steps.mirrors_mgmt_utils import MirrorMgmtContext
 from steps.gpconfig_mgmt_utils import GpConfigContext
 from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
@@ -137,7 +137,7 @@ def after_scenario(context, scenario):
         restore_bashrc()
 
     # NOTE: gpconfig after_scenario cleanup is in the step `the gpconfig context is setup`
-    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpinitstandby',
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpinitstandby',
                     'gpconfig', 'gpstop', 'gpinitsystem', 'cross_subnet']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
@@ -172,3 +172,9 @@ def after_scenario(context, scenario):
     elif hasattr(context, 'permissions_to_restore_path_to'):
         raise Exception('Missing path_for_which_to_restore_the_permissions despite the specified permission %o' %
                         context.permissions_to_restore_path_to)
+
+    if 'gpstate' in context.feature.tags:
+        create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
+        execute_sql('postgres', create_fault_query)
+        reset_fault_query = "SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration WHERE status='u';"
+        execute_sql('postgres', reset_fault_query)

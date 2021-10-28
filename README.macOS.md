@@ -5,7 +5,7 @@ Sierra.
 
 Execute the following, this script will start by caching the `sudo` password:
 
-```
+```bash
 ./README.macOS.bash
 source ~/.bash_profile
 ```
@@ -16,8 +16,9 @@ Note: This will install Homebrew if missing
 
 Execute the following in your terminal:
 
-```
+```bash
 mkdir -p "$HOME/.ssh"
+
 cat >> ~/.bash_profile << EOF
 
 # Allow ssh to use the version of python in path, not the system python
@@ -50,6 +51,12 @@ fi
 [ -f ~/.bashrc ] && source ~/.bashrc
 # END SSH agent
 EOF
+```
+
+Then bring `.bash_profile` into effect and allow ssh to use the version of python in path, not the system python.
+
+```bash
+source ~/.bash_profile
 
 sudo tee -a /etc/ssh/sshd_config << EOF
 # Allow ssh to use the version of python in path, not the system python
@@ -61,16 +68,16 @@ EOF
 
 Currently, the GPDB utilities require that it be possible to `ssh` to localhost
 without using a password.  To verify this, the following command should succeed
-without erroring, or requiring you to enter a password.
+without erroring, or requiring you to enter a password. 
 
-```
-ssh <hostname of your machine>  # e.g., ssh briarwood
+```bash
+ssh <hostname of your machine>  # e.g., ssh briarwood (You can use `hostname` to get the hostname of your machine.)
 ```
 
 However, if it is the first time that you are `ssh`'ing to localhost, you may
 need to accept the trust on first use prompt.
 
-```
+```bash
 The authenticity of host '<your hostname>' can't be established.
 ECDSA key fingerprint is SHA256:<fingerprint here>.
 Are you sure you want to continue connecting (yes/no)?
@@ -79,21 +86,21 @@ Are you sure you want to continue connecting (yes/no)?
 If the hostname does not resolve, try adding your machine name to `/etc/hosts`,
 like so:
 
-```
+```bash
 echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
 ```
 
 If you see `ssh: connect to host <> port 22: Connection refused`, enable remote
 login in:
 
-```
+```bash
 System Preferences -> Sharing -> Remote Login
 ```
 
 If you see a password prompt, add your SSH key to the `authorized_keys` file,
 like so:
 
-```
+```bash
 mkdir -p ~/.ssh
 ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 cat ~/.ssh/id_rsa.pub >>  ~/.ssh/authorized_keys
@@ -102,7 +109,7 @@ cat ~/.ssh/id_rsa.pub >>  ~/.ssh/authorized_keys
 After troubleshooting,  verify one more time that you can ssh without a
 password and that `~/.ssh/environment` exists, by running:
 
-```
+```bash
 ssh <hostname of your machine> 
 ls ~/.ssh/environment
 ```
@@ -128,7 +135,7 @@ Symptoms:
 
 There is an issue with Xcode 8.1 on El Capitan. Here's a workaround:
 
-```
+```bash
 brew install libxml2
 brew link libxml2 --force
 ```

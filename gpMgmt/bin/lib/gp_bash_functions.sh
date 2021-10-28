@@ -77,18 +77,18 @@ GREP=`findCmdInPath grep`
 EGREP=`findCmdInPath egrep`
 HEAD=`findCmdInPath head`
 HOSTNAME=`findCmdInPath hostname`
-IFCONFIG=`findCmdInPath ifconfig`
+IP=`findCmdInPath ip`
 LESSCMD=`findCmdInPath less`
 LOCALE=`findCmdInPath locale`
 MV=`findCmdInPath mv`
 MKDIR=`findCmdInPath mkdir`
-NETSTAT=`findCmdInPath netstat`
 PING=`findCmdInPath ping`
 RM=`findCmdInPath rm`
 SCP=`findCmdInPath scp`
 SED=`findCmdInPath sed`
 SLEEP=`findCmdInPath sleep`
 SORT=`findCmdInPath sort`
+SS=`findCmdInPath ss`
 SSH=`findCmdInPath ssh`
 TAIL=`findCmdInPath tail`
 TEE=`findCmdInPath tee`
@@ -814,7 +814,7 @@ GET_PG_PID_ACTIVE () {
 		PG_LOCK_NETSTAT=""
 		if [ x"" == x"$HOST" ];then
 			#See if we have a netstat entry for this local host
-			PORT_ARRAY=(`$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}"|$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u`)
+			PORT_ARRAY=(`$SS -an 2>/dev/null |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u`)
 			for P_CHK in ${PORT_ARRAY[@]}
 			do
 				if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
@@ -862,7 +862,7 @@ GET_PG_PID_ACTIVE () {
 			if [ $RETVAL -ne 0 ];then
 				PID=0
 			else
-				PORT_ARRAY=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null" |$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u ) )
+        PORT_ARRAY=($( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST $SS -an 2>/dev/null |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u))
 				for P_CHK in ${PORT_ARRAY[@]}
 				do
 					if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
@@ -1171,8 +1171,8 @@ LOG_FILE=$DEFLOGDIR/${PROG_NAME}_${CUR_DATE}.log
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
-	linux ) IPV4_ADDR_LIST_CMD="`findCmdInPath ip` -4 address show"
-		IPV6_ADDR_LIST_CMD="`findCmdInPath ip` -6 address show"
+	linux ) IPV4_ADDR_LIST_CMD="$IP -4 address show"
+		IPV6_ADDR_LIST_CMD="$IP -6 address show"
 		PS_TXT="ax"
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
@@ -1181,7 +1181,8 @@ case $OS_TYPE in
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
-	darwin ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
+	darwin ) IFCONFIG=`findCmdInPath ifconfig`
+		IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		PS_TXT="ax"
 		LIB_TYPE="DYLD_LIBRARY_PATH"
@@ -1192,7 +1193,8 @@ case $OS_TYPE in
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
-	freebsd ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
+	freebsd ) IFCONFIG=`findCmdInPath ifconfig`
+		IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"

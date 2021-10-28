@@ -54,6 +54,7 @@ typedef struct TapeShare
  * prototypes for functions in logtape.c
  */
 
+extern char * LogicalTapeGetBufFilename(const LogicalTapeSet *lts);
 extern LogicalTapeSet *LogicalTapeSetCreate(int ntapes, TapeShare *shared,
 											SharedFileSet *fileset, int worker);
 extern void LogicalTapeSetClose(LogicalTapeSet *lts);

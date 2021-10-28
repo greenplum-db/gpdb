@@ -146,7 +146,16 @@ AppendOnlyVisiMapEnty_ReadData(AppendOnlyVisimapEntry *visiMapEntry, size_t data
 	}
 
 	bms_free(visiMapEntry->bitmap);
-
+	/*
+	 * After we free visiMapEntry->bitmap, In gpdb4 before resetting to a new value,
+	 * Some error may be thrown out (e.g. palloc fail), then when we catch this error in
+	 * PostgresMain we will rollback the transaction by AbortCurrentTransaction, then call 
+	 * PortalCleanup-->ExecutorEnd to close resource, In AppendOnlyVisimapEntry_Finish
+	 * visiMapEntry->bitmap is not null, we free it the second time.
+	 * However, Since gpdb5 PortalCleanup logic is refactored, do not have this issue,
+	 * but I think it is reasonable to set it to NULLL to avoid similar issues.
+	 */
+	visiMapEntry->bitmap = NULL;
 	newWordCount =
 		BitmapDecompress_GetBlockCount(&decompressState);
 	if (newWordCount > 0)
@@ -158,11 +167,7 @@ AppendOnlyVisiMapEnty_ReadData(AppendOnlyVisimapEntry *visiMapEntry, size_t data
 									visiMapEntry->bitmap->words,
 									newWordCount);
 	}
-	else if (newWordCount == 0)
-	{
-		visiMapEntry->bitmap = NULL;
-	}
-	else
+	else if (newWordCount != 0)
 	{
 		elog(ERROR,
 			 "illegal visimap block count: visimap block count %d", newWordCount);

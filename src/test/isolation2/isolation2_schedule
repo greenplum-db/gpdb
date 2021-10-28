@@ -82,6 +82,8 @@ test: distributed_snapshot
 test: gp_collation
 test: ao_upgrade
 test: bitmap_index_concurrent
+test: bitmap_index_crash
+test: bitmap_update_words_backup_block
 
 # below test utilizes fault injectors so it needs to be in a group by itself
 test: external_table
@@ -254,6 +256,7 @@ ignore: restore_memory_accounting_default
 test: setup_startup_memory_accounting
 test: oom_startup_memory
 test: restore_memory_accounting_default
+test: runaway_query
 
 test: distributed_transactions
 
@@ -268,3 +271,6 @@ test: orphan_temp_table
 
 # test if gxid is valid or not on the cluster after running the tests
 test: check_gxid
+
+# test if GUC is synchronized from the QD to QEs.
+test: sync_guc

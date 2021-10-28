@@ -332,8 +332,7 @@ void FtsLoop()
 		else
 		{
 			elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
-				   "FTS: starting %s scan with %d segments and %d contents",
-				   (probe_requested ? "full " : ""),
+				   "FTS: starting scan with %d segments and %d contents",
 				   cdbs->total_segment_dbs,
 				   cdbs->total_segments);
 			/*
@@ -392,7 +391,13 @@ void FtsLoop()
 		 * timeout, so we recheck probe_requested here before waitLatch().
 		 */
 		if (probe_requested)
+		{
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "FTS: run the probe due to external request, even if the remaining time for the next probe is %ds",
+				   (int) timeout);
+
 			timeout = 0;
+		}
 
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,

@@ -37,11 +37,11 @@ For Greenplum Database, a preconfigured **book** is provided in the `/gpdb-doc/b
 
 ### For mac users 
 ```
-    gem install bundler
-    brew install ant
-    brew install v8
-    gem install therubyracer
-    gem install libv8 -v '3.16.14.7' -- --with-system-v8
+gem install bundler
+brew install ant
+brew install v8
+gem install therubyracer
+gem install libv8 -v '3.16.14.7' -- --with-system-v8
 ```
 
 <a name="building"></a>
@@ -78,27 +78,27 @@ Because the `final_app` directory contains the full output of the HTML conversio
 1. Make sure that you have created an account on your local Cloud Foundry instance or on Pivotal Web Services, and that you have installed the latest [cf command line interface](http://docs.cloudfoundry.org/devguide/installcf/). For example:
 
     ``` bash
-$ cf --version
-cf version 6.10.0-b78bf10-2015-02-11T22:25:45+00:00
-```
+    $ cf --version
+    cf version 6.10.0-b78bf10-2015-02-11T22:25:45+00:00
+    ```
 
 2. Log into Cloud Foundry or Pivotal Web Services, specifying the organization and space in which you will push the application. For example:
 
     ``` bash
-$ cf login -u me@mycompany.com -o myorg -s gpdb-space
-```
+    $ cf login -u me@mycompany.com -o myorg -s gpdb-space
+    ```
 
 3. Change to the `final_app` directory where you built the Greenplum Database documentation:
 
     ``` bash
-$ cd /github/gpdb/gpdb-doc/book/final_app
-```
+    $ cd /github/gpdb/gpdb-doc/book/final_app
+    ```
         
 4. Use the `cf` command to push the current directory as a new application to a specified host and domain. For example:
 
     ``` bash
-$ cf push Greenplum Database-docs-build -p . -n my-gpdb-docs -d example.com 
-```
+    $ cf push Greenplum Database-docs-build -p . -n my-gpdb-docs -d example.com 
+    ```
 
   The `cf` tool uploads and starts the application, using a default Web server. In the above example, the pushed application becomes available at [http://my-gpdb-docs.example.com](http://my-gpdb-docs.example.com).
 

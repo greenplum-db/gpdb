@@ -1,0 +1,7 @@
+contact_links:
+  - name: Join Greenplum users mailing list
+    url: https://groups.google.com/a/greenplum.org/g/gpdb-users
+    about: Please ask  general questions here.
+  - name: Join Greenplum developers mailing list
+    url: https://groups.google.com/a/greenplum.org/g/gpdb-dev
+    about: Please ask developing questions here.

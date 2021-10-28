@@ -713,23 +713,46 @@ def quote_unident(val):
     return val
 
 
+def match_notice_obj(notice):
+    # match the formatting errors in notice
+    r = re.compile("^NOTICE:  found (\d+) data formatting errors.*")
+    m = r.match(notice)
+    if m:
+        return int(m.group(1))
+    else:
+        return 0
+
+
+def notice_processor_Notice(notice):
+    # process the notice in master branch
+    # notice is a class which is different in 6X, we need a new function to process
+    global NUM_WARN_ROWS
+    if windowsPlatform == True:
+           # We don't have a pygresql with our notice fix, so skip for windows.
+       # This means we will not get any warnings on windows (MPP10989).
+       return
+    theNotices = notice.message
+    messageNumber = 0
+    if isinstance(theNotices, list):
+        while messageNumber < len(theNotices) and NUM_WARN_ROWS==0:
+            NUM_WARN_ROWS = match_notice_obj(theNotices[messageNumber])
+            messageNumber+=1
+    else:
+        NUM_WARN_ROWS = match_notice_obj(theNotices)
+
+
 def notice_processor(notice):
+    global NUM_WARN_ROWS
     if windowsPlatform == True:
        # We don't have a pygresql with our notice fix, so skip for windows.
        # This means we will not get any warnings on windows (MPP10989).
        return
-
     theNotices = notice
-    r = re.compile("^NOTICE:  found (\d+) data formatting errors.*")
     messageNumber = 0
-    m = None
-    while messageNumber < len(theNotices) and m is None:
-       aNotice = theNotices[messageNumber]
-       m = r.match(aNotice)
-       messageNumber = messageNumber + 1
-       if m:
-           global NUM_WARN_ROWS
-           NUM_WARN_ROWS = int(m.group(1))
+    while messageNumber < len(theNotices) and NUM_WARN_ROWS==0:
+        NUM_WARN_ROWS = match_notice_obj(theNotices[messageNumber])
+        messageNumber+=1
+
 
 def handle_kill(signum, frame):
     # already dying?
@@ -1869,19 +1892,6 @@ class gpload:
                     "the Greenplum Database running on port %i?" % (errorMessage,
                     self.options.p))
 
-    def add_quote_if_not(self, col):
-        '''
-        Judge if the column name string has quotations.
-        If not, return a string with double quotations.
-        pyyaml cannot preserve quotes of string in yaml file.
-        So we need to quote the string for furter comparison if it is not quoted.
-        '''
-        if col[0] == '"' and col[-1] == '"':
-            return col
-        elif col[0] == "'" and col[-1] == "'":
-            return col
-        else:
-            return quote_ident(col)
 
     def read_columns(self):
         '''
@@ -1899,7 +1909,6 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = list(d.keys())[0]
-                col_name = self.add_quote_if_not(key)
                 if d[key] is None or not d[key]:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
@@ -1916,7 +1925,7 @@ class gpload:
 
                 # Mark this column as having no mapping, which is important
                 # for do_insert()
-                self.from_columns.append([col_name,d[key].lower(),None, False])
+                self.from_columns.append([key,d[key].lower(),None, False])
         else:
             self.from_columns = self.into_columns
             self.from_cols_from_user = False
@@ -2380,7 +2389,7 @@ class gpload:
             if formatType=='csv':
                 self.get_external_table_formatOpts('quote','escape')
             else:
-                self.formatOpts += "escape '\\'"
+                self.formatOpts += "escape '\\' "
 
         if formatType=='csv':
             self.get_external_table_formatOpts('quote')
@@ -2591,7 +2600,10 @@ class gpload:
         if self.gpdb_version < "7.0.0":  # for gpdb6
             notice_processor(self.db.notices())
         else:
-            self.db.set_notice_receiver(notice_processor)
+            pass
+            # callback function is setted before insert
+            # notice processor will be called automaticly
+
         if self.log_errors and not self.options.D:
             # make sure we only get errors for our own instance
             if not self.reuse_tables:
@@ -2649,6 +2661,8 @@ class gpload:
         self.log(self.LOG, sql)
         if not self.options.D:
             try:
+                # we need to set the notice receiver function before do insert
+                self.db.set_notice_receiver(notice_processor_Notice)
                 self.rowsInserted = self.db.query(sql.encode('utf-8'))
             except Exception as e:
                 # We need to be a bit careful about the error since it may contain non-unicode characters

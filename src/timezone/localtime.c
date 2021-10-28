@@ -1377,6 +1377,17 @@ pg_localtime(const pg_time_t *timep, const pg_tz *tz)
 	return localsub(&tz->state, timep, &tm);
 }
 
+/*
+ * pg_localtime_thread_safe is similar to pg_localtime.
+ *
+ * Except we don't use the global variable 'tm' to make it thread-safe.
+ */
+struct pg_tm *
+pg_localtime_thread_safe(const pg_time_t *timep, const pg_tz *tz,
+						 struct pg_tm *const tmp)
+{
+	return localsub(&tz->state, timep, tmp);
+}
 
 /*
  * gmtsub is to gmtime as localsub is to localtime.

@@ -341,14 +341,14 @@ InitProcess(void)
 	PGPROC	   *volatile *procgloballist;
 
 	/*
-	 * WAL sender, FTS handler and FTS daemon processes are marked
-	 * as GP_ROLE_UTILITY to prevent unwanted GP_ROLE_DISPATCH MyProc settings
-	 * such as mppSessionId being valid and mppIsWriter set to true.
+	 * WAL sender, etc are marked as GP_ROLE_UTILITY to prevent unwanted
+	 * GP_ROLE_DISPATCH MyProc settings such as mppSessionId being valid and
+	 * mppIsWriter set to true.
 	 *
 	 * RecoveryInProgress() to see if we are in hot standby, because
 	 * HotStandbyActive() is still true after promotion.
 	 */
-	if (am_walsender || am_ftshandler || IsFaultHandler ||
+	if (am_walsender || am_ftshandler || am_faulthandler ||
 		(GpIdentity.segindex == -1 && RecoveryInProgress()))
 	{
 		Gp_role = GP_ROLE_UTILITY;

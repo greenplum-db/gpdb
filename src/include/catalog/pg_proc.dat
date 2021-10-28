@@ -7640,9 +7640,9 @@
 { oid => '2511', descr => 'get the open cursors for this session',
   proname => 'pg_cursor', prorows => '1000', proretset => 't',
   provolatile => 's', proparallel => 'r', prorettype => 'record',
-  proargtypes => '', proallargtypes => '{text,text,bool,bool,bool,timestamptz}',
-  proargmodes => '{o,o,o,o,o,o}',
-  proargnames => '{name,statement,is_holdable,is_binary,is_scrollable,creation_time}',
+  proargtypes => '', proallargtypes => '{text,text,bool,bool,bool,timestamptz,bool}',
+  proargmodes => '{o,o,o,o,o,o,o}',
+  proargnames => '{name,statement,is_holdable,is_binary,is_scrollable,creation_time,is_parallel}',
   prosrc => 'pg_cursor' },
 { oid => '2599', descr => 'get the available time zone abbreviations',
   proname => 'pg_timezone_abbrevs', prorows => '1000', proretset => 't',
@@ -10983,6 +10983,15 @@
 
 { oid => 7171, descr => 'show append only table compression ratio',
    proname => 'get_ao_compression_ratio', provolatile => 'v', proparallel => 'u', prorettype => 'float8', proargtypes => 'regclass', prosrc => 'get_ao_compression_ratio', prodataaccess => 'r' },
+
+{ oid => 7180, descr => 'endpoints information on the cluster visible to the user',
+   proname => 'gp_endpoints', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => '', proallargtypes => '{int4,text,text,int4,text,int4,oid,text,text}', proargmodes => '{o,o,o,o,o,o,o,o,o}', proargnames => '{dbid,auth_token,cursorname,sessionid,hostname,port,userid,state,endpointname}', prosrc => 'gp_endpoints', proexeclocation => 'c' },
+
+{ oid => 7181, descr => 'endpoints information on the segment visible to the user',
+   proname => 'gp_segment_endpoints', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => '', proallargtypes => '{text,int4,int4,int4,text,int4,int4,oid,text,text}', proargmodes => '{o,o,o,o,o,o,o,o,o,o}', proargnames => '{auth_token,databaseid,senderpid,receiverpid,state,dbid,sessionid,userid,endpointname,cursorname}', prosrc => 'gp_segment_endpoints' },
+
+{ oid => 7182, descr => 'wait until all endpoint of this parallel retrieve cursor has been retrieved finished',
+   proname => 'gp_wait_parallel_retrieve_cursor', provolatile => 'v', proparallel => 'u', prorettype => 'bool', proargtypes => 'text int4', proallargtypes => '{text,int4,bool}', proargmodes => '{i,i,o}', proargnames => '{cursorname,timeout_sec,finished}', prosrc => 'gp_wait_parallel_retrieve_cursor', proexeclocation => 'c' },
 
 { oid => 7050, oid_symbol => 'BITMAP_INDEXAM_HANDLER_OID', descr => 'bitmap(internal)',
    proname => 'bmhandler', provolatile => 'v', prorettype => 'index_am_handler', proargtypes => 'internal', prosrc => 'bmhandler' },

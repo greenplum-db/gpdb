@@ -1,11 +1,10 @@
 NOTICE:  HEADER means that each one of the data files has a header row
-NOTICE:  HEADER means that each one of the data files has a header row
-2020-12-17 15:14:24|INFO|gpload session started 2020-12-17 15:14:24
-2020-12-17 15:14:24|INFO|setting schema 'public' for table 'texttable'
-2020-12-17 15:14:24|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2020-12-17 15:14:24|INFO|did not find an external table to reuse. creating ext_gpload_reusable_7dde623c_4037_11eb_9067_000c299afcc5
-2020-12-17 15:14:24|INFO|running time: 0.06 seconds
-2020-12-17 15:14:24|INFO|rows Inserted          = 2
-2020-12-17 15:14:24|INFO|rows Updated           = 0
-2020-12-17 15:14:24|INFO|data formatting errors = 0
-2020-12-17 15:14:24|INFO|gpload succeeded
+2021-07-22 15:02:21|INFO|gpload session started 2021-07-22 15:02:21
+2021-07-22 15:02:21|INFO|setting schema 'public' for table 'texttable'
+2021-07-22 15:02:21|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-22 15:02:21|INFO|reusing external table ext_gpload_reusable_c2a121d8_eaba_11eb_89b3_0050569e2380
+2021-07-22 15:02:21|INFO|running time: 0.05 seconds
+2021-07-22 15:02:21|INFO|rows Inserted          = 2
+2021-07-22 15:02:21|INFO|rows Updated           = 0
+2021-07-22 15:02:21|INFO|data formatting errors = 0
+2021-07-22 15:02:21|INFO|gpload succeeded

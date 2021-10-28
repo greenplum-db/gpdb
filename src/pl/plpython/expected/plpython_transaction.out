@@ -123,8 +123,8 @@ SELECT * FROM test1;
 
 -- check that this doesn't leak a holdable portal
 SELECT * FROM pg_cursors;
- name | statement | is_holdable | is_binary | is_scrollable | creation_time 
-------+-----------+-------------+-----------+---------------+---------------
+ name | statement | is_holdable | is_binary | is_scrollable | creation_time | is_parallel 
+------+-----------+-------------+-----------+---------------+---------------+-------------
 (0 rows)
 
 -- error in cursor loop with commit
@@ -147,8 +147,8 @@ SELECT * FROM test1;
 (2 rows)
 
 SELECT * FROM pg_cursors;
- name | statement | is_holdable | is_binary | is_scrollable | creation_time 
-------+-----------+-------------+-----------+---------------+---------------
+ name | statement | is_holdable | is_binary | is_scrollable | creation_time | is_parallel 
+------+-----------+-------------+-----------+---------------+---------------+-------------
 (0 rows)
 
 -- rollback inside cursor loop
@@ -164,8 +164,8 @@ SELECT * FROM test1;
 (0 rows)
 
 SELECT * FROM pg_cursors;
- name | statement | is_holdable | is_binary | is_scrollable | creation_time 
-------+-----------+-------------+-----------+---------------+---------------
+ name | statement | is_holdable | is_binary | is_scrollable | creation_time | is_parallel 
+------+-----------+-------------+-----------+---------------+---------------+-------------
 (0 rows)
 
 -- first commit then rollback inside cursor loop
@@ -187,8 +187,8 @@ SELECT * FROM test1;
 (3 rows)
 
 SELECT * FROM pg_cursors;
- name | statement | is_holdable | is_binary | is_scrollable | creation_time 
-------+-----------+-------------+-----------+---------------+---------------
+ name | statement | is_holdable | is_binary | is_scrollable | creation_time | is_parallel 
+------+-----------+-------------+-----------+---------------+---------------+-------------
 (0 rows)
 
 DROP TABLE test1;

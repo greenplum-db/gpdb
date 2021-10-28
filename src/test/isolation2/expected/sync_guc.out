@@ -1,0 +1,155 @@
+-- TEST 1: Fix Github issue https://github.com/greenplum-db/gpdb/issues/9208
+1: create schema sync_np1;
+CREATE
+1: create schema sync_np2;
+CREATE
+1: CREATE OR REPLACE FUNCTION public.segment_setting(guc text) RETURNS SETOF text EXECUTE ON ALL SEGMENTS AS $$ BEGIN RETURN NEXT pg_catalog.current_setting(guc); END $$ LANGUAGE plpgsql;
+CREATE
+1q: ... <quitting>
+-- The SET command will create a Gang on the primaries, and the GUC
+-- values should be the same on all QD/QEs.
+2: show search_path;
+ search_path     
+-----------------
+ "$user", public 
+(1 row)
+2: set search_path = 'sync_np1,sync_np2';
+SET
+
+-- The `reset_val` of `search_path` should be synchronized from the QD,
+-- so, the GUC value will be also synchronized with the QD after RESET.
+-- If the search_path is inconsistent between the QD and QEs after RESET,
+-- creating the function will fail.
+2: reset search_path;
+RESET
+2: select public.segment_setting('search_path');
+ segment_setting 
+-----------------
+ "$user", public 
+ "$user", public 
+ "$user", public 
+(3 rows)
+2: create or replace function sync_f1() returns int as $$ select 1234; $$language sql;
+CREATE
+2: select sync_f1();
+ sync_f1 
+---------
+ 1234    
+(1 row)
+2: drop function sync_f1();
+DROP
+2: drop schema sync_np1;
+DROP
+2: drop schema sync_np2;
+DROP
+2q: ... <quitting>
+
+-- TEST 2: Fix Github issue https://github.com/greenplum-db/gpdb/issues/685
+-- `gp_select_invisible` is default to false. SET command will dispatch
+-- the GUC's `reset_val` and changed value to the created Gang. If the QE(s)
+-- use the incorrect `reset_val`, its value will be inconsistent with the QD's,
+-- i.e. the `gp_select_invisible` is still false on the QEs.
+3: show gp_select_invisible;
+ gp_select_invisible 
+---------------------
+ off                 
+(1 row)
+3: set gp_select_invisible = on;
+SET
+3: reset gp_select_invisible;
+RESET
+3: select public.segment_setting('gp_select_invisible');
+ segment_setting 
+-----------------
+ off             
+ off             
+ off             
+(3 rows)
+3: create table sync_t1(i int);
+CREATE
+3: insert into sync_t1 select i from generate_series(1,10)i;
+INSERT 10
+3: delete from sync_t1;
+DELETE 10
+3: select * from sync_t1;
+ i 
+---
+(0 rows)
+3: drop table sync_t1;
+DROP
+3q: ... <quitting>
+
+1: drop function public.segment_setting(guc text);
+DROP
+1q: ... <quitting>
+
+-- TEST 3: make sure all QEs call RESET if there are more than 1 QE of the session
+-- in the primary
+4: create temp table sync_t11(a int, b int) distributed by(b);
+CREATE
+4: create temp table sync_t12(a int, b int) distributed by(a);
+CREATE
+
+-- The join will create 2 slices on each primary, and 1 entrydb on the coordinator.
+-- So, every primary and the coordinator should trigger 2 SET/RESET
+-- We'll test SET/RESET xxx will be called for all QEs in the current session.
+4: select relname from sync_t11, sync_t12, pg_class;
+ relname 
+---------
+(0 rows)
+
+4: select gp_inject_fault('set_variable_fault', 'skip', dbid) from gp_segment_configuration where role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+4: set statement_mem = '12MB';
+SET
+4: select gp_wait_until_triggered_fault('set_variable_fault', 2, dbid) from gp_segment_configuration where role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+ Success:                      
+(4 rows)
+4: select gp_inject_fault('set_variable_fault', 'reset', dbid) from gp_segment_configuration where role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+
+4: select gp_inject_fault('reset_variable_fault', 'skip', dbid) from gp_segment_configuration where role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+4: reset statement_mem;
+RESET
+4: select gp_wait_until_triggered_fault('reset_variable_fault', 2, dbid) from gp_segment_configuration where role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+ Success:                      
+(4 rows)
+4: select gp_inject_fault('reset_variable_fault', 'reset', dbid) from gp_segment_configuration where role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+4q: ... <quitting>
+

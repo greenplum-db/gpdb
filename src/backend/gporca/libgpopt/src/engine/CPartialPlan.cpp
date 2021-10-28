@@ -89,7 +89,11 @@ CPartialPlan::ExtractChildrenCostingInfo(CMemoryPool *mp, ICostModel *pcm,
 
 		CReqdPropPlan *prppChild = exprhdl.Prpp(ul);
 		IStatistics *child_stats = pgroupChild->Pstats();
-		RaiseExceptionIfStatsNull(child_stats);
+		if (nullptr == child_stats)
+		{
+			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+					   GPOS_WSZ_LIT("CPartialPlan"));
+		}
 
 		if (ul == m_ulChildIndex)
 		{
@@ -144,27 +148,6 @@ CPartialPlan::ExtractChildrenCostingInfo(CMemoryPool *mp, ICostModel *pcm,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPartialPlan::RaiseExceptionIfStatsNull
-//
-//	@doc:
-//		Raise exception if the stats object is NULL
-//
-//---------------------------------------------------------------------------
-void
-CPartialPlan::RaiseExceptionIfStatsNull(IStatistics *stats)
-{
-	if (nullptr == stats)
-	{
-		GPOS_RAISE(
-			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
-			GPOS_WSZ_LIT(
-				"Could not compute cost of partial plan since statistics for the group not derived"));
-	}
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPartialPlan::CostCompute
 //
 //	@doc:
@@ -192,7 +175,11 @@ CPartialPlan::CostCompute(CMemoryPool *mp)
 	pdrgpdp->Release();
 
 	IStatistics *stats = m_pgexpr->Pgroup()->Pstats();
-	RaiseExceptionIfStatsNull(stats);
+	if (nullptr == stats)
+	{
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+				   GPOS_WSZ_LIT("CPartialPlan"));
+	}
 
 	stats->AddRef();
 	ICostModel::SCostingInfo ci(mp, exprhdl.UlNonScalarChildren(),

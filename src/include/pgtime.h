@@ -46,6 +46,9 @@ typedef struct pg_tzenum pg_tzenum;
 /* these functions are in localtime.c */
 
 extern struct pg_tm *pg_localtime(const pg_time_t *timep, const pg_tz *tz);
+extern struct pg_tm *pg_localtime_thread_safe(const pg_time_t *timep,
+											  const pg_tz *tz,
+											  struct pg_tm *const tmp);
 extern struct pg_tm *pg_gmtime(const pg_time_t *timep);
 extern int	pg_next_dst_boundary(const pg_time_t *timep,
 								 long int *before_gmtoff,

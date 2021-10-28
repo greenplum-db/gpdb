@@ -272,6 +272,7 @@
 #include "utils/datum.h"
 #include "utils/dynahash.h"
 #include "utils/expandeddatum.h"
+#include "utils/faultinjector.h"
 #include "utils/logtape.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -2955,6 +2956,21 @@ hashagg_tapeinfo_init(AggState *aggstate)
 		tapeinfo->freetapes[i] = i;
 
 	aggstate->hash_tapeinfo = tapeinfo;
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("hashagg_spill_temp_files") == FaultInjectorTypeSkip) {
+		const char *filename = LogicalTapeGetBufFilename(tapeinfo->tapeset);
+		if (!filename)
+			ereport(NOTICE, (errmsg("hashagg: buffilename is null")));
+		else if (strstr(filename, "base/" PG_TEMP_FILES_DIR) == filename)
+			ereport(NOTICE, (errmsg("hashagg: Use default tablespace")));
+		else if (strstr(filename, "pg_tblspc/") == filename)
+			ereport(NOTICE, (errmsg("hashagg: Use temp tablespace")));
+		else
+			ereport(NOTICE, (errmsg("hashagg: Unexpected prefix of the tablespace path")));
+
+	}
+#endif
 }
 
 /*

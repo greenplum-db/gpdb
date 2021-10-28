@@ -5,8 +5,6 @@ CWDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${CWDIR}/common.bash"
 
 function prep_env() {
-	OS=$(os_id)
-	OS_VERSION=$(os_version)
 	OUTPUT_ARTIFACT_DIR=${OUTPUT_ARTIFACT_DIR:=gpdb_artifacts}
 
 	export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
@@ -84,18 +82,24 @@ function include_dependencies() {
 	declare -a library_search_path header_search_path vendored_headers vendored_libs pkgconfigs
 
 	header_search_path=(/usr/local/include/ /usr/include/)
-	vendored_headers=(zstd*.h uv.h uv)
-	pkgconfigs=(libzstd.pc libuv.pc quicklz.pc)
-
-	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0})
-
 	library_search_path+=($(cat /etc/ld.so.conf.d/*.conf | grep -v '#'))
 	library_search_path+=(/lib64 /usr/lib64 /lib /usr/lib)
 
+	pkgconfigs=(quicklz.pc)
+	vendored_libs=(libquicklz.so{,.1,.1.5.0} libxerces-c{,-3.1}.so)
+
+	# If not building for rhel8, vendor libzstd and libuv shared library, headers, and pkgconfig
+	if [[ "${BLD_ARCH}" != "rhel8_x86_64"* ]]; then
+		vendored_headers=(zstd*.h uv.h uv)
+		pkgconfigs+=(libzstd.pc libuv.pc)
+		vendored_libs+=(libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0})
+
+		# Vendor headers - follow symlinks
+		for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]]; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
+	fi
+
 	# Vendor shared libraries - follow symlinks
 	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done
-	# Vendor headers - follow symlinks
-	for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]]; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
 	# vendor pkgconfig files
 	for path in "${library_search_path[@]}"; do if [[ -d "${path}/pkgconfig" ]]; then for pkg in "${pkgconfigs[@]}"; do find -L $path/pkgconfig/ -name $pkg -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib/pkgconfig \;; done; fi; done
 
@@ -142,14 +146,6 @@ function export_gpdb_clients() {
 	popd
 }
 
-function build_xerces() {
-	OUTPUT_DIR="${GPDB_EXT_PATH}"
-	mkdir -p xerces_patch/concourse
-	cp -r gpdb_src/src/backend/gporca/concourse/xerces-c xerces_patch/concourse
-	/usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir="${OUTPUT_DIR}"
-	rm -rf build
-}
-
 function _main() {
 
 	prep_env
@@ -157,7 +153,6 @@ function _main() {
 	## Add CCache Support (?)
 	add_ccache_support "${OS}"
 
-	build_xerces
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"
 	git_info

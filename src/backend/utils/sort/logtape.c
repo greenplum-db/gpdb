@@ -226,6 +226,11 @@ static void ltsConcatWorkerTapes(LogicalTapeSet *lts, TapeShare *shared,
 static void ltsInitTape(LogicalTape *lt);
 static void ltsInitReadBuffer(LogicalTapeSet *lts, LogicalTape *lt);
 
+char *
+LogicalTapeGetBufFilename(const LogicalTapeSet *lts)
+{
+	return lts->pfile ? pstrdup(BufFileGetFilename(lts->pfile)) : NULL;
+}
 
 /*
  * Write a block-sized buffer to the specified block of the underlying file.

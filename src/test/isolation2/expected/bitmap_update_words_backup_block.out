@@ -1,0 +1,71 @@
+-- Setup fault injectors.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
+-- Skip FTS probes for this test to avoid segment being marked down on restart.
+1:SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+1:SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+1:SELECT gp_wait_until_triggered_fault('fts_probe', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+CREATE TABLE bm_update_words_backup_block (id int) WITH (appendonly = true);
+CREATE
+
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO bm_update_words_backup_block SELECT i%100 FROM generate_series(1, 200) AS i;
+INSERT 200
+2: INSERT INTO bm_update_words_backup_block SELECT i%100 FROM generate_series(1, 200) AS i;
+INSERT 200
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+
+CREATE INDEX bm_update_words_backup_block_idx ON bm_update_words_backup_block USING bitmap (id);
+CREATE
+
+-- INSERTs will attempt to add a bitmap page but will cause a word
+-- expansion and a bitmap page split due to overflow. See bitmap
+-- function updatesetbit_inpage().
+2: INSERT INTO bm_update_words_backup_block VALUES (97);
+INSERT 1
+2: INSERT INTO bm_update_words_backup_block VALUES (97), (99);
+INSERT 2
+
+-- Run a CHECKPOINT to force this next INSERT to add backup blocks of
+-- the two bitmap pages to its XLOG_BITMAP_UPDATEWORDS record.
+2: CHECKPOINT;
+CHECKPOINT
+2: INSERT INTO bm_update_words_backup_block VALUES (97);
+INSERT 1
+
+-- Do an immediate restart to force crash recovery. The above INSERT
+-- should be replayed with the backup blocks.
+1: SELECT pg_ctl(datadir, 'restart') FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+3: INSERT INTO bm_update_words_backup_block VALUES (97);
+INSERT 1
+
+-- Turn FTS back on.
+3:SELECT gp_inject_fault('fts_probe', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
