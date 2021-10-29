@@ -688,6 +688,12 @@ getCdbProcessesForQD(int isPrimary)
 	return list;
 }
 
+/*
+ * Be very careful to use this function when having named Portal exists.
+ * This function will destroy the MemoryContexr CdbComponentsContext, if
+ * named portal exists, later when we clean up named portal it might ref
+ * a null pointer (the memorycontext) and lead to PANIC.
+ */
 void
 DisconnectAndDestroyAllGangs(bool resetSession)
 {

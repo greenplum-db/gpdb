@@ -4,6 +4,9 @@
 create extension if not exists gp_inject_fault;
 CREATE
 
+include: helpers/server_helpers.sql;
+CREATE
+
 1: set gp_debug_linger = '1s';
 SET
 1: select gp_inject_fault('make_dispatch_result_error', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
@@ -38,4 +41,122 @@ select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segm
  gp_inject_fault 
 -----------------
  Success:        
+(1 row)
+
+--
+-- Test for issue https://github.com/greenplum-db/gpdb/issues/12703
+--
+
+-- Case for cdbgang_createGang_async
+1: create table t_12703(a int);
+CREATE
+
+1:begin;
+BEGIN
+-- make a cursor so that we have a named portal
+1: declare cur12703 cursor for select * from t_12703;
+DECLARE
+
+2: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=1), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+-- next sql will trigger FTS to mark seg1 as down
+2: select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- this will go to cdbgang_createGang_async's code path
+-- for some segments are DOWN. It should not PANIC even
+-- with a named portal existing.
+1: select * from t_12703;
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:93)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- Case for cdbCopyEndInternal
+-- Provide some data to copy in
+insert into t_12703 select * from generate_series(1, 10)i;
+INSERT 10
+copy t_12703 to '/tmp/t_12703';
+COPY 10
+-- make copy in statement hang at the entry point of cdbCopyEndInternal
+select gp_inject_fault('hang_at_cdb_copy_end_internal', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: copy t_12703 from '/tmp/t_12703';  <waiting ...>
+select gp_wait_until_triggered_fault('hang_at_cdb_copy_end_internal', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- make Gang connection is BAD
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=2), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+2: select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+2: begin;
+BEGIN
+select gp_inject_fault('hang_at_cdb_copy_end_internal', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- continue copy it should not PANIC
+1<:  <... completed>
+ERROR:  MPP detected 1 segment failures, system is reconnected
+1q: ... <quitting>
+-- session 2 still alive (means not PANIC happens)
+2: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+2: end;
+END
+2q: ... <quitting>
+
+!\retcode gprecoverseg -aF --no-progress;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+!\retcode gprecoverseg -ar;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- verify no segment is down after recovery
+select count(*) from gp_segment_configuration where status = 'd';
+ count 
+-------
+ 0     
 (1 row)

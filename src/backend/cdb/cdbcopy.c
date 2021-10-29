@@ -448,6 +448,10 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	bool		io_errors = false;
 	StringInfoData io_err_msg;
 
+#ifdef FAULT_INJECTOR
+	SIMPLE_FAULT_INJECTOR("hang_at_cdb_copy_end_internal");
+#endif
+
 	initStringInfo(&io_err_msg);
 
 	/*
@@ -696,7 +700,6 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 		elog(LOG, "COPY signals FTS to probe segments");
 
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
-		DisconnectAndDestroyAllGangs(true);
 
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

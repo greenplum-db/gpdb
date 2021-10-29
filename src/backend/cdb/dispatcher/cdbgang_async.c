@@ -90,7 +90,6 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 		{
 			if (FtsIsSegmentDown(newGangDefinition->db_descriptors[i]->segment_database_info))
 			{
-				DisconnectAndDestroyAllGangs(true);
 				elog(ERROR, "gang was lost due to cluster reconfiguration");
 			}
 		}
