@@ -71,7 +71,7 @@
           will also need to drop any dependent database objects that reference compatibility
           functions.<p>Install the Oracle Compatibility Functions in Greenplum 6 by creating the
               <codeph>orafce</codeph> module in each database where you require the
-            functions:<codeblock>$ psql -d <varname>dbname</varname> -c 'CREATE EXTENSION orafce'</codeblock>See
+            functions:<codeblock>$ psql -d &lt;dbname> -c 'CREATE EXTENSION orafce'</codeblock>See
               <xref href="install_modules.xml#topic_d45_wcw_pgb"/> for information about installing
               <codeph>orafce</codeph> and other modules.</p></li>
         <li>When restoring language-based user-defined functions, the shared object file must be in
@@ -347,15 +347,15 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
             <codeph>cdbhash_int_ops</codeph>.</p>
         <p>This example creates a table using the legacy hash operator class
             <codeph>cdbhash_int_ops</codeph>.</p>
-        <codeblock>test=# <b>SET gp_use_legacy_hashops=on;</b>
+        <codeblock>test=# SET gp_use_legacy_hashops=on;
 SET            
-test=# <b>CREATE TABLE t1 (
+test=# CREATE TABLE t1 (
     c1 integer,
     c2 integer,
     p integer
-) DISTRIBUTED BY (c1);</b>
+) DISTRIBUTED BY (c1);
 CREATE TABLE
-test=# <b>\d+ t1</b>
+test=# \d+ t1
                           Table "public.t1"
  Column |  Type   | Modifiers | Storage | Stats target | Description
 --------+---------+-----------+---------+--------------+-------------
@@ -368,10 +368,10 @@ Distributed by: (c1)</codeblock>
           class is a legacy operator class, the operator class name is not shown. However, if
             <codeph>gp_use_legacy_hashops</codeph> is <codeph>off</codeph>, the legacy operator
           class name is reported with the distribution key.</p>
-        <codeblock>test=# <b>SET gp_use_legacy_hashops=off;</b>
+        <codeblock>test=# SET gp_use_legacy_hashops=off;
 SET
-test=# <b>\d+ t1
-</b>                          Table "public.t1"
+test=# \d+ t1
+                          Table "public.t1"
  Column |  Type   | Modifiers | Storage | Stats target | Description
 --------+---------+-----------+---------+--------------+-------------
  c1     | integer |           | plain   |              |
@@ -384,15 +384,15 @@ Distributed by: (c1 cdbhash_int4_ops)</codeblock>
             TABLE</codeph> command to redistribute the table with the
             <codeph>gp_use_legacy_hashops</codeph> parameter set to <codeph>off</codeph>.
           <note>Redistributing tables with a large amount of data can take a long time. </note></p>
-        <codeblock>test=# <b>SHOW gp_use_legacy_hashops;</b>
+        <codeblock>test=# SHOW gp_use_legacy_hashops;
  gp_use_legacy_hashops
 -----------------------
  off
 (1 row)
 
-test=# <b>ALTER TABLE t1 SET DISTRIBUTED BY (c1);</b>
+test=# ALTER TABLE t1 SET DISTRIBUTED BY (c1);
 ALTER TABLE
-test=# <b>\d+ t1</b>
+test=# \d+ t1
                           Table "public.t1"
  Column |  Type   | Modifiers | Storage | Stats target | Description
 --------+---------+-----------+---------+--------------+-------------
@@ -402,9 +402,9 @@ test=# <b>\d+ t1</b>
 Distributed by: (c1)</codeblock>
         <p>To verify the default jump consistent operator class has been used, set
             <codeph>gp_use_legacy_hashops</codeph> to on before you show the table definition.</p>
-        <codeblock>test=# <b>SET gp_use_legacy_hashops=on;</b>
+        <codeblock>test=# SET gp_use_legacy_hashops=on;
 SET
-test=# <b>\d+ t1</b>
+test=# \d+ t1
                           Table "public.t1"
  Column |  Type   | Modifiers | Storage | Stats target | Description
 --------+---------+-----------+---------+--------------+-------------

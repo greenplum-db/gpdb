@@ -174,7 +174,7 @@ sdw3-2</codeblock></li>
         problems before continuing on to the next task.</p>
       <ol id="ol_yjk_knz_thb">
         <li id="ji162490">Log in to the coordinator host as
-          <codeph>gpadmin</codeph>:<codeblock>$ su - <varname>gpadmin</varname></codeblock></li>
+          <codeph>gpadmin</codeph>:<codeblock>$ su - gpadmin</codeblock></li>
         <li id="ji162506">Use the <codeph>gpssh</codeph> utility to see if you can log in to all
           hosts without a password prompt, and to confirm that the Greenplum software was installed
           on all hosts. Use the <codeph>hostfile_exkeys</codeph> file you used to set up
