@@ -54,6 +54,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
 
+- name: postgres_for_fdw
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/postgres-fdw-dependencies/postgresql-(10.4).tar.gz
+
 jobs:
 - name: compile_and_test_gpdb
   max_in_flight: 10
@@ -72,6 +79,9 @@ jobs:
       resource: libsigar-centos7
     - get: python-tarball
       resource: python-centos7
+    - get: postgres_for_fdw
+      params:
+        unpack: true
 
   - do:
     - task: init gpdb_src
