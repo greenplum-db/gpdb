@@ -2,7 +2,7 @@ subdir=src/backend/libpq
 top_builddir=../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=pqcomm auth
+TARGETS=pqcomm auth ip
 
 include $(top_builddir)/src/backend/mock.mk
 
@@ -16,3 +16,5 @@ auth.t: \
 	$(MOCK_DIR)/backend/libpq/hba_mock.o \
 	$(MOCK_DIR)/backend/utils/adt/timestamp_mock.o \
 	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o
+
+ip.t:
