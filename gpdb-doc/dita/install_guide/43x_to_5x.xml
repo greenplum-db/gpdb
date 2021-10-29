@@ -11,8 +11,7 @@
   <body>
     <p>For information about how Greenplum Database 6 performs type casts, see <xref
         href="../admin_guide/query/topics/defining-queries.xml#topic14" scope="peer">Type
-        Casts</xref><ph otherprops="op-print">in the <cite>Greenplum Database Administrator
-          Guide</cite></ph>.</p>
+        Casts</xref>.</p>
     <p><b>What is different in Greenplum Database 6</b></p>
     <p>Greenplum Database 6 does not automatically implicitly cast between text and other data
       types. Greenplum Database 6 also treats certain automatic implicit casts differently than

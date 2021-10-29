@@ -34,25 +34,24 @@
       a dash (<codeph>-</codeph>) and number to the host name. For example, <codeph>sdw1-1</codeph>
       and <codeph>sdw1-2</codeph> are the two interface names for host <codeph>sdw1</codeph>.</p>
     <!--Pivotal-->
-    <p otherprops="pivotal">For information about running Greenplum Database in the cloud see
-        <cite>Cloud Services</cite> in the <xref
+    <p>For information about running Tanzu Greenplum Database in the cloud see <cite>Cloud
+        Services</cite> in the <xref
         href="https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace" format="html"
         scope="external">Tanzu Greenplum Partner Marketplace</xref>.</p>
     <note type="important">When data loss is not acceptable for a Greenplum Database cluster,
       Greenplum coordinator and segment mirroring is recommended. If mirroring is not enabled then
       Greenplum stores only one copy of the data, so the underlying storage media provides the only
-      guarantee for data availability and correctness in the event of a hardware failure.<p
-        otherprops="pivotal">Kubernetes enables quick recovery from both pod and host failures, and
-        Kubernetes storage services provide a high level of availability for the underlying data.
-        Furthermore, virtualized environments make it difficult to ensure the anti-affinity
-        guarantees required for Greenplum mirroring solutions. For these reasons, mirrorless
-        deployments are fully supported with Greenplum for Kubernetes. Other deployment environments
-        are generally not supported for production use unless both Greenplum coordinator and segment
-        mirroring are enabled.</p></note>
-    <!--Pivotal-->
-    <note type="note" otherprops="pivotal">For information about upgrading Tanzu Greenplum
-     from a previous version, see the <cite>Greenplum Database Release Notes</cite> for
-      the release that you are installing.</note>
+      guarantee for data availability and correctness in the event of a hardware
+        failure.<p>Kubernetes enables quick recovery from both pod and host failures, and Kubernetes
+        storage services provide a high level of availability for the underlying data. Furthermore,
+        virtualized environments make it difficult to ensure the anti-affinity guarantees required
+        for Greenplum mirroring solutions. For these reasons, mirrorless deployments are fully
+        supported with Greenplum for Kubernetes. Other deployment environments are generally not
+        supported for production use unless both Greenplum coordinator and segment mirroring are
+        enabled.</p></note>
+    <note type="note">For information about upgrading Tanzu Greenplum from a previous version, see
+      the <cite>Tanzu Greenplum Database Release Notes</cite> for the release that you are
+      installing.</note>
     <note type="note">Automating the configuration steps described in this topic and <xref
         href="install_gpdb.xml#topic1"/> with a system provisioning tool, such as Ansible, Chef, or
       Puppet, can save time and ensure a reliable and repeatable Greenplum Database installation.

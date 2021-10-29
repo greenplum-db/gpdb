@@ -4,12 +4,11 @@
 <topic id="topic1" xml:lang="en">
   <title id="kh138244">Migrating Data from Greenplum 4.3 or 5 to Greenplum 6</title>
   <shortdesc>You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the standard
-    backup and restore procedures, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph><ph
-      otherprops="pivotal">, or by using <codeph>gpcopy</codeph></ph>.</shortdesc>
+    backup and restore procedures, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, or by
+    using <codeph>gpcopy</codeph> for Tanzu Greenplum.</shortdesc>
   <body>
     <p>
-      <note otherprops="oss-only">Open source Greenplum Database is available only for Greenplum
-        Database 5 and later. </note>
+      <note>Open source Greenplum Database is available only for Greenplum Database 5 and later. </note>
       <note>You can upgrade a Greenplum Database 5.28 system directly to Greenplum 6.9 or later
         using <xref href="https://greenplum.docs.pivotal.io/upgrade/" format="html" scope="external"
           >gpupgrade</xref>. You cannot upgrade a Greenplum Database 4.3 system directly to
@@ -33,20 +32,19 @@
             <codeph>gpinitsystem</codeph> utility. <note><codeph>gprestore</codeph> only supports
             restoring data to a cluster that has an identical number of hosts and an identical
             number of segments per host, with each segment having the same
-              <codeph>content_id</codeph> as the segment in the original cluster. <ph
-              otherprops="pivotal">Use <codeph>gpcopy</codeph> if you need to migrate data to a
-              different-sized Greenplum 6 cluster.</ph></note>
+              <codeph>content_id</codeph> as the segment in the original cluster. Use
+              <codeph>gpcopy</codeph> (Tanzu Greenplum) if you need to migrate data to a
+            different-sized Greenplum 6 cluster.</note>
           <note> Set the Greenplum Database 6 timezone to a value that is compatible with your host
             systems. Setting the Greenplum Database timezone prevents Greenplum Database from
             selecting a timezone each time the cluster is restarted. See <xref
               href="localization.xml" format="dita" scope="local">Configuring Timezone and
               Localization Settings</xref> for more information.</note></li>
         <li>Install the latest release of the Greenplum Backup and Restore utilities, available to
-          download from <ph otherprops="pivotal"><xref
-              href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore" format="html"
-              scope="external">VMware Tanzu Network</xref></ph><ph otherprops="oss-only"><xref
-              href="https://github.com/greenplum-db/gpbackup/releases" format="html"
-              scope="external">github</xref></ph>.</li>
+          download from <xref href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore"
+            format="html" scope="external">VMware Tanzu Network</xref> or <xref
+            href="https://github.com/greenplum-db/gpbackup/releases" format="html" scope="external"
+            >github</xref>.</li>
         <li>If you intend to install Greenplum Database 6 on the same hardware as your 4.3 system,
           you will need enough disk space to accommodate over five times the original data set (two
           full copies of the primary and mirror data sets, plus the original backup data in ASCII
@@ -54,12 +52,12 @@
             <codeph>gprestore</codeph>. Keep in mind that the ASCII backup data will require more
           disk space than the original data, which may be stored in compressed binary format.
           Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space
-          on each host. <p otherprops="pivotal">If you want to migrate your data on the same
-            hardware but do not have enough free disk space on your host systems,
-              <codeph>gpcopy</codeph> provides the <codeph>--truncate-source-after</codeph> option
-            to truncate each source table after copying the table to the destination cluster and
-            validating that the copy succeeded. This reduces the amount of free space needed to
-            migrate clusters that reside on the same hardware. See <xref scope="peer"
+          on each host. <p>If you want to migrate your data on the same hardware but do not have
+            enough free disk space on your host systems, <codeph>gpcopy</codeph> for Tanzu Greenplum
+            provides the <codeph>--truncate-source-after</codeph> option to truncate each source
+            table after copying the table to the destination cluster and validating that the copy
+            succeeded. This reduces the amount of free space needed to migrate clusters that reside
+            on the same hardware. See <xref scope="peer"
               href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with gpcopy</xref>
             for more information.</p></li>
         <li>Install any external modules used in your Greenplum 4.3 system in the Greenplum 6 system
@@ -107,11 +105,11 @@
       <note>A Greenplum 4 system must be at least version 4.3.22 to use the
           <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities. A Greenplum 5 system
         must be at least version 5.5. Be sure to use the latest release of the backup and restore
-        utilities, available for download from <ph otherprops="pivotal"><xref
-            href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore" format="html"
-            scope="external">VMware Tanzu Network</xref></ph><ph otherprops="oss-only"><xref
-            href="https://github.com/greenplum-db/gpbackup/releases" format="html" scope="external"
-            >github</xref></ph>.</note>
+        utilities, available for download from <xref
+          href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore" format="html"
+          scope="external">VMware Tanzu Network</xref> or <xref
+          href="https://github.com/greenplum-db/gpbackup/releases" format="html" scope="external"
+          >github</xref>.</note>
       <note type="important">Make sure that you have a complete backup of all data in the Greenplum
         Database 4.3 or 5 cluster, and that you can successfully restore the Greenplum Database
         cluster if necessary.</note>
@@ -285,15 +283,14 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
       <p>Review the <codeph>gprestore</codeph> log file for error messages and correct any remaining
         problems in the source Greenplum database.</p>
       <p>When you are able to restore a metadata backup successfully, create the full backup and
-        then restore it to the Greenplum 6 system<ph otherprops="pivotal">, or use
-            <codeph>gpcopy</codeph> to transfer the data</ph>. If needed, use the
-          <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> filter options to omit schemas or
-        tables that cannot be restored without error. </p>
-      <p otherprops="pivotal">If you use <codeph>gpcopy</codeph> to migrate data, initiate the
-          <codeph>gpcopy</codeph> operation from the Greenplum 4.3.26 (or later) or the
-          5.9 (or later) cluster. See <xref
-          scope="peer" href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with
-          gpcopy</xref> for more information.</p>
+        then restore it to the Greenplum 6 system, or use <codeph>gpcopy</codeph> (Tanzu Greenplum)
+        to transfer the data. If needed, use the <codeph>gpbackup</codeph> or
+          <codeph>gprestore</codeph> filter options to omit schemas or tables that cannot be
+        restored without error. </p>
+      <p>If you use <codeph>gpcopy</codeph> to migrate Tanzu Greenplum data, initiate the
+          <codeph>gpcopy</codeph> operation from the Greenplum 4.3.26 (or later) or the 5.9 (or
+        later) cluster. See <xref scope="peer" href="../admin_guide/managing/gpcopy-migrate.xml"
+          >Migrating Data with gpcopy</xref> for more information.</p>
       <note type="important">When you restore a backup taken from a Greenplum Database 4.3 or 5
         system, <codeph>gprestore</codeph> warns that the restore will use legacy hash operators
         when loading the data. This is because Greenplum 6 has new hash algorithms that map
@@ -322,8 +319,8 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
           types. After you migrate from Greenplum Database version 4.3 to version 6, this changed
           behavior may impact existing applications and queries. Refer to <xref href="43x_to_5x.xml"
             format="dita" scope="local">About Implicit Text Casting in Greenplum Database</xref> for
-          information, including a discussion about<ph otherprops="pivotal"> supported and
-            unsupported</ph><ph otherprops="oss-only"> recommended</ph> workarounds.</li>
+          information, including a discussion about VMware supported and unsupported
+          workarounds.</li>
         <li>After migrating data you may need to modify SQL scripts, administration scripts, and
           user-defined functions as necessary to account for changes in Greenplum Database version
           6. Review the <xref
