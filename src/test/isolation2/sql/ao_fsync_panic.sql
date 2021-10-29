@@ -57,11 +57,11 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- Note, if the TRUNCATE operation interleaves between the END_OF_RECOVERY and the
 -- CHECKPOINT record, PANIC might happen due to a fsync request being queued for an unlinked AO file,
 -- is not forgotten in this case.
-2: SELECT gp_inject_fault('checkpoint', 'sleep', dbid)
+2: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'skip', dbid)
     FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
-2: SELECT gp_wait_until_triggered_fault('checkpoint', 1, dbid)
+2: SELECT gp_wait_until_triggered_fault('checkpoint_after_redo_calculated', 1, dbid)
     FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
-2: SELECT gp_inject_fault('checkpoint', 'reset', dbid)
+2: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'reset', dbid)
     FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
 
 -- Expect to see the content 0, preferred primary is mirror and it's down;
@@ -82,6 +82,6 @@ SELECT wait_until_all_segments_synchronized();
 
 -- cleanup
 DROP TABLE ao_fsync_panic_tbl;
-!\retcode gpconfig -r fsync --skipvalidation;
+!\retcode gpconfig -c fsync -v off --skipvalidation;
 !\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
 !\retcode gpstop -u;

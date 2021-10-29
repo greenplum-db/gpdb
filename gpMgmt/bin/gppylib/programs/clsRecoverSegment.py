@@ -268,6 +268,10 @@ class GpRecoverSegmentProgram:
 
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
 
+        if not gpArray.hasMirrors:
+            raise ExceptionNoStackTraceNeeded(
+                'GPDB Mirroring replication is not configured for this Greenplum Database instance.')
+
         num_workers = min(len(gpArray.get_hostlist()), self.__options.parallelDegree)
         hosts = set(gpArray.get_hostlist(includeMaster=False))
         unreachable_hosts = get_unreachable_segment_hosts(hosts, num_workers)
@@ -279,10 +283,6 @@ class GpRecoverSegmentProgram:
             if segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
                 logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.mirrorDB.dbid, segmentPair.mirrorDB.getSegmentHostName()))
                 gpArray.segmentPairs[i].mirrorDB.unreachable = True
-
-        if not gpArray.hasMirrors:
-            raise ExceptionNoStackTraceNeeded(
-                'GPDB Mirroring replication is not configured for this Greenplum Database instance.')
 
         # We have phys-rep/filerep mirrors.
 

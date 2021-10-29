@@ -35,13 +35,8 @@ PQPING_MIRROR_READY = 64
 POSTMASTER_MIRROR_VERSION_DETAIL_MSG = "- VERSION:"
 
 def _get_segment_status(segment):
-    PGDATABASE = os.getenv('pgdatabase')
-    if (PGDATABASE == 'None'):
-        cmd = base.Command('pg_isready for segment',
-                       "pg_isready -q -h %s -p %d" % (segment.hostname, segment.port))
-    else:
-        cmd = base.Command('pg_isready for segment',
-                           "pg_isready -q -h %s -p %d -d %s" % (segment.hostname, segment.port, PGDATABASE))
+    cmd = base.Command('pg_isready for segment',
+                       "pg_isready -q -h %s -p %d -d %s" % (segment.hostname, segment.port, gp.PGDATABASE_FOR_COMMON_USE))
     cmd.run()
 
     rc = cmd.get_return_code()
