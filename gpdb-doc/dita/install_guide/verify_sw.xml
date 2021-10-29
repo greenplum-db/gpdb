@@ -28,7 +28,7 @@
         On CentOS, this utility command is named <codeph>sha256sum</codeph>.</li>
       <li>Run the utility to display the checksum of the package file that you downloaded
         from Tanzu Network. For example, if you downloaded the <b>Greenplum Database
-        Server</b> on CentOS:
+        Server</b> package on CentOS:
         <codeblock>$ sha256sum greenplum-db-6.18.0-rhel7-x86_64.rpm</codeblock></li>
       <li>If the command checksum output matches the <b>SHA256</b> fingerprint specified
         in the Tanzu Network package information, the file was downloaded intact. You
