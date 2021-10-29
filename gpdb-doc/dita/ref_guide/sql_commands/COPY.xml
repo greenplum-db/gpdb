@@ -28,6 +28,7 @@ QUOTE '<varname>quote_character</varname>'
 ESCAPE '<varname>escape_character</varname>'
 FORCE_QUOTE { ( <varname>column_name</varname> [, ...] ) | * }
 FORCE_NOT_NULL ( <varname>column_name</varname> [, ...] ) 
+FORCE_NULL ( <varname>column_name</varname> [, ...] )
 ENCODING '<varname>encoding_name</varname>'       
 FILL MISSING FIELDS
 LOG ERRORS [ SEGMENT REJECT LIMIT <varname>count</varname> [ ROWS | PERCENT ] ]
@@ -246,6 +247,14 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
             format.</pd>
         </plentry>
         <plentry>
+          <pt>FORCE_NULL</pt>
+          <pd>Match the specified columns' values against the null string, even if it has
+            been quoted, and if a match is found set the value to <codeph>NULL</codeph>. In
+            the default case where the null string is empty, this converts a quoted empty
+            string into <codeph>NULL</codeph>. This option is allowed only in
+            <codeph>COPY FROM</codeph>, and only when using <codeph>CSV</codeph> format.</pd>
+        </plentry>
+        <plentry>
           <pt>ENCODING</pt>
           <pd>Specifies that the file is encoded in the <varname>encoding_name</varname>. If this
             option is omitted, the current client encoding is used. See the Notes below for more
@@ -427,6 +436,9 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         operation. You may wish to invoke <codeph>VACUUM</codeph> to recover the wasted space.
         Another option would be to use single row error isolation mode to filter out error rows
         while still loading good rows. </p>
+      <p><codeph>FORCE_NULL</codeph> and <codeph>FORCE_NOT_NULL</codeph> can be used
+        simultaneously on the same column. This results in converting quoted null strings to
+        null values and unquoted null strings to empty strings.</p>
       <p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command is run, the server configuration
         parameter <codeph>gp_enable_segment_copy_checking</codeph> controls whether the table
         distribution policy (from the table <codeph>DISTRIBUTED</codeph> clause) is checked when
@@ -562,7 +574,8 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           an unquoted empty string, while an empty string data value is written with double quotes
             (<codeph>""</codeph>). Reading values follows similar rules. You can use
             <codeph>FORCE_NOT_NULL</codeph> to prevent <codeph>NULL</codeph> input comparisons for
-          specific columns.</p>
+          specific columns. You can also use <codeph>FORCE_NULL</codeph> to convert quoted
+          null string data values to <codeph>NULL</codeph>.</p>
         <p>Because backslash is not a special character in the <codeph>CSV</codeph> format,
             <codeph>\.</codeph>, the end-of-data marker, could also appear as a data value. To avoid
           any misinterpretation, a <codeph>\.</codeph> data value appearing as a lone entry on a
