@@ -291,7 +291,7 @@ BufFileOpenNamedTemp(const char *fileName, bool interXact)
 	BufFile	   *file;
 
 	/*
-	 * Ensure that temp tablespaces are set up for OpenTemporaryFile to use.
+	 * Ensure that temp tablespaces are set up for OpenNamedTemporaryFile to use.
 	 * Possibly the caller will have done this already, but it seems useful to
 	 * double-check here.  Failure to do this at all would result in the temp
 	 * files always getting placed in the default tablespace, which is a
