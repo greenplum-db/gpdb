@@ -202,6 +202,16 @@ BufFileCreateTempInSet(workfile_set *work_set, bool interXact)
 
 	snprintf(filePrefix, MAXPGPATH, "_%s_", work_set->prefix);
 
+	/*
+	 * Ensure that temp tablespaces are set up for OpenTemporaryFile to use.
+	 * Possibly the caller will have done this already, but it seems useful to
+	 * double-check here.  Failure to do this at all would result in the temp
+	 * files always getting placed in the default tablespace, which is a
+	 * pretty hard-to-detect bug.  Callers may prefer to do it earlier if they
+	 * want to be sure that any required catalog access is done in some other
+	 * resource context.
+	 */
+	PrepareTempTablespaces();
 	pfile = OpenTemporaryFile(interXact, filePrefix);
 	Assert(pfile >= 0);
 
@@ -241,7 +251,7 @@ BufFileCreateNamedTemp(const char *fileName, bool interXact, workfile_set *work_
 	BufFile	   *file;
 
 	/*
-	 * Ensure that temp tablespaces are set up for OpenTemporaryFile to use.
+	 * Ensure that temp tablespaces are set up for OpenNamedTemporaryFile to use.
 	 * Possibly the caller will have done this already, but it seems useful to
 	 * double-check here.  Failure to do this at all would result in the temp
 	 * files always getting placed in the default tablespace, which is a
@@ -280,6 +290,16 @@ BufFileOpenNamedTemp(const char *fileName, bool interXact)
 	File		pfile;
 	BufFile	   *file;
 
+	/*
+	 * Ensure that temp tablespaces are set up for OpenTemporaryFile to use.
+	 * Possibly the caller will have done this already, but it seems useful to
+	 * double-check here.  Failure to do this at all would result in the temp
+	 * files always getting placed in the default tablespace, which is a
+	 * pretty hard-to-detect bug.  Callers may prefer to do it earlier if they
+	 * want to be sure that any required catalog access is done in some other
+	 * resource context.
+	 */
+	PrepareTempTablespaces();
 	pfile = OpenNamedTemporaryFile(fileName,
 								   false,	/* create */
 								   false,	/* delOnClose */

@@ -111,7 +111,6 @@ CREATE TABLE tts_aggspill (i int, j int, t text) distributed by (i);
 CREATE TABLE tts_testsiscm (i1 int, i2 int, i3 int, i4 int) distributed by(i1);
 
 
-
 insert into tts_foo select i, i from generate_series(1,1000000)i;
 insert into tts_bar select i, i from generate_series(6000,120000)i;
 insert into tts_jazz select i, i from generate_series(4000,150000)i;
@@ -172,6 +171,11 @@ select gp_tablespace_watch_log(gp_execution_dbid(), '[temp_tablespace]: separato
 
 set statement_mem='1MB';
 select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
+-- supress too many output tuples, so sort(maybe merge sort) spills
+\o /dev/null
+select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
+    from tts_testsiscm group by i1 order by 3,4,5 desc;
+\o
 
 set optimizer = off;
 set statement_mem='3MB';
@@ -188,6 +192,8 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_HashJoin') > 0 a
 
 select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 as "exist";
 select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_SIRW_') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_Sort_') > 0 as "exist";
 
 -- temp files in hash aggregate should reside in the temp tablespace.
 select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate_') > 0 as "exist";
@@ -211,7 +217,6 @@ select count(*) from out11;
 set statement_mem = '1MB';
 -- hash aggregate should spill on the default tablespace.
 select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
-
 select gp_tablespace_watch_log(gp_execution_dbid(), '[RESET - use default temp tablespace]');
 
 set optimizer = off;
@@ -243,6 +248,10 @@ select gp_tablespace_watch_log(gp_execution_dbid(), '[temp_tablespace]: separato
 set statement_mem='1MB';
 -- hash aggregate should spill on the default tablespace.
 select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
+\o /dev/null
+select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
+    from tts_testsiscm group by i1 order by 3,4,5 desc;
+\o
 
 set optimizer = off;
 set statement_mem='3MB';
@@ -257,6 +266,7 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashJoin') > 
 select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 as "exist";
 -- temp files in hash aggregate should reside in the temp tablespace.
 select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate_') > 0 as "exist";
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
 
 
 drop table tts_foo, tts_bar, tts_jazz, tts_aggspill, tts_testsiscm;

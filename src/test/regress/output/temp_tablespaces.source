@@ -217,6 +217,11 @@ select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having
  10000
 (1 row)
 
+-- supress too many output tuples, so sort(maybe merge sort) spills
+\o /dev/null
+select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
+    from tts_testsiscm group by i1 order by 3,4,5 desc;
+\o
 set optimizer = off;
 set statement_mem='3MB';
 select count(*) from (with ctesisc as
@@ -262,6 +267,22 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 a
 (3 rows)
 
 select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_SIRW_') > 0 as "exist";
+ exist 
+-------
+ t
+ t
+ t
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
+ exist 
+-------
+ f
+ f
+ f
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_Sort_') > 0 as "exist";
  exist 
 -------
  t
@@ -388,6 +409,10 @@ select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having
  10000
 (1 row)
 
+\o /dev/null
+select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
+    from tts_testsiscm group by i1 order by 3,4,5 desc;
+\o
 set optimizer = off;
 set statement_mem='3MB';
 select count(*) from (with ctesisc as
@@ -426,6 +451,14 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 a
 
 -- temp files in hash aggregate should reside in the temp tablespace.
 select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate_') > 0 as "exist";
+ exist 
+-------
+ t
+ t
+ t
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
  exist 
 -------
  t
