@@ -4449,8 +4449,7 @@ CUtils::IsHashJoinPossible(CMemoryPool *mp, CExpression *pexpr)
 	GPOS_ASSERT(nullptr != pexpr);
 
 	CExpressionArray *expr_preds =
-		CPredicateUtils::PdrgpexprConjuncts(mp, (*pexpr)[2]);
-
+		CCastUtils::PdrgpexprCastEquality(mp, (*pexpr)[2]);
 	BOOL has_hashable_pred = false;
 	ULONG ulPreds = expr_preds->Size();
 	for (ULONG ul = 0; ul < ulPreds && !has_hashable_pred; ul++)
