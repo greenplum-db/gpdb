@@ -73,19 +73,20 @@ Feature: gprecoverseg tests
       | -B 2 -b 1 |  2             |  1              |
       | -B 1 -b 2 |  1             |  2              |
 
-    Scenario: gprecoverseg should not output bootstrap error on success
+  Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
+        And gprecoverseg should print "Running recovery for the required segments" to stdout
+        And gprecoverseg should print "no rewind required" to stdout for each primary
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-	And the segments are synchronized
+	    And the segments are synchronized
 
     Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running
@@ -100,7 +101,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
+  Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -127,7 +128,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
+  Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -140,7 +141,8 @@ Feature: gprecoverseg tests
         And we generate the postmaster.pid file with the background pid on "primary" segment
         And the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
+        And gprecoverseg should print "Running recovery for the required segments" to stdout
+        And gprecoverseg should print "no rewind required" to stdout for each primary
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
@@ -151,7 +153,7 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
-    Scenario: Pid does not correspond to any running process
+  Scenario: Pid does not correspond to any running process
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -161,8 +163,9 @@ Feature: gprecoverseg tests
         When user can start transactions
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
-        And gprecoverseg should print "Running pg_rewind on failed segments" to stdout
-        Then gprecoverseg should return a return code of 0
+        Then gprecoverseg should print "Running recovery for the required segments" to stdout
+        And gprecoverseg should print "no rewind required" to stdout for each primary
+        And gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
@@ -189,7 +192,7 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And pg_isready reports all primaries are accepting connections
 
-    Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
+  Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
         Given the database is running
         And all the segments are running
         And the segments are synchronized

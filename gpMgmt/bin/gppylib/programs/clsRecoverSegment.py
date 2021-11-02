@@ -336,6 +336,7 @@ class GpRecoverSegmentProgram:
         elif len(mirrorBuilder.getMirrorsToBuild()) == 0:
             self.logger.info('No segments to recover')
         else:
+            #TODO this already happens in buildMirrors function
             mirrorBuilder.checkForPortAndDirectoryConflicts(gpArray)
             self.validate_heap_checksum_consistency(gpArray, mirrorBuilder)
 
