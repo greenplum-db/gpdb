@@ -688,9 +688,12 @@ def impl(context, command, out_msg, num):
     msg_list = context.stdout_message.split('\n')
     msg_list = [x.strip() for x in msg_list]
 
-    count = msg_list.count(out_msg)
+    count = 0
+    for line in msg_list:
+        if out_msg in line:
+            count += 1
     if count != int(num):
-        raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
+        raise Exception("Expected %s to occur %s times. Found %d. stdout: %s" % (out_msg, num, count, msg_list))
 
 
 def lines_matching_both(in_str, str_1, str_2):
@@ -1207,6 +1210,28 @@ def stop_segments(context, where_clause):
                                    pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg.getSegmentDataDirectory()))
                                ])
 
+@given('user immediately stops all {segment_type} processes')
+@when('user immediately stops all {segment_type} processes')
+@then('user immediately stops all {segment_type} processes')
+def stop_all_primary_or_mirror_segments(context, segment_type):
+    if segment_type not in ("primary", "mirror"):
+        raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)
+
+    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
+    stop_segments_immediate(context, lambda seg: seg.getSegmentRole() == role and seg.content != -1)
+
+# where_clause is a lambda that takes a segment to select what segments to stop
+def stop_segments_immediate(context, where_clause):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    segments = filter(where_clause, gparray.getDbList())
+    for seg in segments:
+        # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
+        # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
+        subprocess.check_call(['ssh', seg.getSegmentHostName(),
+                               'source %s/greenplum_path.sh && pg_ctl stop -m immediate -D %s -w' % (
+                                   pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg.getSegmentDataDirectory()))
+                               ])
 
 @given('user can start transactions')
 @when('user can start transactions')
@@ -2309,12 +2334,14 @@ def impl(context):
     for file in files_found:
         os.remove(file)
 
-@then('gpAdminLogs directory has no "{expected_file}" files')
-def impl(context, expected_file):
+@then('gpAdminLogs directory {has} "{expected_file}" files')
+def impl(context, has, expected_file):
     log_dir = _get_gpAdminLogs_directory()
     files_found = glob.glob('%s/%s' % (log_dir, expected_file))
-    if files_found:
+    if files_found and (has == 'has no'):
         raise Exception("expected no %s files in %s, but found %s" % (expected_file, log_dir, files_found))
+    if (not files_found) and (has == 'has'):
+        raise Exception("expected %s file in %s, but not found" % (expected_file, log_dir))
 
 @given('"{filepath}" is copied to the install directory')
 def impl(context, filepath):
