@@ -23,6 +23,7 @@ DATA= __init__.py \
 	mainUtils.py \
 	parseutils.py \
 	pgconf.py \
+	recoveryinfo.py \
 	userinput.py \
 	utils.py
 
