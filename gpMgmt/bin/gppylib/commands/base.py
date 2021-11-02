@@ -19,6 +19,7 @@ for executing this set of commands.
 from Queue import Queue, Empty
 from threading import Thread
 
+import functools
 import os
 import signal
 try:
@@ -648,3 +649,21 @@ def run_remote_commands(name, commands):
     pool.join()
     pool.check_results()
     return cmds
+
+
+def set_cmd_results(run_func):
+    """
+    Decorator function to run a command on the seg and set the results on the command object for that segment.
+    :param run_func: The function to run
+    :return:
+    """
+    @functools.wraps(run_func)
+    def run_and_set_output(cmd):
+        try:
+            run_func(cmd)
+        except Exception as e:
+            cmd.set_results(CommandResult(1, b'', str(e).encode(), True, False))
+        else:
+            cmd.set_results(CommandResult(0, b'', b'', True, False))
+
+    return run_and_set_output

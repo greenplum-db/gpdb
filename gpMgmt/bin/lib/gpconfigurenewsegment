@@ -136,13 +136,13 @@ class ConfExpSegCmd(Command):
                                                                                 datetime.datetime.today().strftime('%Y%m%d_%H%M%S'),
                                                                                 self.dbid)
                     # Create a mirror based on the primary
-                    cmd = PgBaseBackup(pgdata=self.datadir,
-                                       host=self.syncWithSegmentHostname,
-                                       port=str(self.syncWithSegmentPort),
+                    cmd = PgBaseBackup(target_datadir=self.datadir,
+                                       source_host=self.syncWithSegmentHostname,
+                                       source_port=str(self.syncWithSegmentPort),
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
                                        target_gp_dbid=self.dbid,
-                                       logfile=self.progressFile)
+                                       progress_file=self.progressFile)
                     try:
                         logger.info("Running pg_basebackup with progress output temporarily in %s" % self.progressFile)
                         cmd.run(validateAfter=True)
