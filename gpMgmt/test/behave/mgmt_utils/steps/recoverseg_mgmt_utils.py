@@ -109,6 +109,7 @@ def runCommandOnRemoteSegment(context, cid, sql_cmd):
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd).run(validateAfter=True)
 
 @then('gprecoverseg should print "{output}" to stdout for each {segment_type}')
+@when('gprecoverseg should print "{output}" to stdout for each {segment_type}')
 def impl(context, output, segment_type):
     if segment_type not in ("primary", "mirror"):
         raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)

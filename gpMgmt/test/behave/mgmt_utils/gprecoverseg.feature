@@ -42,7 +42,10 @@ Feature: gprecoverseg tests
         When the user runs gprecoverseg with input file and additional args "-a -F -v <args>"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should only spawn up to <master_workers> workers in WorkerPool
-        And check if gprecoverseg ran "$GPHOME/bin/lib/gpconfigurenewsegment" 2 times with args "-b <segHost_workers>"
+        And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b <segHost_workers>"
+        And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b <segHost_workers>"
+        And gpsegsetuprecovery should only spawn up to <segHost_workers> workers in WorkerPool
+        And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
         And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
         And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
         And the segments are synchronized
@@ -63,6 +66,8 @@ Feature: gprecoverseg tests
       When the user runs "gprecoverseg -ra -v <args>"
       Then gprecoverseg should return a return code of 0
       And gprecoverseg should only spawn up to <master_workers> workers in WorkerPool
+      And gpsegsetuprecovery should only spawn up to <segHost_workers> workers in WorkerPool
+      And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstart.py" 1 times with args "-b <segHost_workers>"
       And the segments are synchronized
@@ -75,12 +80,12 @@ Feature: gprecoverseg tests
 
   Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
-        And user stops all primary processes
+        And user immediately stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "Running recovery for the required segments" to stdout
-        And gprecoverseg should print "no rewind required" to stdout for each primary
+        And gprecoverseg should print "Done!" to stdout for each primary
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
@@ -98,19 +103,49 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for each mirror
         And gpAdminLogs directory has no "pg_basebackup*" files
+        And gpAdminLogs directory has "gpsegrecovery*" files
+        And gpAdminLogs directory has "gpsegsetuprecovery*" files
         And all the segments are running
         And the segments are synchronized
+
+    Scenario: gprecoverseg mixed recovery displays pg_basebackup and rewind progress to the user
+      Given the database is running
+      And all the segments are running
+      And the segments are synchronized
+      And user immediately stops all primary processes
+      And user can start transactions
+      And sql "DROP TABLE if exists t; CREATE TABLE t AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+      And the "t" table row count in "postgres" is saved
+      And a gprecoverseg directory under '/tmp' with mode '0700' is created
+      And a gprecoverseg input file is created for mixed recovery for 2 segments with full and 1 incremental
+      When the user runs gprecoverseg with input file and additional args "-a"
+      Then gprecoverseg should return a return code of 0
+        # TODO: rewrite step to check if basebackup/rewind was run for expected dbids
+      And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
+      And gprecoverseg should print "Done!" to stdout
+      And gpAdminLogs directory has no "pg_basebackup*" files
+      And gpAdminLogs directory has no "pg_rewind*" files
+      And gpAdminLogs directory has "gpsegsetuprecovery*" files
+      And gpAdminLogs directory has "gpsegrecovery*" files
+      And all the segments are running
+      And the segments are synchronized
+      And the user runs "gprecoverseg -ar"
+      And gprecoverseg should return a return code of 0
+      And the row count from table "t" in "postgres" is verified against the saved data
 
   Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
-        And user stops all primary processes
+        And all files in gpAdminLogs directory are deleted
+        And user immediately stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a -s"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "no rewind required" to stdout for each primary
+        And gprecoverseg should print "Done!" to stdout for each primary
         And gpAdminLogs directory has no "pg_rewind*" files
+        And gpAdminLogs directory has "gpsegsetuprecovery*" files
+        And gpAdminLogs directory has "gpsegrecovery*" files
         And all the segments are running
         And the segments are synchronized
         And the cluster is rebalanced
@@ -123,6 +158,7 @@ Feature: gprecoverseg tests
         When user can start transactions
         And the user runs "gprecoverseg -F -a --no-progress"
         Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Running recovery for the required segments" to stdout
         And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
         And gpAdminLogs directory has no "pg_basebackup*" files
         And all the segments are running
@@ -164,6 +200,7 @@ Feature: gprecoverseg tests
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
         Then gprecoverseg should print "Running recovery for the required segments" to stdout
+        And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each primary
         And gprecoverseg should print "no rewind required" to stdout for each primary
         And gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
@@ -305,7 +342,8 @@ Feature: gprecoverseg tests
         Then the saved "mirror" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Running pg_rewind on failed segments" to stdout
+        And gprecoverseg should print "Running recovery for the required segments" to stdout
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
         And all the segments are running
         And the segments are synchronized
 
