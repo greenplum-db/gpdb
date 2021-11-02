@@ -65,14 +65,17 @@ S3Params InitConfig(const string& urlWithOptions) {
 
     // read configurations from file
 
-#ifndef S3_STANDALONE
+#if !defined(S3_STANDALONE)
     Config s3Cfg(configPath, httpUrl, DataDir);
+#elif defined(S3_UNITTEST)
+    /* Define this for gtest:HttpParam, otherwise the http cannot be tested. */
+    Config s3Cfg(configPath, httpUrl, "../../../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/");
 #else
     Config s3Cfg(configPath);
 #endif
 
     S3_CHECK_OR_DIE(s3Cfg.Handle() != NULL, S3RuntimeError,
-                    "Failed to parse config file '" + configPath + "', or it doesn't exist");
+                    "Failed to parse config file '" + configPath + "', or it doesn't exist(or http failed)");
 
     S3_CHECK_OR_DIE(s3Cfg.SectionExist(configSection), S3ConfigError,
                     "Selected section '" + configSection +
