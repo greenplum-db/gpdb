@@ -2319,7 +2319,10 @@ ChangeTracking_MarkFullResyncLockAcquired(void)
 	FileRep_SetSegmentState(SegmentStateChangeTrackingDisabled, FaultTypeNotInitialized);
 
 	getFileRepRoleAndState(&fileRepRole, &segmentState, &dataState, NULL, NULL);
-	Assert(segmentState == SegmentStateChangeTrackingDisabled);
+	Assert(segmentState == SegmentStateChangeTrackingDisabled /* common scenario */ ||
+		(fileRepRole == FileRepNoRoleConfigured &&
+		 segmentState == SegmentStateNotInitialized &&
+		 dataState == DataStateNotInitialized) /* PMModeMirrorlessSegment doing gpaddmirrors */);
 }
 
 /*
