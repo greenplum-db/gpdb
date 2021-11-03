@@ -215,6 +215,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenScalarSortCol, GPOS_WSZ_LIT("SortingColumn")},
 		{EdxltokenScalarSortColList, GPOS_WSZ_LIT("SortingColumnList")},
 		{EdxltokenScalarGroupingColList, GPOS_WSZ_LIT("GroupingColumns")},
+		{EdxltokenScalarSortGroupClause, GPOS_WSZ_LIT("SortGroupClause")},
 
 		{EdxltokenScalarBitmapAnd, GPOS_WSZ_LIT("BitmapAnd")},
 		{EdxltokenScalarBitmapOr, GPOS_WSZ_LIT("BitmapOr")},

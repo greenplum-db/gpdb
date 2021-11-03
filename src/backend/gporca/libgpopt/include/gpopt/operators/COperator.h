@@ -172,6 +172,7 @@ public:
 		EopScalarAssertConstraintList,
 		EopScalarAssertConstraint,
 
+		EopScalarSortGroupClause,
 		EopScalarSubquery,
 		EopScalarSubqueryAny,
 		EopScalarSubqueryAll,

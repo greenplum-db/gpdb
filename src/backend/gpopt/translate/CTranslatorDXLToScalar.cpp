@@ -59,6 +59,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarNullIf.h"
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
 #include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
@@ -219,6 +220,11 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		case EdxlopScalarValuesList:
 		{
 			return TranslateDXLScalarValuesListToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarSortGroupClause:
+		{
+			return TranslateDXLScalarSortGroupClauseToScalar(dxlnode,
+															 colid_var);
 		}
 #if 0
 		// GPDB_12_MERGE_FIXME: These were removed from the server with the v12 merge
@@ -2119,6 +2125,25 @@ CTranslatorDXLToScalar::TranslateDXLScalarDMLActionToScalar(
 	return (Expr *) expr;
 }
 
+
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarSortGroupClauseToScalar(
+	const CDXLNode *node,
+	CMappingColIdVar *	//colid_var
+)
+{
+	CDXLScalarSortGroupClause *dxlop =
+		CDXLScalarSortGroupClause::Cast(node->GetOperator());
+
+	SortGroupClause *expr = MakeNode(SortGroupClause);
+	expr->tleSortGroupRef = dxlop->Index();
+	expr->eqop = dxlop->EqOp();
+	expr->sortop = dxlop->SortOp();
+	expr->nulls_first = dxlop->NullsFirst();
+	expr->hashable = dxlop->IsHashable();
+
+	return (Expr *) expr;
+}
 
 
 //---------------------------------------------------------------------------

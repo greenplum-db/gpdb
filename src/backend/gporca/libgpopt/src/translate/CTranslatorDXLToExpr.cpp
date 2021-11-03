@@ -67,6 +67,7 @@
 #include "gpopt/operators/CScalarOp.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarSortGroupClause.h"
 #include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarSubqueryAll.h"
 #include "gpopt/operators/CScalarSubqueryAny.h"
@@ -113,6 +114,7 @@
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSubquery.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryQuantified.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
@@ -2604,6 +2606,8 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 			return CTranslatorDXLToExpr::PexprArrayRefIndexList(dxlnode);
 		case EdxlopScalarValuesList:
 			return CTranslatorDXLToExpr::PexprValuesList(dxlnode);
+		case EdxlopScalarSortGroupClause:
+			return CTranslatorDXLToExpr::PexprSortGroupClause(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3763,6 +3767,21 @@ CTranslatorDXLToExpr::PexprScalarConst(const CDXLNode *pdxlnConstVal)
 		CTranslatorDXLToExprUtils::PopConst(m_mp, m_pmda, dxl_op);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popConst);
+}
+
+CExpression *
+CTranslatorDXLToExpr::PexprSortGroupClause(const CDXLNode *pdxlnSortGroupClause)
+{
+	GPOS_ASSERT(nullptr != pdxlnSortGroupClause);
+
+	// translate the dxl scalar const value
+	CDXLScalarSortGroupClause *dxl_op =
+		CDXLScalarSortGroupClause::Cast(pdxlnSortGroupClause->GetOperator());
+	CScalarSortGroupClause *sgc = GPOS_NEW(m_mp) CScalarSortGroupClause(
+		m_mp, dxl_op->Index(), dxl_op->EqOp(), dxl_op->SortOp(),
+		dxl_op->NullsFirst(), dxl_op->IsHashable());
+
+	return GPOS_NEW(m_mp) CExpression(m_mp, sgc);
 }
 
 //---------------------------------------------------------------------------

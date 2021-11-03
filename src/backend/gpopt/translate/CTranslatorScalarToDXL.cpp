@@ -64,6 +64,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarOneTimeFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSubquery.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryAll.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryAny.h"
@@ -406,6 +407,11 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		case T_SubscriptingRef:
 		{
 			return CTranslatorScalarToDXL::TranslateArrayRefToDXL(
+				expr, var_colid_mapping);
+		}
+		case T_SortGroupClause:
+		{
+			return CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL(
 				expr, var_colid_mapping);
 		}
 	}
@@ -1980,6 +1986,24 @@ CTranslatorScalarToDXL::TranslateArrayRefToDXL(
 
 	return dxlnode;
 }
+
+CDXLNode *
+CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL(
+	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+{
+	GPOS_ASSERT(IsA(expr, SortGroupClause));
+	const SortGroupClause *sgc = (SortGroupClause *) expr;
+
+	CDXLScalarSortGroupClause *sort_group_clause = GPOS_NEW(m_mp)
+		CDXLScalarSortGroupClause(m_mp, sgc->tleSortGroupRef, sgc->eqop,
+								  sgc->sortop, sgc->nulls_first, sgc->hashable);
+
+	// create the DXL node holding the scalar ident operator
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, sort_group_clause);
+
+	return dxlnode;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -319,6 +319,8 @@ private:
 	// scalar constant representation in optimizer
 	CExpression *PexprScalarConst(const CDXLNode *pdxlnConst);
 
+	CExpression *PexprSortGroupClause(const CDXLNode *pdxlnSortGroupClause);
+
 	// translate a DXL project list node into a project list expression
 	CExpression *PexprScalarProjList(const CDXLNode *proj_list_dxlnode);
 
