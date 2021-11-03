@@ -240,8 +240,8 @@ public:
 	static CScalarAggFunc *PopAggFunc(
 		CMemoryPool *mp, IMDId *pmdidAggFunc, const CWStringConst *pstrAggFunc,
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
-		IMDId *pmdidResolvedReturnType =
-			nullptr	 // return type to be used if original return type is ambiguous
+		IMDId *
+			pmdidResolvedReturnType	 // return type to be used if original return type is ambiguous
 	);
 
 	// generate an aggregate function
