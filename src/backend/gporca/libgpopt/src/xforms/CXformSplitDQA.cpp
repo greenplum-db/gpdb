@@ -305,8 +305,8 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 				GPOS_NEW(mp)
 					CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 				true /* is_distinct */, EaggfuncstageLocal /*eaggfuncstage*/,
-				true /* fSplit */, nullptr /* pmdidResolvedReturnType */
-			);
+				true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
+				GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")));
 
 			GPOS_ASSERT(1 == pexprAggFunc->Arity());
 			// CScalarValuesList
@@ -344,8 +344,8 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 				GPOS_NEW(mp)
 					CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 				false /* is_distinct */, EaggfuncstageGlobal /*eaggfuncstage*/,
-				true /* fSplit */, nullptr /* pmdidResolvedReturnType */
-			);
+				true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
+				GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")));
 
 			CExpressionArray *pdrgpexprArgsGlobal =
 				GPOS_NEW(mp) CExpressionArray(mp);
@@ -448,8 +448,8 @@ CXformSplitDQA::PexprSplitHelper(CMemoryPool *mp, CColumnFactory *col_factory,
 				GPOS_NEW(mp)
 					CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 				false /* is_distinct */, EaggfuncstageGlobal /*eaggfuncstage*/,
-				false /* fSplit */, nullptr /* pmdidResolvedReturnType */
-			);
+				false /* fSplit */, nullptr /* pmdidResolvedReturnType */,
+				GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")));
 
 			GPOS_ASSERT(1 == pexprAggFunc->Arity());
 			CExpression *pexprArg = (*(*pexprAggFunc)[0])[0];
@@ -545,9 +545,9 @@ CXformSplitDQA::PexprPrElAgg(CMemoryPool *mp, CExpression *pexprAggFunc,
 		mp, popScAggFunc->MDId(),
 		GPOS_NEW(mp)
 			CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
-		false,									  /*fdistinct */
-		eaggfuncstage, true /* fSplit */, nullptr /* pmdidResolvedReturnType */
-	);
+		false, /*fdistinct */
+		eaggfuncstage, true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
+		GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")));
 
 	return CUtils::PexprScalarProjectElement(
 		mp, pcrCurrStage,

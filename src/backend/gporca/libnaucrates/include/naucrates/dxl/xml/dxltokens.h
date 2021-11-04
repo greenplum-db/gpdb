@@ -296,6 +296,7 @@ enum Edxltoken
 
 	EdxltokenAggrefOid,
 	EdxltokenAggrefDistinct,
+	EdxltokenAggrefKind,
 	EdxltokenAggrefStage,
 	EdxltokenAggrefLookups,
 	EdxltokenAggrefStageNormal,

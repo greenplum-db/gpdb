@@ -57,12 +57,15 @@ private:
 	// Denotes the MPP Stage
 	EdxlAggrefStage m_agg_stage;
 
+	CWStringDynamic *m_aggkind;
+
 public:
 	CDXLScalarAggref(const CDXLScalarAggref &) = delete;
 
 	// ctor/dtor
 	CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_mdid, IMDId *resolved_rettype,
-					 BOOL is_distinct, EdxlAggrefStage agg_stage);
+					 BOOL is_distinct, EdxlAggrefStage agg_stage,
+					 CWStringDynamic *aggkind);
 
 	~CDXLScalarAggref() override;
 
@@ -80,6 +83,12 @@ public:
 	EdxlAggrefStage GetDXLAggStage() const;
 
 	BOOL IsDistinct() const;
+
+	CWStringDynamic *
+	GetAggKind() const
+	{
+		return m_aggkind;
+	}
 
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer,

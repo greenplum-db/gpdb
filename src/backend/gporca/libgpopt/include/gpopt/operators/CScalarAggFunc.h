@@ -60,6 +60,8 @@ private:
 	// distinct aggregate computation
 	BOOL m_is_distinct;
 
+	CWStringDynamic *m_aggkind;
+
 	// stage of the aggregate function
 	EAggfuncStage m_eaggfuncstage;
 
@@ -72,7 +74,8 @@ public:
 	// ctor
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
-				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit);
+				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
+				   CWStringDynamic *aggkind);
 
 	// dtor
 	~CScalarAggFunc() override
@@ -81,6 +84,7 @@ public:
 		CRefCount::SafeRelease(m_pmdidResolvedRetType);
 		CRefCount::SafeRelease(m_return_type_mdid);
 		GPOS_DELETE(m_pstrAggFunc);
+		GPOS_DELETE(m_aggkind);
 	}
 
 
@@ -150,6 +154,12 @@ public:
 	SetIsDistinct(BOOL val)
 	{
 		m_is_distinct = val;
+	}
+
+	CWStringDynamic *
+	AggKind() const
+	{
+		return m_aggkind;
 	}
 
 	// stage of the aggregate function

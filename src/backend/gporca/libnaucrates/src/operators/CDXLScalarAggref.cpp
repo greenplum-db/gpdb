@@ -31,12 +31,14 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLScalarAggref::CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_func_mdid,
 								   IMDId *resolved_rettype_mdid,
-								   BOOL is_distinct, EdxlAggrefStage agg_stage)
+								   BOOL is_distinct, EdxlAggrefStage agg_stage,
+								   CWStringDynamic *aggkind)
 	: CDXLScalar(mp),
 	  m_agg_func_mdid(agg_func_mdid),
 	  m_resolved_rettype_mdid(resolved_rettype_mdid),
 	  m_is_distinct(is_distinct),
-	  m_agg_stage(agg_stage)
+	  m_agg_stage(agg_stage),
+	  m_aggkind(aggkind)
 {
 	GPOS_ASSERT(nullptr != agg_func_mdid);
 	GPOS_ASSERT_IMP(nullptr != resolved_rettype_mdid,
@@ -56,6 +58,7 @@ CDXLScalarAggref::~CDXLScalarAggref()
 {
 	m_agg_func_mdid->Release();
 	CRefCount::SafeRelease(m_resolved_rettype_mdid);
+	GPOS_DELETE(m_aggkind);
 }
 
 
@@ -198,6 +201,8 @@ CDXLScalarAggref::SerializeToDXL(CXMLSerializer *xml_serializer,
 		m_resolved_rettype_mdid->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
 	}
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKind), m_aggkind);
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 
 	xml_serializer->CloseElement(

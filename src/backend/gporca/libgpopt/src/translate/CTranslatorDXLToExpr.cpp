@@ -3139,8 +3139,9 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		m_mp, agg_func_mdid,
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
-		dxl_op->IsDistinct(), agg_func_stage, fSplit,
-		resolved_return_type_mdid);
+		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
+		GPOS_NEW(m_mp)
+			CWStringDynamic(m_mp, dxl_op->GetAggKind()->GetBuffer()));
 
 	CExpression *pexprAggFunc = nullptr;
 
