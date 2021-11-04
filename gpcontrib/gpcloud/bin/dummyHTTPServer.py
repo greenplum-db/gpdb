@@ -105,9 +105,12 @@ def run(server_class=HTTPServer, handler_class=S, port=8553, https=False):
     handler_class.protocol_version = 'HTTP/1.1'
     httpd = server_class(server_address, handler_class)
     if https:
-        datadir = os.getenv('MASTER_DATA_DIRECTORY')
-        if datadir == None:
-            datadir = "../../../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/"
+        datadir = os.getcwd()
+        curdir = "./"
+        while(curdir != "gpdb_src" and curdir != "gpdb"):
+            datadir, curdir = os.path.split(datadir)
+        datadir = os.path.join(datadir, curdir)
+        datadir = os.path.join(datadir, "gpAux/gpdemo/datadirs/qddir/demoDataDir-1/")
         datadir += "/gpfdists/"
         keyfile = datadir + "server.key"
         certfile = datadir + "server.crt"
