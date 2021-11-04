@@ -19,6 +19,7 @@
 #define _GP_POLICY_H_
 
 #include "access/attnum.h"
+#include "access/tupdesc.h"
 #include "catalog/genbki.h"
 #include "nodes/pg_list.h"
 
@@ -140,6 +141,9 @@ extern GpPolicy *GpPolicyCopy(const GpPolicy *src);
  * (which embeds this) in equalFuncs.c
  */
 extern bool GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt);
+
+extern bool GpPolicyEqualByName(const TupleDesc ltd, const GpPolicy *lpol,
+								const TupleDesc rtd, const GpPolicy *rpol);
 
 /*
  * GpPolicyFetch
