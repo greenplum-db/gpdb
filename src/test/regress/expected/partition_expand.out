@@ -1,0 +1,1159 @@
+create extension if not exists gp_debug_numsegments;
+select gp_debug_set_create_table_default_numsegments(1);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 1
+(1 row)
+
+--only partition table can be expanded partition prepare
+drop table if exists t_hash_expand_prepare;
+NOTICE:  table "t_hash_expand_prepare" does not exist, skipping
+create table t_hash_expand_prepare (c1 int, c2 int, c3 int, c4 int) distributed by (c1, c2);
+alter table t_hash_expand_prepare expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_hash_expand_prepare"
+DETAIL:  only root partition can be expanded partition prepare
+drop table t_hash_expand_prepare;
+--partition table distributed by hash
+drop table if exists t_hash_partition;
+NOTICE:  table "t_hash_partition" does not exist, skipping
+create table t_hash_partition(a int,b int,c int)
+ partition by range (a)
+ ( start (1) end (20) every(10),
+   default partition extra
+ );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ 
+insert into t_hash_partition select i,i,i from generate_series(1,30) i;
+--only parent of partition table can be expanded partition prepare
+alter table t_hash_partition_1_prt_2 expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_hash_partition_1_prt_2"
+DETAIL:  only root partition can be expanded partition prepare
+--master policy info
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_partition_1_prt_2'::regclass, 't_hash_partition_1_prt_3'::regclass,
+		't_hash_partition_1_prt_extra'::regclass, 't_hash_partition'::regclass);
+           localoid           | policytype | numsegments | distkey | distclass 
+------------------------------+------------+-------------+---------+-----------
+ t_hash_partition             | p          |           1 | 1       | 10054
+ t_hash_partition_1_prt_extra | p          |           1 | 1       | 10054
+ t_hash_partition_1_prt_2     | p          |           1 | 1       | 10054
+ t_hash_partition_1_prt_3     | p          |           1 | 1       | 10054
+(4 rows)
+
+--segment policy info
+select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_dist_random('gp_distribution_policy') where localoid in (
+		't_hash_partition_1_prt_2'::regclass, 't_hash_partition_1_prt_3'::regclass,
+		't_hash_partition_1_prt_extra'::regclass, 't_hash_partition'::regclass);
+ gp_segment_id |           localoid           | policytype | numsegments | distkey | distclass 
+---------------+------------------------------+------------+-------------+---------+-----------
+             1 | t_hash_partition             | p          |           1 | 1       | 10054
+             1 | t_hash_partition_1_prt_extra | p          |           1 | 1       | 10054
+             1 | t_hash_partition_1_prt_2     | p          |           1 | 1       | 10054
+             1 | t_hash_partition_1_prt_3     | p          |           1 | 1       | 10054
+             0 | t_hash_partition             | p          |           1 | 1       | 10054
+             0 | t_hash_partition_1_prt_extra | p          |           1 | 1       | 10054
+             0 | t_hash_partition_1_prt_2     | p          |           1 | 1       | 10054
+             0 | t_hash_partition_1_prt_3     | p          |           1 | 1       | 10054
+             2 | t_hash_partition             | p          |           1 | 1       | 10054
+             2 | t_hash_partition_1_prt_extra | p          |           1 | 1       | 10054
+             2 | t_hash_partition_1_prt_2     | p          |           1 | 1       | 10054
+             2 | t_hash_partition_1_prt_3     | p          |           1 | 1       | 10054
+(12 rows)
+
+alter table t_hash_partition expand partition prepare;
+--master policy info
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_partition_1_prt_2'::regclass, 't_hash_partition_1_prt_3'::regclass,
+		't_hash_partition_1_prt_extra'::regclass, 't_hash_partition'::regclass);
+           localoid           | policytype | numsegments | distkey | distclass 
+------------------------------+------------+-------------+---------+-----------
+ t_hash_partition             | p          |           3 | 1       | 10054
+ t_hash_partition_1_prt_extra | p          |           3 |         | 
+ t_hash_partition_1_prt_2     | p          |           3 |         | 
+ t_hash_partition_1_prt_3     | p          |           3 |         | 
+(4 rows)
+
+--segment policy info
+select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_dist_random('gp_distribution_policy') where localoid in (
+		't_hash_partition_1_prt_2'::regclass, 't_hash_partition_1_prt_3'::regclass,
+		't_hash_partition_1_prt_extra'::regclass, 't_hash_partition'::regclass);
+ gp_segment_id |           localoid           | policytype | numsegments | distkey | distclass 
+---------------+------------------------------+------------+-------------+---------+-----------
+             1 | t_hash_partition             | p          |           3 | 1       | 10054
+             1 | t_hash_partition_1_prt_extra | p          |           3 |         | 
+             1 | t_hash_partition_1_prt_2     | p          |           3 |         | 
+             1 | t_hash_partition_1_prt_3     | p          |           3 |         | 
+             0 | t_hash_partition             | p          |           3 | 1       | 10054
+             0 | t_hash_partition_1_prt_extra | p          |           3 |         | 
+             0 | t_hash_partition_1_prt_2     | p          |           3 |         | 
+             0 | t_hash_partition_1_prt_3     | p          |           3 |         | 
+             2 | t_hash_partition             | p          |           3 | 1       | 10054
+             2 | t_hash_partition_1_prt_extra | p          |           3 |         | 
+             2 | t_hash_partition_1_prt_2     | p          |           3 |         | 
+             2 | t_hash_partition_1_prt_3     | p          |           3 |         | 
+(12 rows)
+
+alter table t_hash_partition expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_hash_partition"
+DETAIL:  table has already been expanded partiton prepare
+--dml of parent table
+select count(*) from t_hash_partition;
+ count 
+-------
+    30
+(1 row)
+
+select count(*) from t_hash_partition where a=1;
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from t_hash_partition where a=5;
+ count 
+-------
+     1
+(1 row)
+
+insert into t_hash_partition select i,i,i from generate_series(1,30) i;
+select count(*) from t_hash_partition;
+ count 
+-------
+    60
+(1 row)
+
+select count(*) from t_hash_partition where a=1;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_hash_partition where a=3;
+ count 
+-------
+     2
+(1 row)
+
+delete from t_hash_partition where a=1;
+select count(*) from t_hash_partition where a=1;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from t_hash_partition;
+ count 
+-------
+    58
+(1 row)
+
+update t_hash_partition set a = a+1;
+select count(*) from t_hash_partition where a=3;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_hash_partition; 
+ count 
+-------
+    58
+(1 row)
+
+--dml of child table
+select count(*) from t_hash_partition_1_prt_2;
+ count 
+-------
+    16
+(1 row)
+
+select count(*) from t_hash_partition_1_prt_2 where a=2;
+ count 
+-------
+     0
+(1 row)
+
+insert into t_hash_partition_1_prt_2 values(8,1,1);
+select count(*) from t_hash_partition_1_prt_2;
+ count 
+-------
+    17
+(1 row)
+
+select count(*) from t_hash_partition;
+ count 
+-------
+    59
+(1 row)
+
+drop table t_hash_partition;
+--partition table distributed randomly
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+drop table if exists t_randomly_partition;
+NOTICE:  table "t_randomly_partition" does not exist, skipping
+create table t_randomly_partition(a int,b int,c int) distributed randomly
+ partition by range (a)
+ ( start (1) end (20) every(10),
+   default partition extra
+ );
+ 
+insert into t_randomly_partition select i,i,i from generate_series(1,30) i;
+--only parent of partition table can be expanded partition prepare
+alter table t_randomly_partition_1_prt_2 expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_randomly_partition_1_prt_2"
+DETAIL:  only root partition can be expanded partition prepare
+--master policy info
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_randomly_partition_1_prt_2'::regclass, 't_randomly_partition_1_prt_3'::regclass,
+		't_randomly_partition_1_prt_extra'::regclass, 't_randomly_partition'::regclass);
+             localoid             | policytype | numsegments | distkey | distclass 
+----------------------------------+------------+-------------+---------+-----------
+ t_randomly_partition             | p          |           2 |         | 
+ t_randomly_partition_1_prt_extra | p          |           2 |         | 
+ t_randomly_partition_1_prt_2     | p          |           2 |         | 
+ t_randomly_partition_1_prt_3     | p          |           2 |         | 
+(4 rows)
+
+--segment policy info
+select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_dist_random('gp_distribution_policy') where localoid in (
+		't_randomly_partition_1_prt_2'::regclass, 't_randomly_partition_1_prt_3'::regclass,
+		't_randomly_partition_1_prt_extra'::regclass, 't_randomly_partition'::regclass);
+ gp_segment_id |             localoid             | policytype | numsegments | distkey | distclass 
+---------------+----------------------------------+------------+-------------+---------+-----------
+             1 | t_randomly_partition             | p          |           2 |         | 
+             1 | t_randomly_partition_1_prt_extra | p          |           2 |         | 
+             1 | t_randomly_partition_1_prt_2     | p          |           2 |         | 
+             1 | t_randomly_partition_1_prt_3     | p          |           2 |         | 
+             2 | t_randomly_partition             | p          |           2 |         | 
+             2 | t_randomly_partition_1_prt_extra | p          |           2 |         | 
+             2 | t_randomly_partition_1_prt_2     | p          |           2 |         | 
+             2 | t_randomly_partition_1_prt_3     | p          |           2 |         | 
+             0 | t_randomly_partition             | p          |           2 |         | 
+             0 | t_randomly_partition_1_prt_extra | p          |           2 |         | 
+             0 | t_randomly_partition_1_prt_2     | p          |           2 |         | 
+             0 | t_randomly_partition_1_prt_3     | p          |           2 |         | 
+(12 rows)
+
+alter table t_randomly_partition expand partition prepare;
+--master policy info
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_randomly_partition_1_prt_2'::regclass, 't_randomly_partition_1_prt_3'::regclass,
+		't_randomly_partition_1_prt_extra'::regclass, 't_randomly_partition'::regclass);
+             localoid             | policytype | numsegments | distkey | distclass 
+----------------------------------+------------+-------------+---------+-----------
+ t_randomly_partition             | p          |           3 |         | 
+ t_randomly_partition_1_prt_extra | p          |           3 |         | 
+ t_randomly_partition_1_prt_2     | p          |           3 |         | 
+ t_randomly_partition_1_prt_3     | p          |           3 |         | 
+(4 rows)
+
+--segment policy info
+select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_dist_random('gp_distribution_policy') where localoid in (
+		't_randomly_partition_1_prt_2'::regclass, 't_randomly_partition_1_prt_3'::regclass,
+		't_randomly_partition_1_prt_extra'::regclass, 't_randomly_partition'::regclass);
+ gp_segment_id |             localoid             | policytype | numsegments | distkey | distclass 
+---------------+----------------------------------+------------+-------------+---------+-----------
+             0 | t_randomly_partition             | p          |           3 |         | 
+             0 | t_randomly_partition_1_prt_extra | p          |           3 |         | 
+             0 | t_randomly_partition_1_prt_2     | p          |           3 |         | 
+             0 | t_randomly_partition_1_prt_3     | p          |           3 |         | 
+             1 | t_randomly_partition             | p          |           3 |         | 
+             1 | t_randomly_partition_1_prt_extra | p          |           3 |         | 
+             1 | t_randomly_partition_1_prt_2     | p          |           3 |         | 
+             1 | t_randomly_partition_1_prt_3     | p          |           3 |         | 
+             2 | t_randomly_partition             | p          |           3 |         | 
+             2 | t_randomly_partition_1_prt_extra | p          |           3 |         | 
+             2 | t_randomly_partition_1_prt_2     | p          |           3 |         | 
+             2 | t_randomly_partition_1_prt_3     | p          |           3 |         | 
+(12 rows)
+
+		
+alter table t_randomly_partition expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_randomly_partition"
+DETAIL:  table has already been expanded partiton prepare
+--dml of parent table
+select count(*) from t_randomly_partition;
+ count 
+-------
+    30
+(1 row)
+
+select count(*) from t_randomly_partition where a=1;
+ count 
+-------
+     1
+(1 row)
+
+insert into t_randomly_partition select i,i,i from generate_series(1,30) i;
+select count(*) from t_randomly_partition;
+ count 
+-------
+    60
+(1 row)
+
+select count(*) from t_randomly_partition where a=1;
+ count 
+-------
+     2
+(1 row)
+
+delete from t_randomly_partition where a=1;
+select count(*) from t_randomly_partition where a=1;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from t_randomly_partition;
+ count 
+-------
+    58
+(1 row)
+
+update t_randomly_partition set a = a+1;
+select count(*) from t_randomly_partition where a=3;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_randomly_partition; 
+ count 
+-------
+    58
+(1 row)
+
+--dml of child table
+select count(*) from t_randomly_partition_1_prt_2;
+ count 
+-------
+    16
+(1 row)
+
+select count(*) from t_randomly_partition_1_prt_2 where a=2;
+ count 
+-------
+     0
+(1 row)
+
+insert into t_randomly_partition_1_prt_2 values(8,1,1);
+select count(*) from t_randomly_partition_1_prt_2;
+ count 
+-------
+    17
+(1 row)
+
+select count(*) from t_randomly_partition;
+ count 
+-------
+    59
+(1 row)
+
+drop table t_randomly_partition;
+--subpartition table distributed hash
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+drop table if exists t_hash_subpartition;
+NOTICE:  table "t_hash_subpartition" does not exist, skipping
+create table t_hash_subpartition
+(
+	r_regionkey integer not null,
+	r_name char(25)
+)
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition CHINA values ('CHINA'),
+	subpartition america values ('AMERICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r_regionkey' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ 
+insert into t_hash_subpartition values(2,'CHINA');
+insert into t_hash_subpartition values(4,'CHINA');
+insert into t_hash_subpartition values(6,'CHINA');
+insert into t_hash_subpartition values(1,'AMERICA');
+insert into t_hash_subpartition values(3,'AMERICA');
+insert into t_hash_subpartition values(5,'AMERICA');
+--only parent of partition table can be expanded partition prepare
+alter table t_hash_subpartition_1_prt_region1 expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_hash_subpartition_1_prt_region1"
+DETAIL:  only root partition can be expanded partition prepare
+alter table t_hash_subpartition_1_prt_region1_2_prt_china expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_hash_subpartition_1_prt_region1_2_prt_china"
+DETAIL:  only root partition can be expanded partition prepare
+--master policy info
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+(10 rows)
+
+--segment policy info
+select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_dist_random('gp_distribution_policy') where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+ gp_segment_id |                    localoid                     | policytype | numsegments | distkey | distclass 
+---------------+-------------------------------------------------+------------+-------------+---------+-----------
+             0 | t_hash_subpartition                             | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition                             | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition                             | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+(30 rows)
+
+alter table t_hash_subpartition expand partition prepare;
+--master policy info
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+(10 rows)
+
+--segment policy info
+select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_dist_random('gp_distribution_policy') where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+ gp_segment_id |                    localoid                     | policytype | numsegments | distkey | distclass 
+---------------+-------------------------------------------------+------------+-------------+---------+-----------
+             0 | t_hash_subpartition                             | p          |           3 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+             0 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+             0 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+             0 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+             0 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+             0 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+             0 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+             2 | t_hash_subpartition                             | p          |           3 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+             2 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+             1 | t_hash_subpartition                             | p          |           3 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+             1 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+(30 rows)
+
+alter table t_hash_subpartition expand partition prepare;
+ERROR:  cannot expand partition table prepare "t_hash_subpartition"
+DETAIL:  table has already been expanded partiton prepare
+--dml of parent table
+select count(*) from t_hash_subpartition;
+ count 
+-------
+     6
+(1 row)
+
+select count(*) from t_hash_subpartition where r_regionkey=1;
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from t_hash_subpartition where r_regionkey=5;
+ count 
+-------
+     1
+(1 row)
+
+insert into t_hash_subpartition values(1,'CHINA');
+insert into t_hash_subpartition values(2,'CHINA');
+insert into t_hash_subpartition values(3,'CHINA');
+insert into t_hash_subpartition values(4,'AMERICA');
+insert into t_hash_subpartition values(5,'AMERICA');
+insert into t_hash_subpartition values(6,'AMERICA');
+select count(*) from t_hash_subpartition;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from t_hash_subpartition where r_regionkey=1;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_hash_subpartition where r_regionkey=5;
+ count 
+-------
+     2
+(1 row)
+
+delete from t_hash_subpartition where r_regionkey=1;
+select count(*) from t_hash_subpartition where r_regionkey=1;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from t_hash_subpartition;
+ count 
+-------
+    10
+(1 row)
+
+update t_hash_subpartition set r_regionkey = r_regionkey+1;
+select count(*) from t_hash_subpartition where r_regionkey=3;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_hash_subpartition; 
+ count 
+-------
+    10
+(1 row)
+
+--dml of child table
+select count(*) from t_hash_subpartition_1_prt_region1;
+ count 
+-------
+     0
+(1 row)
+
+insert into t_hash_subpartition_1_prt_region1 values(1,'CHINA');
+select count(*) from t_hash_subpartition_1_prt_region1;
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from t_hash_subpartition;
+ count 
+-------
+    11
+(1 row)
+
+--dml of subchild table
+select * from t_hash_subpartition_1_prt_region1_2_prt_china;
+ r_regionkey |          r_name           
+-------------+---------------------------
+           1 | CHINA                    
+(1 row)
+
+insert into t_hash_subpartition_1_prt_region1_2_prt_china values(1,'CHINA');
+select count(*) from t_hash_subpartition_1_prt_region1_2_prt_china;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_hash_subpartition_1_prt_region1;
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from t_hash_subpartition;
+ count 
+-------
+    12
+(1 row)
+
+drop table t_hash_subpartition;
+--------------------------------------------------------
+--test for set distributed of partition table
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+--subpartition distributed by hash
+drop table if exists t_hash_subpartition;
+NOTICE:  table "t_hash_subpartition" does not exist, skipping
+create table t_hash_subpartition
+(
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+)
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition china values ('CHINA'),
+	subpartition america values ('AMERICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r_regionkey' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+(10 rows)
+
+--can not set distributed for interior parts of partition table
+alter table t_hash_subpartition_1_prt_region1 set distributed randomly;
+ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region1"
+HINT:  Distribution policy can not be set for an interior branch.
+--can not set distributed for interior parts of partition table
+alter table t_hash_subpartition_1_prt_region1 set distributed by(r_regionkey);
+ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region1"
+HINT:  Distribution policy can not be set for an interior branch.
+--error when the policy of leaf is different of parent's
+alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed randomly;
+ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region1_2_prt_china"
+HINT:  Distribution policy of a partition can only be the same as its parent's.
+--the policy of leaf is the same as parent's
+alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed by(r_regionkey);
+WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region1_2_prt_china" already set to (r_regionkey)
+HINT:  Use ALTER TABLE "t_hash_subpartition_1_prt_region1_2_prt_china" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (r_regionkey) to force redistribution
+--ok
+alter table t_hash_subpartition set distributed randomly;
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region1               | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region2               | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region3               | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 |         | 
+(10 rows)
+
+--expand partition prepare
+drop table t_hash_subpartition;
+create table t_hash_subpartition
+(
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+)
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition china values ('CHINA'),
+	subpartition america values ('AMERICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r_regionkey' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+(10 rows)
+
+alter table t_hash_subpartition expand partition prepare;
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+(10 rows)
+
+--can not set distributed for interior parts of partition table
+alter table t_hash_subpartition_1_prt_region2 set  distributed randomly;
+ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region2"
+HINT:  Distribution policy can not be set for an interior branch.
+alter table t_hash_subpartition_1_prt_region2 set  distributed by (r_regionkey);
+ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region2"
+HINT:  Distribution policy can not be set for an interior branch.
+--the policy of leaf is the same as original
+alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed randomly;
+WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region1_2_prt_china" already set to DISTRIBUTED RANDOMLY
+HINT:  Use ALTER TABLE "t_hash_subpartition_1_prt_region1_2_prt_china" SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY to force a random redistribution.
+--the policy of leaf is the same as parent's
+alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed by (r_regionkey);
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 | 1       | 10054
+(10 rows)
+
+--alter root of partition table
+alter table t_hash_subpartition set distributed by (r_regionkey);
+WARNING:  distribution policy of relation "t_hash_subpartition" already set to (r_regionkey)
+HINT:  Use ALTER TABLE "t_hash_subpartition" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (r_regionkey) to force redistribution
+WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region1" already set to (r_regionkey)
+HINT:  Use ALTER TABLE "t_hash_subpartition_1_prt_region1" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (r_regionkey) to force redistribution
+WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region2" already set to (r_regionkey)
+HINT:  Use ALTER TABLE "t_hash_subpartition_1_prt_region2" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (r_regionkey) to force redistribution
+WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region3" already set to (r_regionkey)
+HINT:  Use ALTER TABLE "t_hash_subpartition_1_prt_region3" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (r_regionkey) to force redistribution
+WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region1_2_prt_china" already set to (r_regionkey)
+HINT:  Use ALTER TABLE "t_hash_subpartition_1_prt_region1_2_prt_china" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (r_regionkey) to force redistribution
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_hash_subpartition'::regclass,
+		't_hash_subpartition_1_prt_region1'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region2'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_hash_subpartition_1_prt_region3'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_hash_subpartition_1_prt_region3_2_prt_america'::regclass);
+                    localoid                     | policytype | numsegments | distkey | distclass 
+-------------------------------------------------+------------+-------------+---------+-----------
+ t_hash_subpartition                             | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 | 1       | 10054
+ t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 | 1       | 10054
+(10 rows)
+
+drop table t_hash_subpartition;
+--subpartition distributed randomly
+drop table if exists t_random_subpartition;
+NOTICE:  table "t_random_subpartition" does not exist, skipping
+create table t_random_subpartition
+(
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+) distributed randomly
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition china values ('CHINA'),
+	subpartition america values ('AMERICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
+);
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_random_subpartition'::regclass,
+		't_random_subpartition_1_prt_region1'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region2'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region3'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_america'::regclass);
+                     localoid                      | policytype | numsegments | distkey | distclass 
+---------------------------------------------------+------------+-------------+---------+-----------
+ t_random_subpartition                             | p          |           2 |         | 
+ t_random_subpartition_1_prt_region1               | p          |           2 |         | 
+ t_random_subpartition_1_prt_region2               | p          |           2 |         | 
+ t_random_subpartition_1_prt_region3               | p          |           2 |         | 
+ t_random_subpartition_1_prt_region1_2_prt_china   | p          |           2 |         | 
+ t_random_subpartition_1_prt_region1_2_prt_america | p          |           2 |         | 
+ t_random_subpartition_1_prt_region2_2_prt_china   | p          |           2 |         | 
+ t_random_subpartition_1_prt_region2_2_prt_america | p          |           2 |         | 
+ t_random_subpartition_1_prt_region3_2_prt_china   | p          |           2 |         | 
+ t_random_subpartition_1_prt_region3_2_prt_america | p          |           2 |         | 
+(10 rows)
+
+--can not set distributed for interior parts of partition table
+alter table t_random_subpartition_1_prt_region1 set distributed randomly;
+ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region1"
+HINT:  Distribution policy can not be set for an interior branch.
+alter table t_random_subpartition_1_prt_region1 set distributed by(r_regionkey);
+ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region1"
+HINT:  Distribution policy can not be set for an interior branch.
+--the policy of leaf is the same as original
+alter table t_random_subpartition_1_prt_region1_2_prt_china set distributed randomly;
+WARNING:  distribution policy of relation "t_random_subpartition_1_prt_region1_2_prt_china" already set to DISTRIBUTED RANDOMLY
+HINT:  Use ALTER TABLE "t_random_subpartition_1_prt_region1_2_prt_china" SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY to force a random redistribution.
+--error, the policy of leaf is different from parent's
+alter table t_random_subpartition_1_prt_region1_2_prt_china set distributed by(r_regionkey);
+ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region1_2_prt_china"
+HINT:  Distribution policy of a partition can only be the same as its parent's.
+--alter root of partition table
+alter table t_random_subpartition set distributed  by(r_regionkey);
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_random_subpartition'::regclass,
+		't_random_subpartition_1_prt_region1'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region2'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region3'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_america'::regclass);
+                     localoid                      | policytype | numsegments | distkey | distclass 
+---------------------------------------------------+------------+-------------+---------+-----------
+ t_random_subpartition                             | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region1               | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region2               | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region3               | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region1_2_prt_china   | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region1_2_prt_america | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region2_2_prt_china   | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region2_2_prt_america | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region3_2_prt_china   | p          |           2 | 1       | 10054
+ t_random_subpartition_1_prt_region3_2_prt_america | p          |           2 | 1       | 10054
+(10 rows)
+
+--expand partition prepare
+drop table t_random_subpartition;
+create table t_random_subpartition
+(
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+)
+distributed randomly
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition china values ('CHINA'),
+	subpartition america values ('AMERICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
+);
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_random_subpartition'::regclass,
+		't_random_subpartition_1_prt_region1'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region2'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region3'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_america'::regclass);
+                     localoid                      | policytype | numsegments | distkey | distclass 
+---------------------------------------------------+------------+-------------+---------+-----------
+ t_random_subpartition                             | p          |           2 |         | 
+ t_random_subpartition_1_prt_region1               | p          |           2 |         | 
+ t_random_subpartition_1_prt_region2               | p          |           2 |         | 
+ t_random_subpartition_1_prt_region3               | p          |           2 |         | 
+ t_random_subpartition_1_prt_region1_2_prt_china   | p          |           2 |         | 
+ t_random_subpartition_1_prt_region1_2_prt_america | p          |           2 |         | 
+ t_random_subpartition_1_prt_region2_2_prt_china   | p          |           2 |         | 
+ t_random_subpartition_1_prt_region2_2_prt_america | p          |           2 |         | 
+ t_random_subpartition_1_prt_region3_2_prt_china   | p          |           2 |         | 
+ t_random_subpartition_1_prt_region3_2_prt_america | p          |           2 |         | 
+(10 rows)
+
+alter table t_random_subpartition expand partition prepare;
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_random_subpartition'::regclass,
+		't_random_subpartition_1_prt_region1'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region2'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region3'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_america'::regclass);
+                     localoid                      | policytype | numsegments | distkey | distclass 
+---------------------------------------------------+------------+-------------+---------+-----------
+ t_random_subpartition                             | p          |           3 |         | 
+ t_random_subpartition_1_prt_region1               | p          |           3 |         | 
+ t_random_subpartition_1_prt_region2               | p          |           3 |         | 
+ t_random_subpartition_1_prt_region3               | p          |           3 |         | 
+ t_random_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+ t_random_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+ t_random_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+ t_random_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+ t_random_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+ t_random_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
+(10 rows)
+
+--can not set distributed for interior parts of partition table
+alter table t_random_subpartition_1_prt_region3 set  distributed randomly;
+ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region3"
+HINT:  Distribution policy can not be set for an interior branch.
+alter table t_random_subpartition_1_prt_region3 set  distributed by (r_regionkey);
+ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region3"
+HINT:  Distribution policy can not be set for an interior branch.
+--the policy of leaf is the same as parent's
+alter table t_random_subpartition_1_prt_region1_2_prt_china set distributed randomly;
+WARNING:  distribution policy of relation "t_random_subpartition_1_prt_region1_2_prt_china" already set to DISTRIBUTED RANDOMLY
+HINT:  Use ALTER TABLE "t_random_subpartition_1_prt_region1_2_prt_china" SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY to force a random redistribution.
+--error, the policy of leaf is different from parent's
+alter table t_random_subpartition_1_prt_region1_2_prt_china set distributed by (r_regionkey);
+ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region1_2_prt_china"
+HINT:  Distribution policy of a partition can only be the same as its parent's.
+--alter root of partition table
+alter table t_random_subpartition set distributed by (r_regionkey);
+select localoid::regclass, policytype, numsegments, distkey, distclass
+	from gp_distribution_policy where localoid in (
+		't_random_subpartition'::regclass,
+		't_random_subpartition_1_prt_region1'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region1_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region2'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region2_2_prt_america'::regclass,
+		't_random_subpartition_1_prt_region3'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_china'::regclass,
+		't_random_subpartition_1_prt_region3_2_prt_america'::regclass);
+                     localoid                      | policytype | numsegments | distkey | distclass 
+---------------------------------------------------+------------+-------------+---------+-----------
+ t_random_subpartition                             | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region1               | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region2               | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region3               | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region1_2_prt_china   | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region1_2_prt_america | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region2_2_prt_china   | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region2_2_prt_america | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region3_2_prt_china   | p          |           3 | 1       | 10054
+ t_random_subpartition_1_prt_region3_2_prt_america | p          |           3 | 1       | 10054
+(10 rows)
+
+drop table t_random_subpartition;
+create table t_root_partition_expand (a int, b int) partition by range (b) distributed by (a);
+create table t1_partition_expand (a int, b int) distributed by (a); -- same column order as parent
+create table t2_partition_expand (x int, b int, a int) distributed by (a); -- different column order from parent
+alter table t2_partition_expand drop column x;
+alter table t_root_partition_expand attach partition t1_partition_expand for values from (1) to (5);
+alter table t_root_partition_expand attach partition t2_partition_expand for values from (5) to (10);
+alter table t_root_partition_expand expand partition prepare;
+select localoid::regclass, policytype, numsegments, distkey, distclass
+from gp_distribution_policy where localoid in ('t_root_partition_expand'::regclass, 't1_partition_expand'::regclass, 't2_partition_expand'::regclass);
+        localoid         | policytype | numsegments | distkey | distclass 
+-------------------------+------------+-------------+---------+-----------
+ t_root_partition_expand | p          |           3 | 1       | 10054
+ t1_partition_expand     | p          |           3 |         | 
+ t2_partition_expand     | p          |           3 |         | 
+(3 rows)
+
+alter table t1_partition_expand set distributed by (a);
+alter table t2_partition_expand set distributed by (a);
+--cleanup
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
+drop extension gp_debug_numsegments;
