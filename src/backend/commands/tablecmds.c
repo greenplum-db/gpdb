@@ -4639,14 +4639,23 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 							policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
 
-							if(!GpPolicyEqual(policy, rel->rd_cdbpolicy))
-								/*Reject interior branches of partitioned tables.*/
+							/* We can only set policy of child table to the same with parent table */
+							Oid parent_oid = get_partition_parent(RelationGetRelid(rel));
+							/* Use AccessShareLock to allow set distributed in parallel */
+							Relation parent_rel = relation_open(parent_oid, AccessShareLock);
+
+							if (!GpPolicyEqualByName(RelationGetDescr(rel), policy,
+													 RelationGetDescr(parent_rel), parent_rel->rd_cdbpolicy)) {
+								/* Reject leaves of partitioned tables if the new policy is not same with parent */
 								ereport(ERROR,
 										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 												errmsg("can't set the distribution policy of \"%s\"",
 													   RelationGetRelationName(rel)),
 												errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
-							break;
+							}
+							relation_close(parent_rel, AccessShareLock);
+
+							break; /* tidy */
 
 						case PART_STATUS_INTERIOR:
 							/*Reject interior branches of partitioned tables.*/

@@ -141,6 +141,9 @@ extern GpPolicy *GpPolicyCopy(const GpPolicy *src);
  */
 extern bool GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt);
 
+extern bool GpPolicyEqualByName(const TupleDesc ltd, const GpPolicy *lpol,
+								const TupleDesc rtd, const GpPolicy *rpol);
+
 /*
  * GpPolicyFetch
  *

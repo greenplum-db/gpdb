@@ -198,6 +198,39 @@ GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 	return true;
 }								/* GpPolicyEqual */
 
+
+bool
+GpPolicyEqualByName(const TupleDesc ltd, const GpPolicy *lpol,
+					const TupleDesc rtd, const GpPolicy *rpol)
+{
+	int			i;
+
+	if (!lpol || !rpol)
+		return false;
+
+	if (lpol->ptype != rpol->ptype)
+		return false;
+
+	if (lpol->numsegments != rpol->numsegments)
+		return false;
+
+	if (lpol->nattrs != rpol->nattrs)
+		return false;
+
+	for (i = 0; i < lpol->nattrs; i++)
+	{
+		Form_pg_attribute latt = TupleDescAttr(ltd, lpol->attrs[i] - 1);
+		Form_pg_attribute ratt = TupleDescAttr(rtd, rpol->attrs[i] - 1);
+
+		if (strcmp(NameStr(latt->attname), NameStr(ratt->attname)) != 0)
+			return false;
+		if (lpol->opclasses[i] != rpol->opclasses[i])
+			return false;
+	}
+
+	return true;
+}
+
 bool
 IsReplicatedTable(Oid relid)
 {

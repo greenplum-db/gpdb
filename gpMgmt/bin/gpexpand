@@ -1662,9 +1662,9 @@ WHERE
         table_conn = self.connect_database(dbname)
 
         cursor = dbconn.execSQL(table_conn, """
-            SELECT partrelid::regclass AS relname
+            SELECT parrelid::regclass AS relname
             FROM pg_partition, pg_class
-            WHERE partrelid = pg_class.oid;
+            WHERE parrelid = pg_class.oid;
         """)
         for row in cursor:
             prepare_cmd = """
@@ -1697,7 +1697,7 @@ WHERE
                 a.inhrelid = c.oid and
                 a.inhparent = d.oid and
                 c.relnamespace = n.oid and
-                c.relkind != 'p';
+                c.relkind != 'p'
         """ % (undone_status, src_bytes_str)
         self.logger.debug(get_status_detail_cmd)
 
