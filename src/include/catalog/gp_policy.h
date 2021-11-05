@@ -19,6 +19,7 @@
 #define _GP_POLICY_H_
 
 #include "access/attnum.h"
+#include "access/tupdesc.h"
 #include "catalog/genbki.h"
 #include "nodes/pg_list.h"
 
