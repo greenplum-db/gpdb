@@ -15083,7 +15083,7 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 	/* change numsegments of policy to current cluster size */
 	root_dist->numsegments = new_numsegments;
 
-	if (GpPolicyIsRandomPartitioned(root_dist)|| ps == PART_STATUS_ROOT)
+	if (GpPolicyIsRandomPartitioned(root_dist) || ps == PART_STATUS_ROOT)
 	{
 		/* we only change numsegments for root/interior/leaf partitions distributed randomly
 		 * and root/interior partitions distributed by hash
