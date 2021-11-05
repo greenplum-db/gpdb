@@ -4060,7 +4060,6 @@ struct config_int ConfigureNamesInt_gp[] =
 			gettext_noop("This controls the number of consecutive keepalive retransmits that can be "
 						 "lost before a QD/QE connection is considered dead. A value of 0 uses the "
 						 "system default."),
-			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
 		&gp_dispatch_keepalives_count,
