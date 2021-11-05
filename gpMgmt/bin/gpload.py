@@ -1920,29 +1920,43 @@ class gpload:
                 self.enable_custom_format = 1
 
     def check_custom_formatter(self):
+        # Check if load dataflow extension is necessary
+        load_dataflow = False
+
+        # sql pre processing configured guc and used text
+        sql = self.getconfig('gpload:sql', list, default=None)
+        before = None
+        if sql:
+            before = self.getconfig('gpload:sql:before', unicode, default=None)
+            if before:
+                if 'dataflow.prefer_custom_text' in before.lower().replace(" ", ""):
+                    load_dataflow = True
+
         # Check if 'text_in' custom formatter can be used
         self.support_cusfmt = 0
-        try:
-            # make sure dataflow extension has been created.
-            queryString = """CREATE EXTENSION IF NOT EXISTS dataflow;"""
-            self.db.query(queryString.encode('utf-8'))
-            # load gpss.so to enable "dataflow.prefer_custom_text" guc.
-            queryString = """SELECT dataflow_version();"""
-            self.db.query(queryString.encode('utf-8'))
-            # show "dataflow.prefer_custom_text" guc, this guc only exists in gpdb6.
-            queryString = """SHOW dataflow.prefer_custom_text;"""
-            self.db.query(queryString.encode('utf-8'))
 
-            queryString = """SELECT c.oid FROM pg_catalog.pg_proc c 
-                               LEFT JOIN pg_catalog.pg_namespace n
-                               ON n.oid = c.pronamespace
-                               WHERE c.proname = 'text_in';"""
-            resultList = self.db.query(queryString.encode('utf-8')).getresult()
-            if len(resultList) > 0:
-                self.support_cusfmt = 1
+        if load_dataflow:
+            try:
+                # make sure dataflow extension has been created.
+                queryString = """CREATE EXTENSION IF NOT EXISTS dataflow;"""
+                self.db.query(queryString.encode('utf-8'))
+                # load gpss.so to enable "dataflow.prefer_custom_text" guc.
+                queryString = """SELECT dataflow_version();"""
+                self.db.query(queryString.encode('utf-8'))
+                # show "dataflow.prefer_custom_text" guc, this guc only exists in gpdb6.
+                queryString = """SHOW dataflow.prefer_custom_text;"""
+                self.db.query(queryString.encode('utf-8'))
 
-        except Exception, e:
-            self.log(self.DEBUG, 'could not run SQL "%s": %s' % (queryString, unicode(e)))
+                queryString = """SELECT c.oid FROM pg_catalog.pg_proc c 
+                                   LEFT JOIN pg_catalog.pg_namespace n
+                                   ON n.oid = c.pronamespace
+                                   WHERE c.proname = 'text_in';"""
+                resultList = self.db.query(queryString.encode('utf-8')).getresult()
+                if len(resultList) > 0:
+                    self.support_cusfmt = 1
+
+            except Exception, e:
+                self.log(self.DEBUG, 'could not run SQL "%s": %s' % (queryString, unicode(e)))
 
     def read_table_metadata(self):
         # KAS Note to self. If schema is specified, then probably should use PostgreSQL rules for defining it.
@@ -2980,7 +2994,9 @@ class gpload:
         start = time.time()
         self.read_config()
         self.setup_connection()
-        self.check_custom_formatter()
+        # Custom formatter only works for gpdb 6 and abover
+        if noGpVersion == False and self.gpdb_version >= "6.0.0":
+            self.check_custom_formatter()
         self.read_table_metadata()
         self.read_columns()
         self.read_mapping()
