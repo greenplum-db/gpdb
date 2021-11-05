@@ -36,8 +36,6 @@ CATALOG(pg_partition,5010)
 	oidvector	parclass;		
 } FormData_pg_partition;
 
-extern Oid	get_partition_parent(Oid relid);
-
 /* GPDB added foreign key definitions for gpcheckcat. */
 FOREIGN_KEY(parrelid REFERENCES pg_class(oid));
 /* alter table pg_partition add vector_fk parclass on pg_opclass(oid); */

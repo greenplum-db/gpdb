@@ -4640,7 +4640,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 							policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
 
 							/* We can only set policy of child table to the same with parent table */
-							Oid parent_oid = get_partition_parent(RelationGetRelid(rel));
+							Oid parent_oid = rel_partition_get_root(RelationGetRelid(rel));
 							/* Use AccessShareLock to allow set distributed in parallel */
 							Relation parent_rel = relation_open(parent_oid, AccessShareLock);
 
