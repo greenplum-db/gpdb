@@ -277,7 +277,7 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                         ( dbname text,
                           fq_name text,
                           table_oid oid,
-                          root_partition_name text,
+                          root_partition_oid oid,
                           rank int,
                           external_writable bool,
                           status text,
@@ -1582,7 +1582,7 @@ class gpexpand:
     current_database(),
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
-    NULL as root_partition_name,
+    NULL as root_partition_oid,
     2 as rank,
     pe.writable is not null as external_writable,
     '%s' as undone_status,
@@ -1664,18 +1664,18 @@ WHERE
             self.logger.debug(prepare_cmd)
             dbconn.execSQL(table_conn, prepare_cmd, autocommit=False)
 
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(relid)"
+        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(c.oid)"
         get_status_detail_cmd = """
              SELECT
                 current_database(),
                 quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
                 c.oid as tableoid,
-                quote_ident(n.nspname) || '.' || quote_ident(d.relname) as root_partition_name,
+                d.oid as root_partition_oid,
                 2 as rank,
                 false as external_writable,
                 '%s' as undone_status,
                 NULL as expansion_started,
-                NULL as expansion_finished
+                NULL as expansion_finished,
                 %s as source_bytes
             FROM
                 pg_inherits a,
@@ -1688,7 +1688,8 @@ WHERE
                 a.inhrelid = c.oid and
                 a.inhparent = d.oid and
                 c.relnamespace = n.oid and
-                c.relkind != 'p';
+                c.relkind != 'p' and
+                c.relkind != 'f'
         """ % (undone_status, src_bytes_str)
         self.logger.debug(get_status_detail_cmd)
 
@@ -1925,22 +1926,19 @@ WHERE
 class ExpandTable():
     def __init__(self, options, row=None):
         self.options = options
-        self.is_root_partition = False
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
-             self.root_partition_name,
+             self.root_partition_oid,
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
-        if self.fq_name == self.root_partition_name:
-            self.is_root_partition = True
 
     def add_table(self, conn):
         insertSQL = """INSERT INTO gpexpand.status_detail
                             VALUES ('%s','%s',%s,
-                                    '%s',%d,'%s','%s','%s','%s',%d)
+                                    '%d',%d,'%s','%s','%s','%s',%d)
                     """ % (self.dbname.replace("'", "''"), self.fq_name.replace("'", "''"), self.table_oid,
-                           self.root_partition_name.replace("'", "''"),
+                           self.root_partition_oid,
                            self.rank, self.external_writable, self.status,
                            self.expansion_started, self.expansion_finished,
                            self.source_bytes)
@@ -1979,17 +1977,15 @@ class ExpandTable():
 
     def expand(self, table_conn, cancel_flag):
         # expand leaf partitions separately in parallel
-        if self.root_partition_name is not None:
+        if self.root_partition_oid is not None:
             get_dist_cmd = """
-                SELECT pg_get_table_distributedby('%s'::regclass) AS distribution_policy;
-            """ % (self.root_partition_name)
+                select pg_get_table_distributedby(%d) as distribution_policy;
+            """ % (self.root_partition_oid)
             res = dbconn.queryRow(table_conn, get_dist_cmd)
-            # FIXME: handle EXTERNAL writable tables
             sql = "ALTER TABLE %s SET WITH (REORGANIZE=true) %s" % (self.fq_name, res.distribution_policy)
         else:
             # FIXME: Can "ONLY" be allowed in "EXPAND TABLE"?
-            external_str = "EXTERNAL" if self.external_writable else ""
-            sql = 'ALTER TABLE %s %s EXPAND TABLE' % (external_str, self.fq_name)
+            sql = 'ALTER TABLE %s EXPAND TABLE' % self.fq_name
 
         logger.info('Expanding %s.%s' % (self.dbname, self.fq_name))
         logger.debug("Expand SQL: %s" % sql)
