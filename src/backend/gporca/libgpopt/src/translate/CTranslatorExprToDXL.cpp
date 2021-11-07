@@ -165,6 +165,7 @@
 #include "naucrates/dxl/operators/CDXLScalarSortColList.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitchCase.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/operators/CDXLScalarWindowFrameEdge.h"
 #include "naucrates/dxl/operators/CDXLWindowFrame.h"
 #include "naucrates/dxl/operators/CDXLWindowKey.h"
@@ -627,6 +628,8 @@ CTranslatorExprToDXL::PdxlnScalar(CExpression *pexpr)
 			return CTranslatorExprToDXL::PdxlnScArrayCoerceExpr(pexpr);
 		case COperator::EopScalarArray:
 			return CTranslatorExprToDXL::PdxlnArray(pexpr);
+		case COperator::EopScalarValuesList:
+			return CTranslatorExprToDXL::PdxlnValuesList(pexpr);
 		case COperator::EopScalarArrayCmp:
 			return CTranslatorExprToDXL::PdxlnArrayCmp(pexpr);
 		case COperator::EopScalarArrayRef:
@@ -5786,7 +5789,9 @@ CTranslatorExprToDXL::PdxlnScAggref(CExpression *pexprAggFunc)
 						 popScAggFunc->IsDistinct(), edxlaggrefstage);
 
 	CDXLNode *pdxlnAggref = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopAggRef);
-	TranslateScalarChildren(pexprAggFunc, pdxlnAggref);
+
+	CDXLNode *vl = PdxlnValuesList((*pexprAggFunc)[0]);
+	pdxlnAggref->AddChild(vl);
 
 	return pdxlnAggref;
 }
@@ -6436,6 +6441,23 @@ CTranslatorExprToDXL::PdxlnArray(CExpression *pexpr)
 	}
 
 	return pdxlnArray;
+}
+CDXLNode *
+CTranslatorExprToDXL::PdxlnValuesList(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	CDXLNode *pdxlnValuesList = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp));
+
+	for (ULONG ul = 0; ul < pexpr->Arity(); ul++)
+	{
+		CExpression *pexprChild = (*pexpr)[ul];
+		CDXLNode *child_dxlnode = PdxlnScalar(pexprChild);
+		pdxlnValuesList->AddChild(child_dxlnode);
+	}
+
+	return pdxlnValuesList;
 }
 
 //---------------------------------------------------------------------------

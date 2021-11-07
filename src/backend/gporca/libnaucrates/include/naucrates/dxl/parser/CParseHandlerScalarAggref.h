@@ -23,6 +23,12 @@ namespace gpdxl
 {
 using namespace gpos;
 
+enum AggrefChildIndeces
+{
+	EdxlParseHandlerAggrefIndexArgs = 0,
+	EdxlParseHandlerAggrefIndexSentinel
+};
+
 XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------

@@ -167,6 +167,7 @@ public:
 		EopScalarArrayCmp,
 		EopScalarArrayRef,
 		EopScalarArrayRefIndexList,
+		EopScalarValuesList,
 
 		EopScalarAssertConstraintList,
 		EopScalarAssertConstraint,

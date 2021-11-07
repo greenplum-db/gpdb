@@ -193,6 +193,8 @@ private:
 	static Expr *TranslateDXLScalarDMLActionToScalar(
 		const CDXLNode *dml_action_node, CMappingColIdVar *colid_var);
 
+	List *TranslateScalarListChildren(const CDXLNode *dxlnode,
+									  CMappingColIdVar *colid_var);
 
 	// translate children of DXL node, and add them to list
 	List *TranslateScalarChildren(List *list, const CDXLNode *dxlnode,
@@ -230,6 +232,9 @@ public:
 	// This function is called during the translation of DXL->Query or DXL->Query
 	Expr *TranslateDXLToScalar(const CDXLNode *scalar_op_node,
 							   CMappingColIdVar *colid_var);
+
+	Expr *TranslateDXLScalarValuesListToScalar(
+		const CDXLNode *scalar_values_list_node, CMappingColIdVar *colid_var);
 
 	// translate a scalar ident into an Expr
 	static Expr *TranslateDXLScalarIdentToScalar(const CDXLNode *scalar_id_node,

@@ -74,6 +74,7 @@
 #include "gpopt/operators/CScalarSubqueryNotExists.h"
 #include "gpopt/operators/CScalarSwitch.h"
 #include "gpopt/operators/CScalarSwitchCase.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/operators/CDXLLogicalCTAS.h"
@@ -2601,6 +2602,8 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 			return CTranslatorDXLToExpr::PexprArrayRef(dxlnode);
 		case EdxlopScalarArrayRefIndexList:
 			return CTranslatorDXLToExpr::PexprArrayRefIndexList(dxlnode);
+		case EdxlopScalarValuesList:
+			return CTranslatorDXLToExpr::PexprValuesList(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3237,6 +3240,18 @@ CTranslatorDXLToExpr::PexprArrayRef(const CDXLNode *dxlnode)
 	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popArrayref, pdrgpexprChildren);
+}
+
+CExpression *
+CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
+{
+	CScalarValuesList *popScalarValuesList =
+		GPOS_NEW(m_mp) CScalarValuesList(m_mp);
+
+	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
+
+	return GPOS_NEW(m_mp)
+		CExpression(m_mp, popScalarValuesList, pdrgpexprChildren);
 }
 
 //---------------------------------------------------------------------------

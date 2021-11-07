@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDAggregate.h"
 
@@ -308,13 +309,19 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 			);
 
 			GPOS_ASSERT(1 == pexprAggFunc->Arity());
-			CExpression *pexprArg = (*pexprAggFunc)[0];
+			// CScalarValuesList
+			CExpression *pexprArg = (*(*pexprAggFunc)[0])[0];
 			CColRef *pcrDistinctCol = phmexprcr->Find(pexprArg);
 			GPOS_ASSERT(nullptr != pcrDistinctCol);
 			CExpressionArray *pdrgpexprArgsLocal =
 				GPOS_NEW(mp) CExpressionArray(mp);
-			pdrgpexprArgsLocal->Append(
-				CUtils::PexprScalarIdent(mp, pcrDistinctCol));
+			CExpressionArray *pdrgpexprArgs = GPOS_NEW(mp) CExpressionArray(mp);
+			pdrgpexprArgs->Append(CUtils::PexprScalarIdent(mp, pcrDistinctCol));
+
+			CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
+			CExpression *e = GPOS_NEW(mp) CExpression(mp, lv, pdrgpexprArgs);
+
+			pdrgpexprArgsLocal->Append(e);
 
 			const IMDAggregate *pmdagg =
 				md_accessor->RetrieveAgg(popScAggFunc->MDId());
@@ -342,7 +349,13 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 
 			CExpressionArray *pdrgpexprArgsGlobal =
 				GPOS_NEW(mp) CExpressionArray(mp);
-			pdrgpexprArgsGlobal->Append(CUtils::PexprScalarIdent(mp, pcrLocal));
+			CExpressionArray *pdrgpexprArgs2 =
+				GPOS_NEW(mp) CExpressionArray(mp);
+			pdrgpexprArgs2->Append(CUtils::PexprScalarIdent(mp, pcrLocal));
+
+			CScalarValuesList *glv = GPOS_NEW(mp) CScalarValuesList(mp);
+			CExpression *ge = GPOS_NEW(mp) CExpression(mp, glv, pdrgpexprArgs2);
+			pdrgpexprArgsGlobal->Append(ge);
 
 			CExpression *pexprPrElGlobal = CUtils::PexprScalarProjectElement(
 				mp, popScPrEl->Pcr(),
@@ -439,16 +452,25 @@ CXformSplitDQA::PexprSplitHelper(CMemoryPool *mp, CColumnFactory *col_factory,
 			);
 
 			GPOS_ASSERT(1 == pexprAggFunc->Arity());
-			CExpression *pexprArg = (*pexprAggFunc)[0];
+			CExpression *pexprArg = (*(*pexprAggFunc)[0])[0];
 
 			CColRef *pcrDistinctCol = phmexprcr->Find(pexprArg);
 			GPOS_ASSERT(nullptr != pcrDistinctCol);
+			CExpressionArray *pdrgpexprChildren =
+				GPOS_NEW(mp) CExpressionArray(mp);
+
 			CExpressionArray *pdrgpexprArgs = GPOS_NEW(mp) CExpressionArray(mp);
 			pdrgpexprArgs->Append(CUtils::PexprScalarIdent(mp, pcrDistinctCol));
 
+			CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
+			CExpression *e = GPOS_NEW(mp) CExpression(mp, lv, pdrgpexprArgs);
+
+			pdrgpexprChildren->Append(e);
+
 			CExpression *pexprPrElGlobal = CUtils::PexprScalarProjectElement(
 				mp, popScPrEl->Pcr(),
-				GPOS_NEW(mp) CExpression(mp, popScAggFuncNew, pdrgpexprArgs));
+				GPOS_NEW(mp)
+					CExpression(mp, popScAggFuncNew, pdrgpexprChildren));
 
 			pdrgpexprPrElLastStage->Append(pexprPrElGlobal);
 		}
@@ -509,8 +531,13 @@ CXformSplitDQA::PexprPrElAgg(CMemoryPool *mp, CExpression *pexprAggFunc,
 	}
 	else
 	{
+		CExpressionArray *pdrgpargs = GPOS_NEW(mp) CExpressionArray(mp);
+		pdrgpargs->Append(CUtils::PexprScalarIdent(mp, pcrPreviousStage));
+		CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
+		CExpression *args = GPOS_NEW(mp) CExpression(mp, lv, pdrgpargs);
+
 		pdrgpexprArg = GPOS_NEW(mp) CExpressionArray(mp);
-		pdrgpexprArg->Append(CUtils::PexprScalarIdent(mp, pcrPreviousStage));
+		pdrgpexprArg->Append(args);
 	}
 
 	popScAggFunc->MDId()->AddRef();
@@ -796,7 +823,8 @@ CXformSplitDQA::ExtractDistinctCols(
 		{
 			GPOS_ASSERT(1 == pexprAggFunc->Arity());
 
-			CExpression *pexprArg = (*pexprAggFunc)[0];
+			// CScalarValuesList
+			CExpression *pexprArg = (*(*pexprAggFunc)[0])[0];
 			GPOS_ASSERT(nullptr != pexprArg);
 			CColRef *pcrDistinctCol = phmexprcr->Find(pexprArg);
 			if (nullptr == pcrDistinctCol)

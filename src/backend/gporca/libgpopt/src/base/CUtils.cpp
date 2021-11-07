@@ -60,6 +60,7 @@
 #include "gpopt/operators/CScalarOp.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CMemo.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
@@ -1757,9 +1758,16 @@ CUtils::PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   fSplit, nullptr);
 
 	// generate function arguments
-	CExpression *pexprScalarIdent = PexprScalarIdent(mp, colref);
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	pdrgpexpr->Append(pexprScalarIdent);
+
+	CExpression *pexprScalarIdent = PexprScalarIdent(mp, colref);
+	CExpressionArray *pdrgpexprArgs = GPOS_NEW(mp) CExpressionArray(mp);
+	pdrgpexprArgs->Append(pexprScalarIdent);
+
+	CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
+	CExpression *args = GPOS_NEW(mp) CExpression(mp, lv, pdrgpexprArgs);
+
+	pdrgpexpr->Append(args);
 
 	return GPOS_NEW(mp) CExpression(mp, popScAggFunc, pdrgpexpr);
 }
@@ -1775,6 +1783,11 @@ CUtils::PexprCountStar(CMemoryPool *mp)
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_COUNT_STAR);
 	CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("count"));
+
+	CScalarValuesList *popScalarValuesList = GPOS_NEW(mp) CScalarValuesList(mp);
+	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
+	pdrgpexpr->Append(
+		GPOS_NEW(mp) CExpression(mp, popScalarValuesList, pdrgpexprChildren));
 
 	CScalarAggFunc *popScAggFunc = PopAggFunc(
 		mp, mdid, str, false /*is_distinct*/,

@@ -147,6 +147,7 @@ OBJS        = CExpression.o \
               CScalarArrayCoerceExpr.o \
               CScalarArrayRef.o \
               CScalarArrayRefIndexList.o \
+              CScalarValuesList.o \
               CScalarAssertConstraint.o \
               CScalarAssertConstraintList.o \
               CScalarBitmapBoolOp.o \

@@ -60,6 +60,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/exception.h"
@@ -214,6 +215,10 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		case EdxlopScalarDMLAction:
 		{
 			return TranslateDXLScalarDMLActionToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarValuesList:
+		{
+			return TranslateDXLScalarValuesListToScalar(dxlnode, colid_var);
 		}
 #if 0
 		// GPDB_12_MERGE_FIXME: These were removed from the server with the v12 merge
@@ -589,7 +594,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	}
 
 	// translate each DXL argument
-	List *exprs = TranslateScalarChildren(aggref->args, aggref_node, colid_var);
+	List *exprs = TranslateScalarListChildren((*aggref_node)[0], colid_var);
 
 	int attno;
 	aggref->args = NIL;
@@ -1562,6 +1567,23 @@ CTranslatorDXLToScalar::TranslateScalarChildren(List *list,
 	return new_list;
 }
 
+List *
+CTranslatorDXLToScalar::TranslateScalarListChildren(const CDXLNode *dxlnode,
+													CMappingColIdVar *colid_var)
+{
+	List *new_list = nullptr;
+
+	const ULONG arity = dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *child_dxl = (*dxlnode)[ul];
+		Expr *child_expr = TranslateDXLToScalar(child_dxl, colid_var);
+		new_list = gpdb::LAppend(new_list, child_expr);
+	}
+
+	return new_list;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToScalar::TranslateDXLScalarConstToScalar
@@ -1978,6 +2000,18 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayToScalar(
 	return (Expr *) gpdb::EvalConstExpressions((Node *) expr);
 }
 
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar(
+	const CDXLNode *scalar_array_node, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(nullptr != scalar_array_node);
+
+	List *values = nullptr;
+	values = TranslateScalarChildren(values, scalar_array_node, colid_var);
+
+	return (Expr *) values;
+}
+//
 // GPDB_12_MERGE_FIXME: ArrayRef was renamed in commit 558d77f20e4e9.
 // I've fixed the renamed type and fields but the wording "ArrayRef" is
 // still everywhere. Do we plan to rename them?

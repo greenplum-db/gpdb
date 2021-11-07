@@ -481,6 +481,8 @@ private:
 	// translate a scalar array coerce expr with element coerce function
 	CDXLNode *PdxlnScArrayCoerceExpr(CExpression *pexprScArrayCoerceExpr);
 
+	CDXLNode *PdxlnValuesList(CExpression *pexpr);
+
 	// translate an array
 	CDXLNode *PdxlnArray(CExpression *pexpr);
 

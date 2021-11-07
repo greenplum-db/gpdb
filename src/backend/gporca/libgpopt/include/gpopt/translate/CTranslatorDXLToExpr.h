@@ -275,6 +275,8 @@ private:
 	// translate a DXL scalar arrayref
 	CExpression *PexprArrayRef(const CDXLNode *dxlnode);
 
+	CExpression *PexprValuesList(const CDXLNode *dxlnode);
+
 	// translate a DXL scalar arrayref index list
 	CExpression *PexprArrayRefIndexList(const CDXLNode *dxlnode);
 

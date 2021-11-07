@@ -23,6 +23,7 @@
 #include "gpopt/operators/CPatternMultiTree.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDAggregate.h"
 
@@ -242,8 +243,11 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 		CExpression *pexprArg = CUtils::PexprScalarIdent(mp, pcrLocal);
 		pdrgpexprGlobal->Append(pexprArg);
 
+		CScalarValuesList *l = GPOS_NEW(mp) CScalarValuesList(mp);
+		CExpression *globall = GPOS_NEW(mp) CExpression(mp, l, pdrgpexprGlobal);
+
 		CExpression *pexprAggFuncGlobal =
-			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, pdrgpexprGlobal);
+			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, globall);
 
 		// create new project elements for the aggregate functions
 		CExpression *pexprProjElemLocal =
