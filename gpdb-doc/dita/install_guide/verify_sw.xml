@@ -13,6 +13,8 @@
     <p>After you download a Greenplum Database server or component software package,
       you can verify the integrity of the software as follows:</p>
     <ol>
+      <li>On VMware Tanzu Network, navigate to the Greenplum Database version and package
+        that you downloaded.</li>
       <li>On the VMware Tanzu Greenplum <i>Release Download Files</i> page, click the
         <b>i</b> icon to the right of the Greenplum Database software package that
         you downloaded.<p>This action displays a dialog that contains information about
