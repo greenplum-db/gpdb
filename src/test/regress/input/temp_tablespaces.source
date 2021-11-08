@@ -171,11 +171,11 @@ select gp_tablespace_watch_log(gp_execution_dbid(), '[temp_tablespace]: separato
 
 set statement_mem='1MB';
 select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
--- supress too many output tuples, so sort(maybe merge sort) spills
-\o /dev/null
-select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
+--start_ignore
+-- ignore the output, we only need the following query to spill on Sort
+explain analyze select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
     from tts_testsiscm group by i1 order by 3,4,5 desc;
-\o
+--end_ignore
 
 set optimizer = off;
 set statement_mem='3MB';
@@ -248,10 +248,11 @@ select gp_tablespace_watch_log(gp_execution_dbid(), '[temp_tablespace]: separato
 set statement_mem='1MB';
 -- hash aggregate should spill on the default tablespace.
 select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having count(*) = 3) g;
-\o /dev/null
-select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
+--start_ignore
+-- ignore the output, we only need the following query to spill on Sort
+explain analyze select i1, count(distinct(i4)), count(1), count(distinct(i2)) , count(distinct(i3))
     from tts_testsiscm group by i1 order by 3,4,5 desc;
-\o
+--end_ignore
 
 set optimizer = off;
 set statement_mem='3MB';
