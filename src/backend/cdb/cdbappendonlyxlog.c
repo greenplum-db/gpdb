@@ -203,14 +203,6 @@ appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 	uint8         xl_info = record->xl_info;
 	uint8         info = xl_info & ~XLR_INFO_MASK;
 
-	/*
-	 * Perform redo of AO XLOG records only for standby mode. We do
-	 * not need to replay AO XLOG records in normal mode because fsync
-	 * is performed on file close.
-	 */
-	if (!IsStandbyMode())
-		return;
-
 	switch (info)
 	{
 		case XLOG_APPENDONLY_INSERT:
