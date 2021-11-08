@@ -542,6 +542,13 @@ alter table t2_partition_expand drop column x;
 alter table t_root_partition_expand attach partition t1_partition_expand for values from (1) to (5);
 alter table t_root_partition_expand attach partition t2_partition_expand for values from (5) to (10);
 
+select localoid::regclass, policytype, numsegments, distkey, distclass
+from gp_distribution_policy where localoid in (
+  't_root_partition_expand'::regclass,
+  't1_partition_expand'::regclass,
+  't2_partition_expand'::regclass
+);
+
 alter table t_root_partition_expand expand partition prepare;
 select localoid::regclass, policytype, numsegments, distkey, distclass
 from gp_distribution_policy where localoid in ('t_root_partition_expand'::regclass, 't1_partition_expand'::regclass, 't2_partition_expand'::regclass);

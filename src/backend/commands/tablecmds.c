@@ -16363,7 +16363,12 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
  * change policy type of leaf partitions to randomly,
  * the policy type of root and interior partitions are the same as before.
  *
- * after we expand partition prepare from 2 segments to 3 segments, 
+ * For external(foreign) tables, only writable external tables have distribution
+ * policy. So for writable external leaf partitions, expansion is finished during
+ * prepare stage (the following functon) by simply updating numsegments field
+ * in policy. For other external(foreign) tables, just ignore them.
+ *
+ * After we expand partition prepare from 2 segments to 3 segments, 
  * possible distribution policies of partition table:
  * a) original policy type is randomly:
  *    new policy type of all root/interior/leaf partitions are randomly on 3 segments
@@ -16371,7 +16376,7 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
  *    new policy type of root/interior partitions are hashed on 3 segments
  *    and new policy type of leaf partitions are randomly on 3 segments
  *
- * @param rel the parent or child of partition table
+ * @param rel the parent or leaf of partition table
  */
 static void
 ATExecExpandPartitionTablePrepare(Relation rel)
@@ -16399,7 +16404,7 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 		if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 		{
 			/*
-			 * For external|foreign leafs, only writable external
+			 * For external|foreign leaves, only writable external
 			 * table has policy entry and need to be handled.
 			 */
 			if (rel_is_external_table(relid))
@@ -16407,7 +16412,7 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 				ExtTableEntry *ext = GetExtTableEntry(relid);
 				if (ext->iswritable)
 				{
-					/* Just modify the numsegments for external writable leafs */
+					/* Just modify the numsegments for external writable leaves */
 					GpPolicy *leaf_dist = GpPolicyCopy(rel_dist);
 					leaf_dist->numsegments = new_numsegments;
 					GpPolicyReplace(relid, leaf_dist);

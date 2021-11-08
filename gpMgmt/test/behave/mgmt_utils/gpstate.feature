@@ -436,7 +436,7 @@ Feature: gpstate tests
                   distribution_policy_names text,
                   distribution_policy_coloids text,
                   distribution_policy_type text,
-                  root_partition_name text,
+                  root_partition_oid oid,
                   storage_options text,
                   rank int,
                   status text,
