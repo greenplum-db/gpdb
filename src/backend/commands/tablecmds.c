@@ -15072,31 +15072,52 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
 static void
 ATExecExpandPartitionTablePrepare(Relation rel)
 {
-
 	/* get current distribution policy and partition rule (root/interior/leaf) */
-	GpPolicy   *root_dist = GpPolicyCopy(rel->rd_cdbpolicy);
+	int 		new_numsegments = getgpsegmentCount();
+	Oid       	relid = RelationGetRelid(rel);
+	GpPolicy   *rel_dist = rel->rd_cdbpolicy;
 	PartStatus 	ps = rel_part_status(rel->rd_id);
 
-	/* get current cluster size */
-	int new_numsegments = getgpsegmentCount();
-
-	/* change numsegments of policy to current cluster size */
-	root_dist->numsegments = new_numsegments;
-
-	if (GpPolicyIsRandomPartitioned(root_dist) || ps == PART_STATUS_ROOT)
+	if (GpPolicyIsRandomPartitioned(rel_dist) || ps == PART_STATUS_ROOT)
 	{
 		/* we only change numsegments for root/interior/leaf partitions distributed randomly
 		 * and root/interior partitions distributed by hash
 		 */
-		GpPolicyReplace(rel->rd_id, root_dist);
+		GpPolicy *root_dist = GpPolicyCopy(rel_dist);
+
+		/* change numsegments of policy to current cluster size */
+		root_dist->numsegments = new_numsegments;
+
+		GpPolicyReplace(relid, root_dist);
 		rel->rd_cdbpolicy = root_dist;
 	}
 	else
 	{
-		/* we change policy type to randomly for leaf partitions distributed by hash */
-		GpPolicy *random_dist = createRandomPartitionedPolicy(new_numsegments);
-		GpPolicyReplace(rel->rd_id, random_dist);
-		rel->rd_cdbpolicy = random_dist;
+		if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		{
+			/*
+			 * For external|foreign leaves, only writable external
+			 * table has policy entry and need to be handled.
+			 */
+			if (RelationIsExternal(rel))
+			{
+				ExtTableEntry *ext = GetExtTableEntry(relid);
+				if (ext->iswritable)
+				{
+					/* Just modify the numsegments for external writable leaves */
+					GpPolicy *leaf_dist = GpPolicyCopy(rel_dist);
+					leaf_dist->numsegments = new_numsegments;
+					GpPolicyReplace(relid, leaf_dist);
+				}
+			}
+		}
+		else
+		{
+			/* we change policy type to randomly for leaf partitions distributed by hash */
+			GpPolicy *random_dist = createRandomPartitionedPolicy(new_numsegments);
+			GpPolicyReplace(rel->rd_id, random_dist);
+			rel->rd_cdbpolicy = random_dist;
+		}
 	}
 }
 
