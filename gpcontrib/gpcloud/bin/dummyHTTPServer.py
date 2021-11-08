@@ -20,12 +20,12 @@ import os
 import ssl
 
 help_msg = '''./dummyHTTPServer.py 
-[-h] | [-p (--port=) <port>][-f (--filename=) <filename>][-s][-t(--type=)<S|GPSS>]
+[-h] | [-p (--port=) <port>][-f (--filename=) <filename>][-s][-t(--type=)<S|PARAM_S>]
 Options:
     -h : print this help info
     -p --port=: http listen port
     -f --filename=: content filename path
-    -t --type=: GPSS server or Common Server
+    -t --type=: PARAM_S server or Common Server
     -s: use ssl connection
     '''
 filename = "data/s3httptest.conf"
@@ -71,7 +71,7 @@ class S(BaseHTTPRequestHandler):
         self._set_headers(length)
         self.wfile.write("")
 
-class GPSS(BaseHTTPRequestHandler):
+class PARAM_S(BaseHTTPRequestHandler):
     def _set_headers(self,length = 0):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
@@ -145,5 +145,5 @@ if __name__ == "__main__":
     if servertype == "S":
         run(handler_class=S, port=port)
     else:
-        run(handler_class=GPSS, port=port, https=use_ssl)
+        run(handler_class=PARAM_S, port=port, https=use_ssl)
 

@@ -121,7 +121,7 @@ TEST(Config, Gpcheckcloud_eol) {
         InitConfig("s3://abc/a config=data/s3test.conf section=gpcheckcloud_newline_error"),
         S3ConfigError);
 }
-/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t GPSS' before enabling this test */
+/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t PARAM_S' before enabling this test */
 TEST(HttpParam, DISABLED_InitConfigWithHttpOK) {
     S3Params params = InitConfig("s3://abc/a server=http://127.0.0.1:8553 section=hello");
     EXPECT_EQ("\n", params.getGpcheckcloud_newline());
@@ -137,7 +137,7 @@ TEST(HttpParam, DISABLED_InitConfigWithHttpOK) {
     EXPECT_EQ(SSE_NONE, params.getSSEType());
     EXPECT_EQ("S5://xxxx", params.getProxy());
 }
-/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t GPSS -s' before enabling this test */
+/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t PARAM_S -s' before enabling this test */
 TEST(HttpParam, DISABLED_InitConfigWithHttpsOK) {
     S3Params params = InitConfig("s3://abc/a server=https://127.0.0.1:8553 section=hello");
     EXPECT_EQ("\n", params.getGpcheckcloud_newline());

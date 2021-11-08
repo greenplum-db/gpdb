@@ -1,5 +1,5 @@
 CREATE EXTERNAL WEB TABLE dummyHttpServerstart (x text)
-execute E'((python @abs_srcdir@/dummyHTTPServer.py -p 8553 -f @config_file@ -t GPSS >/dev/null 2>&1 &);for i in `seq 1 30`; do curl http://127.0.0.1:8553 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+execute E'((python @abs_srcdir@/dummyHTTPServer.py -p 8553 -f @config_file@ -t PARAM_S >/dev/null 2>&1 &);for i in `seq 1 30`; do curl http://127.0.0.1:8553 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
