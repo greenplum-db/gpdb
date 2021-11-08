@@ -8,6 +8,7 @@ import pytest
 @prepare_before_test(num=64, times=1)
 def test_64_gpload_multi_input_file():
     "64 gpload with multiple input file"
+    runfile(mkpath('setup.sql'))
     copy_data('external_file_01.txt','data_file.txt')
     copy_data('external_file_01.txt','data_file1.txt')
     write_config_file(format='text',file=['data_file.txt','data_file1.txt'],table='texttable')
@@ -16,6 +17,7 @@ def test_64_gpload_multi_input_file():
 @prepare_before_test(num=65, times=1)
 def test_65_gpload_multi_input_file_with_a_notexist():
     "65 gpload with multiple input files including a not exist one"
+    runfile(mkpath('setup.sql'))
     copy_data('external_file_01.txt','data_file.txt')
     copy_data('external_file_01.txt','data_file1.txt')
     write_config_file(format='text',file=['data_file.txt','data_file1.txt','data_file99.txt'],table='texttable')
