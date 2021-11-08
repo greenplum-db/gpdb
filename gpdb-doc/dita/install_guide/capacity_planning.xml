@@ -77,7 +77,7 @@ Without mirrors: U + U/3 = usable_disk_space</codeblock></p>
           roughly estimate the size of an index using these
           formulas.<codeblock>B-tree: unique_values * (data_type_size + 24 bytes)
 
-Bitmap: (unique_values * =number_of_rows * 1 bit * compression_ratio / 8) + (unique_values * 32)</codeblock></li>
+Bitmap: (unique_values * number_of_rows * 1 bit * compression_ratio / 8) + (unique_values * 32)</codeblock></li>
       </ul>
     </body>
   </topic>

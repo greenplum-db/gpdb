@@ -165,13 +165,13 @@ SELinuxstatus: disabled</codeblock></li>
         <li><xref href="#topic3/ssh_max_connections" format="dita"/></li>
       </ul>
       <section id="linux_hosts_file">
-        <title>The <codeph>hosts</codeph> File</title>
+        <title>The hosts File</title>
         <p>Edit the <codeph>/etc/hosts</codeph> file and make sure that it includes the host names
           and all interface address names for every machine participating in your Greenplum Database
           system.</p>
       </section>
       <section id="sysctl_file">
-        <title>The <codeph>sysctl.conf</codeph> File</title>
+        <title>The sysctl.conf File</title>
         <p>The <codeph>sysctl.conf</codeph> parameters listed in this topic are for performance,
           optimization, and consistency in a wide variety of environments. Change these settings
           according to your specific situation and setup.</p>
@@ -339,11 +339,11 @@ vm.dirty_ratio = 10</codeblock></p>
             <p>Read-ahead value</p>
             <p>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
               16384. To verify the read-ahead value of a disk device:</p>
-            <codeblock># sudo /sbin/blockdev --getra <varname>devname</varname></codeblock>
+            <codeblock># sudo /sbin/blockdev --getra &lt;devname></codeblock>
             <p>For example:</p>
             <codeblock># sudo /sbin/blockdev --getra /dev/sdb</codeblock>
             <p>To set blockdev (read-ahead) on a device:</p>
-            <codeblock># sudo /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
+            <codeblock># sudo /sbin/blockdev --setra &lt;bytes> &lt;devname></codeblock>
             <p>For example:</p>
             <codeblock># sudo /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
             <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
@@ -369,7 +369,7 @@ vm.dirty_ratio = 10</codeblock></p>
                 <codeph>CFQ</codeph>, <codeph>AS</codeph>, and <codeph>deadline</codeph>.</p>
             <p>The <codeph>deadline</codeph> scheduler option is recommended. To specify a scheduler
               until the next system reboot, run the following:</p>
-            <codeblock># echo <varname>schedulername</varname> &gt; /sys/block/<varname>devname</varname>/queue/scheduler</codeblock>
+            <codeblock># echo <varname>schedulername</varname> &gt; /sys/block/&lt;devname>/queue/scheduler</codeblock>
             <p>For example:</p>
             <codeblock># echo deadline &gt; /sys/block/sbd/queue/scheduler</codeblock>
             <note>Using the <codeph>echo</codeph> command to set the disk I/O scheduler policy is
@@ -382,7 +382,7 @@ vm.dirty_ratio = 10</codeblock></p>
               This is an example <cmdname>kernel</cmdname> command from a <codeph>grub.conf</codeph>
               file on RHEL 6.x or CentOS 6.x. The command is on multiple lines for readability.</p>
             <codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
-                 <b>elevator=deadline</b> crashkernel=128M@16M  quiet console=tty1
+                 elevator=deadline crashkernel=128M@16M  quiet console=tty1
                  console=ttyS1,115200 panic=30 transparent_hugepage=never 
                  initrd /initrd-2.6.18-274.3.1.el5.img</codeblock>
             <p>To specify the I/O scheduler at boot time on systems that use <codeph>grub2</codeph>
