@@ -72,7 +72,7 @@ public:
 		}
 	};
 
-	typedef CDynamicPtrArray<CDXLCtasOption, CleanupDelete> CDXLCtasOptionArray;
+	using CDXLCtasOptionArray = CDynamicPtrArray<CDXLCtasOption, CleanupDelete>;
 
 	//-------------------------------------------------------------------
 	//	@enum:

@@ -3,6 +3,9 @@
 --
 -- Changes here should also be made to olap_window_seq.sql
 
+-- reduce noise, specifying a precision
+set extra_float_digits=-2;
+
 -- start_ignore
 create schema olap_window_seq;
 set search_path to olap_window_seq, public;

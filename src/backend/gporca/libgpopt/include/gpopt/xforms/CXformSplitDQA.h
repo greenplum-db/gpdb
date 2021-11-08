@@ -33,10 +33,9 @@ class CXformSplitDQA : public CXformExploration
 {
 private:
 	// hash map between expression and a column reference
-	typedef CHashMap<CExpression, CColRef, CExpression::HashValue,
-					 CUtils::Equals, CleanupRelease<CExpression>,
-					 CleanupNULL<CColRef> >
-		ExprToColRefMap;
+	using ExprToColRefMap =
+		CHashMap<CExpression, CColRef, CExpression::HashValue, CUtils::Equals,
+				 CleanupRelease<CExpression>, CleanupNULL<CColRef>>;
 
 	// generate an expression with multi-level aggregation
 	static CExpression *PexprMultiLevelAggregation(

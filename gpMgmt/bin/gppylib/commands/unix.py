@@ -227,7 +227,7 @@ class GenericPlatform():
         return findCmdInPath('tar')
 
     def getIfconfigCmd(self):
-        return findCmdInPath('ifconfig')
+        return findCmdInPath('ip') + " a"
 
 
 class LinuxPlatform(GenericPlatform):
@@ -488,17 +488,17 @@ class RemoveGlob(Command):
 class FileDirExists(Command):
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
         self.directory = directory
-        cmdStr = """python3  -c "import os; print(os.path.exists('%s'))" """ % directory
+        cmdStr = "[ -d '%s' ]" % directory
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
     def remote(name, remote_host, directory):
         cmd = FileDirExists(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
+        cmd.run(validateAfter=False)
         return cmd.filedir_exists()
 
     def filedir_exists(self):
-        return self.results.stdout.strip().upper() == 'TRUE'
+        return (not self.results.rc)
 
 
 # -------------scp------------------
@@ -581,8 +581,8 @@ class Hostname(Command):
 class PgPortIsActive(Command):
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
-        cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
-                 (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
+        cmdStr = "%s -an 2>/dev/null |%s '{for (i =1; i<=NF ; i++) if ($i==\"%s\") print $i}'" % \
+                 (findCmdInPath('ss'), findCmdInPath('awk'), file)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     def contains_port(self):

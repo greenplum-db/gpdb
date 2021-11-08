@@ -31,10 +31,10 @@ class CXformSubqJoin2Apply : public CXformSubqueryUnnest
 {
 private:
 	// hash map between expression and a column reference
-	typedef CHashMap<CExpression, CColRef, HashPtr<CExpression>,
-					 EqualPtr<CExpression>, CleanupRelease<CExpression>,
-					 CleanupNULL<CColRef> >
-		ExprToColRefMap;
+	using ExprToColRefMap =
+		CHashMap<CExpression, CColRef, HashPtr<CExpression>,
+				 EqualPtr<CExpression>, CleanupRelease<CExpression>,
+				 CleanupNULL<CColRef>>;
 
 	// helper to transform function
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,

@@ -31,7 +31,7 @@ class CXMLSerializer;
 class CDXLColRef;
 
 // arrays of column references
-typedef CDynamicPtrArray<CDXLColRef, CleanupRelease> CDXLColRefArray;
+using CDXLColRefArray = CDynamicPtrArray<CDXLColRef, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

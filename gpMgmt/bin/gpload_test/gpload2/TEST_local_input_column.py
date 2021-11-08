@@ -105,6 +105,7 @@ def test_75_gpload_merge_chinese_standard_conforming_str_on():
     """75 gpload merge data with different quotations '"col"'  "\"col\""  "'col'" and "col" 
     with standard_conforming_strings on"""
     copy_data("external_file_19.txt", "data_file.txt")
+    runfile(mkpath('setup.sql'))
     # '"col"'
     columns1 = {"'\"列1\"'": 'text',"'\"列#2\"'": 'int', "'\"lie3\"'": 'timestamp'}
     # "\"col\""

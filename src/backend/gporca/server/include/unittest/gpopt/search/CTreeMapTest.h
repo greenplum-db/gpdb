@@ -29,7 +29,7 @@ class CTreeMapTest
 {
 	// fwd declaration
 	class CNode;
-	typedef CDynamicPtrArray<CNode, CleanupRelease<CNode> > CNodeArray;
+	using CNodeArray = CDynamicPtrArray<CNode, CleanupRelease<CNode>>;
 
 	// struct for resulting trees
 	class CNode : public CRefCount
@@ -64,8 +64,8 @@ private:
 					  BOOL *fTestTrue);
 
 	// shorthand for tests
-	typedef CTreeMap<ULONG, CNode, BOOL, HashValue<ULONG>, Equals<ULONG> >
-		TestMap;
+	using TestMap =
+		CTreeMap<ULONG, CNode, BOOL, HashValue<ULONG>, Equals<ULONG>>;
 
 	// helper to generate loaded the tree map
 	static TestMap *PtmapLoad(CMemoryPool *mp);

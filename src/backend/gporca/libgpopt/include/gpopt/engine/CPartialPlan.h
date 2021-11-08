@@ -59,8 +59,6 @@ private:
 									CExpressionHandle &exprhdl,
 									ICostModel::SCostingInfo *pci);
 
-	// raise exception if the stats object is NULL
-	static void RaiseExceptionIfStatsNull(IStatistics *stats);
 
 public:
 	CPartialPlan(const CPartialPlan &) = delete;

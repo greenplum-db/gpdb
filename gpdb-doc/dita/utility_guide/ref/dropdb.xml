@@ -50,9 +50,7 @@ DROP DATABASE "demo"
 DROP DATABASE</codeblock></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>DROP DATABASE</codeph> in the
-                                                <i>Greenplum Database Reference Guide</i></ph><ph
-                                        otherprops="op-help"><codeph><xref
-                                                  href="createdb.xml#topic1"/></codeph>, <codeph><xref
-                                                  href="../../ref_guide/sql_commands/DROP_DATABASE.xml#topic1"
-                                                /></codeph></ph></p>
+            <i>Greenplum Database Reference Guide</i></ph><ph><codeph><xref
+              href="createdb.xml#topic1"/></codeph>, <codeph><xref
+              href="../../ref_guide/sql_commands/DROP_DATABASE.xml#topic1"/></codeph></ph></p>
                 </section></body></topic>

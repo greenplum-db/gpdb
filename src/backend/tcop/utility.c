@@ -77,6 +77,7 @@
 #include "access/table.h"
 #include "catalog/oid_dispatch.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbvars.h"
 
 
@@ -770,7 +771,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 				PreventCommandDuringRecovery(stmt->is_vacuumcmd ?
 											 "VACUUM" : "ANALYZE");
 				/* forbidden in parallel mode due to CommandIsReadOnly */
-				ExecVacuum(pstate, stmt, isTopLevel);
+				ExecVacuum(pstate, stmt, isTopLevel, false);
 			}
 			break;
 
@@ -1056,6 +1057,10 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 				else
 					ExecAlterOwnerStmt(stmt);
 			}
+			break;
+
+		case T_RetrieveStmt:
+			ExecRetrieveStmt((RetrieveStmt *) parsetree, dest);
 			break;
 
 		case T_CommentStmt:
@@ -2215,6 +2220,9 @@ UtilityReturnsTuples(Node *parsetree)
 		case T_VariableShowStmt:
 			return true;
 
+		case T_RetrieveStmt:
+			return true;
+
 		default:
 			return false;
 	}
@@ -2268,6 +2276,13 @@ UtilityTupleDescriptor(Node *parsetree)
 				VariableShowStmt *n = (VariableShowStmt *) parsetree;
 
 				return GetPGVariableResultDesc(n->name);
+			}
+
+		case T_RetrieveStmt:
+			{
+				RetrieveStmt *n = (RetrieveStmt *) parsetree;
+
+				return CreateTupleDescCopy(GetRetrieveStmtTupleDesc(n));
 			}
 
 		default:
@@ -2592,7 +2607,14 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		case T_DeclareCursorStmt:
-			tag = "DECLARE CURSOR";
+			{
+				DeclareCursorStmt *stmt = (DeclareCursorStmt *) parsetree;
+
+				if (stmt->options & CURSOR_OPT_PARALLEL_RETRIEVE)
+					tag = "DECLARE PARALLEL RETRIEVE CURSOR";
+				else
+					tag = "DECLARE CURSOR";
+			}
 			break;
 
 		case T_ClosePortalStmt:
@@ -3390,6 +3412,10 @@ CreateCommandTag(Node *parsetree)
 
 		case T_AlterTypeStmt:
 			tag = "ALTER TYPE";
+			break;
+
+		case T_RetrieveStmt:
+			tag = "RETRIEVE";
 			break;
 
 		default:

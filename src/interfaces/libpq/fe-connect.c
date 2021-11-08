@@ -396,6 +396,10 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 		"connection type", "D", 10,
 	offsetof(struct pg_conn, gpconntype)},
 
+	{"diff_options", NULL, NULL, NULL,
+		"updated synced GUCs", "D", 80,
+	offsetof(struct pg_conn, diffoptions)},
+
 	/* Terminating entry --- MUST BE LAST */
 	{NULL, NULL, NULL, NULL,
 	NULL, NULL, 0}
@@ -2424,7 +2428,7 @@ keep_going:						/* We will come back to here until there is
 		if (conn->gpconntype &&
 			(strcmp(conn->gpconntype, GPCONN_TYPE_FTS) == 0 ||
 			 strcmp(conn->gpconntype, GPCONN_TYPE_FAULT) == 0 ||
-			 strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) == 0))
+			 strcmp(conn->gpconntype, GPCONN_TYPE_DEFAULT) == 0))
 		{
 			/*
 			 * GPDB uses the high bits of the major version to indicate special
@@ -2432,8 +2436,8 @@ keep_going:						/* We will come back to here until there is
 			 */
 			conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
 
-			/* hide the internal gpconntype option, let it only affect the pversion */
-			if (strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) == 0)
+			/* hide the default gpconntype option, let it only affect the pversion */
+			if (strcmp(conn->gpconntype, GPCONN_TYPE_DEFAULT) == 0)
 			{
 				free(conn->gpconntype);
 				conn->gpconntype = NULL;

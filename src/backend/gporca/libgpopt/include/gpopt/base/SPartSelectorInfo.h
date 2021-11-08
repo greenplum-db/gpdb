@@ -37,10 +37,10 @@ struct SPartSelectorInfoEntry
 	}
 };
 
-typedef CHashMap<ULONG, SPartSelectorInfoEntry, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupDelete<SPartSelectorInfoEntry> >
-	SPartSelectorInfo;
+using SPartSelectorInfo =
+	CHashMap<ULONG, SPartSelectorInfoEntry, gpos::HashValue<ULONG>,
+			 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+			 CleanupDelete<SPartSelectorInfoEntry>>;
 
 }  // namespace gpopt
 #endif	// !GPOPT_CPartSelectorInfo_H

@@ -36,8 +36,8 @@ using namespace gpmd;
 using namespace gpnaucrates;
 
 // dynamic array of cost model params
-typedef CDynamicPtrArray<ICostModelParams::SCostParam, CleanupDelete>
-	ICostModelParamsArray;
+using ICostModelParamsArray =
+	CDynamicPtrArray<ICostModelParams::SCostParam, CleanupDelete>;
 
 //---------------------------------------------------------------------------
 //	@class:

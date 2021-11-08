@@ -27,7 +27,7 @@
 namespace gpopt
 {
 // range array
-typedef CDynamicPtrArray<CRange, CleanupRelease> CRangeArray;
+using CRangeArray = CDynamicPtrArray<CRange, CleanupRelease>;
 
 using namespace gpos;
 using namespace gpmd;
@@ -269,8 +269,8 @@ operator<<(IOstream &os, const CConstraintInterval *interval)
 	return interval->OsPrint(os);
 }
 
-typedef CDynamicPtrArray<CConstraintInterval, CleanupRelease>
-	CConstraintIntervalArray;
+using CConstraintIntervalArray =
+	CDynamicPtrArray<CConstraintInterval, CleanupRelease>;
 }  // namespace gpopt
 
 #endif	// !GPOPT_CConstraintInterval_H

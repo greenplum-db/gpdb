@@ -54,7 +54,7 @@ public:
 
 private:
 	// shorthand for job state machine
-	typedef CJobStateMachine<EState, estSentinel, EEvent, eevSentinel> JSM;
+	using JSM = CJobStateMachine<EState, estSentinel, EEvent, eevSentinel>;
 
 	// target group expression
 	CGroupExpression *m_pgexpr;

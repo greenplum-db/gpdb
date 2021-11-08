@@ -27,11 +27,11 @@ using namespace gpos;
 using namespace gpmd;
 
 // dynamic array of columns -- array owns columns
-typedef CDynamicPtrArray<CColumnDescriptor, CleanupRelease>
-	CColumnDescriptorArray;
+using CColumnDescriptorArray =
+	CDynamicPtrArray<CColumnDescriptor, CleanupRelease>;
 
 // dynamic array of bitsets
-typedef CDynamicPtrArray<CBitSet, CleanupRelease> CBitSetArray;
+using CBitSetArray = CDynamicPtrArray<CBitSet, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

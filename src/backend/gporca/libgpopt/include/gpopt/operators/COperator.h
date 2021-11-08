@@ -31,12 +31,12 @@ class CReqdPropPlan;
 class CReqdPropRelational;
 
 // dynamic array for operators
-typedef CDynamicPtrArray<COperator, CleanupRelease> COperatorArray;
+using COperatorArray = CDynamicPtrArray<COperator, CleanupRelease>;
 
 // hash map mapping CColRef -> CColRef
-typedef CHashMap<CColRef, CColRef, CColRef::HashValue, CColRef::Equals,
-				 CleanupNULL<CColRef>, CleanupNULL<CColRef> >
-	ColRefToColRefMap;
+using ColRefToColRefMap =
+	CHashMap<CColRef, CColRef, CColRef::HashValue, CColRef::Equals,
+			 CleanupNULL<CColRef>, CleanupNULL<CColRef>>;
 
 //---------------------------------------------------------------------------
 //	@class:

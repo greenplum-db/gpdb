@@ -25,6 +25,7 @@
 #include "access/url.h"
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"
@@ -329,6 +330,8 @@ bool		optimizer_enable_groupagg;
 bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
 bool		optimizer_prune_unused_columns;
+bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
+
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -360,6 +363,7 @@ int         optimizer_join_order_threshold;
 int			optimizer_join_order;
 int			optimizer_cte_inlining_bound;
 int			optimizer_push_group_by_below_setop_threshold;
+int			optimizer_xform_bind_threshold;
 bool		optimizer_force_multistage_agg;
 bool		optimizer_force_three_stage_scalar_dqa;
 bool		optimizer_force_expanded_distinct_aggs;
@@ -893,6 +897,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_retrieve_conn", PGC_BACKEND, GP_WORKER_IDENTITY,
+			gettext_noop("Specify this is a connection for parallel cursor retrieve"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_NO_RESET_ALL
+		},
+		&am_cursor_retrieve_handler,
+		false,
+		NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_cost_hashjoin_chainwalk", PGC_USERSET, QUERY_TUNING_COST,
@@ -2805,6 +2821,26 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_autostats_allow_nonowner", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("Allow automatic stats collection on tables even for users who are not the owner of the relation."),
+			gettext_noop("If disabled, table statistics will be updated only when tables are modified by the owners of the relations.")
+		},
+		&gp_autostats_allow_nonowner,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_redistribute_nestloop_loj_inner_child", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable nested loops left join plans with redistributed inner child in the optimizer."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_enable_redistribute_nestloop_loj_inner_child,
+		 true,
+		 NULL, NULL, NULL
+		 },
 
 	/* End-of-list marker */
 	{
@@ -3849,6 +3885,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"optimizer_xform_bind_threshold", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Maximum number bindings per xform per group expression"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_xform_bind_threshold,
+		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"optimizer_join_order_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Maximum number of join children to use dynamic programming based join ordering algorithm."),
 			NULL
@@ -3983,6 +4030,41 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_slices,
 		0, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_idle", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between issuing TCP keepalives from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_idle,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_IDLE,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_interval", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_interval,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_INTERVAL,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_count", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Maximum number of TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("This controls the number of consecutive keepalive retransmits that can be "
+						 "lost before a QD/QE connection is considered dead. A value of 0 uses the "
+						 "system default."),
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_count,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_COUNT,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -4525,7 +4607,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
 		NULL, NULL, NULL
 	},
-
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, NULL, NULL, NULL

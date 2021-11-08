@@ -5,7 +5,7 @@
   <body>
     <p>Restore a Greenplum Database backup that was created using the <codeph>gpbackup</codeph>
       utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
-      located in the Greenplum Database coordinator host data directory, with table data stored locally
+      located in the Greenplum Database master host data directory, with table data stored locally
       on segment hosts in CSV data files.</p>
     <section>
       <title>Synopsis</title>
@@ -21,6 +21,7 @@
    [<b>--include-table</b> <varname>schema.table</varname> [<b>--include-table</b> <varname>schema.table</varname> ...]]
    [<b>--include-schema-file</b> <varname>file_name</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--truncate-table</b>]
    [<b>--redirect-schema</b> <varname>schema_name</varname>]
    [<b>--data-only</b> | <b>--metadata-only</b>]
    [<b>--incremental</b>]
@@ -33,6 +34,7 @@
    [<b>--version</b>]
    [<b>--with-globals</b>]
    [<b>--with-stats</b>]
+   [<b>--run-analyze</b>]
 
 <b>gprestore --help</b></codeblock>
     </section>
@@ -63,13 +65,17 @@
           <codeph>--include-table-file</codeph> and the text file lists some leaf partitions of a
         partitioned table. Restoring the backup creates the partitioned table and restores the data
         only for the leaf partitions listed in the file. </p>
-      <p>Greenplum Database system objects are automatically included in a <codeph>gpbackup</codeph>
-        backup set, but these objects are only restored if you include the
-          <codeph>--with-globals</codeph> option to <codeph>gprestore</codeph>. Similarly, if you
-        backed up query plan statistics using the <codeph>--with-stats</codeph> option, you can
-        restore those statistics by providing <codeph>--with-stats</codeph> to
-          <codeph>gprestore</codeph>. By default, only database objects in the backup set are
-        restored.</p>
+      <p>By default, only database objects in the backup set are restored. Greenplum Database system
+        objects are automatically included in a <codeph>gpbackup</codeph> backup set, but these
+        objects are only restored if you include the <codeph>--with-globals</codeph> option to
+          <codeph>gprestore</codeph>. </p>
+      <p>During a restore operation, automatic updating of table statistics is disabled for the
+        tables being restored. If you backed up query plan statistics using the
+          <codeph>--with-stats</codeph> option, you can restore those statistics by providing
+          <codeph>--with-stats</codeph> to <codeph>gprestore</codeph>. If you did not use
+          <codeph>--with-stats</codeph> during a backup, or you want to collect current statistics
+        during the restore operation, you can use the <codeph>--run-analyze</codeph> option to run
+          <codeph>ANALYZE</codeph> on the restored tables. </p>
       <p>When a materialized view is restored, the data is not restored. To populate the
         materialized view with data, use <codeph>REFRESH MATERIALIZED VIEW</codeph>. The tables that
         are referenced by the materialized view definition must be available. The
@@ -103,8 +109,8 @@
             <varname>YYYYMMDDHHMMSS</varname></pt>
           <pd>Required. Specifies the timestamp of the <codeph>gpbackup</codeph> backup set to
             restore. By default <codeph>gprestore</codeph> tries to locate metadata files for the
-            timestamp on the Greenplum Database coordinator host in the
-              <filepath>$COORDINATOR_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            timestamp on the Greenplum Database master host in the
+              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory, and CSV data files in the
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory of each
             segment host.</pd>
@@ -115,8 +121,8 @@
           <pd>Optional. Sources all backup files (metadata files and data files) from the specified
             directory. You must specify <varname>directory</varname> as an absolute path (not
             relative). If you do not supply this option, <codeph>gprestore</codeph> tries to locate
-            metadata files for the timestamp on the Greenplum Database coordinator host in the
-              <filepath>$COORDINATOR_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            metadata files for the timestamp on the Greenplum Database master host in the
+              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory. CSV data files must be available on each segment in the
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. Include
             this option when you specify a custom backup directory with
@@ -140,6 +146,8 @@
           <pd>The backup set must contain the table data to be restored. For example, a backup
             created with the <codeph>gpbackup</codeph> option <codeph>--metadata-only</codeph> does
             not contain table data.</pd>
+          <pd><codeph>SEQUENCE</codeph> values are updated to match the values taken at the time of
+            the backup.</pd>
           <pd>To restore only database tables, without restoring the table data, see the option
                 <codeph><xref href="#topic1/metadata_only" format="dita"
               >--metadata-only</xref></codeph>.</pd>
@@ -226,10 +234,11 @@
           <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
           <pd>Optional. Specifies a table to restore. The table must be in the format
-              <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
-            character other than a lowercase letter, number, or an underscore character, then you
-            must include that name in double quotes. You can specify this option multiple times. You
-            cannot specify a leaf partition of a partitioned table.</pd>
+            &lt;schema-name>.&lt;table-name>. You can specify this option multiple times. You cannot
+            specify a leaf partition of a partitioned table. For information on specifying special
+            characters in schema and table names, see the <codeph>gpbackup</codeph>
+            <xref href="gpbackup.xml#topic1__table_names" format="dita">Schema and Table
+              Names</xref> section. </pd>
           <pd>You can also specify the qualified name of a sequence, a view, or a materialized view. </pd>
           <pd>If you specify this option, the utility does not automatically restore dependent
             objects. You must also explicitly specify the dependent objects that are required. For
@@ -247,10 +256,11 @@
           <pd>Optional. Specifies a text file containing a list of tables to restore. Each line in
             the text file must define a single table using the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
-            lines. If a table or schema name uses any character other than a lowercase letter,
-            number, or an underscore character, then you must include that name in double quotes.
-            Any tables not listed in this file are omitted from the restore operation. You cannot
-            specify a leaf partition of a partitioned table.</pd>
+            lines. Any tables not listed in this file are omitted from the restore operation. You
+            cannot specify a leaf partition of a partitioned table. For information on specifying
+            special characters in schema and table names, see the <codeph>gpbackup</codeph>
+            <xref href="gpbackup.xml#topic1__table_names" format="dita">Schema and Table
+              Names</xref> section. </pd>
           <pd>You can also specify the qualified name of a sequence, a view, or a materialized view. </pd>
           <pd>If you specify this option, the utility does not automatically restore dependent
             objects. You must also explicitly specify dependent objects that are required. For
@@ -269,10 +279,11 @@
         </plentry>
         <plentry>
           <pt>--incremental (Beta)</pt>
-          <pd>Restores only the table data in the incremental backup specified by the
-              <codeph>--timestamp</codeph> option. Table data is not restored from previous
-            incremental backups in the backup set. For information about incremental backups, see
-              <xref href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.
+          <pd>Optional. Requires the <codeph>--data-only option</codeph>. Restores only the table
+            data in the incremental backup specified by the <codeph>--timestamp</codeph> option.
+            Table data is not restored from previous incremental backups in the backup set. For
+            information about incremental backups, see <xref
+              href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.
             <note type="warning">This is a Beta feature<ph otherprops="pivotal"> and is not
                 supported in a production environment</ph>.</note></pd>
           <pd>An incremental backup contains the following table data that can be restored.</pd>
@@ -285,7 +296,13 @@
             </ul>
           </pd>
           <pd>When this option is specified, <codeph>gprestore</codeph> restores table data by
-            truncating the table and reloading data into the table.</pd>
+            truncating the table and reloading data into the table. <codeph>SEQUENCE</codeph> values
+            are then updated to match the values taken at the time of the backup. </pd>
+          <pd>Before performing the restore operation, <codeph>gprestore</codeph> ensures that the
+            tables being restored exist. If a table does not exist, <codeph>gprestore</codeph>
+            returns an error and exits. If the <codeph>--on-error-continue</codeph> option is
+            specified, <codeph>gprestore</codeph> logs missing tables and attempts to complete the
+            restore operation. </pd>
           <pd>
             <note type="warning">When this option is specified, <codeph>gpbackup</codeph> assumes
               that no changes have been made to the table definitions of the tables being restored,
@@ -293,13 +310,27 @@
           </pd>
         </plentry>
         <plentry>
+          <pt><b>--truncate-table</b></pt>
+          <pd>Optional. Truncate data from a set of tables before restoring the table data from a
+            backup. This option lets you replace table data with data from a backup. Otherwise,
+            table data might be duplicated.</pd>
+          <pd>You must specify the set of tables with either the option
+              <codeph>--include-table</codeph> or <codeph>--include-table-file</codeph>. You must
+            also specify <codeph>--data-only</codeph> to restore table data without creating the
+            tables.</pd>
+          <pd>You can use this option with the <codeph>--redirect-db</codeph> 
+              option. You cannot use this option with
+              <codeph>--redirect-schema</codeph>.</pd>
+        </plentry>
+        <plentry>
           <pt><b>--redirect-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Restore data in the specified schema instead of the original schemas. The
             specified schema must already exist. If the data being restored is in multiple schemas,
             all the data is redirected into the specified schema.</pd>
-          <pd>This option must be used with an option that includes tables,
-              <codeph>--inlcude-table</codeph> or <codeph>--include table-file</codeph>. </pd>
+          <pd>This option must be used with an option that includes tables or schemas:
+              <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+              <codeph>--include-schema</codeph>, or <codeph>--include-schema-file</codeph>. </pd>
           <pd>You cannot use this option with an option that excludes schemas or tables such as
               <codeph>--exclude-schema</codeph> or <codeph>--exclude-table</codeph>.</pd>
           <pd>You can use this option with the <codeph>--metadata-only</codeph> or
@@ -386,7 +417,30 @@
         </plentry>
         <plentry>
           <pt><b>--with-stats</b></pt>
-          <pd>Optional. Restore query plan statistics from the backup set.</pd>
+          <pd>Optional. Restore query plan statistics from the backup set. If the backup set was not
+            created with the <codeph>--with-stats</codeph> option, an error is returned. Restored
+            tables will only have statistics from the backup. You cannot use this option with
+              <codeph>--run-analyze</codeph>.</pd>
+          <pd>To collect current statistics for the restored tables during the restore operation,
+            use the <codeph>--run-analyze</codeph> option. As an alternative, you can run the
+              <codeph>ANALYZE</codeph> command on the tables after the tables are restored. </pd>
+        </plentry>
+        <plentry>
+          <pt><b>--run-analyze</b></pt>
+          <pd>Optional. Run <codeph>ANALYZE</codeph> on the tables that are restored. For a
+            partitioned table, <codeph>ANALYZE</codeph> is run on the root partitioned table. If
+              <codeph>--with-stats</codeph> was specified for the backup, those statistics are
+            ignored. You cannot use this option with <codeph>--with-stats</codeph>. </pd>
+          <pd>If the backup being restored used the <codeph>gpbackup</codeph> option <codeph><xref
+                href="gpbackup.xml#topic1/backup_leaf_part">--leaf-partition-data</xref></codeph>,
+              <codeph>gprestore</codeph> runs <codeph>ANALYZE</codeph> only on the individual leaf
+            partitions that are restored, not the root partitioned table. For Greenplum Database 5,
+              <codeph>ANALYZE</codeph> updates the root partitioned table statistics when all leaf
+            partitions have statistics as the default. For Greenplum Database 4, you must run
+              <codeph>ANALYZE</codeph> on the root partitioned table to update the root partition
+            statistics.</pd>
+          <pd>Depending the tables being restored, running <codeph>ANALYZE</codeph> on restored
+            tables might increase the duration of the restore operation.</pd>
         </plentry>
         <plentry>
           <pt>--help</pt>

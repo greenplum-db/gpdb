@@ -277,7 +277,6 @@
           <li id="pm445741a" class="- topic/li ">Red Hat Enterprise Linux x86_64 7.x (RHEL 7)</li>
           <li class="- topic/li ">Red Hat Enterprise Linux x86_64 8.x (RHEL 8)</li>
           <li>Ubuntu 18.04 LTS</li>
-          <li>SUSE Linux Enterprise Server x86_64 12 (SLES 12)</li>
           <li dir="ltr">Windows 10 (32-bit and 64-bit)</li>
           <li dir="ltr">Windows 8 (32-bit and 64-bit)</li>
           <li>Windows Server 2012 (32-bit and 64-bit)</li>
@@ -401,12 +400,18 @@
       <body>
         <p>
           <ul id="ul_ckf_sfc_hbb">
-            <li>Greenplum Platform Extension Framework (PXF) v5.15.0 - PXF, integrated with
-              Greenplum Database 6, provides access to Hadoop, object store, and SQL external data
+            <li>Greenplum Platform Extension Framework (PXF) v5.15.1 - PXF
+              provides access to Hadoop, object store, and SQL external data
               stores. Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml"
                 >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
                 Administrator Guide</cite> for PXF configuration and usage
-              information.<!--Also check OSS information in Hadoop section--></li>
+              information.
+              <note otherprops="pivotal">PXF version 5.15.1 is bundled with Greenplum Database
+                6.x. You can install a newer version of PXF in your Greenplum cluster by
+                installing 
+                <xref href="https://greenplum.docs.pivotal.io/pxf/latest/release/release-notes.html"
+                  format="html" scope="external">the independent distribution of PXF</xref> as
+                  described in the PXF documentation.</note></li>
             <li>Greenplum Streaming Server v1.5.3 - The Tanzu Greenplum Streaming Server is an ETL
               tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache
               NiFi and custom client data sources to a Tanzu Greenplum cluster. Refer to the <xref
@@ -478,7 +483,7 @@
     <title id="pm357649">Hadoop Distributions</title>
     <body>
       <p>Greenplum Database provides access to HDFS with the Greenplum Platform Extension Framework
-        (PXF).</p>
+          (PXF).</p>
       <p>PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
         distributions. PXF bundles all of the JAR files on which it depends, including the following
         Hadoop libraries:</p>
@@ -499,7 +504,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">5.15.0, 5.14.0, 5.13.0, 5.12.0, 5.11.1, 5.10.1</entry>
+              <entry colname="col1">5.15.x, 5.14.0, 5.13.0, 5.12.0, 5.11.1, 5.10.1</entry>
               <entry colname="col2">2.x, 3.1+</entry>
               <entry colname="col3">1.x, 2.x, 3.1+</entry>
               <entry colname="col4">1.3.2</entry>

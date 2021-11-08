@@ -67,31 +67,23 @@ public:
 	};
 
 	// type definition of cost context hash table
-	typedef CSyncHashtable<CCostContext,  // entry
-						   OPTCTXT_PTR /* search key */>
-		ShtCC;
+	using ShtCC = CSyncHashtable<CCostContext, OPTCTXT_PTR>;
 
 private:
 	// definition of context hash table accessor
-	typedef CSyncHashtableAccessByKey<CCostContext,	 // entry
-									  OPTCTXT_PTR>
-		ShtAcc;
+	using ShtAcc = CSyncHashtableAccessByKey<CCostContext, OPTCTXT_PTR>;
 
 	// definition of context hash table iter
-	typedef CSyncHashtableIter<CCostContext,  // entry
-							   OPTCTXT_PTR>
-		ShtIter;
+	using ShtIter = CSyncHashtableIter<CCostContext, OPTCTXT_PTR>;
 
 	// definition of context hash table iter accessor
-	typedef CSyncHashtableAccessByIter<CCostContext,  // entry
-									   OPTCTXT_PTR>
-		ShtAccIter;
+	using ShtAccIter = CSyncHashtableAccessByIter<CCostContext, OPTCTXT_PTR>;
 
 	// map of partial plans to their costs
-	typedef CHashMap<CPartialPlan, CCost, CPartialPlan::HashValue,
-					 CPartialPlan::Equals, CleanupRelease<CPartialPlan>,
-					 CleanupDelete<CCost> >
-		PartialPlanToCostMap;
+	using PartialPlanToCostMap =
+		CHashMap<CPartialPlan, CCost, CPartialPlan::HashValue,
+				 CPartialPlan::Equals, CleanupRelease<CPartialPlan>,
+				 CleanupDelete<CCost>>;
 
 
 	// expression id

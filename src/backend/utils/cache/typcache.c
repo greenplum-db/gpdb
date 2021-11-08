@@ -2013,7 +2013,13 @@ SharedRecordTypmodRegistryAttach(SharedRecordTypmodRegistry *registry)
 	dshash_table *record_table;
 	dshash_table *typmod_table;
 
+	/*
+	 * gpdb: comment this line out since we use this function for parallel
+	 * retrieve cursor also while upstream uses this for parallel work only.
+	 */
+#if 0
 	Assert(IsParallelWorker());
+#endif
 
 	/* We can't already be attached to a shared registry. */
 	Assert(CurrentSession != NULL);

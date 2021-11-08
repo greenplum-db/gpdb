@@ -1692,9 +1692,11 @@ EXPLAIN select count(*) from
                                  Group Key: b.hundred
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..389.00 rows=3334 width=4)
                                        Hash Key: b.hundred
-                                       ->  Seq Scan on tenk1 b  (cost=0.00..189.00 rows=3334 width=4)
+                                       ->  HashAggregate  (cost=70.67..71.67 rows=100 width=4)
+                                             Group Key: b.hundred
+                                             ->  Seq Scan on tenk1 b  (cost=0.00..62.33 rows=3333 width=4)
  Optimizer: Postgres query optimizer
-(13 rows)
+(15 rows)
 
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
@@ -1718,7 +1720,9 @@ EXPLAIN select count(distinct ss.ten) from
                                                    Group Key: b.hundred
                                                    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..389.00 rows=3334 width=4)
                                                          Hash Key: b.hundred
-                                                         ->  Seq Scan on tenk1 b  (cost=0.00..189.00 rows=3334 width=4)
+                                                         ->  HashAggregate  (cost=70.67..71.67 rows=100 width=4)
+                                                               Group Key: b.hundred
+                                                               ->  Seq Scan on tenk1 b  (cost=0.00..62.33 rows=3333 width=4)
  Optimizer: Postgres query optimizer
 (19 rows)
 
@@ -2878,4 +2882,112 @@ where dt < '2010-01-01'::date;
                Output: extra_flow_dist1.a, extra_flow_dist1.b
  Optimizer: Postgres query optimizer
 (44 rows)
+
+-- Check DISTINCT ON clause and ORDER BY clause in SubLink, See https://github.com/greenplum-db/gpdb/issues/12656.
+-- For EXISTS SubLink, we don’t need to care about the data deduplication problem, we can delete DISTINCT ON clause and
+-- ORDER BY clause with confidence, because we only care about whether the data exists.
+-- But for ANY SubLink, wo can't do this, because we not only care about the existence of data, but also the content of
+-- the data.
+create table issue_12656 (
+    i int,
+    j int
+) distributed by (i);
+insert into issue_12656 values (1, 10001), (1, 10002);
+-- case 1, check basic DISTINCT ON
+explain (costs off, verbose)
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656);
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: issue_12656.i, issue_12656.j
+   ->  Hash Join
+         Output: issue_12656.i, issue_12656.j
+         Inner Unique: true
+         Hash Cond: ((issue_12656.i = issue_12656_1.i) AND (issue_12656.j = issue_12656_1.j))
+         ->  Seq Scan on subselect_gp.issue_12656
+               Output: issue_12656.i, issue_12656.j
+         ->  Hash
+               Output: issue_12656_1.i, issue_12656_1.j
+               ->  Unique
+                     Output: issue_12656_1.i, issue_12656_1.j
+                     Group Key: issue_12656_1.i
+                     ->  Sort
+                           Output: issue_12656_1.i, issue_12656_1.j
+                           Sort Key: issue_12656_1.i
+                           ->  Seq Scan on subselect_gp.issue_12656 issue_12656_1
+                                 Output: issue_12656_1.i, issue_12656_1.j
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(20 rows)
+
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656);
+ i |   j   
+---+-------
+ 1 | 10001
+(1 row)
+
+-- case 2, check DISTINCT ON and ORDER BY
+explain (costs off, verbose)
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j asc);
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: issue_12656.i, issue_12656.j
+   ->  Hash Join
+         Output: issue_12656.i, issue_12656.j
+         Inner Unique: true
+         Hash Cond: ((issue_12656.i = issue_12656_1.i) AND (issue_12656.j = issue_12656_1.j))
+         ->  Seq Scan on subselect_gp.issue_12656
+               Output: issue_12656.i, issue_12656.j
+         ->  Hash
+               Output: issue_12656_1.i, issue_12656_1.j
+               ->  Unique
+                     Output: issue_12656_1.i, issue_12656_1.j
+                     Group Key: issue_12656_1.i
+                     ->  Sort
+                           Output: issue_12656_1.i, issue_12656_1.j
+                           Sort Key: issue_12656_1.i, issue_12656_1.j
+                           ->  Seq Scan on subselect_gp.issue_12656 issue_12656_1
+                                 Output: issue_12656_1.i, issue_12656_1.j
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(20 rows)
+
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j asc);
+ i |   j   
+---+-------
+ 1 | 10001
+(1 row)
+
+explain (costs off, verbose)
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: issue_12656.i, issue_12656.j
+   ->  Hash Join
+         Output: issue_12656.i, issue_12656.j
+         Inner Unique: true
+         Hash Cond: ((issue_12656.i = issue_12656_1.i) AND (issue_12656.j = issue_12656_1.j))
+         ->  Seq Scan on subselect_gp.issue_12656
+               Output: issue_12656.i, issue_12656.j
+         ->  Hash
+               Output: issue_12656_1.i, issue_12656_1.j
+               ->  Unique
+                     Output: issue_12656_1.i, issue_12656_1.j
+                     Group Key: issue_12656_1.i
+                     ->  Sort
+                           Output: issue_12656_1.i, issue_12656_1.j
+                           Sort Key: issue_12656_1.i, issue_12656_1.j DESC
+                           ->  Seq Scan on subselect_gp.issue_12656 issue_12656_1
+                                 Output: issue_12656_1.i, issue_12656_1.j
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(20 rows)
+
+select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
+ i |   j   
+---+-------
+ 1 | 10002
+(1 row)
 

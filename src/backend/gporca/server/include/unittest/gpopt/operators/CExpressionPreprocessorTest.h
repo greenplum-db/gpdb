@@ -32,8 +32,7 @@ class CExpressionPreprocessorTest
 {
 private:
 	// shorthand for functions for generating the expression for unnest test
-	typedef CExpression *(FnPexprUnnestTestCase)(CMemoryPool *mp,
-												 CExpression *pexpr);
+	using FnPexprUnnestTestCase = CExpression *(CMemoryPool *, CExpression *);
 
 	// unnest scalar subqueries test cases
 	struct SUnnestSubqueriesTestCase

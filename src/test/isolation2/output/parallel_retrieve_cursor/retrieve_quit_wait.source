@@ -1,0 +1,479 @@
+-- @Description Tests retrieve quit
+-- Test quitting retrieve sessions interfering with multiple endpoints when calling
+-- gp_wait_parallel_retrieve_cursor.
+DROP TABLE IF EXISTS t1;
+DROP
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+CREATE
+insert into t1 select generate_series(1,100);
+INSERT 100
+
+--------- Test1: test for wait for a finished endpoint
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c2';
+ endpoint_id2 | token_id | host_id | port_id | READY
+ endpoint_id2 | token_id | host_id | port_id | READY
+ endpoint_id2 | token_id | host_id | port_id | READY
+(3 rows)
+1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c3';
+ endpoint_id3 | token_id | host_id | port_id | READY
+ endpoint_id3 | token_id | host_id | port_id | READY
+ endpoint_id3 | token_id | host_id | port_id | READY
+(3 rows)
+
+-- Wait until the c2 has been fully retrieved
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);  <waiting ...>
+
+2: SELECT cursorname, state FROM gp_endpoints();
+ cursorname | state 
+------------+-------
+ c1         | READY 
+ c2         | READY 
+ c3         | READY 
+ c1         | READY 
+ c2         | READY 
+ c3         | READY 
+ c1         | READY 
+ c2         | READY 
+ c3         | READY 
+(9 rows)
+
+-- in all retrieve sessions, retrieve multiple tokens (begin retrieving, finished retrieving, not yet retrieve)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  Retrieve auth token is invalid
+
+
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 22 
+ 24 
+(10 rows)
+
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 31 
+ 35 
+ 36 
+(10 rows)
+
+ a  
+----
+ 5  
+ 6  
+ 9  
+ 10 
+ 11 
+ 13 
+ 14 
+ 17 
+ 21 
+ 25 
+(10 rows)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT2' : RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+#-1retrieve> FATAL:  Retrieve auth token is invalid
+
+
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 22 
+ 24 
+ 27 
+ 29 
+ 34 
+ 37 
+ 39 
+ 41 
+ 42 
+ 45 
+ 51 
+ 53 
+ 54 
+ 55 
+ 59 
+ 60 
+ 65 
+ 66 
+ 70 
+ 75 
+ 77 
+ 80 
+ 81 
+ 84 
+ 90 
+ 92 
+ 93 
+ 94 
+ 97 
+ 99 
+(38 rows)
+
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 31 
+ 35 
+ 36 
+ 38 
+ 40 
+ 44 
+ 46 
+ 47 
+ 48 
+ 49 
+ 50 
+ 57 
+ 61 
+ 64 
+ 68 
+ 69 
+ 71 
+ 72 
+ 74 
+ 76 
+ 78 
+ 79 
+ 83 
+ 86 
+ 87 
+ 88 
+ 89 
+ 91 
+ 95 
+ 98 
+(37 rows)
+
+ a   
+-----
+ 5   
+ 6   
+ 9   
+ 10  
+ 11  
+ 13  
+ 14  
+ 17  
+ 21  
+ 25  
+ 28  
+ 32  
+ 33  
+ 43  
+ 52  
+ 56  
+ 58  
+ 62  
+ 63  
+ 67  
+ 73  
+ 82  
+ 85  
+ 96  
+ 100 
+(25 rows)
+-- skip TOKEN3 in this session
+
+-- Retrieving on C2 finished.
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+
+0U: SELECT cursorname,senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints();
+ cursorname | ?column? | ?column? | state    
+------------+----------+----------+----------
+ c1         | t        | t        | ATTACHED 
+ c2         | f        | t        | FINISHED 
+ c3         | t        | f        | READY    
+(3 rows)
+-- quit the retrieve session
+0Rq: ... <quitting>
+-- Now the interrupt is checked using WaitLatch() for time: WAIT_NORMAL_TIMEOUT,
+-- so here the sleep time should be greater than WAIT_NORMAL_TIMEOUT,
+-- to make sure that the cancel interrupt was handled.
+1: SELECT pg_sleep(0.4);
+ pg_sleep 
+----------
+          
+(1 row)
+-- When the retrieve session was terminated, the endpoint has not been fully retrieved
+-- by this retrieve process should be cancelled.
+-- The endpoint on seg0 for c1 should firstly become to RELEASED (the retrieve process set it),
+-- and then was removed (during the endpoint QE cancelled)
+2: SELECT cursorname, state FROM gp_endpoints();
+ cursorname | state    
+------------+----------
+ c1         | ATTACHED 
+ c1         | ATTACHED 
+ c2         | FINISHED 
+ c2         | FINISHED 
+ c2         | FINISHED 
+ c3         | READY    
+ c3         | READY    
+ c3         | READY    
+(8 rows)
+
+-- Since c1 has been only partially retrieved, an error will be raised when transaction ends.
+1: END;
+ERROR:  canceling MPP operation: "Endpoint retrieve session is quitting. All unfinished parallel retrieve cursors on the session will be terminated."  (seg0 192.168.235.128:7002 pid=69967)
+
+2: SELECT cursorname, state FROM gp_endpoints();
+ cursorname | state 
+------------+-------
+(0 rows)
+
+--------- Test2: test for wait for quit partially retrieving session will abort all endpoints in the transaction.
+
+1: BEGIN;
+BEGIN
+1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c4';
+ endpoint_id4 | token_id | host_id | port_id | READY
+ endpoint_id4 | token_id | host_id | port_id | READY
+ endpoint_id4 | token_id | host_id | port_id | READY
+(3 rows)
+1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c5';
+ endpoint_id5 | token_id | host_id | port_id | READY
+ endpoint_id5 | token_id | host_id | port_id | READY
+ endpoint_id5 | token_id | host_id | port_id | READY
+(3 rows)
+1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c6';
+ endpoint_id6 | token_id | host_id | port_id | READY
+ endpoint_id6 | token_id | host_id | port_id | READY
+ endpoint_id6 | token_id | host_id | port_id | READY
+(3 rows)
+
+-- Wait until retrieving session for c4 quits
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);  <waiting ...>
+
+-- in one retrieve session, retrieve multiple tokens (begin retrieving, finished retrieving, not yet retrieve)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT4' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT4";
+#-1retrieve> FATAL:  Retrieve auth token is invalid
+
+
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 22 
+ 24 
+(10 rows)
+
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 31 
+ 35 
+ 36 
+(10 rows)
+
+ a  
+----
+ 5  
+ 6  
+ 9  
+ 10 
+ 11 
+ 13 
+ 14 
+ 17 
+ 21 
+ 25 
+(10 rows)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT5' : RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
+#-1retrieve> FATAL:  Retrieve auth token is invalid
+
+
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 22 
+ 24 
+ 27 
+ 29 
+ 34 
+ 37 
+ 39 
+ 41 
+ 42 
+ 45 
+ 51 
+ 53 
+ 54 
+ 55 
+ 59 
+ 60 
+ 65 
+ 66 
+ 70 
+ 75 
+ 77 
+ 80 
+ 81 
+ 84 
+ 90 
+ 92 
+ 93 
+ 94 
+ 97 
+ 99 
+(38 rows)
+
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 31 
+ 35 
+ 36 
+ 38 
+ 40 
+ 44 
+ 46 
+ 47 
+ 48 
+ 49 
+ 50 
+ 57 
+ 61 
+ 64 
+ 68 
+ 69 
+ 71 
+ 72 
+ 74 
+ 76 
+ 78 
+ 79 
+ 83 
+ 86 
+ 87 
+ 88 
+ 89 
+ 91 
+ 95 
+ 98 
+(37 rows)
+
+ a   
+-----
+ 5   
+ 6   
+ 9   
+ 10  
+ 11  
+ 13  
+ 14  
+ 17  
+ 21  
+ 25  
+ 28  
+ 32  
+ 33  
+ 43  
+ 52  
+ 56  
+ 58  
+ 62  
+ 63  
+ 67  
+ 73  
+ 82  
+ 85  
+ 96  
+ 100 
+(25 rows)
+-- skip TOKEN3 in this session
+
+0U: SELECT cursorname,senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints();
+ cursorname | ?column? | ?column? | state    
+------------+----------+----------+----------
+ c4         | t        | t        | ATTACHED 
+ c5         | f        | t        | FINISHED 
+ c6         | t        | f        | READY    
+(3 rows)
+0Rq: ... <quitting>
+
+-- Since retrieving session abort, waiting should be interrupted.
+1<:  <... completed>
+ERROR:  canceling MPP operation: "Endpoint retrieve session is quitting. All unfinished parallel retrieve cursors on the session will be terminated."  (seg0 192.168.235.128:7002 pid=70221)
+
+-- All endpoints should be removed since error happened.
+2: SELECT cursorname, state FROM gp_endpoints();
+ cursorname | state 
+------------+-------
+(0 rows)
+
+-- quit all sessions
+1q: ... <quitting>
+2q: ... <quitting>

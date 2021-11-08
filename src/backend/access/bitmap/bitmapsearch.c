@@ -325,8 +325,6 @@ read_words(Relation rel, Buffer lovBuffer, OffsetNumber lovOffset,
 		bitmapBuffer = _bitmap_getbuf(rel, *nextBlockNoP, BM_READ);
 		bitmapPage = BufferGetPage(bitmapBuffer);
 
-		elog(LOG, "fetch bitmap page");
-
 		bitmap = (BMBitmap) PageGetContentsMaxAligned(bitmapPage);
 		bo = (BMBitmapOpaque)PageGetSpecialPointer(bitmapPage);
 

@@ -68,7 +68,7 @@ tqueueReceiveSlot(TupleTableSlot *slot, DestReceiver *self)
 	/* Check for failure. */
 	if (result == SHM_MQ_DETACHED)
 		return false;
-	else if (result != SHM_MQ_SUCCESS)
+	else if (result != SHM_MQ_SUCCESS && result != SHM_MQ_QUERY_FINISH)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("could not send tuple to shared-memory queue")));

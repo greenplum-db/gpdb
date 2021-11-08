@@ -223,8 +223,9 @@ typedef struct CancelRequestPacket
 #define PQ_BUSY_TEST_COUNT_IN_EXITING 5
 
 #define GPCONN_TYPE "gpconntype"
+
+#define GPCONN_TYPE_DEFAULT "default"
 #define GPCONN_TYPE_FTS "fts"
 #define GPCONN_TYPE_FAULT "fault"
-#define GPCONN_TYPE_INTERNAL "internal"
 
 #endif							/* PQCOMM_H */

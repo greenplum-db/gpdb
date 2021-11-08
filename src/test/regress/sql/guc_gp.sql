@@ -230,3 +230,16 @@ FETCH c2;
 END;
 
 DROP TABLE guc_gp_t1;
+
+-- test for string guc is quoted correctly
+SET search_path = "'";
+SHOW search_path;
+SET search_path = '"';
+SHOW search_path;
+SET search_path = '''';
+SHOW search_path;
+SET search_path = '''abc''';
+SHOW search_path;
+SET search_path = '\path';
+SHOW search_path;
+RESET search_path;

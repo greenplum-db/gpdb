@@ -36,16 +36,16 @@ class CExpressionPreprocessor
 {
 private:
 	// map CTE id to collected predicates
-	typedef CHashMap<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupRelease<CExpressionArray> >
-		CTEPredsMap;
+	using CTEPredsMap =
+		CHashMap<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<CExpressionArray>>;
 
 	// iterator for map of CTE id to collected predicates
-	typedef CHashMapIter<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
-						 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-						 CleanupRelease<CExpressionArray> >
-		CTEPredsMapIter;
+	using CTEPredsMapIter =
+		CHashMapIter<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
+					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+					 CleanupRelease<CExpressionArray>>;
 
 	// generate a conjunction of equality predicates between the columns in the given set
 	static CExpression *PexprConjEqualityPredicates(CMemoryPool *mp,

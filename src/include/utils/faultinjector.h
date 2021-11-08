@@ -115,11 +115,10 @@ void register_fault_injection_warning(fault_injection_warning_function warning);
 
 #ifdef FAULT_INJECTOR
 extern bool am_faulthandler;
-#define IsFaultHandler am_faulthandler
 #define SIMPLE_FAULT_INJECTOR(FaultName) \
 	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, "", "")
 #else
-#define IsFaultHandler false
+#define am_faulthandler false
 #define SIMPLE_FAULT_INJECTOR(FaultName)
 #endif
 

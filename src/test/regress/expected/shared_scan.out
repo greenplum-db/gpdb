@@ -1,5 +1,6 @@
 --
 -- Queries that lead to hanging (not dead lock) when we don't handle synchronization properly in shared scan
+-- Queries that lead to wrong result when we don't finish executing the subtree below the shared scan being squelched.
 --
 CREATE SCHEMA shared_scan;
 SET search_path = shared_scan;
@@ -12,12 +13,13 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 CREATE TABLE jazz(e int, f int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'e' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO bar  VALUES (1, 1), (2, 2), (3, 3);
+INSERT INTO foo values (1, 2);
+INSERT INTO bar SELECT i, i from generate_series(1, 100)i;
 INSERT INTO jazz VALUES (2, 2), (3, 3);
 ANALYZE foo;
 ANALYZE bar;
 ANALYZE jazz;
-SET statement_timeout = '15s';
+SELECT $query$
 SELECT * FROM
         (
         WITH cte AS (SELECT * FROM foo)
@@ -26,10 +28,48 @@ SELECT * FROM
         JOIN bar ON b = c
         ) AS XY
         JOIN jazz on c = e AND b = f;
+$query$ AS qry \gset
+-- We are very particular about this plan shape and data distribution with ORCA:
+-- 1. `jazz` has to be the inner table of the outer HASH JOIN, so that on a
+-- segment which has zero tuples in `jazz`, the Sequence node that contains the
+-- Shared Scan will be squelched on that segment. If `jazz` is not on the inner
+-- side, the above mentioned "hang" scenario will not be covered.
+-- 2. The Shared Scan producer has to be on a different slice from consumers,
+-- and some tuples coming out of the Share Scan producer on one segments are
+-- redistributed to a different segment over Motion. If not, the above mentioned
+-- "wrong result" scenario will not be covered.
+EXPLAIN (COSTS OFF)
+:qry ;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((bar.c = jazz.e) AND (foo.b = jazz.f))
+         ->  Hash Join
+               Hash Cond: (bar.c = foo.b)
+               ->  Seq Scan on bar
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b
+                           ->  Append
+                                 ->  Seq Scan on foo
+                                 ->  Seq Scan on foo foo_1
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: jazz.f
+                     ->  Seq Scan on jazz
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+SET statement_timeout = '15s';
+:qry ;
  a | b | c | d | e | f 
 ---+---+---+---+---+---
-(0 rows)
+ 1 | 2 | 2 | 2 | 2 | 2
+ 1 | 2 | 2 | 2 | 2 | 2
+(2 rows)
 
+RESET statement_timeout;
 SELECT *,
         (
         WITH cte AS (SELECT * FROM jazz WHERE jazz.e = bar.c)
@@ -37,3 +77,86 @@ SELECT *,
         )
         FROM bar;
 ERROR:  shareinputscan with outer refs is not supported by GPDB
+CREATE TABLE t1 (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE t2 (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ORCA plan contains a Shared Scan producer with a unsorted Motion below it
+EXPLAIN (COSTS OFF)
+WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 LIMIT 10) SELECT a, 1, 1 FROM cte JOIN t2 USING (a);
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (t2.a = cte.a)
+         ->  Seq Scan on t2
+         ->  Hash
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                     Hash Key: cte.a
+                     ->  Subquery Scan on cte
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)
+                                       ->  Limit
+                                             ->  Seq Scan on t1
+                                                   Filter: (random() < '0.1'::double precision)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+-- This functions returns one more column than expected.
+CREATE OR REPLACE FUNCTION col_mismatch_func1() RETURNS TABLE (field1 int, field2 int)
+LANGUAGE 'plpgsql' VOLATILE STRICT AS
+$$
+DECLARE
+   v_qry text;
+BEGIN
+   v_qry := 'WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 LIMIT 10) SELECT a, 1 , 1 FROM cte JOIN t2 USING (a)';
+  RETURN QUERY EXECUTE v_qry;
+END
+$$;
+-- This should only ERROR and should not SIGSEGV
+SELECT col_mismatch_func1();
+ERROR:  structure of query does not match function result type
+DETAIL:  Number of returned columns (3) does not match expected column count (2).
+CONTEXT:  PL/pgSQL function col_mismatch_func1() line 6 at RETURN QUERY
+-- ORCA plan contains a Shared Scan producer with a sorted Motion below it
+EXPLAIN (COSTS OFF)
+WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 ORDER BY b LIMIT 10) SELECT a, 1, 1 FROM cte JOIN t2 USING (a);
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (t2.a = cte.a)
+         ->  Seq Scan on t2
+         ->  Hash
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                     Hash Key: cte.a
+                     ->  Subquery Scan on cte
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)
+                                       Merge Key: t1.b
+                                       ->  Limit
+                                             ->  Sort
+                                                   Sort Key: t1.b
+                                                   ->  Seq Scan on t1
+                                                         Filter: (random() < '0.1'::double precision)
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+--- This functions returns one more column than expected.
+CREATE OR REPLACE FUNCTION col_mismatch_func2() RETURNS TABLE (field1 int, field2 int)
+    LANGUAGE 'plpgsql' VOLATILE STRICT AS
+$$
+DECLARE
+    v_qry text;
+BEGIN
+    v_qry := 'WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 ORDER BY b LIMIT 10) SELECT a, 1 , 1 FROM cte JOIN t2 USING (a)';
+    RETURN QUERY EXECUTE v_qry;
+END
+$$;
+-- This should only ERROR and should not SIGSEGV
+SELECT col_mismatch_func2();
+ERROR:  structure of query does not match function result type
+DETAIL:  Number of returned columns (3) does not match expected column count (2).
+CONTEXT:  PL/pgSQL function col_mismatch_func2() line 6 at RETURN QUERY

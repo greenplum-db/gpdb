@@ -173,6 +173,7 @@ def create_pipeline(args, git_remote, git_branch):
         'test_trigger': test_trigger,
         'use_ICW_workers': args.use_ICW_workers,
         'build_test_rc_rpm': args.build_test_rc_rpm,
+        'directed_release': args.directed_release,
         'git_username': git_remote.split('/')[-2],
         'git_branch': git_branch
     }
@@ -232,6 +233,7 @@ def header(args):
   test_trigger ............. : %s
   use_ICW_workers .......... : %s
   build_test_rc_rpm ........ : %s
+  directed_release ......... : %s
 ======================================================================
 ''' % (args.pipeline_target,
        args.output_filepath,
@@ -240,7 +242,8 @@ def header(args):
        args.test_sections,
        args.test_trigger_false,
        args.use_ICW_workers,
-       args.build_test_rc_rpm
+       args.build_test_rc_rpm,
+       args.directed_release
        )
 
 
@@ -248,6 +251,11 @@ def print_fly_commands(args, git_remote, git_branch):
     pipeline_name = os.path.basename(args.output_filepath).rsplit('.', 1)[0]
 
     print(header(args))
+    if args.directed_release: 
+        print('NOTE: You can set the directed release pipeline with the following:\n')
+        print(gen_pipeline(args, pipeline_name, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
+                           "https://github.com/greenplum-db/gpdb.git", git_branch))
+        return
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
         pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "master" else BASE_BRANCH
@@ -294,7 +302,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos7'],
-        choices=['centos7', 'ubuntu18.04', 'win'],
+        choices=['centos7', 'rhel8', 'ubuntu18.04', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -375,11 +383,23 @@ def main():
              'configuration to build prod RCs.'
     )
 
+    parser.add_argument(
+        '--directed',
+        action='store_true',
+        dest='directed_release',
+        default=False,
+        help='Generates a pipeline for directed releases. '
+             'This flag can be used only with the prod target.'
+    )
+
     args = parser.parse_args()
 
     if args.pipeline_target == 'prod' and args.build_test_rc_rpm:
         raise Exception('Cannot specify a prod pipeline when building a test'
                         'RC. Please specify one or the other.')
+
+    if args.pipeline_target != 'prod' and args.directed_release:
+        raise Exception('--directed flag can be used only with prod target')
 
     validate_target(args.pipeline_target)
 
@@ -388,7 +408,7 @@ def main():
         print("You can only use one of --output or --user.")
         exit(1)
 
-    if args.pipeline_target == 'prod':
+    if args.pipeline_target == 'prod' and not args.directed_release:
         args.pipeline_configuration = 'prod'
 
     # use_ICW_workers adds tags to the specified concourse definitions which
@@ -396,8 +416,8 @@ def main():
     if args.pipeline_target in ['prod', 'dev', 'cm']:
         args.use_ICW_workers = True
 
-    if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full':
-        args.os_types = ['centos6', 'centos7', 'ubuntu18.04', 'win']
+    if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full' or args.directed_release:
+        args.os_types = ['centos6', 'centos7', 'rhel8', 'ubuntu18.04', 'win']
         args.test_sections = [
             'ICW',
             'Replication',
@@ -418,6 +438,11 @@ def main():
         if args.user != os.getlogin():
             pipeline_file_suffix = args.user
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
+        args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
+
+    if args.directed_release:
+        pipeline_file_suffix = suggested_git_branch()
+        default_dev_output_filename = pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     pipeline_created = create_pipeline(args, git_remote, git_branch)

@@ -1,0 +1,24 @@
+CREATE EXTENSION gp_legacy_string_agg;
+SELECT string_agg('a') FROM generate_series(1, 10);
+WARNING:  Deprecated call to string_agg(text), use string_agg(text, text) instead
+ string_agg 
+------------
+ aaaaaaaaaa
+(1 row)
+
+SELECT string_agg(a) FROM (VALUES('aaaa'),('bbbb'),('cccc'),(NULL)) g(a);
+WARNING:  Deprecated call to string_agg(text), use string_agg(text, text) instead
+  string_agg  
+--------------
+ aaaabbbbcccc
+(1 row)
+
+CREATE TABLE foo(a int, b text);
+INSERT INTO foo VALUES(1, 'aaaa'),(2, 'bbbb'),(3, 'cccc'), (4, NULL);
+SELECT string_agg(b ORDER BY a) FROM foo;
+WARNING:  Deprecated call to string_agg(text), use string_agg(text, text) instead
+  string_agg  
+--------------
+ aaaabbbbcccc
+(1 row)
+

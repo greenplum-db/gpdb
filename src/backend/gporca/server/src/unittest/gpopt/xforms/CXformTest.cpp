@@ -65,7 +65,7 @@ CXformTest::EresUnittest_ApplyXforms()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	typedef CExpression *(*Pfpexpr)(CMemoryPool *);
+	using Pfpexpr = CExpression *(*) (CMemoryPool *);
 	Pfpexpr rgpf[] = {
 		CTestUtils::PexprLogicalApplyWithOuterRef<CLogicalInnerApply>,
 		CTestUtils::PexprLogicalApply<CLogicalLeftSemiApply>,

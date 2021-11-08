@@ -45,7 +45,7 @@ private:
 	static void *PvInitMDAAndLookup(void *pv);
 
 	// cache task function pointer
-	typedef void *(*TaskFuncPtr)(void *);
+	using TaskFuncPtr = void *(*) (void *);
 
 	// structure for passing parameters to task functions
 	struct SMDCacheTaskParams

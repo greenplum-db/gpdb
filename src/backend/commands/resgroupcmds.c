@@ -136,10 +136,10 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	/*
 	 * both CREATE and ALTER resource group need check the sum of cpu_rate_limit
 	 * and memory_limit and make sure the sum don't exceed 100. To make it simple,
-	 * acquire AccessExclusiveLock lock on pg_resgroupcapability at the beginning
+	 * acquire ExclusiveLock lock on pg_resgroupcapability at the beginning
 	 * of CREATE and ALTER
 	 */
-	pg_resgroupcapability_rel = table_open(ResGroupCapabilityRelationId, AccessExclusiveLock);
+	pg_resgroupcapability_rel = table_open(ResGroupCapabilityRelationId, ExclusiveLock);
 	pg_resgroup_rel = table_open(ResGroupRelationId, RowExclusiveLock);
 
 	/* Check if MaxResourceGroups limit is reached */
@@ -428,11 +428,18 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	/*
 	 * In validateCapabilities() we scan all the resource groups
 	 * to check whether the total cpu_rate_limit exceed 100 or not.
-	 * We need to use AccessExclusiveLock here to prevent concurrent
-	 * increase on different resource group.
+	 * We use ExclusiveLock here to prevent concurrent
+	 * increase on different resource group. 
+	 * We can't use AccessExclusiveLock here, the reason is that, 
+	 * if there is a database recovery happened when run "alter resource group"
+	 * and acquire this kind of lock, the initialization of resource group 
+	 * in function InitResGroups will be pending during database startup, 
+	 * since this function will open this table with AccessShareLock, 
+	 * AccessExclusiveLock is not compatible with any other lock.
+	 * ExclusiveLock and AccessShareLock are compatible.
 	 */
 	pg_resgroupcapability_rel = heap_open(ResGroupCapabilityRelationId,
-										  AccessExclusiveLock);
+										  ExclusiveLock);
 
 	/* Load current resource group capabilities */
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupid, &oldCaps);

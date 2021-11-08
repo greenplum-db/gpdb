@@ -55,12 +55,12 @@ privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command 
           <pd>Show help about <codeph>createdb</codeph> command line arguments, and exit.</pd>
         </plentry>
         </parml>
-      <p>The options <codeph>-D</codeph>, <codeph>-l</codeph>, <codeph>-E</codeph>, 
-          <codeph>-O</codeph>, and <codeph>-T</codeph> correspond to options of the underlying
-        SQL command <codeph>CREATE DATABASE</codeph>; see <ph><codeph><xref
-            href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1" otherprops="op-help"
-          /></codeph></ph><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum
-            Database Reference Guide</i></ph> for more information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum coordinator database
+      <p>The options <codeph>-D</codeph>, <codeph>-l</codeph>, <codeph>-E</codeph>,
+          <codeph>-O</codeph>, and <codeph>-T</codeph> correspond to options of the underlying SQL
+        command <codeph>CREATE DATABASE</codeph>; see <ph><codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"
+            /></codeph></ph><ph><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
+            Reference Guide</i></ph> for more information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum coordinator database
               server is running. If not specified, reads from the environment variable
                 <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port=<varname>port</varname></pt><pd>The TCP port on which the Greenplum coordinator database server is
               listening for connections. If not specified, reads from the environment variable
@@ -74,7 +74,7 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
           <codeph>LATIN1</codeph> encoding scheme:</p><codeblock>createdb -p 54321 -h gpmaster -E LATIN1 demo</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
-            Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref
+            Reference Guide</i></ph><ph><codeph><xref
               href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></codeph>,
-            <codeph><xref href="dropdb.xml#topic1"/></codeph></ph></p>
+              <codeph><xref href="dropdb.xml#topic1"/></codeph></ph></p>
     </section></body></topic>

@@ -207,10 +207,9 @@ CScalarFunc::TypeModifier() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarFunc::FHasNonScalarFunction(CExpressionHandle &	//exprhdl
-)
+CScalarFunc::FHasNonScalarFunction(CExpressionHandle &exprhdl)
 {
-	return m_returns_set;
+	return m_returns_set || CScalar::FHasNonScalarFunction(exprhdl);
 }
 
 

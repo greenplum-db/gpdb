@@ -260,10 +260,6 @@ COPY copy_regression_text3 from stdin with delimiter '|';
 the at sign: \100|6|c text data|d text data|e text data
 a single backslash \\ in col a|8|c text data|d text data|e text data
 \.
--- This works in PostgreSQL, and these days in GPDB as well, but used to not
--- work until GPDB 6. This is just one line, because the newlines are
--- escaped. (Even on PostgreSQL, the COPY documentation recommends not to do
--- this, but let's test it.)
 COPY copy_regression_text3 from stdin with delimiter '|';
 an embedded linefeed \
 and another one\

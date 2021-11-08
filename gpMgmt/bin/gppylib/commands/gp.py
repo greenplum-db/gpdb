@@ -57,6 +57,8 @@ MAX_COORDINATOR_NUM_WORKERS=64
 # recovery is active.
 RECOVERY_REWIND_APPNAME = '__gprecoverseg_pg_rewind__'
 
+PGDATABASE_FOR_COMMON_USE= 'postgres'
+
 def get_postmaster_pid_locally(datadir):
     cmdStr = "ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name = "get postmaster"
@@ -69,13 +71,13 @@ def get_postmaster_pid_locally(datadir):
         return -1
 
 def getPostmasterPID(hostname, datadir):
-    cmdStr="ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
+    cmdStr="echo 'START_CMD_OUTPUT';ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name="get postmaster pid"
     cmd=Command(name,cmdStr,ctxt=REMOTE,remoteHost=hostname)
     try:
         cmd.run(validateAfter=True)
         sout=cmd.get_results().stdout.lstrip(' ')
-        return int(sout.split()[1])
+        return int(sout.split('START_CMD_OUTPUT')[1].split()[1])
     except:
         return -1
 
@@ -1506,7 +1508,7 @@ def chk_local_db_running(datadir, port):
 
        1) /tmp/.s.PGSQL.<PORT> and /tmp/.s.PGSQL.<PORT>.lock
        2) DATADIR/postmaster.pid
-       3) netstat
+       3) ss
 
        Returns tuple in format (postmaster_pid_file_exists, tmpfile_exists, lockfile_exists, port_active, postmaster_pid)
 
@@ -1534,9 +1536,9 @@ def chk_local_db_running(datadir, port):
     tmpfile_exists = os.path.exists("/tmp/.s.PGSQL.%d" % port)
     lockfile_exists = os.path.exists(get_lockfile_name(port))
 
-    netstat_port_active = PgPortIsActive.local('check netstat for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
+    netstat_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
 
-    logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s netstat port: %s  pid: %s" %\
+    logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s ss port: %s  pid: %s" %\
                 (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value))
 
     return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value)
@@ -1618,7 +1620,7 @@ class GpRecoverSeg(Command):
 class IfAddrs:
     @staticmethod
     def list_addrs(hostname=None, include_loopback=False):
-        cmd = ['%s/libexec/ifaddrs' % GPHOME]
+        cmd = ["echo 'START_CMD_OUTPUT'; %s/libexec/ifaddrs" % GPHOME]
         if not include_loopback:
             cmd.append('--no-loopback')
         if hostname:
@@ -1628,7 +1630,7 @@ class IfAddrs:
             args = cmd
 
         result = subprocess.check_output(args).decode()
-        return result.splitlines()
+        return result.split('START_CMD_OUTPUT')[1].strip().splitlines()
 
 if __name__ == '__main__':
 

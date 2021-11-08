@@ -34,7 +34,7 @@ class CSyncHashtableAccessByKey : public CSyncHashtableAccessorBase<T, K>
 {
 private:
 	// shorthand for accessor's base class
-	typedef class CSyncHashtableAccessorBase<T, K> Base;
+	using Base = class CSyncHashtableAccessorBase<T, K>;
 
 	// target key
 	const K &m_key;

@@ -107,8 +107,8 @@ private:
 
 	};	// CPartInfoEntry
 
-	typedef CDynamicPtrArray<CPartInfoEntry, CleanupRelease>
-		CPartInfoEntryArray;
+	using CPartInfoEntryArray =
+		CDynamicPtrArray<CPartInfoEntry, CleanupRelease>;
 
 	// partition table consumers
 	CPartInfoEntryArray *m_pdrgppartentries;

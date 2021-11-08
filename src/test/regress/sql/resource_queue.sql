@@ -393,3 +393,19 @@ DROP USER rq_test_u;
 DROP RESOURCE QUEUE rq_test_q;
 DROP TABLE rq_product;
 
+-- Coverage for resource queue error conditions
+CREATE ROLE rq_test_oosm_role;
+SET ROLE rq_test_oosm_role;
+CREATE TABLE rq_test_oosm_table(i int);
+INSERT INTO rq_test_oosm_table VALUES(1);
+-- Simulate an out-of-shared-memory condition during the course of grabbing a
+-- resource queue lock (in ResLockAcquire()).
+SELECT gp_inject_fault('res_increment_add_oosm', 'skip', 1);
+-- Queries should error out indicating that we have no shared memory left.
+SELECT * FROM rq_test_oosm_table;
+SELECT gp_inject_fault('res_increment_add_oosm', 'reset', 1);
+-- Queries should succeed now.
+SELECT * FROM rq_test_oosm_table;
+DROP TABLE rq_test_oosm_table;
+RESET ROLE;
+DROP ROLE rq_test_oosm_role;

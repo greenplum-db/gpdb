@@ -7,18 +7,18 @@ LINE 1: .../data_file.txt') format'text' (delimiter ';' null '\N' escap...
                                                              ^
 HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
 WARNING:  nonstandard use of \' in a string literal
-LINE 1: ...xt') format'text' (delimiter ';' null '\N' escape '\') encod...
+LINE 1: ...xt') format'text' (delimiter ';' null '\N' escape '\' ) enco...
                                                              ^
 HINT:  Use '' to write quotes in strings, or use the escape string syntax (E'...').
-2021-05-24 17:37:14|INFO|gpload session started 2021-05-24 17:37:14
-2021-05-24 17:37:14|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-24 17:37:14|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-24 17:37:14|INFO|did not find an external table to reuse. creating ext_gpload_reusable_9f7ab7d4_bc73_11eb_94c6_0050569e2380
-2021-05-24 17:37:14|ERROR|unexpected error -- backtrace written to log file
-2021-05-24 17:37:14|INFO|rows Inserted          = 0
-2021-05-24 17:37:14|INFO|rows Updated           = 0
-2021-05-24 17:37:14|INFO|data formatting errors = 0
-2021-05-24 17:37:14|INFO|gpload failed
+2021-08-10 14:56:47|INFO|gpload session started 2021-08-10 14:56:47
+2021-08-10 14:56:47|INFO|setting schema 'public' for table 'testspecialchar'
+2021-08-10 14:56:47|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-08-10 14:56:47|INFO|did not find an external table to reuse. creating ext_gpload_reusable_2196b198_f9a8_11eb_a63f_0050569e2380
+2021-08-10 14:56:47|ERROR|unexpected error -- backtrace written to log file
+2021-08-10 14:56:47|INFO|rows Inserted          = 0
+2021-08-10 14:56:47|INFO|rows Updated           = 0
+2021-08-10 14:56:47|INFO|data formatting errors = 0
+2021-08-10 14:56:47|INFO|gpload failed
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'Field1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 WARNING:  nonstandard use of \\ in a string literal
@@ -30,47 +30,30 @@ LINE 1: .../data_file.txt') format'text' (delimiter ';' null '\N' escap...
                                                              ^
 HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
 WARNING:  nonstandard use of \' in a string literal
-LINE 1: ...xt') format'text' (delimiter ';' null '\N' escape '\') encod...
+LINE 1: ...xt') format'text' (delimiter ';' null '\N' escape '\' ) enco...
                                                              ^
 HINT:  Use '' to write quotes in strings, or use the escape string syntax (E'...').
-2021-05-24 17:37:14|INFO|gpload session started 2021-05-24 17:37:14
-2021-05-24 17:37:14|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-24 17:37:15|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-24 17:37:15|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_40df9a45044f2d17b97f89bbbc58f24f
-2021-05-24 17:37:15|INFO|did not find an external table to reuse. creating ext_gpload_reusable_9f96c500_bc73_11eb_90c0_0050569e2380
-2021-05-24 17:37:15|ERROR|unexpected error -- backtrace written to log file
-2021-05-24 17:37:15|INFO|rows Inserted          = 0
-2021-05-24 17:37:15|INFO|rows Updated           = 0
-2021-05-24 17:37:15|INFO|data formatting errors = 0
-2021-05-24 17:37:15|INFO|gpload failed
-2021-05-24 17:37:15|INFO|gpload session started 2021-05-24 17:37:15
-2021-05-24 17:37:15|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-24 17:37:15|ERROR|no mapping for input column "'Field1'" to output table
-2021-05-24 17:37:15|INFO|rows Inserted          = 0
-2021-05-24 17:37:15|INFO|rows Updated           = 0
-2021-05-24 17:37:15|INFO|data formatting errors = 0
-2021-05-24 17:37:15|INFO|gpload failed
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'Field1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-WARNING:  nonstandard use of \\ in a string literal
-LINE 13:                  and pgext.fmtopts like '%delimiter '';'' nu...
-                                                 ^
-HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
-WARNING:  nonstandard use of escape in a string literal
-LINE 1: .../data_file.txt') format'text' (delimiter ';' null '\N' escap...
-                                                             ^
-HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
-WARNING:  nonstandard use of \' in a string literal
-LINE 1: ...xt') format'text' (delimiter ';' null '\N' escape '\') encod...
-                                                             ^
-HINT:  Use '' to write quotes in strings, or use the escape string syntax (E'...').
-2021-05-24 17:37:15|INFO|gpload session started 2021-05-24 17:37:15
-2021-05-24 17:37:15|INFO|setting schema 'public' for table 'testspecialchar'
-2021-05-24 17:37:15|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-05-24 17:37:15|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_40df9a45044f2d17b97f89bbbc58f24f
-2021-05-24 17:37:15|INFO|did not find an external table to reuse. creating ext_gpload_reusable_9fcc9f7c_bc73_11eb_aab0_0050569e2380
-2021-05-24 17:37:15|ERROR|unexpected error -- backtrace written to log file
-2021-05-24 17:37:15|INFO|rows Inserted          = 0
-2021-05-24 17:37:15|INFO|rows Updated           = 0
-2021-05-24 17:37:15|INFO|data formatting errors = 0
-2021-05-24 17:37:15|INFO|gpload failed
+2021-08-10 14:56:48|INFO|gpload session started 2021-08-10 14:56:48
+2021-08-10 14:56:48|INFO|setting schema 'public' for table 'testspecialchar'
+2021-08-10 14:56:48|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-08-10 14:56:48|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_40df9a45044f2d17b97f89bbbc58f24f
+2021-08-10 14:56:48|INFO|did not find an external table to reuse. creating ext_gpload_reusable_21b32daa_f9a8_11eb_acb0_0050569e2380
+2021-08-10 14:56:48|ERROR|unexpected error -- backtrace written to log file
+2021-08-10 14:56:48|INFO|rows Inserted          = 0
+2021-08-10 14:56:48|INFO|rows Updated           = 0
+2021-08-10 14:56:48|INFO|data formatting errors = 0
+2021-08-10 14:56:48|INFO|gpload failed
+2021-08-10 14:56:48|INFO|gpload session started 2021-08-10 14:56:48
+2021-08-10 14:56:48|INFO|setting schema 'public' for table 'testspecialchar'
+2021-08-10 14:56:48|ERROR|no mapping for input column "'Field1'" to output table
+2021-08-10 14:56:48|INFO|rows Inserted          = 0
+2021-08-10 14:56:48|INFO|rows Updated           = 0
+2021-08-10 14:56:48|INFO|data formatting errors = 0
+2021-08-10 14:56:48|INFO|gpload failed
+2021-08-10 14:56:48|INFO|gpload session started 2021-08-10 14:56:48
+2021-08-10 14:56:48|INFO|setting schema 'public' for table 'testspecialchar'
+2021-08-10 14:56:48|ERROR|no mapping for input column "Field1" to output table
+2021-08-10 14:56:48|INFO|rows Inserted          = 0
+2021-08-10 14:56:48|INFO|rows Updated           = 0
+2021-08-10 14:56:48|INFO|data formatting errors = 0
+2021-08-10 14:56:48|INFO|gpload failed

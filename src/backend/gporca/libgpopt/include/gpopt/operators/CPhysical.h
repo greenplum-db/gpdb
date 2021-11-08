@@ -34,7 +34,7 @@ namespace gpopt
 using namespace gpos;
 
 // arrays of unsigned integer arrays
-typedef CDynamicPtrArray<ULONG_PTR, CleanupDeleteArray> UlongPtrArray;
+using UlongPtrArray = CDynamicPtrArray<ULONG_PTR, CleanupDeleteArray>;
 
 class CTableDescriptor;
 class CCTEMap;
@@ -138,10 +138,10 @@ private:
 	};	// class CReqdColsRequest
 
 	// map of incoming required columns request to computed column sets
-	typedef CHashMap<CReqdColsRequest, CColRefSet, CReqdColsRequest::HashValue,
-					 CReqdColsRequest::Equals, CleanupRelease<CReqdColsRequest>,
-					 CleanupRelease<CColRefSet> >
-		ReqdColsReqToColRefSetMap;
+	using ReqdColsReqToColRefSetMap =
+		CHashMap<CReqdColsRequest, CColRefSet, CReqdColsRequest::HashValue,
+				 CReqdColsRequest::Equals, CleanupRelease<CReqdColsRequest>,
+				 CleanupRelease<CColRefSet>>;
 
 	// hash map of child columns requests
 	ReqdColsReqToColRefSetMap *m_phmrcr;

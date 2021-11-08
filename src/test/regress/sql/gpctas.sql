@@ -199,3 +199,22 @@ from
 
 -- then refresh should error out
 refresh materialized view sro_mv_issue_11999;
+
+
+-- Test CTAS + initplan, and an exception was raised in preprocess_initplans
+CREATE OR REPLACE FUNCTION public.exception_func()
+ RETURNS refcursor
+ LANGUAGE plpgsql
+AS $function$declare cname refcursor = 'result'; begin open cname for select 1; raise sqlstate '02000'; return cname; exception when sqlstate '02000' then  return cname; end;$function$;
+
+SELECT exception_func() INTO TEMPORARY test_tmp1;
+
+SELECT * FROM test_tmp1;
+
+CREATE TEMPORARY TABLE test_tmp2 AS SELECT exception_func();
+
+SELECT * FROM test_tmp2;
+
+DROP FUNCTION public.exception_func();
+DROP TABLE test_tmp1;
+DROP TABLE test_tmp2;

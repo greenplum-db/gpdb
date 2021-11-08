@@ -2124,7 +2124,7 @@ CTranslatorUtils::CreateDXLProjElemConstNULL(CMemoryPool *mp,
 	else if (mdid->Equals(&CMDIdGPDB::m_mdid_bool))
 	{
 		datum_dxl = GPOS_NEW(mp)
-			CDXLDatumBool(mp, mdid, true /*fConstNull*/, 0 /*value*/);
+			CDXLDatumBool(mp, mdid, true /*fConstNull*/, false /*value*/);
 	}
 	else if (mdid->Equals(&CMDIdGPDB::m_mdid_oid))
 	{

@@ -148,9 +148,8 @@ CREATE TABLE foo(i int);
         performance when running queries, creating backups, and to store data more sequentially. </p>
       <p>The Greenplum Database server configuration parameter <codeph>temp_tablespaces</codeph>
         controls the location for both temporary tables and temporary spill files for hash aggregate
-        and hash join queries. (Temporary files for purposes such as sorting large data sets are
-        stored with general segment data in
-            <codeph>&lt;<varname>data_dir</varname>>/&lt;<varname>seg_ID</varname>>/base/pgsql_tmp</codeph>.)</p>
+        and hash join queries. Temporary files for purposes such as sorting large data sets are also
+        created in these tablespaces.</p>
       <p><codeph>temp_tablespaces</codeph> specifies tablespaces in which to create temporary
         objects (temp tables and indexes on temp tables) when a <codeph>CREATE</codeph> command does
         not explicitly specify a tablespace.</p>

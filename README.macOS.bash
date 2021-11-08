@@ -21,10 +21,19 @@ brew install apr # gpfdist
 brew install apr-util # gpfdist
 brew install zstd
 brew install pkg-config
+brew install perl
 brew link --force apr
 brew link --force apr-util
 
+# Needed for pygresql, or you can source greenplum_path.sh after compiling database and installing python-dependencies then
+brew install postgresql
+
 brew install python3
+
+# Due to recent update on OS net-tools package. Mac doesn't have support for ss and ip by default.
+# Hence as a workaround installing iproute2mac for ip support and creating soft link for ss support
+brew install iproute2mac
+sudo ln -s /usr/sbin/netstat /usr/local/bin/ss
 
 echo 127.0.0.1$'\t'$HOSTNAME | sudo tee -a /etc/hosts
 

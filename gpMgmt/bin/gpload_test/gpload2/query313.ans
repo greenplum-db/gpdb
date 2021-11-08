@@ -1,10 +1,9 @@
-NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
-2020-12-17 15:46:01|INFO|gpload session started 2020-12-17 15:46:01
-2020-12-17 15:46:01|INFO|setting schema 'public' for table 'texttable'
-2020-12-17 15:46:01|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2020-12-17 15:46:01|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e88f3198_403b_11eb_8f64_000c299afcc5
-2020-12-17 15:46:01|INFO|running time: 0.06 seconds
-2020-12-17 15:46:01|INFO|rows Inserted          = 11
-2020-12-17 15:46:01|INFO|rows Updated           = 0
-2020-12-17 15:46:01|INFO|data formatting errors = 0
-2020-12-17 15:46:01|INFO|gpload succeeded
+2021-07-27 15:41:31|INFO|gpload session started 2021-07-27 15:41:31
+2021-07-27 15:41:31|INFO|setting schema 'public' for table 'texttable'
+2021-07-27 15:41:31|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-07-27 15:41:31|INFO|did not find an external table to reuse. creating ext_gpload_reusable_0f405c92_eeae_11eb_aa19_0050569e2380
+2021-07-27 15:41:31|INFO|running time: 0.05 seconds
+2021-07-27 15:41:31|INFO|rows Inserted          = 11
+2021-07-27 15:41:31|INFO|rows Updated           = 0
+2021-07-27 15:41:31|INFO|data formatting errors = 2
+2021-07-27 15:41:31|INFO|gpload succeeded

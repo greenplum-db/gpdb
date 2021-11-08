@@ -161,6 +161,14 @@ int			gp_gang_creation_retry_count = 5;	/* disable by default */
 int			gp_gang_creation_retry_timer = 2000;	/* 2000ms */
 
 /*
+ * These are GUCs to tune the TCP_KEEPALIVE parameters
+ * for QD/QE libpq connections
+ */
+int			gp_dispatch_keepalives_idle = 0;
+int			gp_dispatch_keepalives_interval = 0;
+int			gp_dispatch_keepalives_count = 0;
+
+/*
  * gp_enable_slow_writer_testmode
  *
  * In order facilitate testing of reader-gang/writer-gang synchronization,
@@ -311,6 +319,7 @@ char	   *gp_autostats_mode_string;
 int			gp_autostats_mode_in_functions;
 char	   *gp_autostats_mode_in_functions_string;
 int			gp_autostats_on_change_threshold = 100000;
+bool		gp_autostats_allow_nonowner = false;
 bool		log_autostats = true;
 
 /* --------------------------------------------------------------------------------------------------

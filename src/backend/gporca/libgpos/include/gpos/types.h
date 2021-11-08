@@ -39,47 +39,47 @@ namespace gpos
 // Basic types to be used instead of built-ins
 // Add types as needed;
 
-typedef unsigned char BYTE;
-typedef char CHAR;
+using BYTE = unsigned char;
+using CHAR = char;
 // ignore signed char for the moment
 
 // wide character type
-typedef wchar_t WCHAR;
+using WCHAR = wchar_t;
 
-typedef bool BOOL;
+using BOOL = bool;
 
 // numeric types
 
-typedef size_t SIZE_T;
-typedef ssize_t SSIZE_T;
-typedef mode_t MODE_T;
+using SIZE_T = size_t;
+using SSIZE_T = ssize_t;
+using MODE_T = mode_t;
 
 // define ULONG,ULLONG as types which implement standard's
 // requirements for ULONG_MAX and ULLONG_MAX; eliminate standard's slack
 // by fixed sizes rather than min requirements
 
-typedef uint32_t ULONG;
+using ULONG = uint32_t;
 GPOS_CPL_ASSERT(4 == sizeof(ULONG));
 enum
 {
 	ulong_max = ((::gpos::ULONG) -1)
 };
 
-typedef uint64_t ULLONG;
+using ULLONG = uint64_t;
 GPOS_CPL_ASSERT(8 == sizeof(ULLONG));
 enum
 {
 	ullong_max = ((::gpos::ULLONG) -1)
 };
 
-typedef uintptr_t ULONG_PTR;
+using ULONG_PTR = uintptr_t;
 #define ULONG_PTR_MAX (gpos::ullong_max)
 
-typedef uint16_t USINT;
-typedef int16_t SINT;
-typedef int32_t INT;
-typedef int64_t LINT;
-typedef intptr_t INT_PTR;
+using USINT = uint16_t;
+using SINT = int16_t;
+using INT = int32_t;
+using LINT = int64_t;
+using INT_PTR = intptr_t;
 
 GPOS_CPL_ASSERT(2 == sizeof(USINT));
 GPOS_CPL_ASSERT(2 == sizeof(SINT));
@@ -109,13 +109,13 @@ enum
 	sint_min = (-gpos::sint_max - 1)
 };
 
-typedef double DOUBLE;
+using DOUBLE = double;
 
 // holds for all platforms
 GPOS_CPL_ASSERT(sizeof(ULONG_PTR) == sizeof(void *));
 
 // variadic parameter list type
-typedef va_list VA_LIST;
+using VA_LIST = va_list;
 
 // enum for results on OS level (instead of using a global error variable)
 enum GPOS_RESULT

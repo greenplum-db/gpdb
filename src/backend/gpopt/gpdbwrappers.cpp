@@ -916,6 +916,9 @@ gpdb::GetComparisonOperator(Oid left_oid, Oid right_oid, unsigned int cmpt)
 {
 	GP_WRAP_START;
 	{
+#ifdef FAULT_INJECTOR
+		SIMPLE_FAULT_INJECTOR("gpdbwrappers_get_comparison_operator");
+#endif
 		/* catalog tables: pg_amop */
 		return get_comparison_operator(left_oid, right_oid, (CmpType) cmpt);
 	}
@@ -1954,22 +1957,17 @@ gpdb::GetDistributionPolicy(Relation rel)
 	return nullptr;
 }
 
-#if 0
 gpos::BOOL
-gpdb::IsChildPartDistributionMismatched
-	(
-	Relation rel
-	)
+gpdb::IsChildPartDistributionMismatched(Relation rel)
 {
-    GP_WRAP_START;
-    {
-    	/* catalog tables: pg_class, pg_inherits */
-    	return child_distribution_mismatch(rel);
-    }
-    GP_WRAP_END;
-    return false;
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_class, pg_inherits */
+		return child_distribution_mismatch(rel);
+	}
+	GP_WRAP_END;
+	return false;
 }
-#endif
 
 bool
 gpdb::RelationExists(Oid oid)

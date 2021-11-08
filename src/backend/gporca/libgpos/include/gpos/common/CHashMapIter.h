@@ -32,7 +32,7 @@ template <class K, class T, ULONG (*HashFn)(const K *),
 class CHashMapIter : public CStackObject
 {
 	// short hand for hashmap type
-	typedef CHashMap<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> TMap;
+	using TMap = CHashMap<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn>;
 
 private:
 	// map to iterate

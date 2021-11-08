@@ -105,10 +105,10 @@ public:
 };
 
 // array of datums
-typedef CDynamicPtrArray<CDXLDatum, CleanupRelease> CDXLDatumArray;
+using CDXLDatumArray = CDynamicPtrArray<CDXLDatum, CleanupRelease>;
 
 // dynamic array of datum arrays -- array owns elements
-typedef CDynamicPtrArray<CDXLDatumArray, CleanupRelease> CDXLDatum2dArray;
+using CDXLDatum2dArray = CDynamicPtrArray<CDXLDatumArray, CleanupRelease>;
 }  // namespace gpdxl
 
 #endif	// !GPDXL_CDXLDatum_H

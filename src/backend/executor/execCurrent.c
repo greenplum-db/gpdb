@@ -117,6 +117,9 @@ execCurrentOf(CurrentOfExpr *cexpr,
  * but it doesn't have to be scanning a row of that table (i.e. it can
  * be scanning a row of a different table in the same inheritance hierarchy).
  * The current table's oid is returned in *current_table_oid.
+ *
+ * GPDB calls it before dispatching to make QEs get the same current position
+ * of the cursor.
  */
 void
 getCurrentOf(CurrentOfExpr *cexpr,
@@ -186,6 +189,21 @@ getCurrentOf(CurrentOfExpr *cexpr,
 						cursor_name)));
 
 	/*
+	 * The referenced cursor must be simply updatable. This has already
+	 * been discerned by parse/analyze for the DECLARE CURSOR of the given
+	 * cursor. This flag assures us that gp_segment_id, ctid, and tableoid (if necessary)
+	 * will be available as junk metadata, courtesy of preprocess_targetlist.
+	 *
+	 * Apply simply updatable check to ordinary tables. Refer to the issue:
+	 * https://github.com/greenplum-db/gpdb/issues/9838.
+	 */
+	if (!OidIsValid(queryDesc->plannedstmt->simplyUpdatableRel))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+						errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
+								cursor_name, table_name)));
+
+	/*
 	 * gpdb partition table routine is different with upstream
 	 * so we hold private updatable check method.
 	 */
@@ -199,18 +217,6 @@ getCurrentOf(CurrentOfExpr *cexpr,
 		relispartition ||
 		get_rel_persistence(table_oid) == RELPERSISTENCE_TEMP)
 	{
-		/*
-		 * The referenced cursor must be simply updatable. This has already
-		 * been discerned by parse/analyze for the DECLARE CURSOR of the given
-		 * cursor. This flag assures us that gp_segment_id, ctid, and tableoid (if necessary)
-		 * will be available as junk metadata, courtesy of preprocess_targetlist.
-		 */
-		if (!OidIsValid(queryDesc->plannedstmt->simplyUpdatableRel))
-			ereport(ERROR,
-			        (errcode(ERRCODE_INVALID_CURSOR_STATE),
-					        errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
-					               cursor_name, table_name)));
-
 		/*
 		 * The target relation must directly match the cursor's relation. This throws out
 		 * the simple case in which a cursor is declared against table X and the update is

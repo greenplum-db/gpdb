@@ -1581,64 +1581,6 @@ TempTablespacePath(char *path, Oid tablespace)
 }
 
 /*
- * Get full path to a temporary file with given name.
- *
- * This can be used, if you want to create a temporary file,
- * but don't want to use the OpenNamedTemporaryFile function
- * for some reason. For example, if you want to create a FIFO
- * or a directory, rather than a regular file.
- *
- * If 'createdir' is true, the pgsql_tmp directory is created
- * if it doesn't exist yet.
- */
-char *
-GetTempFilePath(const char *filename, bool createdir)
-{
-	char		tempdirpath[MAXPGPATH];
-	char		tempfilepath[MAXPGPATH];
-	Oid			tblspcOid;
-
-	if (MyDatabaseTableSpace)
-		tblspcOid = MyDatabaseTableSpace;
-	else
-		tblspcOid = DEFAULTTABLESPACE_OID;
-
-	/*
-	 * Identify the tempfile directory for this tablespace.
-	 *
-	 * If someone tries to specify pg_global, use pg_default instead.
-	 */
-	if (tblspcOid == DEFAULTTABLESPACE_OID ||
-		tblspcOid == GLOBALTABLESPACE_OID)
-	{
-		/* The default tablespace is {datadir}/base */
-		snprintf(tempdirpath, sizeof(tempdirpath), "base/%s",
-				 PG_TEMP_FILES_DIR);
-	}
-	else
-	{
-		/* All other tablespaces are accessed via symlinks */
-		snprintf(tempdirpath, sizeof(tempdirpath), "pg_tblspc/%u/%s/%s",
-				 tblspcOid, GP_TABLESPACE_VERSION_DIRECTORY, PG_TEMP_FILES_DIR);
-	}
-
-	/*
-	 * We might need to create the tablespace's tempfile directory, if no
-	 * one has yet done so.
-	 *
-	 * Don't check for error from mkdir. It will fail if the directory
-	 * exists already, which is quite likely. If it fails for some other
-	 * reason, we'll bomb out when creating the file in the directory.
-	 */
-	if (createdir)
-		mkdir(tempdirpath, S_IRWXU);
-
-	snprintf(tempfilepath, sizeof(tempfilepath), "%s/%s_%s",
-			 tempdirpath, PG_TEMP_FILE_PREFIX, filename);
-	return pstrdup(tempfilepath);
-}
-
-/*
  * Open a temporary file in a specific tablespace.
  * Subroutine for OpenTemporaryFile, which see for details.
  */
@@ -2909,7 +2851,18 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 {
 	int			i;
 
-	Assert(TempTablespacesAreSet());
+	/*
+	 * GPDB: This function is called only by SharedFileSetInit(), in which
+	 * we call PrepareTempTablespaces() just before this function. In upstream
+	 * Postgres, we would only go through this code path inside a transaction.
+	 * However, in GPDB, SharedFileSetInit() may also get called in the process
+	 * of ExecSquelchShareInputScan(), which could happen during abort
+	 * transaction. If we are not in a transaction, PrepareTempTablespaces()
+	 * would have to return early without setting the temp tablespaces. The
+	 * shared fileset in this case will be writen in the default table space
+	 * rather than the temp tablespaces.
+	 */
+	Assert(TempTablespacesAreSet() || IsAbortInProgress());
 	for (i = 0; i < numTempTableSpaces && i < numSpaces; ++i)
 		tableSpaces[i] = tempTableSpaces[i];
 

@@ -2374,10 +2374,12 @@ build_startup_packet(const PGconn *conn, char *packet,
 	 * affects the version number.
 	 */
 	if (conn->gpconntype && conn->gpconntype[0]
-		&& strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) != 0)
+		&& strcmp(conn->gpconntype, GPCONN_TYPE_DEFAULT) != 0)
 		ADD_STARTUP_OPTION(GPCONN_TYPE, conn->gpconntype);
 	if (conn->pgoptions && conn->pgoptions[0])
 		ADD_STARTUP_OPTION("options", conn->pgoptions);
+	if (conn->diffoptions && conn->diffoptions[0])
+		ADD_STARTUP_OPTION("diff_options", conn->diffoptions);
 	if (conn->send_appname)
 	{
 		/* Use appname if present, otherwise use fallback */

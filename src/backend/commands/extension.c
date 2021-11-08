@@ -969,6 +969,10 @@ execute_extension_script(Node *stmt,
 	}
 	PG_CATCH();
 	{
+		/*
+		 * For QEs, the two global variables will be reset
+		 * during abort transaction. (refer: AtAbort_Extension_QE()).
+		 */
 		creating_extension = false;
 		CurrentExtensionObject = InvalidOid;
 
@@ -976,22 +980,6 @@ execute_extension_script(Node *stmt,
 		 * Restore the GUC variables we set above.
 		 */
 		AtEOXact_GUC(true, save_nestlevel);
-		if (Gp_role == GP_ROLE_DISPATCH && stmt != NULL)
-		{
-			/*
-			 * We must reset QE CurrentExtensionObject to InvalidOid.
-			 *
-			 * Previously, we dispatch a statement with end tag to implement
-			 * the logic of reset QE CurrentExtensionObject to InvalidOid. 
-			 * But this method has a big drawback: since current code is in 
-			 * a Catch block, which means some errors must have happened and 
-			 * QEs may have already been in the Abort State and cannot execute 
-			 * any statement dispatched to them.
-			 * 
-			 * So we simply destroy all QEs here to implement the clear logic.
-			 */
-			DisconnectAndDestroyAllGangs(false);
-		}
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -3582,4 +3570,22 @@ read_whole_file(const char *filename, int *length)
 
 	buf[*length] = '\0';
 	return buf;
+}
+
+/*
+ * This function is Greenplum specific. In Greenplum, Create Extension
+ * will first create the catalog entry (this will dispatch to QEs also),
+ * then to create object (like UDFs). Those second-stage operations
+ * will reply on themselves' MPP exeuction (like CreateFunction) so no
+ * execute_extension_script invokation on QEs. Previously, QD dispatch
+ * a new statement to reset the extension related global vars but that
+ * might introduce bugs when error happens. Now we invoke the following
+ * to do reset at AbortOutOfAnyTransaction() and AbortTrasaction() since
+ * error happen means Dtx abort.
+ */
+void
+ResetExtensionCreatingGlobalVarsOnQE(void)
+{
+	creating_extension = false;
+	CurrentExtensionObject = InvalidOid;
 }

@@ -281,19 +281,34 @@ analyze_rel_internal(Oid relid, RangeVar *relation,
 #endif
 
 	/*
-	 * Check if relation needs to be skipped based on ownership.  This check
-	 * happens also when building the relation list to analyze for a manual
-	 * operation, and needs to be done additionally here as ANALYZE could
+	 * analyze_rel can be called in 3 different contexts:  explicitly by the user
+	 * (eg. ANALYZE, VACUUM ANALYZE), implicitly by autovacuum, or implicitly by
+	 * autostats.
+	 *
+	 * In the first case, we always want to make sure the user is the owner of the
+	 * table.  In the autovacuum case, it will be called as superuser so we don't
+	 * really care, but the ownership check should always succeed.  For autostats,
+	 * we only do the check if gp_autostats_allow_nonowner=false, otherwise we can
+	 * proceed with the analyze.
+	 *
+	 * This check happens also when building the relation list to analyze for a
+	 * manual operation, and needs to be done additionally here as ANALYZE could
 	 * happen across multiple transactions where relation ownership could have
 	 * changed in-between.  Make sure to generate only logs for ANALYZE in
 	 * this case.
 	 */
-	if (!vacuum_is_relation_owner(RelationGetRelid(onerel),
-								  onerel->rd_rel,
-								  params->options & VACOPT_ANALYZE))
+
+	if (!(params->auto_stats && gp_autostats_allow_nonowner))
 	{
-		relation_close(onerel, ShareUpdateExclusiveLock);
-		return;
+		if (!vacuum_is_relation_owner(RelationGetRelid(onerel),
+			onerel->rd_rel,
+		  params->options & VACOPT_ANALYZE))
+		{
+			{
+				relation_close(onerel, ShareUpdateExclusiveLock);
+				return;
+			}
+		}
 	}
 
 	/*
@@ -1518,13 +1533,13 @@ acquire_sample_rows(Relation onerel, int elevel,
 	 * Emit some interesting relation info
 	 */
 	ereport(elevel,
-	        (errmsg("\"%s\": scanned %d of %u pages, "
-	                "containing %.0f live rows and %.0f dead rows; "
-	                "%d rows in sample, %.0f estimated total rows",
-	                RelationGetRelationName(onerel),
-	                bs.m, totalblocks,
-	                liverows, deadrows,
-	                numrows, *totalrows)));
+		(errmsg("\"%s\": scanned %d of %u pages, "
+				"containing %.0f live rows and %.0f dead rows; "
+				"%d rows in sample, %.0f estimated total rows",
+				RelationGetRelationName(onerel),
+				bs.m, totalblocks,
+				liverows, deadrows,
+				numrows, *totalrows)));
 
 	return numrows;
 }
@@ -2156,9 +2171,9 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	AttInMetadata *attinmeta;
 	StringInfoData str;
 	int			sampleTuples;	/* 32 bit - assume that number of tuples will not > 2B */
-	char 	  **funcRetValues;
-	bool 	   *funcRetNulls;
-	char 	  **values;
+	char	  **funcRetValues;
+	bool	   *funcRetNulls;
+	char	  **values;
 	int			numLiveColumns;
 	int			perseg_targrows;
 	int			ncolumns;

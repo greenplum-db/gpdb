@@ -37,13 +37,13 @@ namespace gpos
 class CMemoryPoolManager
 {
 private:
-	typedef CSyncHashtableAccessByKey<CMemoryPool, ULONG_PTR>
-		MemoryPoolKeyAccessor;
+	using MemoryPoolKeyAccessor =
+		CSyncHashtableAccessByKey<CMemoryPool, ULONG_PTR>;
 
-	typedef CSyncHashtableIter<CMemoryPool, ULONG_PTR> MemoryPoolIter;
+	using MemoryPoolIter = CSyncHashtableIter<CMemoryPool, ULONG_PTR>;
 
-	typedef CSyncHashtableAccessByIter<CMemoryPool, ULONG_PTR>
-		MemoryPoolIterAccessor;
+	using MemoryPoolIterAccessor =
+		CSyncHashtableAccessByIter<CMemoryPool, ULONG_PTR>;
 
 	// memory pool in which all objects created by the manager itself
 	// are allocated - must be thread-safe
@@ -102,12 +102,14 @@ protected:
 		// raw allocation of memory for internal memory pools
 		void *alloc_internal = gpos::clib::Malloc(sizeof(PoolType));
 
-		// create internal memory pool
-		CMemoryPool *internal = ::new (alloc_internal) PoolType();
+		GPOS_OOM_CHECK(alloc_internal);
 
-		// instantiate manager
 		GPOS_TRY
 		{
+			// create internal memory pool
+			CMemoryPool *internal = ::new (alloc_internal) PoolType();
+
+			// instantiate manager
 			m_memory_pool_mgr = ::new ManagerType(internal, EMemoryPoolTracker);
 			m_memory_pool_mgr->Setup();
 		}

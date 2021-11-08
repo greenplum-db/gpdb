@@ -133,3 +133,10 @@ Feature: Tests for gpinitstandby feature
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
         And verify that the file "pg_hba.conf" in the coordinator data directory has "no" line starting with "host.*replication.*(127.0.0.1|::1).*trust"
+
+    Scenario: gpinitstandby should not throw error when banner exists on the hsot
+        Given the database is running
+        And the standby is not initialized
+        When the user sets banner on host
+        And the user runs gpinitstandby with options " "
+        Then gpinitstandby should return a return code of 0

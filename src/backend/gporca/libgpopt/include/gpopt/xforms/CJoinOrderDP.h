@@ -87,21 +87,20 @@ private:
 	}
 
 	// hash map from component to best join order
-	typedef CHashMap<CBitSet, CExpression, UlHashBitSet, FEqualBitSet,
-					 CleanupRelease<CBitSet>, CleanupRelease<CExpression> >
-		BitSetToExpressionMap;
+	using BitSetToExpressionMap =
+		CHashMap<CBitSet, CExpression, UlHashBitSet, FEqualBitSet,
+				 CleanupRelease<CBitSet>, CleanupRelease<CExpression>>;
 
 	// hash map from component pair to connecting edges
-	typedef CHashMap<SComponentPair, CExpression, SComponentPair::HashValue,
-					 SComponentPair::Equals, CleanupRelease<SComponentPair>,
-					 CleanupRelease<CExpression> >
-		ComponentPairToExpressionMap;
+	using ComponentPairToExpressionMap =
+		CHashMap<SComponentPair, CExpression, SComponentPair::HashValue,
+				 SComponentPair::Equals, CleanupRelease<SComponentPair>,
+				 CleanupRelease<CExpression>>;
 
 	// hash map from expression to cost of best join order
-	typedef CHashMap<CExpression, CDouble, CExpression::HashValue,
-					 CUtils::Equals, CleanupRelease<CExpression>,
-					 CleanupDelete<CDouble> >
-		ExpressionToCostMap;
+	using ExpressionToCostMap =
+		CHashMap<CExpression, CDouble, CExpression::HashValue, CUtils::Equals,
+				 CleanupRelease<CExpression>, CleanupDelete<CDouble>>;
 
 	// lookup table for links
 	ComponentPairToExpressionMap *m_phmcomplink;

@@ -41,19 +41,19 @@ class CPartConstraint;
 class CTableDescriptor;
 
 // map of expression to array of expressions
-typedef CHashMap<CExpression, CExpressionArray, CExpression::HashValue,
-				 CUtils::Equals, CleanupRelease<CExpression>,
-				 CleanupRelease<CExpressionArray> >
-	ExprToExprArrayMap;
+using ExprToExprArrayMap =
+	CHashMap<CExpression, CExpressionArray, CExpression::HashValue,
+			 CUtils::Equals, CleanupRelease<CExpression>,
+			 CleanupRelease<CExpressionArray>>;
 
 // iterator of map of expression to array of expressions
-typedef CHashMapIter<CExpression, CExpressionArray, CExpression::HashValue,
-					 CUtils::Equals, CleanupRelease<CExpression>,
-					 CleanupRelease<CExpressionArray> >
-	ExprToExprArrayMapIter;
+using ExprToExprArrayMapIter =
+	CHashMapIter<CExpression, CExpressionArray, CExpression::HashValue,
+				 CUtils::Equals, CleanupRelease<CExpression>,
+				 CleanupRelease<CExpressionArray>>;
 
 // array of array of expressions
-typedef CDynamicPtrArray<CExpressionArray, CleanupRelease> CExpressionArrays;
+using CExpressionArrays = CDynamicPtrArray<CExpressionArray, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

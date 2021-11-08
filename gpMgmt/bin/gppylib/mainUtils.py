@@ -420,3 +420,46 @@ def addCoordinatorDirectoryOptionForSingleClusterProgram(addTo):
                      help="Optional. The coordinator host data directory. If not specified, the value set" \
                           "for $COORDINATOR_DATA_DIRECTORY will be used.")
 
+def parseStatusLine(line, isStart = False, isStop = False):
+    """
+    Function to parse status line of the result out, for gpstart and gpstop.
+    Currently the parsing for both the utilities is implemented at two different places
+    __processStartOrConvertCommands() and  _process_segment_stop()
+    This is an attempt to consolidate
+    """
+
+    if isStart:
+        tag = "STARTED:"
+    elif isStop:
+        tag = "STOPPED:"
+    else:
+        raise Exception("parseStatusLine: Invalid input")
+
+    fields = line.split('--')
+    index = 1
+    started_tag_index = index + 1
+    while not fields[started_tag_index].startswith(tag):
+        started_tag_index += 1
+
+    dir = "--".join(fields[index:started_tag_index])
+    dir = dir.split(':')[1]
+
+    index = started_tag_index
+    started = fields[index].split(':')[1]
+    index += 1
+
+    if isStart:
+        reasonCode = gp.SEGSTART_ERROR_UNKNOWN_ERROR
+        if fields[index].startswith("REASONCODE:"):
+            reasonCode = int(fields[index].split(":")[1])
+            index += 1
+    else:
+        reasonCode = gp.SEGSTART_SUCCESS
+
+    # The funny join and splits are because Reason could have colons or -- in the text itself
+    reasonStr = "--".join(fields[index:])
+    reasonArr = reasonStr.split(':')
+    reasonArr = reasonArr[1:]
+    reasonStr = ":".join(reasonArr)
+    return reasonCode, reasonStr, started, dir
+

@@ -41,6 +41,10 @@ private:
 		// is upper bound of bucket 1 closed
 		BOOL m_fUb1Closed;
 
+		CDouble m_frequency1;
+
+		CDouble m_distinct1;
+
 		// lower bound of bucket 2
 		INT m_iLb2;
 
@@ -52,6 +56,10 @@ private:
 
 		// is upper bound of bucket 2 closed
 		BOOL m_fUb2Closed;
+
+		CDouble m_frequency2;
+
+		CDouble m_distinct2;
 
 		// result of the bucket intersect test
 		BOOL fIntersect;
@@ -68,10 +76,14 @@ private:
 		// is upper bound of output bucket closed
 		BOOL m_fUbOutputClosed;
 
+		CDouble m_frequencyOutput;
+
+		CDouble m_distinctOutput;
+
 	};	// SBucketsIntersectTestElem
 
 	// do the bucket boundaries match
-	static BOOL FMatchBucketBoundary(CBucket *bucket1, CBucket *bucket2);
+	static BOOL FMatchBucket(CBucket *bucket1, CBucket *bucket2);
 
 public:
 	// unittests

@@ -1046,6 +1046,11 @@ CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
 	// extract part table base stats from passed handle
 	IStatistics *base_table_stats = exprhdl.Pstats();
 	GPOS_ASSERT(nullptr != base_table_stats);
+	if (nullptr == base_table_stats)
+	{
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoStats,
+				   GPOS_WSZ_LIT("CPhysicalDynamicScan"));
+	}
 
 	if (!GPOS_FTRACE(EopttraceDeriveStatsForDPE))
 	{

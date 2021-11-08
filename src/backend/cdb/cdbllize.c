@@ -144,6 +144,7 @@ typedef struct
 static Node *fix_outer_query_motions_mutator(Node *node, decorate_subplans_with_motions_context *context);
 static Plan *fix_subplan_motion(PlannerInfo *root, Plan *subplan, Flow *outer_query_flow);
 static bool build_slice_table_walker(Node *node, build_slice_table_context *context);
+static void adjust_top_path_for_parallel_retrieve_cursor(Path *path, PlanSlice *slice);
 
 /*
  * Create a GpPolicy that matches the natural distribution of the given plan.
@@ -382,7 +383,8 @@ cdbllize_get_final_locus(PlannerInfo *root, PathTarget *target)
  * NB: keep cdbllize_get_final_locus() up to date with any changes here!
  */
 Path *
-cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path, PlanSlice *topslice)
+cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path,
+		PlanSlice *topslice)
 {
 	Query	   *query = root->parse;
 	GpPolicy   *targetPolicy = NULL;
@@ -594,35 +596,40 @@ cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path, PlanSlice *topslice
 
 		if (query->commandType == CMD_SELECT || query->returningList)
 		{
-			/*
-			 * Query result needs to be brought back to the QD. Ask for
-			 * a motion to bring it in. If the result already has the
-			 * right locus, cdbpath_create_motion_path() will return it
-			 * unmodified.
-			 *
-			 * If the query has an ORDER BY clause, use Merge Receive to
-			 * preserve the ordering. The plan has already been set up to
-			 * ensure each qExec's result is properly ordered according to
-			 * the ORDER BY specification.
-			 */
-			CdbPathLocus entryLocus;
+			if (!root->glob->is_parallel_cursor)
+			{
+				/*
+				 * Query result needs to be brought back to the QD. Ask for
+				 * a motion to bring it in. If the result already has the
+				 * right locus, cdbpath_create_motion_path() will return it
+				 * unmodified.
+				 *
+				 * If the query has an ORDER BY clause, use Merge Receive to
+				 * preserve the ordering. The plan has already been set up to
+				 * ensure each qExec's result is properly ordered according to
+				 * the ORDER BY specification.
+				 */
+				CdbPathLocus entryLocus;
 
-			CdbPathLocus_MakeEntry(&entryLocus);
+				CdbPathLocus_MakeEntry(&entryLocus);
 
-			/*
-			 * In a Motion to Entry locus, the numsegments indicates the
-			 * number of segments in the *sender*.
-			 */
-			entryLocus.numsegments = best_path->locus.numsegments;
+				/*
+				 * In a Motion to Entry locus, the numsegments indicates the
+				 * number of segments in the *sender*.
+				 */
+				entryLocus.numsegments = best_path->locus.numsegments;
 
-			best_path = cdbpath_create_motion_path(root,
-												   best_path,
-												   root->sort_pathkeys,
-												   false,
-												   entryLocus);
-			topslice->numsegments = 1;
-			topslice->segindex = 0;
-			topslice->gangType = GANGTYPE_UNALLOCATED;
+				best_path = cdbpath_create_motion_path(root,
+													   best_path,
+													   root->sort_pathkeys,
+													   false,
+													   entryLocus);
+				topslice->numsegments = 1;
+				topslice->segindex = 0;
+				topslice->gangType = GANGTYPE_UNALLOCATED;
+			}
+			else
+				adjust_top_path_for_parallel_retrieve_cursor(best_path, topslice);
 		}
 		else
 		{
@@ -806,7 +813,6 @@ cdbllize_decorate_subplans_with_motions(PlannerInfo *root, Plan *plan)
 
 	return result;
 }
-
 
 /*
  * Workhorse for cdbllize_fix_outer_query_motions().
@@ -1556,4 +1562,37 @@ motion_sanity_check(PlannerInfo *root, Plan *plan)
 
 	if (sanity_result.flags & SANITY_DEADLOCK)
 		elog(ERROR, "Post-planning sanity check detected motion deadlock.");
+}
+
+static void
+adjust_top_path_for_parallel_retrieve_cursor(Path *path, PlanSlice *slice)
+{
+	if (CdbPathLocus_IsSingleQE(path->locus)
+		|| CdbPathLocus_IsGeneral(path->locus)
+		|| CdbPathLocus_IsEntry(path->locus))
+	{
+		/*
+		 * For these scenarios, parallel retrieve cursor needs to run on entrydb
+		 * since endpoint QE needs to interact with the retrieve connections.
+		 */
+		slice->numsegments = 1;
+		slice->gangType = GANGTYPE_ENTRYDB_READER;
+	}
+	else if (CdbPathLocus_IsSegmentGeneral(path->locus))
+	{
+		/*
+		 * queries to replicated table run on a single segment.
+		 */
+		slice->segindex = gp_session_id % path->locus.numsegments;
+		slice->numsegments = path->locus.numsegments;
+		slice->gangType = GANGTYPE_SINGLETON_READER;
+	}
+	else
+	{
+		/*
+		 * queries to non-replicated table run on segments.
+		 */
+		slice->numsegments = path->locus.numsegments;
+		slice->gangType = GANGTYPE_PRIMARY_READER;
+	}
 }

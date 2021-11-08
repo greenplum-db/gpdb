@@ -82,7 +82,7 @@ extern struct SegmentDatabaseDescriptor *getSegmentDescriptorFromGang(const Gang
 Gang *buildGangDefinition(List *segments, SegmentType segmentType);
 bool build_gpqeid_param(char *buf, int bufsz, bool is_writer, int identifier, int hostSegs, int icHtabSize);
 
-char *makeOptions(void);
+extern void makeOptions(char **options, char **diff_options);
 extern bool segment_failure_due_to_recovery(const char *error_message);
 extern bool segment_failure_due_to_missing_writer(const char *error_message);
 

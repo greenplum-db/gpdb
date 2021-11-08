@@ -517,11 +517,6 @@ extern bool pg_strong_random(void *buf, size_t len);
  */
 #define pg_backend_random pg_strong_random
 
-/* port/pg_strong_random.c */
-#ifdef HAVE_STRONG_RANDOM
-extern bool pg_strong_random(void *buf, size_t len);
-#endif
-
 /* port/pgcheckdir.c */
 extern int	pg_check_dir(const char *dir);
 

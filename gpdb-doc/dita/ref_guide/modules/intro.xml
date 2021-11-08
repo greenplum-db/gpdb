@@ -27,6 +27,10 @@
        <li><codeph><xref href="fuzzystrmatch.xml"
              format="dita">fuzzystrmatch</xref></codeph> - Determines similarities and differences
          between strings.</li>
+       <li><codeph><xref href="gp_legacy_string_agg.xml" scope="peer"
+             format="dita">gp_legacy_string_agg</xref></codeph> - Implements a
+         legacy, single-argument <codeph>string_agg()</codeph> aggregate function that was
+         present in Greenplum Database 5.</li>
        <li><codeph><xref href="gp_sparse_vector.xml" scope="peer"
              format="dita">gp_sparse_vector</xref></codeph> - Implements
          a Greenplum Database data type that uses compressed storage of zeros to make

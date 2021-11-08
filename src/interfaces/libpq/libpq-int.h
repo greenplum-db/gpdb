@@ -409,6 +409,7 @@ struct pg_conn
 #endif
     char       *gpconntype; /* type of connection */
     char       *gpqeid;        /* MPP: session id & startup info for qExec */
+    char       *diffoptions;  /* MPP: transfer changed GUCs(require sync) from QD to QEs */
 
 	/* Type of connection to make.  Possible values: any, read-write. */
 	char	   *target_session_attrs;

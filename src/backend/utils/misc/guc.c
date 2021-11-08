@@ -8545,6 +8545,7 @@ ExecSetVariableStmt(VariableSetStmt *stmt, bool isTopLevel)
 				Gp_role != GP_ROLE_EXECUTE)
 				WarnNoTransactionBlock(isTopLevel, "RESET TRANSACTION");
 
+			SIMPLE_FAULT_INJECTOR("reset_variable_fault");
 			(void) set_config_option(stmt->name,
 									 NULL,
 									 (superuser() ? PGC_SUSET : PGC_USERSET),

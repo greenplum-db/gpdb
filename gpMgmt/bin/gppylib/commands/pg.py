@@ -166,7 +166,10 @@ class PgControlData(Command):
             self.data = {}
             for l in self.results.stdout.split('\n'):
                 if len(l) > 0:
-                    (n,v) = l.split(':', 1)
+                    split_line = l.split(':', 1)
+                    # avoid ValueErrors when there is no value to the key
+                    n = split_line[0]
+                    v = split_line[1] if len(split_line) == 2 else ''
                     self.data[n.strip()] = v.strip() 
         return self.data[name]
 

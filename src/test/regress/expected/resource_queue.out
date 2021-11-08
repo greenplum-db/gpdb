@@ -577,3 +577,39 @@ DROP OWNED BY rq_test_u CASCADE;
 DROP USER rq_test_u;
 DROP RESOURCE QUEUE rq_test_q;
 DROP TABLE rq_product;
+-- Coverage for resource queue error conditions
+CREATE ROLE rq_test_oosm_role;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+SET ROLE rq_test_oosm_role;
+CREATE TABLE rq_test_oosm_table(i int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO rq_test_oosm_table VALUES(1);
+-- Simulate an out-of-shared-memory condition during the course of grabbing a
+-- resource queue lock (in ResLockAcquire()).
+SELECT gp_inject_fault('res_increment_add_oosm', 'skip', 1);
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+-- Queries should error out indicating that we have no shared memory left.
+SELECT * FROM rq_test_oosm_table;
+ERROR:  out of shared memory adding portal increments
+HINT:  You may need to increase max_resource_portals_per_transaction.
+SELECT gp_inject_fault('res_increment_add_oosm', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+-- Queries should succeed now.
+SELECT * FROM rq_test_oosm_table;
+ i 
+---
+ 1
+(1 row)
+
+DROP TABLE rq_test_oosm_table;
+RESET ROLE;
+DROP ROLE rq_test_oosm_role;

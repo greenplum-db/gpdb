@@ -29,18 +29,17 @@ using namespace gpmd;
 class CColRef;
 
 // colref array
-typedef CDynamicPtrArray<CColRef, CleanupNULL> CColRefArray;
-typedef CDynamicPtrArray<CColRefArray, CleanupRelease> CColRef2dArray;
+using CColRefArray = CDynamicPtrArray<CColRef, CleanupNULL>;
+using CColRef2dArray = CDynamicPtrArray<CColRefArray, CleanupRelease>;
 
 // hash map mapping ULONG -> CColRef
-typedef CHashMap<ULONG, CColRef, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupNULL<CColRef> >
-	UlongToColRefMap;
+using UlongToColRefMap =
+	CHashMap<ULONG, CColRef, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupNULL<CColRef>>;
 // iterator
-typedef CHashMapIter<ULONG, CColRef, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupNULL<CColRef> >
-	UlongToColRefMapIter;
+using UlongToColRefMapIter =
+	CHashMapIter<ULONG, CColRef, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupNULL<CColRef>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -238,12 +237,12 @@ operator<<(IOstream &os, CColRef &cr)
 }
 
 // hash map: CColRef -> ULONG
-typedef CHashMap<CColRef, ULONG, CColRef::HashValue, gpos::Equals<CColRef>,
-				 CleanupNULL<CColRef>, CleanupDelete<ULONG> >
-	ColRefToUlongMap;
+using ColRefToUlongMap =
+	CHashMap<CColRef, ULONG, CColRef::HashValue, gpos::Equals<CColRef>,
+			 CleanupNULL<CColRef>, CleanupDelete<ULONG>>;
 
-typedef CDynamicPtrArray<ColRefToUlongMap, CleanupRelease>
-	ColRefToUlongMapArray;
+using ColRefToUlongMapArray =
+	CDynamicPtrArray<ColRefToUlongMap, CleanupRelease>;
 
 }  // namespace gpopt
 

@@ -166,7 +166,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 		int			family;
 		int			ret;
 
-		ret = ic_proxy_extract_addr((struct sockaddr *) &addr->addr,
+		ret = ic_proxy_extract_sockaddr((struct sockaddr *) &addr->sockaddr,
 									name, sizeof(name), &port, &family);
 		if (ret == 0)
 			ic_proxy_log(LOG,

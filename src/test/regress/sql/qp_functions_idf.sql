@@ -28,7 +28,9 @@ interval '1 day 1 hour 12 secs' * i as days1,interval '42 minutes 10 seconds' * 
 random() * 9 + i  as b, 
 i as c from generate_series(1, 100)i;
 
+-- reduce noise, specifying a precision and format
 SET datestyle = "ISO, DMY";
+SET extra_float_digits to 0;
 -- end_ignore
 
 --TIMESTAMPTZ

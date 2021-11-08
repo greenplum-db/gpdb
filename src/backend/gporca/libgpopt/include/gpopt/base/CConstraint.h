@@ -29,26 +29,25 @@ class CExpression;
 class CConstraint;
 
 // constraint array
-typedef CDynamicPtrArray<CConstraint, CleanupRelease> CConstraintArray;
+using CConstraintArray = CDynamicPtrArray<CConstraint, CleanupRelease>;
 
 // hash map mapping CColRef -> CConstraintArray
-typedef CHashMap<CColRef, CConstraintArray, CColRef::HashValue, CColRef::Equals,
-				 CleanupNULL<CColRef>, CleanupRelease<CConstraintArray> >
-	ColRefToConstraintArrayMap;
+using ColRefToConstraintArrayMap =
+	CHashMap<CColRef, CConstraintArray, CColRef::HashValue, CColRef::Equals,
+			 CleanupNULL<CColRef>, CleanupRelease<CConstraintArray>>;
 
 // mapping CConstraint -> BOOL to cache previous containment queries,
 // we use pointer equality here for fast map lookup -- since we do shallow comparison, we do not take ownership
 // of pointer values
-typedef CHashMap<CConstraint, BOOL, gpos::HashPtr<CConstraint>,
-				 gpos::EqualPtr<CConstraint>, CleanupNULL<CConstraint>,
-				 CleanupNULL<BOOL> >
-	ConstraintContainmentMap;
+using ConstraintContainmentMap =
+	CHashMap<CConstraint, BOOL, gpos::HashPtr<CConstraint>,
+			 gpos::EqualPtr<CConstraint>, CleanupNULL<CConstraint>,
+			 CleanupNULL<BOOL>>;
 
 // hash map mapping ULONG -> CConstraint
-typedef CHashMap<ULONG, CConstraint, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupRelease<CConstraint> >
-	UlongToConstraintMap;
+using UlongToConstraintMap =
+	CHashMap<ULONG, CConstraint, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupRelease<CConstraint>>;
 
 //---------------------------------------------------------------------------
 //	@class:

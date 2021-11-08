@@ -123,7 +123,8 @@ create_gang_retry:
 		{
 			bool		ret;
 			char		gpqeid[100];
-			char	   *options;
+			char	   *options = NULL;
+			char	   *diff_options = NULL;
 
 			/*
 			 * Create the connection requests.	If we find a segment without a
@@ -156,10 +157,10 @@ create_gang_retry:
 						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						 errmsg("failed to construct connectionstring")));
 
-			options = makeOptions();
+			makeOptions(&options, &diff_options);
 
 			/* start connection in asynchronous way */
-			cdbconn_doConnectStart(segdbDesc, gpqeid, options);
+			cdbconn_doConnectStart(segdbDesc, gpqeid, options, diff_options);
 
 			if (cdbconn_isBadConnection(segdbDesc))
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

@@ -75,17 +75,17 @@ public:
 		}
 	};
 
-	typedef CDynamicPtrArray<SJoinCondition, CleanupDelete> SJoinConditionArray;
+	using SJoinConditionArray = CDynamicPtrArray<SJoinCondition, CleanupDelete>;
 
-	typedef CHashMap<IMdIdArray, CDoubleArray, SJoinCondition::HashValue,
+	using OIDPairToScaleFactorArrayMap =
+		CHashMap<IMdIdArray, CDoubleArray, SJoinCondition::HashValue,
+				 SJoinCondition::Equals, CleanupRelease<IMdIdArray>,
+				 CleanupRelease<CDoubleArray>>;
+
+	using OIDPairToScaleFactorArrayMapIter =
+		CHashMapIter<IMdIdArray, CDoubleArray, SJoinCondition::HashValue,
 					 SJoinCondition::Equals, CleanupRelease<IMdIdArray>,
-					 CleanupRelease<CDoubleArray> >
-		OIDPairToScaleFactorArrayMap;
-
-	typedef CHashMapIter<IMdIdArray, CDoubleArray, SJoinCondition::HashValue,
-						 SJoinCondition::Equals, CleanupRelease<IMdIdArray>,
-						 CleanupRelease<CDoubleArray> >
-		OIDPairToScaleFactorArrayMapIter;
+					 CleanupRelease<CDoubleArray>>;
 
 	// generate the hashmap of scale factors grouped by pred tables, also produces array of complex join preds
 	static OIDPairToScaleFactorArrayMap *GenerateScaleFactorMap(
