@@ -4743,7 +4743,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 				Oid 		relid = RelationGetRelid(rel);
 				PartStatus 	ps = rel_part_status(relid);
-				if (ps == PART_STATUS_INTERIOR || ps == PART_STATUS_LEAF)
+				if (ps != PART_STATUS_ROOT)
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
