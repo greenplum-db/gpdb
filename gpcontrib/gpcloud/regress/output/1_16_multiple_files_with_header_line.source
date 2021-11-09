@@ -33,14 +33,14 @@ SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf crlf, s3regr
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_lf wh, s3regress_multiple_files_without_header_line_lf nh where wh.volume = nh.volume;
  count 
 -------
-    17
+     3
 (1 row)
 
 -- join query between a table without header + LF and the other table with header + CRLF.
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf whcrlf, s3regress_multiple_files_without_header_line_lf nhlf where whcrlf.volume = nhlf.volume;
  count 
 -------
-    17
+     3
 (1 row)
 
 DROP EXTERNAL TABLE s3regress_multiple_files_with_header_line_lf;

@@ -4,4 +4,4 @@ ERROR:  syntax error at or near "FORMAT"
 LINE 2:         low float, volume int) FORMAT 'csv';
                                        ^
 DROP EXTERNAL TABLE s3regress_create_invalid_wet;
-ERROR:  table "s3regress_create_invalid_wet" does not exist
+ERROR:  foreign table "s3regress_create_invalid_wet" does not exist

@@ -1,3 +1,4 @@
+SET client_min_messages TO 'warning';
 CREATE READABLE EXTERNAL TABLE s3write_ret2wet_read (date text, time text, status bool, sample1 float, sample2 float,
         volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@') FORMAT 'csv';
 
@@ -24,3 +25,4 @@ DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_read;
 DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write;
 DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_read_new;
 DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write_new;
+RESET client_min_messages;
