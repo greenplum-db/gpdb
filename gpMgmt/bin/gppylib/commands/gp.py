@@ -972,20 +972,22 @@ class GpSegRecovery(Command):
     """
     Format gpsegrecovery call for running pg_basebackup/pg_rewind on remoteHost for the segments passed in confinfo
     """
-    def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite):
-        cmdStr = _get_cmd_for_recovery_wrapper('gpsegrecovery', confinfo, logdir, batchSize, verbose, forceoverwrite)
+    def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite, era):
+        cmdStr = _get_cmd_for_recovery_wrapper('gpsegrecovery', confinfo, logdir, batchSize, verbose, forceoverwrite, era)
         Command.__init__(self, name, cmdStr, REMOTE, remoteHost)
 
 
-def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize, verbose, forceoverwrite):
+def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize, verbose, forceoverwrite, era=None):
     cmdStr = '$GPHOME/sbin/{}.py -c {} -l {}'.format(wrapper_filename, pipes.quote(confinfo), pipes.quote(logdir))
 
     if verbose:
-        cmdStr += ' -v '
+        cmdStr += ' -v'
     if batchSize:
         cmdStr += ' -b %s' % batchSize
     if forceoverwrite:
         cmdStr += " --force-overwrite"
+    if era:
+        cmdStr += " --era={}".format(era)
 
     return cmdStr
 

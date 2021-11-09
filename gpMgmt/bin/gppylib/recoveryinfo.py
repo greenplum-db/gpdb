@@ -4,6 +4,7 @@ import json
 
 from gppylib import gplog
 
+
 class RecoveryInfo(object):
     """
     This class encapsulates the information needed on a segment host
@@ -33,9 +34,11 @@ class RecoveryInfo(object):
 def serialize_recovery_info_list(recovery_info_list):
     return json.dumps(recovery_info_list, default=lambda o: o.__dict__)
 
+
 def deserialize_recovery_info_list(serialized_string):
     deserialized_list = json.loads(serialized_string)
     return [RecoveryInfo(**i) for i in deserialized_list]
+
 
 def build_recovery_info(mirrors_to_build):
     """

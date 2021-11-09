@@ -108,7 +108,9 @@ class SegSetupRecovery(object):
         pass
 
     def main(self):
-        RecoveryBase().main(__file__, self.get_setup_cmds)
+        recovery_base = RecoveryBase(__file__)
+        recovery_base.main(self.get_setup_cmds(recovery_base.seg_recovery_info_list, recovery_base.options.forceoverwrite,
+                                               recovery_base.logger))
 
     def get_setup_cmds(self, seg_recovery_info_list, forceoverwrite, logger):
         cmd_list = []

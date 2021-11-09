@@ -366,6 +366,27 @@ def impl(context, env_var):
 
     del context.orig_env[env_var]
 
+
+@given('all files in pg_xlog directory are deleted from datadirectory of content {content_ids} mirror')
+def impl(context, content_ids):
+    content_ids_to_delete_files = [int(c) for c in content_ids.split(',')]
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+    for seg in segments:
+        if seg.getSegmentRole() == ROLE_MIRROR and seg.content in content_ids_to_delete_files:
+            datadir = seg.getSegmentDataDirectory()
+            shutil.rmtree('{}/pg_xlog/'.format(datadir))
+
+
+@given('all files in pg_xlog directory are deleted from data directory of saved primary')
+def impl(context):
+    data_dir = context.pseg_data_dir
+    hostname = context.pseg_hostname
+    cmd = Command(name="Remove pg_xlog files", cmdStr='rm -rf {}'.format(os.path.join(data_dir, 'pg_xlog')),
+                  remoteHost=hostname, ctxt=REMOTE)
+    cmd.run(validateAfter=True)
+
+
 @given('the user {action} the walsender on the {segment} on content {content}')
 @then('the user {action} the walsender on the {segment} on content {content}')
 def impl(context, action, segment, content):
@@ -408,8 +429,8 @@ def impl(context, content):
     host, port = get_primary_segment_host_port_for_content(content)
     query = "SELECT pg_current_xlog_location() - sent_location FROM pg_stat_replication;"
     desired_result = 0
-    wait_for_desired_query_result_on_segment(host, port, query, desired_result)
-
+    dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
+    wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
 
 def backup_bashrc():
@@ -564,6 +585,7 @@ def impl(context, ret_code):
 
 
 @when('the user waits until saved async process is completed')
+@then('the user waits until saved async process is completed')
 def impl(context):
     context.asyncproc.communicate2()
 
@@ -705,7 +727,7 @@ def impl(context, command, out_msg, num):
 
 def lines_matching_both(in_str, str_1, str_2):
     lines = [x.strip() for x in in_str.split('\n')]
-    return [x for x in lines if x.count(str_1) and x.count(str_2)]
+    return [line for line in lines if line.count(str_1) and line.count(str_2)]
 
 
 @then('check if {command} ran "{called_command}" {num} times with args "{args}"')
@@ -716,6 +738,35 @@ def impl(context, command, called_command, num, args):
     if len(matches) != int(num):
         raise Exception("Expected %s to occur with %s args %s times. Found %d. \n %s"
                         % (called_command, args, num, len(matches), context.stdout_message))
+
+
+@then('check if gprecoverseg ran gpsegrecovery.py {num} times with the expected args')
+def impl(context, num):
+    gprecoverseg_output = context.stdout_message
+
+    era_cmd = "grep 'era =' {}/log/gp_era | sed 's/^.* // | tr -d '\n'".format(master_data_dir)
+    run_command(context, era_cmd)
+    era = context.stdout_message
+
+    expected_command = "Running Command: $GPHOME/sbin/gpsegrecovery.py"
+    expected_args = "-l {} -v -b 64 --force-overwrite --era={}".format(_get_gpAdminLogs_directory(), era)
+    matches = lines_matching_both(gprecoverseg_output, expected_command, expected_args)
+
+    if len(matches) != int(num):
+        raise Exception("Expected gpsegrecovery.py to occur with %s args %s times. Found %d. \n %s"
+                        % (expected_args, num, len(matches), gprecoverseg_output))
+
+@then('check if gprecoverseg ran gpsegsetuprecovery.py {num} times with the expected args')
+def impl(context, num):
+    gprecoverseg_output = context.stdout_message
+
+    expected_command = "Running Command: $GPHOME/sbin/gpsegsetuprecovery.py"
+    expected_args = "-l {} -v -b 64 --force-overwrite".format(_get_gpAdminLogs_directory())
+    matches = lines_matching_both(gprecoverseg_output, expected_command, expected_args)
+
+    if len(matches) != int(num):
+        raise Exception("Expected gpsegrecovery.py to occur with %s args %s times. Found %d. \n %s"
+                        % (expected_args, num, len(matches), gprecoverseg_output))
 
 
 @then('{command} should only spawn up to {num} workers in WorkerPool')
@@ -747,6 +798,19 @@ def impl(context):
 
     for i in range(times):
         if are_segments_synchronized():
+            return
+        time.sleep(sleeptime)
+
+    raise Exception('segments are not in sync after %d seconds' % (times * sleeptime))
+
+
+@then('the segments are synchronized for content {content_ids}')
+def impl(context, content_ids):
+    times = 60
+    sleeptime = 10
+    content_ids_to_check = [int(c) for c in content_ids.split(',')]
+    for i in range(times):
+        if are_segments_synchronized_for_content_ids(content_ids_to_check):
             return
         time.sleep(sleeptime)
 
@@ -1301,6 +1365,37 @@ def impl(context):
     return
 
 
+@then('the {segment_type} for content {content_ids} are up')
+def impl(context, segment_type, content_ids):
+    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
+    for content in content_ids.split(','):
+        if not is_segment_running(role, int(content)):
+            raise Exception("{} for content {} is not up".format(segment_type, content))
+
+    return
+
+
+@then('verify that mirror on content {content_ids} is {expected_status}')
+def impl(context, content_ids, expected_status):
+    if expected_status not in ('up', 'down'):
+        raise Exception("expected_status can only be 'up' or 'down'")
+
+    for content in content_ids.split(','):
+        if expected_status == 'up' and not is_segment_running(ROLE_MIRROR, int(content)):
+            raise Exception("mirror for content {} is not up".format(content))
+        elif expected_status == 'down' and is_segment_running(ROLE_MIRROR, int(content)):
+            raise Exception("mirror for content {} is not down".format(content))
+
+    return
+
+
+@then('the user waits until mirror on content {content} is up')
+def impl(context, content):
+    query = "SELECT gp_request_fts_probe_scan(); SELECT status FROM gp_segment_configuration where role = 'm' and content = {};".format(content)
+    desired_result = 'u'
+    wait_for_desired_query_result(dbconn.DbURL(), query, desired_result)
+
+
 @given('the "{seg}" segment information is saved')
 @when('the "{seg}" segment information is saved')
 @then('the "{seg}" segment information is saved')
@@ -1720,9 +1815,9 @@ def verify_master_file_last_line(context, filename, contain, output, escape):
     else:
         raise Exception("only 'should contain' and 'should not contain' are valid inputs")
 
-    find_string_in_coordinator_data_directory(context, filename, output, valuesShouldExist, (escape == ' escaped'))
+    find_string_in_master_data_directory(context, filename, output, valuesShouldExist, (escape == ' escaped'))
 
-def find_string_in_coordinator_data_directory(context, filename, output, valuesShouldExist, escapeStr=False):
+def find_string_in_master_data_directory(context, filename, output, valuesShouldExist, escapeStr=False):
     contents = ''
     file_path = os.path.join(master_data_dir, filename)
 
@@ -2463,6 +2558,17 @@ def impl(context):
     for file in files_found:
         os.remove(file)
 
+@given('all files in gpAdminLogs directory are deleted on hosts {hosts}')
+def impl(context, hosts):
+    host_list = hosts.split(',')
+    log_dir = "~/gpAdminLogs"
+    for host in host_list:
+        rm_cmd = Command(name="remove files in gpAdminLogs",
+                              cmdStr="rm -rf {}/*".format(log_dir),
+                              remoteHost=host, ctxt=REMOTE)
+        rm_cmd.run(validateAfter=True)
+
+
 @then('gpAdminLogs directory {has} "{expected_file}" files')
 def impl(context, has, expected_file):
     log_dir = _get_gpAdminLogs_directory()
@@ -2944,7 +3050,7 @@ def impl(context, hostnames):
 
 @given("a temporary directory under '{tmp_base_dir}' with mode '{mode}' is created")
 @given('a temporary directory under "{tmp_base_dir}" to expand into')
-def make_temp_dir(context,tmp_base_dir, mode=''):
+def make_temp_dir(context, tmp_base_dir, mode=''):
     if not tmp_base_dir:
         raise Exception("tmp_base_dir cannot be empty")
     if not os.path.exists(tmp_base_dir):
@@ -2952,7 +3058,7 @@ def make_temp_dir(context,tmp_base_dir, mode=''):
     context.temp_base_dir = tempfile.mkdtemp(dir=tmp_base_dir)
     if mode:
         os.chmod(path.normpath(path.join(tmp_base_dir, context.temp_base_dir)),
-                 int(mode,8))
+                 int(mode, 8))
 
 @given('the new host "{hostnames}" is ready to go')
 def impl(context, hostnames):

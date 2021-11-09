@@ -240,16 +240,13 @@ class SegSetupRecoveryTestCase(GpTestCase):
     def test_complete_workflow(self, mock_execsql, mock_dburl, mock_connect, mock_validate_datadir):
         mock_connect.return_value = Mock()
         mock_dburl.return_value = Mock()
-        with tempfile.TemporaryDirectory() as d:
-            with redirect_stderr() as buf:
-                with self.assertRaises(SystemExit) as ex:
-                    full_ri = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
-                                           6001, True, d)
-                    mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([
-                        full_ri, self.incr_r2])
-                    sys.argv = ['gpsegsetuprecovery', '-c {}'.format(mix_confinfo)]
-                    seg_setup_recovery = SegSetupRecovery()
-                    seg_setup_recovery.main()
+        with redirect_stderr() as buf:
+            with self.assertRaises(SystemExit) as ex:
+                mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([self.full_r1, self.incr_r2])
+                sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '--era', '1234_2021',
+                            '-c {}'.format(mix_confinfo)]
+                seg_setup_recovery = SegSetupRecovery()
+                seg_setup_recovery.main()
         self.assertEqual('', buf.getvalue())
         self.assertEqual(0, ex.exception.code)
         mock_validate_datadir.assert_called_once()
@@ -266,22 +263,32 @@ class SegSetupRecoveryTestCase(GpTestCase):
     def test_complete_workflow_exception(self, mock_execsql, mock_dburl, mock_connect, mock_validate_datadir):
         mock_connect.side_effect = [Exception('connect failed')]
         mock_dburl.return_value = Mock()
-        with tempfile.TemporaryDirectory() as d:
-            with redirect_stderr() as buf:
-                with self.assertRaises(SystemExit) as ex:
-                    full_ri = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
-                                           6001, True, d)
-                    mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([
-                        full_ri, self.incr_r2])
-                    sys.argv = ['gpsegsetuprecovery', '-c {}'.format(mix_confinfo)]
-                    seg_setup_recovery = SegSetupRecovery()
-                    seg_setup_recovery.main()
+        with redirect_stderr() as buf:
+            with self.assertRaises(SystemExit) as ex:
+                mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([self.full_r1, self.incr_r2])
+                sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '--era', '1234_2021',
+                            '-c {}'.format(mix_confinfo)]
+                seg_setup_recovery = SegSetupRecovery()
+                seg_setup_recovery.main()
         self.assertEqual('connect failed\n', buf.getvalue())
         self.assertEqual(1, ex.exception.code)
         mock_validate_datadir.assert_called_once()
         mock_dburl.assert_called_once()
         mock_connect.assert_called_once()
         self.assertRegexpMatches(gplog.get_logfile(), '/gpsegsetuprecovery.py_\d+\.log')
+
+
+    @patch('recovery_base.gplog.setup_tool_logging')
+    @patch('recovery_base.RecoveryBase.main')
+    @patch('gpsegsetuprecovery.SegSetupRecovery.get_setup_cmds')
+    def test_get_recovery_cmds_is_called(self, mock_get_setup_cmds, mock_recovery_base_main, mock_logger):
+        mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([self.full_r1, self.incr_r2])
+        sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '-f',
+                    '-c {}'.format(mix_confinfo)]
+        seg_setup_recovery = SegSetupRecovery()
+        seg_setup_recovery.main()
+        mock_get_setup_cmds.assert_called_once_with([self.full_r1, self.incr_r2], True, mock_logger.return_value)
+        mock_recovery_base_main.assert_called_once_with(mock_get_setup_cmds.return_value)
 
     def test_empty_recovery_info_list(self):
         cmd_list = SegSetupRecovery().get_setup_cmds([], False, None)

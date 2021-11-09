@@ -20,9 +20,9 @@ class BuildMirrorsTestCase(GpTestCase):
     """
     def setUp(self):
         self.maxDiff = None
-        self.coordinator = Segment(content=-1, preferred_role='p', dbid=1, role='p', mode='s',
-                                   status='u', hostname='coordinatorhost', address='coordinatorhost-1',
-                                   port=1111, datadir='/coordinatordir')
+        self.master = Segment(content=-1, preferred_role='p', dbid=1, role='p', mode='s',
+                                   status='u', hostname='masterhost', address='masterhost-1',
+                                   port=1111, datadir='/masterdir')
 
         self.primary = Segment(content=0, preferred_role='p', dbid=20, role='p', mode='s',
                                status='u', hostname='primaryhost', address='primaryhost-1',
@@ -39,14 +39,13 @@ class BuildMirrorsTestCase(GpTestCase):
 
         self.action = 'recover'
         self.gpEnv = Mock()
-        self.gpArray = GpArray([self.coordinator, self.primary, self.mirror])
+        self.gpArray = GpArray([self.master, self.primary, self.mirror])
         self.mock_logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
     def tearDown(self):
         super(BuildMirrorsTestCase, self).tearDown()
 
     def _setup_mocks(self, buildMirrorSegs_obj):
-        buildMirrorSegs_obj._GpMirrorListToBuild__startAll = Mock(return_value=True)
         markdown_mock = Mock()
         buildMirrorSegs_obj._wait_fts_to_mark_down_segments = markdown_mock
         buildMirrorSegs_obj._run_recovery = Mock()
@@ -56,17 +55,17 @@ class BuildMirrorsTestCase(GpTestCase):
         configurationInterface.getConfigurationProvider = Mock()
 
     def _common_asserts_with_stop_and_logger(self, buildMirrorSegs_obj, expected_logger_msg, expected_segs_to_stop,
-                                             expected_segs_to_start, expected_segs_to_markdown, expected_segs_to_update,
-                                             cleanup_count, info_call_count=5):
+                                             expected_segs_to_markdown, expected_segs_to_update, cleanup_count,
+                                             info_call_count=4):
         self.mock_logger.info.assert_any_call(expected_logger_msg)
         #TODO assert all logger info msgs
         self.assertEqual(info_call_count, self.mock_logger.info.call_count)
         self.assertEqual([call(expected_segs_to_stop)],
                          buildMirrorSegs_obj._get_running_postgres_segments.call_args_list)
-        self._common_asserts(buildMirrorSegs_obj, expected_segs_to_start, expected_segs_to_markdown,
+        self._common_asserts(buildMirrorSegs_obj,  expected_segs_to_markdown,
                              expected_segs_to_update, cleanup_count)
 
-    def _common_asserts(self, buildMirrorSegs_obj, expected_segs_to_start, expected_segs_to_markdown,
+    def _common_asserts(self, buildMirrorSegs_obj,  expected_segs_to_markdown,
                         expected_segs_to_update, cleanup_count):
         self.assertEqual([call(self.gpEnv, expected_segs_to_markdown)],
                          buildMirrorSegs_obj._wait_fts_to_mark_down_segments.call_args_list)
@@ -77,24 +76,20 @@ class BuildMirrorsTestCase(GpTestCase):
         self.assertEqual([call(self.gpArray, ANY, dbIdToForceMirrorRemoveAdd=expected_segs_to_update,
                                useUtilityMode=False, allowPrimary=False)],
                          configurationInterface.getConfigurationProvider.return_value.updateSystemConfig.call_args_list)
-        self.assertEqual([call(self.gpEnv, self.gpArray, expected_segs_to_start)],
-                         buildMirrorSegs_obj._GpMirrorListToBuild__startAll.call_args_list)
 
     def _run_no_failed_tests(self, tests):
         mirrors_to_build = []
-        expected_segs_to_start = []
 
         for test in tests:
             with SubTest.subTest(test["name"]):
                 mirrors_to_build.append(GpMirrorToBuild(None, test["live"], test["failover"],
                                                         test["forceFull"]))
-                expected_segs_to_start.append(test["failover"])
 
         buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
 
-        self.assertEqual(3, self.mock_logger.info.call_count)
+        self.assertEqual(2, self.mock_logger.info.call_count)
         self.assertEqual(0, buildMirrorSegs_obj._get_running_postgres_segments.call_count)
-        self._common_asserts(buildMirrorSegs_obj, expected_segs_to_start, [], {2: True, 4: True}, 1)
+        self._common_asserts(buildMirrorSegs_obj, [], {2: True, 4: True}, 1)
 
         for test in tests:
             self.assertEqual('n', test['live'].getSegmentMode())
@@ -103,7 +98,6 @@ class BuildMirrorsTestCase(GpTestCase):
 
     def _run_no_failover_tests(self, tests):
         mirrors_to_build = []
-        expected_segs_to_start = []
         expected_segs_to_stop = []
         expected_segs_to_markdown = []
 
@@ -112,15 +106,15 @@ class BuildMirrorsTestCase(GpTestCase):
                 mirrors_to_build.append(GpMirrorToBuild(test["failed"], test["live"], None,
                                                         test["forceFull"]))
                 expected_segs_to_stop.append(test["failed"])
-                expected_segs_to_start.append(test["failed"])
                 if 'is_failed_segment_up' in test and test["is_failed_segment_up"]:
                     expected_segs_to_markdown.append(test['failed'])
 
         buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
 
         self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 4 failed segment(s) are stopped",
-                                                  expected_segs_to_stop, expected_segs_to_start,
-                                                  expected_segs_to_markdown, {4: True, 30: True}, 1)
+                                                  expected_segs_to_stop,
+                                                  expected_segs_to_markdown, {4: True, 30: True},
+                                                  1)
         for test in tests:
             self.assertEqual('n', test['live'].getSegmentMode())
             self.assertEqual('d', test['failed'].getSegmentStatus())
@@ -128,7 +122,6 @@ class BuildMirrorsTestCase(GpTestCase):
 
     def _run_both_failed_failover_tests(self, tests):
         mirrors_to_build = []
-        expected_segs_to_start = []
         expected_segs_to_stop = []
         expected_segs_to_markdown = []
 
@@ -136,16 +129,19 @@ class BuildMirrorsTestCase(GpTestCase):
             with SubTest.subTest(test["name"]):
                 mirrors_to_build.append(GpMirrorToBuild(test["failed"], test["live"], test["failover"],
                                                         test["forceFull"]))
-                expected_segs_to_stop.append(test["failed"])
-                expected_segs_to_start.append(test["failover"])
+                #TODO better way to check for this condition
+                if not test["failed"].unreachable:
+                    expected_segs_to_stop.append(test["failed"])
                 if 'is_failed_segment_up' in test and test["is_failed_segment_up"]:
                     expected_segs_to_markdown.append(test['failed'])
 
         buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
 
+        # TODO improve the logic that passes info_call_count
         self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 3 failed segment(s) are stopped",
-                                                  expected_segs_to_stop, expected_segs_to_start,
-                                                  expected_segs_to_markdown, {1: True, 5: True, 9: True}, 1)
+                                                  expected_segs_to_stop,
+                                                  expected_segs_to_markdown, {1: True, 5: True, 9: True}, 1,
+                                                  info_call_count=5)
 
         for test in tests:
             self.assertEqual('n', test['live'].getSegmentMode())
@@ -164,9 +160,11 @@ class BuildMirrorsTestCase(GpTestCase):
         self.assertTrue(buildMirrorSegs_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
         return buildMirrorSegs_obj
 
-    def create_primary(self, dbid='1', contentid='0', state='n', status='u', host='sdw1'):
-        return Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|21000|/primary/gpseg0'
-                                      .format(dbid, contentid, state, status, host, host))
+    def create_primary(self, dbid='1', contentid='0', state='n', status='u', host='sdw1', unreachable=False):
+        seg = Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|21000|/primary/gpseg0'
+                                     .format(dbid, contentid, state, status, host, host))
+        seg.unreachable = unreachable
+        return seg
 
     def create_mirror(self, dbid='2', contentid='0', state='n', status='u', host='sdw2'):
         return Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|22000|/mirror/gpseg0'
@@ -244,6 +242,14 @@ class BuildMirrorsTestCase(GpTestCase):
                 "failover": self.create_primary(dbid='9', status='d'),
                 "forceFull": False,
             },
+            {
+                "name": "both_failed_failover_failed_is_unreachable",
+                "failed": self.create_primary(dbid='9', status='d', unreachable=True),
+                "live": self.create_mirror(dbid='10', state='s'),
+                "failover": self.create_primary(dbid='9', status='d'),
+                "forceFull": False,
+            },
+
         ]
         self._run_both_failed_failover_tests(tests)
 
@@ -263,7 +269,7 @@ class BuildMirrorsTestCase(GpTestCase):
         self._setup_mocks(buildMirrorSegs_obj)
         self.assertTrue(buildMirrorSegs_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
         self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 1 failed segment(s) are stopped",
-                                                  [failed], [failover], [], {1: True}, 0)
+                                                  [failed], [], {1: True}, 0)
         self.assertEqual('n', live.getSegmentMode())
         self.assertEqual('d', failover.getSegmentStatus())
         self.assertEqual('n', failover.getSegmentMode())
@@ -306,7 +312,7 @@ class BuildMirrorsTestCase(GpTestCase):
                 forceoverwrite=test['forceoverwrite']
             )
             self._setup_mocks(buildMirrorSegs_obj)
-            local_gp_array = GpArray([self.coordinator, test["failed"]])
+            local_gp_array = GpArray([self.master, test["failed"]])
             expected_error = "failed segment should not be in the new configuration if failing over to"
             with SubTest.subTest(test["name"]):
                 with self.assertRaisesRegexp(Exception, expected_error):
@@ -490,28 +496,6 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
         self.mock_logger.info.assert_any_call('Ensuring that shared memory is cleaned up for stopped segments')
         self.assertEquals(self.mock_logger.warning.call_count, 0)
         self.assertEquals(mock_run.call_count, 1)
-
-    @patch('gppylib.operations.buildMirrorSegments.read_era')
-    @patch('gppylib.operations.startSegments.StartSegmentsOperation')
-    def test_startAll_succeeds(self, mock1, mock2):
-        result = StartSegmentsResult()
-        result.getFailedSegmentObjs()
-        mock1.return_value.startSegments.return_value = result
-        result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
-        self.assertTrue(result)
-
-    @patch('gppylib.operations.buildMirrorSegments.read_era')
-    @patch('gppylib.operations.startSegments.StartSegmentsOperation')
-    def test_startAll_fails(self, mock1, mock2):
-        result = StartSegmentsResult()
-        failed_segment = Segment.initFromString(
-            "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
-        result.addFailure(failed_segment, 'reason', 'reasoncode')
-        mock1.return_value.startSegments.return_value = result
-        result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
-        self.assertFalse(result)
-        self.mock_logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
-                                         'Segment: sdw1:/data/primary0:content=0:dbid=2:role=p:preferred_role=p:mode=s:status=u: REASON: reason')
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(

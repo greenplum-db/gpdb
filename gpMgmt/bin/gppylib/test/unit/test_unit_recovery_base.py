@@ -19,7 +19,7 @@ class RecoveryBaseTestCase(GpTestCase):
 
         self.mock_cmd1 = Mock(spec=['run'])
         self.mock_cmd2 = Mock(spec=['run'])
-        self.mock_get_cmd_list = Mock(return_value=[self.mock_cmd1, self.mock_cmd2])
+        self.cmd_list = [self.mock_cmd1, self.mock_cmd2]
 
         self.file_name = '/path/to/test_file.py'
 
@@ -39,7 +39,8 @@ class RecoveryBaseTestCase(GpTestCase):
     def run_recovery_base_get_stderr(self):
         with redirect_stderr() as buf:
             with self.assertRaises(SystemExit) as ex:
-                RecoveryBase().main(self.file_name, self.mock_get_cmd_list)
+                recovery_base = RecoveryBase(self.file_name)
+                recovery_base.main(self.cmd_list)
         return buf, ex
 
     def _asserts_for_passing_tests(self, stderr_buf, ex, enable_verbose_count=0, warn_count=0):
@@ -78,8 +79,14 @@ class RecoveryBaseTestCase(GpTestCase):
     def test_confinfo_not_passed_fails(self):
         sys.argv = ['recovery_base']
         stderr_buf, ex = self.run_recovery_base_get_stderr()
-        self._asserts_for_failing_tests(ex, stderr_buf, "Missing --confinfo argument.",
-                                        info_count=0)
+        self.assertEqual(1, ex.exception.code)
+        self.assertEqual("Missing --confinfo argument.\n", stderr_buf.getvalue())
+
+    def test_logdir_not_passed_fails(self):
+        sys.argv = ['recovery_base', '-c', 'test']
+        stderr_buf, ex = self.run_recovery_base_get_stderr()
+        self.assertEqual(1, ex.exception.code)
+        self.assertEqual("Missing --log-dir argument.\n", stderr_buf.getvalue())
 
     def test_confinfo_passed_as_blank_fails(self):
         sys.argv = ['recovery_base', '-c']
@@ -102,7 +109,8 @@ class RecoveryBaseTestCase(GpTestCase):
                                              "recovery_base: error: option -b: invalid integer value: 'foo'\n")
 
     def test_confinfo_passed_as_empty_fails(self):
-        sys.argv = ['recovery_base', '-c {}'.format(gppylib.recoveryinfo.serialize_recovery_info_list([]))]
+        sys.argv = ['recovery_base', '-l', '/tmp/logdir',
+                    '-c {}'.format(gppylib.recoveryinfo.serialize_recovery_info_list([]))]
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         stderr_buf.seek(0)
         stderr_lines = stderr_buf.readlines()
@@ -114,7 +122,7 @@ class RecoveryBaseTestCase(GpTestCase):
 
     @patch('recovery_base.WorkerPool')
     def test_batchsize_less_than_cmdlist_passes(self, mock_workerpool):
-        sys.argv = ['recovery_base',
+        sys.argv = ['recovery_base', '-l', '/tmp/logdir',
                     '-c {}'.format(self.confinfo),
                     '-b 1']
         stderr_buf, ex = self.run_recovery_base_get_stderr()
@@ -123,7 +131,7 @@ class RecoveryBaseTestCase(GpTestCase):
 
     @patch('recovery_base.WorkerPool')
     def test_batchsize_greater_than_cmdlist_passes(self, mock_workerpool):
-        sys.argv = ['recovery_base',
+        sys.argv = ['recovery_base', '-l', '/tmp/logdir',
                     '-c {}'.format(self.confinfo),
                     '-b 10']
         stderr_buf, ex = self.run_recovery_base_get_stderr()
@@ -132,7 +140,7 @@ class RecoveryBaseTestCase(GpTestCase):
 
     @patch('recovery_base.WorkerPool')
     def test_invalid_batchsize_passes(self, mock_workerpool):
-        sys.argv = ['recovery_base',
+        sys.argv = ['recovery_base', '-l', '/tmp/logdir',
                     '-c {}'.format(self.confinfo),
                     '-b -1']
         stderr_buf, ex = self.run_recovery_base_get_stderr()
@@ -148,8 +156,8 @@ class RecoveryBaseTestCase(GpTestCase):
         # make sure there are more than 3 segments to recover
         new_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list(
             [self.full_r1, self.incr_r2, self.full_r1, self.incr_r2])
-        self.mock_get_cmd_list.return_value = [Mock(), Mock(), Mock(), Mock()]
-        sys.argv = ['recovery_base',
+        self.cmd_list = [Mock(), Mock(), Mock(), Mock()]
+        sys.argv = ['recovery_base', '-l', '/tmp/logdir',
                     '-c {}'.format(new_confinfo)]
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_passing_tests(stderr_buf, ex)
@@ -161,13 +169,11 @@ class RecoveryBaseTestCase(GpTestCase):
         cmd1 = Command('testcmd', 'testcmdstr')
         cmd1.set_results(CommandResult(0, b'', b'', True, False))
         mock_workerpool.return_value.getCompletedItems = Mock(return_value=[cmd1, cmd1])
-        sys.argv = ['recovery_base', '-c {}'.format(self.confinfo)]
+        sys.argv = ['recovery_base',  '-l', '/tmp/logdir', '-c {}'.format(self.confinfo)]
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_passing_tests(stderr_buf, ex)
-        self.assertEqual([call('test_file.py', ANY, ANY, logdir=None)],
+        self.assertEqual([call('test_file.py', ANY, ANY, logdir='/tmp/logdir')],
                          self.mock_setup_tool_logging.call_args_list)
-        self.assertEqual([call([self.full_r1, self.incr_r2], False, self.mock_logger)],
-                         self.mock_get_cmd_list.call_args_list)
         self._assert_workerpool_calls(mock_workerpool)
 
     @patch('recovery_base.WorkerPool')
@@ -176,48 +182,42 @@ class RecoveryBaseTestCase(GpTestCase):
         cmd1 = Command('testcmd', 'testcmdstr')
         cmd1.set_results(CommandResult(0, b'', b'', True, False))
         mock_workerpool.return_value.getCompletedItems = Mock(return_value=[cmd1, cmd1])
-        sys.argv = ['recovery_base',
+        sys.argv = ['recovery_base', '-l', '/tmp/logdir',
                     '-c {}'.format(self.confinfo),
-                    '-b 10', '-f', '-l', '/tmp/logdir', '-v']
+                    '-b 10', '-f', '-v', '--era', '1234_2021']
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_passing_tests(stderr_buf, ex, enable_verbose_count=1)
         self.assertEqual([call('test_file.py', ANY, ANY, logdir='/tmp/logdir')],
                          self.mock_setup_tool_logging.call_args_list)
-        self.assertEqual([call([self.full_r1, self.incr_r2], True, self.mock_logger)],
-                         self.mock_get_cmd_list.call_args_list)
         self._assert_workerpool_calls(mock_workerpool)
 
-    def test_get_cmd_list_exception_fails(self):
-        sys.argv = ['recovery_base', '-c {}'.format(self.confinfo)]
-        self.mock_get_cmd_list.side_effect = [Exception('cannot get command list')]
-        stderr_buf, ex = self.run_recovery_base_get_stderr()
-        self.assertEqual(1, self.mock_get_cmd_list.call_count)
-        self._asserts_for_failing_tests(ex, stderr_buf, "cannot get command list")
+    # def test_get_cmd_list_exception_fails(self):
+    #     sys.argv = ['recovery_base', '-l', '/tmp/logdir', '-c {}'.format(self.confinfo)]
+    #     self.mock_get_cmd_list.side_effect = [Exception('cannot get command list')]
+    #     stderr_buf, ex = self.run_recovery_base_get_stderr()
+    #     self.assertEqual(1, self.mock_get_cmd_list.call_count)
+    #     self._asserts_for_failing_tests(ex, stderr_buf, "cannot get command list")
 
     def test_invalid_cmd_fails(self):
         # We use the same cmd str for both because the output can contain them
         # in any order
         cmd1 = Command('invalid_cmd1', 'invalid_cmd_str')
         cmd2 = Command('invalid_cmd2', 'invalid_cmd_str')
-        self.mock_get_cmd_list.return_value = [cmd1, cmd2]
-        sys.argv = ['recovery_base', '-c {}'.format(self.confinfo)]
+        self.cmd_list = [cmd1, cmd2]
+        sys.argv = ['recovery_base',  '-l', '/tmp/logdir', '-c {}'.format(self.confinfo)]
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
 
-        self.assertEqual([call([self.full_r1, self.incr_r2], False, self.mock_logger)],
-                         self.mock_get_cmd_list.call_args_list)
         self._asserts_for_failing_tests(ex, stderr_buf, "/bin/bash: invalid_cmd_str: command not found \n"
                                                "/bin/bash: invalid_cmd_str: command not found ")
 
     def test_invalid_cmd_verbose_fails(self):
         cmd1 = Command('invalid_cmd1', 'invalid_cmd_str')
         cmd2 = Command('invalid_cmd2', 'invalid_cmd_str')
-        self.mock_get_cmd_list.return_value = [cmd1, cmd2]
-        sys.argv = ['recovery_base', '-c {}'.format(self.confinfo), '-v']
+        self.cmd_list = [cmd1, cmd2]
+        sys.argv = ['recovery_base',  '-l', '/tmp/logdir', '-c {}'.format(self.confinfo), '-v']
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
-        self.assertEqual([call([self.full_r1, self.incr_r2], False, self.mock_logger)],
-                         self.mock_get_cmd_list.call_args_list)
         self._asserts_for_failing_tests(ex, stderr_buf, "/bin/bash: invalid_cmd_str: command not found \n"
                                                "/bin/bash: invalid_cmd_str: command not found ")
 
@@ -227,12 +227,10 @@ class RecoveryBaseTestCase(GpTestCase):
     def test_valid_failing_cmd_fails(self):
         cmd1 = Command('valid_failing_cmd1', 'echo 1 | grep 2')
         cmd2 = Command('valid_failing_cmd2', 'echo 1 | grep 2')
-        self.mock_get_cmd_list.return_value = [cmd1, cmd2]
-        sys.argv = ['recovery_base', '-c {}'.format(self.confinfo)]
+        self.cmd_list = [cmd1, cmd2]
+        sys.argv = ['recovery_base',  '-l', '/tmp/logdir', '-c {}'.format(self.confinfo)]
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
-        self.assertEqual([call([self.full_r1, self.incr_r2], False, self.mock_logger)],
-                         self.mock_get_cmd_list.call_args_list)
         # The echo+grep cmd that we use has a non zero return code and no stderr.
         self._asserts_for_failing_tests(ex, stderr_buf, "\n")
 
@@ -242,12 +240,10 @@ class RecoveryBaseTestCase(GpTestCase):
     def test_valid_failing_cmd_verbose_fails(self):
         cmd1 = Command('valid_failing_cmd1', 'echo 1 | grep 2')
         cmd2 = Command('valid_failing_cmd2', 'echo 1 | grep 2')
-        self.mock_get_cmd_list.return_value = [cmd1, cmd2]
-        sys.argv = ['recovery_base', '-c {}'.format(self.confinfo), '-v']
+        self.cmd_list = [cmd1, cmd2]
+        sys.argv = ['recovery_base',  '-l', '/tmp/logdir', '-c {}'.format(self.confinfo), '-v']
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
-        self.assertEqual([call([self.full_r1, self.incr_r2], False, self.mock_logger)],
-                         self.mock_get_cmd_list.call_args_list)
         # The echo+grep cmd that we use has a non zero return code and no stderr.
         self._asserts_for_failing_tests(ex, stderr_buf, "\n")
 
@@ -258,7 +254,7 @@ class RecoveryBaseTestCase(GpTestCase):
     def test_parseargs_exception_fails(self, mock_parseargs):
         sys.argv = ['recovery_base']
         with self.assertRaises(SystemExit) as ex:
-            RecoveryBase().main(self.file_name, SegSetupRecovery().get_setup_cmds)
+            RecoveryBase(self.file_name)
         self.assertEqual(1, ex.exception.code)
         self.assertEqual(0, self.mock_logger.error.call_count)
 

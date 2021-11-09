@@ -9,10 +9,18 @@ from gppylib.gpparseopts import OptParser, OptChecker
 
 
 class RecoveryBase(object):
-    def __init__(self):
+    def __init__(self, file_name):
         self.description = ("""
         Configure mirror segment directories for running basebackup/rewind into a pre-existing GPDB array.
         """)
+        self.file_name = file_name
+        self.logger = None
+        self.seg_recovery_info_list = None
+        self.options = None
+        try:
+            self.parseargs()
+        except Exception as e:
+            self._write_to_stderr_and_exit(e)
 
     def parseargs(self):
         parser = OptParser(option_class=OptChecker,
@@ -21,57 +29,57 @@ class RecoveryBase(object):
         parser.set_usage('%prog is a utility script used by gprecoverseg, and gpaddmirrors and is not intended to be run separately.')
         parser.remove_option('-h')
 
+        #TODO we may not need the verbose flag
         parser.add_option('-v','--verbose', action='store_true', help='debug output.', default=False)
         parser.add_option('-c', '--confinfo', type='string')
         parser.add_option('-b', '--batch-size', type='int', default=DEFAULT_SEGHOST_NUM_WORKERS, metavar='<batch_size>')
         parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
         parser.add_option('-l', '--log-dir', dest="logfileDirectory", type="string")
+        parser.add_option('', '--era', dest="era", help="master era", )
 
         # Parse the command line arguments
-        options, _ = parser.parse_args()
-        return options
+        self.options, _ = parser.parse_args()
 
-    def main(self, file_name, get_cmd_list):
+        if not self.options.confinfo:
+            raise Exception('Missing --confinfo argument.')
+        if not self.options.logfileDirectory:
+            raise Exception('Missing --log-dir argument.')
+
+        self.logger = gplog.setup_tool_logging(os.path.split(self.file_name)[-1], unix.getLocalHostname(),
+                                          unix.getUserName(),
+                                          logdir=self.options.logfileDirectory)
+
+        if self.options.batch_size <= 0:
+            self.logger.warn('batch_size was less than zero.  Setting to 1.')
+            self.options.batch_size = 1
+
+        if self.options.verbose:
+            gplog.enable_verbose_logging()
+
+        self.seg_recovery_info_list = recoveryinfo.deserialize_recovery_info_list(self.options.confinfo)
+        if len(self.seg_recovery_info_list) == 0:
+            raise Exception('No segment configuration values found in --confinfo argument')
+
+    def main(self, cmd_list):
         pool = None
-        logger = None
         try:
-            options = self.parseargs()
-            exec_name = os.path.split(file_name)[-1]
-            logger = gplog.setup_tool_logging(exec_name, unix.getLocalHostname(),
-                                              unix.getUserName(),
-                                              logdir=options.logfileDirectory)
-
-            if not options.confinfo:
-                raise Exception('Missing --confinfo argument.')
-
-            if options.batch_size <= 0:
-                logger.warn('batch_size was less than zero.  Setting to 1.')
-                options.batch_size = 1
-
-            if options.verbose:
-                gplog.enable_verbose_logging()
-
             # TODO: should we output the name of the exact file?
-            logger.info("Starting recovery with args: %s" % ' '.join(sys.argv[1:]))
+            self.logger.info("Starting recovery with args: %s" % ' '.join(sys.argv[1:]))
 
-            seg_recovery_info_list = recoveryinfo.deserialize_recovery_info_list(options.confinfo)
-            if len(seg_recovery_info_list) == 0:
-                raise Exception('No segment configuration values found in --confinfo argument')
-
-            cmd_list = get_cmd_list(seg_recovery_info_list, options.forceoverwrite, logger)
-
-            pool = WorkerPool(numWorkers=min(options.batch_size, len(cmd_list)))
-            self.run_cmd_list(cmd_list, logger, options, pool)
-
+            pool = WorkerPool(numWorkers=min(self.options.batch_size, len(cmd_list)))
+            self.run_cmd_list(cmd_list, self.logger, self.options, pool)
             sys.exit(0)
         except Exception as e:
-            if logger:
-                logger.error(str(e))
-            print >> sys.stderr, e
-            sys.exit(1)
+            self._write_to_stderr_and_exit(e)
         finally:
             if pool:
                 pool.haltWork()
+
+    def _write_to_stderr_and_exit(self, e):
+        if self.logger:
+            self.logger.error(str(e))
+        print >> sys.stderr, e
+        sys.exit(1)
 
     # TODO: how to log multiple errors. New workflow reports errors from all segments.
     def run_cmd_list(self, cmd_list, logger, options, pool):
@@ -83,7 +91,6 @@ class RecoveryBase(object):
         for item in pool.getCompletedItems():
             if not item.get_results().wasSuccessful():
                 errors.append(str(item.get_results().stderr).replace("\n", " "))
-
         if not errors:
             sys.exit(0)
 

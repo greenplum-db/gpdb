@@ -3,14 +3,17 @@
 from gppylib.commands.pg import PgBaseBackup, PgRewind
 from recovery_base import RecoveryBase
 from gppylib.commands.base import set_cmd_results, Command
+from gppylib.commands.gp import SegmentStart
+from gppylib.gparray import Segment
 
 
 class FullRecovery(Command):
-    def __init__(self, name, recovery_info, forceoverwrite, logger):
+    def __init__(self, name, recovery_info, forceoverwrite, logger, era):
         self.name = name
         self.recovery_info = recovery_info
         self.replicationSlotName = 'internal_wal_replication_slot'
         self.forceoverwrite = forceoverwrite
+        self.era = era
         # TODO test for this cmdstr. also what should this cmdstr be ?
         cmdStr = ''
 
@@ -32,12 +35,14 @@ class FullRecovery(Command):
         self.logger.info("Running pg_basebackup with progress output temporarily in %s" % self.recovery_info.progress_file)
         cmd.run(validateAfter=True)
         self.logger.info("Successfully ran pg_basebackup for dbid: {}".format(self.recovery_info.target_segment_dbid))
+        start_segment(self.recovery_info, self.logger, self.era)
 
 
 class IncrementalRecovery(Command):
-    def __init__(self, name, recovery_info, logger):
+    def __init__(self, name, recovery_info, logger, era):
         self.name = name
         self.recovery_info = recovery_info
+        self.era = era
         # TODO test for this cmdstr. also what should this cmdstr be ?
         cmdStr = ''
 
@@ -58,6 +63,23 @@ class IncrementalRecovery(Command):
         self.logger.info("Successfully ran pg_rewind for dbid: {}".format(
             self.recovery_info.target_segment_dbid))
 
+        start_segment(self.recovery_info, self.logger, self.era)
+
+
+def start_segment(recovery_info, logger, era):
+    seg = Segment(None, None, None, None, None, None, None, None,
+                  recovery_info.target_port, recovery_info.target_datadir)
+    segStartCmd = SegmentStart(
+        name="Starting new segment with dbid %s:" % (str(recovery_info.target_segment_dbid))
+        , gpdb=seg
+        , numContentsInCluster=0
+        , era=era
+        , mirrormode="mirror"
+        , utilityMode=True)
+    #TODO is this log msg for start segment ebnough?
+    logger.info(str(segStartCmd))
+    segStartCmd.run(validateAfter=True)
+
 
 #TODO we may not need this class
 class SegRecovery(object):
@@ -65,20 +87,25 @@ class SegRecovery(object):
         pass
 
     def main(self):
-        RecoveryBase().main(__file__, self.get_recovery_cmds)
+        recovery_base = RecoveryBase(__file__)
+        recovery_base.main(self.get_recovery_cmds(recovery_base.seg_recovery_info_list, recovery_base.options.forceoverwrite,
+                                                  recovery_base.logger, recovery_base.options.era))
 
-    def get_recovery_cmds(self, seg_recovery_info_list, forceoverwrite, logger):
+    # TODO should we pass the recovery_base obj instead ?
+    def get_recovery_cmds(self, seg_recovery_info_list, forceoverwrite, logger, era):
         cmd_list = []
         for seg_recovery_info in seg_recovery_info_list:
             if seg_recovery_info.is_full_recovery:
                 cmd = FullRecovery(name='Run pg_basebackup',
                                    recovery_info=seg_recovery_info,
                                    forceoverwrite=forceoverwrite,
-                                   logger=logger)
+                                   logger=logger,
+                                   era=era)
             else:
                 cmd = IncrementalRecovery(name='Run pg_rewind',
                                           recovery_info=seg_recovery_info,
-                                          logger=logger)
+                                          logger=logger,
+                                          era=era)
             cmd_list.append(cmd)
         return cmd_list
 

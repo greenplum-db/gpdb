@@ -1,3 +1,5 @@
+import glob
+import os
 import tempfile
 
 from time import sleep
@@ -115,12 +117,79 @@ def impl(context, output, segment_type):
         raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
 
-    # use preferred_role as that is the dbid that runs the recovery process
     all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
-    segments = filter(lambda seg: seg.getSegmentPreferredRole() == role and seg.content >= 0, all_segments)
+    segments = filter(lambda seg: seg.getSegmentRole() == role and seg.content >= 0, all_segments)
     for segment in segments:
         expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
         check_stdout_msg(context, expected)
+
+@then('gprecoverseg should print "{output}" to stdout for mirrors with content {content_ids}')
+def impl(context, output, content_ids):
+    content_list = [int(c) for c in content_ids.split(',')]
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    segments = filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
+                                  seg.content in content_list, all_segments)
+    for segment in segments:
+        expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
+        check_stdout_msg(context, expected)
+
+@then('gpAdminLogs directory has "{expected_file}" files only for content {content_ids}')
+def impl(context, expected_file, content_ids):
+    content_list = [int(c) for c in content_ids.split(',')]
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    segments = filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
+                                  seg.content in content_list, all_segments)
+    seg_dbids = []
+    for seg in segments:
+        seg_dbids.append('dbid{}'.format(seg.dbid))
+
+    log_dir = "%s/gpAdminLogs" % os.path.expanduser("~")
+    files_found = glob.glob('%s/%s' % (log_dir, expected_file))
+    if not files_found:
+        raise Exception("expected %s files in %s, but not found" % (expected_file, log_dir))
+    if len(files_found) != len(seg_dbids):
+        raise Exception("expected {} {} files in {}, but found {}".format(len(seg_dbids), expected_file, log_dir, len(files_found)))
+
+    for file in files_found:
+        if file.split('.')[-2] not in seg_dbids:
+            raise Exception("Found unexpected file {} in {}".format(file, log_dir))
+
+
+@then('gpAdminLogs directory has "{expected_file}" files on respective hosts only for content {content_ids}')
+def impl(context, expected_file, content_ids):
+    content_list = [int(c) for c in content_ids.split(',')]
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    segments = filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
+                                  seg.content in content_list, all_segments)
+    host_to_seg_dbids = {}
+    for seg in segments:
+        segHost = seg.getSegmentHostName()
+        if segHost in host_to_seg_dbids:
+            host_to_seg_dbids[segHost].append('dbid{}'.format(seg.dbid))
+        else:
+            host_to_seg_dbids[segHost] = ['dbid{}'.format(seg.dbid)]
+
+    for segHost in host_to_seg_dbids:
+        expected_files_on_host = host_to_seg_dbids[segHost]
+        log_dir = "~/gpAdminLogs"
+        listdir_cmd = Command(name="list logfiles on host",
+                            cmdStr="ls -l {}/{}".format(log_dir, expected_file),
+                            remoteHost=segHost, ctxt=REMOTE)
+        listdir_cmd.run(validateAfter=True)
+        ls_outs = listdir_cmd.get_results().stdout.split('\n')
+        files_found = [ls_line.split(' ')[-1] for ls_line in ls_outs if ls_line]
+
+        if not files_found:
+            raise Exception("expected {} files in {} on host {}, but not found".format(expected_file, log_dir, segHost))
+
+        if len(files_found) != len(expected_files_on_host):
+            raise Exception("expected {} {} files in {} on host {}, but found {}: {}"
+                            .format(len(expected_files_on_host), expected_file, log_dir, segHost, len(files_found),
+                                    files_found))
+        for file in files_found:
+            if file.split('.')[-2] not in expected_files_on_host:
+                raise Exception("Found unexpected file {} in {}".format(file, log_dir))
+
 
 @then('pg_isready reports all primaries are accepting connections')
 def impl(context):

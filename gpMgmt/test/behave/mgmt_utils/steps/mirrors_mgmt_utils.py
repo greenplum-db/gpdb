@@ -306,26 +306,89 @@ def impl(context, mirror_config):
                         (primary_host, num_mirror_hosts))
 
 
-@given("a gprecoverseg input file is created for mixed recovery for {full} segments with full and {incr} incremental")
-def impl(context, full, incr):
-    full_seg_count = int(full)
-    incr_seg_count = int(incr)
-    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
-    contents = ''
-    for i in range(len(segments)):
-        mirror = segments[i].mirrorDB
-        valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
-                                     mirror.getSegmentPort(),
-                                     mirror.getSegmentDataDirectory())
-        if full_seg_count > 0:
-            full_seg_count -= 1
-            contents += '%s %s\n' % (valid_config, valid_config)
-        elif incr_seg_count > 0:
-            incr_seg_count -= 1
-            contents += '%s\n' % (valid_config)
+@given("a gprecoverseg input file is created")
+def impl(context):
     context.mirror_context.input_file = "gprecoverseg_mixed.txt"
-    with open(context.mirror_context.input_file_path(), 'w') as fd:
-        fd.write(contents)
+    open(context.mirror_context.input_file_path(), 'w').close()
+
+
+@given("edit the input file to recover mirror with content {content} to a new directory with mode {mode}")
+def impl(context, content, mode):
+    content = int(content)
+    make_temp_dir(context, context.mirror_context.working_directory[0], mode)
+    target_datadir = context.temp_base_dir
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                             mirror.getSegmentPort(),
+                                             mirror.getSegmentDataDirectory())
+
+            valid_config_new = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                                 mirror.getSegmentPort(),
+                                                 target_datadir)
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{} {}\n'.format(valid_config, valid_config_new))
+            break
+
+
+@given("edit the input file to recover mirror with content {content} to a new directory on remote host with mode {mode}")
+def impl(context, content, mode):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                             mirror.getSegmentPort(),
+                                             mirror.getSegmentDataDirectory())
+            make_temp_dir_on_remote(context, mirror.getSegmentHostName(), '/tmp/recoverydir_{}'.format(mode), mode)
+            target_datadir = context.temp_base_dir_remote
+            valid_config_new = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                                 mirror.getSegmentPort(),
+                                                 target_datadir)
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{} {}\n'.format(valid_config, valid_config_new))
+            break
+
+def make_temp_dir_on_remote(context, hostname, tmp_base_dir_remote, mode='700'):
+    if not tmp_base_dir_remote:
+        raise Exception("tmp_base_dir cannot be empty")
+    mkdir_cmd = Command(name="create directory remote",
+                        cmdStr="mkdir -p {} -m {}".format(tmp_base_dir_remote, mode),
+                        remoteHost=hostname, ctxt=REMOTE)
+    mkdir_cmd.run(validateAfter=True)
+    context.temp_base_dir_remote = tmp_base_dir_remote
+
+@given("edit the input file to recover mirror with content {content} full inplace")
+def impl(context, content):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                             mirror.getSegmentPort(),
+                                             mirror.getSegmentDataDirectory())
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{} {}\n'.format(valid_config, valid_config))
+            break
+
+
+@given("edit the input file to recover mirror with content {content} incremental")
+def impl(context, content):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                             mirror.getSegmentPort(),
+                                             mirror.getSegmentDataDirectory())
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{}\n'.format(valid_config))
+            break
 
 
 @given("{num} gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
@@ -421,6 +484,13 @@ def impl(context, extra_args=''):
     cmd = "gprecoverseg -i %s %s" % (
         context.mirror_context.input_file_path(), extra_args)
     run_gpcommand(context, cmd)
+
+
+@when('the user asynchronously runs gprecoverseg with input file and additional args "{extra_args}" and the process is saved')
+def impl(context, extra_args=''):
+    cmd = "gprecoverseg -i %s %s" % (
+        context.mirror_context.input_file_path(), extra_args)
+    run_gpcommand_async(context, cmd)
 
 
 @then('verify that mirrors are recognized after a restart')
