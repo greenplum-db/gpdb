@@ -4733,32 +4733,34 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
 			if (!recursing)
 			{
-				if (Gp_role == GP_ROLE_DISPATCH &&
-					rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
-					ereport(ERROR,
-							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							 errmsg("cannot expand partition table prepare \"%s\"",
-									RelationGetRelationName(rel)),
-							 errdetail("table has already been expanded partiton prepare")));
-
 				Oid 		relid = RelationGetRelid(rel);
 				PartStatus 	ps = rel_part_status(relid);
-				if (ps != PART_STATUS_ROOT)
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							 errmsg("cannot expand partition table prepare \"%s\"",
-									RelationGetRelationName(rel)),
-							 errdetail("only root partition can be expanded partition prepare")));
-				}
 
-				if (!GpPolicyIsPartitioned(rel->rd_cdbpolicy))
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							 errmsg("cannot expand partition table prepare \"%s\"",
-									RelationGetRelationName(rel)),
-							 errdetail("only hash/randomly table can be expanded partition prepare")));
+				if (Gp_role == GP_ROLE_DISPATCH) {
+					if (rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot expand partition table prepare \"%s\"",
+											   RelationGetRelationName(rel)),
+										errdetail("table has already been expanded partiton prepare")));
+					}
+					if (ps != PART_STATUS_ROOT)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot expand partition table prepare \"%s\"",
+											   RelationGetRelationName(rel)),
+										errdetail("only root partition can be expanded partition prepare")));
+					}
+					if (!GpPolicyIsPartitioned(rel->rd_cdbpolicy))
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot expand partition table prepare \"%s\"",
+											   RelationGetRelationName(rel)),
+										errdetail("only hash/randomly table can be expanded partition prepare")));
+					}
 				}
 			}
 
@@ -15059,6 +15061,11 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
  * change policy type of leaf partitions to randomly,
  * the policy type of root and interior partitions are the same as before.
  *
+ * For external(foreign) tables, only writable external tables have distribution
+ * policy. So for writable external leaf partitions, expansion is finished during
+ * prepare stage (the following functon) by simply updating numsegments field
+ * in policy. For other exteranl(foreign) tables, just ignore them.
+ *
  * after we expand partition prepare from 2 segments to 3 segments,
  * possible distribution policies of partition table:
  * a) original policy type is randomly:
@@ -15078,10 +15085,10 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 	GpPolicy   *rel_dist = rel->rd_cdbpolicy;
 	PartStatus 	ps = rel_part_status(rel->rd_id);
 
-	if (GpPolicyIsRandomPartitioned(rel_dist) || ps == PART_STATUS_ROOT)
+	if (GpPolicyIsRandomPartitioned(rel_dist) || has_subclass(rel->rd_id))
 	{
 		/* we only change numsegments for root/interior/leaf partitions distributed randomly
-		 * and root/interior partitions distributed by hash
+		 * or root/interior partitions distributed by hash
 		 */
 		GpPolicy *root_dist = GpPolicyCopy(rel_dist);
 

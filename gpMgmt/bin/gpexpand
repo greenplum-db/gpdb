@@ -2005,7 +2005,7 @@ class ExpandTable():
         else:
             # FIXME: Can "ONLY" be allowed in "EXPAND TABLE"?
             external_str = "EXTERNAL" if self.external_writable else ""
-            sql = 'ALTER TABLE %s EXPAND TABLE' % self.fq_name
+            sql = 'ALTER %s TABLE %s EXPAND TABLE' % (external_str, self.fq_name)
 
         logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
         logger.debug("Expand SQL: %s" % sql.decode('utf-8'))

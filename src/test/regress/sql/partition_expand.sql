@@ -61,10 +61,6 @@ delete from t_hash_partition where a=1;
 select count(*) from t_hash_partition where a=1;
 select count(*) from t_hash_partition;
 
-update t_hash_partition set a = a+1;
-select count(*) from t_hash_partition where a=3;
-select count(*) from t_hash_partition; 
-
 --dml of child table
 select count(*) from t_hash_partition_1_prt_2;
 select count(*) from t_hash_partition_1_prt_2 where a=2;
@@ -126,10 +122,6 @@ select count(*) from t_randomly_partition where a=1;
 delete from t_randomly_partition where a=1;
 select count(*) from t_randomly_partition where a=1;
 select count(*) from t_randomly_partition;
-
-update t_randomly_partition set a = a+1;
-select count(*) from t_randomly_partition where a=3;
-select count(*) from t_randomly_partition; 
 
 --dml of child table
 select count(*) from t_randomly_partition_1_prt_2;
@@ -246,10 +238,6 @@ select count(*) from t_hash_subpartition where r_regionkey=5;
 delete from t_hash_subpartition where r_regionkey=1;
 select count(*) from t_hash_subpartition where r_regionkey=1;
 select count(*) from t_hash_subpartition;
-
-update t_hash_subpartition set r_regionkey = r_regionkey+1;
-select count(*) from t_hash_subpartition where r_regionkey=3;
-select count(*) from t_hash_subpartition; 
 
 --dml of child table
 select count(*) from t_hash_subpartition_1_prt_region1;
@@ -533,21 +521,6 @@ select localoid::regclass, policytype, numsegments, distkey, distclass
 		't_random_subpartition_1_prt_region3_2_prt_china'::regclass,
 		't_random_subpartition_1_prt_region3_2_prt_america'::regclass);
 drop table t_random_subpartition;
-
-create table t_root_partition_expand (a int, b int) partition by range (b) distributed by (a);
-create table t1_partition_expand (a int, b int) distributed by (a); -- same column order as parent
-create table t2_partition_expand (x int, b int, a int) distributed by (a); -- different column order from parent
-alter table t2_partition_expand drop column x;
-
-alter table t_root_partition_expand attach partition t1_partition_expand for values from (1) to (5);
-alter table t_root_partition_expand attach partition t2_partition_expand for values from (5) to (10);
-
-alter table t_root_partition_expand expand partition prepare;
-select localoid::regclass, policytype, numsegments, distkey, distclass
-from gp_distribution_policy where localoid in ('t_root_partition_expand'::regclass, 't1_partition_expand'::regclass, 't2_partition_expand'::regclass);
-alter table t1_partition_expand set distributed by (a);
-alter table t2_partition_expand set distributed by (a);
-
 
 --cleanup
 select gp_debug_reset_create_table_default_numsegments();
