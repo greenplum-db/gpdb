@@ -184,9 +184,6 @@ private:
 			: m_group_info(g), m_expr_index(ix)
 		{
 		}
-		SGroupAndExpression(const SGroupAndExpression &other) = default;
-		SGroupAndExpression &operator=(const SGroupAndExpression &other) =
-			default;
 		SExpressionInfo *
 		GetExprInfo() const
 		{
