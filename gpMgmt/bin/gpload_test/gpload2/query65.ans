@@ -1,10 +1,10 @@
-2021-11-08 11:36:19|INFO|gpload session started 2021-11-08 11:36:19
-2021-11-08 11:36:19|INFO|setting schema 'public' for table 'texttable'
-2021-11-08 11:36:19|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt pathto/data_file1.txt pathto/data_file99.txt" -t 30
-2021-11-08 11:36:19|INFO|did not find an external table to reuse. creating ext_gpload_table
-2021-11-08 11:36:20|ERROR|ERROR:  http response code 404 from gpfdist (gpfdist://*:pathto/data_file.txt): HTTP/1.0 404 file not found  (seg0 slice1 *:6002 pid=7393)
+2021-11-09 13:55:16|INFO|gpload session started 2021-11-09 13:55:16
+2021-11-09 13:55:16|INFO|setting schema 'public' for table 'texttable'
+2021-11-09 13:55:16|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt pathto/data_file1.txt pathto/data_file99.txt" -t 30
+2021-11-09 13:55:16|INFO|did not find an external table to reuse. creating ext_gpload_table
+2021-11-09 13:55:17|ERROR|ERROR:  http response code 404 from gpfdist (gpfdist://*:pathto/data_file_not_exist.txt): HTTP/1.0 404 file not found  (seg0 slice1 *:6002 pid=27699)
  encountered while running INSERT INTO public."texttable" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7" FROM ext_gpload_table
-2021-11-08 11:36:20|INFO|rows Inserted          = 0
-2021-11-08 11:36:20|INFO|rows Updated           = 0
-2021-11-08 11:36:20|INFO|data formatting errors = 0
-2021-11-08 11:36:20|INFO|gpload failed
+2021-11-09 13:55:17|INFO|rows Inserted          = 0
+2021-11-09 13:55:17|INFO|rows Updated           = 0
+2021-11-09 13:55:17|INFO|data formatting errors = 0
+2021-11-09 13:55:17|INFO|gpload failed

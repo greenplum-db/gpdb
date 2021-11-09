@@ -538,6 +538,17 @@ def ModifyOutFile(file,old_str,new_str):
             f2.write(line)
     os.remove(file)
     os.rename("%s.bak" % file, file)
+    if file == 'query65.out':
+        print file
+        print 'in file 65'
+        # case 65 is unstable, which file not found is random, 
+        # so we need to pre-process it here
+        with open('query65.out', 'r') as f1,open("query65.bak", "w") as f2:
+            for line in f1:
+                line = re.sub(':pathto\/data_file[0-9]*\.txt',':pathto/data_file_not_exist.txt',line)
+                f2.write(line)
+        os.remove('query65.out')
+        os.rename("query65.bak" , 'query65.out')
 
 Modify_Output_Case = [44,46,51,57,65,219]
 
