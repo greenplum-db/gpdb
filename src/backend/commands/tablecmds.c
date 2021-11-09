@@ -4736,7 +4736,8 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				Oid 		relid = RelationGetRelid(rel);
 				PartStatus 	ps = rel_part_status(relid);
 
-				if (Gp_role == GP_ROLE_DISPATCH) {
+				if (Gp_role == GP_ROLE_DISPATCH)
+				{
 					if (rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
 					{
 						ereport(ERROR,

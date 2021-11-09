@@ -3088,7 +3088,8 @@ def _get_dist_policy_per_partition(table, dbname):
         query = "select * from gp_distribution_policy where localoid::regclass::text like '%s%%' order by localoid;" % table
         cursor = dbconn.query(conn, query)
         rows = cursor.fetchall()
-    return [row[2:5] for row in rows] # we only need numsegments、distkey、distclass
+    # we only need numsegments, distkey, distclass
+    return [row[2:5] for row in rows]
 
 @given('set fault inject "{fault}"')
 @then('set fault inject "{fault}"')
