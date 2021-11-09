@@ -1,5 +1,5 @@
 # coding=utf-8
-from TEST_local_base import write_config_file, psql_run, mkpath
+from TEST_local_base import get_ip, write_config_file, psql_run, mkpath
 from TEST_local_base import prepare_before_test, drop_tables, runfile
 from TEST_local_base import runfile, copy_data, run, hostNameAddrs, masterPort
 import pytest
@@ -227,3 +227,11 @@ def test_78_gpload_merge_upper_case():
         write_config_file(mode='insert',file='data_file.txt',config='config/config_file'+str(i),reuse_tables=True, fast_match=True, table='testheaderreuse',columns=columns[i], delimiter="','")
         f.write("\\! gpload -f "+mkpath('config/config_file'+str(i))+"\n")
     f.close()
+
+@pytest.mark.order(79)
+@prepare_before_test(num=79)
+def test_79_gpload_multi_input_hostname():
+    """79 test gpload has a input source with multiple hostname"""
+    runfile(mkpath('setup.sql'))
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(format='text',file=['data_file.txt'],table='texttable',local_host=['127.0.0.1','localhost'])
