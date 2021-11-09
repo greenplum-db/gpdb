@@ -38,16 +38,15 @@ using namespace gpmd;
 using namespace gpopt;
 
 // hash maps ULONG -> array of ULONGs
-typedef CHashMap<ULONG, ULongPtrArray, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupRelease<ULongPtrArray> >
-	UlongToUlongPtrArrayMap;
+using UlongToUlongPtrArrayMap =
+	CHashMap<ULONG, ULongPtrArray, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupRelease<ULongPtrArray>>;
 
 // iterator
-typedef CHashMapIter<ULONG, ULongPtrArray, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupRelease<ULongPtrArray> >
-	UlongToUlongPtrArrayMapIter;
+using UlongToUlongPtrArrayMapIter =
+	CHashMapIter<ULONG, ULongPtrArray, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<ULongPtrArray>>;
 
 //---------------------------------------------------------------------------
 //	@class:

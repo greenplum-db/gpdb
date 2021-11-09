@@ -33,10 +33,10 @@ private:
 	CMemoryPool *m_mp;
 
 	// short hand for Table of Message Tables (TMT)
-	typedef CSyncHashtable<CMessageTable, ELocale> TMT;
+	using TMT = CSyncHashtable<CMessageTable, ELocale>;
 
 	// short hand for TMT accessor
-	typedef CSyncHashtableAccessByKey<CMessageTable, ELocale> TMTAccessor;
+	using TMTAccessor = CSyncHashtableAccessByKey<CMessageTable, ELocale>;
 
 	// basic hash table
 	TMT m_hash_table;

@@ -4032,6 +4032,41 @@ struct config_int ConfigureNamesInt_gp[] =
 		0, 0, INT_MAX, NULL, NULL
 	},
 
+	{
+		{"gp_dispatch_keepalives_idle", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between issuing TCP keepalives from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_idle,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_IDLE,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_interval", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_interval,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_INTERVAL,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_count", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Maximum number of TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("This controls the number of consecutive keepalive retransmits that can be "
+						 "lost before a QD/QE connection is considered dead. A value of 0 uses the "
+						 "system default."),
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_count,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_COUNT,
+		NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL

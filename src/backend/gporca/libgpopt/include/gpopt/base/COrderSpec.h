@@ -23,7 +23,7 @@ namespace gpopt
 {
 // type definition of corresponding dynamic pointer array
 class COrderSpec;
-typedef CDynamicPtrArray<COrderSpec, CleanupRelease> COrderSpecArray;
+using COrderSpecArray = CDynamicPtrArray<COrderSpec, CleanupRelease>;
 
 using namespace gpos;
 
@@ -116,8 +116,8 @@ private:
 	};	// class COrderExpression
 
 	// array of order expressions
-	typedef CDynamicPtrArray<COrderExpression, CleanupDelete>
-		COrderExpressionArray;
+	using COrderExpressionArray =
+		CDynamicPtrArray<COrderExpression, CleanupDelete>;
 
 
 	// memory pool

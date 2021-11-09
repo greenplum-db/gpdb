@@ -32,7 +32,7 @@ class CICGTest
 {
 private:
 	// function pointer type for checking predicates over DXL fragments
-	typedef BOOL(FnDXLOpPredicate)(CDXLOperator *);
+	using FnDXLOpPredicate = BOOL(CDXLOperator *);
 
 	// counter used to mark last successful test
 	static ULONG m_ulTestCounter;

@@ -70,7 +70,7 @@ public:
 	}
 };
 
-typedef CDynamicPtrArray<CDXLWindowKey, CleanupRelease> CDXLWindowKeyArray;
+using CDXLWindowKeyArray = CDynamicPtrArray<CDXLWindowKey, CleanupRelease>;
 }  // namespace gpdxl
 #endif	// !GPDXL_CDXLWindowKey_H
 

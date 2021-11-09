@@ -26,9 +26,9 @@ namespace gpopt
 using namespace gpos;
 
 // hash maps ULONG -> array of ULONGs
-typedef CHashMap<ULONG, CBitSet, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupRelease<CBitSet> >
-	UlongToBitSetMap;
+using UlongToBitSetMap =
+	CHashMap<ULONG, CBitSet, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupRelease<CBitSet>>;
 
 // forward declarations
 class CColRefSet;

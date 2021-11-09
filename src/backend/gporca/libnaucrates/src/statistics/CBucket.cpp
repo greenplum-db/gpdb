@@ -844,10 +844,14 @@ CBucket::MakeBucketIntersect(CMemoryPool *mp, CBucket *bucket,
 	CDouble freq_intersect1 = ratio1 * m_frequency;
 	CDouble freq_intersect2 = ratio2 * bucket->m_frequency;
 
-	CDouble frequency_new(
-		freq_intersect1 * freq_intersect2 * DOUBLE(1.0) /
+	CDouble distinct_max(
 		std::max(ratio1.Get() * m_distinct.Get(),
 				 ratio2.Get() * bucket->GetNumDistinct().Get()));
+	CDouble frequency_new(distinct_max == CDouble(0)
+							  ? 0
+							  : freq_intersect1 * freq_intersect2 *
+									DOUBLE(1.0) / distinct_max);
+
 
 	lower_new->AddRef();
 	upper_new->AddRef();

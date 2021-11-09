@@ -69,7 +69,7 @@ private:
 	};
 
 	// array of SMcvVPairs
-	typedef CDynamicPtrArray<SMcvPair, CleanupDelete> SMcvPairPtrArray;
+	using SMcvPairPtrArray = CDynamicPtrArray<SMcvPair, CleanupDelete>;
 
 	// given MCVs and histogram buckets, merge them into buckets of a single histogram
 	static CBucketArray *MergeMcvHistBucket(

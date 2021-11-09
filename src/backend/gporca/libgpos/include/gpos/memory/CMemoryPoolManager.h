@@ -37,13 +37,13 @@ namespace gpos
 class CMemoryPoolManager
 {
 private:
-	typedef CSyncHashtableAccessByKey<CMemoryPool, ULONG_PTR>
-		MemoryPoolKeyAccessor;
+	using MemoryPoolKeyAccessor =
+		CSyncHashtableAccessByKey<CMemoryPool, ULONG_PTR>;
 
-	typedef CSyncHashtableIter<CMemoryPool, ULONG_PTR> MemoryPoolIter;
+	using MemoryPoolIter = CSyncHashtableIter<CMemoryPool, ULONG_PTR>;
 
-	typedef CSyncHashtableAccessByIter<CMemoryPool, ULONG_PTR>
-		MemoryPoolIterAccessor;
+	using MemoryPoolIterAccessor =
+		CSyncHashtableAccessByIter<CMemoryPool, ULONG_PTR>;
 
 	// memory pool in which all objects created by the manager itself
 	// are allocated - must be thread-safe

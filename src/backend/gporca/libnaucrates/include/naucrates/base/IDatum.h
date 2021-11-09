@@ -28,9 +28,9 @@ using namespace gpmd;
 class IDatum;
 
 // hash map mapping ULONG -> Datum
-typedef CHashMap<ULONG, IDatum, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupRelease<IDatum> >
-	UlongToIDatumMap;
+using UlongToIDatumMap =
+	CHashMap<ULONG, IDatum, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupRelease<IDatum>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -145,7 +145,7 @@ public:
 };	// class IDatum
 
 // array of idatums
-typedef CDynamicPtrArray<IDatum, CleanupRelease> IDatumArray;
+using IDatumArray = CDynamicPtrArray<IDatum, CleanupRelease>;
 }  // namespace gpnaucrates
 
 

@@ -23,16 +23,36 @@
   echo 'source scl_source enable devtoolset-7' >> ~/.bashrc
   ```
 
-## For RHEL
+## For RHEL:
 
-Use dependency script for CentOS.
+- Install Development Tools.
+  - For RHEL 8: Install `Development Tools`:
 
-- If you want to install `devtoolset-7`:
+    ```bash
+    sudo yum group install -y "Development Tools"
+    ```
 
-  ```bash
-  sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
-  sudo yum install -y devtoolset-7-toolchain
-  ```
+  - For RHEL versions (< 8.0): Install `devtoolset-7`:
+
+    ```bash
+    sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
+    sudo yum install -y devtoolset-7-toolchain
+    ```
+  
+- Install dependencies using README.CentOS.bash script.
+  - For RHEL 8: Execute additional step before running README.CentOS.bash script.
+  
+    Note: Make sure installation of `Development Tools` includes `git` and `make` else install these tools manually.
+
+    ```bash
+    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    ```
+
+  - Install dependencies using README.CentOS.bash script.
+
+    ```bash
+    ./README.CentOS.bash
+    ```
 
 ## For Ubuntu:
 
@@ -80,7 +100,7 @@ then run command `ldconfig`.
 1. Verify that you can ssh to your machine name without a password.
 
    ```bash
-    ssh <hostname of your machine>  # e.g., ssh briarwood (You can use `hostname` to get the hostname of your machine.)
+   ssh <hostname of your machine>  # e.g., ssh briarwood (You can use `hostname` to get the hostname of your machine.)
    ```
 
 1. Set up your system configuration by following the installation guide on [docs.greenplum.org](https://docs.greenplum.org)

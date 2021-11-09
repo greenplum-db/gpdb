@@ -116,7 +116,7 @@ public:
 };
 
 // array of metadata column descriptor
-typedef CDynamicPtrArray<CMDColumn, CleanupRelease> CMDColumnArray;
+using CMDColumnArray = CDynamicPtrArray<CMDColumn, CleanupRelease>;
 
 }  // namespace gpmd
 

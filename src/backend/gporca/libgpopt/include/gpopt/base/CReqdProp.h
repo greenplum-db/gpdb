@@ -28,7 +28,7 @@ class COperator;
 class CReqdProp;
 
 // dynamic array for required properties
-typedef CDynamicPtrArray<CReqdProp, CleanupRelease> CReqdPropArray;
+using CReqdPropArray = CDynamicPtrArray<CReqdProp, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

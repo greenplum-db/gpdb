@@ -18,7 +18,7 @@
 namespace gpopt
 {
 // dynamic array of datum arrays -- array owns elements
-typedef CDynamicPtrArray<IDatumArray, CleanupRelease> IDatum2dArray;
+using IDatum2dArray = CDynamicPtrArray<IDatumArray, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

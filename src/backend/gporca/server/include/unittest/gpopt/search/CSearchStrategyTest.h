@@ -30,11 +30,11 @@ class CSearchStrategyTest
 {
 private:
 	// type definition for of expression generator
-	typedef CExpression *(*Pfpexpr)(CMemoryPool *);
+	using Pfpexpr = CExpression *(*) (CMemoryPool *);
 
 	// type definition for of optimize function
-	typedef void (*PfnOptimize)(CMemoryPool *, CExpression *,
-								CSearchStageArray *);
+	using PfnOptimize = void (*)(CMemoryPool *, CExpression *,
+								 CSearchStageArray *);
 
 	// generate random search strategy
 	static CSearchStageArray *PdrgpssRandom(CMemoryPool *mp);

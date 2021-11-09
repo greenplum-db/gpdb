@@ -33,10 +33,10 @@ class CXformSimplifySubquery : public CXformExploration
 {
 private:
 	// definition of simplification function
-	typedef BOOL(FnSimplify)(CMemoryPool *mp, CExpression *, CExpression **);
+	using FnSimplify = BOOL(CMemoryPool *, CExpression *, CExpression **);
 
 	// definition of matching function
-	typedef BOOL(FnMatch)(COperator *);
+	using FnMatch = BOOL(COperator *);
 
 	// transform existential subqueries to count(*) subqueries
 	static BOOL FSimplifyExistential(CMemoryPool *mp, CExpression *pexprScalar,

@@ -65,7 +65,7 @@ using namespace gpos;
 using namespace gpmd;
 
 
-typedef IMDId *MdidPtr;
+using MdidPtr = IMDId *;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -90,7 +90,7 @@ class CMDAccessor
 {
 public:
 	// ccache template for mdcache
-	typedef CCache<IMDCacheObject *, CMDKey *> MDCache;
+	using MDCache = CCache<IMDCacheObject *, CMDKey *>;
 
 private:
 	// element in the hashtable of cache accessors maintained by the MD accessor
@@ -99,28 +99,28 @@ private:
 
 
 	// cache accessor for objects in a MD cache
-	typedef CCacheAccessor<IMDCacheObject *, CMDKey *> CacheAccessorMD;
+	using CacheAccessorMD = CCacheAccessor<IMDCacheObject *, CMDKey *>;
 
 	// hashtable for cache accessors indexed by the md id of the accessed object
-	typedef CSyncHashtable<SMDAccessorElem, MdidPtr> MDHT;
+	using MDHT = CSyncHashtable<SMDAccessorElem, MdidPtr>;
 
-	typedef CSyncHashtableAccessByKey<SMDAccessorElem, MdidPtr> MDHTAccessor;
+	using MDHTAccessor = CSyncHashtableAccessByKey<SMDAccessorElem, MdidPtr>;
 
 	// iterator for the cache accessors hashtable
-	typedef CSyncHashtableIter<SMDAccessorElem, MdidPtr> MDHTIter;
-	typedef CSyncHashtableAccessByIter<SMDAccessorElem, MdidPtr>
-		MDHTIterAccessor;
+	using MDHTIter = CSyncHashtableIter<SMDAccessorElem, MdidPtr>;
+	using MDHTIterAccessor =
+		CSyncHashtableAccessByIter<SMDAccessorElem, MdidPtr>;
 
 	// hashtable for MD providers indexed by the source system id
-	typedef CSyncHashtable<SMDProviderElem, SMDProviderElem> MDPHT;
+	using MDPHT = CSyncHashtable<SMDProviderElem, SMDProviderElem>;
 
-	typedef CSyncHashtableAccessByKey<SMDProviderElem, SMDProviderElem>
-		MDPHTAccessor;
+	using MDPHTAccessor =
+		CSyncHashtableAccessByKey<SMDProviderElem, SMDProviderElem>;
 
 	// iterator for the providers hashtable
-	typedef CSyncHashtableIter<SMDProviderElem, SMDProviderElem> MDPHTIter;
-	typedef CSyncHashtableAccessByIter<SMDProviderElem, SMDProviderElem>
-		MDPHTIterAccessor;
+	using MDPHTIter = CSyncHashtableIter<SMDProviderElem, SMDProviderElem>;
+	using MDPHTIterAccessor =
+		CSyncHashtableAccessByIter<SMDProviderElem, SMDProviderElem>;
 
 	// element in the cache accessor hashtable maintained by the MD Accessor
 	struct SMDAccessorElem

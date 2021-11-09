@@ -29,7 +29,7 @@ class CDrvdPropCtxt;
 class CReqdPropPlan;
 
 // dynamic array for properties
-typedef CDynamicPtrArray<CDrvdProp, CleanupRelease> CDrvdPropArray;
+using CDrvdPropArray = CDynamicPtrArray<CDrvdProp, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

@@ -128,12 +128,12 @@ private:
 	ULONG m_size;
 
 	// each hash chain is an array of hashmap elements
-	typedef CDynamicPtrArray<CHashMapElem, CleanupDelete> CHashSetElemArray;
+	using CHashSetElemArray = CDynamicPtrArray<CHashMapElem, CleanupDelete>;
 	CHashSetElemArray **const m_chains;
 
 	// array for keys
 	// We use CleanupNULL because the keys are owned by the hash table
-	typedef CDynamicPtrArray<K, CleanupNULL> Keys;
+	using Keys = CDynamicPtrArray<K, CleanupNULL>;
 	Keys *const m_keys;
 
 	IntPtrArray *const m_filled_chains;
@@ -295,9 +295,9 @@ public:
 
 };	// class CHashMap
 
-typedef CHashMap<ULONG, ULONG, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupDelete<ULONG> >
-	UlongToUlongMap;
+using UlongToUlongMap =
+	CHashMap<ULONG, ULONG, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupDelete<ULONG>>;
 }  // namespace gpos
 
 #endif	// !GPOS_CHashMap_H

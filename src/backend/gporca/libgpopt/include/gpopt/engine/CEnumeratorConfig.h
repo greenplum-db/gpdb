@@ -33,7 +33,7 @@ using namespace gpos;
 class CExpression;
 
 // type definition of plan checker
-typedef BOOL(FnPlanChecker)(CExpression *);
+using FnPlanChecker = BOOL(CExpression *);
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -90,7 +90,7 @@ private:
 	};	// struct SSamplePlan
 
 	// array og unsigned long long int
-	typedef CDynamicPtrArray<SSamplePlan, CleanupDelete> SSamplePlanArray;
+	using SSamplePlanArray = CDynamicPtrArray<SSamplePlan, CleanupDelete>;
 
 	// memory pool
 	CMemoryPool *m_mp;

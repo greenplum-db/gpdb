@@ -5,12 +5,12 @@
   <title id="jj138244">Validating Your Systems</title>
   <shortdesc>Validate your hardware and network performance.</shortdesc>
   <body>
-    <p>Greenplum provides a management utility called <codeph><xref
+    <p>Greenplum provides a management utility called <xref
           href="../utility_guide/ref/gpcheckperf.xml" type="topic" format="dita"
-          scope="peer">gpcheckperf</xref></codeph>, which can be used to identify hardware and
-      system-level issues on the machines in your Greenplum Database array. <codeph><xref
+          scope="peer">gpcheckperf</xref>, which can be used to identify hardware and
+      system-level issues on the machines in your Greenplum Database array. <xref
           href="../utility_guide/ref/gpcheckperf.xml" type="topic" format="dita"
-          scope="peer">gpcheckperf</xref></codeph> starts a session on the specified hosts and runs
+          scope="peer">gpcheckperf</xref> starts a session on the specified hosts and runs
       the following performance tests:</p>
     <ul id="ul_s14_dcj_zhb">
       <li id="jj165025">Network Performance (<codeph>gpnetbench*</codeph>)</li>
@@ -18,22 +18,22 @@
       <li id="jj165035">Memory Bandwidth (<codeph>stream</codeph> test)</li>
     </ul>
     <p>Before using <codeph>gpcheckperf</codeph>, you must have a trusted host setup between the
-      hosts involved in the performance test. You can use the utility <codeph><xref
+      hosts involved in the performance test. You can use the utility <xref
           href="../utility_guide/ref/gpssh-exkeys.xml" type="topic" format="dita"
-          scope="peer">gpssh-exkeys</xref></codeph> to update the known host files and exchange
+          scope="peer">gpssh-exkeys</xref> to update the known host files and exchange
       public keys between hosts if you have not done so already. Note that
-        <codeph>gpcheckperf</codeph> calls to <codeph><xref
+        <codeph>gpcheckperf</codeph> calls to <xref
           href="../utility_guide/ref/gpssh.xml" type="topic" format="dita" scope="peer"
-          >gpssh</xref></codeph> and <codeph><xref href="../utility_guide/ref/gpscp.xml"
-          type="topic" format="dita" scope="peer">gpscp</xref></codeph>, so these Greenplum
+          >gpssh</xref> and <xref href="../utility_guide/ref/gpscp.xml"
+          type="topic" format="dita" scope="peer">gpscp</xref>, so these Greenplum
       utilities must be in your <codeph>$PATH</codeph>.</p>
   </body>
   <topic id="topic4" xml:lang="en">
     <title>Validating Network Performance</title>
     <body>
-      <p>To test network performance, run <codeph><xref
+      <p>To test network performance, run <xref
             href="../utility_guide/ref/gpcheckperf.xml" type="topic" format="dita"
-            scope="peer">gpcheckperf</xref></codeph> with one of the network test run options:
+            scope="peer">gpcheckperf</xref> with one of the network test run options:
         parallel pair test (<codeph>-r N</codeph>), serial pair test (<codeph>-r n</codeph>), or
         full matrix test (<codeph>-r M</codeph>). The utility runs a network benchmark program that
         transfers a 5 second stream of data from the current host to each remote host included in
@@ -80,9 +80,9 @@
           </tbody>
         </tgroup>
       </table>
-      <p>You would create four distinct host files for use with the <codeph><xref
+      <p>You would create four distinct host files for use with the <xref
             href="../utility_guide/ref/gpcheckperf.xml" type="topic" format="dita"
-            scope="peer">gpcheckperf</xref></codeph> network test:</p>
+            scope="peer">gpcheckperf</xref> network test:</p>
       <table id="jj165603">
         <title>Example Network Test Host File Contents</title>
         <tgroup cols="2">
@@ -110,8 +110,8 @@
           </tbody>
         </tgroup>
       </table>
-      <p>You would then run <codeph><xref href="../utility_guide/ref/gpcheckperf.xml"
-            type="topic" format="dita" scope="peer">gpcheckperf</xref></codeph> once per subnet. For
+      <p>You would then run <xref href="../utility_guide/ref/gpcheckperf.xml"
+            type="topic" format="dita" scope="peer">gpcheckperf</xref> once per subnet. For
         example (if testing an <i>even</i> number of hosts, run in parallel pairs test mode):</p>
       <codeblock>$ gpcheckperf -f hostfile_gpchecknet_ic1 -r N -d /tmp &gt; subnet1.out
 $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N -d /tmp &gt; subnet2.out</codeblock>
@@ -122,9 +122,9 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N -d /tmp &gt; subnet2.out</codebloc
   <topic id="topic5" xml:lang="en">
     <title id="jj164897">Validating Disk I/O and Memory Bandwidth</title>
     <body>
-      <p>To test disk and memory bandwidth performance, run <codeph><xref
+      <p>To test disk and memory bandwidth performance, run <xref
             href="../utility_guide/ref/gpcheckperf.xml" type="topic" format="dita" scope="peer"
-            >gpcheckperf</xref></codeph> with the disk and stream test run options (<codeph>-r
+            >gpcheckperf</xref> with the disk and stream test run options (<codeph>-r
           ds</codeph>). The disk test uses the <codeph>dd</codeph> command (a standard UNIX utility)
         to test the sequential throughput performance of a logical disk or file system. The memory
         test uses the STREAM benchmark program to measure sustainable memory bandwidth. Results are

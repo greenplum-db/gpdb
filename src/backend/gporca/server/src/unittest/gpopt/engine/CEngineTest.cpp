@@ -466,7 +466,7 @@ CEngineTest::EresTestEngine(Pfpexpr rgpf[], ULONG size)
 GPOS_RESULT
 CEngineTest::EresUnittest_BuildMemoWithSubqueries()
 {
-	typedef CExpression *(*Pfpexpr)(CMemoryPool *, BOOL);
+	using Pfpexpr = CExpression *(*) (CMemoryPool *, BOOL);
 	Pfpexpr rgpf[] = {
 		CSubqueryTestUtils::PexprSelectWithAllAggSubquery,
 		CSubqueryTestUtils::PexprSelectWithAggSubquery,

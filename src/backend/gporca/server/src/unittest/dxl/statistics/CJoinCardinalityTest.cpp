@@ -234,9 +234,10 @@ CJoinCardinalityTest::EresUnittest_Join()
 			// for this test the col name doesn't matter
 			CWStringConst str(GPOS_WSZ_LIT("col"));
 			// create column references for grouping columns
-			(void) col_factory->PcrCreate(
-				pmdtypeint4, default_type_modifier, nullptr, ul /* attno */,
-				false /*IsNullable*/, id, CName(&str), false /*IsDistCol*/, 0);
+			(void) col_factory->PcrCreate(pmdtypeint4, default_type_modifier,
+										  nullptr, ul /* attno */,
+										  false /*IsNullable*/, id, CName(&str),
+										  false /*IsDistCol*/, false);
 		}
 	}
 	cols->Release();

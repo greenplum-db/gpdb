@@ -35,13 +35,13 @@ class CDrvdPropPlan;
 class CCostContext;
 
 // array of cost contexts
-typedef CDynamicPtrArray<CCostContext, CleanupRelease> CCostContextArray;
+using CCostContextArray = CDynamicPtrArray<CCostContext, CleanupRelease>;
 
 // cost context pointer definition
-typedef CCostContext *COSTCTXT_PTR;
+using COSTCTXT_PTR = CCostContext *;
 
 // cost context pointer definition
-typedef const CCostContext *CONST_COSTCTXT_PTR;
+using CONST_COSTCTXT_PTR = const CCostContext *;
 
 //---------------------------------------------------------------------------
 //	@class:

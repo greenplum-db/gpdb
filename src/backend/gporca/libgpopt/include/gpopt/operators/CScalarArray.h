@@ -22,7 +22,7 @@ namespace gpopt
 using namespace gpos;
 using namespace gpmd;
 
-typedef CDynamicPtrArray<CScalarConst, CleanupRelease> CScalarConstArray;
+using CScalarConstArray = CDynamicPtrArray<CScalarConst, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

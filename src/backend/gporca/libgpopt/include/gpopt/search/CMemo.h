@@ -28,9 +28,8 @@ class CMemoProxy;
 class COptimizationContext;
 
 // memo tree map definition
-typedef CTreeMap<CCostContext, CExpression, CDrvdPropCtxtPlan,
-				 CCostContext::HashValue, CCostContext::Equals>
-	MemoTreeMap;
+using MemoTreeMap = CTreeMap<CCostContext, CExpression, CDrvdPropCtxtPlan,
+							 CCostContext::HashValue, CCostContext::Equals>;
 
 using namespace gpos;
 
@@ -46,19 +45,15 @@ class CMemo : public gpos::DbgPrintMixin<CMemo>
 {
 private:
 	// definition of hash table key accessor
-	typedef CSyncHashtableAccessByKey<CGroupExpression,	 // entry
-									  CGroupExpression>
-		ShtAcc;
+	using ShtAcc =
+		CSyncHashtableAccessByKey<CGroupExpression, CGroupExpression>;
 
 	// definition of hash table iterator
-	typedef CSyncHashtableIter<CGroupExpression,  // entry
-							   CGroupExpression>
-		ShtIter;
+	using ShtIter = CSyncHashtableIter<CGroupExpression, CGroupExpression>;
 
 	// definition of hash table iterator accessor
-	typedef CSyncHashtableAccessByIter<CGroupExpression,  // entry
-									   CGroupExpression>
-		ShtAccIter;
+	using ShtAccIter =
+		CSyncHashtableAccessByIter<CGroupExpression, CGroupExpression>;
 
 	// memory pool
 	CMemoryPool *m_mp;

@@ -976,9 +976,8 @@ public:
 };	// class CUtils
 
 // hash set from expressions
-typedef CHashSet<CExpression, CExpression::UlHashDedup, CUtils::Equals,
-				 CleanupRelease<CExpression> >
-	ExprHashSet;
+using ExprHashSet = CHashSet<CExpression, CExpression::UlHashDedup,
+							 CUtils::Equals, CleanupRelease<CExpression>>;
 
 
 //---------------------------------------------------------------------------

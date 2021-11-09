@@ -42,8 +42,8 @@
             <ul>
               <li><xref href="../ref_guide/modules/hstore.xml" type="topic" scope="peer"
                   format="dita">hstore</xref></li>
-              <li otherprops="pivotal"><xref href="../ref_guide/modules/orafce_ref.xml" type="topic"
-                  scope="peer" format="dita">orafce</xref><!--Pivotal only--></li>
+              <li><xref href="../ref_guide/modules/orafce_ref.xml" type="topic" scope="peer"
+                  format="dita">orafce</xref> (Tanzu Greenplum only)</li>
               <li><xref href="../ref_guide/modules/pageinspect.xml" type="topic" scope="peer"
                   format="dita">pageinspect</xref></li>
               <li><xref href="../ref_guide/modules/pgcrypto.xml" type="topic" scope="peer"

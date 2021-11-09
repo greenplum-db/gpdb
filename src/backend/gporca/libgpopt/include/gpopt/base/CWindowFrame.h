@@ -22,7 +22,7 @@ namespace gpopt
 {
 // type definition of corresponding dynamic pointer array
 class CWindowFrame;
-typedef CDynamicPtrArray<CWindowFrame, CleanupRelease> CWindowFrameArray;
+using CWindowFrameArray = CDynamicPtrArray<CWindowFrame, CleanupRelease>;
 
 using namespace gpos;
 

@@ -36,6 +36,7 @@
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/ml_ipc.h"
 #include "commands/sequence.h"
@@ -2109,4 +2110,147 @@ Datum
 get_tablespace_version_directory_name(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_TEXT_P(CStringGetTextDatum(GP_TABLESPACE_VERSION_DIRECTORY));
+}
+
+#if defined(TCP_KEEPIDLE)
+/* TCP_KEEPIDLE is the name of this option on Linux and *BSD */
+#define PG_TCP_KEEPALIVE_IDLE TCP_KEEPIDLE
+#define PG_TCP_KEEPALIVE_IDLE_STR "TCP_KEEPIDLE"
+#elif defined(TCP_KEEPALIVE) && defined(__darwin__)
+/* TCP_KEEPALIVE is the name of this option on macOS */
+#define PG_TCP_KEEPALIVE_IDLE TCP_KEEPALIVE
+#define PG_TCP_KEEPALIVE_IDLE_STR "TCP_KEEPALIVE"
+#endif
+
+/*
+ * This test function obtains the TCP socket keepalive settings for the
+ * cdbgang QD/QE libpq connections.
+ */
+PG_FUNCTION_INFO_V1(gp_keepalives_check);
+Datum
+gp_keepalives_check(PG_FUNCTION_ARGS)
+{
+	typedef struct Context
+	{
+		int index;
+		CdbComponentDatabases *cdbs;
+		ListCell *currentQE;
+	} Context;
+
+	FuncCallContext *funcctx;
+	Context *context;
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		TupleDesc tupdesc;
+		MemoryContext oldcontext;
+
+		/* Create a function context for cross-call persistence */
+		funcctx = SRF_FIRSTCALL_INIT();
+
+		/* Switch to memory context for appropriate multiple function call */
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/* Create tupdesc for result */
+		tupdesc = CreateTemplateTupleDesc(6);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "qe_id",
+						   INT2OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "is_writer",
+						   BOOLOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "keepalives_enabled",
+						   BOOLOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "keepalives_interval",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "keepalives_count",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "keepalives_idle",
+						   INT4OID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		context = (Context *) palloc(sizeof(Context));
+		context->index = 0;
+		context->cdbs = (cdbcomponent_getComponentInfo(MASTER_CONTENT_ID))->cdbs;
+		context->currentQE = NULL;
+
+		funcctx->user_fctx = (void *) context;
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+	context = (Context *) funcctx->user_fctx;
+
+	/* Loop through all QE segments in the cdbgang */
+	while (context->index < context->cdbs->total_segment_dbs)
+	{
+		Datum values[6];
+		bool nulls[6];
+		HeapTuple tuple;
+		Datum result;
+		int keepalives_enabled;
+		int keepalives_interval;
+		int keepalives_count;
+		int keepalives_idle;
+		int socket_fd;
+		uint size = sizeof(int);
+		SegmentDatabaseDescriptor *segDesc;
+
+		/* The QE segment freelist contains the idle QE info that stores the PGconn objects */
+		if (context->cdbs->segment_db_info[context->index].freelist == NULL
+			|| (context->currentQE != NULL && lnext(context->currentQE) == NULL))
+		{
+			/* This QE segment freelist is empty or we've reached the end of the freelist */
+			context->currentQE = NULL;
+			context->index++;
+			continue;
+		}
+		else if (context->currentQE == NULL)
+		{
+			/* Start at the head of this QE segment freelist */
+			context->currentQE = list_head(context->cdbs->segment_db_info[context->index].freelist);
+		}
+		else
+		{
+			/* Continue to next item in the QE segment freelist (e.g. readers and writers) */
+			context->currentQE = lnext(context->currentQE);
+		}
+
+		/* Obtain the socket file descriptor from each libpq connection */
+		segDesc = (SegmentDatabaseDescriptor *)(lfirst(context->currentQE));
+		socket_fd = PQsocket(segDesc->conn);
+
+		/* Obtain the TCP socket keepalive settings */
+		if (getsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE,
+					   &keepalives_enabled, &size) < 0)
+			elog(ERROR, "getsockopt(%s) failed: %m", "SO_KEEPALIVE");
+
+		if (getsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPINTVL,
+					   (char *) &keepalives_interval, &size) < 0)
+			elog(ERROR, "getsockopt(%s) failed: %m", "TCP_KEEPINTVL");
+
+		if (getsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPCNT,
+					   (char *) &keepalives_count, &size) < 0)
+			elog(ERROR, "getsockopt(%s) failed: %m", "TCP_KEEPCNT");
+
+		if (getsockopt(socket_fd, IPPROTO_TCP, PG_TCP_KEEPALIVE_IDLE,
+					   (char *) &keepalives_idle, &size) < 0)
+			elog(ERROR, "getsockopt(%s) failed: %m", PG_TCP_KEEPALIVE_IDLE_STR);
+
+		/* Form tuple with appropriate data */
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+
+		values[0] = Int16GetDatum(segDesc->segindex);
+		values[1] = BoolGetDatum(segDesc->isWriter);
+		values[2] = BoolGetDatum(keepalives_enabled > 0);
+		values[3] = Int32GetDatum(keepalives_interval);
+		values[4] = Int32GetDatum(keepalives_count);
+		values[5] = Int32GetDatum(keepalives_idle);
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+		result = HeapTupleGetDatum(tuple);
+
+		SRF_RETURN_NEXT(funcctx, result);
+	}
+
+	SRF_RETURN_DONE(funcctx);
 }

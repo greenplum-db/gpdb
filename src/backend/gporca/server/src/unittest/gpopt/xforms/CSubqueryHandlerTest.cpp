@@ -93,7 +93,7 @@ CSubqueryHandlerTest::EresUnittest_Subquery2Apply()
 	pmdp->AddRef();
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
-	typedef CExpression *(*Pfpexpr)(CMemoryPool *, BOOL);
+	using Pfpexpr = CExpression *(*) (CMemoryPool *, BOOL);
 	Pfpexpr rgpf[] = {
 		CSubqueryTestUtils::PexprSelectWithAggSubquery,
 		CSubqueryTestUtils::PexprSelectWithAggSubqueryConstComparison,

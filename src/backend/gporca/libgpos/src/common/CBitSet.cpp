@@ -102,7 +102,7 @@ CBitSet::FindLinkByOffset(ULONG offset, CBitSetLink *bsl) const
 	GPOS_ASSERT_IMP(nullptr != cursor,
 					GPOS_OK == m_bsllist.Find(cursor) && "cursor not in list");
 
-	while (1)
+	while (true)
 	{
 		// no more links or we've overshot the target
 		if (nullptr == cursor || cursor->GetOffset() > offset)

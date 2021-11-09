@@ -1074,7 +1074,6 @@ ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *inc
 		set_ps_display(new_status, false);		/* truncate off " queuing" */
 		new_status[len] = '\0';
 	}
-	pgstat_report_wait_start(PG_WAIT_RESOURCE_QUEUE);
 
 	awaitedLock = locallock;
 	awaitedOwner = owner;
@@ -1092,7 +1091,6 @@ ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *inc
 		LWLockRelease(partitionLock);
 		DeadLockReport();
 	}
-	pgstat_report_wait_end();
 
 	awaitedLock = NULL;
 
@@ -1232,7 +1230,7 @@ ResProcWakeup(PGPROC *proc, int waitStatus)
 	proc->waitStatus = waitStatus;
 
 	/* And awaken it */
-	PGSemaphoreUnlock(proc->sem);
+	SetLatch(&proc->procLatch);
 
 	return retProc;
 }
@@ -1280,6 +1278,7 @@ ResRemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
 	/* Clean up the proc's own state */
 	proc->waitLock = NULL;
 	proc->waitProcLock = NULL;
+	proc->waitStatus = STATUS_ERROR;
 
 	/*
 	 * Remove the waited on portal increment.

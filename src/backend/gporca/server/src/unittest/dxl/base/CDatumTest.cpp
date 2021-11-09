@@ -78,7 +78,7 @@ CDatumTest::EresUnittest_Basics()
 	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
-	typedef IDatum *(*Pfpdatum)(CMemoryPool *, BOOL);
+	using Pfpdatum = IDatum *(*) (CMemoryPool *, BOOL);
 
 	Pfpdatum rgpf[] = {
 		CreateInt2Datum, CreateInt4Datum, CreateInt8Datum,

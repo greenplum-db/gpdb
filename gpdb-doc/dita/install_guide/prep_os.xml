@@ -34,25 +34,24 @@
       a dash (<codeph>-</codeph>) and number to the host name. For example, <codeph>sdw1-1</codeph>
       and <codeph>sdw1-2</codeph> are the two interface names for host <codeph>sdw1</codeph>.</p>
     <!--Pivotal-->
-    <p otherprops="pivotal">For information about running Greenplum Database in the cloud see
-        <cite>Cloud Services</cite> in the <xref
+    <p>For information about running Tanzu Greenplum Database in the cloud see <cite>Cloud
+        Services</cite> in the <xref
         href="https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace" format="html"
         scope="external">Tanzu Greenplum Partner Marketplace</xref>.</p>
     <note type="important">When data loss is not acceptable for a Greenplum Database cluster,
       Greenplum coordinator and segment mirroring is recommended. If mirroring is not enabled then
       Greenplum stores only one copy of the data, so the underlying storage media provides the only
-      guarantee for data availability and correctness in the event of a hardware failure.<p
-        otherprops="pivotal">Kubernetes enables quick recovery from both pod and host failures, and
-        Kubernetes storage services provide a high level of availability for the underlying data.
-        Furthermore, virtualized environments make it difficult to ensure the anti-affinity
-        guarantees required for Greenplum mirroring solutions. For these reasons, mirrorless
-        deployments are fully supported with Greenplum for Kubernetes. Other deployment environments
-        are generally not supported for production use unless both Greenplum coordinator and segment
-        mirroring are enabled.</p></note>
-    <!--Pivotal-->
-    <note type="note" otherprops="pivotal">For information about upgrading Tanzu Greenplum
-     from a previous version, see the <cite>Greenplum Database Release Notes</cite> for
-      the release that you are installing.</note>
+      guarantee for data availability and correctness in the event of a hardware
+        failure.<p>Kubernetes enables quick recovery from both pod and host failures, and Kubernetes
+        storage services provide a high level of availability for the underlying data. Furthermore,
+        virtualized environments make it difficult to ensure the anti-affinity guarantees required
+        for Greenplum mirroring solutions. For these reasons, mirrorless deployments are fully
+        supported with Greenplum for Kubernetes. Other deployment environments are generally not
+        supported for production use unless both Greenplum coordinator and segment mirroring are
+        enabled.</p></note>
+    <note type="note">For information about upgrading Tanzu Greenplum from a previous version, see
+      the <cite>Tanzu Greenplum Database Release Notes</cite> for the release that you are
+      installing.</note>
     <note type="note">Automating the configuration steps described in this topic and <xref
         href="install_gpdb.xml#topic1"/> with a system provisioning tool, such as Ansible, Chef, or
       Puppet, can save time and ensure a reliable and repeatable Greenplum Database installation.
@@ -136,8 +135,8 @@ SELinuxstatus: disabled</codeblock></li>
           have the shared memory values set too low for Greenplum Database. On Linux systems, you
           must also disable the OOM (out of memory) killer. For information about Greenplum Database
           shared memory requirements, see the Greenplum Database server configuration parameter
-              <codeph><xref href="../ref_guide/config_params/guc-list.xml#shared_buffers"
-              scope="peer" format="dita">shared_buffers</xref></codeph> in the <cite>Greenplum
+              <xref href="../ref_guide/config_params/guc-list.xml#shared_buffers"
+              scope="peer" format="dita">shared_buffers</xref> in the <cite>Greenplum
             Database Reference Guide</cite>.</li>
         <li id="ji162187"><b>Network</b> - On high-volume Greenplum Database systems, certain
           network-related tuning parameters must be set to optimize network connections made by the
@@ -148,6 +147,7 @@ SELinuxstatus: disabled</codeblock></li>
           settings may cause some Greenplum Database queries to fail because they will run out of
           file descriptors needed to process the query. </li>
       </ul>
+
       <p>More specifically, you need to edit the following Linux configuration settings:</p>
       <ul id="ul_t1k_rl3_2jb">
         <li><xref href="#topic3/linux_hosts_file" format="dita"/></li>
@@ -165,28 +165,28 @@ SELinuxstatus: disabled</codeblock></li>
         <li><xref href="#topic3/ssh_max_connections" format="dita"/></li>
       </ul>
       <section id="linux_hosts_file">
-        <title>The <codeph>hosts</codeph> File</title>
+        <title>The hosts File</title>
         <p>Edit the <codeph>/etc/hosts</codeph> file and make sure that it includes the host names
           and all interface address names for every machine participating in your Greenplum Database
           system.</p>
       </section>
       <section id="sysctl_file">
-        <title>The <codeph>sysctl.conf</codeph> File</title>
+        <title>The sysctl.conf File</title>
         <p>The <codeph>sysctl.conf</codeph> parameters listed in this topic are for performance,
           optimization, and consistency in a wide variety of environments. Change these settings
           according to your specific situation and setup.</p>
         <p>Set the parameters in the <codeph>/etc/sysctl.conf</codeph> file and reload with
             <codeph>sysctl -p</codeph>: </p>
         <codeblock>
-# kernel.shmall = _PHYS_PAGES / 2 # <b>See <xref href="#topic3/shared_memory_pages" format="dita">Shared Memory Pages</xref></b>
+# kernel.shmall = _PHYS_PAGES / 2 # See Shared Memory Pages
 kernel.shmall = 197951838
 # kernel.shmmax = kernel.shmall * PAGE_SIZE 
 kernel.shmmax = 810810728448
 kernel.shmmni = 4096
-vm.overcommit_memory = 2 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
-vm.overcommit_ratio = 95 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
+vm.overcommit_memory = 2 # See Segment Host Memory
+vm.overcommit_ratio = 95 # See Segment Host Memory
 
-net.ipv4.ip_local_port_range = 10000 65535 # <b>See <xref href="#topic3/port_settings" format="dita">Port Settings</xref></b>
+net.ipv4.ip_local_port_range = 10000 65535 # See Port Settings
 kernel.sem = 500 2048000 200 4096
 kernel.sysrq = 1
 kernel.core_uses_pid = 1
@@ -204,7 +204,7 @@ vm.swappiness = 10
 vm.zone_reclaim_mode = 0
 vm.dirty_expire_centisecs = 500
 vm.dirty_writeback_centisecs = 100
-vm.dirty_background_ratio = 0 # <b>See <xref href="#topic3/system_memory" format="dita">System Memory</xref></b>
+vm.dirty_background_ratio = 0 # See System Memory
 vm.dirty_ratio = 0
 vm.dirty_background_bytes = 1610612736
 vm.dirty_bytes = 4294967296</codeblock>
@@ -339,11 +339,11 @@ vm.dirty_ratio = 10</codeblock></p>
             <p>Read-ahead value</p>
             <p>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
               16384. To verify the read-ahead value of a disk device:</p>
-            <codeblock># sudo /sbin/blockdev --getra <varname>devname</varname></codeblock>
+            <codeblock># sudo /sbin/blockdev --getra &lt;devname></codeblock>
             <p>For example:</p>
             <codeblock># sudo /sbin/blockdev --getra /dev/sdb</codeblock>
             <p>To set blockdev (read-ahead) on a device:</p>
-            <codeblock># sudo /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
+            <codeblock># sudo /sbin/blockdev --setra &lt;bytes> &lt;devname></codeblock>
             <p>For example:</p>
             <codeblock># sudo /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
             <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
@@ -369,7 +369,7 @@ vm.dirty_ratio = 10</codeblock></p>
                 <codeph>CFQ</codeph>, <codeph>AS</codeph>, and <codeph>deadline</codeph>.</p>
             <p>The <codeph>deadline</codeph> scheduler option is recommended. To specify a scheduler
               until the next system reboot, run the following:</p>
-            <codeblock># echo <varname>schedulername</varname> &gt; /sys/block/<varname>devname</varname>/queue/scheduler</codeblock>
+            <codeblock># echo <varname>schedulername</varname> &gt; /sys/block/&lt;devname>/queue/scheduler</codeblock>
             <p>For example:</p>
             <codeblock># echo deadline &gt; /sys/block/sbd/queue/scheduler</codeblock>
             <note>Using the <codeph>echo</codeph> command to set the disk I/O scheduler policy is
@@ -382,7 +382,7 @@ vm.dirty_ratio = 10</codeblock></p>
               This is an example <cmdname>kernel</cmdname> command from a <codeph>grub.conf</codeph>
               file on RHEL 6.x or CentOS 6.x. The command is on multiple lines for readability.</p>
             <codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
-                 <b>elevator=deadline</b> crashkernel=128M@16M  quiet console=tty1
+                 elevator=deadline crashkernel=128M@16M  quiet console=tty1
                  console=ttyS1,115200 panic=30 transparent_hugepage=never 
                  initrd /initrd-2.6.18-274.3.1.el5.img</codeblock>
             <p>To specify the I/O scheduler at boot time on systems that use <codeph>grub2</codeph>
@@ -409,7 +409,7 @@ vm.dirty_ratio = 10</codeblock></p>
             <codeph>grub.conf</codeph> file. The command is on multiple lines for
           readability:<codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
            elevator=deadline crashkernel=128M@16M  quiet console=tty1
-           console=ttyS1,115200 panic=30 <b>transparent_hugepage=never</b> 
+           console=ttyS1,115200 panic=30 transparent_hugepage=never 
            initrd /initrd-2.6.18-274.3.1.el5.img</codeblock></p>
         <p>On systems that use <codeph>grub2</codeph> such as RHEL 7.x or CentOS 7.x, use the system
           utility <codeph>grubby</codeph>. This command adds the parameter when run as
@@ -496,7 +496,7 @@ GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=cl/root rd.lvm.lv=cl/swap rhgb quiet <b>transparent_hugepage=never</b>"
+GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=cl/root rd.lvm.lv=cl/swap rhgb quiet transparent_hugepage=never"
               GRUB_DISABLE_RECOVERY="true"</codeblock><note>You
                 must have root permission to edit the <codeph>/etc/default/grub</codeph>
                 file.</note></li>
@@ -536,10 +536,10 @@ server smdw</codeblock></li>
             example:<codeblock>server mdw prefer
 server 10.6.220.20</codeblock></li>
           <li id="ji162612">On the coordinator host, use the NTP daemon synchronize the system clocks on
-            all Greenplum hosts. For example, using <codeph><xref
+            all Greenplum hosts. For example, using <xref
                 href="../utility_guide/ref/gpssh.xml" format="dita" scope="peer"
                 type="topic"
-            >gpssh</xref></codeph>:<codeblock># gpssh -f hostfile_gpssh_allhosts -v -e 'ntpd'</codeblock></li>
+            >gpssh</xref>:<codeblock># gpssh -f hostfile_gpssh_allhosts -v -e 'ntpd'</codeblock></li>
         </ol>
       </section>
     </body>

@@ -47,21 +47,21 @@ template <class T, class R, class U, ULONG (*HashFn)(const T *),
 class CTreeMap
 {
 	// array of source pointers (sources owned by 3rd party)
-	typedef CDynamicPtrArray<T, CleanupNULL> DrgPt;
+	using DrgPt = CDynamicPtrArray<T, CleanupNULL>;
 
 	// array of result pointers (results owned by the tree we unrank)
-	typedef CDynamicPtrArray<R, CleanupRelease<R> > DrgPr;
+	using DrgPr = CDynamicPtrArray<R, CleanupRelease<R>>;
 
 	// generic rehydrate function
-	typedef R *(*PrFn)(CMemoryPool *, T *, DrgPr *, U *);
+	using PrFn = R *(*) (CMemoryPool *, T *, DrgPr *, U *);
 
 private:
 	// fwd declaration
 	class CTreeNode;
 
 	// arrays of internal nodes
-	typedef CDynamicPtrArray<CTreeNode, CleanupNULL> CTreeNodeArray;
-	typedef CDynamicPtrArray<CTreeNodeArray, CleanupRelease> CTreeNode2dArray;
+	using CTreeNodeArray = CDynamicPtrArray<CTreeNode, CleanupNULL>;
+	using CTreeNode2dArray = CDynamicPtrArray<CTreeNodeArray, CleanupRelease>;
 
 	//---------------------------------------------------------------------------
 	//	@class:
@@ -402,17 +402,15 @@ private:
 	CTreeNode *m_ptnRoot;
 
 	// map of all nodes
-	typedef gpos::CHashMap<T, CTreeNode, HashFn, EqFn, CleanupNULL,
-						   CleanupDelete<CTreeNode> >
-		TMap;
-	typedef gpos::CHashMapIter<T, CTreeNode, HashFn, EqFn, CleanupNULL,
-							   CleanupDelete<CTreeNode> >
-		TMapIter;
+	using TMap = gpos::CHashMap<T, CTreeNode, HashFn, EqFn, CleanupNULL,
+								CleanupDelete<CTreeNode>>;
+	using TMapIter = gpos::CHashMapIter<T, CTreeNode, HashFn, EqFn, CleanupNULL,
+										CleanupDelete<CTreeNode>>;
 
 	// map of created links
-	typedef CHashMap<STreeLink, BOOL, STreeLink::HashValue, STreeLink::Equals,
-					 CleanupDelete<STreeLink>, CleanupDelete<BOOL> >
-		LinkMap;
+	using LinkMap =
+		CHashMap<STreeLink, BOOL, STreeLink::HashValue, STreeLink::Equals,
+				 CleanupDelete<STreeLink>, CleanupDelete<BOOL>>;
 
 	TMap *m_ptmap;
 

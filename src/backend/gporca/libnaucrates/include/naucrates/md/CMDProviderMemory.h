@@ -38,9 +38,9 @@ class CMDProviderMemory : public IMDProvider
 {
 protected:
 	// hash map of serialized MD objects indexed by their MD id
-	typedef CHashMap<IMDId, CWStringDynamic, IMDId::MDIdHash,
-					 IMDId::MDIdCompare, CleanupRelease, CleanupDelete>
-		MDIdToSerializedMDIdMap;
+	using MDIdToSerializedMDIdMap =
+		CHashMap<IMDId, CWStringDynamic, IMDId::MDIdHash, IMDId::MDIdCompare,
+				 CleanupRelease, CleanupDelete>;
 
 	// metadata objects indexed by their metadata id
 	MDIdToSerializedMDIdMap *m_mdmap;

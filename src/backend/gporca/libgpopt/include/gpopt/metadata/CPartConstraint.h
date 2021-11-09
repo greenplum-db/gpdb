@@ -27,16 +27,16 @@ class CColRef;
 class CPartConstraint;
 
 // hash maps of part constraints indexed by part index id
-typedef CHashMap<ULONG, CPartConstraint, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupRelease<CPartConstraint> >
-	UlongToPartConstraintMap;
+using UlongToPartConstraintMap =
+	CHashMap<ULONG, CPartConstraint, gpos::HashValue<ULONG>,
+			 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+			 CleanupRelease<CPartConstraint>>;
 
 // map iterator
-typedef CHashMapIter<ULONG, CPartConstraint, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupRelease<CPartConstraint> >
-	UlongToPartConstraintMapIter;
+using UlongToPartConstraintMapIter =
+	CHashMapIter<ULONG, CPartConstraint, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<CPartConstraint>>;
 
 //---------------------------------------------------------------------------
 //	@class:

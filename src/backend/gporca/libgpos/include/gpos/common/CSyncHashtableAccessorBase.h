@@ -36,7 +36,7 @@ class CSyncHashtableAccessorBase : public CStackObject
 {
 private:
 	// shorthand for buckets
-	typedef struct CSyncHashtable<T, K>::SBucket SBucket;
+	using SBucket = typename gpos::CSyncHashtable<T, K>::SBucket;
 
 	// target hashtable
 	CSyncHashtable<T, K> &m_ht;
