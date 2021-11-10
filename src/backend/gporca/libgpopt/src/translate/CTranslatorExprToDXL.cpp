@@ -5796,8 +5796,17 @@ CTranslatorExprToDXL::PdxlnScAggref(CExpression *pexprAggFunc)
 
 	CDXLNode *pdxlnAggref = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopAggRef);
 
-	CDXLNode *vl = PdxlnValuesList((*pexprAggFunc)[0]);
-	pdxlnAggref->AddChild(vl);
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexArgs]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexDirectArgs]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexAggOrder]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexAggDistinct]));
 
 	return pdxlnAggref;
 }

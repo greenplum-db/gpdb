@@ -24,6 +24,8 @@ extern "C" {
 #include "utils/datum.h"
 }
 
+#include <vector>
+
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
@@ -600,40 +602,83 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	}
 
 	// translate each DXL argument
-	List *exprs = TranslateScalarListChildren((*aggref_node)[0], colid_var);
+	List *args = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexArgs], colid_var);
+	aggref->aggdirectargs = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexDirectArgs], colid_var);
+	aggref->aggorder = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexAggOrder], colid_var);
+
+	CHAR *paggkind = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
+		dxlop->GetAggKind()->GetBuffer());
+	aggref->aggkind = *paggkind;
+	gpdb::GPDBFree(paggkind);
+
+	// 'indexes' stores the position of the TargetEntry which is referenced by
+	// a SortGroupClause.
+	std::vector<int> indexes(gpdb::ListLength(args) + 1, -1);
+
+	{
+		int i;
+		ListCell *lc;
+		ForEachWithCount(lc, aggref->aggorder, i)
+		{
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lc);
+			indexes[gc->tleSortGroupRef] = gc->tleSortGroupRef;
+
+			// 'indexes' values are zero-based, but zero means TargetEntry
+			// doesn't have corresponding SortGroupClause. So convert back to
+			// one-based.
+			gc->tleSortGroupRef += 1;
+		}
+	}
+	if (dxlop->IsDistinct())
+	{
+		List *aggdistinct = TranslateScalarListChildren(
+			(*aggref_node)[EdxlscalaraggrefIndexAggDistinct], colid_var);
+
+		ULONG i;
+		ListCell *lc;
+		ForEachWithCount(lc, aggdistinct, i)
+		{
+			if (i >= gpdb::ListLength(args))
+			{
+				break;
+			}
+
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lc);
+			indexes[gc->tleSortGroupRef] = gc->tleSortGroupRef;
+
+			// 'indexes' values are zero-based, but zero means TargetEntry
+			// doesn't have corresponding SortGroupClause. So convert back to
+			// one-based.
+			gc->tleSortGroupRef += 1;
+
+			aggref->aggdistinct = gpdb::LAppend(aggref->aggdistinct, gc);
+		}
+	}
 
 	int attno;
 	aggref->args = NIL;
 	ListCell *lc;
-	int sortgrpindex = 1;
-	ForEachWithCount(lc, exprs, attno)
+	ForEachWithCount(lc, args, attno)
 	{
 		TargetEntry *new_target_entry = gpdb::MakeTargetEntry(
 			(Expr *) lfirst(lc), attno + 1, nullptr, false);
-		Oid aggargtype = gpdb::ExprType((Node *) lfirst(lc));
-		/*
-		 * Translate the aggdistinct bool set to true (in ORCA),
-		 * to a List of SortGroupClause in the PLNSTMT
-		 */
-		if (dxlop->IsDistinct())
-		{
-			new_target_entry->ressortgroupref = sortgrpindex;
-			SortGroupClause *gc = makeNode(SortGroupClause);
-			gc->tleSortGroupRef = sortgrpindex;
-			gc->eqop = gpdb::GetEqualityOp(
-				gpdb::ExprType((Node *) new_target_entry->expr));
-			gc->sortop = gpdb::GetOrderingOpForEqualityOp(gc->eqop, nullptr);
-			/*
-			 * Since ORCA doesn't yet support ordered aggregates, we are
-			 * setting nulls_first to false. This is also the default behavior
-			 * when no order by clause is provided so it is OK to set it to
-			 * false.
-			 */
-			gc->nulls_first = false;
-			aggref->aggdistinct = gpdb::LAppend(aggref->aggdistinct, gc);
-			sortgrpindex++;
-		}
+
 		aggref->args = gpdb::LAppend(aggref->args, new_target_entry);
+		if (gpdb::ListLength(aggref->aggorder) > 0 ||
+			gpdb::ListLength(aggref->aggdistinct) > 0)
+		{
+			new_target_entry->ressortgroupref =
+				indexes[attno] == -1 ? 0 : (indexes[attno] + 1);
+		}
+		aggref->aggargtypes = gpdb::LAppendOid(aggref->aggargtypes, aggargtype);
+	}
+
+	ForEachWithCount(lc, aggref->aggdirectargs, attno)
+	{
+		Oid aggargtype = gpdb::ExprType((Node *) lfirst(lc));
 		aggref->aggargtypes = gpdb::LAppendOid(aggref->aggargtypes, aggargtype);
 	}
 
@@ -655,7 +700,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	aggref->aggtranstype = aggtranstype;
 
 	// GPDB_91_MERGE_FIXME: collation
-	aggref->inputcollid = gpdb::ExprCollation((Node *) exprs);
+	aggref->inputcollid = gpdb::ExprCollation((Node *) args);
 	aggref->aggcollid = gpdb::TypeCollation(aggref->aggtype);
 
 	return (Expr *) aggref;

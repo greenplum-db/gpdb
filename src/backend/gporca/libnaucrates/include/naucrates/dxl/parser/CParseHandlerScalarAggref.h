@@ -26,6 +26,9 @@ using namespace gpos;
 enum AggrefChildIndeces
 {
 	EdxlParseHandlerAggrefIndexArgs = 0,
+	EdxlParseHandlerAggrefIndexDirectArgs,
+	EdxlParseHandlerAggrefIndexOrder,
+	EdxlParseHandlerAggrefIndexDistinct,
 	EdxlParseHandlerAggrefIndexSentinel
 };
 

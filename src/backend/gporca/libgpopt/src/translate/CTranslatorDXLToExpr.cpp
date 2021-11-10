@@ -3155,9 +3155,9 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		CExpressionArray *pdrgpexprArgs = PdrgpexprChildren(pdxlnAggref);
 
 		// check if the arguments have set returning functions, if so raise an exception
-		for (ULONG ul = 0; ul < pdrgpexprArgs->Size(); ul++)
+		for (ULONG ul = 0; ul < (*pdrgpexprArgs)[0]->Arity(); ul++)
 		{
-			CExpression *pexprAggrefChild = (*pdrgpexprArgs)[ul];
+			CExpression *pexprAggrefChild = (*(*pdrgpexprArgs)[0])[ul];
 
 			if (pexprAggrefChild->DeriveHasNonScalarFunction())
 			{

@@ -1764,10 +1764,20 @@ CUtils::PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 	CExpressionArray *pdrgpexprArgs = GPOS_NEW(mp) CExpressionArray(mp);
 	pdrgpexprArgs->Append(pexprScalarIdent);
 
-	CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
-	CExpression *args = GPOS_NEW(mp) CExpression(mp, lv, pdrgpexprArgs);
+	pdrgpexpr->Append(GPOS_NEW(mp) CExpression(
+		mp, GPOS_NEW(mp) CScalarValuesList(mp), pdrgpexprArgs));
 
-	pdrgpexpr->Append(args);
+	pdrgpexpr->Append(GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+									  GPOS_NEW(mp) CExpressionArray(mp)));
+
+	pdrgpexpr->Append(GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+									  GPOS_NEW(mp) CExpressionArray(mp)));
+
+	pdrgpexpr->Append(GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+									  GPOS_NEW(mp) CExpressionArray(mp)));
 
 	return GPOS_NEW(mp) CExpression(mp, popScAggFunc, pdrgpexpr);
 }
@@ -1788,6 +1798,18 @@ CUtils::PexprCountStar(CMemoryPool *mp)
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
 	pdrgpexpr->Append(
 		GPOS_NEW(mp) CExpression(mp, popScalarValuesList, pdrgpexprChildren));
+
+	pdrgpexpr->Append(GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+									  GPOS_NEW(mp) CExpressionArray(mp)));
+
+	pdrgpexpr->Append(GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+									  GPOS_NEW(mp) CExpressionArray(mp)));
+
+	pdrgpexpr->Append(GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+									  GPOS_NEW(mp) CExpressionArray(mp)));
 
 	CScalarAggFunc *popScAggFunc = PopAggFunc(
 		mp, mdid, str, false /*is_distinct*/,

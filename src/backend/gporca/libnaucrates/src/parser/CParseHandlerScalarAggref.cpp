@@ -125,10 +125,17 @@ CParseHandlerScalarAggref::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	CParseHandlerScalarValuesList *scalar_values_parse_handler =
-		dynamic_cast<CParseHandlerScalarValuesList *>(
-			(*this)[EdxlParseHandlerAggrefIndexArgs]);
-	AddChildFromParseHandler(scalar_values_parse_handler);
+	AddChildFromParseHandler(dynamic_cast<CParseHandlerScalarValuesList *>(
+		(*this)[EdxlParseHandlerAggrefIndexArgs]));
+
+	AddChildFromParseHandler(dynamic_cast<CParseHandlerScalarValuesList *>(
+		(*this)[EdxlParseHandlerAggrefIndexDirectArgs]));
+
+	AddChildFromParseHandler(dynamic_cast<CParseHandlerScalarValuesList *>(
+		(*this)[EdxlParseHandlerAggrefIndexOrder]));
+
+	AddChildFromParseHandler(dynamic_cast<CParseHandlerScalarValuesList *>(
+		(*this)[EdxlParseHandlerAggrefIndexDistinct]));
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

@@ -239,15 +239,29 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 
 		// create a new global aggregate function adding the column reference of the
 		// intermediate result to the arguments of the global aggregate function
+		CExpressionArray *fullargs = GPOS_NEW(mp) CExpressionArray(mp);
+
 		CExpressionArray *pdrgpexprGlobal = GPOS_NEW(mp) CExpressionArray(mp);
-		CExpression *pexprArg = CUtils::PexprScalarIdent(mp, pcrLocal);
-		pdrgpexprGlobal->Append(pexprArg);
+		pdrgpexprGlobal->Append(CUtils::PexprScalarIdent(mp, pcrLocal));
 
 		CScalarValuesList *l = GPOS_NEW(mp) CScalarValuesList(mp);
 		CExpression *globall = GPOS_NEW(mp) CExpression(mp, l, pdrgpexprGlobal);
+		fullargs->Append(globall);
+
+		fullargs->Append(GPOS_NEW(mp)
+							 CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 GPOS_NEW(mp) CExpressionArray(mp)));
+
+		fullargs->Append(GPOS_NEW(mp)
+							 CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 GPOS_NEW(mp) CExpressionArray(mp)));
+
+		fullargs->Append(GPOS_NEW(mp)
+							 CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 GPOS_NEW(mp) CExpressionArray(mp)));
 
 		CExpression *pexprAggFuncGlobal =
-			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, globall);
+			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, fullargs);
 
 		// create new project elements for the aggregate functions
 		CExpression *pexprProjElemLocal =

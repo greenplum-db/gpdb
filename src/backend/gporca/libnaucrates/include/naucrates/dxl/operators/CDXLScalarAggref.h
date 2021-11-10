@@ -21,6 +21,14 @@ namespace gpdxl
 {
 using namespace gpmd;
 
+enum Edxlascalarggref
+{
+	EdxlscalaraggrefIndexArgs = 0,
+	EdxlscalaraggrefIndexDirectArgs,
+	EdxlscalaraggrefIndexAggOrder,
+	EdxlscalaraggrefIndexAggDistinct,
+};
+
 enum EdxlAggrefStage
 {
 	EdxlaggstageNormal = 0,
