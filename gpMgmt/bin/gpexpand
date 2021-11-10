@@ -1681,23 +1681,20 @@ WHERE
                 c.oid as tableoid,
                 d.oid as root_partition_oid,
                 2 as rank,
-                false as external_writable,
+                pe.writable is not null as external_writable,
                 '%s' as undone_status,
                 NULL as expansion_started,
                 NULL as expansion_finished,
                 %s as source_bytes
             FROM
-                pg_inherits a,
-                pg_partition b,
-                pg_class c, 
-                pg_class d,
-                pg_namespace n
-            WHERE
-                a.inhparent=b.parrelid and
-                a.inhrelid = c.oid and
-                a.inhparent = d.oid and
-                c.relnamespace = n.oid and
-                c.relkind != 'p'
+                pg_class c
+                JOIN pg_inherits a on (a.inhrelid = c.oid)
+                JOIN pg_partition b on (a.inhparent=b.parrelid)
+                JOIN pg_class d on (a.inhparent = d.oid)
+                JOIN pg_namespace n on (c.relnamespace = n.oid)
+                LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
+            where
+                c.relkind != 'p';
         """ % (undone_status, src_bytes_str)
         self.logger.debug(get_status_detail_cmd)
 
@@ -1996,12 +1993,17 @@ class ExpandTable():
 
     def expand(self, table_conn, cancel_flag):
         # expand leaf partitions separately in parallel
+        sql = ""
+
         if self.root_partition_oid is not None:
-            get_dist_cmd = """
-                SELECT pg_get_table_distributedby(%d) AS distribution_policy;
-            """ % self.root_partition_oid
-            res = dbconn.execSQLForSingletonRow(table_conn, get_dist_cmd)
-            sql = "ALTER TABLE %s SET WITH (REORGANIZE=true) %s" % (self.fq_name, res[0])
+            # for writable external partition table, expansion is finished during prepare stage
+            # by simply updating numsegments field in policy. so we just skip it.
+            if not self.external_writable:
+                get_dist_cmd = """
+                    SELECT pg_get_table_distributedby(%d) AS distribution_policy;
+                """ % self.root_partition_oid
+                res = dbconn.execSQLForSingletonRow(table_conn, get_dist_cmd)
+                sql = "ALTER TABLE %s SET WITH (REORGANIZE=true) %s" % (self.fq_name, res[0])
         else:
             # FIXME: Can "ONLY" be allowed in "EXPAND TABLE"?
             external_str = "EXTERNAL" if self.external_writable else ""
@@ -2012,8 +2014,9 @@ class ExpandTable():
 
         # check is atomic in python
         if not cancel_flag:
-            dbconn.execSQL(table_conn, sql)
-            table_conn.commit()
+            if sql:
+                dbconn.execSQL(table_conn, sql)
+                table_conn.commit()
             if self.options.analyze:
                 sql = 'ANALYZE %s' % (self.fq_name)
                 logger.info('Analyzing %s' % (self.fq_name.decode('utf-8')))

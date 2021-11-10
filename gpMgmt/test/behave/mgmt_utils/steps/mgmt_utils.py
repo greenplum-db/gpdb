@@ -199,7 +199,7 @@ def impl(conetxt, tabname):
 def impl(conetxt, tabname):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
-        sql = "create table {tabname}(i int) partition by range(i) (start(0) end(10001) every(1000)) distributed by (i)".format(tabname=tabname)
+        sql = "create table {tabname}(i int) distributed by (i) partition by range(i) (start(0) end(10001) every(1000))".format(tabname=tabname)
         dbconn.execSQL(conn, sql)
         sql = "INSERT INTO {tabname} SELECT generate_series(1, 10000)".format(tabname=tabname)
         dbconn.execSQL(conn, sql)
@@ -3086,7 +3086,7 @@ def _get_row_count_per_segment(table, dbname):
 def _get_dist_policy_per_partition(table, dbname):
     with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         query = "select * from gp_distribution_policy where localoid::regclass::text like '%s%%' order by localoid;" % table
-        cursor = dbconn.query(conn, query)
+        cursor = dbconn.execSQL(conn, query)
         rows = cursor.fetchall()
     # we only need numsegments, distkey, distclass
     return [row[2:5] for row in rows]
