@@ -1694,7 +1694,7 @@ WHERE
                 JOIN pg_namespace n on (c.relnamespace = n.oid)
                 LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
             where
-                c.relkind != 'p';
+                c.relkind != 'p'
         """ % (undone_status, src_bytes_str)
         self.logger.debug(get_status_detail_cmd)
 
