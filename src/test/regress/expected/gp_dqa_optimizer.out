@@ -795,20 +795,13 @@ select corr(distinct d, i) from dqa_t1;
 (1 row)
 
 explain (costs off) select corr(distinct d, i) from dqa_t1;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Finalize Aggregate
+                   QUERY PLAN                   
+------------------------------------------------
+ Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  HashAggregate
-                     Group Key: ((d)::double precision), ((i)::double precision)
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: ((d)::double precision), ((i)::double precision)
-                           ->  Streaming HashAggregate
-                                 Group Key: (d)::double precision, (i)::double precision
-                                 ->  Seq Scan on dqa_t1
- Optimizer: Postgres query optimizer
-(11 rows)
+         ->  Seq Scan on dqa_t1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 -- multi args singledqa with group by
 select corr(distinct d, i) from dqa_t1 group by d;
@@ -840,15 +833,15 @@ select corr(distinct d, i) from dqa_t1 group by d;
 (23 rows)
 
 explain (costs off) select corr(distinct d, i) from dqa_t1 group by d;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
+   ->  GroupAggregate
          Group Key: d
-         ->  HashAggregate
-               Group Key: d, (d)::double precision, (i)::double precision
+         ->  Sort
+               Sort Key: d
                ->  Seq Scan on dqa_t1
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
@@ -867,20 +860,18 @@ select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
 (10 rows)
 
 explain (costs off) select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
+   ->  GroupAggregate
          Group Key: c
-         ->  HashAggregate
-               Group Key: c, ((d)::double precision), ((i)::double precision)
+         ->  Sort
+               Sort Key: c
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: c
-                     ->  Streaming HashAggregate
-                           Group Key: c, (d)::double precision, (i)::double precision
-                           ->  Seq Scan on dqa_t1
- Optimizer: Postgres query optimizer
-(11 rows)
+                     ->  Seq Scan on dqa_t1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 -- multi args multidqa
 select count(distinct c), corr(distinct d, i) from dqa_t1;
