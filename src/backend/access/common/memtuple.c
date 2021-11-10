@@ -95,6 +95,8 @@ void destroy_memtuple_binding(MemTupleBinding *pbind)
  * null attribute.  For all possible combinations of 4 null bit,
  * we index into a short[16] array to get how many space is saved
  * by the nulls.
+ * Null bitmap is spilt into bytes and each byte is spilt into low
+ * and high bits. So each byte will need 2 short[16] arrays. 
  */
 
 /* Compute how much space to store the null save entries.
@@ -429,7 +431,10 @@ MemTupleBinding *create_memtuple_binding(TupleDesc tupdesc)
 		Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
 
 		if (attr->attlen > 0 && attr->attalign == 'd')
+		{
 			pbind->column_align = 8;
+			break;
+		}
 	}
 
 	pbind->null_bitmap_extra_size = compute_null_bitmap_extra_size(tupdesc, pbind->column_align); 
