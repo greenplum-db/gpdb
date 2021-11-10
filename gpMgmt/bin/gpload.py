@@ -1770,7 +1770,8 @@ class gpload:
                 # MPP-13617
                 if ':' in l:
                     l = '[' + l + ']'
-                self.locations.append('%s://%s:%d%s%s%s' % (protocol, l, port, sep, '%20'.join(file), fragment))
+                for f in file:
+                    self.locations.append('%s://%s:%d%s%s%s' % (protocol, l, port, sep, f, fragment))
         if not found_source:
             self.control_file_error("configuration file must contain source definition")
 
