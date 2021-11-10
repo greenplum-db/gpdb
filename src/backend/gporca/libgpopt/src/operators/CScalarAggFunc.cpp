@@ -36,7 +36,8 @@ CScalarAggFunc::CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 							   IMDId *resolved_rettype,
 							   const CWStringConst *pstrAggFunc,
 							   BOOL is_distinct, EAggfuncStage eaggfuncstage,
-							   BOOL fSplit, CWStringDynamic *aggkind)
+							   BOOL fSplit, CWStringDynamic *aggkind,
+							   ULongPtrArray *argtypes)
 	: CScalar(mp),
 	  m_pmdidAggFunc(pmdidAggFunc),
 	  m_pmdidResolvedRetType(resolved_rettype),
@@ -44,6 +45,7 @@ CScalarAggFunc::CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 	  m_pstrAggFunc(pstrAggFunc),
 	  m_is_distinct(is_distinct),
 	  m_aggkind(aggkind),
+	  m_argtypes(argtypes),
 	  m_eaggfuncstage(eaggfuncstage),
 	  m_fSplit(fSplit)
 {

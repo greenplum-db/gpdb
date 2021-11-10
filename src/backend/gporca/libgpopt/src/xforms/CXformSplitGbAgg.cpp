@@ -201,22 +201,26 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 			CScalarAggFunc::PopConvert(pexprAggFunc->Pop());
 
 		popScAggFunc->MDId()->AddRef();
+		popScAggFunc->GetArgTypes()->AddRef();
 		CScalarAggFunc *popScAggFuncLocal = CUtils::PopAggFunc(
 			mp, popScAggFunc->MDId(),
 			GPOS_NEW(mp)
 				CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 			popScAggFunc->IsDistinct(), EaggfuncstageLocal, /* fGlobal */
 			true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
-			GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")));
+			GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")),
+			popScAggFunc->GetArgTypes());
 
 		popScAggFunc->MDId()->AddRef();
+		popScAggFunc->GetArgTypes()->AddRef();
 		CScalarAggFunc *popScAggFuncGlobal = CUtils::PopAggFunc(
 			mp, popScAggFunc->MDId(),
 			GPOS_NEW(mp)
 				CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 			false /* is_distinct */, EaggfuncstageGlobal, /* fGlobal */
 			true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
-			GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")));
+			GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")),
+			popScAggFunc->GetArgTypes());
 
 		// determine column reference for the new project element
 		const IMDAggregate *pmdagg =

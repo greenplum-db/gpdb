@@ -3139,13 +3139,14 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		resolved_return_type_mdid->AddRef();
 	}
 
+	dxl_op->GetArgTypes()->AddRef();
 	CScalarAggFunc *popScAggFunc = CUtils::PopAggFunc(
 		m_mp, agg_func_mdid,
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
 		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
-		GPOS_NEW(m_mp)
-			CWStringDynamic(m_mp, dxl_op->GetAggKind()->GetBuffer()));
+		GPOS_NEW(m_mp) CWStringDynamic(m_mp, dxl_op->GetAggKind()->GetBuffer()),
+		dxl_op->GetArgTypes());
 
 	CExpression *pexprAggFunc = nullptr;
 

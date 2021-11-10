@@ -1070,6 +1070,10 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 			dxl_memory_manager, attrs, EdxltokenAggrefKind,
 			EdxltokenScalarAggref);
 
+	ULongPtrArray *argtypelist = ExtractConvertValuesToArray(
+		dxl_memory_manager, attrs, EdxltokenAggrefArgTypes,
+		EdxltokenScalarAggref);
+
 	EdxlAggrefStage agg_stage = EdxlaggstageFinal;
 
 	if (0 ==
@@ -1114,8 +1118,9 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 			dxl_memory_manager, attrs, EdxltokenTypeId, EdxltokenScalarAggref);
 	}
 
-	return GPOS_NEW(mp) CDXLScalarAggref(mp, agg_mdid, resolved_rettype,
-										 is_distinct, agg_stage, aggkind);
+	return GPOS_NEW(mp)
+		CDXLScalarAggref(mp, agg_mdid, resolved_rettype, is_distinct, agg_stage,
+						 aggkind, argtypelist);
 }
 
 //---------------------------------------------------------------------------

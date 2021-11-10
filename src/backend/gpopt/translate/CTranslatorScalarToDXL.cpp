@@ -1390,9 +1390,20 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 		resolved_ret_type = GPOS_NEW(m_mp) CMDIdGPDB(aggref->aggtype);
 	}
 
+	// translate argtypes
+	ULongPtrArray *aggargtypes_values = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	ListCell *lc;
+	ForEach(lc, aggref->aggargtypes)
+	{
+		ULONG *poid = GPOS_NEW(m_mp) ULONG(lfirst_oid(lc));
+
+		aggargtypes_values->Append(poid);
+	}
+
 	CDXLScalarAggref *aggref_scalar = GPOS_NEW(m_mp) CDXLScalarAggref(
 		m_mp, agg_mdid, resolved_ret_type, is_distinct, agg_stage,
-		CDXLUtils::CreateDynamicStringFromCharArray(m_mp, &aggref->aggkind));
+		CDXLUtils::CreateDynamicStringFromCharArray(m_mp, &aggref->aggkind),
+		aggargtypes_values);
 
 	// create the DXL node holding the scalar aggref
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, aggref_scalar);
@@ -1406,7 +1417,6 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 		GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp);
 	CDXLNode *args_value_list_dxlnode =
 		GPOS_NEW(m_mp) CDXLNode(m_mp, args_values);
-	ListCell *lc;
 	int i = 0;
 	ForEachWithCount(lc, aggref->args, i)
 	{

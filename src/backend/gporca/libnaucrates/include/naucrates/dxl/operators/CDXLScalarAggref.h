@@ -67,13 +67,15 @@ private:
 
 	CWStringDynamic *m_aggkind;
 
+	ULongPtrArray *m_argtypes;
+
 public:
 	CDXLScalarAggref(const CDXLScalarAggref &) = delete;
 
 	// ctor/dtor
 	CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_mdid, IMDId *resolved_rettype,
 					 BOOL is_distinct, EdxlAggrefStage agg_stage,
-					 CWStringDynamic *aggkind);
+					 CWStringDynamic *aggkind, ULongPtrArray *argtypes);
 
 	~CDXLScalarAggref() override;
 
@@ -96,6 +98,12 @@ public:
 	GetAggKind() const
 	{
 		return m_aggkind;
+	}
+
+	ULongPtrArray *
+	GetArgTypes() const
+	{
+		return m_argtypes;
 	}
 
 	// serialize operator in DXL format

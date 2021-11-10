@@ -673,13 +673,13 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			new_target_entry->ressortgroupref =
 				indexes[attno] == -1 ? 0 : (indexes[attno] + 1);
 		}
-		aggref->aggargtypes = gpdb::LAppendOid(aggref->aggargtypes, aggargtype);
 	}
 
-	ForEachWithCount(lc, aggref->aggdirectargs, attno)
+	ULongPtrArray *argtypes = dxlop->GetArgTypes();
+	for (ULONG ul = 0; ul < argtypes->Size(); ul++)
 	{
-		Oid aggargtype = gpdb::ExprType((Node *) lfirst(lc));
-		aggref->aggargtypes = gpdb::LAppendOid(aggref->aggargtypes, aggargtype);
+		aggref->aggargtypes =
+			gpdb::LAppendOid(aggref->aggargtypes, *(*argtypes)[ul]);
 	}
 
 	/*

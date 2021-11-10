@@ -62,6 +62,8 @@ private:
 
 	CWStringDynamic *m_aggkind;
 
+	ULongPtrArray *m_argtypes;
+
 	// stage of the aggregate function
 	EAggfuncStage m_eaggfuncstage;
 
@@ -75,7 +77,7 @@ public:
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
 				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
-				   CWStringDynamic *aggkind);
+				   CWStringDynamic *aggkind, ULongPtrArray *argtypes);
 
 	// dtor
 	~CScalarAggFunc() override
@@ -85,6 +87,7 @@ public:
 		CRefCount::SafeRelease(m_return_type_mdid);
 		GPOS_DELETE(m_pstrAggFunc);
 		GPOS_DELETE(m_aggkind);
+		CRefCount::SafeRelease(m_argtypes);
 	}
 
 
@@ -160,6 +163,12 @@ public:
 	AggKind() const
 	{
 		return m_aggkind;
+	}
+
+	ULongPtrArray *
+	GetArgTypes() const
+	{
+		return m_argtypes;
 	}
 
 	// stage of the aggregate function

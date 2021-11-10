@@ -348,6 +348,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenAggrefOid, GPOS_WSZ_LIT("AggMdid")},
 		{EdxltokenAggrefDistinct, GPOS_WSZ_LIT("AggDistinct")},
+		{EdxltokenAggrefArgTypes, GPOS_WSZ_LIT("AggArgTypes")},
 		{EdxltokenAggrefKind, GPOS_WSZ_LIT("AggKind")},
 		{EdxltokenAggrefStage, GPOS_WSZ_LIT("AggStage")},
 		{EdxltokenAggrefLookups, GPOS_WSZ_LIT("AggLookups")},

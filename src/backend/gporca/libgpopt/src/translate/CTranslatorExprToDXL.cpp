@@ -5788,11 +5788,15 @@ CTranslatorExprToDXL::PdxlnScAggref(CExpression *pexprAggFunc)
 		edxlaggrefstage = EdxlaggstagePartial;
 	}
 
+	ULongPtrArray *argtypes = popScAggFunc->GetArgTypes();
+	argtypes->AddRef();
+
 	CDXLScalarAggref *pdxlopAggRef = GPOS_NEW(m_mp) CDXLScalarAggref(
 		m_mp, pmdidAggFunc, resolved_rettype, popScAggFunc->IsDistinct(),
 		edxlaggrefstage,
 		GPOS_NEW(m_mp)
-			CWStringDynamic(m_mp, popScAggFunc->AggKind()->GetBuffer()));
+			CWStringDynamic(m_mp, popScAggFunc->AggKind()->GetBuffer()),
+		argtypes);
 
 	CDXLNode *pdxlnAggref = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopAggRef);
 
