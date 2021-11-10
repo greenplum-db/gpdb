@@ -9,17 +9,25 @@
 
 --
 -- generate_recover_config_file:
---   generate config file used by recoverseg -i
+--   Generate config file used by recoverseg -i, to trigger '__callSegmentAddMirror',
+--   we should recover the segment to a different datadir location instead of its
+--   original one.
 --
 create or replace function generate_recover_config_file(datadir text, port text)
 returns void as $$
     import io
     import os
     myhost = os.uname()[1]
-    inplaceConfig = myhost + '|' + port + '|' + datadir
-    configStr = inplaceConfig + ' ' + inplaceConfig
+    srcConfig = myhost + '|' + port + '|' + datadir
+    dstConfig = myhost + '|' + port + '|' + datadir + 'temp'
+    configStr = srcConfig + ' ' + dstConfig
 	
-    f = open("/tmp/recover_config_file", "w")
+    f = open("/tmp/recover_config_file1", "w")
+    f.write(configStr)
+    f.close()
+
+    configStr = dstConfig + ' ' + srcConfig
+    f = open("/tmp/recover_config_file2", "w")
     f.write(configStr)
     f.close()
 $$ language plpython3u;
@@ -56,7 +64,7 @@ select generate_recover_config_file(
 	(select port from gp_segment_configuration c where c.role='m' and c.content=1)::text);
 
 -- recover from config file, only seg with content=1 will be recovered
-!\retcode gprecoverseg -a -i /tmp/recover_config_file;
+!\retcode gprecoverseg -a -i /tmp/recover_config_file1;
 
 -- after gprecoverseg -i, the down segemnt should be up
 -- in mirror mode
@@ -65,6 +73,9 @@ where role='m' and content=1;
 
 -- recover should reuse the old dbid and not occupy dbid=2
 select dbid from gp_segment_configuration where dbid=2;
+
+-- recover the segment to its original datadir
+!\retcode gprecoverseg -a -i /tmp/recover_config_file2;
 
 update gp_segment_configuration set dbid=2 where dbid=9;
 set allow_system_table_mods to false;
@@ -86,5 +97,8 @@ select wait_until_all_segments_synchronized();
 -- recheck gp_segment_configuration after rebalance
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
 
+-- remove recovered segment's temp datadir
+!\retcode rm -rf `cat /tmp/recover_config_file2 | awk 'BEGIN {FS=" "}  {print $1}' | awk 'BEGIN {FS="|"}  {print $3}'`; 
 -- remove the config file
-!\retcode rm /tmp/recover_config_file
+!\retcode rm /tmp/recover_config_file1;
+!\retcode rm /tmp/recover_config_file2;

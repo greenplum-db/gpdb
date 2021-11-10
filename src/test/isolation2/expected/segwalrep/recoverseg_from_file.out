@@ -9,9 +9,12 @@
 
 --
 -- generate_recover_config_file:
---   generate config file used by recoverseg -i
+--   Generate config file used by recoverseg -i, to trigger '__callSegmentAddMirror',
+--   we should recover the segment to a different datadir location instead of its
+--   original one.
 --
-create or replace function generate_recover_config_file(datadir text, port text) returns void as $$ import io import os myhost = os.uname()[1] inplaceConfig = myhost + '|' + port + '|' + datadir configStr = inplaceConfig + ' ' + inplaceConfig  f = open("/tmp/recover_config_file", "w") f.write(configStr) f.close() $$ language plpython3u;
+create or replace function generate_recover_config_file(datadir text, port text) returns void as $$ import io import os myhost = os.uname()[1] srcConfig = myhost + '|' + port + '|' + datadir dstConfig = myhost + '|' + port + '|' + datadir + 'temp' configStr = srcConfig + ' ' + dstConfig  f = open("/tmp/recover_config_file1", "w") f.write(configStr) f.close() 
+configStr = dstConfig + ' ' + srcConfig f = open("/tmp/recover_config_file2", "w") f.write(configStr) f.close() $$ language plpython3u;
 CREATE
 
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
@@ -80,8 +83,9 @@ select generate_recover_config_file( (select datadir from gp_segment_configurati
 (1 row)
 
 -- recover from config file, only seg with content=1 will be recovered
-!\retcode gprecoverseg -a -i /tmp/recover_config_file;
+!\retcode gprecoverseg -a -i /tmp/recover_config_file1;
 -- start_ignore
+
 -- end_ignore
 (exited with code 0)
 
@@ -99,6 +103,13 @@ select dbid from gp_segment_configuration where dbid=2;
 ------
 (0 rows)
 
+-- recover the segment to its original datadir
+!\retcode gprecoverseg -a -i /tmp/recover_config_file2;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
 update gp_segment_configuration set dbid=2 where dbid=9;
 UPDATE 1
 set allow_system_table_mods to false;
@@ -109,6 +120,7 @@ SET
 -- at here
 !\retcode gprecoverseg -a;
 -- start_ignore
+
 -- end_ignore
 (exited with code 0)
 
@@ -122,6 +134,7 @@ select wait_until_all_segments_synchronized();
 -- rebalance the cluster
 !\retcode gprecoverseg -ar;
 -- start_ignore
+
 -- end_ignore
 (exited with code 0)
 
@@ -146,5 +159,20 @@ SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configu
  8    | m    | m              | -1      | s    | u      
 (8 rows)
 
+-- remove recovered segment's temp datadir
+!\retcode rm -rf `cat /tmp/recover_config_file2 | awk 'BEGIN {FS=" "}  {print $1}' | awk 'BEGIN {FS="|"}  {print $3}'`;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
 -- remove the config file
-!\retcode rm /tmp/recover_config_file
+!\retcode rm /tmp/recover_config_file1;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm /tmp/recover_config_file2;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
