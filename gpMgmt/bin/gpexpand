@@ -1664,7 +1664,7 @@ WHERE
         table_conn = self.connect_database(dbname)
 
         cursor = dbconn.execSQL(table_conn, """
-            SELECT parrelid::regclass AS relname
+            SELECT DISTINCT parrelid::regclass AS relname
             FROM pg_partition, pg_class
             WHERE parrelid = pg_class.oid;
         """)
