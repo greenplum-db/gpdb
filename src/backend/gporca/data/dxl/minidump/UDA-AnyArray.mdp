@@ -248,8 +248,13 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="11" Alias="myaggp20a">
-              <dxl:AggFunc AggMdid="0.2873631.1.0" AggDistinct="false" AggStage="Normal" TypeMdid="0.1007.1.0">
+              <dxl:AggFunc AggMdid="0.2873631.1.0" AggDistinct="false" AggStage="Normal" TypeMdid="0.1007.1.0" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1" ColName="f1" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -319,8 +324,13 @@
                 <dxl:Ident ColId="2" ColName="f3" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="10" Alias="myaggp20a">
-                <dxl:AggFunc AggMdid="0.2873631.1.0" AggDistinct="false" AggStage="Normal" TypeMdid="0.1007.1.0">
+                <dxl:AggFunc AggMdid="0.2873631.1.0" AggDistinct="false" AggStage="Normal" TypeMdid="0.1007.1.0" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="0" ColName="f1" TypeMdid="0.23.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>

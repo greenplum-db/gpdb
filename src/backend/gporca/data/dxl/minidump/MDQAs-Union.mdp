@@ -428,13 +428,23 @@ select a,count(distinct a), count(distinct b) from t1 group by a
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="10" Alias="count">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="11" Alias="count">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -460,13 +470,23 @@ select a,count(distinct a), count(distinct b) from t1 group by a
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="21" Alias="count">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="12" ColName="a" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="22" Alias="count">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="13" ColName="b" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -674,8 +694,13 @@ select a,count(distinct a), count(distinct b) from t1 group by a
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="0" Alias="a">
@@ -767,8 +792,13 @@ select a,count(distinct a), count(distinct b) from t1 group by a
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="10" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="52" ColName="b" TypeMdid="0.23.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="51" Alias="a">
@@ -984,8 +1014,13 @@ select a,count(distinct a), count(distinct b) from t1 group by a
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="20" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
+                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="41" ColName="ColRef_0041" TypeMdid="0.20.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="12" Alias="b">
@@ -1035,8 +1070,13 @@ select a,count(distinct a), count(distinct b) from t1 group by a
                         </dxl:GroupingColumns>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="41" Alias="ColRef_0041">
-                            <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Partial">
+                            <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Partial" AggKind="n" AggArgTypes="">
+                              <dxl:ValuesList ParamType="aggargs">
                               <dxl:Ident ColId="11" ColName="a" TypeMdid="0.23.1.0"/>
+                              </dxl:ValuesList>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
                             </dxl:AggFunc>
                           </dxl:ProjElem>
                           <dxl:ProjElem ColId="12" Alias="b">
@@ -1132,8 +1172,13 @@ select a,count(distinct a), count(distinct b) from t1 group by a
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="21" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="32" ColName="b" TypeMdid="0.23.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="32" Alias="b">

@@ -6318,7 +6318,8 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="90" Alias="revenue">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0" OperatorType="0.1700.1.0">
                   <dxl:Ident ColId="37" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
                   <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0" OperatorType="0.1700.1.0">
@@ -6326,6 +6327,10 @@
                     <dxl:Ident ColId="38" ColName="l_discount" TypeMdid="0.1700.1.0"/>
                   </dxl:OpExpr>
                 </dxl:OpExpr>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -6544,7 +6549,8 @@
                 <dxl:Ident ColId="69" ColName="n_name" TypeMdid="0.1042.1.0"/>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="89" Alias="revenue">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0" OperatorType="0.1700.1.0">
                     <dxl:Ident ColId="36" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
                     <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0" OperatorType="0.1700.1.0">
@@ -6552,6 +6558,10 @@
                       <dxl:Ident ColId="37" ColName="l_discount" TypeMdid="0.1700.1.0"/>
                     </dxl:OpExpr>
                   </dxl:OpExpr>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>

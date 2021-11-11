@@ -318,7 +318,12 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="19" Alias="count">
-                        <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                        <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                          <dxl:ValuesList ParamType="aggargs"/>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
+                        </dxl:AggFunc>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:LogicalGet>
@@ -342,7 +347,12 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="29" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs"/>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
+                      </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:LogicalSelect>
@@ -491,7 +501,12 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="28" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs"/>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
+                      </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="19" Alias="e">
                       <dxl:Ident ColId="19" ColName="e" TypeMdid="0.23.1.0"/>
@@ -579,7 +594,12 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                             </dxl:GroupingColumns>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="18" Alias="count">
-                                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                                  <dxl:ValuesList ParamType="aggargs"/>
+                                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                                  <dxl:ValuesList ParamType="aggorder"/>
+                                  <dxl:ValuesList ParamType="aggdistinct"/>
+                                </dxl:AggFunc>
                               </dxl:ProjElem>
                               <dxl:ProjElem ColId="9" Alias="c">
                                 <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>

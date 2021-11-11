@@ -511,7 +511,8 @@
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="29" Alias="sum">
-            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:If TypeMdid="0.23.1.0">
                 <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
                   <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -521,8 +522,13 @@
                         <dxl:GroupingColumns/>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="28" Alias="sum">
-                            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                              <dxl:ValuesList ParamType="aggargs">
                               <dxl:Ident ColId="20" ColName="d" TypeMdid="0.23.1.0"/>
+                              </dxl:ValuesList>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
                             </dxl:AggFunc>
                           </dxl:ProjElem>
                         </dxl:ProjList>
@@ -575,10 +581,15 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
               </dxl:If>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="48" Alias="sum">
-            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:If TypeMdid="0.23.1.0">
                 <dxl:Not>
                   <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="30">
@@ -630,6 +641,10 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
               </dxl:If>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -658,13 +673,23 @@
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="28" Alias="sum">
-            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-              <dxl:Ident ColId="61" ColName="ColRef_0061" TypeMdid="0.20.1.0"/>
+            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
+                <dxl:Ident ColId="61" ColName="ColRef_0061" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="47" Alias="sum">
-            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-              <dxl:Ident ColId="62" ColName="ColRef_0062" TypeMdid="0.20.1.0"/>
+            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
+                <dxl:Ident ColId="62" ColName="ColRef_0062" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -690,7 +715,8 @@
             <dxl:GroupingColumns/>
             <dxl:ProjList>
               <dxl:ProjElem ColId="61" Alias="ColRef_0061">
-                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
+                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:If TypeMdid="0.23.1.0">
                     <dxl:If TypeMdid="0.16.1.0">
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
@@ -710,10 +736,15 @@
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                   </dxl:If>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="62" Alias="ColRef_0062">
-                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
+                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:If TypeMdid="0.23.1.0">
                     <dxl:SubPlan TypeMdid="0.16.1.0" SubPlanType="AllSubPlan">
                       <dxl:TestExpr>
@@ -908,6 +939,10 @@
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                   </dxl:If>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -924,13 +959,23 @@
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="49" Alias="ColRef_0049">
-                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
-                    <dxl:Ident ColId="59" ColName="ColRef_0059" TypeMdid="0.20.1.0"/>
+                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="16">
+                    <dxl:ValuesList ParamType="aggargs">
+                      <dxl:Ident ColId="59" ColName="ColRef_0059" TypeMdid="0.20.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="51" Alias="ColRef_0051">
-                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-                    <dxl:Ident ColId="60" ColName="ColRef_0060" TypeMdid="0.20.1.0"/>
+                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="23">
+                    <dxl:ValuesList ParamType="aggargs">
+                      <dxl:Ident ColId="60" ColName="ColRef_0060" TypeMdid="0.20.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -1050,13 +1095,23 @@
                       </dxl:GroupingColumns>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="59" Alias="ColRef_0059">
-                          <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial">
-                            <dxl:Ident ColId="48" ColName="ColRef_0048" TypeMdid="0.16.1.0"/>
+                          <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="16">
+                            <dxl:ValuesList ParamType="aggargs">
+                              <dxl:Ident ColId="48" ColName="ColRef_0048" TypeMdid="0.16.1.0"/>
+                            </dxl:ValuesList>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="60" Alias="ColRef_0060">
-                          <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
-                            <dxl:Ident ColId="50" ColName="ColRef_0050" TypeMdid="0.23.1.0"/>
+                          <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="23">
+                            <dxl:ValuesList ParamType="aggargs">
+                              <dxl:Ident ColId="50" ColName="ColRef_0050" TypeMdid="0.23.1.0"/>
+                            </dxl:ValuesList>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="0" Alias="a">

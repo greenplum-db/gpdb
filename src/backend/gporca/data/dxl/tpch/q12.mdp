@@ -1990,7 +1990,8 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="40" Alias="high_line_count">
-              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:If TypeMdid="0.23.1.0">
                   <dxl:Or>
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
@@ -2005,10 +2006,15 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                 </dxl:If>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="41" Alias="low_line_count">
-              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:If TypeMdid="0.23.1.0">
                   <dxl:And>
                     <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.1057.1.0">
@@ -2023,6 +2029,10 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                 </dxl:If>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -2143,13 +2153,23 @@
               <dxl:Ident ColId="30" ColName="l_shipmode" TypeMdid="0.1042.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="39" Alias="high_line_count">
-              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
+              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="41" ColName="ColRef_0041" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="40" Alias="low_line_count">
-              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
+              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="42" ColName="ColRef_0042" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -2223,7 +2243,8 @@
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="41" Alias="ColRef_0041">
-                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
+                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:If TypeMdid="0.23.1.0">
                           <dxl:Or>
                             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
@@ -2238,10 +2259,15 @@
                           <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                           <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                         </dxl:If>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="42" Alias="ColRef_0042">
-                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
+                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:If TypeMdid="0.23.1.0">
                           <dxl:And>
                             <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.1057.1.0">
@@ -2256,6 +2282,10 @@
                           <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                           <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                         </dxl:If>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="30" Alias="l_shipmode">

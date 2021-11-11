@@ -1525,13 +1525,18 @@
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="76" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                           <dxl:Ident ColId="42" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
                           <dxl:FuncExpr FuncId="0.1740.1.0" FuncRetSet="false" TypeMdid="0.1700.1.0">
                             <dxl:Ident ColId="41" ColName="ps_availqty" TypeMdid="0.23.1.0"/>
                           </dxl:FuncExpr>
                         </dxl:OpExpr>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
@@ -1616,13 +1621,18 @@
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="38" Alias="value">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                     <dxl:Ident ColId="4" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
                     <dxl:FuncExpr FuncId="0.1740.1.0" FuncRetSet="false" TypeMdid="0.1700.1.0">
                       <dxl:Ident ColId="3" ColName="ps_availqty" TypeMdid="0.23.1.0"/>
                     </dxl:FuncExpr>
                   </dxl:OpExpr>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -1764,13 +1774,18 @@
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="37" Alias="value">
-                  <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                  <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                       <dxl:Ident ColId="3" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
                       <dxl:FuncExpr FuncId="0.1740.1.0" FuncRetSet="false" TypeMdid="0.1700.1.0">
                         <dxl:Ident ColId="2" ColName="ps_availqty" TypeMdid="0.23.1.0"/>
                       </dxl:FuncExpr>
                     </dxl:OpExpr>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="0" Alias="ps_partkey">
@@ -1987,8 +2002,13 @@
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="75" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final">
+                      <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="78" ColName="ColRef_0078" TypeMdid="0.1700.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
@@ -2011,13 +2031,18 @@
                       <dxl:GroupingColumns/>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="78" Alias="ColRef_0078">
-                          <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial">
+                          <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                            <dxl:ValuesList ParamType="aggargs">
                             <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                               <dxl:Ident ColId="41" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
                               <dxl:FuncExpr FuncId="0.1740.1.0" FuncRetSet="false" TypeMdid="0.1700.1.0">
                                 <dxl:Ident ColId="40" ColName="ps_availqty" TypeMdid="0.23.1.0"/>
                               </dxl:FuncExpr>
                             </dxl:OpExpr>
+                            </dxl:ValuesList>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
                       </dxl:ProjList>

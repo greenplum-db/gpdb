@@ -9,7 +9,12 @@
       <dxl:GroupingColumns/>
       <dxl:ProjList>
         <dxl:ProjElem ColId="10" Alias="count">
-          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+            <dxl:ValuesList ParamType="aggargs"/>
+            <dxl:ValuesList ParamType="aggdirectargs"/>
+            <dxl:ValuesList ParamType="aggorder"/>
+            <dxl:ValuesList ParamType="aggdistinct"/>
+          </dxl:AggFunc>
         </dxl:ProjElem>
       </dxl:ProjList>
       <dxl:LogicalGet>

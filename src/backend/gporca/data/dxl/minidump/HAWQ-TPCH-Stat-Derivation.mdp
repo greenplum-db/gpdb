@@ -6301,8 +6301,13 @@ ORDER BY s_name;
                           <dxl:GroupingColumns/>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="57" Alias="sum">
-                              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                                <dxl:ValuesList ParamType="aggargs">
                                 <dxl:Ident ColId="42" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                                </dxl:ValuesList>
+                                <dxl:ValuesList ParamType="aggdirectargs"/>
+                                <dxl:ValuesList ParamType="aggorder"/>
+                                <dxl:ValuesList ParamType="aggdistinct"/>
                               </dxl:AggFunc>
                             </dxl:ProjElem>
                           </dxl:ProjList>
@@ -6663,8 +6668,13 @@ ORDER BY s_name;
                         </dxl:GroupingColumns>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="56" Alias="sum">
-                            <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final">
+                            <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                              <dxl:ValuesList ParamType="aggargs">
                               <dxl:Ident ColId="60" ColName="ColRef_0060" TypeMdid="0.1700.1.0"/>
+                              </dxl:ValuesList>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
                             </dxl:AggFunc>
                           </dxl:ProjElem>
                           <dxl:ProjElem ColId="38" Alias="l_partkey">
@@ -6727,8 +6737,13 @@ ORDER BY s_name;
                               </dxl:GroupingColumns>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="60" Alias="ColRef_0060">
-                                  <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial">
+                                  <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                    <dxl:ValuesList ParamType="aggargs">
                                     <dxl:Ident ColId="41" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                                    </dxl:ValuesList>
+                                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                                    <dxl:ValuesList ParamType="aggorder"/>
+                                    <dxl:ValuesList ParamType="aggdistinct"/>
                                   </dxl:AggFunc>
                                 </dxl:ProjElem>
                                 <dxl:ProjElem ColId="38" Alias="l_partkey">
