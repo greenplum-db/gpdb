@@ -1,0 +1,24 @@
+---
+platform: linux
+
+image_resource:
+  type: registry-image
+
+inputs:
+- name: gpdb_src
+
+run:
+  path: /bin/sh
+  args:
+  - -exc
+  - |
+    if [ -n "${CONFIG}" ]; then
+      echo "${CONFIG}" >> config.py
+      find_unicode_control.py -p "${CHARACTERS}" -c config.py gpdb_src/
+    else
+      find_unicode_control.py -p "${CHARACTERS}" gpdb_src/
+    fi
+
+params:
+  CHARACTERS:
+  CONFIG:
