@@ -1000,12 +1000,6 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 					current_level_info, join_bitset, join_expr_info);
 				AddExprToGroupIfNecessary(group_info, join_expr_info);
 
-				// We only want to consider linear trees when enumerating partition selector alternatives
-				if (right_level != 1)
-				{
-					continue;
-				}
-
 				// For PS alternatives, get the best join expression for any properties
 				SExpressionProperties join_props(EJoinOrderAny);
 
@@ -1014,17 +1008,21 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 					left_group_info, right_group_info, join_props);
 
 
-
-				// TODO: Reduce non-mandatory cross products
-
-				PopulateDPEInfo(join_expr_info, left_group_info,
-								right_group_info);
-				// For the first level, we should consider joining both ways
-				if (left_level == 1 && right_level == 1)
+				// We only want to consider linear trees when enumerating partition selector alternatives
+				if (right_level == 1)
 				{
-					PopulateDPEInfo(join_expr_info, right_group_info,
-									left_group_info);
+					// TODO: Reduce non-mandatory cross products
+
+					PopulateDPEInfo(join_expr_info, left_group_info,
+									right_group_info);
+					// For the first level, we should consider joining both ways
+					if (left_level == 1 && right_level == 1)
+					{
+						PopulateDPEInfo(join_expr_info, right_group_info,
+										left_group_info);
+					}
 				}
+
 
 				if (join_expr_info->m_contain_PS->Size() > 0)
 				{
