@@ -1676,6 +1676,8 @@ WHERE
             dbconn.execSQL(table_conn, prepare_cmd)
 
         src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
+
+        # We need populate all leaf table to gpexpand.status_detail
         get_status_detail_cmd = """
              SELECT
                 current_database(),
@@ -1692,12 +1694,12 @@ WHERE
             FROM
                 pg_class c
                 JOIN pg_inherits a on (a.inhrelid = c.oid)
-                JOIN pg_partition b on (a.inhparent=b.parrelid)
                 JOIN pg_class d on (a.inhparent = d.oid)
                 JOIN pg_namespace n on (c.relnamespace = n.oid)
                 LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
             where
-                c.relkind != 'p'
+                c.relkind != 'p' and
+                c.relhassubclass = false
         """ % (undone_status, src_bytes_str)
         self.logger.debug(get_status_detail_cmd)
 
