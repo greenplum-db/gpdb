@@ -15084,7 +15084,6 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 	int 		new_numsegments = getgpsegmentCount();
 	Oid       	relid = RelationGetRelid(rel);
 	GpPolicy   *rel_dist = rel->rd_cdbpolicy;
-	PartStatus 	ps = rel_part_status(rel->rd_id);
 
 	if (GpPolicyIsRandomPartitioned(rel_dist) || has_subclass(rel->rd_id))
 	{
@@ -20296,6 +20295,9 @@ char *alterTableCmdString(AlterTableType subtype)
 			break;
 
 		case AT_PartAttachIndex:
+			break;
+
+		case AT_ExpandPartitionTablePrepare: /* ALTER TABLE EXPAND PARTITION PREPARE */
 			break;
 	}
 
