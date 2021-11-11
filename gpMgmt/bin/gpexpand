@@ -283,7 +283,8 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                           status text,
                           expansion_started timestamp,
                           expansion_finished timestamp,
-                          source_bytes numeric ) """
+                          source_bytes numeric,
+                          rel_storage text ) """
 # gpexpand views
 progress_view_simple_sql = """CREATE VIEW gpexpand.expansion_progress AS
 SELECT
