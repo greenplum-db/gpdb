@@ -79,6 +79,7 @@ function unittest_check_gpdb() {
 function include_dependencies() {
 
 	mkdir -p ${GREENPLUM_INSTALL_DIR}/{lib/pkgconfig,include}
+	mkdir -p ${GREENPLUM_CL_INSTALL_DIR}/lib
 	declare -a library_search_path header_search_path vendored_headers vendored_libs pkgconfigs
 
 	header_search_path=(/usr/local/include/ /usr/include/)
@@ -93,9 +94,12 @@ function include_dependencies() {
 		vendored_headers=(zstd*.h uv.h uv)
 		pkgconfigs+=(libzstd.pc libuv.pc)
 		vendored_libs+=(libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0})
+		vendored_libs_clients=(libzstd.so{,.1,.1.3.7})
 
 		# Vendor headers - follow symlinks
 		for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]]; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
+		# vendor libzstd for clients (needed dependency for gpfdist)
+		for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs_clients[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_CL_INSTALL_DIR}/lib \;; done; fi; done
 	fi
 
 	# Vendor shared libraries - follow symlinks
