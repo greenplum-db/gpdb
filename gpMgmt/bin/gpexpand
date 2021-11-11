@@ -1595,7 +1595,8 @@ class gpexpand:
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
-    %s as source_bytes
+    %s as source_bytes,
+    c.relstorage as rel_storage
 FROM
     pg_class c
     JOIN pg_namespace n ON (c.relnamespace=n.oid)
@@ -1685,7 +1686,8 @@ WHERE
                 '%s' as undone_status,
                 NULL as expansion_started,
                 NULL as expansion_finished,
-                %s as source_bytes
+                %s as source_bytes,
+                c.relstorage as rel_storage
             FROM
                 pg_class c
                 JOIN pg_inherits a on (a.inhrelid = c.oid)
@@ -1944,17 +1946,17 @@ class ExpandTable():
              self.root_partition_oid,
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,
-             self.source_bytes) = row
+             self.source_bytes, self.rel_storage) = row
 
     def add_table(self, conn):
         insertSQL = """INSERT INTO gpexpand.status_detail
                             VALUES ('%s','%s',%s,
-                                    '%d',%d,'%s','%s','%s','%s',%d)
+                                    '%d',%d,'%s','%s','%s','%s',%d, '%s')
                     """ % (self.dbname.replace("'", "''"), self.fq_name.replace("'", "''"), self.table_oid,
                            self.root_partition_oid,
                            self.rank, self.external_writable, self.status,
                            self.expansion_started, self.expansion_finished,
-                           self.source_bytes)
+                           self.source_bytes, self.rel_storage)
         logger.info('Added table %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
         logger.debug(insertSQL.decode('utf-8'))
         dbconn.execSQL(conn, insertSQL)
@@ -1996,9 +1998,10 @@ class ExpandTable():
         sql = ""
 
         if self.root_partition_oid is not None:
-            # for writable external partition table, expansion is finished during prepare stage
-            # by simply updating numsegments field in policy. so we just skip it.
-            if not self.external_writable:
+            # For writable external partition leaves, expansion is finished during prepare stage
+            # by simply updating numsegments field in policy, so we just skip it.
+            # For non-writable external partition leaves, we should do nothing to it.
+            if self.rel_storage != 'x':
                 get_dist_cmd = """
                     SELECT pg_get_table_distributedby(%d) AS distribution_policy;
                 """ % self.root_partition_oid
