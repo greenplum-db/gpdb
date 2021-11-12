@@ -15,7 +15,8 @@
                       {'name': 'replication_slots',
                        'use_concourse_cluster': false},
                       {'name': 'gpactivatestandby',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': true,
+                       'set_max_connections': true},
                       {'name': 'gpinitstandby',
                        'use_concourse_cluster': false},
                       {'name': 'gp_bash_functions.sh',
@@ -1776,6 +1777,10 @@ jobs:
               SUDO_MDW_USERNAME: ubuntu
               {% endif %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+              {% if test.set_max_connections %}
+              COORDINATOR_MAX_CONNECT: 100
+              SEGMENT_MAX_CONNECT: 300
+              {% endif %}
               [[ test.env ]]
             on_success:
               <<: *ccp_destroy
