@@ -291,3 +291,15 @@ Feature: gpinitsystem tests
         Then gpinitsystem should return a return code of 0
         # the log file must have the entry indicating that DCA specific configuration has been set
         And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
+
+    Scenario: gpinitsystem succeeds if there is banner on host
+        Given the database is not running
+        When the user sets banner on host
+        And a demo cluster is created using gpinitsystem args " "
+        And gpinitsystem should return a return code of 0
+
+    Scenario: gpinitsystem succeeds if there is multi-line banner on host
+        Given the database is not running
+        When the user sets multi-line banner on host
+        And a demo cluster is created using gpinitsystem args " "
+        And gpinitsystem should return a return code of 0

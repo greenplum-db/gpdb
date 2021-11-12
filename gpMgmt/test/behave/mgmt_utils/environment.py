@@ -9,6 +9,7 @@ from test.behave_utils.utils import drop_database_if_exists, start_database_if_n
 from steps.mirrors_mgmt_utils import MirrorMgmtContext
 from steps.gpconfig_mgmt_utils import GpConfigContext
 from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
+from steps.mgmt_utils import backup_bashrc, restore_bashrc
 from gppylib.db import dbconn
 
 def before_all(context):
@@ -112,7 +113,8 @@ def before_scenario(context, scenario):
     if 'analyzedb' not in context.feature.tags:
         start_database_if_not_started(context)
         drop_database_if_exists(context, 'testdb')
-
+    if 'gp_bash_functions.sh' in context.feature.tags:
+        backup_bashrc()
 
 def after_scenario(context, scenario):
     #TODO: you'd think that the scenario.skip() in before_scenario() would
@@ -130,6 +132,9 @@ def after_scenario(context, scenario):
             Then the user runs "gpstart -a"
             And gpstart should return a return code of 0
             ''')
+
+    if 'gp_bash_functions.sh' in context.feature.tags:
+        restore_bashrc()
 
     # NOTE: gpconfig after_scenario cleanup is in the step `the gpconfig context is setup`
     tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpinitstandby',
