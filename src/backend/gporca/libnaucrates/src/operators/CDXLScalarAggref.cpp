@@ -14,6 +14,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/md/IMDAggregate.h"
 
@@ -179,6 +180,26 @@ CDXLScalarAggref::IsDistinct() const
 }
 
 //---------------------------------------------------------------------------
+//     @function:
+//             CDXLScalarAggref::SerializeValuesListChildToDXL
+//
+//     @doc:
+//             Serialize child CDXLScalarValuesList node in DXL format. Param index is
+//             one based.
+//
+//---------------------------------------------------------------------------
+void
+CDXLScalarAggref::SerializeValuesListChildToDXL(CXMLSerializer *xml_serializer,
+												const CDXLNode *dxlnode,
+												ULONG index,
+												const CHAR *attr_name) const
+{
+	CDXLScalarValuesList *child =
+		CDXLScalarValuesList::Cast(((*dxlnode)[index])->GetOperator());
+	child->SerializeToDXL(xml_serializer, (*dxlnode)[index], attr_name);
+}
+
+//---------------------------------------------------------------------------
 //	@function:
 //		CDXLScalarAggref::SerializeToDXL
 //
@@ -213,7 +234,10 @@ CDXLScalarAggref::SerializeToDXL(CXMLSerializer *xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefArgTypes), argtypes);
 	GPOS_DELETE(argtypes);
 
-	dxlnode->SerializeChildrenToDXL(xml_serializer);
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 0, "aggargs");
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 1, "aggdirectargs");
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 2, "aggorder");
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 3, "aggdistinct");
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);

@@ -110,6 +110,10 @@ public:
 	void SerializeToDXL(CXMLSerializer *xml_serializer,
 						const CDXLNode *dxlnode) const override;
 
+	void SerializeValuesListChildToDXL(CXMLSerializer *xml_serializer,
+									   const CDXLNode *dxlnode, ULONG index,
+									   const CHAR *attr_name) const;
+
 	// conversion function
 	static CDXLScalarAggref *
 	Cast(CDXLOperator *dxl_op)

@@ -46,6 +46,10 @@ public:
 	void SerializeToDXL(CXMLSerializer *xml_serializer,
 						const CDXLNode *dxlnode) const override;
 
+	// serialize operator in DXL format
+	void SerializeToDXL(CXMLSerializer *xml_serializer, const CDXLNode *dxlnode,
+						const CHAR *attrname) const;
+
 	// conversion function
 	static CDXLScalarValuesList *Cast(CDXLOperator *dxl_op);
 
