@@ -427,7 +427,7 @@ CPhysicalJoin::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 			CExpressionArray *pdrgpexpr = pdsHashed->Pdrgpexpr();
 			IMdIdArray *opfamilies = pdsHashed->Opfamilies();
 
-			if (NULL != opfamilies)
+			if (nullptr != opfamilies)
 			{
 				opfamilies->AddRef();
 			}
