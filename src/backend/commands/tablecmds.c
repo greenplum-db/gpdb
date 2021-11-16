@@ -15064,8 +15064,8 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
  *
  * For external(foreign) tables, only writable external tables have distribution
  * policy. So for writable external leaf partitions, expansion is finished during
- * prepare stage (the following functon) by simply updating numsegments field
- * in policy. For other exteranl(foreign) tables, just ignore them.
+ * prepare stage (the following function) by simply updating numsegments field
+ * in policy. For other external(foreign) tables, just ignore them.
  *
  * after we expand partition prepare from 2 segments to 3 segments,
  * possible distribution policies of partition table:
