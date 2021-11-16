@@ -139,7 +139,8 @@ $ gpstart</codeblock></li>
             installation directory on the coordinator and segment host systems. </p></li>
         <li>If you configured PXF in your previous Greenplum Database installation, you may
           need to install PXF in your new Greenplum installation, and you may be required to
-          re-initialize the PXF service after you upgrade Greenplum Database. Refer to the <xref
+          re-initialize or register the PXF service after you upgrade Greenplum Database.
+          Refer to the <xref
             href="../pxf/upgrade_pxf_6x.html#pxfup" type="topic" format="html">Step 2</xref>
           PXF upgrade procedure for instructions.</li>
         <li>For Tanzu Greenplum Database, if you configured GPSS in your previous installation, you

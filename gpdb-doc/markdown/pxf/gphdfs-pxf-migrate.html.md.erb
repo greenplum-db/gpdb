@@ -7,7 +7,7 @@ You may be using the `gphdfs` external table protocol in a Greenplum Database ve
 To migrate your `gphdfs` external tables to use the `pxf` external table protocol, you:
 
 1. [Prepare](#prepare) for the migration.
-2. Map configuration properties, then [configure and start PXF] (#id_cfg_prop).
+2. Map configuration properties, and then [set up PXF] (#id_cfg_prop).
 3. [Create](#create_pxf_ext_table) a new `pxf` external table to replace each `gphdfs` external table.
 4. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
 5. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
@@ -21,7 +21,7 @@ To migrate your `gphdfs` external tables to use the `pxf` external table protoco
 <li>Greenplum 4: <a href="#prepare">Prepare</a> for the migration.</li>
 <li>Greenplum 6:<ol>
   <li>Install and configure the Greenplum 6 software.</li>
-  <li>Map configuration properties, then <a href="#id_cfg_prop">configure and start PXF</a>.</li>
+  <li>Map configuration properties, and then <a href="#id_cfg_prop">install and set up PXF</a>.</li>
   <li><a href="#create_pxf_ext_table">Create</a> a new <code>pxf</code> external table to replace each <code>gphdfs</code> external table.</li>
   <li><a href="#verify_pxf">Verify</a> access to Hadoop files with the <code>pxf</code> external tables.</li></ol>
 <li>Greenplum 4:<ol>
@@ -69,7 +69,7 @@ As you prepare for migrating from `gphdfs` to PXF:
 3. Save the information that you gathered above.
 
 
-## <a id="id_cfg_prop"></a>Configuring and Starting PXF
+## <a id="id_cfg_prop"></a>Setting Up PXF
 
 PXF does not use the following `gphdfs` configuration options:
 
@@ -92,22 +92,39 @@ Configuration properties required by PXF, and the `gphdfs` equivalent, if applic
 
 After you determine the equivalent PXF configuration properties, you will:
 
-1. (Optional) [Install](../../pxf/6-0/installing_pxf.html) the newest version of PXF on your Greenplum Database hosts. You may also choose to use the PXF version 5.15.1 embedded in your Greenplum Database 6.x installation.
-1. Update the Java version installed on each Greenplum Database host, if necessary. PXF supports Java version 8 and 11. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](../../pxf/5-15/install_java.html).
+1. Update the Java version installed on each Greenplum Database host, if necessary. PXF supports Java version 8 and 11. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](../../pxf/latest/install_java.html). Note the `$JAVA_HOME` setting.
 
-2. The next step depends upon the version of PXF to which you are migrating:
-    - If you are migrating to PXF 5.x, initialize PXF as described in [Initializing PXF](../../pxf/5-15/init_pxf.html). You must initialize PXF 5.x before you can access Hadoop.
-    - If you just installed or are migrating to PXF 6.x, register the PXF extension with Greenplum Datatabase:
+1. If you are migrating from Greenplum Database 4, *or* you have not previously used PXF in your Greenplum 5 installation:
+
+    1. [Install](../../pxf/latest/installing_pxf.html) the newest version of the independent PXF distribution on your Greenplum Database hosts.
+
+    1. Inform PXF of the $JAVA_HOME setting by specifying its value in the `pxf-env.sh` [configuration file](../../pxf/latest/config_files.html).
+        - Edit the `pxf-env.sh` file on the Greenplum master node.
+
+            ``` shell
+            gpadmin@gpmaster$ vi /usr/local/pxf-gp6/conf/pxf-env.sh
+            ```
+        - Locate the `JAVA_HOME` setting in the `pxf-env.sh` file, uncomment if necessary, and set it to your `$JAVA_HOME` value. For example:
+
+            ```
+            export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk/jre/
+            ```
+
+    1. Register the PXF extension with Greenplum Datatabase:
 
         ```shell
         gpadmin@gpmaster$ pxf cluster register
         ```
 
-3. [Configure the PXF Hadoop Connectors](../../pxf/5-15/client_instcfg.html). This procedure creates a PXF server configuration that provides PXF the information that it requires to access Hadoop. This procedure also synchronizes the configuration changes to all hosts in your Greenplum cluster.
+    1. [Enable the PXF extension](../../pxf/latest/using_pxf.html#enable-pxf-ext) and [grant users access to PXF](../../pxf/latest/using_pxf.html#access_pxf).
 
-4. Start PXF in your Greenplum Database cluster as described in [Starting PXF](../../pxf/5-15/cfginitstart_pxf.html#start_pxf).
+3. [Configure the PXF Hadoop Connectors](../../pxf/latest/client_instcfg.html). This procedure creates a PXF server configuration that provides PXF the information that it requires to access Hadoop. This procedure also synchronizes the configuration changes to all hosts in your Greenplum cluster.
 
-5. Register the PXF extension and [grant users access to PXF](../../pxf/5-15/using_pxf.html).
+4. Start or restart PXF in your Greenplum Database cluster:
+
+    ``` shell
+    gpadmin@gpmaster$ pxf cluster start
+    ```
 
 
 ## <a id="create_pxf_ext_table"></a>Creating a PXF External Table
@@ -133,7 +150,7 @@ LOCATION('pxf://<path-to-data>?PROFILE=<profile_name>[&SERVER=<server_name>][&<c
 
 You are not required to specify the HDFS host and port number when you create a PXF external table. PXF obtains this information from the `default` server configuration, or from the server configuration name that you specify in `<server_name>`.
 
-Refer to [Creating an External Table](../../pxf/5-15/intro_pxf.html#create_external_table) in the PXF documentation for more information about the PXF `CREATE EXTERNAL TABLE` syntax and keywords.
+Refer to [Creating an External Table](../../pxf/latest/intro_pxf.html#create_external_table) in the PXF documentation for more information about the PXF `CREATE EXTERNAL TABLE` syntax and keywords.
 
 When you create an external table specifying the `gphdfs` protocol, you identify the format of the external data in the `FORMAT` clause (discussed in the next section). PXF uses a `PROFILE` option in the `LOCATION` clause to identify the source and type of the external data.
 
@@ -143,7 +160,7 @@ When you create an external table specifying the `gphdfs` protocol, you identify
 | Parquet | hdfs:parquet | 
 | Text  |  hdfs:text | 
 
-Refer to [Connectors, Data Formats, and Profiles](../../pxf/5-15/access_hdfs.html#hadoop_connectors) in the PXF documentation for more information about the PXF profiles supported for Hadoop.
+Refer to [Connectors, Data Formats, and Profiles](../../pxf/latest/access_hdfs.html#hadoop_connectors) in the PXF documentation for more information about the PXF profiles supported for Hadoop.
 
 Both `gphdfs` and `pxf` utilize custom options in the `LOCATION` clause to identify data-format-, operation-, or profile-specific options supported by the protocol. For example, both `gphdfs` and `pxf` support parquet and compression options on `INSERT` operations.
 
