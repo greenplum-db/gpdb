@@ -437,6 +437,8 @@ bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 											  NIL, // DESTROY pathkeys
 											  false,
 											  target_locus);
+			if (!path)
+				elog(ERROR, "Can't create valid motion for relation's path.");
 
 			path = (Path *) create_material_path(root, rel, path);
 

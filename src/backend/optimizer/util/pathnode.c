@@ -1581,6 +1581,8 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		else
 		{
 			subpath = cdbpath_create_motion_path(root, subpath, subpath->pathkeys, false, targetlocus);
+			if (!subpath)
+				elog(ERROR, "Can't create valid motion for Append node.");
 		}
 
 		pathnode->sameslice_relids = bms_union(pathnode->sameslice_relids, subpath->sameslice_relids);

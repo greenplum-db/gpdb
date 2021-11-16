@@ -81,7 +81,9 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
  *    If no motion is needed, the caller's subpath is returned unchanged.
  *    Else if require_existing_order is true, NULL is returned if the
  *      motion would not preserve an ordering at least as strong as the
- *      specified ordering; also NULL is returned if pathkeys is NIL
+ *      specified ordering or if path has parameterization relids,
+ *      which generally may indicate we can't add motion;
+ *      also NULL is returned if pathkeys is NIL
  *      meaning the caller is just checking and doesn't want to add motion.
  *    Else a CdbMotionPath is returned having either the specified pathkeys
  *      (if given and the motion uses Merge Receive), or the pathkeys
@@ -136,14 +138,25 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			return subpath;
 		}
 
+		/* No motion needed if subpath can run anywhere giving same output. */
+		if (CdbPathLocus_IsGeneral(subpath->locus))
+		{
+			/*
+			 * general-->(entry|singleqe), no motion is needed, can run
+			 * directly on any of the common segments
+			 */
+			subpath->locus.numsegments = numsegments;
+			return subpath;
+		}
+
+		/* Fail if caller refuses motion. */
+		if (require_existing_order &&
+			!pathkeys)
+			return NULL;
+
 		/* singleQE-->entry?  Don't move.  Slice's QE will run on entry db. */
 		if (CdbPathLocus_IsSingleQE(subpath->locus))
 		{
-			/*
-			 * If the subpath requires parameters, we cannot generate Motion atop of it.
-			 */
-			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
-				return NULL;
 			/*
 			 * Create CdbMotionPath node to indicate that the slice must be
 			 * dispatched to a singleton gang running on the entry db.  We
@@ -176,11 +189,6 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		if (CdbPathLocus_IsSegmentGeneral(subpath->locus))
 		{
 			/*
-			 * If the subpath requires parameters, we cannot generate Motion atop of it.
-			 */
-			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
-				return NULL;
-			/*
 			 * Data is only available on segments, to distingush it with
 			 * CdbLocusType_General, adding a motion to indicated this
 			 * slice must be executed on a singleton gang.
@@ -209,22 +217,6 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.rescannable = false;
 			return (Path *) pathnode;
 		}
-
-		/* No motion needed if subpath can run anywhere giving same output. */
-		if (CdbPathLocus_IsGeneral(subpath->locus))
-		{
-			/*
-			 * general-->(entry|singleqe), no motion is needed, can run
-			 * directly on any of the common segments
-			 */
-			subpath->locus.numsegments = numsegments;
-			return subpath;
-		}
-
-		/* Fail if caller refuses motion. */
-		if (require_existing_order &&
-			!pathkeys)
-			return NULL;
 
 		/* replicated-->singleton would give redundant copies of the rows. */
 		if (CdbPathLocus_IsReplicated(subpath->locus))
@@ -314,11 +306,6 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	/* Does subpath produce same multiset of rows on every qExec of its gang? */
 	else if (CdbPathLocus_IsReplicated(subpath->locus))
 	{
-		/*
-		 * If the subpath requires parameters, we cannot generate Motion atop of it.
-		 */
-		if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
-			return NULL;
 		/* No-op if replicated-->replicated. */
 		if (CdbPathLocus_IsReplicated(locus))
 		{
@@ -401,6 +388,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	/* Unexpected source or destination locus. */
 invalid_motion_request:
 	Assert(0);
+	elog(WARNING, "cdbpath_create_motion_path can't apply valid motion");
 	return NULL;
 }								/* cdbpath_create_motion_path */
 
@@ -900,6 +888,11 @@ cdbpath_distkeys_from_preds(PlannerInfo *root,
  * mergeclause_list is a List of RestrictInfo.  Its members are
  * the equijoin predicates between the outer and inner rel.
  * It comes from select_mergejoin_clauses() in joinpath.c.
+ *
+ * Besides ordering logic,
+ * outer_require_existing_order and inner_require_existing_order
+ * indicates path has parameterization relids, so we can decide
+ * can we add a motion node atop of processing node
  */
 
 typedef struct
@@ -2098,6 +2091,7 @@ turn_volatile_seggen_to_singleqe(PlannerInfo *root, Path *path, Node *node)
 		CdbPathLocus_MakeSingleQE(&singleQE,
 								  CdbPathLocus_NumSegments(path->locus));
 		mpath = cdbpath_create_motion_path(root, path, NIL, false, singleQE);
+		Assert(mpath);
 		ppath =  create_projection_path_with_quals(root, mpath->parent, mpath, NIL);
 		ppath->force = true;
 		return (Path *) ppath;
