@@ -295,6 +295,7 @@ Feature: gpinitsystem tests
     Scenario: gpinitsystem succeeds if there is banner on host
         Given the database is not running
         And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
+        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*" 
         When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
         And the user sets banner on host
         And a demo cluster is created using gpinitsystem args " "
@@ -305,6 +306,7 @@ Feature: gpinitsystem tests
     Scenario: gpinitsystem succeeds if there is multi-line banner on host
         Given the database is not running
         And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
+        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
         When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
         And the user sets multi-line banner on host
         And a demo cluster is created using gpinitsystem args " "
