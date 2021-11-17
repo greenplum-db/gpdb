@@ -294,12 +294,20 @@ Feature: gpinitsystem tests
 
     Scenario: gpinitsystem succeeds if there is banner on host
         Given the database is not running
-        When the user sets banner on host
+        And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
+        When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
+        And the user sets banner on host
         And a demo cluster is created using gpinitsystem args " "
-        And gpinitsystem should return a return code of 0
+        Then gpinitsystem should return a return code of 0
+        And  the user runs "gpstate"
+        And gpstate should return a return code of 0
 
     Scenario: gpinitsystem succeeds if there is multi-line banner on host
         Given the database is not running
-        When the user sets multi-line banner on host
+        And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
+        When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
+        And the user sets multi-line banner on host
         And a demo cluster is created using gpinitsystem args " "
-        And gpinitsystem should return a return code of 0
+        Then gpinitsystem should return a return code of 0
+        And  the user runs "gpstate"
+        And gpstate should return a return code of 0
