@@ -426,7 +426,7 @@ static void ATExecClusterOn(Relation rel, const char *indexName, LOCKMODE lockmo
 static void ATExecDropCluster(Relation rel, LOCKMODE lockmode);
 static void ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel,
 					char *tablespacename, LOCKMODE lockmode);
-static void ATPartsPrepSetTableSpace(List **wqueue, Relation rel, AlterTableCmd *cmd, 
+static void ATPartsPrepSetTableSpace(List **wqueue, Relation rel, AlterTableCmd *cmd,
 									 List *oids);
 static void ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode);
 static void ATExecSetRelOptions(Relation rel, List *defList,
@@ -455,6 +455,8 @@ static void RangeVarCallbackForAlterRelation(const RangeVar *rv, Oid relid,
 								 Oid oldrelid, void *arg);
 static void RemoveInheritance(Relation child_rel, Relation parent_rel, bool is_partition);
 static void ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd);
+static void ATExecExpandPartitionTablePrepare(Relation rel);
+static void ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd);
 
 static void ATExecSetDistributedBy(Relation rel, Node *node,
 								   AlterTableCmd *cmd);
@@ -477,7 +479,7 @@ static void ATPExecPartAdd(AlteredTableInfo *tab,
 						   Relation rel,
                            AlterPartitionCmd *pc,
 						   AlterTableType att);				/* Add */
-static void ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, 
+static void ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab,
 							 Relation *rel,
                              AlterPartitionCmd *pc);		/* Alter */
 static void ATPExecPartDrop(Relation rel,
@@ -631,7 +633,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 	 *
 	 * Note: This code duplicates code in indexcmds.c
 	 */
-	if (relkind == RELKIND_SEQUENCE || 
+	if (relkind == RELKIND_SEQUENCE ||
 		relkind == RELKIND_VIEW ||
 		relkind == RELKIND_COMPOSITE_TYPE ||
 		(relkind == RELKIND_RELATION && (
@@ -639,7 +641,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 			relstorage == RELSTORAGE_FOREIGN  ||
 			relstorage == RELSTORAGE_VIRTUAL)))
 	{
-		/* 
+		/*
 		 * These relkinds have no storage, and thus do not support tablespaces.
 		 * We shouldn't go through the regular default case for these because
 		 * we don't want to pick up the value from the default_tablespace guc.
@@ -665,7 +667,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 		tablespaceId = GetDefaultTablespace(stmt->relation->relpersistence);
 
 		/* Need the real tablespace id for dispatch */
-		if (!OidIsValid(tablespaceId)) 
+		if (!OidIsValid(tablespaceId))
 			tablespaceId = MyDatabaseTableSpace;
 
 		/* 
@@ -1046,7 +1048,7 @@ EvaluateDeferredStatements(List *deferredStmts)
 	 ***      with ordinary inheritance and partial indexes.  When that bug,
 	 ***      is fixed, this section should become unnecessary!
 	 ***/
-	
+
 	foreach( lc, deferredStmts )
 	{
 		Query	   *uquery;
@@ -1374,7 +1376,7 @@ RelationToRemoveIsTemp(const RangeVar *relation, DropBehavior behavior)
 		nspname = get_namespace_name(relForm->relnamespace);
 
 	/* XXX XXX: is this all just for debugging?  could just be simplified to:
-	   SELECT relnamespace from pg_class 
+	   SELECT relnamespace from pg_class
 	*/
 
 	relname = quote_qualified_identifier(nspname, NameStr(relForm->relname));
@@ -1556,7 +1558,7 @@ ExecuteTruncate(TruncateStmt *stmt)
 		PartitionNode *pNode;
 
 		rel = heap_openrv(rv, AccessExclusiveLock);
-			
+
 		pNode = RelationBuildPartitionDesc(rel, false);
 
 		if (pNode)
@@ -1675,7 +1677,7 @@ ExecuteTruncate(TruncateStmt *stmt)
 				relids = lappend_oid(relids, relid);
 
 				if (MetaTrackValidKindNsp(rel->rd_rel))
-					meta_relids = lappend_oid(meta_relids, 
+					meta_relids = lappend_oid(meta_relids,
 											  RelationGetRelid(rel));
 			}
 		}
@@ -3583,7 +3585,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 
 	/*
 	 * Verify the object specified against relstorage in the catalog.
-	 * Enforce correct syntax usage. 
+	 * Enforce correct syntax usage.
 	 */
 	if (RelationIsExternal(rel) && stmt->relkind != OBJECT_EXTTABLE)
 	{
@@ -4047,6 +4049,7 @@ AlterTableGetLockLevel(List *cmds)
 
 				/* GPDB additions */
 			case AT_ExpandTable:
+			case AT_ExpandPartitionTablePrepare:
 			case AT_SetDistributedBy:
 			case AT_PartAdd:
 			case AT_PartAddForSplit:
@@ -4183,7 +4186,7 @@ ATController(Relation rel, List *cmds, bool recurse, LOCKMODE lockmode)
 		}
 	}
 
-	/* 
+	/*
 	 * Phase 3: scan/rewrite tables as needed. If the data is in an external
 	 * table, no need to rewrite it or to add toast.
 	 *
@@ -4427,7 +4430,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
  								ereport(ERROR,
  										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
- 										 errmsg("can't place a %s constraint on just part of partitioned table \"%s\"", 
+ 										 errmsg("can't place a %s constraint on just part of partitioned table \"%s\"",
  												what, RelationGetRelationName(rel)),
  										 errhint("Constrain the whole table or create a part-wise UNIQUE index instead.")));
  							}
@@ -4557,7 +4560,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_MATVIEW | ATT_INDEX);
-			/* This command never recurses, but the offered relation may be partitioned, 
+			/* This command never recurses, but the offered relation may be partitioned,
 			 * in which case, we need to act as if the command specified the top-level
 			 * list of parts.
 			 */
@@ -4566,7 +4569,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				PartitionNode *pnode = NULL;
 				List *all_oids = NIL;
 
-				pnode = get_parts(RelationGetRelid(rel), 
+				pnode = get_parts(RelationGetRelid(rel),
 								  0, /**/
 								  InvalidOid, /**/
 								  false, /**/
@@ -4636,14 +4639,23 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 							policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
 
-							if(!GpPolicyEqual(policy, rel->rd_cdbpolicy))
-								/*Reject interior branches of partitioned tables.*/
+							/* We can only set policy of child table to the same with parent table */
+							Oid parent_oid = rel_partition_get_root(RelationGetRelid(rel));
+							/* Use AccessShareLock to allow set distributed in parallel */
+							Relation parent_rel = relation_open(parent_oid, AccessShareLock);
+
+							if (!GpPolicyEqualByName(RelationGetDescr(rel), policy,
+													 RelationGetDescr(parent_rel), parent_rel->rd_cdbpolicy)) {
+								/* Reject leaves of partitioned tables if the new policy is not same with parent */
 								ereport(ERROR,
 										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 												errmsg("can't set the distribution policy of \"%s\"",
 													   RelationGetRelationName(rel)),
 												errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
-							break;
+							}
+							relation_close(parent_rel, AccessShareLock);
+
+							break; /* tidy */
 
 						case PART_STATUS_INTERIOR:
 							/*Reject interior branches of partitioned tables.*/
@@ -4708,6 +4720,48 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 								 errhint("use \"ALTER TABLE %s EXPAND TABLE\" instead",
 										 get_rel_name(rel_partition_get_master(relid)))));
 						break;
+				}
+			}
+
+			ATSimpleRecursion(wqueue, rel, cmd, recurse, lockmode);
+			pass = AT_PASS_MISC;
+			break;
+
+		case AT_ExpandPartitionTablePrepare:
+			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
+
+			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
+			if (!recursing)
+			{
+				Oid 		relid = RelationGetRelid(rel);
+				PartStatus 	ps = rel_part_status(relid);
+
+				if (Gp_role == GP_ROLE_DISPATCH)
+				{
+					if (rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot expand partition table prepare \"%s\"",
+											   RelationGetRelationName(rel)),
+										errdetail("table has already been expanded partiton prepare")));
+					}
+					if (ps != PART_STATUS_ROOT)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot expand partition table prepare \"%s\"",
+											   RelationGetRelationName(rel)),
+										errdetail("only root partition can be expanded partition prepare")));
+					}
+					if (!GpPolicyIsPartitioned(rel->rd_cdbpolicy))
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot expand partition table prepare \"%s\"",
+											   RelationGetRelationName(rel)),
+										errdetail("only hash/randomly table can be expanded partition prepare")));
+					}
 				}
 			}
 
@@ -4780,18 +4834,18 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 			/* CDB: Partitioned Table commands */
 		case AT_PartExchange:			/* Exchange */
-			
+
 			ATPartitionCheck(cmd->subtype, rel, false, recursing);
-			
+
 			if (Gp_role == GP_ROLE_UTILITY)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
  						 errmsg("EXCHANGE is not supported in utility mode")));
-			
+
 			pass = AT_PASS_MISC;
-			
+
 			ATPrepExchange(rel, (AlterPartitionCmd *)cmd->def);
-			
+
 			break;
 
 		case AT_PartSplit:				/* Split */
@@ -4812,7 +4866,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				PgPartRule			*prule3	= NULL;
 				PgPartRule			*prule_specified	= NULL;
 				Relation			 target = NULL;
-				
+
 				AlterPartitionId *pid = (AlterPartitionId *) pc->partid;
 				AlterPartitionCmd *cmd2;
 				Node *at;
@@ -5201,7 +5255,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 					}
 				}
-				
+
 				/* MPP-18395 begs for a last minute check that we aren't about to
 				 * split into an existing partition.  The case that prompts the check
 				 * has to do with specifying an existing partition by name, but it
@@ -5210,8 +5264,8 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				 * one we're splitting.  (We're going to drop this one, so it's okay
 				 * recycle it.)
 				 *
-				 * Examples: 
-				 *    t is target part to split, 
+				 * Examples:
+				 *    t is target part to split,
 				 *    n, m are new parts,
 				 *    x, y are existing parts != t
 				 *
@@ -5228,23 +5282,23 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				 *   prule3 refers to the second INTO part
 				 */
 				Insist( prule2 == NULL || prule3 == NULL );
-				
+
 				if ( prule2 != NULL )
 				    prule_specified = prule2;
 				else if ( prule3 != NULL )
 					prule_specified = prule3;
 				else
 					prule_specified = NULL;
-					
+
 				if ( prule_specified &&
-					 prule_specified->topRule->parruleid != prule1->topRule->parruleid 
+					 prule_specified->topRule->parruleid != prule1->topRule->parruleid
 					 )
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_DUPLICATE_OBJECT),
 							 errmsg("cannot split into an existing partition")));
 				}
-				
+
 				ATSimplePermissions(target, ATT_TABLE);
 				heap_close(target, NoLock);
 			}
@@ -5262,14 +5316,14 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			if ( Gp_role == GP_ROLE_DISPATCH && recurse && ! recursing )
 			{
 				AlterTableCmd *basecmd = basic_AT_cmd(cmd);
-				
+
 				switch ( basecmd->subtype )
 				{
 					case AT_SetTableSpace:
 						cmd->partoids = basic_AT_oids(rel,cmd);
 						ATPartsPrepSetTableSpace(wqueue, rel, basecmd, cmd->partoids);
 						break;
-					
+
 					default:
 						/* Not a for-each-subsumed-part-type command. */
 						break;
@@ -5284,7 +5338,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					case AT_SetTableSpace:
 						ATPartsPrepSetTableSpace(wqueue, rel, basecmd, cmd->partoids);
 						break;
-						
+
 					default:
 						/* Not a for-each-subsumed-part-type command. */
 						break;
@@ -5298,7 +5352,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 							 errmsg("SET TABLESPACE is not supported in utility mode")));
 			}
 			pass = AT_PASS_MISC;
-			break;				
+			break;
 
 		case AT_PartSetTemplate:		/* Set Subpartition Template */
 			if (!gp_allow_non_uniform_partitioning_ddl)
@@ -5654,6 +5708,9 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
 			break;
 		case AT_ExpandTable:	/* SET DISTRIBUTED BY */
 			ATExecExpandTable(wqueue, rel, cmd);
+			break;
+		case AT_ExpandPartitionTablePrepare:	/* EXPAND PARTITION PREPARE */
+			ATExecExpandPartitionTablePrepare(rel);
 			break;
 			/* CDB: Partitioned Table commands */
 		case AT_PartAdd:				/* Add */
@@ -6659,7 +6716,7 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 				foreach(l, notnull_attrs)
 				{
 					int					attn = lfirst_int(l);
-					
+
 					if (memtuple_attisnull(mtuple, mt_bind, attn + 1))
 						ereport(ERROR,
 								(errcode(ERRCODE_NOT_NULL_VIOLATION),
@@ -6693,7 +6750,7 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 				if (newrel)
 				{
 					AOTupleId	aoTupleId;
-					
+
 					appendonly_insert(aoInsertDesc, mtuple, InvalidOid, &aoTupleId);
 				}
 
@@ -6783,7 +6840,7 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 				foreach(l, notnull_attrs)
 				{
 					int					attn = lfirst_int(l);
-					
+
 					if (slot_attisnull(econtext->ecxt_scantuple, attn + 1))
 						ereport(ERROR,
 								(errcode(ERRCODE_NOT_NULL_VIOLATION),
@@ -6911,7 +6968,7 @@ ATGetQueueEntry(List **wqueue, Relation rel)
 }
 
 /*
- * Issue an error, if this is a part of a partitioned table or, in case 
+ * Issue an error, if this is a part of a partitioned table or, in case
  * rejectroot is true, if this is a partitioned table itself.
  *
  * Usually called from ATPrepCmd to validate a subcommand of an ALTER
@@ -9282,9 +9339,9 @@ ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 						 errmsg("constraints on temporary tables must involve temporary tables of this session")));
 			break;
 	}
-	
+
 	/*
-	 * Disallow reference to a part of a partitioned table.  A foreign key 
+	 * Disallow reference to a part of a partitioned table.  A foreign key
 	 * must reference the whole partitioned table or none of it.
 	 */
 	if ( rel_is_child_partition(RelationGetRelid(pkrel)) )
@@ -12637,7 +12694,7 @@ ATExecDropCluster(Relation rel, LOCKMODE lockmode)
  * ALTER TABLE SET TABLESPACE
  */
 
-/* 
+/*
  * Convert tablespace name to pg_tablespace Oid.  Error out if not valid and
  * settable by the current user.
  */
@@ -12688,10 +12745,10 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, char *tablespacename, L
 	tab->newTableSpace = tablespaceId;
 }
 
-/* 
+/*
  * ATPartsPrepSetTableSpace is like ATPrepSetTableSpace except that it generates work queue
- * entries for the command (an ALTER TABLE ... SET TABLESPACE ...)  for each part within the 
- * sub-hierarchy indicated by the oid list. 
+ * entries for the command (an ALTER TABLE ... SET TABLESPACE ...)  for each part within the
+ * sub-hierarchy indicated by the oid list.
  *
  * Designed to be called from the AT_PartAlter case of ATPrepCmd.
  */
@@ -12701,22 +12758,22 @@ ATPartsPrepSetTableSpace(List **wqueue, Relation rel, AlterTableCmd *cmd, List *
 	ListCell *lc;
 	Oid tablespaceId;
 	int pass = AT_PASS_MISC;
-	
+
 	Assert( cmd && cmd->subtype == AT_SetTableSpace );
 	Assert( oids );
-	
+
 	tablespaceId = get_settable_tablespace_oid(cmd->name);
 	Assert(tablespaceId);
-	
+
 	ereport(DEBUG1,
-			(errmsg("Expanding ALTER TABLE %s SET TABLESPACE...", 
+			(errmsg("Expanding ALTER TABLE %s SET TABLESPACE...",
 					RelationGetRelationName(rel))
 			 ));
-	
+
 	foreach(lc, oids)
 	{
 		Oid partrelid = lfirst_oid(lc);
-		Relation partrel = relation_open(partrelid, NoLock); 
+		Relation partrel = relation_open(partrelid, NoLock);
 		/* NoLock because we should be holding AccessExclusiveLock on parent */
 		AlterTableCmd *partcmd = copyObject(cmd);
 		AlteredTableInfo *parttab = ATGetQueueEntry(wqueue, partrel);
@@ -12725,14 +12782,14 @@ ATPartsPrepSetTableSpace(List **wqueue, Relation rel, AlterTableCmd *cmd, List *
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("conflicting SET TABLESPACE subcommands for \"%s\"",
 							RelationGetRelationName(partrel))));
-		
+
 		parttab->newTableSpace = tablespaceId;
 		parttab->subcmds[pass] = lappend(parttab->subcmds[pass], partcmd);
-		
+
 		ereport(DEBUG1,
 				(errmsg("will SET TABLESPACE on \"%s\"",
 						RelationGetRelationName(partrel))));
-		
+
 		relation_close(partrel, NoLock);
 	}
 }
@@ -13151,7 +13208,7 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	 * Append-only tables now include init forks for unlogged tables, so we copy
 	 * over all forks. AO tables, so far, do not have visimap or fsm forks.
 	 */
-	
+
 	/* copy those extra forks that exist */
 	for (forkNum = MAIN_FORKNUM + 1; forkNum <= MAX_FORKNUM; forkNum++)
 	{
@@ -13938,7 +13995,7 @@ MergeAttributesIntoExisting(Relation child_rel, Relation parent_rel, List *inhAt
 					foreach(attNameCell, inhAttrNameList)
 					{
 						char	*inhAttrName;
-						
+
 						inhAttrName = strVal((Value *) lfirst(attNameCell));
 						if (strcmp(attributeName, inhAttrName) == 0)
 						{
@@ -14998,6 +15055,79 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
 	GpPolicyReplace(relid, newPolicy);
 }
 
+/*
+ * ALTER TABLE xxx EXPAND PARTITION PREPARE
+ *
+ * Update a partition table's "numsegments" value to current cluster size,
+ * change policy type of leaf partitions to randomly,
+ * the policy type of root and interior partitions are the same as before.
+ *
+ * For external(foreign) tables, only writable external tables have distribution
+ * policy. So for writable external leaf partitions, expansion is finished during
+ * prepare stage (the following function) by simply updating numsegments field
+ * in policy. For other external(foreign) tables, just ignore them.
+ *
+ * after we expand partition prepare from 2 segments to 3 segments,
+ * possible distribution policies of partition table:
+ * a) original policy type is randomly:
+ *    new policy type of all root/interior/leaf partitions are randomly on 3 segments
+ * b) original policy type is hashed:
+ *    new policy type of root/interior partitions are hashed on 3 segments
+ *    and new policy type of leaf partitions are randomly on 3 segments
+ *
+ * @param rel the parent or child of partition table
+ */
+static void
+ATExecExpandPartitionTablePrepare(Relation rel)
+{
+	/* get current distribution policy and partition rule (root/interior/leaf) */
+	int 		new_numsegments = getgpsegmentCount();
+	Oid       	relid = RelationGetRelid(rel);
+	GpPolicy   *rel_dist = rel->rd_cdbpolicy;
+
+	if (GpPolicyIsRandomPartitioned(rel_dist) || has_subclass(rel->rd_id))
+	{
+		/* we only change numsegments for root/interior/leaf partitions distributed randomly
+		 * or root/interior partitions distributed by hash
+		 */
+		GpPolicy *root_dist = GpPolicyCopy(rel_dist);
+
+		/* change numsegments of policy to current cluster size */
+		root_dist->numsegments = new_numsegments;
+
+		GpPolicyReplace(relid, root_dist);
+		rel->rd_cdbpolicy = root_dist;
+	}
+	else
+	{
+		if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		{
+			/*
+			 * For external|foreign leaves, only writable external
+			 * table has policy entry and need to be handled.
+			 */
+			if (RelationIsExternal(rel))
+			{
+				ExtTableEntry *ext = GetExtTableEntry(relid);
+				if (ext->iswritable)
+				{
+					/* Just modify the numsegments for external writable leaves */
+					GpPolicy *leaf_dist = GpPolicyCopy(rel_dist);
+					leaf_dist->numsegments = new_numsegments;
+					GpPolicyReplace(relid, leaf_dist);
+				}
+			}
+		}
+		else
+		{
+			/* we change policy type to randomly for leaf partitions distributed by hash */
+			GpPolicy *random_dist = createRandomPartitionedPolicy(new_numsegments);
+			GpPolicyReplace(rel->rd_id, random_dist);
+			rel->rd_cdbpolicy = random_dist;
+		}
+	}
+}
+
 static void
 ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 {
@@ -15206,7 +15336,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	Datum		newOptions = PointerGetDatum(NULL);
 	bool		change_policy = false;
 	int			numsegments;
-	SetDistributionCmd *qe_data = NULL; 
+	SetDistributionCmd *qe_data = NULL;
 	bool 				save_optimizer_replicated_table_insert;
 	Oid					relationOid = InvalidOid;
 	AutoStatsCmdType 	cmdType = AUTOSTATS_CMDTYPE_SENTINEL;
@@ -15561,7 +15691,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		GpPolicy *original_policy = NULL;
 
 		/*
-		 * Disable optimizer_replicated_table_insert so planner 
+		 * Disable optimizer_replicated_table_insert so planner
 		 * can force a broadcast motion even both source and target
 		 * are replicated table. This is important when altering
 		 * distribution policy is called by gpexpand.
@@ -15609,7 +15739,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		 */
 		queryDesc->gpmon_pkt = NULL;
 
-		/* 
+		/*
 		 * We need to update our snapshot here to make sure we see all
 		 * committed work. We have an exclusive lock on the table so no one
 		 * will be able to access the table now.
@@ -15671,7 +15801,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		 */
 		qe_data = makeNode(SetDistributionCmd);
 		qe_data->backendId = MyBackendId;
-		qe_data->relids = list_make1_oid(tarrelid); 
+		qe_data->relids = list_make1_oid(tarrelid);
 	}
 	else
 	{
@@ -15692,13 +15822,13 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		{
 			/* caller expects rel to be closed for this AT type */
 			heap_close(rel, NoLock);
-			goto l_distro_fini;			
+			goto l_distro_fini;
 		}
 
 		if (!list_member_oid(qe_data->relids, tarrelid))
 		{
 			heap_close(rel, NoLock);
-			goto l_distro_fini;			
+			goto l_distro_fini;
 		}
 
 		backend_id = qe_data->backendId;
@@ -16700,8 +16830,8 @@ exchange_part_inheritance(Oid oldrelid, Oid newrelid)
 	heap_close(newrel, NoLock);
 }
 
-/* ALTER TABLE ... EXCHANGE PARTITION 
- * 
+/* ALTER TABLE ... EXCHANGE PARTITION
+ *
  * Do the exchange that was validated earlier (in ATPrepExchange).
  */
 static void
@@ -16717,7 +16847,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 
 	if (Gp_role == GP_ROLE_UTILITY)
 		return;
-	
+
 	/* Exchange for SPLIT is different from user-requested EXCHANGE.  The special
 	 * coding to indicate SPLIT is obscure. */
 	is_split = ((AlterPartitionCmd *)pc->arg2)->arg2 != NULL;
@@ -16817,10 +16947,10 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 #else
 	/*
 	 * It would be nice to just swap the relfilenodes. In fact, we could
-	 * do that in most cases, the exceptions being tables with dropped 
+	 * do that in most cases, the exceptions being tables with dropped
 	 * columns and append only tables.
 	 *
-	 * So instead, we swap the names of the tables, the type names, the 
+	 * So instead, we swap the names of the tables, the type names, the
 	 * constraints, inheritance. We do not swap indexes, ao information
 	 * or statistics.
 	 *
@@ -16869,7 +16999,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 
 		newname = pstrdup(RelationGetRelationName(newrel));
 		oldname = pstrdup(RelationGetRelationName(oldrel));
-		
+
 		ok = map_part_attrs(rel, newrel, &newmap, TRUE);
 		Assert(ok);
 		ok = map_part_attrs(rel, oldrel, &oldmap, TRUE);
@@ -16912,7 +17042,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 			ObjectAddresses *objsMoved = new_object_addresses();
 
 			/* move the old partition (which has a temporary name) to
-			 * the new namespace 
+			 * the new namespace
 			 */
 			oldrel = heap_open(oldrelid, AccessExclusiveLock);
 			AlterTableNamespaceInternal(oldrel, oldnspid, newnspid, objsMoved);
@@ -16923,7 +17053,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 			/* before we move the new table to the old namespace,
 			 * rename it to a temporary name to avoid a name
 			 * collision.  It would be nice to have an atomic
-			 * operation to rename and renamespace a relation... 
+			 * operation to rename and renamespace a relation...
 			 */
 			RenameRelationInternal(newrelid, tmpname2, true);
 			CommandCounterIncrement();
@@ -17401,7 +17531,7 @@ partrule_walker(Node *node, void *context)
 	return expression_tree_walker(node, partrule_walker, p);
 }
 
-/* 
+/*
  * Build a basic ResultRelInfo for executing split. We only need
  * the relation descriptor and index information.
  */
@@ -17427,7 +17557,7 @@ destroy_split_resultrel(ResultRelInfo *rri)
 {
 	ExecCloseIndices(rri);
 
-	/* 
+	/*
 	 * Don't do anything with the relation descriptor, that's our caller's job
 	 */
 	pfree(rri);
@@ -17479,7 +17609,7 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	{
 		uint16 idx;
 		List *bins = NIL;
-		
+
 		for (idx = 0; idx < intoa->rd_att->constr->num_check; idx++)
 		{
 			bins = list_concat(bins,
@@ -17494,7 +17624,7 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	{
 		uint16 idx;
 		List *bins = NIL;
-		
+
 		for (idx = 0; idx < intob->rd_att->constr->num_check; idx++)
 		{
 			bins = list_concat(bins,
@@ -17571,8 +17701,8 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 		/*
 		 * Map attributes from origin to target. We should consider dropped
 		 * columns in the origin.
-		 * 
-		 * ExecQual should use targetSlot rather than slotT in case possible 
+		 *
+		 * ExecQual should use targetSlot rather than slotT in case possible
 		 * partition key mapping.
 		 */
 		AssertImply(!PointerIsValid(achk), PointerIsValid(bchk));
@@ -17936,7 +18066,7 @@ ATPExecPartSplit(Relation *rel,
 					isdef = true;
 					exists = true;
 					parname = prule->pNode->default_part->parname;
-					if (!defparname && isdef) 
+					if (!defparname && isdef)
 						defparname = pstrdup(parname);
 				}
 				else
@@ -17970,7 +18100,7 @@ ATPExecPartSplit(Relation *rel,
 						isdef = true;
 						exists = true;
 						parname = prule->pNode->default_part->parname;
-						if (!defparname && isdef) 
+						if (!defparname && isdef)
 							defparname = pstrdup(parname);
 					}
 				}
@@ -17985,7 +18115,7 @@ ATPExecPartSplit(Relation *rel,
 					isdef = tmprule->topRule->parisdefault;
 					exists = true;
 					parname = tmprule->topRule->parname;
-					if (!defparname && isdef) 
+					if (!defparname && isdef)
 						defparname = pstrdup(parname);
 				}
 			}
@@ -18021,7 +18151,7 @@ ATPExecPartSplit(Relation *rel,
 					isdef = true;
 					exists = true;
 					parname = prule->pNode->default_part->parname;
-					if (!defparname && isdef) 
+					if (!defparname && isdef)
 						defparname = pstrdup(parname);
 				}
 				else
@@ -18055,7 +18185,7 @@ ATPExecPartSplit(Relation *rel,
 						isdef = true;
 						exists = true;
 						parname = prule->pNode->default_part->parname;
-						if (!defparname && isdef) 
+						if (!defparname && isdef)
 							defparname = pstrdup(parname);
 					}
 
@@ -18071,7 +18201,7 @@ ATPExecPartSplit(Relation *rel,
 					isdef = tmprule->topRule->parisdefault;
 					exists = true;
 					parname = tmprule->topRule->parname;
-					if (!defparname && isdef) 
+					if (!defparname && isdef)
 						defparname = pstrdup(parname);
 				}
 			}
@@ -18218,7 +18348,7 @@ ATPExecPartSplit(Relation *rel,
 		 * NOTE: hateful hackery.  Normally, the arg2 for the PartDrop
 		 * cmd is null.  But since SPLIT may need to DROP the last
 		 * partition before it re-ADDs two new ones, we pass a non-null
-		 * arg2 as a flag to enable ForceDrop in ATPExecPartDrop().  
+		 * arg2 as a flag to enable ForceDrop in ATPExecPartDrop().
 		*/
 		mypc->arg2 = (Node *)makeNode(AlterPartitionCmd);
 
@@ -18356,7 +18486,7 @@ ATPExecPartSplit(Relation *rel,
 						PartitionRangeItem *ri;
 
 						/* MPP-6589: if the partition has an "open"
-						 * START, pass a NULL partStart 
+						 * START, pass a NULL partStart
 						 */
 						if (prule->topRule &&
 							prule->topRule->parrangestart)
@@ -18364,10 +18494,10 @@ ATPExecPartSplit(Relation *rel,
 							ri = makeNode(PartitionRangeItem);
 							ri->location = -1;
 							ri->everycount = 0;
-							ri->partRangeVal = 
+							ri->partRangeVal =
 									copyObject(prule->topRule->parrangestart);
 							ri->partedge =
-									prule->topRule->parrangestartincl ? 
+									prule->topRule->parrangestartincl ?
 									PART_EDGE_INCLUSIVE : PART_EDGE_EXCLUSIVE;
 
 							a->partStart = (Node *)ri;
@@ -18395,7 +18525,7 @@ ATPExecPartSplit(Relation *rel,
 						a->partStart = (Node *)ri;
 
 						/* MPP-6589: if the partition has an "open"
-						 * END, pass a NULL partEnd 
+						 * END, pass a NULL partEnd
 						 */
 						if (prule->topRule &&
 							prule->topRule->parrangeend)
@@ -18405,7 +18535,7 @@ ATPExecPartSplit(Relation *rel,
 							ri->everycount = 0;
 							ri->partRangeVal =
 									copyObject(prule->topRule->parrangeend);
-							ri->partedge = prule->topRule->parrangeendincl ? 
+							ri->partedge = prule->topRule->parrangeendincl ?
 									PART_EDGE_INCLUSIVE : PART_EDGE_EXCLUSIVE;
 
 							a->partEnd = (Node *)ri;
@@ -18562,9 +18692,9 @@ ATPExecPartSplit(Relation *rel,
 
 			pelem->location  = -1;
 			/* MPP-10421: determine if new partition, re-use of old
-			 * partition, and/or is default partition 
+			 * partition, and/or is default partition
 			 */
-			pelem->isDefault = (defparname && 
+			pelem->isDefault = (defparname &&
 								parname &&
 								(0 == strcmp(parname, defparname)));
 
@@ -19960,17 +20090,17 @@ ATPrepExchange(Relation rel, AlterPartitionCmd *pc)
 	PgPartRule   	   	*prule 	= NULL;
 	Relation			 oldrel = NULL;
 	Relation			 newrel = NULL;
-	
+
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		AlterPartitionId *pid = (AlterPartitionId *) pc->partid;
 		bool				is_split;
-		
+
 		is_split = ((AlterPartitionCmd *)pc->arg2)->arg2 != NULL;
-		
+
 		if (is_split)
 			return;
-		
+
 		prule = get_part_rule(rel, pid, true, true, NULL, false);
 
 		oldrel = heap_open(prule->topRule->parchildrelid, AccessExclusiveLock);
@@ -19982,15 +20112,15 @@ ATPrepExchange(Relation rel, AlterPartitionCmd *pc)
 							 AccessExclusiveLock);
 		newrel = heap_openrv((RangeVar *)pc->arg1,
 							 AccessExclusiveLock);
-		
+
 	}
 	ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 	ATSimplePermissions(oldrel, ATT_TABLE | ATT_FOREIGN_TABLE);
 	ATSimplePermissions(newrel, ATT_TABLE | ATT_FOREIGN_TABLE);
-	
+
 	/* Check that old and new look the same, error if not. */
 	is_exchangeable(rel, oldrel, newrel, true);
-	
+
 	heap_close(oldrel, NoLock);
 	heap_close(newrel, NoLock);
 }
@@ -20000,13 +20130,13 @@ ATPrepExchange(Relation rel, AlterPartitionCmd *pc)
  * in a message pattern like "can't %s a partitioned table".  The default
  * return string is "alter".
  *
- * This may pose a challenge for localization.  
+ * This may pose a challenge for localization.
  */
 static
 char *alterTableCmdString(AlterTableType subtype)
 {
 	char *cmdstring = NULL;
-	
+
 	switch (subtype)
 	{
 		case AT_AddColumn: /* add column */
@@ -20019,23 +20149,23 @@ char *alterTableCmdString(AlterTableType subtype)
 		case AT_ColumnDefaultRecurse:
 			cmdstring = pstrdup("alter a column default of");
 			break;
-			
+
 		case AT_DropNotNull: /* alter column drop not null */
 		case AT_SetNotNull: /* alter column set not null */
 			cmdstring = pstrdup("alter a column null setting of");
 			break;
-			
+
 		case AT_SetStatistics: /* alter column set statistics */
 		case AT_SetOptions: /* alter column set (<reloptions>) */
 		case AT_ResetOptions: /* alter column reset (<reloptions>) */
 		case AT_SetStorage: /* alter column set storage */
 			break;
-			
+
 		case AT_DropColumn: /* drop column */
 		case AT_DropColumnRecurse: /* internal to commands/tablecmds.c */
 			cmdstring = pstrdup("drop a column from");
 			break;
-			
+
 		case AT_AddIndex: /* add index */
 		case AT_ReAddIndex: /* internal to commands/tablecmds.c */
 			cmdstring = pstrdup("add index or primary/unique key to");
@@ -20069,7 +20199,7 @@ char *alterTableCmdString(AlterTableType subtype)
 		case AT_DropConstraint: /* drop constraint */
 			cmdstring = pstrdup("drop a constraint from");
 			break;
-			
+
 		case AT_AlterColumnType: /* alter column type */
 			cmdstring = pstrdup("alter a column datatype of");
 			break;
@@ -20079,21 +20209,21 @@ char *alterTableCmdString(AlterTableType subtype)
 		case AT_ChangeOwner: /* change owner */
 			cmdstring = pstrdup("alter the owner of");
 			break;
-			
+
 		case AT_ClusterOn: /* CLUSTER ON */
 		case AT_DropCluster: /* SET WITHOUT CLUSTER */
 			break;
-			
+
 		case AT_DropOids: /* SET WITHOUT OIDS */
 			cmdstring = pstrdup("alter the oid setting of");
 			break;
-			
+
 		case AT_SetTableSpace: /* SET TABLESPACE */
 		case AT_SetRelOptions: /* SET (...) -- AM specific parameters */
 		case AT_ResetRelOptions: /* RESET (...) -- AM specific parameters */
 		case AT_ReplaceRelOptions: /* REPLACE (...) -- AM specific parameters */
 			break;
-			
+
 		case AT_EnableTrig: /* ENABLE TRIGGER name */
 		case AT_EnableAlwaysTrig: /* ENABLE ALWAYS TRIGGER name */
 		case AT_EnableReplicaTrig: /* ENABLE REPLICA TRIGGER name */
@@ -20104,7 +20234,7 @@ char *alterTableCmdString(AlterTableType subtype)
 		case AT_DisableTrigUser: /* DISABLE TRIGGER USER */
 			cmdstring = pstrdup("enable or disable triggers on");
 			break;
-			
+
 		case AT_EnableRule: /* ENABLE RULE name */
 		case AT_EnableAlwaysRule: /* ENABLE ALWAYS RULE name */
 		case AT_EnableReplicaRule: /* ENABLE REPLICA RULE  name */
@@ -20143,19 +20273,19 @@ char *alterTableCmdString(AlterTableType subtype)
 		case AT_PartAlter: /* Alter */
 		case AT_PartDrop: /* Drop */
 			break;
-			
+
 		case AT_PartExchange: /* Exchange */
 			cmdstring = pstrdup("exchange a part into");
 			break;
-			
+
 		case AT_PartRename: /* Rename */
 		case AT_PartSetTemplate: /* Set Subpartition Template */
 			break;
-			
+
 		case AT_PartSplit: /* Split */
 			cmdstring = pstrdup("split parts of");
 			break;
-			
+
 		case AT_PartTruncate: /* Truncate */
 		case AT_PartAddInternal: /* CREATE TABLE time partition addition */
 			break;
@@ -20166,13 +20296,16 @@ char *alterTableCmdString(AlterTableType subtype)
 
 		case AT_PartAttachIndex:
 			break;
+
+		case AT_ExpandPartitionTablePrepare: /* ALTER TABLE EXPAND PARTITION PREPARE */
+			break;
 	}
-	
+
 	if ( cmdstring == NULL )
 	{
 		cmdstring = pstrdup("alter");
 	}
-	
+
 	return cmdstring;
 }
 
@@ -20716,7 +20849,7 @@ ATExecAttachPartitionIdx(List **wqueue, Relation parentIdx, AlterPartitionId *al
 	Assert(IsA(alterpartId->partiddef, RangeVar));
 
 	name = (RangeVar *) alterpartId->partiddef;
-	
+
 	/*
 	 * We need to obtain lock on the index 'name' to modify it, but we also
 	 * need to read its owning table's tuple descriptor -- so we need to lock

@@ -1637,14 +1637,17 @@ WHERE
 
     def _populate_partitioned_tables(self, dbname):
         """
-        population of status_detail for partitioned tables, leaf partition cannot
-        has different numsegments with root partition, we need to expand root
-        partition in one shot, so just populate root partition for now.
+        The policy of leaves can be different of the policy of root, But it must
+        follow below rules:
+        If a partitioned table is Hash distributed, then all its leaf partitions
+        must also be Hash partitioned on the same distribution key, with the
+        same 'numsegments', or randomly distributed with the same 'numsegments'.
+        If a partitioned table is Randomly distributed, then all the leaves must
+        be randomly distributed as well.
 
-        TODO:
-        We used to use a tricky but effective way to expand leaf partition in
-        in parallel, that way is still under discussion. Keep the old method
-        here in case we need bring it back someday.
+        population of status_detail for partitioned tables, leaf partition can
+        has different policy with root partition, we need to expand leaf
+        partitions separately in parallel.
 
         Step1:
            BEGIN;
@@ -1653,41 +1656,55 @@ WHERE
            Change all leaf partition to random distributed;
            COMMIT;
         Step2:
-           Change all leaf partition's policy back to old policy with a mandatory
-           data movement.
+           Change all leaf partition's policy back to parent's policy with set distributed
+           with(REORGANIZE=true)
         """
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
-        sql = """
-SELECT
-    current_database(),
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-    c.oid as tableoid,
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name,
-    2 as rank,
-    false as external_writable,
-    '%s' as undone_status,
-    NULL as expansion_started,
-    NULL as expansion_finished,
-    %s as source_bytes
-FROM
-    pg_class c,
-    pg_namespace n,
-    pg_partition p,
-    gp_distribution_policy d
-WHERE
-    c.relnamespace = n.oid
-    AND p.parrelid = c.oid
-    AND d.localoid = c.oid
-    AND parlevel = 0
-ORDER BY fq_name, tableoid desc
-                  """ % (undone_status, src_bytes_str)
-        self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
+
+        cursor = dbconn.execSQL(table_conn, """
+            SELECT DISTINCT parrelid::regclass AS relname
+            FROM pg_partition, pg_class
+            WHERE parrelid = pg_class.oid;
+        """)
+        for row in cursor:
+            prepare_cmd = """
+                ALTER TABLE %s EXPAND PARTITION PREPARE;
+            """ % (row[0])
+            self.logger.debug(prepare_cmd)
+            dbconn.execSQL(table_conn, prepare_cmd)
+
+        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
+
+        # We need populate all leaf table to gpexpand.status_detail
+        get_status_detail_cmd = """
+             SELECT
+                current_database(),
+                quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
+                c.oid as tableoid,
+                d.oid as root_partition_oid,
+                2 as rank,
+                pe.writable is not null as external_writable,
+                '%s' as undone_status,
+                NULL as expansion_started,
+                NULL as expansion_finished,
+                %s as source_bytes,
+                c.relstorage as rel_storage
+            FROM
+                pg_class c
+                JOIN pg_inherits a on (a.inhrelid = c.oid)
+                JOIN pg_class d on (a.inhparent = d.oid)
+                JOIN pg_namespace n on (c.relnamespace = n.oid)
+                LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
+            where
+                c.relkind != 'p' and
+                c.relhassubclass = false
+        """ % (undone_status, src_bytes_str)
+        self.logger.debug(get_status_detail_cmd)
 
         try:
             data_file = os.path.abspath('./status_detail.dat')
             self.logger.debug('status_detail data file: %s' % data_file)
-            copySQL = """COPY (%s) TO '%s'""" % (sql, data_file)
+            copySQL = """COPY (%s) TO '%s'""" % (get_status_detail_cmd, data_file)
 
             self.logger.debug(copySQL)
             dbconn.execSQL(table_conn, copySQL)
