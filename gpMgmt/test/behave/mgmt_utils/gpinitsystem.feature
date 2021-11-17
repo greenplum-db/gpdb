@@ -292,24 +292,24 @@ Feature: gpinitsystem tests
         # the log file must have the entry indicating that DCA specific configuration has been set
         And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
 
-    Scenario: gpinitsystem succeeds if there is banner on host
+      Scenario: gpinitsystem succeeds if there is banner on host
         Given the database is not running
-        And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
-        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*" 
-        When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
-        And the user sets banner on host
-        And a demo cluster is created using gpinitsystem args " "
-        Then gpinitsystem should return a return code of 0
-        And  the user runs "gpstate"
-        And gpstate should return a return code of 0
+        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        When the user sets banner on host
+        And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And gpinitsystem should return a return code of 0
+        Then gpstate should return a return code of 0
 
     Scenario: gpinitsystem succeeds if there is multi-line banner on host
         Given the database is not running
-        And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
         And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
-        When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
-        And the user sets multi-line banner on host
-        And a demo cluster is created using gpinitsystem args " "
-        Then gpinitsystem should return a return code of 0
-        And  the user runs "gpstate"
-        And gpstate should return a return code of 0
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        When the user sets multi-line banner on host
+        And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And gpinitsystem should return a return code of 0
+        Then gpstate should return a return code of 0

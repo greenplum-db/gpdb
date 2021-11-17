@@ -1045,7 +1045,6 @@ GET_PG_PID_ACTIVE () {
 				PID=0
 				EXIT_STATUS=1
 			else
-				PORT_ARRAY=(`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u`)
 				PORT_ARRAY=($( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u ))
 				for P_CHK in ${PORT_ARRAY[@]}
 				do
