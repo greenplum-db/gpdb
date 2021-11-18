@@ -86,11 +86,11 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
 ---------------+------------------------------+------------+-------------+---------+-----------
              0 | t_hash_partition             | p          |           3 | 1       | 10027
              0 | t_hash_partition_1_prt_extra | p          |           3 |         |
-             0 | t_hash_partition_1_prt_2     | p          |           3 |         |
-             0 | t_hash_partition_1_prt_3     | p          |           3 |         |
+             0 | t_hash_partition_1_prt_2     | p          |           3 |         | 
+             0 | t_hash_partition_1_prt_3     | p          |           3 |         | 
              1 | t_hash_partition             | p          |           3 | 1       | 10027
-             1 | t_hash_partition_1_prt_extra | p          |           3 |         |
-             1 | t_hash_partition_1_prt_2     | p          |           3 |         |
+             1 | t_hash_partition_1_prt_extra | p          |           3 |         | 
+             1 | t_hash_partition_1_prt_2     | p          |           3 |         | 
              1 | t_hash_partition_1_prt_3     | p          |           3 |         |
              2 | t_hash_partition             | p          |           3 | 1       | 10027
              2 | t_hash_partition_1_prt_extra | p          |           3 |         | 
