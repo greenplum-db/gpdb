@@ -713,7 +713,7 @@ HINT:  Distribution policy can be set for an entire partitioned table, not for o
 --error when the policy of leaf is different of parent's
 alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed randomly;
 ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region1_2_prt_china"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 --the policy of leaf is the same as parent's
 alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed by(r_regionkey);
 WARNING:  distribution policy of relation "t_hash_subpartition_1_prt_region1_2_prt_china" already set to (r_regionkey)
@@ -830,7 +830,7 @@ HINT:  Distribution policy can be set for an entire partitioned table, not for o
 --the policy of leaf is the same as original
 alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed randomly;
 ERROR:  can't set the distribution policy of "t_hash_subpartition_1_prt_region1_2_prt_china"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 --the policy of leaf is the same as parent's
 alter table t_hash_subpartition_1_prt_region1_2_prt_china set distributed by (r_regionkey);
 select localoid::regclass, policytype, numsegments, distkey, distclass
@@ -958,7 +958,7 @@ HINT:  Use ALTER TABLE "t_random_subpartition_1_prt_region1_2_prt_china" SET WIT
 --error, the policy of leaf is different from parent's
 alter table t_random_subpartition_1_prt_region1_2_prt_china set distributed by(r_regionkey);
 ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region1_2_prt_china"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 --alter root of partition table
 alter table t_random_subpartition set distributed  by(r_regionkey);
 select localoid::regclass, policytype, numsegments, distkey, distclass
@@ -1074,7 +1074,7 @@ HINT:  Use ALTER TABLE "t_random_subpartition_1_prt_region1_2_prt_china" SET WIT
 --error, the policy of leaf is different from parent's
 alter table t_random_subpartition_1_prt_region1_2_prt_china set distributed by (r_regionkey);
 ERROR:  can't set the distribution policy of "t_random_subpartition_1_prt_region1_2_prt_china"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 --alter root of partition table
 alter table t_random_subpartition set distributed by (r_regionkey);
 select localoid::regclass, policytype, numsegments, distkey, distclass

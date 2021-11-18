@@ -4651,7 +4651,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 												errmsg("can't set the distribution policy of \"%s\"",
 													   RelationGetRelationName(rel)),
-												errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
+												errhint("Distribution policy of a partition can only be the same as its parent's.")));
 							}
 							relation_close(parent_rel, AccessShareLock);
 
