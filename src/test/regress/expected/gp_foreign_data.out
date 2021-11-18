@@ -26,3 +26,12 @@ CREATE FOREIGN TABLE ft3 (
 CREATE FOREIGN TABLE ft4 (
 	c1 int
 ) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'all segments');
+-- CREATE FOREIGN SERVER WITH num_segments
+CREATE SERVER s1 FOREIGN DATA WRAPPER dummy OPTIONS (num_segments '5');
+-- CHECK FOREIGN SERVER's OPTIONS
+SELECT srvoptions FROM pg_foreign_server WHERE srvname = 's1';
+    srvoptions    
+------------------
+ {num_segments=5}
+(1 row)
+

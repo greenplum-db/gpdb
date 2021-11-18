@@ -3,6 +3,8 @@
 --
 
 -- start_ignore
+DROP SERVER s0 CASCADE;
+DROP SERVER s1 CASCADE;
 DROP FOREIGN DATA WRAPPER dummy CASCADE;
 -- end_ignore
 
@@ -24,3 +26,9 @@ CREATE FOREIGN TABLE ft3 (
 CREATE FOREIGN TABLE ft4 (
 	c1 int
 ) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'all segments');
+
+-- CREATE FOREIGN SERVER WITH num_segments
+CREATE SERVER s1 FOREIGN DATA WRAPPER dummy OPTIONS (num_segments '5');
+
+-- CHECK FOREIGN SERVER's OPTIONS
+SELECT srvoptions FROM pg_foreign_server WHERE srvname = 's1';

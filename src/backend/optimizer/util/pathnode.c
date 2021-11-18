@@ -3067,8 +3067,11 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 			CdbPathLocus_MakeGeneral(&(pathnode->path.locus), getgpsegmentCount());
 			break;
 		case FTEXECLOCATION_ALL_SEGMENTS:
-			if (rel->ftEntry && rel->ftEntry->num_segments > 0)
-				CdbPathLocus_MakeStrewn(&(pathnode->path.locus), rel->ftEntry->num_segments);
+			if (rel->ftEntry)
+			{
+				ForeignServer *server = GetForeignServer(rel->ftEntry->serverid);
+				CdbPathLocus_MakeStrewn(&(pathnode->path.locus), server->num_segments);
+			}
 			else
 				CdbPathLocus_MakeStrewn(&(pathnode->path.locus), getgpsegmentCount());
 			break;
