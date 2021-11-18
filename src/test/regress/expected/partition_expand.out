@@ -85,13 +85,13 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
  gp_segment_id |           localoid           | policytype | numsegments | distkey | distclass 
 ---------------+------------------------------+------------+-------------+---------+-----------
              0 | t_hash_partition             | p          |           3 | 1       | 10027
-             0 | t_hash_partition_1_prt_extra | p          |           3 |         |
+             0 | t_hash_partition_1_prt_extra | p          |           3 |         | 
              0 | t_hash_partition_1_prt_2     | p          |           3 |         | 
              0 | t_hash_partition_1_prt_3     | p          |           3 |         | 
              1 | t_hash_partition             | p          |           3 | 1       | 10027
              1 | t_hash_partition_1_prt_extra | p          |           3 |         | 
              1 | t_hash_partition_1_prt_2     | p          |           3 |         | 
-             1 | t_hash_partition_1_prt_3     | p          |           3 |         |
+             1 | t_hash_partition_1_prt_3     | p          |           3 |         | 
              2 | t_hash_partition             | p          |           3 | 1       | 10027
              2 | t_hash_partition_1_prt_extra | p          |           3 |         | 
              2 | t_hash_partition_1_prt_2     | p          |           3 |         | 
@@ -219,18 +219,18 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
 		't_randomly_partition_1_prt_extra'::regclass, 't_randomly_partition'::regclass);
  gp_segment_id |             localoid             | policytype | numsegments | distkey | distclass 
 ---------------+----------------------------------+------------+-------------+---------+-----------
-             0 | t_randomly_partition             | p          |           2 |         |
-             0 | t_randomly_partition_1_prt_extra | p          |           2 |         |
-             0 | t_randomly_partition_1_prt_2     | p          |           2 |         |
-             0 | t_randomly_partition_1_prt_3     | p          |           2 |         |
-             1 | t_randomly_partition             | p          |           2 |         |
+             0 | t_randomly_partition             | p          |           2 |         | 
+             0 | t_randomly_partition_1_prt_extra | p          |           2 |         | 
+             0 | t_randomly_partition_1_prt_2     | p          |           2 |         | 
+             0 | t_randomly_partition_1_prt_3     | p          |           2 |         | 
+             1 | t_randomly_partition             | p          |           2 |         | 
              1 | t_randomly_partition_1_prt_extra | p          |           2 |         | 
              1 | t_randomly_partition_1_prt_2     | p          |           2 |         | 
              1 | t_randomly_partition_1_prt_3     | p          |           2 |         | 
              2 | t_randomly_partition             | p          |           2 |         | 
              2 | t_randomly_partition_1_prt_extra | p          |           2 |         | 
              2 | t_randomly_partition_1_prt_2     | p          |           2 |         | 
-             2 | t_randomly_partition_1_prt_3     | p          |           2 |         |
+             2 | t_randomly_partition_1_prt_3     | p          |           2 |         | 
 (12 rows)
 
 alter table t_randomly_partition expand partition prepare;
@@ -510,22 +510,22 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
              1 | t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10027
              1 | t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10027
              1 | t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10027
-             1 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         |
-             1 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         |
-             1 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         |
-             1 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         |
-             1 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         |
-             1 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         |
+             1 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+             1 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
              2 | t_hash_subpartition                             | p          |           3 | 1       | 10027
              2 | t_hash_subpartition_1_prt_region1               | p          |           3 | 1       | 10027
              2 | t_hash_subpartition_1_prt_region2               | p          |           3 | 1       | 10027
              2 | t_hash_subpartition_1_prt_region3               | p          |           3 | 1       | 10027
-             2 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         |
-             2 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         |
-             2 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         |
-             2 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         |
-             2 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         |
-             2 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         |
+             2 | t_hash_subpartition_1_prt_region1_2_prt_china   | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region1_2_prt_america | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region2_2_prt_china   | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region2_2_prt_america | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region3_2_prt_china   | p          |           3 |         | 
+             2 | t_hash_subpartition_1_prt_region3_2_prt_america | p          |           3 |         | 
 (30 rows)
 
 alter table t_hash_subpartition expand partition prepare;
@@ -598,7 +598,7 @@ insert into t_hash_subpartition_1_prt_region1 values(1,'CHINA');
 ERROR:  directly modifying intermediate part of a partitioned table is disallowed
 HINT:  Modify either the root or a leaf partition instead.
 select count(*) from t_hash_subpartition_1_prt_region1;
- count
+ count 
 -------
      2
 (1 row)
@@ -613,8 +613,8 @@ select count(*) from t_hash_subpartition;
 select * from t_hash_subpartition_1_prt_region1_2_prt_china;
  r_regionkey |          r_name           
 -------------+---------------------------
-           2 | CHINA
-           2 | CHINA
+           2 | CHINA                    
+           2 | CHINA                    
 (2 rows)
 
 insert into t_hash_subpartition_1_prt_region1_2_prt_china values(1,'CHINA');
