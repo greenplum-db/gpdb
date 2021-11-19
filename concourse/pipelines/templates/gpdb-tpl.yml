@@ -208,9 +208,11 @@ groups:
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
+  - test_gpdb_clients_ubuntu18.04
 {% endif %}
 {% if "rhel8" in os_types %}
   - compile_gpdb_rhel8
+  - test_gpdb_clients_rhel8
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -320,9 +322,11 @@ groups:
 {% endif %}
 {% if "rhel8" in os_types %}
   - compile_gpdb_rhel8
+  - test_gpdb_clients_rhel8
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
+  - test_gpdb_clients_ubuntu18.04
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -565,8 +569,7 @@ resources:
     tag: latest
     username: _json_key
     password: ((container-registry-readonly-service-account-key))
-{% endif %}
-{% if test_sections and ("rhel8" in os_types or "CLI" in test_sections) %}
+
 - name: gpdb7-rhel8-test
   type: registry-image
   source:
@@ -933,6 +936,24 @@ jobs:
         params:
           file: gpdb_artifacts/bin_gpdb_clients.tar.gz
 
+- name: test_gpdb_clients_rhel8
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            trigger: true
+            passed: [compile_gpdb_rhel8]
+          - get: bin_gpdb
+            resource: bin_gpdb_rhel8
+            passed: [compile_gpdb_rhel8]
+          - get: bin_gpdb_clients
+            resource: bin_gpdb_clients_rhel8
+            passed: [compile_gpdb_rhel8]
+          - get: gpdb7-rhel8-test
+    - task: run_tests
+      image: gpdb7-rhel8-test
+      file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
+
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: compile_gpdb_ubuntu18.04
@@ -961,6 +982,24 @@ jobs:
         - put: bin_gpdb_clients_ubuntu18.04
           params:
             file: gpdb_artifacts/bin_gpdb_clients.tar.gz
+
+- name: test_gpdb_clients_ubuntu18.04
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            trigger: true
+            passed: [compile_gpdb_ubuntu18.04]
+          - get: bin_gpdb
+            resource: bin_gpdb_ubuntu18.04
+            passed: [compile_gpdb_ubuntu18.04]
+          - get: bin_gpdb_clients
+            resource: bin_gpdb_clients_ubuntu18.04
+            passed: [compile_gpdb_ubuntu18.04]
+          - get: gpdb7-ubuntu18.04-test
+    - task: run_tests
+      image: gpdb7-ubuntu18.04-test
+      file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
 
 {% endif %}
 {% if "win" in os_types %}
@@ -2300,6 +2339,8 @@ jobs:
         - cli_cross_subnet
         - unit_tests_gporca_centos7
         - unit_tests_gporca_rhel8
+        - test_gpdb_clients_rhel8
+        - test_gpdb_clients_ubuntu18.04
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]
 {% if "ubuntu18.04" in os_types %}
