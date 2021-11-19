@@ -1692,6 +1692,7 @@ WHERE
             FROM
                 pg_class c
                 JOIN pg_inherits a on (a.inhrelid = c.oid)
+                JOIN pg_partitions pa on (c.oid = pa.partitiontablename::regclass::oid)
                 JOIN pg_class d on (a.inhparent = d.oid)
                 JOIN pg_namespace n on (c.relnamespace = n.oid)
                 LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
