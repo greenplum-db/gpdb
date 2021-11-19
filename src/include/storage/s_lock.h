@@ -328,10 +328,32 @@ tas(volatile slock_t *lock)
 
 typedef int slock_t;
 
+static __inline__ int CompareAndSwap(volatile slock_t* ptr, int old_value, int new_value)
+{
+	int prev;
+	int temp;
+	__asm__ __volatile__ (
+		"0: \n\t"
+		"ldaxr %w[prev], %[ptr] \n\t"
+		"cmp %w[prev], %w[old_value] \n\t"
+		"bne 1f \n\t"
+		"stlxr %w[temp], %w[new_value], %[ptr] \n\t"
+		"cbnz %w[temp], 0b \n\t"
+		"1: \n\t"
+		: [prev]"=&r" (prev),
+		[temp]"=&r" (temp),
+		[ptr]"+Q" (*ptr)
+		: [old_value]"IJr" (old_value),
+		[new_value]"r" (new_value)
+		: "cc", "memory"
+	);
+	return prev;
+}
+
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	return __sync_lock_test_and_set(lock, 1);
+	return CompareAndSwap(lock, 0, 1);
 }
 
 #define S_UNLOCK(lock) __sync_lock_release(lock)
