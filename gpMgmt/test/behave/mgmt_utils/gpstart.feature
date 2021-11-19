@@ -41,10 +41,9 @@ Feature: gpstart behave tests
           And gpstart should print unreachable host messages for the down segments
           And the status of the primary on content 0 should be "d"
           And the status of the mirror on content 1 should be "d"
-
           And the cluster is returned to a good state
 
-  @concourse_cluster
+    @concourse_cluster
     @demo_cluster
     Scenario: non-super user 'foouser' can connect to psql database
         Given the database is running
