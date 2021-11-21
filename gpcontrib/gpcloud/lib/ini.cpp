@@ -178,16 +178,13 @@ static CURL *create_curl_from_url(const char *url, const char *datadir) {
     INICURL_EASY_SETOPT(curl, CURLOPT_URL, url);
     // Add https support
     if (strncmp(url, "https", 5) == 0) {
-        memset(extssl_cer_full, 0, S3MAXPGPATH);
         snprintf(extssl_cer_full, S3MAXPGPATH, "%s/%s", datadir, extssl_cert);
         /* set the cert for client authentication */
         INICURL_EASY_SETOPT(curl, CURLOPT_SSLCERT, extssl_cer_full);
         INICURL_EASY_SETOPT(curl, CURLOPT_SSLKEYTYPE,"PEM");
-        memset(extssl_key_full, 0, S3MAXPGPATH);
         snprintf(extssl_key_full, S3MAXPGPATH, "%s/%s", datadir, extssl_key);
         /* set the private key (file or ID in engine) */
         INICURL_EASY_SETOPT(curl, CURLOPT_SSLKEY, extssl_key_full);
-        memset(extssl_cas_full, 0, S3MAXPGPATH);
         snprintf(extssl_cas_full, S3MAXPGPATH, "%s/%s", datadir, extssl_ca);
         /* set the file with the CA certificates, for validating the server */
         INICURL_EASY_SETOPT(curl, CURLOPT_CAINFO, extssl_cas_full);
@@ -215,7 +212,7 @@ get_s3_param(char *buffer, size_t size, size_t nitems, void *userp)
 
     return nbytes;
 }
-ini_t* ini_load_4url(const char *url, const char *datadir) {
+ini_t* ini_load_from_url(const char *url, const char *datadir) {
     ini_t *ini = NULL;
     CURL *curl = NULL;
     curl_slist *headers = NULL;
