@@ -25,7 +25,7 @@ Options:
     -h : print this help info
     -p --port=: http listen port
     -f --filename=: content filename path
-    -t --type=: PARAM_S server or Common Server
+    -t --type=: Parameter_Server server or Common_Server
     -s: use ssl connection
     '''
 filename = "data/s3httptest.conf"
@@ -142,7 +142,7 @@ if __name__ == "__main__":
             filename = arg
         elif opt in ("-t", "--type"):
             servertype = arg
-    if servertype == "S":
+    if servertype == "Common_Server":
         run(handler_class=S, port=port)
     else:
         run(handler_class=PARAM_S, port=port, https=use_ssl)

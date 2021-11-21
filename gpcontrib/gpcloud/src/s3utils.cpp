@@ -128,7 +128,7 @@ const char *MD5Calc::Get() {
 
 Config::Config(const string &filename, const string &url, const char *datadir) : _conf(NULL) {
     if (!url.empty()) {
-        this->_conf = ini_load_4url(url.c_str(), datadir);
+        this->_conf = ini_load_from_url(url.c_str(), datadir);
     } else {
         this->_conf = ini_load(filename.c_str());
     }

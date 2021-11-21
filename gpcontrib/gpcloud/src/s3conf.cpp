@@ -48,7 +48,7 @@ S3Params InitConfig(const string& urlWithOptions) {
     string sourceUrl = TruncateOptions(urlWithOptions);
     S3_CHECK_OR_DIE(!sourceUrl.empty(), S3RuntimeError, "URL not found from location string");
 
-    string httpUrl = GetOptS3(urlWithOptions, "server");
+    string httpUrl = GetOptS3(urlWithOptions, "config_server");
     string configPath = GetOptS3(urlWithOptions, "config");
     if (configPath.empty()) {
         S3WARN("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
@@ -67,9 +67,6 @@ S3Params InitConfig(const string& urlWithOptions) {
 
 #if !defined(S3_STANDALONE)
     Config s3Cfg(configPath, httpUrl, DataDir);
-#elif defined(S3_UNITTEST)
-    /* Define this for gtest:HttpParam, otherwise the http cannot be tested. */
-    Config s3Cfg(configPath, httpUrl, "../../../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/");
 #else
     Config s3Cfg(configPath);
 #endif
