@@ -130,6 +130,7 @@ TEST(Config, Gpcheckcloud_eol) {
  #else
       Config s3Cfg(configPath);
  #endif
+Alse add -DS3_UNITTEST in test/Makefile
 Then recompile and then start dummyServer as the following test case and remove the DISABLED_
 before each test case.
 */
