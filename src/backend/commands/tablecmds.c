@@ -4653,7 +4653,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 													   RelationGetRelationName(rel)),
 												errhint("Distribution policy of a partition can only be the same as its parent's.")));
 							}
-							relation_close(parent_rel, AccessShareLock);
+							relation_close(parent_rel, NoLock);
 
 							break; /* tidy */
 
@@ -4753,14 +4753,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 										errmsg("cannot expand partition table prepare \"%s\"",
 											   RelationGetRelationName(rel)),
 										errdetail("only root partition can be expanded partition prepare")));
-					}
-					if (!GpPolicyIsPartitioned(rel->rd_cdbpolicy))
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-										errmsg("cannot expand partition table prepare \"%s\"",
-											   RelationGetRelationName(rel)),
-										errdetail("only hash/randomly table can be expanded partition prepare")));
 					}
 				}
 			}
