@@ -2338,7 +2338,7 @@ def impl(context, command, target):
 
 @given('the user change enable_mergejoin to on only on qd by alter system on gptest')
 def impl(context):
-    host, port = get_cooridnator_host_port()
+    host, port = get_coordinator_host_port()
     query = "alter system set enable_mergejoin to on"
     psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
         "gptest", host, port, query)

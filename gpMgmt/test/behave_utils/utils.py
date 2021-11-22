@@ -682,12 +682,12 @@ def check_count_for_specific_query(dbname, query, nrows):
     if result != nrows:
         raise Exception('%d rows in query: %s. Expected row count = %d' % (result, query, nrows))
 
-def get_cooridnator_host_port():
+def get_coordinator_host_port():
     """
     return host, port of cooridnator (dbid 1)
     """
-    COORIDNATOR_DBID = 1
-    get_psegment_sql = 'select hostname, port from gp_segment_configuration where dbid=%i;' % COORIDNATOR_DBID
+    COORDINATOR_DBID = 1
+    get_psegment_sql = 'select hostname, port from gp_segment_configuration where dbid=%i;' % COORDINATOR_DBID
     with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
         cur = dbconn.query(conn, get_psegment_sql)
         rows = cur.fetchall()
