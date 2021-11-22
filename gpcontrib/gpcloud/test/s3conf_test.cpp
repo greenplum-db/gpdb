@@ -121,9 +121,21 @@ TEST(Config, Gpcheckcloud_eol) {
         InitConfig("s3://abc/a config=data/s3test.conf section=gpcheckcloud_newline_error"),
         S3ConfigError);
 }
-/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t PARAM_S' before enabling this test */
+/* HttpParam test: because the unittest is compiled with S3_STANDLONE, so if we want to test
+ * this case, we need change the code of s3conf.cpp line 67 like this:
+ #if !defined(S3_STANDALONE)
+      Config s3Cfg(configPath, httpUrl, DataDir);
+ #elif defined(S3_UNITTEST)
+      Config s3Cfg(configPath, httpUrl, "../../../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/");
+ #else
+      Config s3Cfg(configPath);
+ #endif
+Then recompile and then start dummyServer as the following test case and remove the DISABLED_
+before each test case.
+*/
+/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t Parameter_Server' before enabling this test */
 TEST(HttpParam, DISABLED_InitConfigWithHttpOK) {
-    S3Params params = InitConfig("s3://abc/a server=http://127.0.0.1:8553 section=hello");
+    S3Params params = InitConfig("s3://abc/a config_server=http://127.0.0.1:8553 section=hello");
     EXPECT_EQ("\n", params.getGpcheckcloud_newline());
     S3Credential cred{"123","456","789"};
     EXPECT_EQ(cred, params.getCred());
@@ -137,9 +149,9 @@ TEST(HttpParam, DISABLED_InitConfigWithHttpOK) {
     EXPECT_EQ(SSE_NONE, params.getSSEType());
     EXPECT_EQ("S5://xxxx", params.getProxy());
 }
-/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t PARAM_S -s' before enabling this test */
+/* Run './bin/dummyHTTPServer.py -f data/s3httptest.conf -t Parameter_Server -s' before enabling this test */
 TEST(HttpParam, DISABLED_InitConfigWithHttpsOK) {
-    S3Params params = InitConfig("s3://abc/a server=https://127.0.0.1:8553 section=hello");
+    S3Params params = InitConfig("s3://abc/a config_server=https://127.0.0.1:8553 section=hello");
     EXPECT_EQ("\n", params.getGpcheckcloud_newline());
     S3Credential cred{"123","456","789"};
     EXPECT_EQ(cred, params.getCred());
