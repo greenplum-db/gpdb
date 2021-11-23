@@ -102,6 +102,19 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
 
 #endif
 
+#if 0
+/*
+ * GPDB: This is dead code as the only erstwhile caller is
+ * old_9_3_check_for_line_data_type_usage(), which is not applicable to upgrades
+ * from GPDB 5. See old_9_3_check_for_line_data_type_usage() for details.
+ *
+ * Besides, this makes use of a recursive CTE, which will result in:
+ * ERROR:  RECURSIVE option in WITH clause is not supported
+ * when executed on a source 5X cluster.
+ *
+ * To make use of this function for things like the name datatype for instance,
+ * we would need to rewrite the query.
+ */
 /*
  * check_for_data_type_usage
  *	Detect whether there are any stored columns depending on the given type
@@ -226,8 +239,12 @@ check_for_data_type_usage(ClusterInfo *cluster, const char *typename,
 
 	return found;
 }
+#endif
 
-
+#if 0
+/*
+ * GPDB 5 does not support the line datatype.
+ */
 /*
  * old_9_3_check_for_line_data_type_usage()
  *	9.3 -> 9.4
@@ -258,3 +275,4 @@ old_9_3_check_for_line_data_type_usage(ClusterInfo *cluster)
 	else
 		check_ok();
 }
+#endif
