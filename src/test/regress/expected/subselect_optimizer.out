@@ -827,17 +827,29 @@ select * from
   (3 not in (select * from (values (1), (2)) ss1)),
   (false)
 ) ss;
-                  QUERY PLAN                  
-----------------------------------------------
- Values Scan on "*VALUES*"
-   Output: "*VALUES*".column1
-   SubPlan 1
-     ->  Materialize
-           Output: "*VALUES*_1".column1
-           ->  Values Scan on "*VALUES*_1"
-                 Output: "*VALUES*_1".column1
- Optimizer: Postgres query optimizer
-(8 rows)
+                                                                                                                                                                  QUERY PLAN                                                                                                                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Append
+   ->  Result
+         Output: ((CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+         ->  Nested Loop Left Join
+               Output: (CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END)
+               Join Filter: true
+               ->  Result
+                     Output: true
+               ->  Result
+                     Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END
+                     ->  Aggregate
+                           Output: sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)), sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))
+                           ->  Result
+                                 Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
+                                 ->  Values Scan on "Values"
+                                       Output: column1
+   ->  Result
+         Output: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: optimizer=on
+(20 rows)
 
 select * from
 (values
