@@ -2047,9 +2047,10 @@ def runAllChecks(run_tests):
     '''
     for name in sorted(all_checks, key=lambda x: all_checks[x]["order"]):
         if all_checks[name]["version"] >= GV.version and name in run_tests:
-            if ( "defaultSkip" in all_checks[name] and all_checks[name]["defaultSkip"] == True):
-                continue
-            runOneCheck(name)
+            if (not GV.opt['-R'] and  "defaultSkip" in all_checks[name] and all_checks[name]["defaultSkip"] == True):
+                logger.debug("Default skipping test:"+name)
+            else:
+                runOneCheck(name)
 
     closeDbs()
     logger.info("------------------------------------")
