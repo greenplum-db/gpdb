@@ -143,9 +143,14 @@ struct BufFile
 	zstd_context *zstd_context;	/* ZStandard library handles. */
 
 	/*
-	 * During compression, tracks of the original, uncompressed size.
+	 * fields used during compression,
 	 */
-	size_t		uncompressed_bytes;
+	size_t		uncompressed_bytes; 		/* tracks of the original, uncompressed size. */
+	char		*compression_buffer; 		/* temporary buffer used during compression. */
+	size_t		compression_buffer_pos;		/* the offset for compression_buffer for next write */
+
+	/* the buffer size should a little bigger than BLCKS to avoid destination buffer is too small */
+#define BUFFILE_ZSTD_COMPRESSION_BUFFERSZ (2 * BLCKSZ)
 
 	/* This holds compressed input, during decompression. */
 	ZSTD_inBuffer compressed_buffer;
@@ -1210,13 +1215,10 @@ BufFilePledgeSequential(BufFile *buffile)
  */
 #ifdef USE_ZSTD
 
+#ifndef BUFFILE_ZSTD_COMPRESSION_LEVEL
+/* NOTE: ZSTD window size should small than BUFFILE_ZSTD_COMPRESSION_BUFFERSZ */
 #define BUFFILE_ZSTD_COMPRESSION_LEVEL 1
-
-/*
- * Temporary buffer used during compression. It's used only within the
- * functions, so we can allocate this once and reuse it for all files.
- */
-static char *compression_buffer;
+#endif
 
 /*
  * Initialize the compressor.
@@ -1239,17 +1241,17 @@ BufFileStartCompression(BufFile *file)
 		file->buffer.data = NULL;
 	}
 
-	if (compression_buffer == NULL)
-		compression_buffer = MemoryContextAlloc(TopMemoryContext, BLCKSZ);
-
 	/*
-	 * Make sure the zstd handle is kept in the same resource owner as
+	 * Make sure the zstd handle and buffer is kept in the same resource owner as
 	 * the underlying file. In the typical use, when BufFileCompressOK is
 	 * called immediately after opening the file, this wouldn't be
 	 * necessary, but better safe than sorry.
 	 */
 	oldowner = CurrentResourceOwner;
 	CurrentResourceOwner = file->resowner;
+
+	file->compression_buffer_pos = 0;
+	file->compression_buffer = palloc(BUFFILE_ZSTD_COMPRESSION_BUFFERSZ);
 
 	file->zstd_context = zstd_alloc_context();
 	file->zstd_context->cctx = ZSTD_createCStream();
@@ -1283,22 +1285,32 @@ BufFileDumpCompressedBuffer(BufFile *file, const void *buffer, Size nbytes)
 		ZSTD_outBuffer output;
 		size_t		ret;
 
-		output.dst = compression_buffer;
-		output.size = BLCKSZ;
+		/* append compressed data to file->compression_buffer */
+		output.dst = file->compression_buffer + file->compression_buffer_pos;
+		output.size = BUFFILE_ZSTD_COMPRESSION_BUFFERSZ - file->compression_buffer_pos;
 		output.pos = 0;
 
 		ret = ZSTD_compressStream(file->zstd_context->cctx, &output, &input);
 		if (ZSTD_isError(ret))
 			elog(ERROR, "%s", ZSTD_getErrorName(ret));
 
-		if (output.pos > 0)
+		file->compression_buffer_pos += output.pos;
+
+		/* got a compressed block, write it out */
+		if (file->compression_buffer_pos >= BLCKSZ)
 		{
 			int			wrote;
+			char		*buftowrite = file->compression_buffer;
 
-			wrote = FileWrite(file->files[0], output.dst, output.pos, file->curOffset + file->pos + pos, WAIT_EVENT_BUFFILE_WRITE);
-			if (wrote != output.pos)
-				elog(ERROR, "could not write %d bytes to compressed temporary file: %m", (int) output.pos);
+			wrote = FileWrite(file->files[0], buftowrite, BLCKSZ, file->curOffset + pos, WAIT_EVENT_BUFFILE_WRITE);
+
+			if (wrote != BLCKSZ)
+				elog(ERROR, "could not write %d bytes to compressed temporary file: %m", (int) BLCKSZ);
 			pos += wrote;
+
+			/* move the extra data to the head of buffer, for next write */
+			file->compression_buffer_pos -= BLCKSZ;
+			memcpy(file->compression_buffer, file->compression_buffer + BLCKSZ, file->compression_buffer_pos);
 		}
 	}
 	file->curOffset += pos;
@@ -1318,22 +1330,46 @@ BufFileEndCompression(BufFile *file)
 	Assert(file->state == BFS_COMPRESSED_WRITING);
 
 	do {
-		output.dst = compression_buffer;
-		output.size = BLCKSZ;
+		/* append compressed data to file->compression_buffer */
+		output.dst = file->compression_buffer + file->compression_buffer_pos;
+		output.size = BUFFILE_ZSTD_COMPRESSION_BUFFERSZ - file->compression_buffer_pos;
 		output.pos = 0;
 
 		ret = ZSTD_endStream(file->zstd_context->cctx, &output);
 		if (ZSTD_isError(ret))
 			elog(ERROR, "%s", ZSTD_getErrorName(ret));
 
-		wrote = FileWrite(file->files[0], output.dst, output.pos, file->curOffset + file->pos + pos, WAIT_EVENT_BUFFILE_WRITE);
-		if (wrote != output.pos)
-			elog(ERROR, "could not write %d bytes to compressed temporary file: %m", (int) output.pos);
-		pos += wrote;
+		file->compression_buffer_pos += output.pos;
+
+		/* got a compressed block or end of the compression, write it out */
+		if (file->compression_buffer_pos >= BLCKSZ || ret == 0)
+		{
+			char		*buftowrite 	= file->compression_buffer;
+			size_t		bytestowrite 	= file->compression_buffer_pos;
+
+			/*
+			 * compressed block size is bigger than BLCKSZ and there still has data in ZSTD internal buffer
+			 * write the first BLCKSZ out, remaining data will wirte out next time.
+			 */
+			if (bytestowrite > BLCKSZ && ret > 0)
+				bytestowrite = BLCKSZ;
+
+			wrote = FileWrite(file->files[0], buftowrite, bytestowrite, file->curOffset + file->pos + pos, WAIT_EVENT_BUFFILE_WRITE);
+
+			if (wrote != bytestowrite)
+				elog(ERROR, "could not write %d bytes to compressed temporary file: %m", (int) bytestowrite);
+			pos += wrote;
+
+			/* move the extra data to the head of buffer, for next write */
+			file->compression_buffer_pos -= bytestowrite;
+			memcpy(file->compression_buffer, file->compression_buffer + bytestowrite, file->compression_buffer_pos);
+		}
 	} while (ret > 0);
 
 	ZSTD_freeCCtx(file->zstd_context->cctx);
 	file->zstd_context->cctx = NULL;
+	pfree(file->compression_buffer);
+	file->compression_buffer_pos = 0, file->compression_buffer = NULL;
 
 	elog(DEBUG1, "BufFile compressed from %ld to %ld bytes",
 		 file->uncompressed_bytes, BufFileSize(file));
