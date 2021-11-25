@@ -1441,11 +1441,15 @@ where x.a + 1 in (select distinct b from t2_dedupsemi_indexonly);
                ->  Seq Scan on t1_dedupsemi_indexonly
                      Filter: (a < 3)
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: t2_dedupsemi_indexonly.b
-                     ->  Seq Scan on t2_dedupsemi_indexonly
+               ->  HashAggregate
+                     Group Key: t2_dedupsemi_indexonly.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: t2_dedupsemi_indexonly.b
+                           ->  HashAggregate
+                                 Group Key: t2_dedupsemi_indexonly.b
+                                 ->  Seq Scan on t2_dedupsemi_indexonly
  Optimizer: Postgres query optimizer
-(12 rows)
+(16 rows)
 
 select * from
 (
