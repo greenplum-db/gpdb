@@ -59,7 +59,7 @@
     <title>External Tables with Gpfdist</title>
     <body>
       <p>The fastest way to load large fact tables is to use external tables with
-          <codeph>gpdist</codeph>. <codeph>gpfdist</codeph> is a file server program using an HTTP
+          <codeph>gpfdist</codeph>. <codeph>gpfdist</codeph> is a file server program using an HTTP
         protocol that serves external data files to Greenplum Database segments in parallel. A
           <codeph>gpfdist</codeph> instance can serve 200 MB/second and many
           <codeph>gpfdist</codeph> processes can run simultaneously, each serving up a portion of

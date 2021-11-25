@@ -15,6 +15,8 @@
 #   hitting max_connections limit on segments.
 #
 
+test: gp_dispatch_keepalives
+
 # copy command
 # copy form a file with different EOL
 test: copy_eol
@@ -220,8 +222,8 @@ test: uaocs_compaction/index_stats
 test: uaocs_compaction/index
 test: uaocs_compaction/drop_column
 
-test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column
-test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column uao_ddl/temp_on_commit_delete_rows_row uao_ddl/temp_on_commit_delete_rows_column
+test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column uao_ddl/spgist_over_ao_table_row
+test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column uao_ddl/temp_on_commit_delete_rows_row uao_ddl/temp_on_commit_delete_rows_column uao_ddl/spgist_over_ao_table_column
 # Do not add the two uao*_catalog_tables tests to a group that runs
 # serializable transactions.  They run VACUUM FULL on append-optimized
 # tables and assume that no AWAITING_DROP segfiles exist at the end of
@@ -284,6 +286,6 @@ test: gangsize gang_reuse
 test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
-test: create_extension_gp_debug_segments
+test: create_extension_fail
 
 # end of tests

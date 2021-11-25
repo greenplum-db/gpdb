@@ -370,10 +370,9 @@ struct pg_conn
 	char	   *sslrootcert;	/* root certificate filename */
 	char	   *sslcrl;			/* certificate revocation list filename */
 	char	   *requirepeer;	/* required peer credentials for local sockets */
-
-#if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	char	   *krbsrvname;		/* Kerberos service name */
-#endif
+	char	   *gsslib;			/* What GSS library to use ("gssapi" or
+								 * "sspi") */
     char       *gpconntype; /* type of connection */
     char       *gpqeid;        /* MPP: session id & startup info for qExec */
 
@@ -499,9 +498,6 @@ struct pg_conn
 #ifdef ENABLE_SSPI
 #ifndef ENABLE_GSS
 	gss_buffer_desc ginbuf;		/* GSS input token */
-#else
-	char	   *gsslib;			/* What GSS librart to use ("gssapi" or
-								 * "sspi") */
 #endif
 	CredHandle *sspicred;		/* SSPI credentials handle */
 	CtxtHandle *sspictx;		/* SSPI context */

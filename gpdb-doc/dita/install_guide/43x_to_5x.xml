@@ -11,8 +11,7 @@
   <body>
     <p>For information about how Greenplum Database 6 performs type casts, see <xref
         href="../admin_guide/query/topics/defining-queries.xml#topic14" scope="peer">Type
-        Casts</xref><ph otherprops="op-print">in the <cite>Greenplum Database Administrator
-          Guide</cite></ph>.</p>
+        Casts</xref>.</p>
     <p><b>What is different in Greenplum Database 6</b></p>
     <p>Greenplum Database 6 does not automatically implicitly cast between text and other data
       types. Greenplum Database 6 also treats certain automatic implicit casts differently than
@@ -126,9 +125,9 @@ SELECT * FROM foo WHERE (a::text)::date  = '20130101'::date;</codeblock></li>
           set of equality (<codeph>=</codeph>) operators and functions for several text and other
           data type comparisons.</li>
         <li>Download the <xref href="https://gist.github.com/ioguix/4dd187986c4a1b7e1160"
-            format="html" scope="external"><codeph>8.3 operator workaround.sql</codeph></xref>
-          script referenced on the blog page, noting the location to which the file was downloaded
-          on your local system.</li>
+            format="html" scope="external">8.3 operator workaround.sql</xref> script referenced on
+          the blog page, noting the location to which the file was downloaded on your local
+          system.</li>
         <li>The <codeph>8.3 operator workaround.sql</codeph> script creates the equality operators
           and functions. Open the script in the editor of your choice, and examine the contents. For
           example, using the <codeph>vi</codeph>

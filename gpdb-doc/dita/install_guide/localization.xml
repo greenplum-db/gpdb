@@ -50,12 +50,11 @@
         POSIX locale facilities provided by the server operating system. For additional information
         refer to the documentation of your operating system.</p>
       <p>Locale support is automatically initialized when a Greenplum Database system is
-        initialized. The initialization utility, <codeph><xref
-            href="../utility_guide/ref/gpinitsystem.xml" type="topic" format="dita"
-            scope="peer">gpinitsystem</xref></codeph>, will initialize the Greenplum array with the
-        locale setting of its execution environment by default, so if your system is already set to
-        use the locale that you want in your Greenplum Database system then there is nothing else
-        you need to do. </p>
+        initialized. The initialization utility, <xref href="../utility_guide/ref/gpinitsystem.xml"
+          type="topic" format="dita" scope="peer">gpinitsystem</xref>, will initialize the Greenplum
+        array with the locale setting of its execution environment by default, so if your system is
+        already set to use the locale that you want in your Greenplum Database system then there is
+        nothing else you need to do. </p>
       <p>When you are ready to initiate Greenplum Database and you want to use a different locale
         (or you are not sure which locale your system is set to), you can instruct
           <codeph>gpinitsystem</codeph> exactly which locale to use by specifying the -n
@@ -147,9 +146,9 @@
           provides it. </p>
         <p>Check that Greenplum Database is actually using the locale that you think it is.
             <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> settings are determined at
-          initialization time and cannot be changed without redoing <codeph><xref
+          initialization time and cannot be changed without redoing <xref
               href="../utility_guide/ref/gpinitsystem.xml" type="topic" format="dita"
-              scope="peer">gpinitsystem</xref></codeph>. Other locale settings including
+              scope="peer">gpinitsystem</xref>. Other locale settings including
             <codeph>LC_MESSAGES</codeph> and <codeph>LC_MONETARY</codeph> are initially determined
           by the operating system environment of the master and/or segment host, but can be changed
           after initialization by editing the <codeph>postgresql.conf</codeph> file of each
@@ -730,10 +729,9 @@
           which allows you to change client encoding on the fly.</li>
         <li id="jk168661">Using <codeph>SET client_encoding TO</codeph>. Setting the client encoding
           can be done with this SQL command:
-            <codeblock>=&gt; SET CLIENT_ENCODING TO '<varname>value</varname>';</codeblock><p>To
-            query the current client encoding:
-            </p><codeblock>=&gt; SHOW client_encoding;</codeblock><p>To return to the default
-            encoding: </p><codeblock>=&gt; RESET client_encoding;</codeblock></li>
+            <codeblock>=&gt; SET CLIENT_ENCODING TO '&lt;value>';</codeblock><p>To query the current
+            client encoding: </p><codeblock>=&gt; SHOW client_encoding;</codeblock><p>To return to
+            the default encoding: </p><codeblock>=&gt; RESET client_encoding;</codeblock></li>
         <li id="jk168667">Using the <codeph>PGCLIENTENCODING</codeph> environment variable. When
             <codeph>PGCLIENTENCODING</codeph> is defined in the client's environment, that client
           encoding is automatically selected when a connection to the server is made. (This can

@@ -77,9 +77,9 @@
               <xref href="./init_gpdb.xml#topic1" type="topic" format="dita"/> for information about
             the <varname>hostfile_gpinitsystem</varname> file and the <codeph>gpinitsystem</codeph>
             command. </p></li>
-        <li id="ji163212" otherprops="dca">For the administration network on a Greenplum DCA, allow
-          communication using <codeph>ssh</codeph>, <codeph>ntp</codeph>, and <codeph>icmp</codeph>
-          protocols. (<codeph>eth0</codeph> interface in the example).</li>
+        <li id="ji163212">For the administration network on a Greenplum DCA,
+          allow communication using <codeph>ssh</codeph>, <codeph>ntp</codeph>, and
+            <codeph>icmp</codeph> protocols. (<codeph>eth0</codeph> interface in the example).</li>
       </ul>
       <p>In the <codeph>iptables</codeph> file, each append rule command (lines starting with
           <codeph>-A</codeph>) is a single line.</p>
@@ -118,7 +118,7 @@
 -A INPUT -i eth4 -p udp -s 192.0.2.0/22 -j ACCEPT
 -A INPUT -i eth5 -p udp -s 198.51.100.0/22 -j ACCEPT
 -A INPUT -i eth4 -p tcp -s 192.0.2.0/22 -j ACCEPT --syn -m state --state NEW
--A INPUT -i eth5 -p tcp -s 198.51.100.0/22 -j ACCEPT --syn -m state --state NEW<ph otherprops="dca">
+-A INPUT -i eth5 -p tcp -s 198.51.100.0/22 -j ACCEPT --syn -m state --state NEW<ph>
 # Allow udp/tcp ntp connections on the admin network on Greenplum DCA.
 -A INPUT -i eth0 -p udp --dport ntp -s 203.0.113.0/21 -j ACCEPT
 -A INPUT -i eth0 -p tcp --dport ntp -s 203.0.113.0/21 -j ACCEPT --syn -m state --state NEW</ph>
@@ -130,7 +130,7 @@
 -A INPUT -i eth1 -p tcp --dport 28080 -j ACCEPT --syn -m state --state NEW
 # Allow ping and any other icmp traffic on the interconnect networks.
 -A INPUT -i eth4 -p icmp -s 192.0.2.0/22 -j ACCEPT
--A INPUT -i eth5 -p icmp -s 198.51.100.0/22 -j ACCEPT<ph otherprops="dca">
+-A INPUT -i eth5 -p icmp -s 198.51.100.0/22 -j ACCEPT<ph>
 # Allow ping only on the admin network on Greenplum DCA.
 -A INPUT -i eth0 -p icmp --icmp-type echo-request -s 203.0.113.0/21 -j ACCEPT</ph>
 # Log an error if a packet passes through the rules to the default

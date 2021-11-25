@@ -48,12 +48,13 @@ SET statement_timeout = '15s';
 
 RESET statement_timeout;
 
-SELECT *,
+SELECT COUNT(*)
+FROM (SELECT *,
         (
         WITH cte AS (SELECT * FROM jazz WHERE jazz.e = bar.c)
         SELECT 1 FROM cte c1, cte c2
         )
-        FROM bar;
+      FROM bar) as s;
 
 CREATE TABLE t1 (a int, b int);
 CREATE TABLE t2 (a int);
@@ -93,3 +94,30 @@ $$;
 
 -- This should only ERROR and should not SIGSEGV
 SELECT col_mismatch_func2();
+
+-- https://github.com/greenplum-db/gpdb/issues/12701
+-- Disable cte sharing in subquery
+drop table if exists pk_list;
+create table pk_list (id int, schema_name varchar, table_name varchar) distributed by (id);
+drop table if exists calender;
+create table calender (id int, data_hour timestamp) distributed by (id);
+
+explain (costs off)
+with
+	tbls as (select distinct schema_name, table_name as table_nm from pk_list),
+	tbls_daily_report_23 as (select unnest(string_to_array('mart_cm.card' ,',')) as table_nm_23),
+	tbls_w_onl_actl_data as (select unnest(string_to_array('mart_cm.cont_resp,mart_cm.card', ',')) as table_nm_onl_act)
+select  data_hour, stat.schema_name as schema_nm, dt.table_nm
+from (
+	select * from calender c
+	cross join tbls
+) dt
+inner join (
+	select tbls.schema_name, tbls.table_nm as table_name
+	from tbls tbls
+) stat on dt.table_nm = stat.table_name
+where
+	(data_hour = date_trunc('day',data_hour) and stat.schema_name || '.' ||stat.table_name not in (select table_nm_23 from tbls_daily_report_23))
+	and (stat.schema_name || '.' ||stat.table_name not in (select table_nm_onl_act from tbls_w_onl_actl_data))
+	or (stat.schema_name || '.' ||stat.table_name in (select table_nm_onl_act from tbls_w_onl_actl_data));
+

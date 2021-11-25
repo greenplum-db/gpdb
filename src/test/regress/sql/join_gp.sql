@@ -669,3 +669,46 @@ select t1.relname, ss.x from
 drop table rep_tbl;
 drop table dis_tbl;
 reset enable_seqscan;
+
+-- test for indexonly scan with dedup semi join
+create table t1_dedupsemi_indexonly(a int, b int);
+create table t2_dedupsemi_indexonly(a int, b int);
+insert into t1_dedupsemi_indexonly select i,i from generate_series(1, 100)i;
+insert into t2_dedupsemi_indexonly select i,i from generate_series(1, 4)i;
+insert into t2_dedupsemi_indexonly select i,i from generate_series(1, 4)i;
+create unique index idx on t1_dedupsemi_indexonly(a);
+analyze t1_dedupsemi_indexonly;
+analyze t2_dedupsemi_indexonly;
+
+-- if ever seen indexonly scan path, planner will not to use
+-- unique rowid path method to implement the SEMI join. The
+-- following case will lead to a SEMI join plan to give the
+-- correct answer.
+explain (costs off)
+select * from
+(
+  select a from t1_dedupsemi_indexonly where a < 3 -- index only scan
+) x (a)
+where x.a + 1 in (select distinct b from t2_dedupsemi_indexonly);
+
+select * from
+(
+  select a from t1_dedupsemi_indexonly where a < 3 -- index only scan
+) x (a)
+where x.a + 1 in (select distinct b from t2_dedupsemi_indexonly);
+
+explain (costs off)
+select * from
+(
+  select a from t1_dedupsemi_indexonly where a < 3 -- index only scan
+) x (a)
+where x.a + 1 in (select b from t2_dedupsemi_indexonly);
+
+select * from
+(
+  select a from t1_dedupsemi_indexonly where a < 3 -- index only scan
+) x (a)
+where x.a + 1 in (select b from t2_dedupsemi_indexonly);
+
+drop table t1_dedupsemi_indexonly;
+drop table t2_dedupsemi_indexonly;

@@ -25,7 +25,7 @@
             have more active segments than is optimal for top system performance. </p><p>Segments
             that display the <codeph>Config status</codeph> as <codeph>Down</codeph> indicate the
             corresponding mirror segment is down. </p><p>See <xref
-              href="g-segment-recovery-scenarios.xml"/> for instructions to fix this
+              href="g-recovering-from-segment-failures.xml"/> for instructions to fix this
               situation.</p></section>
   
     <section id="select_from_table">

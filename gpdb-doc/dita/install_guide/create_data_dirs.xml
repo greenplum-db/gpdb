@@ -23,10 +23,10 @@
               commands as <codeph>root</codeph>:<codeblock># mkdir -p /data/master</codeblock></li>
             <li id="ji162549">Change ownership of this directory to the <codeph>gpadmin</codeph>
               user. For example:<codeblock># chown gpadmin:gpadmin /data/master</codeblock></li>
-            <li id="ji162557">Using <codeph><xref href="../utility_guide/ref/gpssh.xml"
-                  format="dita" scope="peer" type="topic">gpssh</xref></codeph>, create the master
-              data directory location on your standby master as well. For
-              example:<codeblock># source /usr/local/greenplum-db/greenplum_path.sh 
+            <li id="ji162557">Using <xref href="../utility_guide/ref/gpssh.xml" format="dita"
+              scope="peer" type="topic">gpssh</xref>, create the master data directory location
+            on your standby master as well. For
+            example:<codeblock># source /usr/local/greenplum-db/greenplum_path.sh 
 # gpssh -h smdw -e 'mkdir -p /data/master'
 # gpssh -h smdw -e 'chown gpadmin:gpadmin /data/master'</codeblock></li>
           </ol>
@@ -49,10 +49,10 @@
             you have three segment hosts:<codeblock>sdw1
 sdw2
 sdw3</codeblock></li>
-          <li id="ji162580">Using <codeph><xref href="../utility_guide/ref/gpssh.xml"
-                format="dita" scope="peer">gpssh</xref></codeph>, create the primary and mirror data
-            directory locations on all segment hosts at once using the
-              <codeph>hostfile_gpssh_segonly</codeph> file you just created. For
+          <li id="ji162580">Using <xref href="../utility_guide/ref/gpssh.xml" format="dita"
+              scope="peer">gpssh</xref>, create the primary and mirror data directory locations on
+            all segment hosts at once using the <codeph>hostfile_gpssh_segonly</codeph> file you
+            just created. For
             example:<codeblock># source /usr/local/greenplum-db/greenplum_path.sh 
 # gpssh -f hostfile_gpssh_segonly -e 'mkdir -p /data/primary'
 # gpssh -f hostfile_gpssh_segonly -e 'mkdir -p /data/mirror'

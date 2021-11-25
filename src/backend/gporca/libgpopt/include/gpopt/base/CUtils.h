@@ -959,6 +959,9 @@ public:
 	// return true if the given expression is a cross join
 	static BOOL FCrossJoin(CExpression *pexpr);
 
+	// return true if can create hash join for the expression
+	static BOOL IsHashJoinPossible(CMemoryPool *mp, CExpression *pexpr);
+
 	// is this scalar expression an NDV-preserving function (used for join stats derivation)
 	static BOOL IsExprNDVPreserving(CExpression *pexpr,
 									const CColRef **underlying_colref);

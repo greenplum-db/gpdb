@@ -2503,7 +2503,7 @@
       </row>
 
       <row>
-       <entry><literal>tcvn_to_utf8</literal></entry>
+       <entry><literal>windows_1258_to_utf8</literal></entry>
        <entry><literal>WIN1258</literal></entry>
        <entry><literal>UTF8</literal></entry>
       </row>
@@ -2671,7 +2671,7 @@
       </row>
 
       <row>
-       <entry><literal>utf8_to_tcvn</literal></entry>
+       <entry><literal>utf8_to_windows_1258</literal></entry>
        <entry><literal>UTF8</literal></entry>
        <entry><literal>WIN1258</literal></entry>
       </row>
@@ -11469,14 +11469,14 @@ SELECT NULLIF(value, '(none)') ...
        <row>
         <entry> <literal>@&gt;</literal> </entry>
         <entry>contains</entry>
-        <entry><literal>ARRAY[1,4,3] @&gt; ARRAY[3,1]</literal></entry>
+        <entry><literal>ARRAY[1,4,3] @&gt; ARRAY[3,1,3]</literal></entry>
         <entry><literal>t</literal></entry>
        </row>
 
        <row>
         <entry> <literal>&lt;@</literal> </entry>
         <entry>is contained by</entry>
-        <entry><literal>ARRAY[2,7] &lt;@ ARRAY[1,7,4,2,6]</literal></entry>
+        <entry><literal>ARRAY[2,2,7] &lt;@ ARRAY[1,7,4,2,6]</literal></entry>
         <entry><literal>t</literal></entry>
        </row>
 
@@ -11519,8 +11519,10 @@ SELECT NULLIF(value, '(none)') ...
     </table>
 
   <para>
-   Array comparisons compare the array contents element-by-element,
-   using the default B-tree comparison function for the element data type.
+   The array ordering operators (<literal>&lt;</literal>,
+   <literal>&gt;=</literal>, etc) compare the array contents
+   element-by-element, using the default B-tree comparison function for
+   the element data type, and sort based on the first difference.
    In multidimensional arrays the elements are visited in row-major order
    (last subscript varies most rapidly).
    If the contents of two arrays are equal but the dimensionality is
@@ -11529,6 +11531,15 @@ SELECT NULLIF(value, '(none)') ...
    <productname>PostgreSQL</> prior to 8.2: older versions would claim
    that two arrays with the same contents were equal, even if the
    number of dimensions or subscript ranges were different.)
+  </para>
+
+  <para>
+   The array containment operators (<literal>&lt;@</literal>
+   and <literal>@&gt;</literal>) consider one array to be contained in
+   another one if each of its elements appears in the other one.
+   Duplicates are not treated specially, thus <literal>ARRAY[1]</literal>
+   and <literal>ARRAY[1,1]</literal> are each considered to contain the
+   other.
   </para>
 
   <para>
@@ -12211,7 +12222,7 @@ NULL baz</literallayout>(3 rows)</entry>
        <type>double precision</type> for a floating-point argument,
        otherwise the same as the argument data type
       </entry>
-      <entry>the average (arithmetic mean) of all input values</entry>
+      <entry>the average (arithmetic mean) of all non-null input values</entry>
      </row>
 
      <row>
@@ -12331,7 +12342,7 @@ NULL baz</literallayout>(3 rows)</entry>
       <entry>
        <type>json</type>
       </entry>
-      <entry>aggregates values as a JSON array</entry>
+      <entry>aggregates values, including nulls, as a JSON array</entry>
      </row>
 
      <row>
@@ -12347,7 +12358,8 @@ NULL baz</literallayout>(3 rows)</entry>
       <entry>
        <type>json</type>
       </entry>
-      <entry>aggregates name/value pairs as a JSON object</entry>
+      <entry>aggregates name/value pairs as a JSON object; values can be
+       null, but not names</entry>
      </row>
 
      <row>
@@ -12361,7 +12373,7 @@ NULL baz</literallayout>(3 rows)</entry>
       <entry>same as argument type</entry>
       <entry>
        maximum value of <replaceable
-       class="parameter">expression</replaceable> across all input
+       class="parameter">expression</replaceable> across all non-null input
        values
       </entry>
      </row>
@@ -12377,7 +12389,7 @@ NULL baz</literallayout>(3 rows)</entry>
       <entry>same as argument type</entry>
       <entry>
        minimum value of <replaceable
-       class="parameter">expression</replaceable> across all input
+       class="parameter">expression</replaceable> across all non-null input
        values
       </entry>
      </row>
@@ -12398,7 +12410,7 @@ NULL baz</literallayout>(3 rows)</entry>
       <entry>
        same as argument types
       </entry>
-      <entry>input values concatenated into a string, separated by delimiter</entry>
+      <entry>non-null input values concatenated into a string, separated by delimiter</entry>
      </row>
 
      <row>
@@ -12420,7 +12432,8 @@ NULL baz</literallayout>(3 rows)</entry>
        <type>bigint</type> arguments, otherwise the same as the
        argument data type
       </entry>
-      <entry>sum of <replaceable class="parameter">expression</replaceable> across all input values</entry>
+      <entry>sum of <replaceable class="parameter">expression</replaceable>
+       across all non-null input values</entry>
      </row>
 
      <row>
@@ -12436,7 +12449,8 @@ NULL baz</literallayout>(3 rows)</entry>
       <entry>
        <type>xml</type>
       </entry>
-      <entry>concatenation of XML values (see also <xref linkend="functions-xml-xmlagg">)</entry>
+      <entry>concatenation of non-null XML values
+       (see also <xref linkend="functions-xml-xmlagg">)</entry>
      </row>
     </tbody>
    </tgroup>

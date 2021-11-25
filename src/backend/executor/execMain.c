@@ -267,6 +267,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
 	EState	   *estate;
 	MemoryContext oldcontext;
+	Slice *slice0 = NULL;
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
 	bool		needDtx;
@@ -628,6 +629,11 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			shouldDispatch = false;
 
 		/*
+		 * slice0 is the root slice of the main plan if the query
+		 * needs to be dispatched.
+		 */
+		slice0 = getCurrentSlice(estate, 0);
+		/*
 		 * if in dispatch mode, time to serialize plan and query
 		 * trees, and fire off cdb_exec command to each of the qexecs
 		 */
@@ -717,7 +723,14 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 *
 			 * Main plan is parallel, send plan to it.
 			 */
-			if (queryDesc->plannedstmt->planTree->dispatch == DISPATCH_PARALLEL)
+			/*
+			 * When the gangType of slice0 is not GANGTYPE_UNALLOCATED,
+			 * the gang will execute on the QE, so the QD needs to dispatch
+			 * the plan to the segment.
+			 * Otherwise, it will run on QD process, i.e. the current process.
+			 * Only if the children of slice0 is not empty, the QD will dispatch.
+			 */
+			if (slice0 && (slice0->gangType != GANGTYPE_UNALLOCATED || slice0->children))
 				CdbDispatchPlan(queryDesc, needDtx, true);
 		}
 
@@ -749,9 +762,16 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		else if (exec_identity == GP_ROOT_SLICE)
 		{
 			/* Run a root slice. */
-			if (queryDesc->planstate != NULL &&
-				queryDesc->plannedstmt->planTree->dispatch == DISPATCH_PARALLEL &&
-				queryDesc->plannedstmt->nMotionNodes > 0 &&
+			/*
+			 * Only if we run on the QD and the slice0 has children,
+			 * it should establish interconnect.
+			 * Note: calling CdbDispatchPlan() doesn't infer to call
+			 * SetupInterconnect(). Like simple INSERT, the QD dispatches
+			 * the plan to the QEs on segments, but it doesn't require
+			 * interconnect to the QE.
+			 */
+			if (queryDesc->planstate != NULL && slice0 &&
+				(slice0->gangType == GANGTYPE_UNALLOCATED && slice0->children) &&
 				!estate->es_interconnect_is_setup)
 			{
 				Assert(!estate->interconnect_context);
@@ -2191,10 +2211,10 @@ CheckValidResultRel(Relation resultRel, CmdType operation)
 
 			/*
 			 * Okay only if there's a suitable INSTEAD OF trigger.  Messages
-			 * here should match rewriteHandler.c's rewriteTargetView, except
-			 * that we omit errdetail because we haven't got the information
-			 * handy (and given that we really shouldn't get here anyway, it's
-			 * not worth great exertion to get).
+			 * here should match rewriteHandler.c's rewriteTargetView and
+			 * RewriteQuery, except that we omit errdetail because we haven't
+			 * got the information handy (and given that we really shouldn't
+			 * get here anyway, it's not worth great exertion to get).
 			 */
 			/*
 			 * GPDB_91_MERGE_FIXME: In Greenplum, views are treated as non

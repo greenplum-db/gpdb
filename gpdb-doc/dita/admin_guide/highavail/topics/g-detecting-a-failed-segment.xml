@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic9">
-  <title>Detecting a Failed Segment</title>
+  <title>How Greenplum Database Detects a Failed Segment</title>
   <body>
     <p>With segment mirroring enabled, Greenplum Database automatically fails over to a mirror
       segment instance when a primary segment instance goes down. Provided one segment instance is
@@ -40,161 +40,9 @@
             <codeph><xref href="../../../ref_guide/system_catalogs/gp_configuration_history.xml"
           /></codeph> table with the operations performed.</p>
       <p dir="ltr">When there is only an active primary segment and the corresponding mirror is
-        down, the primary goes into the <codeph>Not In Sync </codeph>state and continues logging
-        database changes, so the mirror can be synchronized without performing a full copy of data
-        from the primary to the mirror.</p>
-      <p>Running the <codeph>gpstate</codeph> utility with the <codeph>-e</codeph> option displays
-        any issues with a primary or mirror segment instances. Other <codeph>gpstate</codeph>
-        options that display information about all primary or mirror segment instances such as
-          <codeph>-m</codeph> (mirror instance information) and <codeph>-c</codeph> (primary and
-        mirror configuration information) also display information about primary and mirror issues. </p>
-      <p dir="ltr">You can also can see the mode: <codeph>s</codeph> (<codeph>Synchronized</codeph>)
-        or <codeph>n</codeph> (<codeph>Not In Sync</codeph>) for each segment instance, as well as
-        the status <codeph>u</codeph> (up) or <codeph>d</codeph> (down), in the
-          <codeph>gp_segment_configuration</codeph> table. </p>
-      <p dir="ltr">The <codeph><xref href="../../../utility_guide/ref/gprecoverseg.xml"/></codeph>
-        utility is used to bring up a mirror that is down. By default, <codeph>gprecoverseg</codeph>
-        performs an incremental recovery, placing the mirror segment into <codeph>Not In
-          Sync</codeph> mode, which starts to replay the recorded changes from the primary onto the
-        mirror. If the incremental recovery cannot be completed, the recovery fails and
-          <codeph>gprecoverseg</codeph> should be run again with the <codeph>-F</codeph> option, to
-        perform full recovery. This causes the primary to copy all of the data to the mirror.</p>
-      <p>After a segment instance has been recovered, the <codeph>gpstate -e</codeph> command might
-        list primary and mirror segment instances that are switched. This indicates that the system
-        is not balanced (the primary and mirror instances are not in their originally configured
-        roles). If a system is not balanced, there might be skew resulting from the number of active
-        primary segment instances on segment host systems.</p>
-      <p dir="ltr">The <codeph>gp_segment_configuration</codeph> table has columns
-          <codeph>role</codeph> and <codeph>preferred_role</codeph>. These can have values of either
-          <codeph>p</codeph> for primary or <codeph>m</codeph> for mirror. The <codeph>role</codeph>
-        column shows the segment instance current role and the <codeph>preferred_role</codeph> shows
-        the original role of the segment instance. </p>
-      <p dir="ltr">In a balanced system, the <codeph>role</codeph> and
-          <codeph>preferred_role</codeph> matches for all segment instances. When they do not match
-        the system is not balanced. To rebalance the cluster and bring all the segments into their
-        preferred role, run the <codeph>gprecoverseg</codeph> command with the <codeph>-r</codeph>
-        option.</p>
-    </section>
-    <section>
-      <title>Simple Failover and Recovery Example</title>
-      <p dir="ltr">Consider a single primary-mirror segment instance pair where the primary segment
-        has failed over to the mirror. The following table shows the segment instance preferred
-        role, role, mode, and status from <codeph>gp_segment_configuration</codeph> table before
-        beginning recovery of the failed primary segment. </p>
-      <p>You can also run <codeph>gpstate -e</codeph> to display any issues with a primary or mirror
-        segment instances. </p>
-      <table frame="all" rowsep="1" colsep="1" id="table_hdk_jst_fgb">
-        <tgroup cols="5">
-          <colspec colname="c1" colnum="1" colwidth="1.0*"/>
-          <colspec colname="c2" colnum="2" colwidth="1.0*"/>
-          <colspec colname="c3" colnum="3" colwidth="1.0*"/>
-          <colspec colname="c4" colnum="4" colwidth="1.0*"/>
-          <colspec colname="c5" colnum="5" colwidth="1.0*"/>
-          <thead>
-            <row>
-              <entry/>
-              <entry><codeph>preferred_role</codeph></entry>
-              <entry><codeph>role</codeph></entry>
-              <entry><codeph>mode</codeph></entry>
-              <entry><codeph>status</codeph></entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>Primary</entry>
-              <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>n</codeph><p>(Not In Sync)</p></entry>
-              <entry><codeph>d</codeph><p>(down)</p></entry>
-            </row>
-            <row>
-              <entry>Mirror</entry>
-              <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>n</codeph><p>(Not In Sync)</p></entry>
-              <entry><codeph>u</codeph><p>(up)</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-      <p>The segment instance roles are not in their preferred roles, and the primary is down. The
-        mirror is up, the role is now primary, and it is not synchronizing because its mirror, the
-        failed primary, is down. After fixing issues with the segment host and primary segment
-        instance, you use <codeph>gprecoverseg</codeph> to prepare failed segment instances for
-        recovery and initiate synchronization between the primary and mirror instances. </p>
-      <p>Once <codeph>gprecoverseg</codeph> has completed, the segments are in the states shown in
-        the following table where the primary-mirror segment pair is up with the primary and mirror
-        roles reversed from their preferred roles.</p>
-      <table frame="all" rowsep="1" colsep="1" id="table_idk_jst_fgb">
-        <tgroup cols="5">
-          <colspec colname="c1" colnum="1" colwidth="1.0*"/>
-          <colspec colname="c2" colnum="2" colwidth="1.0*"/>
-          <colspec colname="c3" colnum="3" colwidth="1.0*"/>
-          <colspec colname="c4" colnum="4" colwidth="1.0*"/>
-          <colspec colname="c5" colnum="5" colwidth="1.0*"/>
-          <thead>
-            <row>
-              <entry/>
-              <entry><codeph>preferred_role</codeph></entry>
-              <entry><codeph>role</codeph></entry>
-              <entry><codeph>mode</codeph></entry>
-              <entry><codeph>status</codeph></entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>Primary</entry>
-              <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>s</codeph><p>(<codeph>Not In Sync</codeph>)</p></entry>
-              <entry><codeph>u</codeph><p>(up)</p></entry>
-            </row>
-            <row>
-              <entry>Mirror</entry>
-              <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>s</codeph><p>(<codeph>Not In Sync</codeph>)</p></entry>
-              <entry><codeph>u</codeph><p>(up)</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-      <p>The <codeph>gprecoverseg -r</codeph> command rebalances the system by returning the segment
-        roles to their preferred roles.</p>
-      <table frame="all" rowsep="1" colsep="1" id="table_jdk_jst_fgb">
-        <tgroup cols="5">
-          <colspec colname="c1" colnum="1" colwidth="1.0*"/>
-          <colspec colname="c2" colnum="2" colwidth="1.0*"/>
-          <colspec colname="c3" colnum="3" colwidth="1.0*"/>
-          <colspec colname="c4" colnum="4" colwidth="1.0*"/>
-          <colspec colname="c5" colnum="5" colwidth="1.0*"/>
-          <thead>
-            <row>
-              <entry/>
-              <entry><codeph>preferred_role</codeph></entry>
-              <entry><codeph>role</codeph></entry>
-              <entry><codeph>mode</codeph></entry>
-              <entry><codeph>status</codeph></entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>Primary</entry>
-              <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>p</codeph><p>(primary)</p></entry>
-              <entry><codeph>s</codeph><p>(<codeph>Synchronized</codeph>)</p></entry>
-              <entry><codeph>u</codeph><p>(up)</p></entry>
-            </row>
-            <row>
-              <entry>Mirror</entry>
-              <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>m</codeph><p>(mirror)</p></entry>
-              <entry><codeph>s</codeph><p>(<codeph>Synchronized</codeph>)</p></entry>
-              <entry><codeph>u</codeph><p>(up)</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
+        down, the primary goes into the <i>Not In Sync</i> state and continues logging database
+        changes, so the mirror can be synchronized without performing a full copy of data from the
+        primary to the mirror.</p>
     </section>
     <section>
       <title>Configuring FTS Behavior</title>

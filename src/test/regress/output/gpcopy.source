@@ -1673,3 +1673,53 @@ select * from foo;
  database in COPY TO: funny copy"db'with\\quotes
 (3 rows)
 
+-- Test for Issue: https://github.com/greenplum-db/gpdb/issues/12700
+-- When under planner, to set a plan's flow based on path's locus and
+-- the locus is hashed, it will try to verify that each distkey in locus
+-- is in plan's targetlist andalso is hashable. Previously, hashable-test
+-- is not correct and will lead to no hash exprs in the plan's flow. A
+-- typical case is that copy-on-segment might add extra motion atop leading
+-- to confusing data files.
+-- Distributed by two columns is very important in this case.
+create table t_12700 (a varchar(32), id int)
+distributed by (a, id)
+partition by list (id)
+( partition p1 values (0),
+  partition p2 values (1)
+);
+NOTICE:  CREATE TABLE will create partition "t_12700_1_prt_p1" for table "t_12700"
+NOTICE:  CREATE TABLE will create partition "t_12700_1_prt_p2" for table "t_12700"
+insert into t_12700
+select chr(i)::varchar(32), i%2 from generate_series(97, 122)i;
+-- previously, planner will generate a motion atop the plan of query
+-- and distributed by the first column and leads to wrong file data distribution
+copy (select * from t_12700) to '/tmp/out_12700_<SEGID>' on segment;
+-- the following statement should not error out
+-- manually abort since we do not want mismatch of table content and outfile.
+begin;
+copy t_12700 from '/tmp/out_12700_<SEGID>' on segment;
+abort;
+-- start_ignore
+create language plpythonu;
+-- end_ingore
+create function get_file_lines_12700(segid int) returns int
+as
+$$
+with open('/tmp/out_12700_' + str(segid)) as f:
+    return sum(1 for line in f)
+$$
+language plpythonu;
+with cte(segid, num) as (
+  select gp_segment_id, count(a) num from t_12700 group by gp_segment_id
+)
+select get_file_lines_12700(segid) = num from cte;
+ ?column? 
+----------
+ t
+ t
+ t
+(3 rows)
+
+drop table t_12700;
+drop function get_file_lines_12700(int);
+\! rm /tmp/out_12700_* -f

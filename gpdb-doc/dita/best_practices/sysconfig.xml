@@ -225,7 +225,7 @@ kernel.shmall = 197951838</codeblock>
       <ul id="ul_dyd_1qq_bp">
         <li>The <codeph>gp_workfile_entries</codeph> view contains one row for each operator using
           disk space for workfiles on a segment at the current time. See <xref
-            href="tuning_queries.xml#reading_explain_plan"/>for information about operators.</li>
+            href="tuning_queries.xml#reading_explain_plan"/> for information about operators.</li>
         <li>The <codeph>gp_workfile_usage_per_query</codeph> view contains one row for each query
           using disk space for workfiles on a segment at the current time.</li>
         <li>The <codeph>gp_workfile_usage_per_segment</codeph> view contains one row for each

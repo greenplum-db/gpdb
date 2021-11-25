@@ -71,7 +71,7 @@
           the container, and the container shuts down.</p>
         
       </section>
-      <section>
+      <section id="section_d32_nv1_rqb">
         <title>About PL/Container 3 Beta</title>
         <p>Greenplum Database 6.5 introduces PL/Container version 3 Beta, which:<ul
             id="ul_jj3_lyq_blb">

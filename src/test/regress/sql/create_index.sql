@@ -682,6 +682,10 @@ INSERT INTO func_index_heap VALUES('ABCD', 'EF');
 -- but this shouldn't:
 INSERT INTO func_index_heap VALUES('QWERTY');
 
+-- while we're here, see that the metadata looks sane
+\d func_index_heap
+\d func_index_index
+
 
 --
 -- Same test, expressional index
@@ -697,6 +701,14 @@ INSERT INTO func_index_heap VALUES('QWE','RTY');
 INSERT INTO func_index_heap VALUES('ABCD', 'EF');
 -- but this shouldn't:
 INSERT INTO func_index_heap VALUES('QWERTY');
+
+-- while we're here, see that the metadata looks sane
+\d func_index_heap
+\d func_index_index
+
+-- this should fail because of unsafe column type (anonymous record)
+create index on func_index_heap ((f1 || f2), (row(f1, f2)));
+
 
 --
 -- Also try building functional, expressional, and partial indexes on
@@ -751,6 +763,31 @@ VACUUM FULL concur_heap;
 \d concur_heap
 REINDEX TABLE concur_heap;
 \d concur_heap
+
+-- Temporary tables with concurrent builds and on-commit actions
+-- CONCURRENTLY used with CREATE INDEX and DROP INDEX is ignored.
+-- PRESERVE ROWS, the default.
+CREATE TEMP TABLE concur_temp (f1 int, f2 text)
+  ON COMMIT PRESERVE ROWS;
+INSERT INTO concur_temp VALUES (1, 'foo'), (2, 'bar');
+CREATE INDEX CONCURRENTLY concur_temp_ind ON concur_temp(f1);
+DROP INDEX CONCURRENTLY concur_temp_ind;
+DROP TABLE concur_temp;
+-- ON COMMIT DROP
+BEGIN;
+CREATE TEMP TABLE concur_temp (f1 int, f2 text)
+  ON COMMIT DROP;
+INSERT INTO concur_temp VALUES (1, 'foo'), (2, 'bar');
+-- Fails when running in a transaction.
+CREATE INDEX CONCURRENTLY concur_temp_ind ON concur_temp(f1);
+COMMIT;
+-- ON COMMIT DELETE ROWS
+CREATE TEMP TABLE concur_temp (f1 int, f2 text)
+  ON COMMIT DELETE ROWS;
+INSERT INTO concur_temp VALUES (1, 'foo'), (2, 'bar');
+CREATE INDEX CONCURRENTLY concur_temp_ind ON concur_temp(f1);
+DROP INDEX CONCURRENTLY concur_temp_ind;
+DROP TABLE concur_temp;
 
 --
 -- Try some concurrent index drops

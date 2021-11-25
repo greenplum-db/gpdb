@@ -496,6 +496,15 @@ invoke_agg_trans_func(AggState *aggstate,
 	 * If pass-by-ref datatype, must copy the new value into aggcontext and
 	 * pfree the prior transValue.  But if transfn returned a pointer to its
 	 * first input, we don't need to do anything.
+	 *
+	 * It's safe to compare newVal with pergroupstate->transValue without
+	 * regard for either being NULL, because we below take care to set
+	 * transValue to 0 when NULL. Otherwise we could end up accidentally not
+	 * reparenting, when the transValue has the same numerical value as
+	 * newVal, despite being NULL.  This is a somewhat hot path, making it
+	 * undesirable to instead solve this with another branch for the common
+	 * case of the transition function returning its (modified) input
+	 * argument.
 	 */
 	if (!transtypeByVal && 
 		DatumGetPointer(newVal) != DatumGetPointer(transValue))
@@ -504,6 +513,15 @@ invoke_agg_trans_func(AggState *aggstate,
 		{
 			newVal = datumCopyWithMemManager(transValue, newVal, transtypeByVal,
 											 transtypeLen, mem_manager);
+		}
+		else
+		{
+			/*
+			 * Ensure that pergroupstate->transValue ends up being 0, so we
+			 * can safely compare newVal/transValue without having to check
+			 * their respective nullness.
+			 */
+			newVal = (Datum) 0;
 		}
 	}
 

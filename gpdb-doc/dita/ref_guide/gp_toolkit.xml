@@ -1170,6 +1170,10 @@
                 <entry colname="col2" class="- topic/entry ">The command number within a session
                   (prefixed with "cmd").</entry>
               </row>
+              <row>
+                <entry>logseverity</entry>
+                <entry>The log severity level.</entry>
+              </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">logmessage </entry>
                 <entry colname="col2" class="- topic/entry ">Log or error message text.</entry>

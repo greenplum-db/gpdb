@@ -267,7 +267,7 @@
       <section><title>Additional Information</title><i>Greenplum Database Administrator Guide</i>:
           <ul id="ul_wff_k1m_v4">
           <li><xref href="../admin_guide/managing/monitor.xml"/></li>
-          <li><xref href="../admin_guide/highavail/topics/g-segment-recovery-scenarios.xml"/></li>
+          <li><xref href="../admin_guide/highavail/topics/g-recovering-from-segment-failures.xml"/></li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
             <li><codeph><xref href="../utility_guide/ref/gpstate.xml">gpstate</xref></codeph> - view
               state of the Greenplum system</li>

@@ -34,13 +34,6 @@ privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command 
           <pt>--lc-ctype <varname>locale</varname></pt>
           <pd>Specifies the LC_CTYPE setting to be used in this database.</pd>
         </plentry>
-        <plentry>
-          <pt>--maintenance-db=<varname>dbname</varname></pt>
-          <pd>Specifies the name of the database to connect to when creating the new database. If
-            not specified, the <codeph>postgres</codeph> database will be used; if that does not
-            exist (or if it is the name of the new database being created),
-              <codeph>template1</codeph> will be used.</pd>
-        </plentry>
         <plentry><pt>-O <varname>owner</varname> | --owner=<varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
           to the user running this command. (This name
           is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-T <varname>template</varname> | --template=<varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
@@ -69,8 +62,15 @@ the environment variable <codeph>PGUSER</codeph> or defaults to the current
 system role name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never issue a password prompt. If the server requires password authentication
 and a password is not available by other means such as a <codeph>.pgpass</codeph>
 file, the connection attempt will fail. This option can be useful in
-batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To create the database <codeph>test</codeph> using the default options:</p><codeblock>createdb test</codeblock><p>To create the database <codeph>demo</codeph> using the Greenplum
-        master on host <codeph>gpmaster</codeph>, port <codeph>54321</codeph>, using the
+batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry>
+          <plentry>
+            <pt>--maintenance-db=<varname>dbname</varname></pt>
+            <pd>Specifies the name of the database to connect to when creating the new database. If
+              not specified, the <codeph>postgres</codeph> database will be used; if that does not
+              exist (or if it is the name of the new database being created),
+                <codeph>template1</codeph> will be used.</pd>
+          </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To create the database <codeph>test</codeph> using the default options:</p><codeblock>createdb test</codeblock><p>To create the database <codeph>demo</codeph> using the Greenplum
+        coordinator on host <codeph>gpmaster</codeph>, port <codeph>54321</codeph>, using the
           <codeph>LATIN1</codeph> encoding scheme:</p><codeblock>createdb -p 54321 -h gpmaster -E LATIN1 demo</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database

@@ -400,11 +400,11 @@ class GpStart:
     def _startMaster(self):
         logger.info("Starting Master instance in admin mode")
 
-        cmd = gp.MasterStart('master in utility mode', self.master_datadir,
-                             self.port, self.era,
-                             wrapper=self.wrapper, wrapper_args=self.wrapper_args,
-                             specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
-                             )
+        cmd = gp.MasterStart('master in utility mode with restricted set to {0}'.format(self.restricted),
+                             self.master_datadir, self.port, self.era, wrapper=self.wrapper,
+                             wrapper_args=self.wrapper_args, specialMode=self.specialMode,
+                             restrictedMode=self.restricted, timeout=self.timeout, utilityMode=True,
+                             max_connections=self.max_connections)
         cmd.run()
 
         if cmd.get_results().rc != 0:

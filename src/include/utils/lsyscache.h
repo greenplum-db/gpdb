@@ -162,6 +162,7 @@ extern Oid	get_rel_type_id(Oid relid);
 extern char get_rel_relkind(Oid relid);
 extern char get_rel_relstorage(Oid relid);
 extern Oid	get_rel_tablespace(Oid relid);
+extern char get_rel_persistence(Oid relid);
 extern char *get_type_name(Oid typid);
 extern bool get_typisdefined(Oid typid);
 extern int16 get_typlen(Oid typid);
@@ -209,6 +210,7 @@ extern bool get_attstatsslot(AttStatsSlot *sslot, HeapTuple statstuple,
 extern void free_attstatsslot(AttStatsSlot *sslot);
 extern char *get_namespace_name(Oid nspid);
 extern Oid	get_range_subtype(Oid rangeOid);
+extern Oid	get_range_collation(Oid rangeOid);
 
 extern bool relation_exists(Oid oid);
 extern bool index_exists(Oid oid);

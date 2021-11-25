@@ -1615,19 +1615,127 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 							  sizeof(chunk->requested_size));
 	/* Test for someone scribbling on unused space in chunk */
 	if (chunk->requested_size < oldsize)
-	{
 		if (!sentinel_ok(pointer, chunk->requested_size))
 			elog(WARNING, "detected write past chunk end in %s %p (%s:%d)",
 				 set->header.name, chunk, CDB_MCXT_WHERE(&set->header));
-	}
 #endif
 
+	if (oldsize > set->allocChunkLimit)
+	{
+		/*
+		 * The chunk must have been allocated as a single-chunk block.  Use
+		 * realloc() to make the containing block bigger, or smaller, with
+		 * minimum space wastage.
+		 */
+		AllocBlock	block = (AllocBlock) (((char *) chunk) - ALLOC_BLOCKHDRSZ);
+		Size		chksize;
+		Size		blksize;
+		Size		oldblksize;
+
+		/*
+		 * Try to verify that we have a sane block pointer: it should
+		 * reference the correct aset, and freeptr and endptr should point
+		 * just past the chunk.
+		 */
+		if (block->aset != set ||
+			block->freeptr != UserPtr_GetEndPtr(block) ||
+			block->freeptr != ((char *) block) +
+			(oldsize + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ))
+			elog(ERROR, "could not find block containing chunk %p", chunk);
+
+		/* isHeader is set to false as we should never require realloc for shared header */
+		AllocFreeInfo(set, chunk, false);
+
+		/*
+		 * Even if the new request is less than set->allocChunkLimit, we stick
+		 * with the single-chunk block approach.  Therefore we need
+		 * chunk->size to be bigger than set->allocChunkLimit, so we don't get
+		 * confused about the chunk's status in future calls.
+		 */
+		chksize = Max(size, set->allocChunkLimit + 1);
+		chksize = MAXALIGN(chksize);
+
+		/* Do the realloc */
+		oldblksize = UserPtr_GetUserPtrSize(block);
+		blksize = chksize + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ;
+		block = (AllocBlock) gp_realloc(block, blksize);
+		if (block == NULL)
+		{
+			/* we need to set chunk info back*/
+			AllocAllocInfo(set, chunk, false);
+			MemoryContextError(ERRCODE_OUT_OF_MEMORY,
+							   &set->header, CDB_MCXT_WHERE(&set->header),
+							   "Out of memory.  Failed on request of size %zu bytes.",
+							   size);
+		}
+		block->freeptr = UserPtr_GetEndPtr(block);
+
+		/* Update pointers since block has likely been moved */
+		chunk = (AllocChunk) (((char *) block) + ALLOC_BLOCKHDRSZ);
+		pointer = AllocChunkGetPointer(chunk);
+		if (block->prev)
+			block->prev->next = block;
+		else
+			set->blocks = block;
+		if (block->next)
+			block->next->prev = block;
+		chunk->size = chksize;
+
+#ifdef MEMORY_CONTEXT_CHECKING
+#ifdef RANDOMIZE_ALLOCATED_MEMORY
+		/* We can only fill the extra space if we know the prior request */
+		if (size > chunk->requested_size)
+			randomize_mem((char *) pointer + chunk->requested_size,
+						  size - chunk->requested_size);
+#endif
+
+		/*
+		 * realloc() (or randomize_mem()) will have left any newly-allocated
+		 * part UNDEFINED, but we may need to adjust trailing bytes from the
+		 * old allocation.
+		 */
+#ifdef USE_VALGRIND
+		if (oldsize > chunk->requested_size)
+			VALGRIND_MAKE_MEM_UNDEFINED((char *) pointer + chunk->requested_size,
+										oldsize - chunk->requested_size);
+#endif
+
+		chunk->requested_size = size;
+		VALGRIND_MAKE_MEM_NOACCESS(&chunk->requested_size,
+								   sizeof(chunk->requested_size));
+
+		/* set mark to catch clobber of "unused" space */
+		if (size < chunk->size)
+			set_sentinel(pointer, size);
+#else							/* !MEMORY_CONTEXT_CHECKING */
+
+		/*
+		 * We don't know how much of the old chunk size was the actual
+		 * allocation; it could have been as small as one byte.  We have to be
+		 * conservative and just mark the entire old portion DEFINED.
+		 */
+		VALGRIND_MAKE_MEM_DEFINED(pointer, oldsize);
+#endif
+
+		/* Make any trailing alignment padding NOACCESS. */
+		VALGRIND_MAKE_MEM_NOACCESS((char *) pointer + size, chksize - size);
+
+		AllocAllocInfo(set, chunk, false /* We should never require realloc for shared header */);
+
+		if (blksize > oldblksize)
+			MemoryContextNoteAlloc(&set->header, blksize - oldblksize); /*CDB*/
+		else if (blksize < oldblksize)
+			MemoryContextNoteFree(&set->header, oldblksize - blksize); /*CDB*/
+
+		return pointer;
+	}
+
 	/*
-	 * Chunk sizes are aligned to power of 2 in AllocSetAlloc(). Maybe the
-	 * allocated area already is >= the new size.  (In particular, we always
+	 * Chunk sizes are aligned to power of 2 in AllocSetAlloc().  Maybe the
+	 * allocated area already is >= the new size.  (In particular, we will
 	 * fall out here if the requested size is a decrease.)
 	 */
-	if (oldsize >= size)
+	else if (oldsize >= size)
 	{
 		/* isHeader is set to false as we should never require realloc for shared header */
 		AllocFreeInfo(set, chunk, false);
@@ -1660,7 +1768,6 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 		/* set mark to catch clobber of "unused" space */
 		if (size < oldsize)
 			set_sentinel(pointer, size);
-
 #else							/* !MEMORY_CONTEXT_CHECKING */
 
 		/*
@@ -1677,109 +1784,15 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 
 		return pointer;
 	}
-
-	if (oldsize > set->allocChunkLimit)
-	{
-		/*
-		 * The chunk must have been allocated as a single-chunk block.  Use
-		 * realloc() to make the containing block bigger with minimum space
-		 * wastage.
-		 */
-		AllocBlock	block = (AllocBlock) (((char *) chunk) - ALLOC_BLOCKHDRSZ);
-		Size		chksize;
-		Size		blksize;
-        Size        oldblksize;
-
-		/*
-		 * Try to verify that we have a sane block pointer: it should
-		 * reference the correct aset, and freeptr and endptr should point
-		 * just past the chunk.
-		 */
-		if (block->aset != set ||
-			block->freeptr != UserPtr_GetEndPtr(block) ||
-			block->freeptr != ((char *) block) +
-			(chunk->size + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ))
-			elog(ERROR, "could not find block containing chunk %p", chunk);
-
-		/* isHeader is set to false as we should never require realloc for shared header */
-		AllocFreeInfo(set, chunk, false);
-
-		/* Do the realloc */
-        oldblksize = UserPtr_GetUserPtrSize(block);
-		chksize = MAXALIGN(size);
-		blksize = chksize + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ;
-		block = (AllocBlock) gp_realloc(block, blksize);
-		if (block == NULL)
-		{
-			/* we need to set chunk info back*/
-			AllocAllocInfo(set, chunk, false);
-			MemoryContextError(ERRCODE_OUT_OF_MEMORY,
-							   &set->header, CDB_MCXT_WHERE(&set->header),
-							   "Out of memory.  Failed on request of size %zu bytes.",
-							   size);
-		}
-		block->freeptr = UserPtr_GetEndPtr(block);
-
-		/* Update pointers since block has likely been moved */
-		chunk = (AllocChunk) (((char *) block) + ALLOC_BLOCKHDRSZ);
-		pointer = AllocChunkGetPointer(chunk);
-		if (block->prev)
-			block->prev->next = block;
-		else
-			set->blocks = block;
-		if (block->next)
-			block->next->prev = block;
-		chunk->size = chksize;
-
-#ifdef MEMORY_CONTEXT_CHECKING
-#ifdef RANDOMIZE_ALLOCATED_MEMORY
-		/* We can only fill the extra space if we know the prior request */
-		randomize_mem((char *) pointer + chunk->requested_size,
-					  size - chunk->requested_size);
-#endif
-
-		/*
-		 * realloc() (or randomize_mem()) will have left the newly-allocated
-		 * part UNDEFINED, but we may need to adjust trailing bytes from the
-		 * old allocation.
-		 */
-		VALGRIND_MAKE_MEM_UNDEFINED((char *) pointer + chunk->requested_size,
-									oldsize - chunk->requested_size);
-
-		chunk->requested_size = size;
-		VALGRIND_MAKE_MEM_NOACCESS(&chunk->requested_size,
-								   sizeof(chunk->requested_size));
-
-		/* set mark to catch clobber of "unused" space */
-		if (size < chunk->size)
-			set_sentinel(pointer, size);
-#else							/* !MEMORY_CONTEXT_CHECKING */
-
-		/*
-		 * We don't know how much of the old chunk size was the actual
-		 * allocation; it could have been as small as one byte.  We have to be
-		 * conservative and just mark the entire old portion DEFINED.
-		 */
-		VALGRIND_MAKE_MEM_DEFINED(pointer, oldsize);
-#endif
-
-		/* Make any trailing alignment padding NOACCESS. */
-		VALGRIND_MAKE_MEM_NOACCESS((char *) pointer + size, chksize - size);
-
-		AllocAllocInfo(set, chunk, false /* We should never require realloc for shared header */);
-
-		MemoryContextNoteAlloc(&set->header, blksize - oldblksize); /*CDB*/
-		return pointer;
-	}
 	else
 	{
 		/*
-		 * Small-chunk case.  We just do this by brute force, ie, allocate a
-		 * new chunk and copy the data.  Since we know the existing data isn't
-		 * huge, this won't involve any great memcpy expense, so it's not
-		 * worth being smarter.  (At one time we tried to avoid memcpy when it
-		 * was possible to enlarge the chunk in-place, but that turns out to
-		 * misbehave unpleasantly for repeated cycles of
+		 * Enlarge-a-small-chunk case.  We just do this by brute force, ie,
+		 * allocate a new chunk and copy the data.  Since we know the existing
+		 * data isn't huge, this won't involve any great memcpy expense, so
+		 * it's not worth being smarter.  (At one time we tried to avoid
+		 * memcpy when it was possible to enlarge the chunk in-place, but that
+		 * turns out to misbehave unpleasantly for repeated cycles of
 		 * palloc/repalloc/pfree: the eventually freed chunks go into the
 		 * wrong freelist for the next initial palloc request, and so we leak
 		 * memory indefinitely.  See pgsql-hackers archives for 2007-08-11.)
@@ -1817,6 +1830,31 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 
 		return newPointer;
 	}
+}
+
+/*
+ * AllocSetContains
+ *		Detects whether a generic memory pointer belongs to a given context or not.
+ *		Note, the "generic" means it will be ready to handle pointers to any memory region,
+ *		whether allocated using palloc or not, and regardless of their alignment.  This will
+ *		return true if the pointer points to any data structure within a block managed by the
+ *		given memory context.
+ *
+ *		This should be used in place of MemoryContextContains if there is any uncertainty
+ *		about whether the pointer has maximal alignment and points to the beginning of a chunk
+ *		allocated by some MemoryContext
+ */
+bool
+AllocSetContains(MemoryContext context, void *pointer) {
+	Assert(context->type == T_AllocSetContext);
+
+	AllocSet set = (AllocSet) context;
+
+	for (AllocBlock block = set->blocks; block != NULL; block = (AllocBlock) block->next) {
+		if (pointer >= (void *)block && pointer < (void *)UserPtr_GetEndPtr(block))
+			return true;
+	}
+	return false;
 }
 
 /*

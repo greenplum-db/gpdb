@@ -9,9 +9,8 @@
         dependencies, across an entire cluster. The package manager also integrates with existing
         scripts so that any packages are automatically installed on any new hosts introduced into
         the system following cluster expansion or segment host recovery.</p>
-      <p>See <codeph><xref href="../utility_guide/ref/gppkg.xml" format="dita"
-            scope="peer" type="topic">gppkg</xref></codeph> for more information, including
-        usage.</p>
+      <p>See <xref href="../utility_guide/ref/gppkg.xml" format="dita" scope="peer" type="topic"
+          >gppkg</xref> for more information, including usage.</p>
       <p>Extension packages can be downloaded from the Greenplum Database page on <xref
           href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
           class="- topic/xref ">VMware Tanzu Network</xref>. The extension documentation in the <i><xref

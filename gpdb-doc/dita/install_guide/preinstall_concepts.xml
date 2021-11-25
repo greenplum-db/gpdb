@@ -91,8 +91,8 @@
       <body>
         <p>When you deploy your Greenplum Database system, you have the option to configure
             <i>mirror</i> segments. Mirror segments allow database queries to fail over to a backup
-          segment if the primary segment becomes unavailable.<ph otherprops="pivotal"> Mirroring is
-            a requirement for VMware-supported production Greenplum systems. </ph></p>
+          segment if the primary segment becomes unavailable. Mirroring is a requirement for
+          VMware-supported production Greenplum systems. </p>
         <p>A mirror segment must always reside on a different host than its primary segment. Mirror
           segments can be arranged across the hosts in the system in one of two standard
           configurations, or in a custom configuration you design. The default configuration, called
@@ -286,9 +286,8 @@
       </fig>
     </body>
   </topic>
-  <topic xml:lang="en" id="topic_e5t_whm_kbb" otherprops="pivotal">
-    <title>Greenplum Performance Monitoring</title>
-    <!--Pivotal-->
+  <topic xml:lang="en" id="topic_e5t_whm_kbb">
+    <title>Tanzu Greenplum Performance Monitoring</title>
     <body>
       <p>Greenplum Database includes a dedicated system monitoring and management database, named
         gpperfmon, that administrators can install and enable. When this database is enabled, data

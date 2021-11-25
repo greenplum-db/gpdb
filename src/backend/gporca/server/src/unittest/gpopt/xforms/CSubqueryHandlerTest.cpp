@@ -53,10 +53,6 @@ CSubqueryHandlerTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(
 			CSubqueryHandlerTest::EresUnittest_SubqueryWithDisjunction),
 		GPOS_UNITTEST_FUNC(CSubqueryHandlerTest::EresUnittest_RunMinidumpTests),
-#ifdef GPOS_DEBUG
-		GPOS_UNITTEST_FUNC_ASSERT(
-			CSubqueryHandlerTest::EresUnittest_SubqueryWithConstSubqueries),
-#endif	// GPOS_DEBUG
 	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
@@ -194,92 +190,6 @@ CSubqueryHandlerTest::EresUnittest_Subquery2Apply()
 	xform_set->Release();
 
 	return GPOS_OK;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CSubqueryHandlerTest::EresUnittest_SubqueryWithConstSubqueries
-//
-//	@doc:
-//		Test of subquery handler for ALL subquery over const table get
-//
-//---------------------------------------------------------------------------
-GPOS_RESULT
-CSubqueryHandlerTest::EresUnittest_SubqueryWithConstSubqueries()
-{
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
-
-	// setup a file-based provider
-	CMDProviderMemory *pmdp = CTestUtils::m_pmdpf;
-	pmdp->AddRef();
-
-	// we need to use an auto pointer for the cache here to ensure
-	// deleting memory of cached objects when we throw
-	CAutoP<CMDAccessor::MDCache> apcache;
-	apcache =
-		CCacheFactory::CreateCache<gpopt::IMDCacheObject *, gpopt::CMDKey *>(
-			true,  // fUnique
-			0 /* unlimited cache quota */, CMDKey::UlHashMDKey,
-			CMDKey::FEqualMDKey);
-
-	CMDAccessor::MDCache *pcache = apcache.Value();
-
-	{
-		CMDAccessor mda(mp, pcache, CTestUtils::m_sysidDefault, pmdp);
-
-		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
-						 CTestUtils::GetCostModel(mp));
-
-		// create a subquery with const table get expression
-		CExpression *pexpr =
-			CSubqueryTestUtils::PexprSubqueryWithDisjunction(mp);
-		CXform *pxform = CXformFactory::Pxff()->Pxf(CXform::ExfSelect2Apply);
-
-		CWStringDynamic str(mp);
-		COstreamString oss(&str);
-
-		oss << std::endl << "EXPRESSION:" << std::endl << *pexpr << std::endl;
-
-		CExpression *pexprLogical = (*pexpr)[0];
-		CExpression *pexprScalar = (*pexpr)[1];
-		oss << std::endl
-			<< "LOGICAL:" << std::endl
-			<< *pexprLogical << std::endl;
-		oss << std::endl << "SCALAR:" << std::endl << *pexprScalar << std::endl;
-
-		GPOS_TRACE(str.GetBuffer());
-		str.Reset();
-
-		CXformContext *pxfctxt = GPOS_NEW(mp) CXformContext(mp);
-		CXformResult *pxfres = GPOS_NEW(mp) CXformResult(mp);
-
-		// calling the xform to perform subquery to Apply transformation;
-		// xform must fail since we do not expect constant subqueries
-		pxform->Transform(pxfctxt, pxfres, pexpr);
-		CExpression *pexprResult = pxfres->PexprNext();
-
-		oss << std::endl
-			<< "NEW LOGICAL:" << std::endl
-			<< *((*pexprResult)[0]) << std::endl;
-		oss << std::endl
-			<< "RESIDUAL SCALAR:" << std::endl
-			<< *((*pexprResult)[1]) << std::endl;
-
-		GPOS_TRACE(str.GetBuffer());
-		str.Reset();
-
-		pxfres->Release();
-		pxfctxt->Release();
-		pexpr->Release();
-	}
-
-	// This test checks for an assert in CSubqueryHandler::FRemoveAnySubquery that
-	// will trigger for the subquery we created above. If we reach here, the test
-	// has failed, since the assert didn't trigger (note that this means that this
-	// test will likely fail in a retail build).
-	return GPOS_FAILED;
 }
 
 //---------------------------------------------------------------------------

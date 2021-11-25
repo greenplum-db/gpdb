@@ -168,6 +168,14 @@ SELECT POSITION(B'1101' IN b),
        POSITION(B'11011' IN b),
        b
        FROM BIT_SHIFT_TABLE ;
+SELECT b, b >> 1 AS bsr, b << 1 AS bsl
+       FROM BIT_SHIFT_TABLE ;
+SELECT b, b >> 8 AS bsr8, b << 8 AS bsl8
+       FROM BIT_SHIFT_TABLE ;
+SELECT b::bit(15), b::bit(15) >> 1 AS bsr, b::bit(15) << 1 AS bsl
+       FROM BIT_SHIFT_TABLE ;
+SELECT b::bit(15), b::bit(15) >> 8 AS bsr8, b::bit(15) << 8 AS bsl8
+       FROM BIT_SHIFT_TABLE ;
 
 
 CREATE TABLE VARBIT_SHIFT_TABLE(v BIT VARYING(20));
@@ -180,7 +188,10 @@ SELECT POSITION(B'1101' IN v),
        POSITION(B'11011' IN v),
        v
        FROM VARBIT_SHIFT_TABLE ;
-
+SELECT v, v >> 1 AS vsr, v << 1 AS vsl
+       FROM VARBIT_SHIFT_TABLE ;
+SELECT v, v >> 8 AS vsr8, v << 8 AS vsl8
+       FROM VARBIT_SHIFT_TABLE ;
 
 DROP TABLE BIT_SHIFT_TABLE;
 DROP TABLE VARBIT_SHIFT_TABLE;

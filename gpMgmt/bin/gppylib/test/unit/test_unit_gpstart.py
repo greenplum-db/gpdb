@@ -2,7 +2,7 @@ import imp
 import os
 import sys
 
-from mock import Mock, patch
+from mock import Mock, patch, call
 
 from gppylib.gparray import Segment, GpArray
 from gppylib.operations.startSegments import StartSegmentsResult
@@ -129,6 +129,55 @@ class GpStart(GpTestCase):
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 1)
         self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with master-only startup', 'N')
         self.assertEqual(return_code, 4)
+
+    def test_option_master_restricted_success_with_auto_accept(self):
+        sys.argv = ["gpstart", "-m", "-R", "-a"]
+        self.mock_userinput.ask_yesno.return_value = True
+        self.subject.unix.PgPortIsActive.local.return_value = False
+        self.mock_os_path_exists.side_effect = os_exists_check
+        self.mock_pgconf.readfile.return_value.int.return_value = 99  # mock the port value
+
+        gpstart = self.setup_gpstart()
+        gpstart.master_datadir = "/data/master"
+
+        return_code = gpstart.run()
+
+        expected_args = call('master in utility mode with restricted set to True', gpstart.master_datadir,
+                             99, None, wrapper=None, wrapper_args=None,
+                             specialMode=None, restrictedMode=True, timeout=600, utilityMode=True,
+                             max_connections=99)
+
+        self.assertEqual([expected_args],
+                         self.subject.gp.MasterStart.call_args_list)  # assert that the MasterStart function was called with the right arguments
+        self.assertEqual(self.mock_userinput.ask_yesno.call_count, 0)
+        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
+        self.subject.logger.info.assert_any_call('Master Started...')
+        self.assertEqual(return_code, 0)
+
+    def test_option_master_restricted_success_without_auto_accept(self):
+        sys.argv = ["gpstart", "-m", "-R"]
+        self.mock_userinput.ask_yesno.return_value = True
+        self.subject.unix.PgPortIsActive.local.return_value = False
+        self.mock_os_path_exists.side_effect = os_exists_check
+        self.mock_pgconf.readfile.return_value.int.return_value = 99  # mock the port value
+
+        gpstart = self.setup_gpstart()
+        gpstart.master_datadir = "/data/master"
+
+        return_code = gpstart.run()
+
+        expected_args = call('master in utility mode with restricted set to True', gpstart.master_datadir,
+                             99, None, wrapper=None, wrapper_args=None,
+                             specialMode=None, restrictedMode=True, timeout=600, utilityMode=True,
+                             max_connections=99)
+
+        self.assertEqual([expected_args],
+                         self.subject.gp.MasterStart.call_args_list)  # assert that the MasterStart function was called with the right arguments
+        self.assertEqual(self.mock_userinput.ask_yesno.call_count, 1)
+        self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with master-only startup', 'N')
+        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
+        self.subject.logger.info.assert_any_call('Master Started...')
+        self.assertEqual(return_code, 0)
 
     def test_gpstart_success_without_auto_accept(self):
         self.mock_userinput.ask_yesno.return_value = True

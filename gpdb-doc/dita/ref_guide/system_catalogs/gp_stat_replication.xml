@@ -9,7 +9,7 @@
         <codeph>walsender</codeph> process that is used for Greenplum Database Write-Ahead Logging
       (WAL) replication when master or segment mirroring is enabled.</p>
     <table id="op164584">
-      <title>gp_catalog.gp_stat_replication</title>
+      <title>pg_catalog.gp_stat_replication</title>
       <tgroup cols="4">
         <colspec colnum="1" colname="col1" colwidth="131pt"/>
         <colspec colnum="2" colname="col2" colwidth="100pt"/>
@@ -80,6 +80,12 @@
             <entry colname="col2">timestamp </entry>
             <entry colname="col3"/>
             <entry colname="col4">Operation start timestamp. </entry>
+          </row>
+          <row>
+            <entry><codeph>backend_xmin</codeph></entry>
+            <entry>xid</entry>
+            <entry/>
+            <entry>The current backend's <codeph>xmin</codeph> horizon.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>state</codeph></entry>

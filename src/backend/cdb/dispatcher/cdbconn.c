@@ -129,12 +129,15 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 					   const char *options,
 					   const char *diff_options)
 {
-#define MAX_KEYWORDS 11
+#define MAX_KEYWORDS 15
 #define MAX_INT_STRING_LEN 20
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
 	const char *keywords[MAX_KEYWORDS];
 	const char *values[MAX_KEYWORDS];
 	char		portstr[MAX_INT_STRING_LEN];
+	char		keepalivesIdleStr[MAX_INT_STRING_LEN];
+	char		keepalivesCountStr[MAX_INT_STRING_LEN];
+	char		keepalivesIntervalStr[MAX_INT_STRING_LEN];
 	int			nkeywords = 0;
 
 	keywords[nkeywords] = "gpqeid";
@@ -235,6 +238,34 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	}
 	nkeywords++;
 
+	/*
+	 * Set QD-QE dispatch keepalive settings.
+	 * We only set the value if it is non-zero as setsockopt() with option_value=0 results in:
+	 * 'Invalid argument' on Linux based systems
+	 */
+	if (gp_dispatch_keepalives_idle > 0)
+	{
+		keywords[nkeywords] = "keepalives_idle";
+		snprintf(keepalivesIdleStr, sizeof(keepalivesIdleStr), "%d", gp_dispatch_keepalives_idle);
+		values[nkeywords] = keepalivesIdleStr;
+		nkeywords++;
+	}
+
+	if (gp_dispatch_keepalives_interval > 0)
+	{
+		keywords[nkeywords] = "keepalives_interval";
+		snprintf(keepalivesIntervalStr, sizeof(keepalivesIntervalStr), "%d", gp_dispatch_keepalives_interval);
+		values[nkeywords] = keepalivesIntervalStr;
+		nkeywords++;
+	}
+
+	if (gp_dispatch_keepalives_count > 0)
+	{
+		keywords[nkeywords] = "keepalives_count";
+		snprintf(keepalivesCountStr, sizeof(keepalivesCountStr), "%d", gp_dispatch_keepalives_count);
+		values[nkeywords] = keepalivesCountStr;
+		nkeywords++;
+	}
 	keywords[nkeywords] = NULL;
 	values[nkeywords] = NULL;
 

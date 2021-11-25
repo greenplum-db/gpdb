@@ -18,6 +18,8 @@
                        'use_concourse_cluster': true},
                       {'name': 'gpinitstandby',
                        'use_concourse_cluster': false},
+                      {'name': 'gp_bash_functions.sh',
+                       'use_concourse_cluster': false},
                       {'name': 'gpcheckcat',
                        'use_concourse_cluster': true},
                       { 'name': 'gpcheckperf',
@@ -1843,7 +1845,7 @@ jobs:
       terraform_source: ccp_src/google/
       vars:
         PLATFORM: centos7
-        boot_disk_image: data-gp-toolsmiths/gpdb-prod-centos-7-fips
+        boot_disk_image: data-gp-releng/gpdb-prod-centos-7-fips
         instance_type: n1-standard-2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml

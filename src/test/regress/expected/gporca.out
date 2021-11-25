@@ -11371,53 +11371,66 @@ INSERT INTO onetimefilter1 SELECT i, i FROM generate_series(1,10)i;
 INSERT INTO onetimefilter2 SELECT i, i FROM generate_series(1,10)i;
 ANALYZE onetimefilter1;
 ANALYZE onetimefilter2;
-EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
-                                                               QUERY PLAN                                                               
-----------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=3.43..12.31 rows=10 width=12)
-   ->  Hash Join  (cost=3.43..12.31 rows=4 width=12)
+EXPLAIN (COSTS OFF) WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice9; segments: 3)
+   ->  Hash Join
          Hash Cond: (f1.b = f2.b)
-         ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..3.30 rows=4 width=8)
+         ->  Redistribute Motion 3:3  (slice7; segments: 3)
                Hash Key: f1.b
-               ->  Seq Scan on onetimefilter1 f1  (cost=0.00..3.10 rows=4 width=8)
-         ->  Hash  (cost=3.30..3.30 rows=4 width=4)
-               ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..3.30 rows=4 width=4)
+               ->  Seq Scan on onetimefilter1 f1
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice8; segments: 3)
                      Hash Key: f2.b
-                     ->  Seq Scan on onetimefilter2 f2  (cost=0.00..3.10 rows=4 width=4)
-         SubPlan 1  (slice6; segments: 3)
-           ->  Limit  (cost=0.00..0.04 rows=1 width=0)
-                 ->  Limit  (cost=0.00..0.02 rows=1 width=0)
-                       ->  Result  (cost=0.00..0.20 rows=4 width=0)
+                     ->  Seq Scan on onetimefilter2 f2
+         SubPlan 1  (slice9; segments: 3)
+           ->  Limit
+                 ->  Limit
+                       ->  Result
                              One-Time Filter: (f1.b = f2.b)
-                             ->  Result  (cost=6.51..6.77 rows=4 width=8)
-                                   ->  Materialize  (cost=6.51..6.77 rows=4 width=8)
-                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
-                                               ->  Shared Scan (share slice:id 1:0)  (cost=6.51..6.72 rows=4 width=8)
-                                                     ->  Materialize  (cost=3.23..6.51 rows=4 width=8)
-                                                           ->  Hash Join  (cost=3.23..6.46 rows=4 width=8)
-                                                                 Hash Cond: (onetimefilter1.a = onetimefilter2.a)
-                                                                 ->  Seq Scan on onetimefilter1  (cost=0.00..3.10 rows=4 width=8)
-                                                                 ->  Hash  (cost=3.10..3.10 rows=4 width=4)
-                                                                       ->  Seq Scan on onetimefilter2  (cost=0.00..3.10 rows=4 width=4)
-         SubPlan 2  (slice6; segments: 3)
-           ->  Result  (cost=0.00..0.28 rows=1 width=0)
+                             ->  Hash Join
+                                   Hash Cond: (onetimefilter1.a = onetimefilter2.a)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                     ->  Seq Scan on onetimefilter1
+                                   ->  Hash
+                                         ->  Result
+                                               ->  Materialize
+                                                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                           ->  Seq Scan on onetimefilter2
+         SubPlan 2  (slice9; segments: 3)
+           ->  Result
                  One-Time Filter: (f1.a = 2)
-                 ->  Subquery Scan on abc  (cost=0.00..0.28 rows=1 width=0)
-                       Filter: ((f1.a)::double precision = random())
-                       ->  Result  (cost=6.51..6.77 rows=4 width=8)
-                             ->  Materialize  (cost=6.51..6.77 rows=4 width=8)
-                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
-                                         ->  Shared Scan (share slice:id 2:0)  (cost=6.51..6.72 rows=4 width=8)
-         SubPlan 3  (slice6; segments: 3)
-           ->  Subquery Scan on abc_1  (cost=0.00..0.22 rows=1 width=4)
-                 Filter: (abc_1.b = f1.b)
-                 ->  Result  (cost=6.51..6.77 rows=4 width=8)
-                       ->  Materialize  (cost=6.51..6.77 rows=4 width=8)
-                             ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
-                                   ->  Shared Scan (share slice:id 3:0)  (cost=6.51..6.72 rows=4 width=8)
- Planning time: 0.276 ms
+                 ->  Hash Join
+                       Hash Cond: (onetimefilter1_1.a = onetimefilter2_1.a)
+                       Join Filter: ((f1.a)::double precision = random())
+                       ->  Result
+                             ->  Materialize
+                                   ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                         ->  Seq Scan on onetimefilter1 onetimefilter1_1
+                       ->  Hash
+                             ->  Result
+                                   ->  Materialize
+                                         ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                               ->  Seq Scan on onetimefilter2 onetimefilter2_1
+         SubPlan 3  (slice9; segments: 3)
+           ->  Subquery Scan on abc
+                 ->  Hash Join
+                       Hash Cond: (onetimefilter2_2.a = onetimefilter1_2.a)
+                       ->  Result
+                             ->  Materialize
+                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                         ->  Seq Scan on onetimefilter2 onetimefilter2_2
+                       ->  Hash
+                             ->  Result
+                                   Filter: (onetimefilter1_2.b = f1.b)
+                                   ->  Materialize
+                                         ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                               ->  Seq Scan on onetimefilter1 onetimefilter1_2
  Optimizer: Postgres query optimizer
-(43 rows)
+(56 rows)
 
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
  ?column? | coalesce | b  
@@ -13445,35 +13458,32 @@ select first_id
 from material_test2
 where first_id in (select first_id from mat_w)
 and first_id in (select first_id from mat_w);
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.36..5.01 rows=39 width=4)
    Output: material_test2.first_id
    ->  Seq Scan on orca.material_test2  (cost=0.36..5.01 rows=13 width=4)
          Output: material_test2.first_id
          Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2))
          SubPlan 1  (slice3; segments: 3)
-           ->  Materialize  (cost=4.69..4.94 rows=3 width=4)
-                 Output: share0_ref1.first_id
-                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=4.69..4.90 rows=3 width=4)
-                       Output: share0_ref1.first_id
-                       ->  Shared Scan (share slice:id 1:0)  (cost=4.69..4.90 rows=3 width=4)
-                             Output: share0_ref1.first_id
-                             ->  Materialize  (cost=0.00..4.69 rows=3 width=4)
-                                   Output: material_test.first_id
-                                   ->  Seq Scan on orca.material_test  (cost=0.00..4.65 rows=3 width=4)
-                                         Output: material_test.first_id
-                                         Filter: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
+           ->  Materialize  (cost=0.00..4.69 rows=3 width=4)
+                 Output: material_test.first_id
+                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.65 rows=3 width=4)
+                       Output: material_test.first_id
+                       ->  Seq Scan on orca.material_test  (cost=0.00..4.65 rows=3 width=4)
+                             Output: material_test.first_id
+                             Filter: (material_test.second_id = ANY ('{1,2,3,4}'::integer[]))
          SubPlan 2  (slice3; segments: 3)
-           ->  Materialize  (cost=4.69..4.94 rows=3 width=4)
-                 Output: share0_ref2.first_id
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=4.69..4.90 rows=3 width=4)
-                       Output: share0_ref2.first_id
-                       ->  Shared Scan (share slice:id 2:0)  (cost=4.69..4.90 rows=3 width=4)
-                             Output: share0_ref2.first_id
+           ->  Materialize  (cost=0.00..4.69 rows=3 width=4)
+                 Output: material_test_1.first_id
+                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..4.65 rows=3 width=4)
+                       Output: material_test_1.first_id
+                       ->  Seq Scan on orca.material_test material_test_1  (cost=0.00..4.65 rows=3 width=4)
+                             Output: material_test_1.first_id
+                             Filter: (material_test_1.second_id = ANY ('{1,2,3,4}'::integer[]))
  Optimizer: Postgres query optimizer
  Settings: enable_seqscan=on, optimizer=off
-(26 rows)
+(23 rows)
 
 with mat_w as (
 select first_id
@@ -13768,6 +13778,215 @@ WITH cte AS (SELECT one(min(a)) from tone) SELECT 1 FROM tone, cte c1;
         1
 (10 rows)
 
+--- if the inner child is already distributed on the join column, orca should
+--- not place any motion on the inner child
+SET optimizer_enable_hashjoin=off;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (t1.a = t2.a)
+         ->  Seq Scan on tone t1
+         ->  Hash
+               ->  Seq Scan on tone t2
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+ a  | b  | c  | a  | b  | c  
+----+----+----+----+----+----
+  5 |  5 |  5 |  5 |  5 |  5
+  6 |  6 |  6 |  6 |  6 |  6
+  9 |  9 |  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10 | 10 | 10
+  2 |  2 |  2 |  2 |  2 |  2
+  3 |  3 |  3 |  3 |  3 |  3
+  4 |  4 |  4 |  4 |  4 |  4
+  7 |  7 |  7 |  7 |  7 |  7
+  8 |  8 |  8 |  8 |  8 |  8
+  1 |  1 |  1 |  1 |  1 |  1
+(10 rows)
+
+--- if the inner child is not distributed on the join column, orca should 
+--- redistribute the inner child
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: (t2.b = t1.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: t2.b
+               ->  Seq Scan on tone t2
+         ->  Hash
+               ->  Seq Scan on tone t1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+ a  | b  | c  | a  | b  | c  
+----+----+----+----+----+----
+  5 |  5 |  5 |  5 |  5 |  5
+  6 |  6 |  6 |  6 |  6 |  6
+  9 |  9 |  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10 | 10 | 10
+  2 |  2 |  2 |  2 |  2 |  2
+  3 |  3 |  3 |  3 |  3 |  3
+  4 |  4 |  4 |  4 |  4 |  4
+  7 |  7 |  7 |  7 |  7 |  7
+  8 |  8 |  8 |  8 |  8 |  8
+  1 |  1 |  1 |  1 |  1 |  1
+(10 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN (SELECT 1+t2.b as b from tone t2) t2 ON t1.a = t2.b;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: ((1 + t2.b) = t1.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: (1 + t2.b)
+               ->  Seq Scan on tone t2
+         ->  Hash
+               ->  Seq Scan on tone t1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN (SELECT 1+t2.b as b from tone t2) t2 ON t1.a = t2.b;
+ a  | b  | c  | b  
+----+----+----+----
+  2 |  2 |  2 |  2
+  7 |  7 |  7 |  7
+  3 |  3 |  3 |  3
+  4 |  4 |  4 |  4
+  8 |  8 |  8 |  8
+  6 |  6 |  6 |  6
+ 10 | 10 | 10 | 10
+  5 |  5 |  5 |  5
+  9 |  9 |  9 |  9
+  1 |  1 |  1 |   
+(10 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b+t2.a+1;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: (((t2.b + t2.a) + 1) = t1.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: ((t2.b + t2.a) + 1)
+               ->  Seq Scan on tone t2
+         ->  Hash
+               ->  Seq Scan on tone t1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b+t2.a+1;
+ a  | b  | c  | a | b | c 
+----+----+----+---+---+---
+  5 |  5 |  5 | 2 | 2 | 2
+  9 |  9 |  9 | 4 | 4 | 4
+  6 |  6 |  6 |   |   |  
+ 10 | 10 | 10 |   |   |  
+  1 |  1 |  1 |   |   |  
+  7 |  7 |  7 | 3 | 3 | 3
+  3 |  3 |  3 | 1 | 1 | 1
+  8 |  8 |  8 |   |   |  
+  4 |  4 |  4 |   |   |  
+  2 |  2 |  2 |   |   |  
+(10 rows)
+
+--- send a broadcast request to the inner child where the inner side clause contains
+--- columns from the outer side
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b-t1.a;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop Left Join
+         Join Filter: (t1.a = (t2.b - t1.a))
+         ->  Seq Scan on tone t1
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Seq Scan on tone t2
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b-t1.a;
+ a  | b  | c  | a  | b  | c  
+----+----+----+----+----+----
+  1 |  1 |  1 |  2 |  2 |  2
+  5 |  5 |  5 | 10 | 10 | 10
+  6 |  6 |  6 |    |    |   
+  9 |  9 |  9 |    |    |   
+ 10 | 10 | 10 |    |    |   
+  2 |  2 |  2 |  4 |  4 |  4
+  3 |  3 |  3 |  6 |  6 |  6
+  4 |  4 |  4 |  8 |  8 |  8
+  7 |  7 |  7 |    |    |   
+  8 |  8 |  8 |    |    |   
+(10 rows)
+
+--- orca should broadcast the inner child if the guc is set off
+SET optimizer_enable_redistribute_nestloop_loj_inner_child=off;
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: (t2.b = t1.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: t2.b
+               ->  Seq Scan on tone t2
+         ->  Hash
+               ->  Seq Scan on tone t1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.b;
+ a  | b  | c  | a  | b  | c  
+----+----+----+----+----+----
+  1 |  1 |  1 |  1 |  1 |  1
+  2 |  2 |  2 |  2 |  2 |  2
+  3 |  3 |  3 |  3 |  3 |  3
+  4 |  4 |  4 |  4 |  4 |  4
+  7 |  7 |  7 |  7 |  7 |  7
+  8 |  8 |  8 |  8 |  8 |  8
+  5 |  5 |  5 |  5 |  5 |  5
+  6 |  6 |  6 |  6 |  6 |  6
+  9 |  9 |  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10 | 10 | 10
+(10 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (t1.a = t2.a)
+         ->  Seq Scan on tone t1
+         ->  Hash
+               ->  Seq Scan on tone t2
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
+ a  | b  | c  | a  | b  | c  
+----+----+----+----+----+----
+  5 |  5 |  5 |  5 |  5 |  5
+  6 |  6 |  6 |  6 |  6 |  6
+  9 |  9 |  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10 | 10 | 10
+  2 |  2 |  2 |  2 |  2 |  2
+  3 |  3 |  3 |  3 |  3 |  3
+  4 |  4 |  4 |  4 |  4 |  4
+  7 |  7 |  7 |  7 |  7 |  7
+  8 |  8 |  8 |  8 |  8 |  8
+  1 |  1 |  1 |  1 |  1 |  1
+(10 rows)
+
+RESET optimizer_enable_redistribute_nestloop_loj_inner_child;
+RESET optimizer_enable_hashjoin;
 --- optimizer_xform_bind_threshold should limit the search space and quickly
 --- generate a plan (<100ms, but if this GUC is not set it will take minutes to
 --- optimize)
@@ -13835,7 +14054,7 @@ select count(*) from (select trim( case when a!='abc' then  (regexp_split_to_tab
 (1 row)
 
 select count(regexp_split_to_table((a)::text, ','::text)) from nested_srf;
-ERROR:  set-valued function called in context that cannot accept a set  (seg2 slice1 127.0.0.1:6004 pid=82558)
+ERROR:  set-valued function called in context that cannot accept a set  (seg2 slice1 127.0.0.1:6004 pid=17357)
 -- This produces wrong results on planner
 select count(*) from (select trim(coalesce(regexp_split_to_table((a)::text, ','::text),'')) from nested_srf)a;
  count 
@@ -13857,3 +14076,108 @@ select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) f
 (1 row)
 
 reset optimizer_trace_fallback;
+-- start_ignore
+DROP SCHEMA orca CASCADE;
+NOTICE:  drop cascades to 167 other objects
+DETAIL:  drop cascades to table bar1
+drop cascades to table bar2
+drop cascades to table r
+drop cascades to table s
+drop cascades to table m
+drop cascades to table m1
+drop cascades to table orca_w1
+drop cascades to table orca_w2
+drop cascades to table orca_w3
+drop cascades to table rcte
+drop cascades to table onek
+drop cascades to table pp
+drop cascades to table multilevel_p
+drop cascades to table t
+drop cascades to table t_date
+drop cascades to table t_text
+drop cascades to type employee
+drop cascades to function emp_equal(employee,employee)
+drop cascades to operator =(employee,employee)
+drop cascades to operator family employee_op_class for access method btree
+drop cascades to table t_employee
+drop cascades to table t_ceeval_ints
+drop cascades to function csq_f(integer)
+drop cascades to table csq_r
+drop cascades to table fooh1
+drop cascades to table fooh2
+drop cascades to append only table t77
+drop cascades to table prod9
+drop cascades to table toanalyze
+drop cascades to table ur
+drop cascades to table us
+drop cascades to table ut
+drop cascades to table uu
+drop cascades to table twf1
+drop cascades to table twf2
+drop cascades to table tab1
+drop cascades to table tab2
+drop cascades to function sum_sfunc(anyelement,anyelement)
+drop cascades to function sum_combinefunc(anyelement,anyelement)
+drop cascades to function myagg1(anyelement)
+drop cascades to function sum_sfunc2(anyelement,anyelement,anyelement)
+drop cascades to function myagg2(anyelement,anyelement)
+drop cascades to function gptfp(anyarray,anyelement)
+drop cascades to function gpffp(anyarray)
+drop cascades to function myagg3(anyelement)
+drop cascades to table array_table
+drop cascades to table mpp22453
+drop cascades to table mpp22791
+drop cascades to table p1
+drop cascades to append only table tmp_verd_s_pp_provtabs_agt_0015_extract1
+drop cascades to table arrtest
+drop cascades to table foo_missing_stats
+drop cascades to table bar_missing_stats
+drop cascades to table cust
+drop cascades to table datedim
+drop cascades to function plusone(integer)
+drop cascades to table bm_test
+drop cascades to table bm_dyn_test
+drop cascades to table bm_dyn_test_onepart
+drop cascades to table bm_dyn_test_multilvl_part
+drop cascades to table my_tt_agg_opt
+drop cascades to table my_tq_agg_opt_part
+drop cascades to function plusone(numeric)
+drop cascades to table ggg
+drop cascades to table t3
+drop cascades to table index_test
+drop cascades to table btree_test
+drop cascades to table bitmap_test
+drop cascades to type rainbow
+drop cascades to table foo_ctas
+drop cascades to table input_tab1
+drop cascades to table input_tab2
+drop cascades to table tab_1
+drop cascades to table tab_2
+drop cascades to table tab_3
+drop cascades to table t_outer
+drop cascades to table t_inner
+drop cascades to table wst0
+drop cascades to table wst1
+drop cascades to table wst2
+drop cascades to table test1
+drop cascades to table t_new
+drop cascades to table x_tab
+drop cascades to table y_tab
+drop cascades to table z_tab
+drop cascades to function test_func_pg_stats()
+drop cascades to table bar
+drop cascades to type myint
+drop cascades to function myintout(myint)
+drop cascades to function myintin(cstring)
+drop cascades to function myint_int8(myint)
+drop cascades to table csq_cast_param_outer
+drop cascades to table csq_cast_param_inner
+drop cascades to function myint_numeric(myint)
+drop cascades to cast from myint to numeric
+drop cascades to table onetimefilter1
+drop cascades to table onetimefilter2
+drop cascades to table ffoo
+drop cascades to table fbar
+drop cascades to table touter
+and 67 other objects (see server log for list)
+-- end_ignore

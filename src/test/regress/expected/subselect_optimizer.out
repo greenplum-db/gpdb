@@ -820,6 +820,47 @@ where s.i < 10 and (select val.x) < 110;
   10
 (17 rows)
 
+-- another variant of that (bug #16213)
+explain (verbose, costs off)
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+                                                                                                                                                                  QUERY PLAN                                                                                                                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Append
+   ->  Result
+         Output: ((CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+         ->  Nested Loop Left Join
+               Output: (CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END)
+               Join Filter: true
+               ->  Result
+                     Output: true
+               ->  Result
+                     Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END
+                     ->  Aggregate
+                           Output: sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)), sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))
+                           ->  Result
+                                 Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
+                                 ->  Values Scan on "Values"
+                                       Output: column1
+   ->  Result
+         Output: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(19 rows)
+
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+ column1 
+---------
+ t
+ f
+(2 rows)
+
 --
 -- Check sane behavior with nested IN SubLinks
 -- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?

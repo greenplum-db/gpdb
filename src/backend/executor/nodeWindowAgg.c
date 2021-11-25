@@ -1256,10 +1256,7 @@ eval_windowfunction(WindowAggState *winstate, WindowStatePerFunc perfuncstate,
 	// GPDB_84_MERGE_FIXME: In upstream, we know that the allocation
 	// was palloc in some memory context, but in GPDB, that is not true.
 	// So we have to use MemoryContextContainsGenericAllocation instead of
-	// plain MemoryContextContains(). This is not actually 100% safe, there is
-	// a small chance MemoryContextContainsGenericAllocation() incorrectly
-	// says that the chunk is in the context, which could lead to a crash.
-	// nodeAgg.c has the same problem.
+	// plain MemoryContextContains().
 	if (!perfuncstate->resulttypeByVal && !fcinfo.isnull &&
 		!MemoryContextContainsGenericAllocation(CurrentMemoryContext,
 							   DatumGetPointer(*result))

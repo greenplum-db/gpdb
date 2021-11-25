@@ -829,11 +829,15 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 			return;
 
 		if (!root->disallow_unique_rowid_path)
+		{
 			path = (Path *) create_unique_rowid_path(root,
 													 parent_rel,
 													 (Path *) new_path,
 													 new_path->outerjoinpath->parent->relids,
 													 required_outer);
+		}
+		else
+			return;
 	}
 	else if (orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
 	{
@@ -844,11 +848,15 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 			return;
 
 		if (!root->disallow_unique_rowid_path)
+		{
 			path = (Path *) create_unique_rowid_path(root,
 													 parent_rel,
 													 (Path *) new_path,
 													 new_path->innerjoinpath->parent->relids,
 													 required_outer);
+		}
+		else
+			return;
 	}
 
 	add_path(parent_rel, path);

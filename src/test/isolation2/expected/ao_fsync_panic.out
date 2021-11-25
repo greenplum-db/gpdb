@@ -93,17 +93,17 @@ INSERT 100
 -- Note, if the TRUNCATE operation interleaves between the END_OF_RECOVERY and the
 -- CHECKPOINT record, PANIC might happen due to a fsync request being queued for an unlinked AO file,
 -- is not forgotten in this case.
-2: SELECT gp_inject_fault('checkpoint', 'sleep', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
+2: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
-2: SELECT gp_wait_until_triggered_fault('checkpoint', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
+2: SELECT gp_wait_until_triggered_fault('checkpoint_after_redo_calculated', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
 (1 row)
-2: SELECT gp_inject_fault('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
+2: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_inject_fault 
 -----------------
  Success:        
@@ -151,7 +151,7 @@ SELECT wait_until_all_segments_synchronized();
 -- cleanup
 DROP TABLE ao_fsync_panic_tbl;
 DROP
-!\retcode gpconfig -r fsync --skipvalidation;
+!\retcode gpconfig -c fsync -v off --skipvalidation;
 -- start_ignore
 
 -- end_ignore

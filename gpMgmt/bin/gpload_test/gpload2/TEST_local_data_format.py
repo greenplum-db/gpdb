@@ -326,3 +326,12 @@ def test_252_gpload_eol_LF_in_quote_csv():
     runfile(file)
     copy_data('external_file_252.csv','data_file.csv')
     write_config_file(reuse_tables=True,format='csv',file='data_file.csv',table='texttable2')
+
+@pytest.mark.order(253)
+@prepare_before_test(num=253)
+def test_253_gpload_custom_format():
+    "253 gpload loads text file without customer format"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_253.txt','data_file.txt')
+    write_config_file(reuse_tables=True,log_errors=True,error_limit=2,sql=True,before='set dataflow.prefer_custom_text = false;',file='data_file.txt',table='texttable2')

@@ -157,7 +157,7 @@
         <p>To enable PostGIS support, install the Greenplum PostGIS extension package into the
           Greenplum Database system, and then use the <codeph>CREATE EXTENSION</codeph> command to
           enable PostGIS support for an individual database.</p>
-        <section>
+        <section id="section_dlv_xv1_rqb">
           <title>Installing the Greenplum PostGIS Extension Package</title>
           <p>Install Greenplum PostGIS extension package with the <codeph>gppkg</codeph> utility.
             For example, this command installs the package for RHEL 7.
@@ -290,7 +290,7 @@ DROP EXTENSION IF EXISTS fuzzystrmatch;</codeblock></li>
                 drop the PostGIS schema if required.</p></li>
           </ol>
         </section>
-        <section>
+        <section id="section_wvr_wv1_rqb">
           <title>Uninstalling the Greenplum PostGIS Extension Package</title>
           <p>After PostGIS support has been removed from all databases in the Greenplum Database
             system, you can remove the PostGIS extension package. For example, this
@@ -376,9 +376,9 @@ SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
         <title>Building a Spatial Index</title>
         <body>
           <p>You can build a GiST index as follows:</p>
-          <codeblock>CREATE INDEX <i>indexname</i>
-  ON <i>tablename</i>
-  USING GIST ( <i>geometryfield</i> );</codeblock>
+          <codeblock>CREATE INDEX indexname
+  ON tablename
+  USING GIST ( geometryfield );</codeblock>
         </body>
       </topic>
     </topic>

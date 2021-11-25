@@ -419,6 +419,8 @@ sisc_lockname(char *p, int size, int share_id, const char* name)
 			 "gpcdb2.sisc_%d_%d_%d_%d_%s",
 			 GpIdentity.segindex, gp_session_id, gp_command_count, share_id, name);
 
+	/* Ensure that temp tablespaces are set up to build temporary path. */
+	PrepareTempTablespaces();
 	path = GetTempFilePath(filename, true);
 	if (strlen(path) >= size)
 		elog(ERROR, "path to temporary file too long: %s", path);

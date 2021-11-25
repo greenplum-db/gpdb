@@ -2,7 +2,7 @@ subdir=src/backend/utils/mmgr
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=aset memaccounting vmem_tracker redzone_handler runaway_cleaner idle_tracker event_version memprot
+TARGETS=aset memaccounting vmem_tracker redzone_handler runaway_cleaner idle_tracker event_version memprot mcxt
 
 include $(top_builddir)/src/backend/mock.mk
 

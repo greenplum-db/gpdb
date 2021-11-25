@@ -15,108 +15,47 @@
           <stentry>
             <ul id="ul_vsx_zwn_r4">
               <li>
-                <codeph>
-                  <xref href="../utility_guide/ref/gpactivatestandby.xml" type="topic"
-                    format="dita" scope="peer">gpactivatestandby</xref>
-                </codeph>
+                <xref href="../utility_guide/ref/gpactivatestandby.xml" type="topic" format="dita"
+                  scope="peer">gpactivatestandby</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpaddmirrors.xml" type="topic"
-                      format="dita" scope="peer">gpaddmirrors</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpaddmirrors.xml" type="topic" format="dita"
+                  scope="peer">gpaddmirrors</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpcheckperf.xml" type="topic"
-                      format="dita" scope="peer">gpcheckperf</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpcheckperf.xml" type="topic" format="dita"
+                  scope="peer">gpcheckperf</xref>
               </li>
-              <li otherprops="pivotal">
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpcopy.xml" type="topic"
-                      format="dita" scope="peer">gpcopy</xref>
-                  </codeph><!--Pivotal-->
-                </p>
+              <li><xref href="../utility_guide/ref/gpcopy.xml" type="topic" format="dita"
+                  scope="peer">gpcopy</xref> (Tanzu Greenplum only) </li>
+              <li><xref href="../utility_guide/ref/gpdeletesystem.xml" type="topic" format="dita"
+                  scope="peer">gpdeletesystem</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpdeletesystem.xml" type="topic"
-                      format="dita" scope="peer">gpdeletesystem</xref>
-                  </codeph>
-                </p>
-              </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpinitstandby.xml" type="topic"
-                      format="dita" scope="peer">gpinitstandby</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpinitstandby.xml" type="topic" format="dita"
+                  scope="peer">gpinitstandby</xref>
               </li>
             </ul>
           </stentry>
           <stentry>
             <ul id="ul_zy5_fxn_r4">
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic"
-                      format="dita" scope="peer">gpinitsystem</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" format="dita"
+                  scope="peer">gpinitsystem</xref>
               </li>
-              <li>
-                <codeph>
-                  <xref href="../utility_guide/ref/gppkg.xml" type="topic" format="dita"
-                    scope="peer">gppkg</xref>
-                </codeph>
+              <li><xref href="../utility_guide/ref/gppkg.xml" type="topic" format="dita"
+                  scope="peer">gppkg</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpscp.xml" type="topic"
-                      format="dita" scope="peer">gpscp</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpscp.xml" type="topic" format="dita"
+                  scope="peer">gpscp</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpssh.xml" type="topic"
-                      format="dita" scope="peer">gpssh</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpssh.xml" type="topic" format="dita"
+                  scope="peer">gpssh</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpssh-exkeys.xml" type="topic"
-                      format="dita" scope="peer">gpssh-exkeys</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpssh-exkeys.xml" type="topic" format="dita"
+                  scope="peer">gpssh-exkeys</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpstart.xml" type="topic"
-                      format="dita" scope="peer">gpstart</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpstart.xml" type="topic" format="dita"
+                  scope="peer">gpstart</xref>
               </li>
-              <li>
-                <p>
-                  <codeph>
-                    <xref href="../utility_guide/ref/gpstop.xml" type="topic"
-                      format="dita" scope="peer">gpstop</xref>
-                  </codeph>
-                </p>
+              <li><xref href="../utility_guide/ref/gpstop.xml" type="topic" format="dita"
+                  scope="peer">gpstop</xref>
               </li>
             </ul>
           </stentry>

@@ -29,11 +29,13 @@ standard_initdb() {
 	../../src/test/regress/pg_regress --config-auth "$PGDATA"
 }
 
-# Establish how the server will listen for connections
-testhost=`uname -s`
+# What flavor of host are we on?
+# Treat MINGW* (msys1) and MSYS* (msys2) the same.
+testhost=`uname -s | sed s/^MSYS/MINGW/`
 
+# Establish how the server will listen for connections
 case $testhost in
-	MINGW*|MSYS*)
+	MINGW*)
 		LISTEN_ADDRESSES="localhost"
 		PGHOST=localhost
 		;;
@@ -214,8 +216,11 @@ pg_upgrade $PG_UPGRADE_OPTS -d "${PGDATA}.old" -D "${PGDATA}" -b "$oldbindir" -B
 
 pg_ctl start -l "$logdir/postmaster2.log" -o "$POSTMASTER_OPTS" -w
 
+# In the commands below we inhibit msys2 from converting the "/c" switch
+# in "cmd /c" to a file system path.
+
 case $testhost in
-	MINGW*)	cmd /c analyze_new_cluster.bat ;;
+	MINGW*)	MSYS2_ARG_CONV_EXCL=/c cmd /c analyze_new_cluster.bat ;;
 	*)		sh ./analyze_new_cluster.sh ;;
 esac
 
@@ -228,7 +233,7 @@ if [ -n "$pg_dumpall2_status" ]; then
 fi
 
 case $testhost in
-	MINGW*)	cmd /c delete_old_cluster.bat ;;
+	MINGW*)	MSYS2_ARG_CONV_EXCL=/c cmd /c delete_old_cluster.bat ;;
 	*)	    sh ./delete_old_cluster.sh ;;
 esac
 

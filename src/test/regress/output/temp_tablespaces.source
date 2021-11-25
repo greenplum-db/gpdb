@@ -217,6 +217,9 @@ select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having
  10000
 (1 row)
 
+--start_ignore
+-- ignore the output, we only need the following query to spill on Sort
+--end_ignore
 set optimizer = off;
 set statement_mem='3MB';
 select count(*) from (with ctesisc as
@@ -262,6 +265,22 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 a
 (3 rows)
 
 select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_SIRW_') > 0 as "exist";
+ exist 
+-------
+ t
+ t
+ t
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
+ exist 
+-------
+ f
+ f
+ f
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_Sort_') > 0 as "exist";
  exist 
 -------
  t
@@ -388,6 +407,9 @@ select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having
  10000
 (1 row)
 
+--start_ignore
+-- ignore the output, we only need the following query to spill on Sort
+--end_ignore
 set optimizer = off;
 set statement_mem='3MB';
 select count(*) from (with ctesisc as
@@ -426,6 +448,14 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 a
 
 -- temp files in hash aggregate should reside in the temp tablespace.
 select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate_') > 0 as "exist";
+ exist 
+-------
+ t
+ t
+ t
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
  exist 
 -------
  t

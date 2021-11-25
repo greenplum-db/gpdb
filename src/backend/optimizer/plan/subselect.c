@@ -598,16 +598,22 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
+	{
 		config->is_under_subplan = true;
 
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		config->gp_cte_sharing = IsSubqueryCorrelated(subquery) ||
-				!(subLinkType == ROWCOMPARE_SUBLINK ||
-				 subLinkType == ARRAY_SUBLINK ||
-				 subLinkType == EXPR_SUBLINK ||
-				 subLinkType == EXISTS_SUBLINK);
+		/*
+		 * Disable CTE sharing in subplan.
+		 *
+		 * fixup_subplans() copys duplicate subplan (subplan with same
+		 * plan_id), but doesn't copy the subroot.
+		 * If enable cte sharing here, it leads to mismatch of the length
+		 * of subplans and subroots. And apply_shareinput_xslice() cannot
+		 * make it correct when shared scan is in subplan, then an assert
+		 * (or panic) error will happen in init_tuplestore_state().
+		 *
+		 * See github issue: https://github.com/greenplum-db/gpdb/issues/12701
+		 */
+		config->gp_cte_sharing = false;
 	}
 	/*
 	 * Strictly speaking, the order of rows in a subquery doesn't matter.

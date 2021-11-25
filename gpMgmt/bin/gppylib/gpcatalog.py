@@ -306,6 +306,11 @@ class GPCatalog():
         self._tables['pg_class']._setKnownDifferences(
             "relfilenode relpages reltuples relhasindex relhaspkey relowner relfrozenxid relminmxid relallvisible")
 
+        # pg_extension:
+        #   - postgis has extra entry for extconfig and extcondition column
+        #   - there will not be any problem if extension's catalog data is inconsistent
+        self._tables['pg_extension']._setKnownDifferences("extconfig extcondition")
+
         # pg_type: typowner has its own checks:
         #       => may want to separate out "owner" columns like acl and oid
         self._tables['pg_type']._setKnownDifferences("typowner")
@@ -347,13 +352,13 @@ class GPCatalog():
         # indcheckxmin column related to HOT feature in pg_index is calculated
         # independently for master and segment based on individual nodes
         # transaction state, hence it can be different so skip it from checks.
-        self._tables['pg_index']._setKnownDifferences("indpred, indcheckxmin")
+        self._tables['pg_index']._setKnownDifferences("indpred indcheckxmin")
 
         # This section should have exceptions for tables for which OIDs are not
         # synchronized between master and segments, refer function
         # RelationNeedsSynchronizedOIDs() in catalog.c
-        self._tables['pg_amop']._setKnownDifferences("oid, amopopr")
-        self._tables['pg_amproc']._setKnownDifferences("oid");
+        self._tables['pg_amop']._setKnownDifferences("oid amopopr")
+        self._tables['pg_amproc']._setKnownDifferences("oid")
 
     def _validate(self):
         """

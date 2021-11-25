@@ -1,0 +1,87 @@
+-- start_matchignore
+-- m/.*gpconfig.*completed successfully with parameters.*/
+-- m/waiting for server to shut down.* done/
+-- m/waiting for server to start.* done/
+-- end_matchignore
+-- Setting up test functions to acquire keepalive parameters from the cdbgang
+-- QD/QE libpq connection TCP sockets. Store the results in a table to diff
+-- later. We need to call the C UDF from the plpython UDF to be able to store
+-- the C UDF results because CTAS doesn't work for master only functions.
+CREATE OR REPLACE FUNCTION gp_keepalives_check(
+    OUT qe_id int2, OUT is_writer bool,
+    OUT keepalives_enabled bool,
+    OUT keepalives_interval int,
+    OUT keepalives_count int,
+    OUT keepalives_idle int)
+RETURNS SETOF record AS '@abs_srcdir@/regress.so',
+'gp_keepalives_check' LANGUAGE C VOLATILE EXECUTE ON MASTER;
+CREATE OR REPLACE LANGUAGE plpythonu;
+CREATE OR REPLACE FUNCTION save_keepalives_data(result_table text) RETURNS void AS $$
+    results = plpy.execute("select * from gp_keepalives_check()")
+    for r in results:
+        stmt = "INSERT INTO %s VALUES (%s, %s, %s, %s, %s, %s)" % (result_table, r["qe_id"], \
+                                                                   r["is_writer"], r["keepalives_enabled"], \
+                                                                   r["keepalives_interval"], r["keepalives_count"], \
+                                                                   r["keepalives_idle"])
+        plpy.execute(stmt)
+$$ LANGUAGE plpythonu VOLATILE EXECUTE ON MASTER;
+-- Before we change the keepalives parameters, create the result table to start
+-- the cdbgang and to store the function call results afterwards.
+CREATE TABLE keepalives_before (qe_id int2, is_writer bool,
+    keepalives_enabled bool, keepalives_interval int,
+    keepalives_count int, keepalives_idle int) DISTRIBUTED BY (qe_id);
+SELECT save_keepalives_data('keepalives_before');
+ save_keepalives_data 
+----------------------
+ 
+(1 row)
+
+SELECT count(*) FROM keepalives_before;
+ count 
+-------
+     3
+(1 row)
+
+-- Update keepalives tuning parameters. This requires a segment restart.
+\! gpconfig -c gp_dispatch_keepalives_idle -v 32767 --masteronly
+\! gpconfig -c gp_dispatch_keepalives_count -v 127 --masteronly
+\! gpconfig -c gp_dispatch_keepalives_interval -v 32767 --masteronly
+\! pg_ctl -l /dev/null -D $MASTER_DATA_DIRECTORY restart -w -m fast;
+server stopped
+server started
+\c
+-- After the keepalives parameters have changed, create the result table to start
+-- the cdbgang and to store the function call results afterwards.
+CREATE TABLE keepalives_after (qe_id int2, is_writer bool,
+    keepalives_enabled bool, keepalives_interval int,
+    keepalives_count int, keepalives_idle int) DISTRIBUTED BY (qe_id);
+SELECT save_keepalives_data('keepalives_after');
+ save_keepalives_data 
+----------------------
+ 
+(1 row)
+
+SELECT count(*) FROM keepalives_after;
+ count 
+-------
+     3
+(1 row)
+
+-- Compare the before and after result tables. We should see that the keepalives
+-- parameters have changed to our unconventional test values.
+SELECT * FROM keepalives_after EXCEPT SELECT * FROM keepalives_before;
+ qe_id | is_writer | keepalives_enabled | keepalives_interval | keepalives_count | keepalives_idle 
+-------+-----------+--------------------+---------------------+------------------+-----------------
+     0 | t         | t                  |               32767 |              127 |           32767
+     2 | t         | t                  |               32767 |              127 |           32767
+     1 | t         | t                  |               32767 |              127 |           32767
+(3 rows)
+
+-- Reset keepalives tuning parameters. This requires a segment restart.
+\! gpconfig -r gp_dispatch_keepalives_idle
+\! gpconfig -r gp_dispatch_keepalives_count
+\! gpconfig -r gp_dispatch_keepalives_interval
+\! pg_ctl -l /dev/null -D $MASTER_DATA_DIRECTORY restart -w -m fast;
+server stopped
+server started
+\c

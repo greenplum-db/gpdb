@@ -1429,13 +1429,6 @@ CSubqueryHandler::FRemoveAnySubquery(CExpression *pexprOuter,
 #ifdef GPOS_DEBUG
 	AssertValidArguments(mp, pexprOuter, pexprSubquery, ppexprNewOuter,
 						 ppexprResidualScalar);
-	COperator *popSubqChild = (*pexprSubquery)[0]->Pop();
-	GPOS_ASSERT_IMP(
-		COperator::EopLogicalConstTableGet == popSubqChild->Eopid(),
-		0 == CLogicalConstTableGet::PopConvert(popSubqChild)
-					->Pdrgpdrgpdatum()
-					->Size() &&
-			"Constant subqueries must be unnested during preprocessing");
 #endif	// GPOS_DEBUG
 
 	CScalarSubqueryAny *pScalarSubqAny =
@@ -1600,13 +1593,6 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 #ifdef GPOS_DEBUG
 	AssertValidArguments(mp, pexprOuter, pexprSubquery, ppexprNewOuter,
 						 ppexprResidualScalar);
-	COperator *popSubqChild = (*pexprSubquery)[0]->Pop();
-	GPOS_ASSERT_IMP(
-		COperator::EopLogicalConstTableGet == popSubqChild->Eopid(),
-		0 == CLogicalConstTableGet::PopConvert(popSubqChild)
-					->Pdrgpdrgpdatum()
-					->Size() &&
-			"Constant subqueries must be unnested during preprocessing");
 #endif	// GPOS_DEBUG
 
 	if (m_fEnforceCorrelatedApply)

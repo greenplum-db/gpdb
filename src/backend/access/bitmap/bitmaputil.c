@@ -255,6 +255,11 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 	bool done = false;
 
 	result->nextTidLoc = result->numOfTids = 0;
+
+	_bitmap_catchup_to_next_tid(words, result);
+
+	Assert(words->firstTid == result->nextTid);
+
 	while (words->nwords > 0 && result->numOfTids < maxTids && !done)
 	{
 		uint8 oldScanPos = result->lastScanPos;
@@ -289,7 +294,7 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 			{
 				/* explain the fill word */
 				for (bitNo = 0; bitNo < BM_HRL_WORD_SIZE; bitNo++)
-					result->nextTids[result->numOfTids++] = ++result->nextTid;
+					result->nextTids[result->numOfTids++] = result->nextTid++;
 
 				nfillwords--;
 				/* update fill word to reflect expansion */
@@ -324,15 +329,15 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 				w = words->cwords[result->lastScanWordNo];
 				result->lastScanPos = _bitmap_find_bitset(w, oldScanPos);
 
-				/* did we fine a bit set in this word? */
+				/* did we find a bit set in this word? */
 				if (result->lastScanPos != 0)
 				{
-					result->nextTid += (result->lastScanPos - oldScanPos);
-					result->nextTids[result->numOfTids++] = result->nextTid;
+					uint64 tid = result->nextTid + result->lastScanPos -1;
+					result->nextTids[result->numOfTids++] = tid;
 				}
 				else
 				{
-					result->nextTid += BM_HRL_WORD_SIZE - oldScanPos;
+					result->nextTid += BM_HRL_WORD_SIZE;
 					/* start scanning a new word */
 					words->nwords--;
 					result->lastScanWordNo++;
@@ -340,6 +345,85 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 				}
 				oldScanPos = result->lastScanPos;
 			}
+		}
+	}
+}
+
+/*
+ * _bitmap_catchup_to_next_tid - Catch up to the nextTid we need to check
+ * from last iteration.
+ *
+ * Normally words->firstTid should equal to result->nextTid. But there
+ * are exceptions:
+ * 1: When the concurrent insert causes bitmap items from previous full page
+ * to spill over to current page in the window when we (the read transaction)
+ * had released the lock on the previous page and not locked the current page.
+ * More details see read_words in bitmapsearch.c.
+ * Related to issue: https://github.com/greenplum-db/gpdb/issues/11308
+ * 2. Or when running bitmap heap scan path on bitmap index, since we always
+ * try to read from a table block's start tid. See pull_stream.
+ */
+void
+_bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
+{
+	if (words->firstTid >= result->nextTid)
+		return;
+
+	/*
+	 * Iterate each word until catch up to the next tid to search.
+	 */
+	for(; words->nwords > 0 && words->firstTid < result->nextTid;
+		result->lastScanWordNo++)
+	{
+		if (IS_FILL_WORD(words->hwords, result->lastScanWordNo))
+		{
+			BM_HRL_WORD word = words->cwords[result->lastScanWordNo];
+			uint64	fillLength = FILL_LENGTH(word);
+
+			/*
+			 * XXX: weird, why the word marks as compresed but the word is 0?
+			 */
+			if (word == 0)
+			{
+				fillLength = 1;
+				/* Skip all empty bits, this may cause words->firstTid > result->nextTid */
+				words->firstTid += fillLength * BM_HRL_WORD_SIZE;
+				words->nwords--;
+
+				/* reset next tid to skip all empty words */
+				if (words->firstTid > result->nextTid)
+					result->nextTid = words->firstTid;
+				continue;
+			}
+			else
+			{
+				while (fillLength > 0 && words->firstTid < result->nextTid)
+				{
+					/* update fill word to reflect expansion */
+					words->cwords[result->lastScanWordNo]--;
+					words->firstTid += BM_HRL_WORD_SIZE;
+					fillLength--;
+				}
+
+				/* comsume all the fill words, try to fetch next words */
+				if (fillLength == 0)
+				{
+					words->nwords--;
+					continue;
+				}
+
+				/*
+				* Catch up the next tid to search, but there still fill words.
+				* Return current state.
+				*/
+				if (words->firstTid >= result->nextTid)
+					return;
+			}
+		}
+		else
+		{
+			words->firstTid += BM_HRL_WORD_SIZE;
+			words->nwords--;
 		}
 	}
 }
@@ -502,7 +586,7 @@ static uint64
 fast_forward(uint32 nbatches, BMBatchWords **batches, BMBatchWords *result)
 {
 	int i;
-	uint64 min_tid = ~0;
+	uint64 min_fill_len = MAX_FILL_LENGTH;
 	uint64 fast_forward_words = 0;
 
 	Assert(result != NULL);
@@ -510,7 +594,16 @@ fast_forward(uint32 nbatches, BMBatchWords **batches, BMBatchWords *result)
 
 	for (i = 0; i < nbatches; i++)
 	{
-		BM_HRL_WORD word = batches[i]->cwords[batches[i]->startNo];
+		BM_HRL_WORD word;
+
+		/*
+		 * Fast forward the read batch from a rearrage bitmap index page.
+		 * Since words->nwordsread may get set to a new value in read_words().
+		 * See bitmapsearch.c read_words for more details.
+		 */
+		_bitmap_findnextword(batches[i], batches[i]->nextread);
+
+		word = batches[i]->cwords[batches[i]->startNo];
 
 		/* if we find a matching tid in one of the batches, nothing to do */
 		if (CUR_WORD_IS_FILL(batches[i]) && GET_FILL_BIT(word) == 1)
@@ -519,14 +612,13 @@ fast_forward(uint32 nbatches, BMBatchWords **batches, BMBatchWords *result)
 			return batches[0]->nextread;
 		else if (CUR_WORD_IS_FILL(batches[i]) && GET_FILL_BIT(word) == 0)
 		{
-			uint64 batch_tid = batches[i]->firstTid +
-				(FILL_LENGTH(word) * BM_HRL_WORD_SIZE);
+			uint64 fill_len = FILL_LENGTH(word);
 
 			/* adjust down */
-			if (batch_tid < min_tid)
+			if (fill_len < min_fill_len)
 			{
-				min_tid = batch_tid;
-				fast_forward_words = FILL_LENGTH(word);
+				min_fill_len = fill_len;
+				fast_forward_words = fill_len;
 			}
 		}
 	}
@@ -572,6 +664,15 @@ _bitmap_union(BMBatchWords **batches, uint32 numBatches, BMBatchWords *result)
 
 	/* save batch->startNo for each input bitmap vector */
 	prevstarts = (uint32 *)palloc0(numBatches * sizeof(uint32));
+
+	/*
+	 * Update the real firstTid for the bachwords with unioned batches.
+	 * This is required because we may result->firstTid is set to nextTid
+	 * to fetch in _bitmap_nextbatchwords for bitmap index scan, but the
+	 * read words may not reach this position yet, the below calculation
+	 * will set it back to the real first tid of current result batch.
+	 */
+	result->firstTid = ((batches[0]->nextread - 1) * BM_HRL_WORD_SIZE) + 1;
 
 	/* 
 	 * Compute the next read offset. We fast forward compressed
@@ -786,7 +887,6 @@ _bitmap_find_bitset(BM_HRL_WORD word, uint8 lastPos)
 void
 _bitmap_begin_iterate(BMBatchWords *words, BMIterateResult *result)
 {
-	result->nextTid = words->firstTid;
 	result->lastScanPos = 0;
 	result->lastScanWordNo = words->startNo;
 	result->numOfTids = 0;

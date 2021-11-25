@@ -316,6 +316,15 @@ extern int  gp_dtx_recovery_prepared_period;
 extern int gp_gang_creation_retry_count; /* How many retries ? */
 extern int gp_gang_creation_retry_timer; /* How long between retries */
 
+/* GUCs to control TCP keepalive settings for dispatch libpq connections */
+extern int 			gp_dispatch_keepalives_idle;
+extern int			gp_dispatch_keepalives_interval;
+extern int			gp_dispatch_keepalives_count;
+
+#define MAX_GP_DISPATCH_KEEPALIVES_IDLE 32767 /* Linux MAX_TCP_KEEPIDLE */
+#define MAX_GP_DISPATCH_KEEPALIVES_INTERVAL 32767 /* Linux MAX_TCP_KEEPINTVL */
+#define MAX_GP_DISPATCH_KEEPALIVES_COUNT 127 /* Linux MAX_TCP_KEEPCNT */
+
 /*
  * Parameter Gp_max_packet_size
  *

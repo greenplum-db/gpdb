@@ -31,10 +31,10 @@
         database instances (called <i>segment instances</i> in Greenplum).</p>
       <p>Each database instance (the master and all segments) must be initialized across all of the
         hosts in the system in such a way that they can all work together as a unified DBMS.
-        Greenplum provides its own version of <codeph>initdb</codeph> called <codeph><xref
-            href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-            >gpinitsystem</xref></codeph>, which takes care of initializing the database on the
-        master and on each segment instance, and starting each instance in the correct order. </p>
+        Greenplum provides its own version of <codeph>initdb</codeph> called <xref
+          href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
+        >gpinitsystem</xref>, which takes care of initializing the database on the master and on
+        each segment instance, and starting each instance in the correct order. </p>
       <p>After the Greenplum Database database system has been initialized and started, you can then
         create and manage databases as you would in a regular PostgreSQL DBMS by connecting to the
         Greenplum master.</p>
@@ -73,12 +73,11 @@ $ source /usr/local/greenplum-db/greenplum_path.sh</codeblock></p>
     <topic id="topic4" xml:lang="en">
       <title id="jm138555">Creating the Initialization Host File</title>
       <body>
-        <p>The <codeph><xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-              >gpinitsystem</xref></codeph> utility requires a host file that contains the list of
-          addresses for each segment host. The initialization utility determines the number of
-          segment instances per host by the number host addresses listed per host times the number
-          of data directory locations specified in the <codeph>gpinitsystem_config</codeph>
-          file.</p>
+        <p>The <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
+            >gpinitsystem</xref> utility requires a host file that contains the list of addresses
+          for each segment host. The initialization utility determines the number of segment
+          instances per host by the number host addresses listed per host times the number of data
+          directory locations specified in the <codeph>gpinitsystem_config</codeph> file.</p>
         <p>This file should only contain <varname>segment</varname> host addresses (not the master
           or standby master). For segment machines with multiple, unbonded network interfaces, this
           file should list the host address names for each interface — one per line.</p>
@@ -115,11 +114,11 @@ sdw4-2</codeblock></li>
     <topic id="topic5" xml:lang="en">
       <title id="jm138566">Creating the Greenplum Database Configuration File</title>
       <body>
-        <p>Your Greenplum Database configuration file tells the <codeph><xref
-              href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer">gpinitsystem</xref></codeph>
-          utility how you want to configure your Greenplum Database system. An example configuration
-          file can be found in
-          <codeph>$GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config</codeph>.</p>
+        <p>Your Greenplum Database configuration file tells the <xref
+            href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
+            >gpinitsystem</xref> utility how you want to configure your Greenplum Database system.
+          An example configuration file can be found in
+            <codeph>$GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config</codeph>.</p>
         <section id="jm138725">
           <title>To create a gpinitsystem_config file</title>
           <ol>
@@ -128,17 +127,17 @@ sdw4-2</codeblock></li>
               example:<codeblock>$ cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config \
      /home/gpadmin/gpconfigs/gpinitsystem_config</codeblock></li>
             <li id="jm138730">Open the file you just copied in a text editor. <p>Set all of the
-                required parameters according to your environment. See <codeph><xref
-                    href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-                    >gpinitsystem</xref></codeph> for more information. A Greenplum Database system
-                must contain a master instance and at <i>least two</i> segment instances (even if
-                setting up a single node system). </p><p>The <codeph>DATA_DIRECTORY</codeph>
-                parameter is what determines how many segments per host will be created. If your
-                segment hosts have multiple network interfaces, and you used their interface address
-                names in your host file, the number of segments will be evenly spread over the
-                number of available interfaces.</p><p>To specify <codeph>PORT_BASE</codeph>, review
-                the port range specified in the <codeph>net.ipv4.ip_local_port_range</codeph>
-                parameter in the <codeph>/etc/sysctl.conf</codeph> file. See <xref
+                required parameters according to your environment. See <xref
+                  href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
+                  >gpinitsystem</xref> for more information. A Greenplum Database system must
+                contain a master instance and at <i>least two</i> segment instances (even if setting
+                up a single node system). </p><p>The <codeph>DATA_DIRECTORY</codeph> parameter is
+                what determines how many segments per host will be created. If your segment hosts
+                have multiple network interfaces, and you used their interface address names in your
+                host file, the number of segments will be evenly spread over the number of available
+                interfaces.</p><p>To specify <codeph>PORT_BASE</codeph>, review the port range
+                specified in the <codeph>net.ipv4.ip_local_port_range</codeph> parameter in the
+                  <codeph>/etc/sysctl.conf</codeph> file. See <xref
                   href="../install_guide/prep_os.xml#topic3" format="dita"/>.</p><p>Here is an
                 example of the <i>required</i> parameters in the
                   <codeph>gpinitsystem_config</codeph> file:
@@ -160,8 +159,8 @@ ENCODING=UNICODE</codeblock></li>
               mirror parameters in the <codeph>gpinitsystem_config</codeph> file:<codeblock>MIRROR_PORT_BASE=7000
 declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /data2/mirror /data2/mirror /data2/mirror)</codeblock>
               <note>You can initialize your Greenplum system with primary segments only and deploy
-                mirrors later using the <codeph><xref href="../utility_guide/ref/gpaddmirrors.xml"
-                    type="topic">gpaddmirrors</xref></codeph> utility.</note></li>
+                mirrors later using the <xref href="../utility_guide/ref/gpaddmirrors.xml"
+                  type="topic">gpaddmirrors</xref> utility.</note></li>
             <li id="jm138783">Save and close the file.</li>
           </ol>
         </section>
@@ -170,9 +169,9 @@ declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /dat
     <topic id="topic6" xml:lang="en">
       <title id="jm142333">Running the Initialization Utility</title>
       <body>
-        <p>The <codeph><xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
-              >gpinitsystem</xref></codeph> utility will create a Greenplum Database system using
-          the values defined in the configuration file.</p>
+        <p>The <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
+            >gpinitsystem</xref> utility will create a Greenplum Database system using the values
+          defined in the configuration file.</p>
         <p>These steps assume you are logged in as the <codeph>gpadmin</codeph> user and have
           sourced the <codeph>greenplum_path.sh</codeph> file to set Greenplum Database environment
           variables.</p>
@@ -188,7 +187,7 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 configuration) include the <codeph>-s</codeph> and
                   <codeph>--mirror-mode=spread</codeph> options. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
-  -s <varname>standby_master_hostname</varname> --mirror-mode=spread</codeblock><p>During
+  -s &lt;standby_master_hostname> --mirror-mode=spread</codeblock><p>During
                 a new cluster creation, you may use the <codeph><varname>-O
                     output_configuration_file</varname></codeph> option to save the cluster
                 configuration details in a file. For
@@ -198,20 +197,20 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 See <xref href="../utility_guide/ref/gpinitsystem.xml" type="topic" scope="peer"
                   >gpinitsystem</xref> for further details. <note>Calling
                     <codeph>gpinitsystem</codeph> with the <codeph>-O</codeph> option does not
-                  initialize the Greenplum Database system; it merely generates and saves a file with cluster
-                  configuration details.</note></p></li>
+                  initialize the Greenplum Database system; it merely generates and saves a file
+                  with cluster configuration details.</note></p></li>
             <li id="jm138853">The utility will verify your setup information and make sure it can
               connect to each host and access the data directories specified in your configuration.
               If all of the pre-checks are successful, the utility will prompt you to confirm your
               configuration. For
-              example:<codeblock>=&gt; Continue with Greenplum creation? <b>Yy/Nn</b></codeblock></li>
+              example:<codeblock>=&gt; Continue with Greenplum creation? Yy/Nn</codeblock></li>
             <li id="jm143919">Press <codeph>y</codeph> to start the initialization.</li>
             <li id="jm141337">The utility will then begin setup and initialization of the master
               instance and each segment instance in the system. Each segment instance is set up in
               parallel. Depending on the number of segments, this process can take a while.</li>
             <li id="jm141341">At the end of a successful setup, the utility will start your
               Greenplum Database system. You should
-              see:<codeblock><varname>=&gt; Greenplum Database instance successfully created.</varname></codeblock></li>
+              see:<codeblock>=&gt; Greenplum Database instance successfully created.</codeblock></li>
           </ol>
         </section>
       </body>
@@ -254,10 +253,10 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
           PostgreSQL timezones. Setting the Greenplum Database timezone prevents Greenplum Database
           from selecting a timezone each time the cluster is restarted and sets the timezone for the
           Greenplum Database master and segment instances. </p>
-        <p>Use the <codeph><xref href="../utility_guide/ref/gpconfig.xml" type="topic"
-              >gpconfig</xref></codeph> utility to show and set the Greenplum Database timezone. For
-          example, these commands show the Greenplum Database timezone and set the timezone to
-            <codeph>US/Pacific</codeph>.<codeblock>$ gpconfig -s TimeZone
+        <p>Use the <xref href="../utility_guide/ref/gpconfig.xml" type="topic">gpconfig</xref>
+          utility to show and set the Greenplum Database timezone. For example, these commands show
+          the Greenplum Database timezone and set the timezone to
+          <codeph>US/Pacific</codeph>.<codeblock>$ gpconfig -s TimeZone
 $ gpconfig -c TimeZone -v 'US/Pacific'</codeblock>You
           must restart Greenplum Database after changing the timezone. The command <codeph>gpstop
             -ra</codeph> restarts Greenplum Database. The catalog view
@@ -314,7 +313,7 @@ export PGDATABASE=gpadmin</codeblock></li>
           <li id="jm145342">If you have a standby master host, copy your environment file to the
             standby master as well. For
             example:<codeblock>$ cd ~
-$ scp .bashrc <varname>standby_hostname</varname>:`pwd`</codeblock></li>
+$ scp .bashrc &lt;standby_hostname>:`pwd`</codeblock></li>
         </ol>
         <note type="note">The <codeph>.bashrc</codeph> file should not produce any output. If you
           wish to have a message display to users upon logging in, use the <codeph>.bash_profile</codeph>

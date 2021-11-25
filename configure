@@ -752,6 +752,7 @@ autodepend
 TAS
 GCC
 CPP
+CFLAGS_SL
 CFLAGS_VECTOR
 PG_CRC32C_OBJS
 CFLAGS_SSE42
@@ -2785,7 +2786,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-PG_PACKAGE_VERSION=9.4.24
+PG_PACKAGE_VERSION=9.4.26
 
 
 
@@ -5877,7 +5878,6 @@ fi
 
 fi
 
-CFLAGS_VECTOR=$CFLAGS_VECTOR
 
 
 # supply -g if --enable-debug
@@ -5937,6 +5937,9 @@ fi
 # user-specified flags (if any) at the end.  This lets users override
 # the automatic additions.
 CFLAGS="$CFLAGS $user_CFLAGS"
+
+# The template file must set up CFLAGS_SL; we don't support user override
+
 
 # Check if the compiler still works with the final flag settings
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the C compiler still works" >&5
@@ -9562,7 +9565,7 @@ fi
 
 if test "$with_python" = yes; then
   if test -z "$PYTHON"; then
-  for ac_prog in python python2
+  for ac_prog in python python3 python2
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -18917,6 +18920,10 @@ fi
   # On most platforms, if perl.h is there then libperl.so will be too, but at
   # this writing Debian packages them separately.  There is no known reason to
   # waste cycles on separate probes for the Tcl or Python libraries, though.
+  # On some Red Hat platforms, the link attempt can fail if we don't use
+  # CFLAGS_SL while building the test program.
+  ac_save_CFLAGS=$CFLAGS
+  CFLAGS="$CFLAGS $CFLAGS_SL"
   pgac_save_LIBS=$LIBS
   LIBS="$perl_embed_ldflags"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libperl" >&5
@@ -18946,6 +18953,7 @@ fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
   LIBS=$pgac_save_LIBS
+  CFLAGS=$ac_save_CFLAGS
   CPPFLAGS=$ac_save_CPPFLAGS
 fi
 

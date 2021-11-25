@@ -22,6 +22,7 @@
 #include "access/appendonlywriter.h"
 #include "access/heapam.h"
 #include "access/hio.h"
+#include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/gp_fastsequence.h"
 #include "catalog/namespace.h"
@@ -909,6 +910,12 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 								   "",	/* databaseName */
 								   RelationGetRelationName(idesc->aoi_rel));	/* tableName */
 #endif
+
+	/*
+	 * Generate new transaction id if necessary, so dependent entities, such as
+	 * spgist indexes, can use it outside aocs_insert_values.
+	 */
+	(void) GetCurrentTransactionId();
 
 	/* As usual, at this moment, we assume one col per vp */
 	for (i = 0; i < RelationGetNumberOfAttributes(rel); ++i)
