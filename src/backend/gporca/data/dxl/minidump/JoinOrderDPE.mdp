@@ -3144,7 +3144,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="644">
+    <dxl:Plan Id="0" SpaceSize="84">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1301.264890" Rows="95315.069401" Width="24"/>

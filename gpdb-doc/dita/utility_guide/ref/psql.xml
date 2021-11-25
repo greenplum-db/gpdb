@@ -1770,11 +1770,12 @@ testdb-&gt; ;
 CREATE TABLE</codeblock>
       <p>Look at the table definition:</p>
       <codeblock>testdb=&gt; \d my_table
-             Table "my_table"
- Attribute |  Type   |      Modifier
+             Table "public.my_table"
+ Column    |  Type   |      Modifiers
 -----------+---------+--------------------
  first     | integer | not null default 0
- second    | text    |</codeblock>
+ second    | text    |
+Distributed by: (first)</codeblock>
       <p>Run <codeph>psql</codeph> in non-interactive mode by passing in a file containing SQL
         commands:</p>
       <codeblock>psql -f /home/gpadmin/test/myscript.sql</codeblock>

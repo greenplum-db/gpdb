@@ -164,7 +164,7 @@ coordinatorPort = getPortCoordinatorOnly()
 def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=coordinatorPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
     ssl=None,columns=None, format='text', force_not_null=[], log_errors=None, error_limit=None, delimiter="'|'", encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None, transform_config=None, max_line_length=None, 
     table='texttable', mode='insert', update_columns=['n2'], update_condition=None, match_columns=['n1','s1','s2'], staging_table=None, mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,
-    sql=False, before=None, after=None, error_table=None):
+    sql=False, before=None, after=None, error_table=None, newline=None):
 
     f = open(config,'w', encoding="utf-8")
     f.write("VERSION: "+version)
@@ -206,7 +206,10 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
         f.write("\n    - ERROR_LIMIT: "+str(error_limit))
     if error_table:
         f.write("\n    - ERROR_TABLE: "+error_table)
-    f.write("\n    - DELIMITER: "+delimiter)
+    if delimiter:
+        f.write("\n    - DELIMITER: "+delimiter)
+    if newline:
+        f.write("\n    - NEWLINE: "+str(newline))
     if encoding:
         f.write("\n    - ENCODING: "+encoding)
     if escape:

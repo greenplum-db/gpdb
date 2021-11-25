@@ -4765,10 +4765,10 @@
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="53564">
+    <dxl:Plan Id="0" SpaceSize="16648">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1548186.589494" Rows="321694266.492042" Width="355"/>
+          <dxl:Cost StartupCost="0" TotalCost="1749361.680098" Rows="321694266.492042" Width="355"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="cs_sold_date_sk">
@@ -5000,7 +5000,7 @@
         </dxl:HashCondList>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1138306.731315" Rows="467986.685065" Width="339"/>
+            <dxl:Cost StartupCost="0" TotalCost="1339481.821919" Rows="467986.685065" Width="339"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="cs_sold_date_sk">
@@ -5209,7 +5209,7 @@
           <dxl:SortingColumnList/>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1137594.404102" Rows="467986.685065" Width="339"/>
+              <dxl:Cost StartupCost="0" TotalCost="1338769.494706" Rows="467986.685065" Width="339"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="cs_sold_date_sk">
@@ -5422,9 +5422,9 @@
                 <dxl:Ident ColId="64" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:HashCondList>
-            <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+            <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1136809.698814" Rows="467986.685065" Width="232"/>
+                <dxl:Cost StartupCost="0" TotalCost="1337984.789418" Rows="467986.685065" Width="232"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="cs_sold_date_sk">
@@ -5546,80 +5546,13 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:JoinFilter>
+              <dxl:JoinFilter/>
+              <dxl:HashCondList>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                   <dxl:Ident ColId="5" ColName="cs_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Ident ColId="52" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
-              </dxl:JoinFilter>
-              <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.240955" Rows="2.000000" Width="32"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="52" Alias="hd_demo_sk">
-                    <dxl:Ident ColId="52" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="53" Alias="hd_income_band_sk">
-                    <dxl:Ident ColId="53" ColName="hd_income_band_sk" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="54" Alias="hd_buy_potential">
-                    <dxl:Ident ColId="54" ColName="hd_buy_potential" TypeMdid="0.1042.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="55" Alias="hd_dep_count">
-                    <dxl:Ident ColId="55" ColName="hd_dep_count" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="56" Alias="hd_vehicle_count">
-                    <dxl:Ident ColId="56" ColName="hd_vehicle_count" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:TableScan>
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.239280" Rows="1.000000" Width="32"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="52" Alias="hd_demo_sk">
-                      <dxl:Ident ColId="52" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="53" Alias="hd_income_band_sk">
-                      <dxl:Ident ColId="53" ColName="hd_income_band_sk" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="54" Alias="hd_buy_potential">
-                      <dxl:Ident ColId="54" ColName="hd_buy_potential" TypeMdid="0.1042.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="55" Alias="hd_dep_count">
-                      <dxl:Ident ColId="55" ColName="hd_dep_count" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="56" Alias="hd_vehicle_count">
-                      <dxl:Ident ColId="56" ColName="hd_vehicle_count" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter>
-                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                      <dxl:Ident ColId="54" ColName="hd_buy_potential" TypeMdid="0.1042.1.0"/>
-                      <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACj4xMDAwMA==" LintValue="266732324"/>
-                    </dxl:Comparison>
-                  </dxl:Filter>
-                  <dxl:TableDescriptor Mdid="0.810130.1.1" TableName="household_demographics">
-                    <dxl:Columns>
-                      <dxl:Column ColId="52" Attno="1" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="53" Attno="2" ColName="hd_income_band_sk" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="54" Attno="3" ColName="hd_buy_potential" TypeMdid="0.1042.1.0" ColWidth="15"/>
-                      <dxl:Column ColId="55" Attno="4" ColName="hd_dep_count" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="56" Attno="5" ColName="hd_vehicle_count" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="57" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                      <dxl:Column ColId="58" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="59" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="60" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="61" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="62" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                      <dxl:Column ColId="63" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                    </dxl:Columns>
-                  </dxl:TableDescriptor>
-                </dxl:TableScan>
-              </dxl:BroadcastMotion>
+              </dxl:HashCondList>
               <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="0">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="213404.135560" Rows="3367164198.571393" Width="200"/>
@@ -6550,7 +6483,75 @@
                   </dxl:TableDescriptor>
                 </dxl:TableScan>
               </dxl:Append>
-            </dxl:NestedLoopJoin>
+              <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="431.240955" Rows="2.000000" Width="32"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="52" Alias="hd_demo_sk">
+                    <dxl:Ident ColId="52" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="53" Alias="hd_income_band_sk">
+                    <dxl:Ident ColId="53" ColName="hd_income_band_sk" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="54" Alias="hd_buy_potential">
+                    <dxl:Ident ColId="54" ColName="hd_buy_potential" TypeMdid="0.1042.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="55" Alias="hd_dep_count">
+                    <dxl:Ident ColId="55" ColName="hd_dep_count" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="56" Alias="hd_vehicle_count">
+                    <dxl:Ident ColId="56" ColName="hd_vehicle_count" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:SortingColumnList/>
+                <dxl:TableScan>
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="431.239280" Rows="1.000000" Width="32"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="52" Alias="hd_demo_sk">
+                      <dxl:Ident ColId="52" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="53" Alias="hd_income_band_sk">
+                      <dxl:Ident ColId="53" ColName="hd_income_band_sk" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="54" Alias="hd_buy_potential">
+                      <dxl:Ident ColId="54" ColName="hd_buy_potential" TypeMdid="0.1042.1.0"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="55" Alias="hd_dep_count">
+                      <dxl:Ident ColId="55" ColName="hd_dep_count" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="56" Alias="hd_vehicle_count">
+                      <dxl:Ident ColId="56" ColName="hd_vehicle_count" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Filter>
+                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                      <dxl:Ident ColId="54" ColName="hd_buy_potential" TypeMdid="0.1042.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACj4xMDAwMA==" LintValue="266732324"/>
+                    </dxl:Comparison>
+                  </dxl:Filter>
+                  <dxl:TableDescriptor Mdid="0.810130.1.1" TableName="household_demographics">
+                    <dxl:Columns>
+                      <dxl:Column ColId="52" Attno="1" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="53" Attno="2" ColName="hd_income_band_sk" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="54" Attno="3" ColName="hd_buy_potential" TypeMdid="0.1042.1.0" ColWidth="15"/>
+                      <dxl:Column ColId="55" Attno="4" ColName="hd_dep_count" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="56" Attno="5" ColName="hd_vehicle_count" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="57" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                      <dxl:Column ColId="58" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                      <dxl:Column ColId="59" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                      <dxl:Column ColId="60" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                      <dxl:Column ColId="61" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                      <dxl:Column ColId="62" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                      <dxl:Column ColId="63" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                    </dxl:Columns>
+                  </dxl:TableDescriptor>
+                </dxl:TableScan>
+              </dxl:BroadcastMotion>
+            </dxl:HashJoin>
             <dxl:PartitionSelector RelationMdid="0.802597.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="432.238603" Rows="838.491452" Width="107"/>

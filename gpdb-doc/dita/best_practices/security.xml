@@ -66,7 +66,8 @@
         password should be at least 12 characters long and include a mix of capitalized letters,
         lowercase letters, special characters, and numbers. It should not be based on any dictionary
         word. </p>
-      <p> Password expiration parameters should be configured. </p>
+      <p> Password expiration parameters should be configured. The following commands must be run as
+          <codeph>root</codeph> or using <codeph>sudo</codeph>. </p>
       <p> Ensure the following line exists within the file <codeph>/etc/libuser.conf</codeph> under
         the <codeph>[import]</codeph> section. </p>
       <codeblock>login_defs = /etc/login.defs
@@ -159,10 +160,10 @@ password required pam_cracklib.so try_first_pass retry=3\minlen=14 dcredit=-1 uc
         reflect your security policy requirements. A locked account can be manually unlocked using
         the <codeph>pam_tally2</codeph>
         utility:<codeblock>
-/sbin/pam_tally2 --user {username} -reset
+/sbin/pam_tally2 --user {username} --reset
 </codeblock></p>
       <p> You can use PAM to limit the reuse of recent passwords. The remember option for the
-          <codeph>pam_ unix</codeph> module can be set to remember the recent passwords and prevent
+          <codeph>pam_unix</codeph> module can be set to remember the recent passwords and prevent
         their reuse. To accomplish this, edit the appropriate line in
           <codeph>/etc/pam.d/system-auth</codeph> to include the remember option. </p>
       <p> For example: </p>

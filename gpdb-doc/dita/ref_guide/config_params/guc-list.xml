@@ -1606,7 +1606,7 @@
             <row>
               <entry colname="col1">a list of absolute directory paths separated by colons</entry>
               <entry colname="col2">$libdir</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -2022,7 +2022,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer</entry>
+              <entry colname="col1">integer (-15 to 3)</entry>
               <entry colname="col2">0</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
@@ -2503,7 +2503,7 @@
             <row>
               <entry colname="col1">boolean</entry>
               <entry colname="col2">off</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3316,7 +3316,7 @@
             <row>
               <entry colname="col1">10 - 3600 seconds</entry>
               <entry colname="col2">1min</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3344,7 +3344,7 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">5</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3372,7 +3372,7 @@
             <row>
               <entry colname="col1">10 - 3600 seconds</entry>
               <entry colname="col2">20 secs</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3792,7 +3792,7 @@
             <row>
               <entry colname="col1">string (maximum length - 16384 bytes)</entry>
               <entry colname="col2"/>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4045,7 +4045,7 @@
             <row>
               <entry colname="col1">512-65536</entry>
               <entry colname="col2">8192</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4687,7 +4687,7 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">0</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

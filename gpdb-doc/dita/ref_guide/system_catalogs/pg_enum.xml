@@ -32,6 +32,12 @@
             <entry>The OID of the <codeph>pg_type</codeph> entry owning this enum value</entry>
           </row>
           <row>
+            <entry><codeph>enumsortorder</codeph></entry>
+            <entry>float4</entry>
+            <entry/>
+            <entry>The sort position of this enum value within its enum type</entry>
+          </row>
+          <row>
             <entry><codeph>enumlabel</codeph></entry>
             <entry>name</entry>
             <entry/>

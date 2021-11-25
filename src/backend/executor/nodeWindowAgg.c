@@ -813,7 +813,7 @@ finalize_windowaggregate(WindowAggState *winstate,
 	 * If result is pass-by-ref, make sure it is in the right context.
 	 */
 	if (!peraggstate->resulttypeByVal && !*isnull &&
-		!MemoryContextContains(CurrentMemoryContext,
+		!MemoryContextContainsGenericAllocation(CurrentMemoryContext,
 							   DatumGetPointer(*result)))
 		*result = datumCopy(*result,
 							peraggstate->resulttypeByVal,
@@ -1296,13 +1296,8 @@ eval_windowfunction(WindowAggState *winstate, WindowStatePerFunc perfuncstate,
 	 * need this in case the function returns a pointer into some short-lived
 	 * tuple, as is entirely possible.)
 	 */
-	// GPDB_84_MERGE_FIXME: In upstream, we know that the allocation
-	// was palloc in some memory context, but in GPDB, that is not true.
-	// This is not actually 100% safe, there is a small chance
-	// MemoryContextContains() incorrectly says that the chunk is in the context,
-	// which could lead to a crash. nodeAgg.c has the same problem.
 	if (!perfuncstate->resulttypeByVal && !fcinfo->isnull &&
-		!MemoryContextContains(CurrentMemoryContext,
+		!MemoryContextContainsGenericAllocation(CurrentMemoryContext,
 							   DatumGetPointer(*result))
 		)
 		*result = datumCopy(*result,

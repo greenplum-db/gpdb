@@ -213,6 +213,8 @@ enum EOptTraceFlag
 	// enable NL Left Join plan alternatives where inner child is redistributed if possible
 	EopttraceEnableRedistributeNLLOJInnerChild = 103040,
 
+	EopttraceForceComprehensiveJoinImplementation = 103041,
+
 	///////////////////////////////////////////////////////
 	///////////////////// statistics flags ////////////////
 	//////////////////////////////////////////////////////
