@@ -1,0 +1,22 @@
+2021-11-25 15:46:59|INFO|gpload session started 2021-11-25 15:46:59
+2021-11-25 15:46:59|INFO|setting schema 'public' for table 'texttable2'
+2021-11-25 15:46:59|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2021-11-25 15:46:59|INFO|did not find an external table to reuse. creating ext_gpload_reusable_ded925d2_4dc3_11ec_ab4b_0050569ea4ff
+2021-11-25 15:46:59|ERROR|ERROR:  missing data for column "s2"  (seg1 slice1 127.0.0.1:6003 pid=2792)
+CONTEXT:  External table ext_gpload_reusable_ded925d2_4dc3_11ec_ab4b_0050569ea4ff, line 1 of gpfdist://127.0.0.1:8082//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv: "line1 with CR"
+ encountered while running INSERT INTO public."texttable2" ("s1","s2") SELECT "s1","s2" FROM ext_gpload_reusable_ded925d2_4dc3_11ec_ab4b_0050569ea4ff
+2021-11-25 15:46:59|INFO|rows Inserted          = 0
+2021-11-25 15:46:59|INFO|rows Updated           = 0
+2021-11-25 15:46:59|INFO|data formatting errors = 0
+2021-11-25 15:46:59|INFO|gpload failed
+2021-11-25 15:46:59|INFO|gpload session started 2021-11-25 15:46:59
+2021-11-25 15:46:59|INFO|setting schema 'public' for table 'texttable2'
+2021-11-25 15:46:59|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2021-11-25 15:46:59|INFO|reusing external table ext_gpload_reusable_ded925d2_4dc3_11ec_ab4b_0050569ea4ff
+2021-11-25 15:47:00|ERROR|ERROR:  missing data for column "s2"  (seg0 slice1 127.0.0.1:6002 pid=2841)
+CONTEXT:  External table ext_gpload_reusable_ded925d2_4dc3_11ec_ab4b_0050569ea4ff, line 1 of gpfdist://127.0.0.1:8082//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv: "line1 with CR"
+ encountered while running INSERT INTO public."texttable2" ("s1","s2") SELECT "s1","s2" FROM ext_gpload_reusable_ded925d2_4dc3_11ec_ab4b_0050569ea4ff
+2021-11-25 15:47:00|INFO|rows Inserted          = 0
+2021-11-25 15:47:00|INFO|rows Updated           = 0
+2021-11-25 15:47:00|INFO|data formatting errors = 0
+2021-11-25 15:47:00|INFO|gpload failed

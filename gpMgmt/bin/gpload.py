@@ -109,6 +109,7 @@ valid_tokens = {
     "delimiter": {'parse_children': True, 'parent': "input"},
     "escape": {'parse_children': True, 'parent': "input"},
     "null_as": {'parse_children': True, 'parent': "input"},
+    "newline": {'parse_children': True, 'parent': "input"},
     "quote": {'parse_children': True, 'parent': "input"},
     "encoding": {'parse_children': True, 'parent': "input"},
     "force_not_null": {'parse_children': False, 'parent': "input"},
@@ -368,6 +369,7 @@ keywords = {
 	"natural": True,
 	"nchar": True,
 	"new": True,
+	"newline": True,
 	"next": True,
 	"no": True,
 	"nocreatedb": True,
@@ -2419,6 +2421,11 @@ class gpload:
 
         if formatType=='csv':
             self.get_external_table_formatOpts('quote')
+
+        newline = self.getconfig('gpload:input:newline', unicode, False)
+        self.log(self.DEBUG, "newline " + unicode(newline))
+        if newline != False: # could be empty string
+            self.formatOpts += "newline %s " % quote_no_slash(newline)
 
         if self.getconfig('gpload:input:header',bool,False) and not self.use_customfmt: #TODO:text_in format not support header now
             self.formatOpts += "header "
