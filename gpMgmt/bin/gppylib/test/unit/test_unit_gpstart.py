@@ -150,7 +150,7 @@ class GpStart(GpTestCase):
         self.assertEqual([expected_args],
                          self.subject.gp.MasterStart.call_args_list)  # assert that the MasterStart function was called with the right arguments
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 0)
-        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
+        self.subject.logger.info.assert_any_call('Starting Master instance in admin and RESTRICTED mode')
         self.subject.logger.info.assert_any_call('Master Started...')
         self.assertEqual(return_code, 0)
 
@@ -175,7 +175,7 @@ class GpStart(GpTestCase):
                          self.subject.gp.MasterStart.call_args_list)  # assert that the MasterStart function was called with the right arguments
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 1)
         self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with master-only startup', 'N')
-        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
+        self.subject.logger.info.assert_any_call('Starting Master instance in admin and RESTRICTED mode')
         self.subject.logger.info.assert_any_call('Master Started...')
         self.assertEqual(return_code, 0)
 
