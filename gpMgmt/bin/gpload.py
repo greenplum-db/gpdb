@@ -2422,11 +2422,6 @@ class gpload:
         if formatType=='csv':
             self.get_external_table_formatOpts('quote')
 
-        newline = self.getconfig('gpload:input:newline', unicode, False)
-        self.log(self.DEBUG, "newline " + unicode(newline))
-        if newline != False: # could be empty string
-            self.formatOpts += "newline %s " % quote_no_slash(newline)
-
         if self.getconfig('gpload:input:header',bool,False) and not self.use_customfmt: #TODO:text_in format not support header now
             self.formatOpts += "header "
             self.reuse_tbl_Opts += "header "
@@ -2447,6 +2442,16 @@ class gpload:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
             self.formatOpts += "force not null %s " % ','.join(force_not_null_columns) #only for csv
             self.reuse_tbl_Opts += "force not null %s " % ','.join(force_not_null_columns)
+
+        newline = self.getconfig('gpload:input:newline', unicode, False)
+        self.log(self.DEBUG, "newline " + unicode(newline))
+        if newline != False: # could be empty string
+            if self.use_customfmt:
+                self.formatOpts += ', newline=%s' % quote_no_slash(newline)
+                self.reuse_tbl_Opts += "newline %s " % quote_no_slash(newline)
+            else:
+                self.formatOpts += "newline %s " % quote_no_slash(newline)
+                self.reuse_tbl_Opts += "newline %s " % quote_no_slash(newline)
 
         encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
