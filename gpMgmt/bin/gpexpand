@@ -861,14 +861,6 @@ class SegmentTemplate:
             remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
 
-        self.logger.info('Copying postgresql.auto.conf from existing segment into template')
-        cmdName = 'gpexpand copying postgresql.auto.conf to %s:%s/postgresql.auto.conf' \
-                  % (self.srcSegHostname, self.srcSegDataDir)
-        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.auto.conf',
-            dstFile=self.tempDir, dstHost=localHostname, ctxt=REMOTE,
-            remoteHost=self.srcSegHostname)
-        cpCmd.run(validateAfter=True)
-
         self.logger.info('Copying pg_hba.conf from existing segment into template')
         cmdName = 'gpexpand copy pg_hba.conf to %s:%s/pg_hba.conf' \
                   % (self.srcSegHostname, self.srcSegDataDir)

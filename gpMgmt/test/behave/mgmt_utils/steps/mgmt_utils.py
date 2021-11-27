@@ -2422,32 +2422,6 @@ def impl(context, command, target):
     if target not in contents:
         raise Exception("cannot find %s in %s" % (target, filename))
 
-
-@given('the user change enable_mergejoin to on only on qd by alter system on gptest')
-def impl(context):
-    host, port = get_primary_segment_host_port_for_content('-1')
-    query = "alter system set enable_mergejoin to on"
-    psql_cmd = "PGDATABASE=\'%s\' psql -h %s -p %s -c \"%s\"; " % (
-        "gptest", host, port, query)
-    Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
-
-@given('the user restart the whole cluster')
-def impl(context):
-    cmd = "gpstop -rai"
-    Command(name='Running Remote command: %s' % cmd, cmdStr=cmd).run(validateAfter=True)
-
-@given('enable_mergejoin is on on qd and off on all qes')
-@then('enable_mergejoin is on on qd and off on all qes')
-def impl(context):
-    cmd = "gpconfig -s enable_mergejoin"
-    c = Command(name='Running Remote command: %s' % cmd, cmdStr=cmd)
-    c.run(validateAfter=True)
-    out = c.get_stdout()
-    if ("Master  value: on" not in out or
-        "Segment value: off" not in out):
-        raise Exception('Guc enable_mergejoin value is not correct')
-
-
 @given('verify that a role "{role_name}" exists in database "{dbname}"')
 @then('verify that a role "{role_name}" exists in database "{dbname}"')
 def impl(context, role_name, dbname):
