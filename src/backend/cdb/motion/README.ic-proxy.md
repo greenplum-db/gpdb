@@ -143,7 +143,7 @@ in a write queue.  If the sender sends the DATA faster than the receiver, the
 write queue could become too large and even cause OOM.
 
 A flow control is needed due to this.  In ic-tcp mode if the receiver is not
-receiving the sender can not send the DATA out; in ic-proxy mode flow control
+receiving the sender can not send the DATA out; in ic-udp mode flow control
 is done by dropping packets.  In ic-proxy mode we could not stop receiving
 because all the logical connections from the remote segment share the same
 proxy-proxy connection; we could not drop packets, because currently the
