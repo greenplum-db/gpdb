@@ -14322,6 +14322,42 @@ select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) f
 (1 row)
 
 reset optimizer_trace_fallback;
+--- Test if orca can produce the correct plan for CTAS
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+EXPLAIN CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=0)
+   ->  Result  (cost=0.00..862.16 rows=2 width=12)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=12)
+               Hash Key: dist_tab_a.a
+               ->  Hash Left Join  (cost=0.00..862.00 rows=2 width=12)
+                     Hash Cond: ((dist_tab_a.a)::bpchar = dist_tab_b.a)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           Hash Key: dist_tab_a.a
+                           ->  Seq Scan on dist_tab_a  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=24)
+                           ->  Seq Scan on dist_tab_b  (cost=0.00..431.00 rows=1 width=24)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
+
+CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+SELECT gp_segment_id, * FROM result_tab;
+ gp_segment_id |   a   | b 
+---------------+-------+---
+             0 | 3     | 3
+             1 | 2     | 2
+             2 | 1     | 1
+(3 rows)
+
+DROP TABLE IF EXISTS dist_tab_a;
+DROP TABLE IF EXISTS dist_tab_b;
+DROP TABLE IF EXISTS result_tab;
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 NOTICE:  drop cascades to 167 other objects
