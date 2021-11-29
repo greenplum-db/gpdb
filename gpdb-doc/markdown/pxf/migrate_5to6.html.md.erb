@@ -20,7 +20,7 @@ Before migrating PXF from Greenplum 5 to Greenplum 6, ensure that you can:
 - Identify the location of your PXF installation:
 
     - If you installed PXF from a separate `rpm` or `deb`, the PXF install location is `/usr/local/pxf-gp<greenplum-major-version>`.
-    - If you are running the PXF included in the Greenplum Database 5 Server installation, the PXF install location is `$GPHOME/pxf`.
+    - If you are running the PXF bundled in the Greenplum Database 5 Server installation, the PXF install location is `$GPHOME/pxf`.
 - Determine if you have `gphdfs` external tables defined in your Greenplum 5 installation.
 - Identify the file system location of the PXF `$PXF_CONF` directory in your Greenplum 5 installation. (If you are unsure of the location, you can find the value in `pxf-env-default.sh`.) In Greenplum 5.15 and later, `$PXF_CONF` identifies the user configuration directory that was provided to the `pxf cluster init` command. This directory contains PXF server configurations, security keytab files, and log files.
 
@@ -92,7 +92,7 @@ After you upgrade to Greenplum Database 6, and table definitions and data from t
             ```
         1. Skip the following steps and exit this procedure.
 
-    1. You must install the latest independent PXF 5.16.x distribution for Greenplum 6 on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/5-16/installing_pxf.html).
+    1. If you are running PXF version 5.x, you must install the latest independent PXF 5.16.x distribution for Greenplum 6 on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/5-16/installing_pxf.html).
 
         <div class="note">If you are interested in running PXF version 6.x, upgrade to that version <b>after</b> you complete this entire procedure and verify that PXF is working in your Greenplum 6.x installation.</div>
 
@@ -157,8 +157,7 @@ After you upgrade to Greenplum Database 6, and table definitions and data from t
     gpadmin@gp6master$ pxf cluster start
     ```
 
-    Your Greenplum Database cluster is now running version 5.16.x of PXF, but running it from the PXF installation directory (`/usr/local/pxf-gp<greenplum-major-version>`). Should you wish to upgrade PXF in the future, consult the [PXF upgrade documentation](../../pxf/5-16/upgrade_landing.html).
+    Your Greenplum Database cluster is now running version 5.16.x of PXF, and running it from the PXF installation directory (`/usr/local/pxf-gp<greenplum-major-version>`). Should you wish to upgrade PXF in the future, consult the [PXF upgrade documentation](../../pxf/5-16/upgrade_landing.html).
 
 7. Verify the migration by testing that each PXF external table can access the referenced data store.
-
 

@@ -406,8 +406,9 @@
                 >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
                 Administrator Guide</cite> for PXF configuration and usage
               information.
-              <note otherprops="pivotal">PXF is no longer bundled with Greenplum Database
-                6.x. You can install PXF in your Greenplum cluster by installing
+              <note otherprops="pivotal">Greenplum Database versions before 6.19.0 no longer
+                bundle an older version of PXF.
+                You can install PXF in your Greenplum cluster by installing
                 <xref href="https://greenplum.docs.pivotal.io/pxf/latest/release/release-notes.html"
                   format="html" scope="external">the independent distribution of PXF</xref> as
                   described in the PXF documentation.</note></li>
@@ -484,7 +485,7 @@
       <p>Greenplum Database provides access to HDFS with the
         <xref href="https://greenplum.docs.pivotal.io/pxf/latest/overview_pxf.html"
                   format="html" scope="external">Greenplum Platform Extension Framework
-          (PXF)</xref>..</p>
+          (PXF)</xref>.</p>
       <p>PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
         distributions. PXF bundles all of the JAR files on which it depends, including the following
         Hadoop libraries:</p>
