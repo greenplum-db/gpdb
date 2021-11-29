@@ -2395,11 +2395,6 @@ class gpload:
         if formatType=='csv':
             self.get_external_table_formatOpts('quote')
 
-        newline = self.getconfig('gpload:input:newline', str, False)
-        self.log(self.DEBUG, "newline " + str(newline))
-        if newline != False: # could be empty string
-            self.formatOpts += "newline %s " % quote_no_slash(newline)
-
         if self.getconfig('gpload:input:header',bool,False):
             self.formatOpts += "header "
 
@@ -2410,6 +2405,11 @@ class gpload:
                 if type(i) != str and type(i) != str:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
             self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
+
+        newline = self.getconfig('gpload:input:newline', str, False)
+        self.log(self.DEBUG, "newline " + str(newline))
+        if newline != False: # could be empty string
+            self.formatOpts += "newline %s " % quote_no_slash(newline)
 
         encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', str, None)
@@ -2526,7 +2526,7 @@ class gpload:
         try:
             self.db.query(sql.encode('utf-8'))
         except Exception as e:
-            self.log(self.ERROR, 'could not run SQL "%s": %s' % (sql, unicode(e)))
+            self.log(self.ERROR, 'could not run SQL "%s": %s' % (sql, str(e)))
 
         # set up to drop the external table at the end of operation, unless user
         # specified the 'reuse_tables' option, in which case we don't drop

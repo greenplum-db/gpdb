@@ -224,8 +224,8 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
         f.write("\n    - FILL_MISSING_FIELDS: "+str(fill_missing_fields))
     if quote:
         f.write("\n    - QUOTE: "+quote)
-    if header:
-        f.write("\n    - HEADER: "+header)
+    if header != None:
+        f.write("\n    - HEADER: "+str(header))
     if transform:
         f.write("\n    - TRANSFORM: "+transform)
     if transform_config:
@@ -505,7 +505,7 @@ def ModifyOutFile(file,old_str,new_str):
     os.remove(file)
     os.rename("%s.bak" % file, file)
 
-Modify_Output_Case = [46,51,57,65]
+Modify_Output_Case = [46,51,57,65,76]
 
 
 def doTest(num):
@@ -523,7 +523,9 @@ def doTest(num):
         newpat2 = 'pathto/data_file'
         pat3 = r', SSL off$'
         newpat3 = ''
-        ModifyOutFile(str(num), [pat1,pat2,pat3], [newpat1,newpat2,newpat3])  # some strings in outfile are different each time, such as host and file location
+        pat4 = r'LINE 1: ...[a-zA-Z0-9\_]*\('
+        newpat4 = 'LINE 1: ...('
+        ModifyOutFile(str(num), [pat1,pat2,pat3,pat4], [newpat1,newpat2,newpat3,newpat4])  # some strings in outfile are different each time, such as host and file location
         # we modify the out file here to make it match the ans file
 
     check_result(file,num=num)

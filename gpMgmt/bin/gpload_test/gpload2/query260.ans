@@ -1,9 +1,11 @@
-2021-10-25 07:07:31|INFO|gpload session started 2021-10-25 07:07:31
-2021-10-25 07:07:31|INFO|setting schema 'public' for table 'texttable2'
-2021-10-25 07:07:31|INFO|started gpfdist -p 8081 -P 8082 -f "/tmp/build/e18b2f02/gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-10-25 07:07:31|INFO|did not find an external table to reuse. creating ext_gpload_reusable_38cea190_3562_11ec_9d95_92812239cffc
-2021-10-25 07:07:31|ERROR|unexpected error -- backtrace written to log file
-2021-10-25 07:07:31|INFO|rows Inserted          = 0
-2021-10-25 07:07:31|INFO|rows Updated           = 0
-2021-10-25 07:07:31|INFO|data formatting errors = 0
-2021-10-25 07:07:31|INFO|gpload failed
+2021-11-29 11:57:06|INFO|gpload session started 2021-11-29 11:57:06
+2021-11-29 11:57:06|INFO|setting schema 'public' for table 'texttable2'
+2021-11-29 11:57:06|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2021-11-29 11:57:06|INFO|did not find an external table to reuse. creating ext_gpload_reusable_6b1916f4_50c8_11ec_8cc5_0050569e2380
+2021-11-29 11:57:06|ERROR|could not run SQL "create external table ext_gpload_reusable_6b1916f4_50c8_11ec_8cc5_0050569e2380("s1" text,"s2" text)location('gpfdist://10.117.190.10:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv') format'csv' (delimiter ',' null '' escape '"' quote '"' newline 'LFCR' ) encoding'UTF8' ": ERROR:  invalid value for NEWLINE "LFCR"
+HINT:  Valid options are: 'LF', 'CRLF' and 'CR'.
+
+2021-11-29 11:57:06|INFO|rows Inserted          = 0
+2021-11-29 11:57:06|INFO|rows Updated           = 0
+2021-11-29 11:57:06|INFO|data formatting errors = 0
+2021-11-29 11:57:06|INFO|gpload failed
