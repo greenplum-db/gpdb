@@ -406,7 +406,7 @@
                 >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
                 Administrator Guide</cite> for PXF configuration and usage
               information.
-              <note otherprops="pivotal">Greenplum Database versions before 6.19.0 no longer
+              <note otherprops="pivotal">Greenplum Database versions starting with 6.19.0 no longer
                 bundle an older version of PXF.
                 You can install PXF in your Greenplum cluster by installing
                 <xref href="https://greenplum.docs.pivotal.io/pxf/latest/release/release-notes.html"
