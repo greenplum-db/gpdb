@@ -722,40 +722,25 @@ DisconnectAndDestroyAllGangs(bool resetSession)
  * Destroy all idle (i.e available) QEs.
  * It is always safe to get rid of the reader QEs.
  *
- * If we are not in a transaction and we do not have a TempNamespace, destroy
- * writer QEs as well.
- *
  * call only from an idle session.
  */
 void DisconnectAndDestroyUnusedQEs(void)
 {
-	if (IsTransactionOrTransactionBlock() || TempNamespaceOidIsValid())
-	{
-		/*
-		 * If we are in a transaction, we can't release the writer gang,
-		 * as this will abort the transaction.
-		 *
-		 * If we have a TempNameSpace, we can't release the writer gang, as this
-		 * would drop any temp tables we own.
-		 *
-		 * Since we are idle, any reader gangs will be available but not allocated.
-		 */
-		cdbcomponent_cleanupIdleQEs(false);
-	}
-	else
-	{
-		/*
-		 * Get rid of ALL gangs... Readers and primary writer.
-		 * After this, we have no resources being consumed on the segDBs at all.
-		 *
-		 * Our session wasn't destroyed due to an fatal error or FTS action, so
-		 * we don't need to do anything special.  Specifically, we DON'T want
-		 * to act like we are now in a new session, since that would be confusing
-		 * in the log.
-		 *
-		 */
-		cdbcomponent_cleanupIdleQEs(true);
-	}
+	/*
+	 * Only release reader gangs, never writer gang. This helps to avoid the
+	 * shared snapshot collision error on next gang creation from hitting if
+	 * QE processes are slow to exit due to this cleanup.
+	 *
+	 * If we are in a transaction, we can't release the writer gang also, as
+	 * this will abort the transaction.
+	 *
+	 * If we have a TempNameSpace, we can't release the writer gang also, as
+	 * this would drop any temp tables we own.
+	 *
+	 * Since we are idle, any reader gangs will be available but not
+	 * allocated.
+	 */
+	cdbcomponent_cleanupIdleQEs(false);
 }
 
 /*
