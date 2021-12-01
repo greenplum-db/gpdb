@@ -15,7 +15,7 @@
        | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
            [, ...])
        | ('pxf://<varname>path-to-data</varname>?PROFILE=<varname>profile_name</varname>[&amp;SERVER=<varname>server_name</varname>][&amp;<varname>custom-option</varname>=<varname>value</varname>[...]]'))
-       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
+       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname> | config_server=<varname>url</varname>]')
      [ON MASTER]
      FORMAT 'TEXT' 
            [( [HEADER]
@@ -93,7 +93,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
 
 CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
+     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname> | config_server=<varname>url</varname>]')
       [ON MASTER]
       FORMAT 'TEXT' 
                [( [DELIMITER [AS] '<varname>delimiter</varname>']

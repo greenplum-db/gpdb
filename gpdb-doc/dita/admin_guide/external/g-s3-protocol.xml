@@ -24,121 +24,126 @@
             href="g-pxf-protocol.xml#topic_z5g_l5h_kr1313"/>.</note>
       <p>This topic contains the sections:<ul id="ul_o15_22r_kx">
             <li><xref href="#amazon-emr/s3_prereq" format="dita"/></li>
+            <li><xref href="#amazon-emr/s3_using" format="dita"/></li>
             <li><xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/></li>
             <li><xref href="#amazon-emr/section_c2f_zvs_3x" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_serversideencrypt" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_proxy" format="dita"/></li>
-            <li><xref href="#amazon-emr/s3_config_param" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_config_file" format="dita"/></li>
+            <li><xref href="#amazon-emr/s3_config_param" format="dita"/></li>
             <li><xref href="#amazon-emr/section_tsq_n3t_3x" format="dita"/></li>
             <li><xref href="#amazon-emr/s3chkcfg_utility" format="dita"/></li>
          </ul></p>
       <section id="s3_prereq">
-         <title>Configuring and Using S3 External Tables</title>
-         <p>Follow these basic steps to configure the S3 protocol and use S3 external tables, using
-            the available links for more information. See also <xref
-               href="#amazon-emr/section_tsq_n3t_3x" format="dita"/> to better understand the
-            capabilities and limitations of S3 external tables:<ol id="ol_pbb_rmq_kx">
-               <li>Configure each database to support the <codeph>s3</codeph> protocol:<ol
-                     id="ol_w3z_dpq_kx">
-                     <li>In each database that will access an S3 bucket with the <codeph>s3</codeph>
-                        protocol, create the read and write functions for the <codeph>s3</codeph>
-                        protocol
-                        library:<codeblock>CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
+         <title>Configuring the s3 Protocol</title>
+         <p>You must configure the <codeph>s3</codeph> protocol before you can use it.
+           Perform these steps in each database in which you want to use the protocol:</p>
+         <ol>
+           <li>Create the read and write functions for the <codeph>s3</codeph> protocol
+             library:<codeblock>CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
    '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;</codeblock><codeblock>CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
    '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;</codeblock></li>
-                     <li> In each database that will access an S3 bucket, declare the
-                           <codeph>s3</codeph> protocol and specify the read and write functions you
-                        created in the previous step:<codeblock>CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);</codeblock>
-                        <note>The protocol name <codeph>s3</codeph> must be the same as the protocol
-                           of the URL specified for the external table you create to access an S3
-                           resource. <p>The corresponding function is called by every Greenplum
-                              Database segment instance. All segment hosts must have access to the
-                              S3 bucket.</p></note></li>
-                  </ol></li>
-               <li>On each Greenplum Database segment, create and install the <codeph>s3</codeph>
-                  protocol configuration file:<ol id="ol_mnq_rnq_kx">
-                     <li>Create a template <codeph>s3</codeph> protocol configuration file using the
-                           <codeph>gpcheckcloud</codeph>
-                        utility:<codeblock>gpcheckcloud -t > ./mytest_s3.config</codeblock></li>
-                     <li>Edit the template file to specify the <codeph>accessid</codeph> and
-                           <codeph>secret</codeph> required to connect to the S3 location. See <xref
-                           href="#amazon-emr/s3_config_file" format="dita"/> for information about
-                        other <codeph>s3</codeph> protocol configuration parameters.</li>
-                     <li>Copy the file to the same location and filename for all Greenplum Database
-                        segments on all hosts. The default file location is
-                              <codeph><varname>gpseg_data_dir</varname>/<varname>gpseg_prefix</varname><varname>N</varname>/s3/s3.conf</codeph>.
-                           <varname>gpseg_data_dir</varname> is the path to the Greenplum Database
-                        segment data directory, <varname>gpseg_prefix</varname> is the segment
-                        prefix, and <varname>N</varname> is the segment ID. The segment data
-                        directory, prefix, and ID are set when you initialize a Greenplum Database
-                        system. <p>If you copy the file to a different location or filename, then
-                           you must specify the location with the <codeph>config</codeph> parameter
-                           in the <codeph>s3</codeph> protocol URL. See <xref
-                              href="#amazon-emr/s3_config_param" format="dita"/>.</p></li>
-                     <li>Use the <codeph>gpcheckcloud</codeph> utility to validate connectivity to
-                        the S3
-                           bucket:<codeblock>gpcheckcloud -c "s3://&lt;s3-endpoint>/&lt;s3-bucket> config=./mytest_s3.config"</codeblock><p>Specify
-                           the correct path to the configuration file for your system, as well as
-                           the S3 endpoint name and bucket that you want to check.
-                              <codeph>gpcheckcloud</codeph> attempts to connect to the S3 endpoint
-                           and lists any files in the S3 bucket, if available. A successful
-                           connection ends with the
-                           message:<codeblock>Your configuration works well.</codeblock>You can
-                           optionally use <codeph>gpcheckcloud</codeph> to validate uploading to and
-                           downloading from the S3 bucket, as described in <xref
-                              href="#amazon-emr/s3chkcfg_utility" format="dita"/>.</p></li>
-                  </ol></li>
-               <li>After completing the previous steps to create and configure the
-                     <codeph>s3</codeph> protocol, you can specify an <codeph>s3</codeph> protocol
-                  URL in the <codeph>CREATE EXTERNAL TABLE</codeph> command to define S3 external
-                  tables. For read-only S3 tables, the URL defines the location and prefix used to
-                  select existing data files that comprise the S3 table. For example:
+           <li>Declare the <codeph>s3</codeph> protocol and specify the read and write functions you
+             created in the previous step:<codeblock>CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);</codeblock>
+             <note>The protocol name <codeph>s3</codeph> must be the same as the protocol
+               of the URL specified for the external table that you create to access an S3
+               resource. <p>The corresponding function is called by every Greenplum
+               Database segment instance.</p></note></li>
+         </ol>
+      </section>
+      <section id="s3_using">
+         <title>Using s3 External Tables</title>
+         <p>Follow these basic steps to use the <codeph>s3</codeph> protocol with Greenplum
+            Database external tables. Each step includes links to relevant topics from
+            which you can obtain more information. See also <xref
+               href="#amazon-emr/section_tsq_n3t_3x" format="dita"/> to better understand the
+            capabilities and limitations of s3 external tables:</p>
+            <ol id="ol_pbb_rmq_kx">
+              <li><xref href="#amazon-emr/s3_prereq" format="dita">Configure the s3 Protocol</xref>.</li>
+              <li>Create the <codeph>s3</codeph> protocol configuration file:
+                <ol id="ol_mnq_rnq_kx">
+                  <li>Create a template <codeph>s3</codeph> protocol configuration file using the
+                    <codeph>gpcheckcloud</codeph>
+                    utility:<codeblock>gpcheckcloud -t > ./mytest_s3.config</codeblock></li>
+                  <li>Edit the template file to specify the <codeph>accessid</codeph> and
+                    <codeph>secret</codeph> required to connect to the S3 location. See <xref
+                      href="#amazon-emr/s3_config_file" format="dita"/> for information about
+                    other <codeph>s3</codeph> protocol configuration parameters.</li>
+                </ol>
+              </li>
+              <li>Greenplum Database can access an <codeph>s3</codeph> protocol
+                configuration file when the file is located on each segment host or when the
+                file is served up by an <codeph>http/https</codeph> server. Identify where you
+                plan to locate the configuration file, and note the location and configuration
+                option (if applicable). Refer to
+                <xref href="#amazon-emr/s3_config_param" format="dita"/> for more information
+                about the location options for the file.</li>
+              <li>Use the <codeph>gpcheckcloud</codeph> utility to validate connectivity to
+                the S3 bucket.
+                You must specify the S3 endpoint name and bucket that you want to check.
+                <p>For example, if the <codeph>s3</codeph> protocol configuration file resides
+                  in the default location, you would run the following command:
+                  <codeblock>gpcheckcloud -c "s3://&lt;s3-endpoint>/&lt;s3-bucket>"</codeblock></p>
+                 <p><codeph>gpcheckcloud</codeph> attempts to connect to the S3 endpoint
+                  and lists any files in the S3 bucket, if available. A successful
+                  connection ends with the message:
+                  <codeblock>Your configuration works well.</codeblock>
+                  You can optionally use <codeph>gpcheckcloud</codeph> to validate uploading
+                  to and downloading from the S3 bucket. Refer to <xref
+                    href="#amazon-emr/s3chkcfg_utility" format="dita"/> for information
+                  about this utility and other usage examples.</p>
+</li>
+               <li>Create an s3 external table by specifying an <codeph>s3</codeph> protocol
+                  URL in the <codeph>CREATE EXTERNAL TABLE</codeph> command, 
+                  <codeph>LOCATION</codeph> clause.
+                  <p>For read-only s3 tables, the URL defines the location and prefix used to
+                  select existing data files that comprise the s3 table. For example:
                      <codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
    LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')
-   FORMAT 'csv';</codeblock><p>For
-                     writable S3 tables, the protocol URL defines the S3 location in which Greenplum
-                     database stores data files for the table, as well as a prefix to use when
-                     creating files for table <codeph>INSERT</codeph> operations. For
+   FORMAT 'csv';</codeblock></p><p>For
+                     writable s3 tables, the protocol URL defines the S3 location in which Greenplum
+                     Database writes the data files that back the table for <codeph>INSERT</codeph>
+                     operations. You can also specify a prefix that Greenplum will add to the files
+                     that it creates. For
                      example:<codeblock>CREATE WRITABLE EXTERNAL TABLE S3WRIT (LIKE S3TBL)
    LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')
-   FORMAT 'csv';</codeblock></p><p>See
+   FORMAT 'csv';</codeblock></p><p>Refer to
                         <xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/> for more
-                     information.</p></li>
-            </ol></p>
+                     information about the <codeph>s3</codeph> protocol URL.</p></li>
+            </ol>
       </section>
       <section id="section_stk_c2r_kx">
-         <title>About the S3 Protocol URL</title>
-         <p>For the <codeph>s3</codeph> protocol, you specify a location for files and an optional
-            configuration file location in the <codeph>LOCATION</codeph> clause of the
-               <codeph>CREATE EXTERNAL TABLE</codeph> command. This is the syntax:</p>
-         <codeblock>'s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3_region</varname>] [config=<varname>config_file_location</varname>]'</codeblock>
+         <title>About the s3 Protocol LOCATION URL</title>
+         <p>When you use the <codeph>s3</codeph> protocol, you specify an S3 file location
+            and optional configuration file location and region parameters in the
+            <codeph>LOCATION</codeph> clause
+            of the <codeph>CREATE EXTERNAL TABLE</codeph> command. The syntax follows:</p>
+         <codeblock>'s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3_region</varname>] [config=<varname>config_file_location</varname> | config_server=<varname>url</varname>]'</codeblock>
          <p>The <codeph>s3</codeph> protocol requires that you specify the S3 endpoint and S3 bucket
-            name. Each Greenplum Database segment instance must have access to the S3 location. The
+            name. Each Greenplum Database segment host must have access to the S3 location. The
             optional <varname>S3_prefix</varname> value is used to select files for read-only S3
-            tables, or as a filename prefix to use when uploading files for S3 writable tables.</p>
+            tables, or as a filename prefix to use when uploading files for s3 writable tables.</p>
          <note>The Greenplum Database <codeph>s3</codeph> protocol URL must include the S3 endpoint
             hostname.</note>
          <p>To specify an ECS endpoint (an Amazon S3 compatible service) in the
-               <codeph>LOCATION</codeph> clause, you must set the <codeph>s3</codeph> configuration
-            file parameter <codeph>version</codeph> to 2. The <codeph>version</codeph> parameter
+               <codeph>LOCATION</codeph> clause, you must set the <codeph>s3</codeph> protocol configuration
+            file parameter <codeph>version</codeph> to <codeph>2</codeph>. The <codeph>version</codeph> parameter
             controls whether the <codeph>region</codeph> parameter is used in the
                <codeph>LOCATION</codeph> clause. You can also specify an Amazon S3 location when the
-               <codeph>version</codeph> parameter is 2. For information about
+               <codeph>version</codeph> parameter is 2. For information about the
                <codeph>version</codeph> parameter, see <xref href="#amazon-emr/s3_config_file"
                format="dita"/>.</p>
          <note id="s3-prefix-note">Although the <varname>S3_prefix</varname> is an optional part of
-            the syntax, you should always include an S3 prefix for both writable and read-only S3
+            the syntax, you should always include an S3 prefix for both writable and read-only s3
             tables to separate datasets as part of the <codeph><xref
                   href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1">CREATE
                   EXTERNAL TABLE</xref></codeph> syntax.</note>
-         <p>For writable S3 tables, the <codeph>s3</codeph> protocol URL specifies the endpoint and
-            bucket name where Greenplum Database uploads data files for the table. The S3 bucket
-            permissions must be <codeph>Upload/Delete</codeph> for the S3 user ID that uploads the
-            files. The S3 file prefix is used for each new file uploaded to the S3 location as a
+         <p>For writable s3 tables, the <codeph>s3</codeph> protocol URL specifies the endpoint and
+            bucket name where Greenplum Database uploads data files for the table.
+            The S3 file prefix is used for each new file uploaded to the S3 location as a
             result of inserting data to the table. See <xref href="#amazon-emr/section_c2f_zvs_3x"
                format="dita"/>.</p>
-         <p>For read-only S3 tables, the S3 file prefix is optional. If you specify an
+         <p>For read-only s3 tables, the S3 file prefix is optional. If you specify an
                <varname>S3_prefix</varname>, then the <codeph>s3</codeph> protocol selects all files
             that start with the specified prefix as data files for the external table. The
                <codeph>s3</codeph> protocol does not use the slash character (<codeph>/</codeph>) as
@@ -174,9 +179,7 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
          <p>All of the files selected by the S3 URL
                (<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/<varname>S3_prefix</varname>)
             are used as the source for the external table, so they must have the same format. Each
-            file must also contain complete data rows. A data row cannot be split between files. The
-            S3 file permissions must be <codeph>Open/Download</codeph> and <codeph>View</codeph> for
-            the S3 user ID that is accessing the files. </p>
+            file must also contain complete data rows. A data row cannot be split between files.</p>
          <p>For information about the Amazon S3 endpoints see <xref
                href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region"
                format="html" scope="external"
@@ -188,16 +191,50 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
                href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ListingKeysHierarchy.html"
                format="html" scope="external">Listing Keys Hierarchically Using a Prefix and
                Delimiter</xref>.</p>
-         <p>The <codeph>config</codeph> parameter specifies the location of the required
-               <codeph>s3</codeph> protocol configuration file that contains AWS connection
-            credentials and communication parameters. See <xref href="#amazon-emr/s3_config_param"
-               format="dita"/>.</p>
+         <p>You use the <codeph>config</codeph> or <codeph>config_server</codeph> parameter
+           to specify the location of the required <codeph>s3</codeph> protocol configuration
+           file that contains AWS connection credentials and communication parameters
+            as described in <xref href="#amazon-emr/s3_config_param" format="dita"/>.</p>
       </section>
       <section id="section_c2f_zvs_3x">
-         <title>About S3 Data Files</title>
-         <p>For each <codeph>INSERT</codeph> operation to a writable S3 table, each Greenplum
-            Database segment uploads a single file to the configured S3 bucket using the filename
-            format <codeph>&lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph>
+         <title>About Reading and Writing S3 Data Files</title>
+         <p>You can use the <codeph>s3</codeph> protocol to read and write data files on 
+           Amazon S3.</p>
+         <sectiondiv id="read_file">
+           <p><b>Reading S3 Files</b></p>
+           <p>The S3 permissions on any file that you read must include
+             <codeph>Open/Download</codeph> and <codeph>View</codeph> for the S3 user ID that
+             accesses the files.</p>
+           <p>For read-only s3 tables, all of the files specified by the S3 file location
+               (<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/<varname>S3_prefix</varname>)
+            are used as the source for the external table and must have the same format. Each file
+            must also contain complete data rows. If the files contain an optional header row, the
+            column names in the header row cannot contain a newline character (<codeph>\n</codeph>)
+            or a carriage return (<codeph>\r</codeph>). Also, the column delimiter cannot be a
+            newline character (<codeph>\n</codeph>) or a carriage return character
+               (<codeph>\r</codeph>). </p>
+           <p>The <codeph>s3</codeph> protocol recognizes gzip and deflate
+            compressed files and automatically decompresses the files. For gzip compression, the
+            protocol recognizes the format of a gzip compressed file. For deflate compression, the
+            protocol assumes a file with the <codeph>.deflate</codeph> suffix is a deflate
+            compressed file.</p>
+           <p>Each Greenplum Database segment can download one file at a time from the S3 location
+            using several threads. To take advantage of the parallel processing performed by the
+            Greenplum Database segments, the files in the S3 location should be similar in size and
+            the number of files should allow for multiple segments to download the data from the S3
+            location. For example, if the Greenplum Database system consists of 16 segments and
+            there was sufficient network bandwidth, creating 16 files in the S3 location allows each
+            segment to download a file from the S3 location. In contrast, if the location contained
+            only 1 or 2 files, only 1 or 2 segments download data.</p>
+         </sectiondiv>
+         <sectiondiv id="write_file">
+           <p><b>Writing S3 Files</b></p>
+           <p> Writing a file to S3 requires that the S3 user ID have
+             <codeph>Upload/Delete</codeph> permissions.</p>
+           <p>When you initiate an <codeph>INSERT</codeph> operation on a writable s3 table,
+             each Greenplum Database segment uploads a single file to the configured S3 bucket
+             using the filename
+             format <codeph>&lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph>
                where:<ul id="ul_sw1_qvs_3x">
                <li><codeph>&lt;prefix></codeph> is the prefix specified in the S3 URL.</li>
                <li><codeph>&lt;segment_id></codeph> is the Greenplum Database segment ID.</li>
@@ -209,35 +246,12 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
                      TABLE</codeph>). Files created by the <codeph>gpcheckcloud</codeph> utility
                   always uses the extension <filepath>.data</filepath>.</li>
                <li><filepath>.gz</filepath> is appended to the filename if compression is enabled
-                  for S3 writable tables (the default).</li>
+                  for s3 writable tables (the default).</li>
             </ul></p>
-         <p>For writable S3 tables, you can configure the buffer size and the number of threads that
+           <p>You can configure the buffer size and the number of threads that
             segments use for uploading files. See <xref href="#amazon-emr/s3_config_file"
                format="dita"/>.</p>
-         <p>For read-only S3 tables, all of the files specified by the S3 file location
-               (<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/<varname>S3_prefix</varname>)
-            are used as the source for the external table and must have the same format. Each file
-            must also contain complete data rows. If the files contain an optional header row, the
-            column names in the header row cannot contain a newline character (<codeph>\n</codeph>)
-            or a carriage return (<codeph>\r</codeph>). Also, the column delimiter cannot be a
-            newline character (<codeph>\n</codeph>) or a carriage return character
-               (<codeph>\r</codeph>). </p>
-         <p>For read-only S3 tables, the <codeph>s3</codeph> protocol recognizes gzip and deflate
-            compressed files and automatically decompresses the files. For gzip compression, the
-            protocol recognizes the format of a gzip compressed file. For deflate compression, the
-            protocol assumes a file with the <codeph>.deflate</codeph> suffix is a deflate
-            compressed file.</p>
-         <p>The S3 file permissions must be <codeph>Open/Download</codeph> and <codeph>View</codeph>
-            for the S3 user ID that is accessing the files. Writable S3 tables require the S3 user
-            ID to have <codeph>Upload/Delete</codeph> permissions.</p>
-         <p>For read-only S3 tables, each segment can download one file at a time from S3 location
-            using several threads. To take advantage of the parallel processing performed by the
-            Greenplum Database segments, the files in the S3 location should be similar in size and
-            the number of files should allow for multiple segments to download the data from the S3
-            location. For example, if the Greenplum Database system consists of 16 segments and
-            there was sufficient network bandwidth, creating 16 files in the S3 location allows each
-            segment to download a file from the S3 location. In contrast, if the location contained
-            only 1 or 2 files, only 1 or 2 segments download data.</p>
+         </sectiondiv>
       </section>
       <section id="s3_serversideencrypt">
          <title>s3 Protocol AWS Server-Side Encryption Support</title>
@@ -260,7 +274,7 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
                advantage of server-side encryption on AWS S3 objects you write using the Greenplum
                Database <codeph>s3</codeph> protocol, you must set the
                   <codeph>server_side_encryption</codeph> configuration parameter in your
-                  <codeph>s3</codeph> configuration file to the value <codeph>sse-s3</codeph>:</p>
+                  <codeph>s3</codeph> protocol configuration file to the value <codeph>sse-s3</codeph>:</p>
             <p>
                <codeblock>
 server_side_encryption = sse-s3
@@ -304,60 +318,20 @@ server_side_encryption = sse-s3
          <p>For information about the configuration parameter <codeph>proxy</codeph>, see <xref
                href="#amazon-emr/s3_config_file" format="dita"/>.</p>
       </section>
-      <section id="s3_config_param">
-         <title>About the s3 Protocol config Parameter</title>
-         <p>The optional <codeph>config</codeph> parameter specifies the location of the required
-               <codeph>s3</codeph> protocol configuration file. The file contains Amazon Web
-            Services (AWS) connection credentials and communication parameters. For information
-            about the file, see <xref href="#amazon-emr/s3_config_file" format="dita"/>.</p>
-         <p>The configuration file is required on all Greenplum Database segment hosts. This is
-            default location is a location in the data directory of each Greenplum Database segment
-            instance.<codeblock><varname>gpseg_data_dir</varname>/<varname>gpseg_prefix</varname><varname>N</varname>/s3/s3.conf</codeblock></p>
-         <p>The <varname>gpseg_data_dir</varname> is the path to the Greenplum Database segment data
-            directory, the <varname>gpseg_prefix</varname> is the segment prefix, and
-               <varname>N</varname> is the segment ID. The segment data directory, prefix, and ID
-            are set when you initialize a Greenplum Database system.</p>
-         <p>If you have multiple segment instances on segment hosts, you can simplify the
-            configuration by creating a single location on each segment host. Then you specify the
-            absolute path to the location with the <codeph>config</codeph> parameter in the
-               <codeph>s3</codeph> protocol <codeph>LOCATION</codeph> clause. This example specifies
-            a location in the <codeph>gpadmin</codeph> home directory. </p>
-         <codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/test/my_data config=/home/gpadmin/s3.conf')</codeblock>
-         <p>All segment instances on the hosts use the file
-            <codeph>/home/gpadmin/s3.conf</codeph>.</p>
-      </section>
       <section id="s3_config_file">
-         <title>s3 Protocol Configuration File</title>
-         <p>When using the <codeph>s3</codeph> protocol, an <codeph>s3</codeph> protocol
-            configuration file is required on all Greenplum Database segments. The default location
-            is:<codeblock><varname>gpseg_data_dir</varname>/<varname>gpseg-prefix</varname><varname>N</varname>/s3/s3.conf</codeblock></p>
-         <p>The <varname>gpseg_data_dir</varname> is the path to the Greenplum Database segment data
-            directory, the <varname>gpseg-prefix</varname> is the segment prefix, and
-               <varname>N</varname> is the segment ID. The segment data directory, prefix, and ID
-            are set when you initialize a Greenplum Database system.</p>
-         <p>If you have multiple segment instances on segment hosts, you can simplify the
-            configuration by creating a single location on each segment host. Then you can specify
-            the absolute path to the location with the <codeph>config</codeph> parameter in the
-               <codeph>s3</codeph> protocol <codeph>LOCATION</codeph> clause. However, note that
-            both read-only and writable S3 external tables use the same parameter values for their
-            connections. If you want to configure protocol parameters differently for read-only and
-            writable S3 tables, then you must use two different <codeph>s3</codeph> protocol
-            configuration files and specify the correct file in the <codeph>CREATE EXTERNAL
-               TABLE</codeph> statement when you create each table.</p>
-         <p>This example specifies a single file location in the <codeph>s3</codeph> directory of
-            the <codeph>gpadmin</codeph> home directory:</p>
-         <codeblock>config=/home/gpadmin/s3/s3.conf</codeblock>
-         <p>All segment instances on the hosts use the file
-               <codeph>/home/gpadmin/s3/s3.conf</codeph>.</p>
-         <p>The <codeph>s3</codeph> protocol configuration file is a text file that consists of a
-               <codeph>[default]</codeph> section and parameters This is an example configuration
-            file:<codeblock>[default]
+         <title>About the s3 Protocol Configuration File</title>
+         <p>An <codeph>s3</codeph> protocol configuration file contains Amazon Web Services
+           (AWS) connection credentials and communication parameters. This file is required
+           to use the <codeph>s3</codeph> protocol.</p>
+         <p>The <codeph>s3</codeph> protocol configuration file is a text file that
+           contains a <codeph>[default]</codeph> section and parameters.
+           An example configuration file follows:<codeblock>[default]
 secret = "secret"
 accessid = "user access id"
 threadnum = 3
 chunksize = 67108864</codeblock></p>
-         <p>You can use the Greenplum Database <codeph>gpcheckcloud</codeph> utility to test the S3
-            configuration file. See <xref href="#amazon-emr/s3chkcfg_utility" format="dita"/>.</p>
+         <p>You can use the Greenplum Database <codeph>gpcheckcloud</codeph> utility to test the s3
+            protocol configuration file. See <xref href="#amazon-emr/s3chkcfg_utility" format="dita"/>.</p>
          <sectiondiv>
             <p><b>s3 Configuration File Parameters</b></p>
             <parml>
@@ -371,7 +345,7 @@ chunksize = 67108864</codeblock></p>
                </plentry>
                <plentry>
                   <pt>autocompress</pt>
-                  <pd>For writable S3 external tables, this parameter specifies whether to compress
+                  <pd>For writable s3 external tables, this parameter specifies whether to compress
                      files (using gzip) before uploading to S3. Files are compressed by default if
                      you do not specify this parameter.</pd>
                </plentry>
@@ -379,7 +353,7 @@ chunksize = 67108864</codeblock></p>
                   <pt>chunksize</pt>
                   <pd>The buffer size that each segment thread uses for reading from or writing to
                      the S3 server. The default is 64 MB. The minimum is 8MB and the maximum is
-                     128MB. <p>When inserting data to a writable S3 table, each Greenplum Database
+                     128MB. <p>When inserting data to a writable s3 table, each Greenplum Database
                         segment writes the data into its buffer (using multiple threads up to the
                            <codeph>threadnum</codeph> value) until it is full, after which it writes
                         the buffer to a file in the S3 bucket. This process is then repeated as
@@ -388,7 +362,7 @@ chunksize = 67108864</codeblock></p>
                         multipart uploads, the minimum <codeph>chunksize</codeph> value of 8MB
                         supports a maximum insert size of 80GB per Greenplum database segment. The
                         maximum <codeph>chunksize</codeph> value of 128MB supports a maximum insert
-                        size 1.28TB per segment. For writable S3 tables, you must ensure that the
+                        size 1.28TB per segment. For writable s3 tables, you must ensure that the
                            <codeph>chunksize</codeph> setting can support the anticipated table size
                         of your table. See <xref
                            href="http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html"
@@ -518,6 +492,40 @@ chunksize = 67108864</codeblock></p>
             </note>
          </sectiondiv>
       </section>
+      <section id="s3_config_param">
+         <title>About Specifying the Configuration File Location</title>
+         <p>The default location of the <codeph>s3</codeph> protocol configuration file is
+           a file named <codeph>s3.conf</codeph> that resides in the data directory of each
+           Greenplum Database segment instance:
+           <codeblock><varname>gpseg_data_dir</varname>/<varname>gpseg_prefix</varname><varname>N</varname>/s3/s3.conf</codeblock>
+           The <varname>gpseg_data_dir</varname> is the path to the Greenplum Database segment data
+            directory, the <varname>gpseg_prefix</varname> is the segment prefix, and
+               <varname>N</varname> is the segment ID. The segment data directory, prefix, and ID
+            are set when you initialize a Greenplum Database system.</p>
+         <p>You may choose an alternate location for the <codeph>s3</codeph> protocol
+           configuration file by specifying the optional <codeph>config</codeph> or
+           <codeph>config_server</codeph> parameters in the <codeph>LOCATION</codeph> URL:</p>
+         <ul>
+           <li>You can simplify the configuration by using a single configuration file that
+             resides in the same file system location on each segment host. In this scenario,
+             you specify the <codeph>config</codeph> parameter
+             in the <codeph>LOCATION</codeph> clause to identify the absolute path to the file.
+             The following example specifies a location in the <codeph>gpadmin</codeph> home
+             directory:
+             <codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/test/my_data config=/home/gpadmin/s3.conf')</codeblock>
+           <p>The <codeph>/home/gpadmin/s3.conf</codeph> file must reside on each segment host,
+             and all segment instances on a host use the file.</p>
+           </li>
+           <li>You also have the option to use an <codeph>http/https</codeph> server to serve up the
+             configuration file. In this scenario, you specify an <codeph>http/https</codeph>
+             server URL in the <codeph>config_server</codeph> parameter. You are responsible
+             for configuring and starting the server, and each Greenplum Database segment host
+             must be able to access the server. The following example specifies an IP address
+             and port for an <codeph>https</codeph> server:
+             <codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/test/my_data config_server=https://203.0.113.0:8553')</codeblock>
+           </li>
+         </ul>
+      </section>
       <section id="section_tsq_n3t_3x">
          <title>s3 Protocol Limitations</title>
          <p>These are <codeph>s3</codeph> protocol limitations: <ul id="ul_qqg_qcz_55">
@@ -530,14 +538,15 @@ chunksize = 67108864</codeblock></p>
                         href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region"
                         format="html" scope="external"
                         >http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region</xref>.</p></li>
-               <li>Only a single URL and optional configuration file is supported in the
+               <li>Only a single URL and optional configuration file location and region
+                 parameters is supported in the
                      <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL TABLE</codeph>
                   command.</li>
                <li>If the <codeph>NEWLINE</codeph> parameter is not specified in the <codeph>CREATE
                      EXTERNAL TABLE</codeph> command, the newline character must be identical in all
                   data files for specific prefix. If the newline character is different in some data
                   files with the same prefix, read operations on the files might fail.</li>
-               <li>For writable S3 external tables, only the <codeph>INSERT</codeph> operation is
+               <li>For writable s3 external tables, only the <codeph>INSERT</codeph> operation is
                   supported. <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
                      <codeph>TRUNCATE</codeph> operations are not supported.</li>
                <li>Because Amazon S3 allows a maximum of 10,000 parts for multipart uploads, the
@@ -549,7 +558,7 @@ chunksize = 67108864</codeblock></p>
                      format="html" scope="external">Multipart Upload Overview</xref> in the S3
                   documentation for more information about uploads to S3.</li>
                <li>To take advantage of the parallel processing performed by the Greenplum Database
-                  segment instances, the files in the S3 location for read-only S3 tables should be
+                  segment instances, the files in the S3 location for read-only s3 tables should be
                   similar in size and the number of files should allow for multiple segments to
                   download the data from the S3 location. For example, if the Greenplum Database
                   system consists of 16 segments and there was sufficient network bandwidth,
@@ -567,9 +576,9 @@ chunksize = 67108864</codeblock></p>
             capture the output and create an <codeph>s3</codeph> configuration file to connect to
             Amazon S3. </p><p>The utility is installed in the Greenplum Database
                <codeph>$GPHOME/bin</codeph> directory.</p><b>Syntax</b>
-         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
+         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname> | config_server=<varname>url</varname>]"
 
-gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
+gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname> | config_server=<varname>url</varname>]"
 gpcheckcloud <b>-t</b>
 
 gpcheckcloud <b>-h</b></codeblock>
@@ -620,8 +629,12 @@ gpcheckcloud <b>-h</b></codeblock>
             successful upload results in one or more files placed in the S3 bucket using the
             filename format <codeph> abc&lt;segment_id>&lt;random>.data[.gz]</codeph>. See <xref
                href="#amazon-emr/section_c2f_zvs_3x" format="dita"/>.</p><p>This example attempts to
-            connect to an S3 bucket location with the <codeph>s3</codeph> configuration file
-               <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p><p>Download
+            connect to an S3 bucket location with the <codeph>s3</codeph> protocol configuration file
+               <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p>
+         <p>This example attempts to connect to an S3 bucket location using an 
+           <codeph>s3</codeph> protocol configuration file served by an <codeph>https</codeph> server:
+           <codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config_server=https://203.0.113.0:8553"</codeblock></p>
+         <p>Download
             all files from the S3 bucket location and send the output to <codeph>STDOUT</codeph>.
             <codeblock>gpcheckcloud -d "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p></section>
    </body>
