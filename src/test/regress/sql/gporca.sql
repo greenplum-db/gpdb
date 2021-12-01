@@ -252,6 +252,31 @@ create table orca.bar(a int, b int, c int);
 insert into orca.foo select i, i%2, i%4, i-1 from generate_series(1,40)i;
 insert into orca.bar select i, i%3, i%2 from generate_series(1,30)i;
 
+-- test casting with setops
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  except all
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect
+    select 2019::int)
+select * from v where year > 1;
+
+with v(year) as (
+    select 2019::float8 + dx from (VALUES (-1), (0), (0), (1), (1)) t(dx)
+  intersect all
+    select 2019::int)
+select * from v where year > 1;
+
 -- distinct operation
 SELECT distinct a, b from orca.foo;
 SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
@@ -2108,3 +2133,4 @@ reset optimizer_trace_fallback;
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
+
