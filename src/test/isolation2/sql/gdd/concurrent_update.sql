@@ -173,3 +173,28 @@ DROP TABLE t_concurrent_update;
 2q:
 
 0:drop table t_splitupdate_raise_error;
+
+-- test eval planqual with initPlan
+-- EvalPlanQualStart will init all subplans even if it does
+-- not use it. If such subplan contains Motion nodes, we should
+-- error out just like the behavior in EvalPlanQual.
+-- See Issue: https://github.com/greenplum-db/gpdb/issues/12902
+-- for details.
+1: create table t_epq_subplans(a int, b int);
+1: insert into t_epq_subplans values (1, 1);
+1: begin;
+1: update t_epq_subplans set b = b + 1;
+
+-- make sure planner will contain InitPlan
+-- NOTE: orca does not generate InitPlan.
+2: explain update t_epq_subplans set b = b + 1 where a > -1.5 * (select max(a) from t_epq_subplans);
+2&: update t_epq_subplans set b = b + 1 where a > -1.5 * (select max(a) from t_epq_subplans);
+
+1: end;
+-- session 2 should throw error and not PANIC
+2<:
+
+1: drop table t_epq_subplans;
+
+1q:
+2q:

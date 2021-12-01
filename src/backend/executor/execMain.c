@@ -151,6 +151,7 @@ static void FillSliceTable(EState *estate, PlannedStmt *stmt);
 static PartitionNode *BuildPartitionNodeFromRoot(Oid relid);
 static void InitializeQueryPartsMetadata(PlannedStmt *plannedstmt, EState *estate);
 static void AdjustReplicatedTableCounts(EState *estate);
+static void check_epq_safe_on_qes(Plan *plan);
 
 /* end of local decls */
 
@@ -3534,21 +3535,8 @@ EvalPlanQual(EState *estate, EPQState *epqstate,
 
 	Assert(rti > 0);
 
-	/*
-	 * Greenplum cannot create gang in QEs so it does not support
-	 * EvalPlanQual that subplan contain motions. This can happen
-	 * in two cases:
-	 *   1. GDD is enabled, so update|delete can be concurrently executing
-	 *   2. Utility mode connect to a segment and other global transaction
-	 *      do UpdateStatement.
-	 */
-	Assert(subPlan != NULL);
-	if (subPlan->nMotionNodes > 0)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-				 errmsg("EvalPlanQual can not handle subPlan with Motion node")));
-	}
+	/* Greenplum specific check */
+	check_epq_safe_on_qes(subPlan);
 
 	/*
 	 * Get and lock the updated version of the row; if fail, return NULL.
@@ -4235,6 +4223,12 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 	{
 		Plan	   *subplan = (Plan *) lfirst(l);
 		PlanState  *subplanstate;
+
+		/*
+		 * Greenplum specific check
+		 * See Issue https://github.com/greenplum-db/gpdb/issues/12902 for details.
+		 */
+		check_epq_safe_on_qes(subplan);
 
 		subplanstate = ExecInitNode(subplan, estate, 0);
 		estate->es_subplanstates = lappend(estate->es_subplanstates,
@@ -5212,4 +5206,29 @@ AdjustReplicatedTableCounts(EState *estate)
 
 	if (containReplicatedTable)
 		estate->es_processed = estate->es_processed / numsegments;
+}
+
+static void
+check_epq_safe_on_qes(Plan *plan)
+{
+	Assert(!IS_QUERY_DISPATCHER());
+	/*
+	 * Greenplum cannot create gang in QEs so it does not support
+	 * EvalPlanQual that subplan contain motions. This can happen
+	 * in two cases:
+	 *   1. GDD is enabled, so update|delete can be concurrently executing
+	 *   2. Utility mode connect to a segment and other global transaction
+	 *      do UpdateStatement.
+	 *
+	 * Another case is when to EvalPlanQual, it will try to init all
+	 * the SubPlans (even thoses subplans are not used for current plan
+	 * qual), so we need also check if subplans contain motion. See comments
+	 * of EvalPlanQualStart for details.
+	 */
+	if (plan && plan->nMotionNodes > 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+				 errmsg("EvalPlanQual can not handle subPlan with Motion node")));
+	}
 }
