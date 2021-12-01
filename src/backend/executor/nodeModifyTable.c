@@ -589,8 +589,8 @@ ExecInsert(TupleTableSlot *parentslot,
 	/* Process RETURNING if present */
 	if (projectReturning)
 	{
-		/* slot has been modified by trigger or others*/
-		if (slot != parentslot)
+		/* slot has been modified by trigger and it is not from partition table */
+		if (slot != parentslot && NULL == resultRelInfo->ri_partInsertMap)
 		{
 			int         natts = slot->tts_tupleDescriptor->natts;
 			slot_getallattrs(slot);
