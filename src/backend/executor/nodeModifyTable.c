@@ -162,6 +162,37 @@ ExecProcessReturning(ProjectionInfo *projectReturning,
 	return ExecProject(projectReturning, NULL);
 }
 
+/* update parentslot if slot has been modified */
+static void
+update_parentslot(TupleTableSlot *parentslot, TupleTableSlot *slot)
+{
+	int natts = slot->tts_tupleDescriptor->natts;
+	slot_getallattrs(slot);
+	Datum *values = slot_get_values(slot);
+	bool *isnull = slot_get_isnull(slot);
+
+	/* make sure the parentslot is clear */
+	ExecClearTuple(parentslot);
+
+	/* update parentslot */
+	memcpy(parentslot->PRIVATE_tts_values, values, natts * sizeof(Datum));
+	memcpy(parentslot->PRIVATE_tts_isnull, isnull, natts * sizeof(bool));
+
+	/* mark parentslot as containing a virtual tuple */
+	ExecStoreVirtualTuple(parentslot);
+
+	/* set parentslot's tableoid and ctid */
+	parentslot->tts_tableOid = slot->tts_tableOid;
+	/*
+	 * We need to check if the slot has a valid ctid when it has a HeapTuple
+	 * before calling slot_get_ctid, otherwise the Assert in slot_get_ctid will fail
+	 */
+	if (TupHasHeapTuple(slot) && ItemPointerIsValid((&(slot->PRIVATE_tts_heaptuple->t_self))))
+	{
+		slot_set_ctid(parentslot, slot_get_ctid(slot));
+	}
+}
+
 /* ----------------------------------------------------------------
  *		ExecInsert
  *
@@ -431,31 +462,7 @@ ExecInsert(TupleTableSlot *parentslot,
 			/* The values in slot may have been updated by FDW or
 			 * not, anyway we update the parentslot here.
 			 */
-			int         natts = slot->tts_tupleDescriptor->natts;
-			slot_getallattrs(slot);
-			Datum *values = slot_get_values(slot);
-			bool *isnull = slot_get_isnull(slot);
-
-			/* make sure the parentslot is clear */
-			ExecClearTuple(parentslot);
-
-			/* update parentslot */
-			memcpy(parentslot->PRIVATE_tts_values, values, natts * sizeof(Datum));
-			memcpy(parentslot->PRIVATE_tts_isnull, isnull, natts * sizeof(bool));
-
-			/* mark parentslot as containing a virtual tuple */
-			ExecStoreVirtualTuple(parentslot);
-
-			/* set parentslot's tableoid and ctid */
-			parentslot->tts_tableOid = slot->tts_tableOid;
-			/*
-			 * We need to check if the slot has a valid ctid when it has a HeapTuple
-			 * before calling slot_get_ctid, otherwise the Assert in slot_get_ctid will fail
-			 */
-			if (TupHasHeapTuple(slot) && ItemPointerIsValid((&(slot->PRIVATE_tts_heaptuple->t_self))))
-			{
-				slot_set_ctid(parentslot, slot_get_ctid(slot));
-			}
+			update_parentslot(parentslot, slot);
 		}
 		newId = InvalidOid;
 	}
@@ -592,31 +599,7 @@ ExecInsert(TupleTableSlot *parentslot,
 		/* slot has been modified by trigger and it is not from partition table */
 		if (slot != parentslot && NULL == resultRelInfo->ri_partInsertMap)
 		{
-			int         natts = slot->tts_tupleDescriptor->natts;
-			slot_getallattrs(slot);
-			Datum *values = slot_get_values(slot);
-			bool *isnull = slot_get_isnull(slot);
-
-			/* make sure the parentslot is clear */
-			ExecClearTuple(parentslot);
-
-			/* update parentslot */
-			memcpy(parentslot->PRIVATE_tts_values, values, natts * sizeof(Datum));
-			memcpy(parentslot->PRIVATE_tts_isnull, isnull, natts * sizeof(bool));
-
-			/* mark parentslot as containing a virtual tuple */
-			ExecStoreVirtualTuple(parentslot);
-
-			/* set parentslot's tableoid and ctid */
-			parentslot->tts_tableOid = slot->tts_tableOid;
-			/*
-			* We need to check if the slot has a valid ctid when it has a HeapTuple
-			* before calling slot_get_ctid, otherwise the Assert in slot_get_ctid will fail
-			*/
-			if (TupHasHeapTuple(slot) && ItemPointerIsValid((&(slot->PRIVATE_tts_heaptuple->t_self))))
-			{
-				slot_set_ctid(parentslot, slot_get_ctid(slot));
-			}
+			update_parentslot(parentslot, slot);
 		}
 		return ExecProcessReturning(projectReturning,
 									parentslot, planSlot);
