@@ -34,5 +34,8 @@
 3<:
 3:END;
 
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
+
 0:DROP role role_concurrency_test;
 0:DROP RESOURCE QUEUE rq_concurrency_test;
