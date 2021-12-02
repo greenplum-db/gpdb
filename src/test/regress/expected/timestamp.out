@@ -1835,3 +1835,65 @@ select timeofday()::date = current_timestamp::date;
  t
 (1 row)
 
+--MPP-5665
+select '20081225130000.123456'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "20081225130000.123456"
+LINE 1: select '20081225130000.123456'::timestamp;
+               ^
+select '20081225130000'::timestamp;
+ERROR:  date/time field value out of range: "20081225130000"
+LINE 1: select '20081225130000'::timestamp;
+               ^
+HINT:  Perhaps you need a different "datestyle" setting.
+select '20081225130000.000000000000000000000'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "20081225130000.000000000000000000000"
+LINE 1: select '20081225130000.000000000000000000000'::timestamp;
+               ^
+select '20090625123002.111111111111'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "20090625123002.111111111111"
+LINE 1: select '20090625123002.111111111111'::timestamp;
+               ^
+-- should error out
+select '2009062512300.111111111111'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "2009062512300.111111111111"
+LINE 1: select '2009062512300.111111111111'::timestamp;
+               ^
+select '200906251230021.111111111111'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "200906251230021.111111111111"
+LINE 1: select '200906251230021.111111111111'::timestamp;
+               ^
+SET enable_implicit_timeformat_YYYYMMDDHH24MISS=on;
+select '20081225130000.123456'::timestamp;
+            timestamp            
+---------------------------------
+ Thu Dec 25 13:00:00.123456 2008
+(1 row)
+
+select '20081225130000'::timestamp;
+        timestamp         
+--------------------------
+ Thu Dec 25 13:00:00 2008
+(1 row)
+
+select '20081225130000.000000000000000000000'::timestamp;
+        timestamp         
+--------------------------
+ Thu Dec 25 13:00:00 2008
+(1 row)
+
+select '20090625123002.111111111111'::timestamp;
+            timestamp            
+---------------------------------
+ Thu Jun 25 12:30:02.111111 2009
+(1 row)
+
+-- should error out
+select '2009062512300.111111111111'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "2009062512300.111111111111"
+LINE 1: select '2009062512300.111111111111'::timestamp;
+               ^
+select '200906251230021.111111111111'::timestamp;
+ERROR:  invalid input syntax for type timestamp: "200906251230021.111111111111"
+LINE 1: select '200906251230021.111111111111'::timestamp;
+               ^
+RESET enable_implicit_timeformat_YYYYMMDDHH24MISS;

@@ -244,6 +244,7 @@ bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
 bool		gp_allow_rename_relation_without_lock = false;
+bool		enable_implicit_timeformat_YYYYMMDDHH24MISS;
 
 /* ignore EXCLUDE clauses in window spec for backwards compatibility */
 bool		gp_ignore_window_exclude = false;
@@ -3122,6 +3123,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 &optimizer_force_comprehensive_join_implementation,
 		 false,
 		 NULL, NULL, NULL
+	},
+
+	{
+		{"enable_implicit_timeformat_YYYYMMDDHH24MISS", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("If set, implicitly converts strings to timestamps using YYYYMMDDHH24MISS format"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&enable_implicit_timeformat_YYYYMMDDHH24MISS,
+		false,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */

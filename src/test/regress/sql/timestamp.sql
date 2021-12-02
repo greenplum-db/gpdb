@@ -282,3 +282,22 @@ SET DateStyle TO DEFAULT;
 
 -- Make sure timeofdate() and current_time() are doing roughly the same thing
 select timeofday()::date = current_timestamp::date;
+
+--MPP-5665
+select '20081225130000.123456'::timestamp;
+select '20081225130000'::timestamp;
+select '20081225130000.000000000000000000000'::timestamp;
+select '20090625123002.111111111111'::timestamp;
+-- should error out
+select '2009062512300.111111111111'::timestamp;
+select '200906251230021.111111111111'::timestamp;
+
+SET enable_implicit_timeformat_YYYYMMDDHH24MISS=on;
+select '20081225130000.123456'::timestamp;
+select '20081225130000'::timestamp;
+select '20081225130000.000000000000000000000'::timestamp;
+select '20090625123002.111111111111'::timestamp;
+-- should error out
+select '2009062512300.111111111111'::timestamp;
+select '200906251230021.111111111111'::timestamp;
+RESET enable_implicit_timeformat_YYYYMMDDHH24MISS;

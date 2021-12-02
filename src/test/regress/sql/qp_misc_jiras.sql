@@ -788,7 +788,14 @@ select * from qp_misc_jiras.tbl_694_1 join qp_misc_jiras.tbl_694_2 on qp_misc_ji
 
 drop table qp_misc_jiras.tbl_694_1;
 drop table qp_misc_jiras.tbl_694_2;
-
+-- Postgres timestamp
+select '20081225 130000'::timestamp;
+-- Teradata timestamp
+select '20081225130000'::timestamp;
+-- Teradata timestamp
+SET enable_implicit_timeformat_YYYYMMDDHH24MISS=on;
+select '20081225130000'::timestamp;
+RESET enable_implicit_timeformat_YYYYMMDDHH24MISS;
 select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
 select * from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
 select x.b from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
