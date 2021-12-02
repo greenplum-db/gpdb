@@ -2855,9 +2855,10 @@ guessConstraintInheritance(TableInfo *tblinfo, int numTables)
 		TableInfo **parents;
 		TableInfo  *parent;
 
-		/* Sequences and views never have parents */
+		/* Some kinds never have parents */
 		if (tbinfo->relkind == RELKIND_SEQUENCE ||
-			tbinfo->relkind == RELKIND_VIEW)
+			tbinfo->relkind == RELKIND_VIEW ||
+			tbinfo->relkind == RELKIND_MATVIEW)
 			continue;
 
 		/* Don't bother computing anything for non-target tables, either */
