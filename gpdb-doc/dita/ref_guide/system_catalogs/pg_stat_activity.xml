@@ -5,8 +5,7 @@
   <title id="hq141670">pg_stat_activity</title>
   <body>
     <p>The view <codeph>pg_stat_activity</codeph> shows one row per server process with details
-      about the associated user session and query. The columns that report data on the current query
-      are available unless the parameter <codeph>stats_command_string</codeph> has been turned off.
+      about the associated user session and query. The columns report data on the current query.
       Furthermore, these columns are only visible if the user examining the view is a superuser or
       the same as the user owning the process being reported on.</p>
     <p>The maximum length of the query text string stored in the column <codeph>query</codeph> can
