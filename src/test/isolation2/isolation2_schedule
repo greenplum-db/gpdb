@@ -64,6 +64,10 @@ test: misc
 test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 test: vacuum_drop_phase_ao
 
+# Test simple cancellation for resource queues and cancellation/deadlocks for
+# sessions with multiple portals.
+test: resource_queue_cancel resource_queue_multi_portal
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 
