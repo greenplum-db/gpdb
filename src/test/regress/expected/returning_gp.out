@@ -116,3 +116,39 @@ SELECT * FROM returning_disttest;
   2
 (2 rows)
 
+-- Test returning ctid with trigger
+CREATE TABLE returning_ctid (f1 serial, f2 text) DISTRIBUTED BY (f1);
+CREATE TABLE
+-- Create function used by trigger
+CREATE FUNCTION trig_row_before_insupdate() RETURNS TRIGGER AS $$
+  BEGIN
+    NEW.f2 := NEW.f2 || ' triggered !';
+    RETURN NEW;
+  END
+$$ language plpgsql;
+CREATE FUNCTION
+-- Create trigger for each row insert
+CREATE TRIGGER trig_row_before BEFORE INSERT OR UPDATE ON returning_ctid
+FOR EACH ROW EXECUTE PROCEDURE trig_row_before_insupdate();
+CREATE TRIGGER
+-- Check returning sys attribute on insert 
+INSERT INTO returning_ctid(f2) VALUES ('test') RETURNING ctid;
+ ctid  
+-------
+ (0,1)
+(1 row)
+
+INSERT 0 1
+SELECT *, ctid FROM returning_ctid;
+ f1 |        f2        | ctid  
+----+------------------+-------
+  1 | test triggered ! | (0,1)
+(1 row)
+
+-- Clean up
+DROP TRIGGER trig_row_before ON returning_ctid;
+DROP TRIGGER
+DROP FUNCTION trig_row_before_insupdate() CASCADE;
+DROP FUNCTION
+DROP TABLE returning_ctid;
+DROP TABLE
