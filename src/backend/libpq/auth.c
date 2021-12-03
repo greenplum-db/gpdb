@@ -1517,7 +1517,7 @@ pg_GSS_recvauth(Port *port)
 		gbuf.length = buf.len;
 		gbuf.value = buf.data;
 
-		elog(DEBUG4, "Processing received GSS token of length %u",
+		elog(DEBUG4, "processing received GSS token of length %u",
 			 (unsigned int) gbuf.length);
 
 		maj_stat = gss_accept_sec_context(
@@ -1795,7 +1795,7 @@ pg_SSPI_recvauth(Port *port)
 		outbuf.ulVersion = SECBUFFER_VERSION;
 
 
-		elog(DEBUG4, "Processing received SSPI token of length %u",
+		elog(DEBUG4, "processing received SSPI token of length %u",
 			 (unsigned int) buf.len);
 
 		r = AcceptSecurityContext(&sspicred,
@@ -3315,7 +3315,7 @@ radius_add_attribute(radius_packet *packet, uint8 type, const unsigned char *dat
 		 * fail.
 		 */
 		elog(WARNING,
-			 "Adding attribute code %d with length %d to radius packet would create oversize packet, ignoring",
+			 "adding attribute code %d with length %d to radius packet would create oversize packet, ignoring",
 			 type, len);
 		return;
 	}

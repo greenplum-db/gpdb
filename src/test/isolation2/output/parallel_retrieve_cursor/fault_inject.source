@@ -76,7 +76,7 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
  a  
@@ -263,14 +263,14 @@ ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"
 -------
 (0 rows)
 1R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint endpoint_id2 does not exist in the session
+ERROR:  the endpoint endpoint_id2 does not exist in the session
 
 2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
  state 
 -------
 (0 rows)
 2R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint endpoint_id2 does not exist in the session
+ERROR:  the endpoint endpoint_id2 does not exist in the session
 
 1<:  <... completed>
 FAILED:  Execution failed
@@ -325,14 +325,14 @@ ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"
 -------
 (0 rows)
 0R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
-ERROR:  The endpoint endpoint_id3 does not exist in the session
+ERROR:  the endpoint endpoint_id3 does not exist in the session
 
 2U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
  state 
 -------
 (0 rows)
 2R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
-ERROR:  The endpoint endpoint_id3 does not exist in the session
+ERROR:  the endpoint endpoint_id3 does not exist in the session
 
 1<:  <... completed>
 FAILED:  Execution failed
@@ -429,7 +429,7 @@ ERROR:  canceling MPP operation: "Endpoint retrieve statement aborted"  (seg0 12
 -------
 (0 rows)
 2R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
-ERROR:  The endpoint endpoint_id4 does not exist in the session
+ERROR:  the endpoint endpoint_id4 does not exist in the session
 
 1<:  <... completed>
 FAILED:  Execution failed

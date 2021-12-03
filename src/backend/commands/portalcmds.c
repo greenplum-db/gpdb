@@ -247,15 +247,14 @@ PerformPortalFetch(FetchStmt *stmt,
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("The 'MOVE' statement for PARALLEL RETRIEVE CURSOR is not supported."),
-					 errhint("The 'PARALLEL RETRIEVE CURSOR' does not support SCROLLABLE option.")));
+					 errmsg("the 'MOVE' statement for PARALLEL RETRIEVE CURSOR is not supported")));
 		}
 		else
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("Cannot specify 'FETCH' for PARALLEL RETRIEVE CURSOR."),
-					 errhint("Using 'RETRIEVE' statement on endpoint instead.")));
+					 errmsg("cannot specify 'FETCH' for PARALLEL RETRIEVE CURSOR"),
+					 errhint("Use 'RETRIEVE' statement on endpoint instead.")));
 		}
 	}
 

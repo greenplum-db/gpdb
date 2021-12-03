@@ -128,8 +128,8 @@ Start A Retrieve Session
 Once a parallel retrieve cursor has been declared, retrieve sessions can be
 started on each endpoint's host by using the endpoint's token as the session
 authentication password. The user of this retrieve session is the session user
-who declares this parallel retrieve cursor. 
- 
+who declares this parallel retrieve cursor.
+
 gp_retrieve_conn=true needs to be set to start retrieve session.
 
 Examples:

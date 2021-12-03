@@ -1581,13 +1581,15 @@ Portal
 SPI_cursor_find(const char *name)
 {
 	Portal portal = GetPortalByName(name);
+
 	if (portal != NULL && PortalIsParallelRetrieveCursor(portal))
 	{
 		ereport(ERROR,
-		(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("The PARALLEL RETRIEVE CURSOR is not supported in SPI."),
-				errhint("Using normal cursor statement instead.")));
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("The PARALLEL RETRIEVE CURSOR is not supported in SPI."),
+				 errhint("Use normal cursor statement instead.")));
 	}
+
 	return portal;
 }
 

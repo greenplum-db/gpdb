@@ -11,6 +11,7 @@ $$ LANGUAGE SQL;
 -- Test: Retrieve login without valid token.
 1: @pre_run 'export RETRIEVE_TOKEN="123" ; echo $RAW_STR' : SELECT 1;
 0R: SELECT 1;
+0Rq:
 
 -- Test: Declare a cursor
 1: BEGIN;
@@ -20,7 +21,7 @@ $$ LANGUAGE SQL;
 -- Test: Should not change gp_role in retrieve mode
 0R: set gp_role to 'utility';
 
--- Test: limit all statement which is supported in utility session
+-- Test: limit all statement which is supported in retrieve session
 0R: show gp_role;
 
 0R: begin;
@@ -32,13 +33,12 @@ $$ LANGUAGE SQL;
 0R: insert into t1 select generate_series(100,110);
 0R: update t1 set a=a+100 where a<10;
 0R: truncate table t1;
--- web external table is also disallowed by this restriction.
 0R: select * from t1;
 
 0R: CREATE TABLE t10 (a INT) DISTRIBUTED by (a);
 0R: DROP TABLE t1;
 
--- copy ... on program ... is also disallowed by this restriction.
+-- copy ... on program ... is also disallowed by this retrieve session.
 0R: COPY t1 to '/tmp/1.cvs';
 
 -- Test: builtin function can not be allowed
@@ -50,8 +50,8 @@ $$ LANGUAGE SQL;
 SELECT $1 || $2
 $$ LANGUAGE SQL;
 
--- Test: Different illegal tokens always lead to a same general message
----- Illegal tokens
+-- Test: Different illegal endpoints always lead to an error
+---- invalid endpoints
 1R: RETRIEVE ALL FROM ENDPOINT abc;
 1R: RETRIEVE ALL FROM ENDPOINT 123;
 1R: RETRIEVE ALL FROM ENDPOINT tk1122;

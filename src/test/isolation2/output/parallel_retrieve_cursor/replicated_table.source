@@ -39,17 +39,32 @@ DECLARE
 BEGIN
 3: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
 DECLARE
+4: BEGIN;
+BEGIN
+4: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+DECLARE
+5: BEGIN;
+BEGIN
+5: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+DECLARE
+6: BEGIN;
+BEGIN
+6: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+DECLARE
 
 -- Here because replicated table will execute on seg id: session_id % segment_number
 -- Just declare & CHECK PARALLEL RETRIEVE CURSORs in all segment_number (i.e. 3) sessions,
 -- so that there should have specific session: MOD(sessionid,3)=1;
 -- Get token only in specific session id and retrieve this token.
-4: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE MOD(sessionid,3)=1;
+7: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE MOD(sessionid,3)=1 LIMIT 1;
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
 2&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);  <waiting ...>
 3&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);  <waiting ...>
+4&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);  <waiting ...>
+5&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);  <waiting ...>
+6&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);  <waiting ...>
 *U: @pre_run 'set_endpoint_variable @ENDPOINT2': SELECT state FROM gp_segment_endpoints() WHERE endpointname='@ENDPOINT2';
  state 
 -------
@@ -68,10 +83,10 @@ DECLARE
 -------
 (0 rows)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT2";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
-#0retrieve> FATAL:  Retrieve auth token is invalid
+#0retrieve> FATAL:  retrieve auth token is invalid
 
 
  a  
@@ -88,21 +103,30 @@ DECLARE
  10 
 (10 rows)
 
-#2retrieve> FATAL:  Retrieve auth token is invalid
+#2retrieve> FATAL:  retrieve auth token is invalid
 
--- cancel all 3 sessions
-4: select pg_cancel_backend(pid) from pg_stat_activity, gp_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3');
+-- cancel all 6 sessions
+7: select pg_cancel_backend(pid) from pg_stat_activity, gp_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3' or cursorname ='c4' or cursorname='c5' or cursorname='c6');
  pg_cancel_backend 
 -------------------
  t                 
  t                 
  t                 
-(3 rows)
+ t                 
+ t                 
+ t                 
+(6 rows)
 1<:  <... completed>
 ERROR:  canceling statement due to user request
 2<:  <... completed>
 ERROR:  canceling statement due to user request
 3<:  <... completed>
+ERROR:  canceling statement due to user request
+4<:  <... completed>
+ERROR:  canceling statement due to user request
+5<:  <... completed>
+ERROR:  canceling statement due to user request
+6<:  <... completed>
 ERROR:  canceling statement due to user request
 
 1: ROLLBACK;
@@ -111,14 +135,26 @@ ROLLBACK
 ROLLBACK
 3: ROLLBACK;
 ROLLBACK
+4: ROLLBACK;
+ROLLBACK
+5: ROLLBACK;
+ROLLBACK
+6: ROLLBACK;
+ROLLBACK
 
 1q: ... <quitting>
 2q: ... <quitting>
 3q: ... <quitting>
--1Rq:FAILED:  Sessions not started cannot be quit
+4q: ... <quitting>
+5q: ... <quitting>
+6q: ... <quitting>
+-1Rq:Sessions not started cannot be quit
 1Rq: ... <quitting>
-2Rq:FAILED:  Sessions not started cannot be quit
-3Rq:FAILED:  Sessions not started cannot be quit
+2Rq:Sessions not started cannot be quit
+3Rq:Sessions not started cannot be quit
+4Rq:Sessions not started cannot be quit
+5Rq:Sessions not started cannot be quit
+6Rq:Sessions not started cannot be quit
 
 --------- Test3: Basic test for PARALLEL RETRIEVE CURSOR on replicated table
 1: BEGIN;
@@ -133,17 +169,32 @@ DECLARE
 BEGIN
 3: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
 DECLARE
+4: BEGIN;
+BEGIN
+4: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+DECLARE
+5: BEGIN;
+BEGIN
+5: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+DECLARE
+6: BEGIN;
+BEGIN
+6: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+DECLARE
 
 -- Here because replicated table will execute on seg id: session_id % segment_number
 -- Just declare & CHECK PARALLEL RETRIEVE CURSORs in all segment_number (i.e. 3) sessions,
 -- so that there should have specific session: MOD(sessionid,3)=1;
 -- Get token only in specific session id and retrieve this token.
-4: @post_run 'parse_endpoint_info 3 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE MOD(sessionid,3)=1;
+7: @post_run 'parse_endpoint_info 3 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE MOD(sessionid,3)=1 LIMIT 1;
  endpoint_id3 | token_id | host_id | port_id | READY
 (1 row)
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
 2&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);  <waiting ...>
 3&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);  <waiting ...>
+4&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);  <waiting ...>
+5&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);  <waiting ...>
+6&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);  <waiting ...>
 *U: @pre_run 'set_endpoint_variable @ENDPOINT3': SELECT state FROM gp_segment_endpoints() WHERE endpointname='@ENDPOINT3';
  state 
 -------
@@ -162,10 +213,10 @@ DECLARE
 -------
 (0 rows)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT3";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
-#0retrieve> FATAL:  Retrieve auth token is invalid
+#0retrieve> FATAL:  retrieve auth token is invalid
 
 
  a  
@@ -182,21 +233,30 @@ DECLARE
  28 
 (10 rows)
 
-#2retrieve> FATAL:  Retrieve auth token is invalid
+#2retrieve> FATAL:  retrieve auth token is invalid
 
--- cancel all 3 sessions
-4: select pg_cancel_backend(pid) from pg_stat_activity, gp_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3');
+-- cancel all 6 sessions
+7: select pg_cancel_backend(pid) from pg_stat_activity, gp_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3' or cursorname ='c4' or cursorname='c5' or cursorname='c6');
  pg_cancel_backend 
 -------------------
  t                 
  t                 
  t                 
-(3 rows)
+ t                 
+ t                 
+ t                 
+(6 rows)
 1<:  <... completed>
 ERROR:  canceling statement due to user request
 2<:  <... completed>
 ERROR:  canceling statement due to user request
 3<:  <... completed>
+ERROR:  canceling statement due to user request
+4<:  <... completed>
+ERROR:  canceling statement due to user request
+5<:  <... completed>
+ERROR:  canceling statement due to user request
+6<:  <... completed>
 ERROR:  canceling statement due to user request
 
 1: ROLLBACK;
@@ -205,14 +265,26 @@ ROLLBACK
 ROLLBACK
 3: ROLLBACK;
 ROLLBACK
+4: ROLLBACK;
+ROLLBACK
+5: ROLLBACK;
+ROLLBACK
+6: ROLLBACK;
+ROLLBACK
 
 1q: ... <quitting>
 2q: ... <quitting>
 3q: ... <quitting>
--1Rq:FAILED:  Sessions not started cannot be quit
+4q: ... <quitting>
+5q: ... <quitting>
+6q: ... <quitting>
+-1Rq:Sessions not started cannot be quit
 1Rq: ... <quitting>
-2Rq:FAILED:  Sessions not started cannot be quit
-3Rq:FAILED:  Sessions not started cannot be quit
+2Rq:Sessions not started cannot be quit
+3Rq:Sessions not started cannot be quit
+4Rq:Sessions not started cannot be quit
+5Rq:Sessions not started cannot be quit
+6Rq:Sessions not started cannot be quit
 
 --------- Test4: Basic test for PARALLEL RETRIEVE CURSOR on replicated table
 1: BEGIN;
@@ -227,17 +299,32 @@ DECLARE
 BEGIN
 3: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
 DECLARE
+4: BEGIN;
+BEGIN
+4: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+DECLARE
+5: BEGIN;
+BEGIN
+5: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+DECLARE
+6: BEGIN;
+BEGIN
+6: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+DECLARE
 
 -- Here because replicated table will execute on seg id: session_id % segment_number
 -- Just declare & CHECK PARALLEL RETRIEVE CURSORs in all segment_number (i.e. 3) sessions,
 -- so that there should have specific session: MOD(sessionid,3)=1;
 -- Get token only in specific session id and retrieve this token.
-4: @post_run 'parse_endpoint_info 4 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE MOD(sessionid,3)=1;
+7: @post_run 'parse_endpoint_info 4 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE MOD(sessionid,3)=1 LIMIT 1;
  endpoint_id4 | token_id | host_id | port_id | READY
 (1 row)
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
 2&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);  <waiting ...>
 3&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);  <waiting ...>
+4&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);  <waiting ...>
+5&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);  <waiting ...>
+6&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);  <waiting ...>
 *U: @pre_run 'set_endpoint_variable @ENDPOINT4': SELECT state FROM gp_segment_endpoints() WHERE endpointname='@ENDPOINT4';
  state 
 -------
@@ -256,10 +343,10 @@ DECLARE
 -------
 (0 rows)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT4";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
-#0retrieve> FATAL:  Retrieve auth token is invalid
+#0retrieve> FATAL:  retrieve auth token is invalid
 
 
  a  
@@ -276,21 +363,30 @@ DECLARE
  14 
 (10 rows)
 
-#2retrieve> FATAL:  Retrieve auth token is invalid
+#2retrieve> FATAL:  retrieve auth token is invalid
 
--- cancel all 3 sessions
-4: select pg_cancel_backend(pid) from pg_stat_activity, gp_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3');
+-- cancel all 6 sessions
+7: select pg_cancel_backend(pid) from pg_stat_activity, gp_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3' or cursorname ='c4' or cursorname='c5' or cursorname='c6');
  pg_cancel_backend 
 -------------------
  t                 
  t                 
  t                 
-(3 rows)
+ t                 
+ t                 
+ t                 
+(6 rows)
 1<:  <... completed>
 ERROR:  canceling statement due to user request
 2<:  <... completed>
 ERROR:  canceling statement due to user request
 3<:  <... completed>
+ERROR:  canceling statement due to user request
+4<:  <... completed>
+ERROR:  canceling statement due to user request
+5<:  <... completed>
+ERROR:  canceling statement due to user request
+6<:  <... completed>
 ERROR:  canceling statement due to user request
 
 1: ROLLBACK;
@@ -298,4 +394,10 @@ ROLLBACK
 2: ROLLBACK;
 ROLLBACK
 3: ROLLBACK;
+ROLLBACK
+4: ROLLBACK;
+ROLLBACK
+5: ROLLBACK;
+ROLLBACK
+6: ROLLBACK;
 ROLLBACK

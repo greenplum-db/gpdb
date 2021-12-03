@@ -267,7 +267,7 @@ get_or_create_token(void)
 		sessionId = gp_session_id;
 		if (!pg_strong_random(currentToken, ENDPOINT_TOKEN_HEX_LEN))
 			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("failed to generate a new random token.")));
+							errmsg("failed to generate a new random token")));
 	}
 	return currentToken;
 }
@@ -504,7 +504,7 @@ create_and_connect_mq(TupleDesc tupleDesc, dsm_segment **mqSeg /* out */ ,
 	TupleDescNode *node = makeNode(TupleDescNode);
 
 	elog(DEBUG3,
-		 "CDB_ENDPOINTS: create and setup the shared memory message queue.");
+		 "CDB_ENDPOINTS: create and setup the shared memory message queue");
 
 	/* Serialize TupleDesc */
 	node->natts = tupleDesc->natts;
@@ -629,7 +629,7 @@ checkQDConnectionAlive()
 static void
 wait_receiver(EndpointExecState * state)
 {
-	elog(DEBUG3, "CDB_ENDPOINTS: wait receiver.");
+	elog(DEBUG3, "CDB_ENDPOINTS: wait receiver");
 	while (true)
 	{
 		int			wr = 0;
@@ -651,7 +651,7 @@ wait_receiver(EndpointExecState * state)
 			if (!checkQDConnectionAlive())
 			{
 				ereport(LOG,
-						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken.")));
+						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken")));
 				abort_endpoint(state);
 				proc_exit(0);
 			}
@@ -661,7 +661,7 @@ wait_receiver(EndpointExecState * state)
 		{
 			abort_endpoint(state);
 			ereport(LOG,
-					(errmsg("CDB_ENDPOINT: postmaster exit, close shared memory message queue.")));
+					(errmsg("CDB_ENDPOINT: postmaster exit, close shared memory message queue")));
 			proc_exit(0);
 		}
 
@@ -707,7 +707,7 @@ unset_endpoint_sender_pid(Endpoint endpoint)
 	if (endpoint == NULL || endpoint->empty)
 		return;
 
-	elog(DEBUG3, "CDB_ENDPOINT: unset endpoint sender pid.");
+	elog(DEBUG3, "CDB_ENDPOINT: unset endpoint sender pid");
 
 	/*
 	 * Only the endpoint QE/entry DB execute this unset sender pid function.
@@ -802,7 +802,7 @@ wait_parallel_retrieve_close(void)
 		if (wr & WL_POSTMASTER_DEATH)
 		{
 			ereport(LOG,
-					(errmsg("CDB_ENDPOINT: postmaster exit, close shared memory message queue.")));
+					(errmsg("CDB_ENDPOINT: postmaster exit, close shared memory message queue")));
 			proc_exit(0);
 		}
 
@@ -811,7 +811,7 @@ wait_parallel_retrieve_close(void)
 			if (!checkQDConnectionAlive())
 			{
 				ereport(LOG,
-						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken.")));
+						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken")));
 				proc_exit(0);
 			}
 		}
@@ -1013,7 +1013,7 @@ allocEndpointExecState()
 
 	if (unlikely(CurrEndpointExecState != NULL))
 		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("Previous endpoint estate is not cleaned up.")));
+						errmsg("previous endpoint estate is not cleaned up")));
 
 	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
 

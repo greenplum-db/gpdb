@@ -262,7 +262,7 @@ transformOptionalSelectInto(ParseState *pstate, Node *parseTree)
 	if (am_cursor_retrieve_handler != IsA(parseTree, RetrieveStmt))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("This is %s a retrieve connection, but query is %sRETRIEVE.",
+				errmsg("This is %sa retrieve connection, but the query is %sa RETRIEVE.",
 					   am_cursor_retrieve_handler ? "" : "not ",
 					   IsA(parseTree, RetrieveStmt) ? "" : "not ")));
 
@@ -2936,6 +2936,7 @@ transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("SCROLL is not allowed for the PARALLEL RETRIEVE CURSORs"),
 				 errdetail("Scrollable cursors can not be parallel")));
+
 	/*
 	 * We also disallow data-modifying WITH in a cursor.  (This could be
 	 * allowed, but the semantics of when the updates occur might be

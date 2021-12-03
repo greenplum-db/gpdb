@@ -1189,7 +1189,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		process_startup_options(MyProcPort, am_superuser);
 
 	/*
-	 * am_cursor_retrieve_handler is set by guc so need to judge after calling
+	 * am_cursor_retrieve_handler is set by GUC so need to judge after calling
 	 * process_startup_options().
 	 */
 	if (am_cursor_retrieve_handler)

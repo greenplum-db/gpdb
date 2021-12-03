@@ -1,6 +1,6 @@
 -- @Description Tests the state for pg_endpoints AND gp_segment_endpoints(), focus in nowait mode
 -- need to fault injection to gp_wait_parallel_retrieve_cursor()
--- 
+--
 DROP TABLE IF EXISTS t1;
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
 insert into t1 select generate_series(1,100);
@@ -86,7 +86,7 @@ insert into t1 select generate_series(1,100);
 -- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', 0);
 1: ROLLBACK;
--- check no endpoint info 
+-- check no endpoint info
 2: SELECT state FROM gp_endpoints() WHERE cursorname='c3';
 *U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c3';
 
@@ -116,7 +116,7 @@ insert into t1 select generate_series(1,100);
 -- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', 0);
 1: ROLLBACK;
--- check no endpoint info 
+-- check no endpoint info
 2: SELECT state FROM gp_endpoints() WHERE cursorname='c4';
 *U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c4';
 2Rq:
@@ -147,7 +147,7 @@ insert into t1 select generate_series(1,100);
 -- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', 0);
 1: ROLLBACK;
--- check no endpoint info 
+-- check no endpoint info
 2: SELECT state FROM gp_endpoints() WHERE cursorname='c5';
 *U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c5';
 
