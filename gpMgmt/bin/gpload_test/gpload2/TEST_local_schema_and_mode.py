@@ -36,9 +36,10 @@ def test_402_gpload_yaml_non_existing_external_schema():
     """402 test gpload reports error when external schema doesn't exist."""
     TestBase.drop_tables()
     schema = "non_ext_schema_test"
+    TestBase.copy_data('external_file_01.txt','data_file.txt')
     TestBase.psql_run(cmd=f'DROP SCHEMA IF EXISTS {schema} CASCADE;',
                       dbname='reuse_gptest')
-    TestBase.write_config_file(externalSchema=schema)
+    TestBase.write_config_file(externalSchema=schema,file='data_file.txt')
 
 
 @TestBase.prepare_before_test(num=403, times=1)

@@ -505,7 +505,7 @@ def ModifyOutFile(file,old_str,new_str):
     os.remove(file)
     os.rename("%s.bak" % file, file)
 
-Modify_Output_Case = [46,51,57,65,76]
+Modify_Output_Case = [46,51,57,65,76,260,402]
 
 
 def doTest(num):

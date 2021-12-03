@@ -2406,6 +2406,10 @@ class gpload:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
             self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
 
+        if formatType == 'csv' or formatType == 'text':
+            if self.getconfig('gpload:input:fill_missing_fields', bool, False):
+                self.formatOpts += 'fill missing fields '
+
         newline = self.getconfig('gpload:input:newline', str, False)
         self.log(self.DEBUG, "newline " + str(newline))
         if newline != False: # could be empty string
@@ -2439,10 +2443,6 @@ class gpload:
             from_cols = [a for a in self.from_columns if a[3] != True]
         else:
             from_cols = self.from_columns
-
-        if formatType == 'csv' or formatType == 'text':
-            if self.getconfig('gpload:input:fill_missing_fields', bool, False):
-                self.formatOpts += 'fill missing fields'
 
         # If the 'reuse tables' option was specified we now try to find an
         # already existing external table in the catalog which will match

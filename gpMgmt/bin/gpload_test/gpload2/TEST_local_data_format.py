@@ -298,6 +298,8 @@ def test_253_gpload_eol_CRLF_txt():
                       format='text',
                       file='data_file.txt',
                       table='texttable2',
+                      fill_missing_fields = True,
+                      escape = '\\',
                       header = True,
                       newline='CRLF')
 
