@@ -534,4 +534,3 @@
 		"xmloption",
 		"zero_damaged_pages",
 		"max_slot_wal_keep_size",
-		"enable_implicit_timeformat_YYYYMMDDHH24MISS",

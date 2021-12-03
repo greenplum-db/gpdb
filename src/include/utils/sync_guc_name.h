@@ -9,6 +9,7 @@
 		"dev_opt_unsafe_truncate_in_subtransaction",
 		"dml_ignore_target_partition_check",
 		"dtx_phase2_retry_count",
+		"enable_implicit_timeformat_YYYYMMDDHH24MISS",
 		"execute_pruned_plan",
 		"explain_memory_verbosity",
 		"gin_fuzzy_search_limit",
