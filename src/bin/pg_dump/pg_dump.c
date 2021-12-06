@@ -1390,6 +1390,12 @@ setup_connection(Archive *AH, const char *dumpencoding,
 	}
 
 	/*
+	 * Initialize prepared-query state to "nothing prepared".  We do this here
+	 * so that a parallel dump worker will have its own state.
+	 */
+	AH->is_prepared = (bool *) pg_malloc0(NUM_PREP_QUERIES * sizeof(bool));
+
+	/*
 	 * Start transaction-snapshot mode transaction to dump consistent data.
 	 */
 	ExecuteSqlStatement(AH, "BEGIN");
@@ -7832,7 +7838,7 @@ getDomainConstraints(Archive *fout, TypeInfo *tyinfo)
 {
 	int			i;
 	ConstraintInfo *constrinfo;
-	PQExpBuffer query;
+	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
 	int			i_tableoid,
 				i_oid,
@@ -7840,25 +7846,35 @@ getDomainConstraints(Archive *fout, TypeInfo *tyinfo)
 				i_consrc;
 	int			ntups;
 
-	query = createPQExpBuffer();
+	if (!fout->is_prepared[PREPQUERY_GETDOMAINCONSTRAINTS])
+	{
+		/* Set up query for constraint-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE getDomainConstraints(pg_catalog.oid) AS\n");
 
-	if (fout->remoteVersion >= 90100)
-		appendPQExpBuffer(query, "SELECT tableoid, oid, conname, "
-						  "pg_catalog.pg_get_constraintdef(oid) AS consrc, "
-						  "convalidated "
-						  "FROM pg_catalog.pg_constraint "
-						  "WHERE contypid = '%u'::pg_catalog.oid "
-						  "ORDER BY conname",
-						  tyinfo->dobj.catId.oid);
+		if (fout->remoteVersion >= 90100)
+			appendPQExpBufferStr(query, "SELECT tableoid, oid, conname, "
+								 "pg_catalog.pg_get_constraintdef(oid) AS consrc, "
+								 "convalidated "
+								 "FROM pg_catalog.pg_constraint "
+								 "WHERE contypid = $1 "
+								 "ORDER BY conname");
+		else
+			appendPQExpBufferStr(query, "SELECT tableoid, oid, conname, "
+								 "pg_catalog.pg_get_constraintdef(oid) AS consrc, "
+								 "true as convalidated "
+								 "FROM pg_catalog.pg_constraint "
+								 "WHERE contypid = $1 "
+								 "ORDER BY conname");
 
-	else
-		appendPQExpBuffer(query, "SELECT tableoid, oid, conname, "
-						  "pg_catalog.pg_get_constraintdef(oid) AS consrc, "
-						  "true as convalidated "
-						  "FROM pg_catalog.pg_constraint "
-						  "WHERE contypid = '%u'::pg_catalog.oid "
-						  "ORDER BY conname",
-						  tyinfo->dobj.catId.oid);
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_GETDOMAINCONSTRAINTS] = true;
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE getDomainConstraints('%u')",
+					  tyinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -10881,18 +10897,31 @@ dumpEnumType(Archive *fout, const TypeInfo *tyinfo)
 	int			i_enumlabel;
 	int			i_oid;
 
-	if (fout->remoteVersion >= 90100)
-		appendPQExpBuffer(query, "SELECT oid, enumlabel "
-						  "FROM pg_catalog.pg_enum "
-						  "WHERE enumtypid = '%u'"
-						  "ORDER BY enumsortorder",
-						  tyinfo->dobj.catId.oid);
-	else
-		appendPQExpBuffer(query, "SELECT oid, enumlabel "
-						  "FROM pg_catalog.pg_enum "
-						  "WHERE enumtypid = '%u'"
-						  "ORDER BY oid",
-						  tyinfo->dobj.catId.oid);
+	if (!fout->is_prepared[PREPQUERY_DUMPENUMTYPE])
+	{
+		/* Set up query for enum-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE dumpEnumType(pg_catalog.oid) AS\n");
+
+		if (fout->remoteVersion >= 90100)
+			appendPQExpBufferStr(query, "SELECT oid, enumlabel "
+								 "FROM pg_catalog.pg_enum "
+								 "WHERE enumtypid = $1 "
+								 "ORDER BY enumsortorder");
+		else
+			appendPQExpBufferStr(query, "SELECT oid, enumlabel "
+								 "FROM pg_catalog.pg_enum "
+								 "WHERE enumtypid = $1 "
+								 "ORDER BY oid");
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPENUMTYPE] = true;
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpEnumType('%u')",
+					  tyinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -11011,19 +11040,36 @@ dumpRangeType(Archive *fout, const TypeInfo *tyinfo)
 	char	   *qualtypname;
 	char	   *procname;
 
-	appendPQExpBuffer(query,
-					  "SELECT pg_catalog.format_type(rngsubtype, NULL) AS rngsubtype, "
-					  "opc.opcname AS opcname, "
-					  "(SELECT nspname FROM pg_catalog.pg_namespace nsp "
-					  "  WHERE nsp.oid = opc.opcnamespace) AS opcnsp, "
-					  "opc.opcdefault, "
-					  "CASE WHEN rngcollation = st.typcollation THEN 0 "
-					  "     ELSE rngcollation END AS collation, "
-					  "rngcanonical, rngsubdiff "
-					  "FROM pg_catalog.pg_range r, pg_catalog.pg_type st, "
-					  "     pg_catalog.pg_opclass opc "
-					  "WHERE st.oid = rngsubtype AND opc.oid = rngsubopc AND "
-					  "rngtypid = '%u'",
+	if (!fout->is_prepared[PREPQUERY_DUMPRANGETYPE])
+	{
+		/* Set up query for range-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE dumpRangeType(pg_catalog.oid) AS\n");
+
+		appendPQExpBufferStr(query,
+							 "SELECT ");
+
+		appendPQExpBufferStr(query,
+							 "pg_catalog.format_type(rngsubtype, NULL) AS rngsubtype, "
+							 "opc.opcname AS opcname, "
+							 "(SELECT nspname FROM pg_catalog.pg_namespace nsp "
+							 "  WHERE nsp.oid = opc.opcnamespace) AS opcnsp, "
+							 "opc.opcdefault, "
+							 "CASE WHEN rngcollation = st.typcollation THEN 0 "
+							 "     ELSE rngcollation END AS collation, "
+							 "rngcanonical, rngsubdiff "
+							 "FROM pg_catalog.pg_range r, pg_catalog.pg_type st, "
+							 "     pg_catalog.pg_opclass opc "
+							 "WHERE st.oid = rngsubtype AND opc.oid = rngsubopc AND "
+							 "rngtypid = $1");
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPRANGETYPE] = true;
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpRangeType('%u')",
 					  tyinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
@@ -11229,47 +11275,60 @@ dumpBaseType(Archive *fout, const TypeInfo *tyinfo)
 	char	   *typdefault;
 	bool		typdefault_is_literal = false;
 
-	/* Fetch type-specific details */
-	appendPQExpBufferStr(query, "SELECT typlen, "
-						 "typinput, typoutput, typreceive, typsend, "
-						 "typreceive::pg_catalog.oid AS typreceiveoid, "
-						 "typsend::pg_catalog.oid AS typsendoid, "
-						 "typanalyze, "
-						 "typanalyze::pg_catalog.oid AS typanalyzeoid, "
-						 "typdelim, typbyval, typalign, typstorage, ");
+	if (!fout->is_prepared[PREPQUERY_DUMPBASETYPE])
+	{
+		/* Set up query for type-specific details */
+		appendPQExpBufferStr(query,
+							"PREPARE dumpBaseType(pg_catalog.oid) AS\n");
 
-	if (fout->remoteVersion >= 80300)
-		appendPQExpBufferStr(query,
-							 "typmodin, typmodout, "
-							 "typmodin::pg_catalog.oid AS typmodinoid, "
-							 "typmodout::pg_catalog.oid AS typmodoutoid, ");
-	else
-		appendPQExpBufferStr(query,
-							 "'-' AS typmodin, '-' AS typmodout, "
-							 "0 AS typmodinoid, 0 AS typmodoutoid, ");
+		appendPQExpBufferStr(query, "SELECT typlen, "
+							"typinput, typoutput, typreceive, typsend, "
+							"typreceive::pg_catalog.oid AS typreceiveoid, "
+							"typsend::pg_catalog.oid AS typsendoid, "
+							"typanalyze, "
+							"typanalyze::pg_catalog.oid AS typanalyzeoid, "
+							"typdelim, typbyval, typalign, typstorage, ");
 
-	if (fout->remoteVersion >= 80400)
-		appendPQExpBufferStr(query,
-							 "typcategory, typispreferred, ");
-	else
-		appendPQExpBufferStr(query,
-							 "'U' AS typcategory, false AS typispreferred, ");
+		if (fout->remoteVersion >= 80300)
+			appendPQExpBufferStr(query,
+								"typmodin, typmodout, "
+								"typmodin::pg_catalog.oid AS typmodinoid, "
+								"typmodout::pg_catalog.oid AS typmodoutoid, ");
+		else
+			appendPQExpBufferStr(query,
+								"'-' AS typmodin, '-' AS typmodout, "
+								"0 AS typmodinoid, 0 AS typmodoutoid, ");
 
-	if (fout->remoteVersion >= 90100)
-		appendPQExpBufferStr(query, "(typcollation <> 0) AS typcollatable, ");
-	else
-		appendPQExpBufferStr(query, "false AS typcollatable, ");
+		if (fout->remoteVersion >= 80400)
+			appendPQExpBufferStr(query,
+								"typcategory, typispreferred, ");
+		else
+			appendPQExpBufferStr(query,
+								"'U' AS typcategory, false AS typispreferred, ");
 
-	/* Before 8.4, pg_get_expr does not allow 0 for its second arg */
-	if (fout->remoteVersion >= 80400)
-		appendPQExpBufferStr(query,
-							 "pg_catalog.pg_get_expr(typdefaultbin, 0) AS typdefaultbin, typdefault ");
-	else
-		appendPQExpBufferStr(query,
-							 "pg_catalog.pg_get_expr(typdefaultbin, 'pg_catalog.pg_type'::pg_catalog.regclass) AS typdefaultbin, typdefault ");
+		if (fout->remoteVersion >= 90100)
+			appendPQExpBufferStr(query, "(typcollation <> 0) AS typcollatable, ");
+		else
+			appendPQExpBufferStr(query, "false AS typcollatable, ");
 
-	appendPQExpBuffer(query, "FROM pg_catalog.pg_type "
-					  "WHERE oid = '%u'::pg_catalog.oid",
+		/* Before 8.4, pg_get_expr does not allow 0 for its second arg */
+		if (fout->remoteVersion >= 80400)
+			appendPQExpBufferStr(query,
+								"pg_catalog.pg_get_expr(typdefaultbin, 0) AS typdefaultbin, typdefault ");
+		else
+			appendPQExpBufferStr(query,
+								"pg_catalog.pg_get_expr(typdefaultbin, 'pg_catalog.pg_type'::pg_catalog.regclass) AS typdefaultbin, typdefault ");
+
+		appendPQExpBuffer(query, "FROM pg_catalog.pg_type "
+							"WHERE oid = $1");
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPBASETYPE] = true;
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpBaseType('%u')",
 					  tyinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
@@ -11494,31 +11553,43 @@ dumpDomain(Archive *fout, const TypeInfo *tyinfo)
 	Oid			typcollation;
 	bool		typdefault_is_literal = false;
 
-	/* Fetch domain specific details */
-	if (fout->remoteVersion >= 90100)
+	if (!fout->is_prepared[PREPQUERY_DUMPDOMAIN])
 	{
-		/* typcollation is new in 9.1 */
-		appendPQExpBuffer(query, "SELECT t.typnotnull, "
-						  "pg_catalog.format_type(t.typbasetype, t.typtypmod) AS typdefn, "
-						  "pg_catalog.pg_get_expr(t.typdefaultbin, 'pg_catalog.pg_type'::pg_catalog.regclass) AS typdefaultbin, "
-						  "t.typdefault, "
-						  "CASE WHEN t.typcollation <> u.typcollation "
-						  "THEN t.typcollation ELSE 0 END AS typcollation "
-						  "FROM pg_catalog.pg_type t "
-						  "LEFT JOIN pg_catalog.pg_type u ON (t.typbasetype = u.oid) "
-						  "WHERE t.oid = '%u'::pg_catalog.oid",
-						  tyinfo->dobj.catId.oid);
+		/* Set up query for domain-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE dumpDomain(pg_catalog.oid) AS\n");
+
+		if (fout->remoteVersion >= 90100)
+		{
+			/* typcollation is new in 9.1 */
+			appendPQExpBufferStr(query, "SELECT t.typnotnull, "
+								 "pg_catalog.format_type(t.typbasetype, t.typtypmod) AS typdefn, "
+								 "pg_catalog.pg_get_expr(t.typdefaultbin, 'pg_catalog.pg_type'::pg_catalog.regclass) AS typdefaultbin, "
+								 "t.typdefault, "
+								 "CASE WHEN t.typcollation <> u.typcollation "
+								 "THEN t.typcollation ELSE 0 END AS typcollation "
+								 "FROM pg_catalog.pg_type t "
+								 "LEFT JOIN pg_catalog.pg_type u ON (t.typbasetype = u.oid) "
+								 "WHERE t.oid = $1");
+		}
+		else
+		{
+			appendPQExpBufferStr(query, "SELECT typnotnull, "
+								 "pg_catalog.format_type(typbasetype, typtypmod) AS typdefn, "
+								 "pg_catalog.pg_get_expr(typdefaultbin, 'pg_catalog.pg_type'::pg_catalog.regclass) AS typdefaultbin, "
+								 "typdefault, 0 AS typcollation "
+								 "FROM pg_catalog.pg_type "
+								 "WHERE oid = $1");
+		}
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPDOMAIN] = true;
 	}
-	else
-	{
-		appendPQExpBuffer(query, "SELECT typnotnull, "
-						  "pg_catalog.format_type(typbasetype, typtypmod) AS typdefn, "
-						  "pg_catalog.pg_get_expr(typdefaultbin, 'pg_catalog.pg_type'::pg_catalog.regclass) AS typdefaultbin, "
-						  "typdefault, 0 AS typcollation "
-						  "FROM pg_catalog.pg_type "
-						  "WHERE oid = '%u'::pg_catalog.oid",
-						  tyinfo->dobj.catId.oid);
-	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpDomain('%u')",
+					  tyinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
 
@@ -11673,44 +11744,56 @@ dumpCompositeType(Archive *fout, const TypeInfo *tyinfo)
 	int			i;
 	int			actual_atts;
 
-	/* Fetch type specific details */
-	if (fout->remoteVersion >= 90100)
+	if (!fout->is_prepared[PREPQUERY_DUMPCOMPOSITETYPE])
 	{
-		/*
-		 * attcollation is new in 9.1.  Since we only want to dump COLLATE
-		 * clauses for attributes whose collation is different from their
-		 * type's default, we use a CASE here to suppress uninteresting
-		 * attcollations cheaply.  atttypid will be 0 for dropped columns;
-		 * collation does not matter for those.
-		 */
-		appendPQExpBuffer(query, "SELECT a.attname, "
-						  "pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttypdefn, "
-						  "a.attlen, a.attalign, a.attisdropped, "
-						  "CASE WHEN a.attcollation <> at.typcollation "
-						  "THEN a.attcollation ELSE 0 END AS attcollation "
-						  "FROM pg_catalog.pg_type ct "
-						  "JOIN pg_catalog.pg_attribute a ON a.attrelid = ct.typrelid "
-						  "LEFT JOIN pg_catalog.pg_type at ON at.oid = a.atttypid "
-						  "WHERE ct.oid = '%u'::pg_catalog.oid "
-						  "ORDER BY a.attnum ",
-						  tyinfo->dobj.catId.oid);
+		/* Set up query for type-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE dumpCompositeType(pg_catalog.oid) AS\n");
+
+		if (fout->remoteVersion >= 90100)
+		{
+			/*
+			 * attcollation is new in 9.1.  Since we only want to dump COLLATE
+			 * clauses for attributes whose collation is different from their
+			 * type's default, we use a CASE here to suppress uninteresting
+			 * attcollations cheaply.  atttypid will be 0 for dropped columns;
+			 * collation does not matter for those.
+			 */
+			appendPQExpBufferStr(query, "SELECT a.attname, "
+								 "pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttypdefn, "
+								 "a.attlen, a.attalign, a.attisdropped, "
+								 "CASE WHEN a.attcollation <> at.typcollation "
+								 "THEN a.attcollation ELSE 0 END AS attcollation "
+								 "FROM pg_catalog.pg_type ct "
+								 "JOIN pg_catalog.pg_attribute a ON a.attrelid = ct.typrelid "
+								 "LEFT JOIN pg_catalog.pg_type at ON at.oid = a.atttypid "
+								 "WHERE ct.oid = $1 "
+								 "ORDER BY a.attnum");
+		}
+		else
+		{
+			/*
+			 * Since ALTER TYPE could not drop columns until 9.1, attisdropped
+			 * should always be false.
+			 */
+			appendPQExpBufferStr(query, "SELECT a.attname, "
+								 "pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttypdefn, "
+								 "a.attlen, a.attalign, a.attisdropped, "
+								 "0 AS attcollation "
+								 "FROM pg_catalog.pg_type ct, pg_catalog.pg_attribute a "
+								 "WHERE ct.oid = $1 "
+								 "AND a.attrelid = ct.typrelid "
+								 "ORDER BY a.attnum");
+		}
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPCOMPOSITETYPE] = true;
 	}
-	else
-	{
-		/*
-		 * Since ALTER TYPE could not drop columns until 9.1, attisdropped
-		 * should always be false.
-		 */
-		appendPQExpBuffer(query, "SELECT a.attname, "
-						  "pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttypdefn, "
-						  "a.attlen, a.attalign, a.attisdropped, "
-						  "0 AS attcollation "
-						  "FROM pg_catalog.pg_type ct, pg_catalog.pg_attribute a "
-						  "WHERE ct.oid = '%u'::pg_catalog.oid "
-						  "AND a.attrelid = ct.typrelid "
-						  "ORDER BY a.attnum ",
-						  tyinfo->dobj.catId.oid);
-	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpCompositeType('%u')",
+					  tyinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -12331,73 +12414,87 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 	q = createPQExpBuffer();
 	delqry = createPQExpBuffer();
 	asPart = createPQExpBuffer();
+	
+	if (!fout->is_prepared[PREPQUERY_DUMPFUNC])
+	{
+		/* GPDB_95_MERGE_FIXME: use isGE70 instead? */
+		/* Set up query for function-specific details */
+		appendPQExpBufferStr(query, "PREPARE dumpFunc(pg_catalog.oid) AS\n");
 
-	/* GPDB_95_MERGE_FIXME: use isGE70 instead? */
-	/* Fetch function-specific details */
-	appendPQExpBuffer(query,
-					  "SELECT\n"
-					  "proretset,\n"
-					  "prosrc,\n"
-					  "probin,\n"
-					  "provolatile,\n"
-					  "proisstrict,\n"
-					  "prosecdef,\n"
-					  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) AS lanname,\n "
-						"proconfig,\n"
-						"procost,\n"
-						"prorows,\n"
-						"prodataaccess,\n"
-						"pg_catalog.pg_get_function_arguments(oid) AS funcargs,\n"
-						"pg_catalog.pg_get_function_identity_arguments(oid) AS funciargs,\n"
-						"pg_catalog.pg_get_function_result(oid) AS funcresult,\n"
-						"(SELECT procallback FROM pg_catalog.pg_proc_callback WHERE profnoid::pg_catalog.oid = oid) as callbackfunc,\n");
-
-	if (fout->remoteVersion >= 90200)
 		appendPQExpBuffer(query,
-						  "proleakproof,\n");
-	else
-		appendPQExpBuffer(query,
-						  "false AS proleakproof,\n");
+							"SELECT\n"
+							"proretset,\n"
+							"prosrc,\n"
+							"probin,\n"
+							"provolatile,\n"
+							"proisstrict,\n"
+							"prosecdef,\n"
+							"(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) AS lanname,\n "
+							"proconfig,\n"
+							"procost,\n"
+							"prorows,\n"
+							"prodataaccess,\n"
+							"pg_catalog.pg_get_function_arguments(p.oid) AS funcargs,\n"
+							"pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs,\n"
+							"pg_catalog.pg_get_function_result(p.oid) AS funcresult,\n"
+							"(SELECT procallback FROM pg_catalog.pg_proc_callback WHERE profnoid::pg_catalog.oid = p.oid) as callbackfunc,\n");
 
-	/* GPDB6 added proexeclocation */
-	if (fout->remoteVersion >= 90400)
+		if (fout->remoteVersion >= 90200)
 			appendPQExpBuffer(query,
-						  "proexeclocation,\n");
-	else
+								"proleakproof,\n");
+		else
 			appendPQExpBuffer(query,
-							"'a' as proexeclocation,\n");
+								"false AS proleakproof,\n");
 
-	if (fout->remoteVersion >= 90500)
-		appendPQExpBuffer(query,
-						  "array_to_string(protrftypes, ' ') AS protrftypes,\n");
+		/* GPDB6 added proexeclocation */
+		if (fout->remoteVersion >= 90400)
+				appendPQExpBuffer(query,
+								"proexeclocation,\n");
+		else
+				appendPQExpBuffer(query,
+								"'a' as proexeclocation,\n");
 
-	if (fout->remoteVersion >= 90600)
-		appendPQExpBuffer(query,
-						  "proparallel,\n");
-	else
-		appendPQExpBuffer(query,
-						  "'u' AS proparallel,\n");
+		if (fout->remoteVersion >= 90500)
+			appendPQExpBuffer(query,
+								"array_to_string(protrftypes, ' ') AS protrftypes,\n");
 
-	if (fout->remoteVersion >= 110000)
-		appendPQExpBuffer(query,
-						  "prokind,\n");
-	else if (fout->remoteVersion >= 80400)
-		appendPQExpBuffer(query,
-						  "CASE WHEN proiswindow THEN 'w' ELSE 'f' END AS prokind,\n");
-	else
-		appendPQExpBuffer(query,
-						  "CASE WHEN proiswin THEN 'w' ELSE 'f' END AS prokind,\n");
+		if (fout->remoteVersion >= 90600)
+			appendPQExpBuffer(query,
+								"proparallel,\n");
+		else
+			appendPQExpBuffer(query,
+								"'u' AS proparallel,\n");
 
-	if (fout->remoteVersion >= 120000)
-		appendPQExpBuffer(query,
-						  "prosupport\n");
-	else
-		appendPQExpBuffer(query,
-						  "'-' AS prosupport\n");
+		if (fout->remoteVersion >= 110000)
+			appendPQExpBuffer(query,
+								"prokind,\n");
+		else if (fout->remoteVersion >= 80400)
+			appendPQExpBuffer(query,
+								"CASE WHEN proiswindow THEN 'w' ELSE 'f' END AS prokind,\n");
+		else
+			appendPQExpBuffer(query,
+								"CASE WHEN proiswin THEN 'w' ELSE 'f' END AS prokind,\n");
 
-	appendPQExpBuffer(query,
-					  "FROM pg_catalog.pg_proc "
-					  "WHERE oid = '%u'::pg_catalog.oid",
+		if (fout->remoteVersion >= 120000)
+			appendPQExpBuffer(query,
+								"prosupport\n");
+		else
+			appendPQExpBuffer(query,
+								"'-' AS prosupport\n");
+
+		appendPQExpBuffer(query,
+							 "FROM pg_catalog.pg_proc p, pg_catalog.pg_language l\n"
+							 "WHERE p.oid = $1 "
+							 "AND l.oid = p.prolang");
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPFUNC] = true;
+
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpFunc('%u')",
 					  finfo->dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
@@ -12768,6 +12865,7 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 }
 
 
+
 /*
  * Dump a user-defined cast
  */
@@ -13059,19 +13157,32 @@ dumpOpr(Archive *fout, const OprInfo *oprinfo)
 	oprid = createPQExpBuffer();
 	details = createPQExpBuffer();
 
+	if (!fout->is_prepared[PREPQUERY_DUMPOPR])
+	{
+		/* Set up query for operator-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE dumpOpr(pg_catalog.oid) AS\n");
 
-	appendPQExpBuffer(query, "SELECT oprkind, "
-						"oprcode::pg_catalog.regprocedure, "
-						"oprleft::pg_catalog.regtype, "
-						"oprright::pg_catalog.regtype, "
-						"oprcom, "
-						"oprnegate, "
-						"oprrest::pg_catalog.regprocedure, "
-						"oprjoin::pg_catalog.regprocedure, "
-						"oprcanmerge, oprcanhash "
-						"FROM pg_catalog.pg_operator "
-						"WHERE oid = '%u'::pg_catalog.oid",
-						oprinfo->dobj.catId.oid);
+		appendPQExpBuffer(query, "SELECT oprkind, "
+							"oprcode::pg_catalog.regprocedure, "
+							"oprleft::pg_catalog.regtype, "
+							"oprright::pg_catalog.regtype, "
+							"oprcom, "
+							"oprnegate, "
+							"oprrest::pg_catalog.regprocedure, "
+							"oprjoin::pg_catalog.regprocedure, "
+							"oprcanmerge, oprcanhash "
+							"FROM pg_catalog.pg_operator "
+							"WHERE oid = $1");
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPOPR] = true;
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpOpr('%u')",
+					  oprinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
 
@@ -14338,77 +14449,90 @@ dumpAgg(Archive *fout, const AggInfo *agginfo)
 	delq = createPQExpBuffer();
 	details = createPQExpBuffer();
 
-	/* Get aggregate-specific details */
-	appendPQExpBuffer(query,
-					  "SELECT\n"
-					  "aggtransfn,\n"
-					  "aggfinalfn,\n"
-					  "aggtranstype::pg_catalog.regtype,\n"
-					  "agginitval,\n");
+	if (!fout->is_prepared[PREPQUERY_DUMPAGG])
+	{
+		/* Set up query for aggregate-specific details */
+		appendPQExpBufferStr(query,
+							 "PREPARE dumpAgg(pg_catalog.oid) AS\n");
 
-	if (fout->remoteVersion >= 80100)
-		appendPQExpBuffer(query,
-						  "aggsortop,\n");
-	else
-		appendPQExpBuffer(query,
-						  "0 AS aggsortop,\n");
+		appendPQExpBufferStr(query,
+							 "SELECT "
+							 "aggtransfn,\n"
+							 "aggfinalfn,\n"
+							 "aggtranstype::pg_catalog.regtype,\n"
+							 "agginitval,\n");
 
-	if (fout->remoteVersion >= 80400)
-		appendPQExpBuffer(query,
-						  "pg_catalog.pg_get_function_arguments(p.oid) AS funcargs,\n"
-						  "pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs,\n");
+		if (fout->remoteVersion >= 80100)
+			appendPQExpBufferStr(query,
+								 "aggsortop,\n");
+		else
+			appendPQExpBufferStr(query,
+								 "0 AS aggsortop,\n");
 
-	if (fout->remoteVersion >= 90400)
-		appendPQExpBuffer(query,
-						  "aggkind,\n"
-						  "aggmtransfn,\n"
-						  "aggminvtransfn,\n"
-						  "aggmfinalfn,\n"
-						  "aggmtranstype::pg_catalog.regtype,\n"
-						  "aggfinalextra,\n"
-						  "aggmfinalextra,\n"
-						  "aggtransspace,\n"
-						  "aggmtransspace,\n"
-						  "aggminitval,\n");
-	else
-		appendPQExpBuffer(query,
-						  "'n' AS aggkind,\n"
-						  "'-' AS aggmtransfn,\n"
-						  "'-' AS aggminvtransfn,\n"
-						  "'-' AS aggmfinalfn,\n"
-						  "0 AS aggmtranstype,\n"
-						  "false AS aggfinalextra,\n"
-						  "false AS aggmfinalextra,\n"
-						  "0 AS aggtransspace,\n"
-						  "0 AS aggmtransspace,\n"
-						  "NULL AS aggminitval,\n");
+		if (fout->remoteVersion >= 80400)
+			appendPQExpBufferStr(query,
+								 "pg_catalog.pg_get_function_arguments(p.oid) AS funcargs,\n"
+								 "pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs,\n");
 
-	if (fout->remoteVersion >= 90600)
-		appendPQExpBuffer(query,
-						  "aggcombinefn,\n"
-						  "aggserialfn,\n"
-						  "aggdeserialfn,\n"
-						  "proparallel,\n");
-	else
-		appendPQExpBuffer(query,
-						  "'-' AS aggcombinefn,\n"
-						  "'-' AS aggserialfn,\n"
-						  "'-' AS aggdeserialfn,\n"
-						  "'u' AS proparallel,\n");
+		if (fout->remoteVersion >= 90400)
+			appendPQExpBufferStr(query,
+								 "aggkind,\n"
+								 "aggmtransfn,\n"
+								 "aggminvtransfn,\n"
+								 "aggmfinalfn,\n"
+								 "aggmtranstype::pg_catalog.regtype,\n"
+								 "aggfinalextra,\n"
+								 "aggmfinalextra,\n"
+								 "aggtransspace,\n"
+								 "aggmtransspace,\n"
+								 "aggminitval,\n");
+		else
+			appendPQExpBufferStr(query,
+								 "'n' AS aggkind,\n"
+								 "'-' AS aggmtransfn,\n"
+								 "'-' AS aggminvtransfn,\n"
+								 "'-' AS aggmfinalfn,\n"
+								 "0 AS aggmtranstype,\n"
+								 "false AS aggfinalextra,\n"
+								 "false AS aggmfinalextra,\n"
+								 "0 AS aggtransspace,\n"
+								 "0 AS aggmtransspace,\n"
+								 "NULL AS aggminitval,\n");
 
-	if (fout->remoteVersion >= 110000)
-		appendPQExpBuffer(query,
-						  "aggfinalmodify,\n"
-						  "aggmfinalmodify\n");
-	else
-		appendPQExpBuffer(query,
-						  "'0' AS aggfinalmodify,\n"
-						  "'0' AS aggmfinalmodify\n");
+		if (fout->remoteVersion >= 90600)
+			appendPQExpBufferStr(query,
+								 "aggcombinefn,\n"
+								 "aggserialfn,\n"
+								 "aggdeserialfn,\n"
+								 "proparallel,\n");
+		else
+			appendPQExpBufferStr(query,
+								 "'-' AS aggcombinefn,\n"
+								 "'-' AS aggserialfn,\n"
+								 "'-' AS aggdeserialfn,\n"
+								 "'u' AS proparallel,\n");
 
-	appendPQExpBuffer(query,
-					  "FROM pg_catalog.pg_aggregate a, pg_catalog.pg_proc p "
-					  "WHERE a.aggfnoid = p.oid "
-					  "AND p.oid = '%u'::pg_catalog.oid",
+		if (fout->remoteVersion >= 110000)
+			appendPQExpBufferStr(query,
+								 "aggfinalmodify,\n"
+								 "aggmfinalmodify\n");
+		else
+			appendPQExpBufferStr(query,
+								 "'0' AS aggfinalmodify,\n"
+								 "'0' AS aggmfinalmodify\n");
+
+		appendPQExpBufferStr(query,
+							 "FROM pg_catalog.pg_aggregate a, pg_catalog.pg_proc p "
+							 "WHERE a.aggfnoid = p.oid "
+							 "AND p.oid = $1");
+
+		ExecuteSqlStatement(fout, query->data);
+
+		fout->is_prepared[PREPQUERY_DUMPAGG] = true;
+	}
+
+	printfPQExpBuffer(query,
+					  "EXECUTE dumpAgg('%u')",
 					  agginfo->aggfn.dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
@@ -16044,45 +16168,58 @@ dumpTable(Archive *fout, const TableInfo *tbinfo)
 		PGresult   *res;
 		int			i;
 
-		if (fout->remoteVersion >= 90600)
+		if (!fout->is_prepared[PREPQUERY_GETCOLUMNACLS])
 		{
-			/*
-			 * In principle we should call acldefault('c', relowner) to get
-			 * the default ACL for a column.  However, we don't currently
-			 * store the numeric OID of the relowner in TableInfo.  We could
-			 * convert the owner name using regrole, but that creates a risk
-			 * of failure due to concurrent role renames.  Given that the
-			 * default ACL for columns is empty and is likely to stay that
-			 * way, it's not worth extra cycles and risk to avoid hard-wiring
-			 * that knowledge here.
-			 */
-			appendPQExpBuffer(query,
-							  "SELECT at.attname, "
-							  "at.attacl, "
-							  "'{}' AS acldefault, "
-							  "pip.privtype, pip.initprivs "
-							  "FROM pg_catalog.pg_attribute at "
-							  "LEFT JOIN pg_catalog.pg_init_privs pip ON "
-							  "(at.attrelid = pip.objoid "
-							  "AND pip.classoid = 'pg_catalog.pg_class'::pg_catalog.regclass "
-							  "AND at.attnum = pip.objsubid) "
-							  "WHERE at.attrelid = '%u'::pg_catalog.oid AND "
-							  "NOT at.attisdropped "
-							  "AND (at.attacl IS NOT NULL OR pip.initprivs IS NOT NULL) "
-							  "ORDER BY at.attnum",
-							  tbinfo->dobj.catId.oid);
+			/* Set up query for column ACLs */
+			appendPQExpBufferStr(query,
+								 "PREPARE getColumnACLs(pg_catalog.oid) AS\n");
+
+			if (fout->remoteVersion >= 90600)
+			{
+				/*
+				 * In principle we should call acldefault('c', relowner) to
+				 * get the default ACL for a column.  However, we don't
+				 * currently store the numeric OID of the relowner in
+				 * TableInfo.  We could convert the owner name using regrole,
+				 * but that creates a risk of failure due to concurrent role
+				 * renames.  Given that the default ACL for columns is empty
+				 * and is likely to stay that way, it's not worth extra cycles
+				 * and risk to avoid hard-wiring that knowledge here.
+				 */
+				appendPQExpBufferStr(query,
+									 "SELECT at.attname, "
+									 "at.attacl, "
+									 "'{}' AS acldefault, "
+									 "pip.privtype, pip.initprivs "
+									 "FROM pg_catalog.pg_attribute at "
+									 "LEFT JOIN pg_catalog.pg_init_privs pip ON "
+									 "(at.attrelid = pip.objoid "
+									 "AND pip.classoid = 'pg_catalog.pg_class'::pg_catalog.regclass "
+									 "AND at.attnum = pip.objsubid) "
+									 "WHERE at.attrelid = $1 AND "
+									 "NOT at.attisdropped "
+									 "AND (at.attacl IS NOT NULL OR pip.initprivs IS NOT NULL) "
+									 "ORDER BY at.attnum");
+			}
+			else
+			{
+				appendPQExpBufferStr(query,
+									 "SELECT attname, attacl, '{}' AS acldefault, "
+									 "NULL AS privtype, NULL AS initprivs "
+									 "FROM pg_catalog.pg_attribute "
+									 "WHERE attrelid = $1 AND NOT attisdropped "
+									 "AND attacl IS NOT NULL "
+									 "ORDER BY attnum");
+			}
+
+			ExecuteSqlStatement(fout, query->data);
+
+			fout->is_prepared[PREPQUERY_GETCOLUMNACLS] = true;
 		}
-		else
-		{
-			appendPQExpBuffer(query,
-							  "SELECT attname, attacl, '{}' AS acldefault, "
-							  "NULL AS privtype, NULL AS initprivs "
-							  "FROM pg_catalog.pg_attribute "
-							  "WHERE attrelid = '%u'::pg_catalog.oid AND NOT attisdropped "
-							  "AND attacl IS NOT NULL "
-							  "ORDER BY attnum",
-							  tbinfo->dobj.catId.oid);
-		}
+
+		printfPQExpBuffer(query,
+						  "EXECUTE getColumnACLs('%u')",
+						  tbinfo->dobj.catId.oid);
 
 		res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 

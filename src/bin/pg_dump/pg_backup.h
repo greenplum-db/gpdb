@@ -58,6 +58,37 @@ typedef enum _teSection
 	SECTION_POST_DATA			/* stuff to be processed after data */
 } teSection;
 
+/* We need one enum entry per prepared query in pg_dump */
+enum _dumpPreparedQueries
+{
+	PREPQUERY_DUMPAGG,
+	PREPQUERY_DUMPBASETYPE,
+	PREPQUERY_DUMPCOMPOSITETYPE,
+	PREPQUERY_DUMPDOMAIN,
+	PREPQUERY_DUMPENUMTYPE,
+	PREPQUERY_DUMPFUNC,
+	PREPQUERY_DUMPOPR,
+	PREPQUERY_DUMPRANGETYPE,
+	PREPQUERY_DUMPTABLEATTACH,
+	PREPQUERY_GETCOLUMNACLS,
+	PREPQUERY_GETDOMAINCONSTRAINTS,
+	NUM_PREP_QUERIES			/* must be last */
+};
+
+/* Parameters needed by ConnectDatabase; same for dump and restore */
+typedef struct _connParams
+{
+	/* These fields record the actual command line parameters */
+	char	   *dbname;			/* this may be a connstring! */
+	char	   *pgport;
+	char	   *pghost;
+	char	   *username;
+	trivalue	promptPassword;
+	/* If not NULL, this overrides the dbname obtained from command line */
+	/* (but *only* the DB name, not anything else in the connstring) */
+	char	   *override_dbname;
+} ConnParams;
+
 typedef struct _restoreOptions
 {
 	int			createDB;		/* Issue commands to create the database */
@@ -207,6 +238,9 @@ typedef struct Archive
 	/* error handling */
 	bool		exit_on_error;	/* whether to exit on SQL errors... */
 	int			n_errors;		/* number of errors (if no die) */
+
+	/* prepared-query status */
+	bool	   *is_prepared;	/* indexed by enum _dumpPreparedQueries */
 
 	/* The rest is private */
 } Archive;
