@@ -182,6 +182,7 @@ tablespace-setup:
 	./testtablespace_mytempsp2 \
 	./testtablespace_mytempsp3 \
 	./testtablespace_mytempsp4 \
+	./testtablespace_space_12871 \
 	./testtablespace_database_tablespace
 
 .PHONY: hooktest

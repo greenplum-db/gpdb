@@ -135,6 +135,13 @@ struct BufFile
 #endif
 };
 
+/*
+ * If force_default_tablespace is true, we always use default table
+ * space. Currently, **only** set it true for shared snapshot buf-file
+ * and shared combo cid buf-file.
+ */
+static bool force_default_tablespace = false;
+
 static BufFile *makeBufFile(File firstfile);
 static void BufFileUpdateSize(BufFile *buffile);
 
@@ -258,8 +265,15 @@ BufFileCreateNamedTemp(const char *fileName, bool interXact, workfile_set *work_
 	 * pretty hard-to-detect bug.  Callers may prefer to do it earlier if they
 	 * want to be sure that any required catalog access is done in some other
 	 * resource context.
+	 *
+	 * Under some senario, always using temp tablespace might lead to infinite
+	 * recurisve problem. One such senario is the buf-file of snapshot that passed
+	 * to cursors's reader gang. We do not need to put that small file in temp
+	 * tablespace.
+	 * See Issue https://github.com/greenplum-db/gpdb/issues/12871 for details.
 	 */
-	PrepareTempTablespaces();
+	if (!GetForceDefaultTableSpaceVal() && !interXact)
+		PrepareTempTablespaces();
 
 	pfile = OpenNamedTemporaryFile(fileName,
 								   true, /* create */
@@ -298,8 +312,11 @@ BufFileOpenNamedTemp(const char *fileName, bool interXact)
 	 * pretty hard-to-detect bug.  Callers may prefer to do it earlier if they
 	 * want to be sure that any required catalog access is done in some other
 	 * resource context.
+	 *
+	 * Refer to more comments in BufFileCreateNamedTemp(const char*, bool).
 	 */
-	PrepareTempTablespaces();
+	if (!GetForceDefaultTableSpaceVal() && !interXact)
+		PrepareTempTablespaces();
 	pfile = OpenNamedTemporaryFile(fileName,
 								   false,	/* create */
 								   false,	/* delOnClose */
@@ -1213,3 +1230,66 @@ BufFileLoadCompressedBuffer(BufFile *file, void *buffer, size_t bufsize)
 }
 
 #endif		/* HAVE_ZSTD */
+
+void
+SetForceDefaultTableSpaceVal(bool val)
+{
+	force_default_tablespace = val;
+}
+
+bool
+GetForceDefaultTableSpaceVal(void)
+{
+	return force_default_tablespace;
+}
+
+/*
+ * The function is just a wrapper of BufFileCreateNamedTemp.
+ * It forces using default tablespace.
+ */
+BufFile *
+BufFileCreateNamedTemp_ForceDefaultSpace(const char *fileName, bool interXact,
+										 workfile_set *work_set)
+{
+	BufFile     *f = NULL;
+
+	SetForceDefaultTableSpaceVal(true);
+	PG_TRY();
+	{
+		f = BufFileCreateNamedTemp(fileName, interXact, work_set);
+		SetForceDefaultTableSpaceVal(false);
+	}
+	PG_CATCH();
+	{
+		SetForceDefaultTableSpaceVal(false);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	return f;
+}
+
+/*
+ * The function is just a wrapper of BufFileOpenNamedTemp.
+ * It forces using default tablespace.
+ */
+BufFile *
+BufFileOpenNamedTemp_ForceDefaultSpace(const char *fileName, bool interXact)
+{
+	BufFile     *f = NULL;
+
+	SetForceDefaultTableSpaceVal(true);
+	PG_TRY();
+	{
+		f = BufFileOpenNamedTemp(fileName, interXact);
+		SetForceDefaultTableSpaceVal(false);
+	}
+	PG_CATCH();
+	{
+		SetForceDefaultTableSpaceVal(false);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	return f;
+}
