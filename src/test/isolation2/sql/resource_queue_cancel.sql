@@ -17,16 +17,16 @@
 0:SELECT pg_cancel_backend(pid) FROM pg_stat_activity
   WHERE query='SELECT 100;';
 
--- Now once we quit session 1, we should be able to consume the vacated active
--- statement slot in session 2.
-1q:
+-- Now once we end session 1's transaction, we should be able to consume the
+-- vacated active statement slot in session 2.
+1:END;
 
 2<:
 2:END;
 2:BEGIN;
 2:DECLARE c CURSOR FOR SELECT 0;
 
-2q:
+2:END;
 
 -- Sanity check: Ensure that the resource queue is now empty.
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_cancel';

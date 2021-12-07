@@ -4,15 +4,17 @@
 0:CREATE RESOURCE QUEUE rq_multi_portal WITH (active_statements = 2);
 0:CREATE ROLE role_multi_portal RESOURCE QUEUE rq_multi_portal;
 
+1:SET ROLE role_multi_portal;
+2:SET ROLE role_multi_portal;
+
 --
 -- Scenario 1:
 -- Multiple explicit cursors active in the same session with a deadlock.
 --
-1:SET ROLE role_multi_portal;
+
 1:BEGIN;
 1:DECLARE c1 CURSOR FOR SELECT 1;
 
-2:SET ROLE role_multi_portal;
 2:BEGIN;
 2:DECLARE c2 CURSOR FOR SELECT 1;
 
@@ -38,17 +40,16 @@
 0:SELECT count(*) from pg_stat_activity WHERE query LIKE 'DECLARE c% CURSOR FOR SELECT 1;'
     AND state = 'idle in transaction (aborted)';
 
--- After quitting the sessions there should be 0 active statements.
+-- After ending the transactions, there should be 0 active statements.
 1<:
-1q:
-2q:
+1:END;
+2:END;
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
 
 --
 -- Scenario 2:
 -- Multiple explicit cursors active in the same session with a self deadlock.
 --
-1:SET ROLE role_multi_portal;
 1:BEGIN;
 1:DECLARE c1 CURSOR FOR SELECT 1;
 1:DECLARE c2 CURSOR FOR SELECT 1;
@@ -63,17 +64,15 @@
 -- There should be 0 active statements following the transaction abort.
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
 
-1q:
+1:END;
 
 --
 -- Scenario 3:
 -- Multiple explicit cursors active in the same session with cancellation.
 --
-1:SET ROLE role_multi_portal;
 1:BEGIN;
 1:DECLARE c1 CURSOR FOR SELECT 1;
 
-2:SET ROLE role_multi_portal;
 2:BEGIN;
 2:DECLARE c2 CURSOR FOR SELECT 1;
 
@@ -93,11 +92,10 @@
 0:SELECT query, state from pg_stat_activity
   WHERE query = 'DECLARE c2 CURSOR FOR SELECT 1;';
 
+-- After ending the transactions, there should be 0 active statements.
 1<:
-1q:
-
--- After quitting session 2 there should be 0 active statements.
-2q:
+1:END;
+2:END;
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
 
 -- Cleanup
