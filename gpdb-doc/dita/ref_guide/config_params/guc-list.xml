@@ -120,6 +120,9 @@
               <xref href="#enable_hashjoin"/>
             </li>
             <li>
+              <xref href="#enable_implicit_timeformat_YYYYMMDDHH24MISS"/>
+            </li>
+            <li>
               <xref href="#enable_indexscan"/>
             </li>
             <li>
@@ -1828,6 +1831,38 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="enable_implicit_timeformat_YYYYMMDDHH24MISS">
+    <title>enable_implicit_timeformat_YYYYMMDDHH24MISS</title>
+    <body>
+      <p>Enables or disables implicit conversion of a string with the deprecated
+        <i>YYYYMMDDHH24MISS</i> timestamp format to a valid date/time type.</p>
+      <p>The default value is <codeph>off</codeph>. When this parameter is set to
+        <codeph>on</codeph>, Greenplum Database converts a string with the
+        timestamp format <i>YYYYMMDDHH24MISS</i> into a valid date/time type. You
+        may require this conversion when loading data from Greenplum Database 5.</p>
+      <table id="tbl_enable_implicit_timeformat_YYYYMMDDHH24MISS">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">off</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

@@ -1396,6 +1396,9 @@
         <simpletable frame="none" id="simpletable_uy5_1bv_bdb">
           <strow>
             <stentry>
+              <p>
+                <xref href="guc-list.xml#enable_implicit_timeformat_YYYYMMDDHH24MISS" type="section">enable_implicit_timeformat_YYYYMMDDHH24MISS</xref>
+              </p>
               <p><xref href="guc-list.xml#gp_ignore_error_table">gp_ignore_error_table</xref>
               </p>
             </stentry>

@@ -238,10 +238,22 @@
           previous Greenplum Database releases. You can still specify the
             <codeph>YYYYMMDDHH24MISS</codeph> format in conversion functions such as
             <codeph>to_timestamp</codeph> and <codeph>to_char</codeph> for compatibility with other
-          database systems. You can use input formats for converting text to date or timestamp
-          values to avoid unexpected results or query execution failures. For example, this
+          database systems. You have two options to avoid unexpected results or
+          query execution failures:
+          <ul>
+            <li>Set the <codeph><xref href="../ref_guide/config_params/guc-list.xml#enable_implicit_timeformat_YYYYMMDDHH24MISS"
+              format="dita" scope="peer">enable_implicit_timeformat_YYYYMMDDHH24MISS</xref></codeph>
+              server configuration parameter to <codeph>on</codeph> to have Greenplum
+              Database implicitly convert a string with the deprecated 
+              <codeph>YYYYMMDDHH24MISS</codeph> timestamp format to a valid date/time type.
+              You may require this conversion when loading data from Greenplum 5. Be sure to
+              turn <codeph>off</codeph> the parameter when the conversion is no longer
+              required.</li>
+            <li>Use input formats for converting text to date or timestamp values. For example, this
             <codeph>SELECT</codeph> command returns a timestamp in Greenplum Database 5 and fails in
-            6.<codeblock>SELECT to_timestamp('20190905140000');</codeblock><p>To convert the string
+            6 with the default <codeph>enable_implicit_timeformat_YYYYMMDDHH24MISS</codeph> setting
+            (<codeph>off</codeph>):
+            <codeblock>SELECT to_timestamp('20190905140000');</codeblock><p>To convert the string
             to a timestamp in Greenplum Database 6, you must use a valid format. Both of these
             commands return a timestamp in Greenplum Database 6. The first example explicitly
             specifies a timestamp format. The second example uses the string in a format that
@@ -249,9 +261,12 @@
             recognizes.<codeblock>SELECT to_timestamp('20190905140000','YYYYMMDDHH24MISS');
 SELECT to_timestamp('201909051 40000');</codeblock></p><p>The
             timestamp issue also applies when you use the <codeph>::</codeph> syntax. In Greenplum
-            Database 6, the first command returns an error. The second command returns a timestamp.
+            Database 6 with the default <codeph>enable_implicit_timeformat_YYYYMMDDHH24MISS</codeph> setting
+            (<codeph>off</codeph>), the first command returns an error. The second command returns a timestamp.
             <codeblock>SELECT '20190905140000'::timestamp ;
 SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
+          </ul>
+        </li>
         <li>Creating a table using the <codeph>CREATE TABLE AS</codeph> command in Greenplum 4.3 or
           5 could create a table with a duplicate distribution key. The <codeph>gpbackup</codeph>
           utility saves the table to the backup using a <codeph>CREATE TABLE</codeph> command that

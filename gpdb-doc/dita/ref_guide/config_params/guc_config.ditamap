@@ -64,6 +64,7 @@
             <topicref href="guc-list.xml#enable_groupagg"/>
             <topicref href="guc-list.xml#enable_hashagg"/>
             <topicref href="guc-list.xml#enable_hashjoin"/>
+            <topicref href="guc-list.xml#enable_implicit_timeformat_YYYYMMDDHH24MISS"/>
             <topicref href="guc-list.xml#enable_indexscan"/>
             <topicref href="guc-list.xml#enable_mergejoin"/>
             <topicref href="guc-list.xml#enable_nestloop"/>
