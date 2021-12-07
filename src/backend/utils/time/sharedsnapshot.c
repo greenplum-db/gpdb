@@ -834,6 +834,16 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 		snapshot->curcid,
 		distributedTransactionContext);
 
+	/*
+	 * After SetSharedTransactionId_reader is called, we need to
+	 * invalidate catalog snapshot so that next time it will get
+	 * a new catalog snapshot containing the correct command id.
+	 *
+	 * See Issue https://github.com/greenplum-db/gpdb/issues/12871#issuecomment-982627753
+	 * for details.
+	 */
+	InvalidateCatalogSnapshot();
+
 	return;
 }
 
