@@ -28,6 +28,11 @@ test: eval_record
 # Test deadlock situation when waiting on a resource queue lock
 test: resource_queue_deadlock
 
+# Test simple cancellation for resource queues and cancellation/deadlocks for
+# sessions with multiple portals.
+test: resource_queue_cancel
+test: resource_queue_multi_portal
+
 # Tests on Append-Optimized tables (row-oriented).
 test: uao/alter_while_vacuum_row
 test: uao/alter_while_vacuum2_row

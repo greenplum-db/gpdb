@@ -67,14 +67,22 @@ t
 -- catch the issue and error out session 2.
 2: SELECT * FROM t_deadlock_test;
 ERROR:  deadlock detected
-DETAIL:  Process 26804 waits for ExclusiveLock on resource queue 57544; blocked by process 26795.
-Process 26795 waits for ShareUpdateExclusiveLock on relation 57546 of database 57503; blocked by process 26804.
+DETAIL:  Process 238028 waits for ExclusiveLock on resource queue 16416; blocked by process 238019.
+Process 238019 waits for ShareUpdateExclusiveLock on relation 16420 of database 16408; blocked by process 238028.
+HINT:  See server log for query details.
 
 -- Finish up the two sessions.
 2: ROLLBACK;
 ROLLBACK
 1<:  <... completed>
 INSERT 1
+
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_deadlock_test';
+rsqcountlimit|rsqcountvalue
+-------------+-------------
+1            |0            
+(1 row)
 
 -- Clean up the test
 0: DROP TABLE t_deadlock_test;

@@ -323,7 +323,11 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		lock->requested[lockmode]--;
 		Assert((lock->nRequested >= 0) && (lock->requested[lockmode] >= 0));
 
-		/* Clean up this lock. */
+		/*
+		 * Clean up the locallock. Since a single locallock can represent
+		 * multiple locked portals in the same backend, we can only remove it if
+		 * this is the last portal.
+		 */
 		if (proclock->nLocks == 0)
 			RemoveLocalLock(locallock);
 
@@ -385,7 +389,11 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		lock->requested[lockmode]--;
 		Assert((lock->nRequested >= 0) && (lock->requested[lockmode] >= 0));
 
-		/* Clean up this lock. */
+		/*
+		 * Clean up the locallock. Since a single locallock can represent
+		 * multiple locked portals in the same backend, we can only remove it if
+		 * this is the last portal.
+		 */
 		if (proclock->nLocks == 0)
 			RemoveLocalLock(locallock);
 
@@ -597,6 +605,11 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	if (!incrementSet)
 	{
 		elog(DEBUG1, "Resource queue %d: increment not found on unlock", locktag->locktag_field1);
+		/*
+		 * Clean up the locallock. Since a single locallock can represent
+		 * multiple locked portals in the same backend, we can only remove it if
+		 * this is the last portal.
+		 */
 		if (proclock->nLocks == 0)
 		{
 			RemoveLocalLock(locallock);
@@ -616,6 +629,10 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 
 	/*
 	 * Perform clean-up, waking up any waiters!
+	 *
+	 * Clean up the locallock. Since a single locallock can represent
+	 * multiple locked portals in the same backend, we can only remove it if
+	 * this is the last portal.
 	 */
 	if (proclock->nLocks == 0)
 		RemoveLocalLock(locallock);

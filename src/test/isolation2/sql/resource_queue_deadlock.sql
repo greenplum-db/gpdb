@@ -47,6 +47,9 @@
 2: ROLLBACK;
 1<:
 
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_deadlock_test';
+
 -- Clean up the test
 0: DROP TABLE t_deadlock_test;
 0: DROP ROLE role_deadlock_test;

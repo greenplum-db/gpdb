@@ -1448,15 +1448,22 @@ CheckDeadLock(void)
 		if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() &&
 			LOCK_LOCKMETHOD(*(MyProc->waitLock)) == RESOURCE_LOCKMETHOD)
 		{
-			ResRemoveFromWaitQueue(MyProc, 
-								   LockTagHashCode(&(MyProc->waitLock->tag)));
 			/*
-			 * lockAwaited's lock/proclock pointers are dangling after the call
-			 * to ResRemoveFromWaitQueue(). So clean up the locallock as well,
-			 * to avoid de-referencing them in the eventual ResLockRelease() in
-			 * ResLockPortal/ResLockUtilityPortal.
+			 * If there are no other locked portals resident in this backend
+			 * (i.e. nLocks == 0), lockAwaited's lock/proclock pointers are dangling
+			 * after the following call to ResRemoveFromWaitQueue(). So clean up the
+			 * locallock as well, to avoid de-referencing them in the eventual
+			 * ResLockRelease() in ResLockPortal()/ResLockUtilityPortal().
+			 *
+			 * If there are other locked portals resident in this backend
+			 * (i.e. nLocks > 0), as always, the lock and proclock cannot be cleaned
+			 * up now. Thus, defer the cleanup of the locallock.
 			 */
-			RemoveLocalLock(lockAwaited);
+			if (MyProc->waitProcLock->nLocks == 0)
+				RemoveLocalLock(lockAwaited);
+
+			ResRemoveFromWaitQueue(MyProc,
+								   LockTagHashCode(&(MyProc->waitLock->tag)));
 		}
 		else
 		{
@@ -1997,14 +2004,21 @@ ResLockWaitCancel(void)
 			/* We should only be trying to cancel resource locks. */
 			Assert(LOCALLOCK_LOCKMETHOD(*lockAwaited) == RESOURCE_LOCKMETHOD);
 
-			ResRemoveFromWaitQueue(MyProc, lockAwaited->hashcode);
 			/*
-			 * lockAwaited's lock/proclock pointers are dangling after the call
-			 * to ResRemoveFromWaitQueue(). So clean up the locallock as well,
-			 * to avoid de-referencing them in the eventual ResLockRelease() in
-			 * ResLockPortal/ResLockUtilityPortal.
+			 * If there are no other locked portals resident in this backend
+			 * (i.e. nLocks == 0), lockAwaited's lock/proclock pointers are dangling
+			 * after the following call to ResRemoveFromWaitQueue(). So clean up the
+			 * locallock as well, to avoid de-referencing them in the eventual
+			 * ResLockRelease() in ResLockPortal()/ResLockUtilityPortal().
+			 *
+			 * If there are other locked portals resident in this backend
+			 * (i.e. nLocks > 0), as always, the lock and proclock cannot be cleaned
+			 * up now. Thus, defer the cleanup of the locallock.
 			 */
-			RemoveLocalLock(lockAwaited);
+			if (MyProc->waitProcLock->nLocks == 0)
+				RemoveLocalLock(lockAwaited);
+
+			ResRemoveFromWaitQueue(MyProc, lockAwaited->hashcode);
 		}
 
 		lockAwaited = NULL;
