@@ -1162,7 +1162,7 @@ def stop_segments(context, where_clause):
         # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
         # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
         subprocess.check_call(['ssh', seg.getSegmentHostName(),
-                               'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s -w' % (
+                               'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s -w -t 120' % (
                                    pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg.getSegmentDataDirectory()))
                                ])
 
