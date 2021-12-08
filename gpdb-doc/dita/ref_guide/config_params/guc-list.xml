@@ -444,6 +444,10 @@
                 >optimizer_enable_multiple_distinct_aggs</xref>
             </li>
             <li>
+              <xref href="#optimizer_force_comprehensive_join_implementation" type="section"
+                >optimizer_force_comprehensive_join_implementation</xref>
+            </li>
+            <li>
               <xref href="#optimizer_force_multistage_agg" type="section"
                 >optimizer_force_multistage_agg</xref>
             </li>
@@ -7394,6 +7398,38 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_force_comprehensive_join_implementation">
+    <title>optimizer_force_comprehensive_join_implementation</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter affects its consideration of
+        nested loop join and hash join alternatives.</p>
+      <p>The default value is <codeph>false</codeph>, GPORCA does not consider nested loop
+        join alternatives when a hash join is available, which significantly improves
+        optimization performance for most queries. When set to <codeph>true</codeph>,
+        GPORCA will explore nested loop join alternatives even when a hash join is possible.</p>
+      <table id="table_ofcji">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

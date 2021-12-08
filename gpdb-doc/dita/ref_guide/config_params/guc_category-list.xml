@@ -350,6 +350,9 @@
               >optimizer_enable_multiple_distinct_aggs</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_agg_skew_avoidance" type="section"
                 >optimizer_force_agg_skew_avoidance</xref></p>
+            <p><xref href="guc-list.xml#optimizer_force_comprehensive_join_implementation" type="section"
+                >optimizer_force_comprehensive_join_implementation</xref>
+            </p>
           </stentry>
           <stentry>
             <p><xref href="guc-list.xml#optimizer_force_multistage_agg" type="section"

@@ -25,6 +25,10 @@
       <li><codeph>optimizer_cte_inlining_bound</codeph> controls the amount of inlining performed
         for common table expression (CTE) queries (queries that contain a <codeph>WHERE</codeph>
         clause).</li>
+      <li><codeph>optimizer_force_comprehensive_join_implementation</codeph> affects GPORCA's
+        consideration of nested loop join and hash join alternatives. When the value is
+          <codeph>false</codeph> (the default), GPORCA does not consider nested loop join
+          alternatives when a hash join is available.</li>
       <li><codeph>optimizer_force_multistage_agg</codeph> forces GPORCA to choose a multi-stage
         aggregate plan for a scalar distinct qualified aggregate. When the value is
           <codeph>off</codeph> (the default), GPORCA  chooses between a one-stage and two-stage

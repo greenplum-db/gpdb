@@ -232,6 +232,7 @@
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_enable_multiple_distinct_aggs"/>
             <topicref href="guc-list.xml#optimizer_force_agg_skew_avoidance"/>
+            <topicref href="guc-list.xml#optimizer_force_comprehensive_join_implementation"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>
             <topicref href="guc-list.xml#optimizer_force_three_stage_scalar_dqa"/>
             <topicref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"/>
