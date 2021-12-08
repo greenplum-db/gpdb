@@ -140,7 +140,6 @@ libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R
           these changes are covered in the upgrade documentation.</p></note>
     </body>
   </topic>
-  </topic>
   <topic id="topic_xmb_gb5_vhb">
     <title>Enabling Passwordless SSH</title>
     <body>
