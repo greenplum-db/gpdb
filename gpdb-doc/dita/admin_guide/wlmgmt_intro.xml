@@ -132,7 +132,8 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
       </sectiondiv>
       <sectiondiv>
         <p><b>Configuring Segment Memory when Resource Queue-Based Resource Management is Active</b></p>
-        <p>When resource queue-based resource management is active, the <varname>gp_vmem_protect_limit</varname> server configuration parameter value 
+        <p>When resource queue-based resource management is active, the
+          <varname>gp_vmem_protect_limit</varname> server configuration parameter value 
           identifies the amount of memory to allocate to
           each segment. This value is estimated by calculating the memory available for all Greenplum
           Database processes and dividing by the maximum number of primary segments during a
@@ -144,8 +145,10 @@ gp_vmem_protect_limit = gp_vmem_rq / max_acting_primary_segments</codeblock></p>
           <p>where <codeph>max_acting_primary_segments</codeph> is the maximum number of
           primary segments that could be running on a host when mirror segments are activated
           due to a host or segment failure.</p>
-        <p><varname>gp_vmem_protect_limit</varname> does not affect segment memory when using 
-          resource groups for Greenplum Database resource management.</p>
+        <note>The <varname>gp_vmem_protect_limit</varname> setting is enforced only when
+          resource queue-based resource management is active in Greenplum Database.
+          Greenplum ignores this configuration parameter when resource group-based resource
+          management is active.</note>
         <p>Resource queues expose additional configuration parameters that
            enable you to further control and refine the amount of memory allocated for queries.</p>
       </sectiondiv>

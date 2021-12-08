@@ -14,6 +14,7 @@ import time
 import pprint
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 import socket
+from gppylib.mainUtils import parseStatusLine
 
 try:
     from gppylib.gpparseopts import OptParser, OptChecker
@@ -595,10 +596,7 @@ class GpStop:
                 lines = cmdout.split('\n')
                 for line in lines:
                     if line.startswith("STATUS"):
-                        fields = line.split('--')
-                        dir = fields[1].split(':')[1]
-                        started = fields[2].split(':')[1]
-                        reasonStr = fields[3].split(':')[1]
+                        reasonStr, started, dir = parseStatusLine(line, isStop=True)[1:]
 
                         if started.lower() == 'false':
                             success = False

@@ -43,7 +43,7 @@ public:
 	struct SMDFuncRequest;
 
 	// array of type requests
-	typedef CDynamicPtrArray<SMDTypeRequest, CleanupDelete> SMDTypeRequestArray;
+	using SMDTypeRequestArray = CDynamicPtrArray<SMDTypeRequest, CleanupDelete>;
 
 	//---------------------------------------------------------------------------
 	//	@class:

@@ -4,16 +4,14 @@
 <topic id="topic_tbx_szy_kbb">
   <title class="- topic/title ">Upgrading to Greenplum 6</title>
   <shortdesc>This topic identifies the upgrade paths for upgrading a Greenplum Database 6.x release
-    to a newer 6.x release. The topic also describes the <ph otherprops="pivotal">migration</ph>
-      path<ph otherprops="pivotal">s</ph> for migrating Greenplum Database 4.x or 5.x data to
-    Greenplum Database 6.x.</shortdesc>
+    to a newer 6.x release. The topic also describes the migration paths for migrating Tanzu
+    Greenplum Database 4.x or 5.x data to Greenplum Database 6.x.</shortdesc>
   <body>
     <p>Greenplum Database 6 supports upgrading from a Greenplum 6.x release to a newer 6.x release.
-        <ph otherprops="pivotal">Direct upgrade from Greenplum 5.28 and later to Greenplum 6.9 and
-        later is provided via gpupgrade; for more information, see the <xref
-          href="https://greenplum.docs.pivotal.io/upgrade/" format="html" scope="external">gpupgrade
-          documentation</xref>. Direct upgrade from Greenplum Database 4.3, or from Greenplum 5.27
-        and earlier, to Greenplum 6 is not supported; you must migrate the data to Greenplum
-      6.</ph></p>
+      Direct upgrade from Tanzu Greenplum 5.28 and later to Tanzu Greenplum 6.9 and later is
+      provided via gpupgrade; for more information, see the <xref
+        href="https://greenplum.docs.pivotal.io/upgrade/" format="html" scope="external">gpupgrade
+        documentation</xref>. Direct upgrade from Greenplum Database 4.3, or from Greenplum 5.27 and
+      earlier, to Greenplum 6 is not supported; you must migrate the data to Greenplum 6.</p>
   </body>
 </topic>

@@ -27,9 +27,9 @@ using namespace gpos;
 XERCES_CPP_NAMESPACE_USE
 
 // shorthand for functions creating operator parse handlers
-typedef CParseHandlerBase *(ParseHandlerOpCreatorFunc)(CMemoryPool *mp,
-													   CParseHandlerManager *,
-													   CParseHandlerBase *);
+using ParseHandlerOpCreatorFunc = CParseHandlerBase *(CMemoryPool *,
+													  CParseHandlerManager *,
+													  CParseHandlerBase *);
 
 // fwd decl
 class CDXLTokens;
@@ -61,9 +61,9 @@ IsXMLStrEqual(const XMLCh *xml_str1, const XMLCh *xml_str2)
 //---------------------------------------------------------------------------
 class CParseHandlerFactory
 {
-	typedef CHashMap<const XMLCh, ParseHandlerOpCreatorFunc, GetHashXMLStr,
-					 IsXMLStrEqual, CleanupNULL, CleanupNULL>
-		TokenParseHandlerFuncMap;
+	using TokenParseHandlerFuncMap =
+		CHashMap<const XMLCh, ParseHandlerOpCreatorFunc, GetHashXMLStr,
+				 IsXMLStrEqual, CleanupNULL, CleanupNULL>;
 
 	// pair of DXL token type and the corresponding parse handler
 	struct SParseHandlerMapping

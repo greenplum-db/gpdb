@@ -36,7 +36,7 @@ class CSyncHashtableAccessByIter : public CSyncHashtableAccessorBase<T, K>
 
 private:
 	// shorthand for base class
-	typedef class CSyncHashtableAccessorBase<T, K> Base;
+	using Base = class CSyncHashtableAccessorBase<T, K>;
 
 	// target iterator
 	CSyncHashtableIter<T, K> &m_iter;

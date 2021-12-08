@@ -330,6 +330,9 @@ bool		optimizer_enable_groupagg;
 bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
 bool		optimizer_prune_unused_columns;
+bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
+bool		optimizer_force_comprehensive_join_implementation;
+
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -2828,6 +2831,28 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"optimizer_enable_redistribute_nestloop_loj_inner_child", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable nested loops left join plans with redistributed inner child in the optimizer."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_enable_redistribute_nestloop_loj_inner_child,
+		 true,
+		 NULL, NULL, NULL
+	},
+	{
+		{"optimizer_force_comprehensive_join_implementation", PGC_USERSET, QUERY_TUNING_METHOD,
+		 gettext_noop("Explore a nested loop join even if a hash join is possible"),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_force_comprehensive_join_implementation,
+		 false,
+		 NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -4016,6 +4041,41 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_slices,
 		0, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_idle", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between issuing TCP keepalives from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_idle,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_IDLE,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_interval", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_interval,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_INTERVAL,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_count", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Maximum number of TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("This controls the number of consecutive keepalive retransmits that can be "
+						 "lost before a QD/QE connection is considered dead. A value of 0 uses the "
+						 "system default."),
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_count,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_COUNT,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */

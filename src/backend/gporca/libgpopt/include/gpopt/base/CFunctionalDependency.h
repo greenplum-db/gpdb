@@ -24,8 +24,8 @@ namespace gpopt
 class CFunctionalDependency;
 
 // definition of array of functional dependencies
-typedef CDynamicPtrArray<CFunctionalDependency, CleanupRelease>
-	CFunctionalDependencyArray;
+using CFunctionalDependencyArray =
+	CDynamicPtrArray<CFunctionalDependency, CleanupRelease>;
 
 using namespace gpos;
 

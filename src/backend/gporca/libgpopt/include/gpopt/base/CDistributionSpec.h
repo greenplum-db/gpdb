@@ -169,8 +169,8 @@ public:
 };	// class CDistributionSpec
 
 // arrays of distribution spec
-typedef CDynamicPtrArray<CDistributionSpec, CleanupRelease>
-	CDistributionSpecArray;
+using CDistributionSpecArray =
+	CDynamicPtrArray<CDistributionSpec, CleanupRelease>;
 }  // namespace gpopt
 
 #endif	// !GPOPT_IDistributionSpec_H

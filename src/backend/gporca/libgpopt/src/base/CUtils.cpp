@@ -4443,6 +4443,28 @@ CUtils::FCrossJoin(CExpression *pexpr)
 	return fCrossJoin;
 }
 
+BOOL
+CUtils::IsHashJoinPossible(CMemoryPool *mp, CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	CExpressionArray *expr_preds =
+		CCastUtils::PdrgpexprCastEquality(mp, (*pexpr)[2]);
+	BOOL has_hashable_pred = false;
+	ULONG ulPreds = expr_preds->Size();
+	for (ULONG ul = 0; ul < ulPreds && !has_hashable_pred; ul++)
+	{
+		CExpression *pred = (*expr_preds)[ul];
+		if (CPhysicalJoin::FHashJoinCompatible(pred, (*pexpr)[0], (*pexpr)[1]))
+		{
+			has_hashable_pred = true;
+		}
+	}
+	expr_preds->Release();
+
+	return has_hashable_pred;
+}
+
 // Determine whether a scalar expression consists only of a scalar id and NDV-preserving
 // functions plus casts. If so, return the corresponding CColRef.
 BOOL
@@ -4456,7 +4478,7 @@ CUtils::IsExprNDVPreserving(CExpression *pexpr,
 	// go down the expression tree, visiting the child containing a scalar ident until
 	// we found the ident or until we found a non-NDV-preserving function (at which point there
 	// is no more need to check)
-	while (1)
+	while (true)
 	{
 		COperator *pop = curr_expr->Pop();
 		ULONG child_with_scalar_ident = 0;

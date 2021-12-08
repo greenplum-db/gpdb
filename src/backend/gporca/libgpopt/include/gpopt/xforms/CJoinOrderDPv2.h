@@ -184,7 +184,6 @@ private:
 			: m_group_info(g), m_expr_index(ix)
 		{
 		}
-		SGroupAndExpression(const SGroupAndExpression &other) = default;
 		SExpressionInfo *
 		GetExprInfo() const
 		{
@@ -303,8 +302,8 @@ private:
 		}
 	};
 
-	typedef CDynamicPtrArray<SExpressionInfo, CleanupRelease<SExpressionInfo> >
-		SExpressionInfoArray;
+	using SExpressionInfoArray =
+		CDynamicPtrArray<SExpressionInfo, CleanupRelease<SExpressionInfo>>;
 
 	//---------------------------------------------------------------------------
 	//	@struct:
@@ -349,8 +348,8 @@ private:
 	};
 
 	// dynamic array of SGroupInfo, where each index represents an alternative group of a given level k
-	typedef CDynamicPtrArray<SGroupInfo, CleanupRelease<SGroupInfo> >
-		SGroupInfoArray;
+	using SGroupInfoArray =
+		CDynamicPtrArray<SGroupInfo, CleanupRelease<SGroupInfo>>;
 
 	// info for a join level, the set of all groups representing <m_level>-way joins
 	struct SLevelInfo : public CRefCount
@@ -390,23 +389,22 @@ private:
 		return pbsFst->Equals(pbsSnd);
 	}
 
-	typedef CHashMap<CExpression, SEdge, CExpression::HashValue, CUtils::Equals,
-					 CleanupRelease<CExpression>, CleanupRelease<SEdge> >
-		ExpressionToEdgeMap;
+	using ExpressionToEdgeMap =
+		CHashMap<CExpression, SEdge, CExpression::HashValue, CUtils::Equals,
+				 CleanupRelease<CExpression>, CleanupRelease<SEdge>>;
 
 	// dynamic array of SGroupInfos
-	typedef CHashMap<CBitSet, SGroupInfo, UlHashBitSet, FEqualBitSet,
-					 CleanupRelease<CBitSet>, CleanupRelease<SGroupInfo> >
-		BitSetToGroupInfoMap;
+	using BitSetToGroupInfoMap =
+		CHashMap<CBitSet, SGroupInfo, UlHashBitSet, FEqualBitSet,
+				 CleanupRelease<CBitSet>, CleanupRelease<SGroupInfo>>;
 
 	// iterator over group infos in a level
-	typedef CHashMapIter<CBitSet, SGroupInfo, UlHashBitSet, FEqualBitSet,
-						 CleanupRelease<CBitSet>, CleanupRelease<SGroupInfo> >
-		BitSetToGroupInfoMapIter;
+	using BitSetToGroupInfoMapIter =
+		CHashMapIter<CBitSet, SGroupInfo, UlHashBitSet, FEqualBitSet,
+					 CleanupRelease<CBitSet>, CleanupRelease<SGroupInfo>>;
 
 	// dynamic array of SLevelInfos, where each index represents the level
-	typedef CDynamicPtrArray<SLevelInfo, CleanupRelease<SLevelInfo> >
-		DPv2Levels;
+	using DPv2Levels = CDynamicPtrArray<SLevelInfo, CleanupRelease<SLevelInfo>>;
 
 	// an array of an array of groups, organized by level at the first array dimension,
 	// main data structure for dynamic programming

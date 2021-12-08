@@ -28,10 +28,10 @@ namespace gpos
 class CMessageTable
 {
 	// short hand for message tables
-	typedef CSyncHashtable<CMessage, CException> MessageTable;
+	using MessageTable = CSyncHashtable<CMessage, CException>;
 
 	// short hand for message table accessor
-	typedef CSyncHashtableAccessByKey<CMessage, CException> MTAccessor;
+	using MTAccessor = CSyncHashtableAccessByKey<CMessage, CException>;
 
 	// message hashtable
 	MessageTable m_hash_table;

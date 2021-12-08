@@ -16,6 +16,7 @@ extern "C" {
 #include "c.h"
 #include "cdb/cdbvars.h"
 extern int getgpsegmentCount(void);
+extern char *DataDir;
 }
 #endif
 
@@ -47,6 +48,7 @@ S3Params InitConfig(const string& urlWithOptions) {
     string sourceUrl = TruncateOptions(urlWithOptions);
     S3_CHECK_OR_DIE(!sourceUrl.empty(), S3RuntimeError, "URL not found from location string");
 
+    string httpUrl = GetOptS3(urlWithOptions, "config_server");
     string configPath = GetOptS3(urlWithOptions, "config");
     if (configPath.empty()) {
         S3WARN("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
@@ -62,10 +64,15 @@ S3Params InitConfig(const string& urlWithOptions) {
     string urlRegion = GetOptS3(urlWithOptions, "region");
 
     // read configurations from file
+
+#if !defined(S3_STANDALONE)
+    Config s3Cfg(configPath, httpUrl, DataDir);
+#else
     Config s3Cfg(configPath);
+#endif
 
     S3_CHECK_OR_DIE(s3Cfg.Handle() != NULL, S3RuntimeError,
-                    "Failed to parse config file '" + configPath + "', or it doesn't exist");
+                    "Failed to parse config file '" + configPath + "', or it doesn't exist(or http failed)");
 
     S3_CHECK_OR_DIE(s3Cfg.SectionExist(configSection), S3ConfigError,
                     "Selected section '" + configSection +

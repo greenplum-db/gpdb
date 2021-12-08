@@ -50,14 +50,14 @@ using namespace gpmd;
 using namespace gpdxl;
 
 // hash maps
-typedef CHashMap<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupNULL>
-	UlongToExprArrayMap;
+using UlongToExprArrayMap =
+	CHashMap<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
+			 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupNULL>;
 
 // iterator
-typedef CHashMapIter<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupNULL>
-	UlongToExprArrayMapIter;
+using UlongToExprArrayMapIter =
+	CHashMapIter<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupNULL>;
 
 
 //---------------------------------------------------------------------------

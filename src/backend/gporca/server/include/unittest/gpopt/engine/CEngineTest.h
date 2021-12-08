@@ -35,7 +35,7 @@ private:
 #ifdef GPOS_DEBUG
 
 	// type definition for of expression generator
-	typedef CExpression *(*Pfpexpr)(CMemoryPool *);
+	using Pfpexpr = CExpression *(*) (CMemoryPool *);
 
 	// helper for testing engine using an array of expression generators
 	static GPOS_RESULT EresTestEngine(Pfpexpr rgpf[], ULONG size);
@@ -50,7 +50,7 @@ private:
 
 public:
 	// type definition of optimizer test function
-	typedef void(FnOptimize)(CMemoryPool *, CExpression *, CSearchStageArray *);
+	using FnOptimize = void(CMemoryPool *, CExpression *, CSearchStageArray *);
 
 	// main driver
 	static GPOS_RESULT EresUnittest();

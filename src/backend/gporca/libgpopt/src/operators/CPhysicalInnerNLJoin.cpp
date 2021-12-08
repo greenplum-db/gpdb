@@ -126,57 +126,11 @@ CPhysicalInnerNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	{
 		if (1 == child_index)
 		{
-			// compute a matching distribution based on derived distribution of outer child
-			CDistributionSpec *pdsOuter =
-				CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
-			if (CDistributionSpec::EdtHashed == pdsOuter->Edt())
-			{
-				// require inner child to have matching hashed distribution
-				CExpression *pexprScPredicate = exprhdl.PexprScalarExactChild(
-					2, true /*error_on_null_return*/);
-				CExpressionArray *pdrgpexpr =
-					CPredicateUtils::PdrgpexprConjuncts(mp, pexprScPredicate);
-
-				CExpressionArray *pdrgpexprMatching =
-					GPOS_NEW(mp) CExpressionArray(mp);
-				CDistributionSpecHashed *pdshashed =
-					CDistributionSpecHashed::PdsConvert(pdsOuter);
-				CExpressionArray *pdrgpexprHashed = pdshashed->Pdrgpexpr();
-				const ULONG ulSize = pdrgpexprHashed->Size();
-
-				BOOL fSuccess = true;
-				for (ULONG ul = 0; fSuccess && ul < ulSize; ul++)
-				{
-					CExpression *pexpr = (*pdrgpexprHashed)[ul];
-					// get matching expression from predicate for the corresponding outer child
-					// to create CDistributionSpecHashed for inner child
-					CExpression *pexprMatching =
-						CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexpr);
-					fSuccess = (nullptr != pexprMatching);
-					if (fSuccess)
-					{
-						pexprMatching->AddRef();
-						pdrgpexprMatching->Append(pexprMatching);
-					}
-				}
-				pdrgpexpr->Release();
-
-				if (fSuccess)
-				{
-					GPOS_ASSERT(pdrgpexprMatching->Size() ==
-								pdrgpexprHashed->Size());
-
-					// create a matching hashed distribution request
-					BOOL fNullsColocated = pdshashed->FNullsColocated();
-					CDistributionSpecHashed *pdshashedEquiv =
-						GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexprMatching,
-															 fNullsColocated);
-					pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
-					return GPOS_NEW(mp)
-						CEnfdDistribution(pdshashedEquiv, dmatch);
-				}
-				pdrgpexprMatching->Release();
-			}
+			CEnfdDistribution *pEnfdHashedDistribution =
+				CPhysicalJoin::PedInnerHashedFromOuterHashed(
+					mp, exprhdl, dmatch, (*pdrgpdpCtxt)[0]);
+			if (pEnfdHashedDistribution)
+				return pEnfdHashedDistribution;
 		}
 		return CPhysicalJoin::Ped(mp, exprhdl, prppInput, child_index,
 								  pdrgpdpCtxt, ulOptReq);

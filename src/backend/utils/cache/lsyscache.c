@@ -4338,13 +4338,11 @@ relation_policy(Relation rel)
  *  different distribution policy. The only allowed mismatch is for the parent
  *  to be hash distributed, and its child part to be randomly distributed.
  */
-/* GPDB_12_MERGE_FIXME */
-#if 0
 bool
 child_distribution_mismatch(Relation rel)
 {
 	Assert(NULL != rel);
-	if (PART_STATUS_NONE == rel_part_status(rel->rd_id))
+	if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 	{
 		/* not a partitioned table */
 		return false;
@@ -4391,7 +4389,6 @@ child_distribution_mismatch(Relation rel)
 	/* all children match the root's distribution policy */
 	return false;
 }
-#endif
 
 /*
  *  child_triggers

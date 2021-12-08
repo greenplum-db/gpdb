@@ -149,7 +149,7 @@ public:
 };
 
 // array of dxl column stats
-typedef CDynamicPtrArray<CDXLColStats, CleanupRelease> CDXLColStatsArray;
+using CDXLColStatsArray = CDynamicPtrArray<CDXLColStats, CleanupRelease>;
 }  // namespace gpmd
 
 

@@ -376,7 +376,7 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 	/*
 	 * Iterate each word until catch up to the next tid to search.
 	 */
-	for(; result->lastScanWordNo < words->nwords && words->firstTid < result->nextTid;
+	for(; words->nwords > 0 && words->firstTid < result->nextTid;
 		result->lastScanWordNo++)
 	{
 		if (IS_FILL_WORD(words->hwords, result->lastScanWordNo))
@@ -391,7 +391,7 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 			{
 				fillLength = 1;
 				/* Skip all empty bits, this may cause words->firstTid > result->nextTid */
-				words->firstTid = fillLength * BM_HRL_WORD_SIZE;
+				words->firstTid += fillLength * BM_HRL_WORD_SIZE;
 				words->nwords--;
 
 				/* reset next tid to skip all empty words */
@@ -668,6 +668,15 @@ _bitmap_union(BMBatchWords **batches, uint32 numBatches, BMBatchWords *result)
 
 	/* save batch->startNo for each input bitmap vector */
 	prevstarts = (uint32 *)palloc0(numBatches * sizeof(uint32));
+
+	/*
+	 * Update the real firstTid for the bachwords with unioned batches.
+	 * This is required because we may result->firstTid is set to nextTid
+	 * to fetch in _bitmap_nextbatchwords for bitmap index scan, but the
+	 * read words may not reach this position yet, the below calculation
+	 * will set it back to the real first tid of current result batch.
+	 */
+	result->firstTid = ((batches[0]->nextread - 1) * BM_HRL_WORD_SIZE) + 1;
 
 	/* 
 	 * Compute the next read offset. We fast forward compressed

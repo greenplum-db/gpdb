@@ -3260,6 +3260,13 @@ alter_table_cmd:
 					n->subtype = AT_ExpandTable;
 					$$ = (Node *)n;
 				}
+			/* ALTER TABLE <name> EXPAND PARTITION PREPARE*/
+			| EXPAND PARTITION PREPARE
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_ExpandPartitionTablePrepare;
+					$$ = (Node *)n;
+				}
 			/* ALTER TABLE <name> OF <type_name> */
 			| OF any_name
 				{

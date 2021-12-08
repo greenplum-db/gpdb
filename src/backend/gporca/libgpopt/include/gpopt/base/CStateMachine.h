@@ -53,11 +53,11 @@ class CStateMachine
 private:
 #ifdef GPOS_DEBUG
 	// shorthand for sets and iterators
-	typedef CEnumSet<TEnumState, tenumstateSentinel> EsetStates;
-	typedef CEnumSet<TEnumEvent, tenumeventSentinel> EsetEvents;
+	using EsetStates = CEnumSet<TEnumState, tenumstateSentinel>;
+	using EsetEvents = CEnumSet<TEnumEvent, tenumeventSentinel>;
 
-	typedef CEnumSetIter<TEnumState, tenumstateSentinel> EsetStatesIter;
-	typedef CEnumSetIter<TEnumEvent, tenumeventSentinel> EsetEventsIter;
+	using EsetStatesIter = CEnumSetIter<TEnumState, tenumstateSentinel>;
+	using EsetEventsIter = CEnumSetIter<TEnumEvent, tenumeventSentinel>;
 #endif	// GPOS_DEBUG
 
 	// current state
@@ -149,9 +149,8 @@ private:
 	}
 
 	// shorthand for walker function type
-	typedef void (*PfWalker)(const CStateMachine *psm, TEnumState tenumstateOld,
-							 TEnumState tenumstateNew, TEnumEvent tenumevent,
-							 void *pvContext);
+	using PfWalker = void (*)(const CStateMachine *, TEnumState, TEnumState,
+							  TEnumEvent, void *);
 
 	// generic walker function, called for every edge in the graph
 	void

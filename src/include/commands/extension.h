@@ -53,4 +53,6 @@ extern ObjectAddress AlterExtensionNamespace(const char *extensionName, const ch
 
 extern void execute_sql_string(const char *sql);
 
+extern void ResetExtensionCreatingGlobalVarsOnQE(void);
+
 #endif							/* EXTENSION_H */

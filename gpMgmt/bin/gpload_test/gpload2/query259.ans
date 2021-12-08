@@ -1,0 +1,11 @@
+2021-11-29 11:57:05|INFO|gpload session started 2021-11-29 11:57:05
+2021-11-29 11:57:05|INFO|setting schema 'public' for table 'texttable2'
+2021-11-29 11:57:05|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-11-29 11:57:05|INFO|did not find an external table to reuse. creating ext_gpload_reusable_6adbab20_50c8_11ec_94a0_0050569e2380
+2021-11-29 11:57:05|ERROR|could not run SQL "create external table ext_gpload_reusable_6adbab20_50c8_11ec_94a0_0050569e2380("s1" text,"s2" text)location('gpfdist://10.117.190.10:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '|' null '\N' escape '\' newline 'LFCR' ) encoding'UTF8' ": ERROR:  invalid value for NEWLINE "LFCR"
+HINT:  Valid options are: 'LF', 'CRLF' and 'CR'.
+
+2021-11-29 11:57:05|INFO|rows Inserted          = 0
+2021-11-29 11:57:05|INFO|rows Updated           = 0
+2021-11-29 11:57:05|INFO|data formatting errors = 0
+2021-11-29 11:57:05|INFO|gpload failed

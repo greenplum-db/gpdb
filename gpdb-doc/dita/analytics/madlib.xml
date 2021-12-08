@@ -31,7 +31,7 @@
       <image placement="break" href="graphics/gp_greenplum_diagram.png" width="750" height="450"
         align="center" id="image_t43_zdr_2kb"/>
     </fig>
-    <section>
+    <section id="section_lmf_pv1_rqb">
       <title>Machine Learning</title>
       <p dir="ltr">Apache MADlib consists of methods to support the full spectrum of data science
         activities. This includes data transformation and feature engineering, using methods in
@@ -44,7 +44,7 @@
           scope="external">MADlib user guide</xref> for more information on these methods.</p>
       <p> </p>
     </section>
-    <section>
+    <section id="section_hrn_pv1_rqb">
       <title> Deep Learning</title>
       <p dir="ltr">Starting in Apache MADlib release 1.16, Greenplum Database supports using Keras
         and TensorFlow for deep learning. You can review the <xref
@@ -62,7 +62,7 @@
           scope="external">https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning</xref>.
       </p>
     </section>
-    <section>
+    <section id="section_wp5_pv1_rqb">
       <title>PivotalR</title>
       <p>MADlib can be used with PivotalR, an R client package that enables users to interact with
         data resident in the Greenplum Database. PivotalR can be considered as a wrapper around
@@ -73,11 +73,11 @@
         using the R client. Using PivotalR requires that MADlib is installed on the Greenplum
         Database.</p>
       <p>PivotalR allows R users to leverage the scalability and performance of in-database
-        analytics without leaving the R command line. The computational work is run
-        in-database, while the end user benefits from the familiar R interface. Compared with
-        respective native R functions, there is an increase in scalability and a decrease in running
-        time. Furthermore, data movement, which can take hours for very large data sets, is
-        eliminated with PivotalR.</p>
+        analytics without leaving the R command line. The computational work is run in-database,
+        while the end user benefits from the familiar R interface. Compared with respective native R
+        functions, there is an increase in scalability and a decrease in running time. Furthermore,
+        data movement, which can take hours for very large data sets, is eliminated with
+        PivotalR.</p>
       <p>Key features of the PivotalR package:<ul id="ul_exp_vq2_sv">
           <li>Explore and manipulate data in the database with R syntax. SQL translation is
             performed by PivotalR.</li>

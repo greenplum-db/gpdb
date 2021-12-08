@@ -267,7 +267,7 @@
       <section><title>Additional Information</title><i>Greenplum Database Administrator Guide</i>:
           <ul id="ul_wff_k1m_v4">
           <li><xref href="../admin_guide/managing/monitor.xml"/></li>
-          <li><xref href="../admin_guide/highavail/topics/g-segment-recovery-scenarios.xml"/></li>
+          <li><xref href="../admin_guide/highavail/topics/g-recovering-from-segment-failures.xml"/></li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
             <li><codeph><xref href="../utility_guide/ref/gpstate.xml">gpstate</xref></codeph> - view
               state of the Greenplum system</li>
@@ -424,15 +424,14 @@
           <li>Create an input file for the <codeph>gpmovemirrors</codeph> utility with an entry for
             each mirror that must be moved.<p>The <codeph>gpmovemirrors</codeph> input file has the
               following
-              format:<codeblock><varname>contentID</varname>|<varname>address</varname>|<varname>port</varname>|<varname>data_dir</varname> <varname>new_address</varname>|<varname>port</varname>|<varname>data_dir</varname></codeblock></p>Where
-              <varname>contentID</varname> is the segment instance content ID,
-              <varname>address</varname> is the host name or IP address of the segment host,
+              format:<codeblock><varname>old_address</varname>|<varname>port</varname>|<varname>data_dir</varname> <varname>new_address</varname>|<varname>port</varname>|<varname>data_dir</varname></codeblock></p>Where
+              <varname>old_address</varname> is the host name or IP address of the segment host,
               <varname>port</varname> is the communication port, and <codeph>data_dir</codeph> is
             the segment instance data directory.<p>The following example
                 <codeph>gpmovemirrors</codeph> input file specifies three mirror segments to move.
-              <codeblock>1|sdw2|50001|/data2/mirror/gpseg1 sdw3|50001|/data/mirror/gpseg1
-2|sdw2|50001|/data2/mirror/gpseg2 sdw4|50001|/data/mirror/gpseg2
-3|sdw3|50001|/data2/mirror/gpseg3 sdw1|50001|/data/mirror/gpseg3
+              <codeblock>sdw2|50001|/data2/mirror/gpseg1 sdw3|50001|/data/mirror/gpseg1
+sdw2|50001|/data2/mirror/gpseg2 sdw4|50001|/data/mirror/gpseg2
+sdw3|50001|/data2/mirror/gpseg3 sdw1|50001|/data/mirror/gpseg3
 </codeblock></p></li>
           <li>Run <codeph>gpmovemirrors</codeph> with a command like the
             following:<codeblock>gpmovemirrors -i <varname>mirror_config_file</varname></codeblock></li>

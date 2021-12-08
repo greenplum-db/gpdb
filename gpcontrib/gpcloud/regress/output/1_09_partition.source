@@ -1,3 +1,4 @@
+SET client_min_messages TO 'warning';
 CREATE TABLE stock (date text, time text, open float, high float, low float, volume int) DISTRIBUTED BY (date) PARTITION BY RANGE (volume)
 (
   PARTITION stock10000 START (10000) INCLUSIVE,
@@ -47,3 +48,4 @@ DROP TABLE ext_stock000;
 DROP TABLE ext_stock001;
 DROP TABLE ext_stock002;
 DROP TABLE stock;
+RESET client_min_messages;

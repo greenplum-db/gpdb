@@ -18,10 +18,9 @@
 
 namespace gpopt
 {
-typedef CHashMap<CExpression, CExpression, CExpression::HashValue,
-				 CUtils::Equals, CleanupRelease<CExpression>,
-				 CleanupRelease<CExpression> >
-	ExprPredToExprPredPartMap;
+using ExprPredToExprPredPartMap =
+	CHashMap<CExpression, CExpression, CExpression::HashValue, CUtils::Equals,
+			 CleanupRelease<CExpression>, CleanupRelease<CExpression>>;
 
 //---------------------------------------------------------------------------
 //	@class:

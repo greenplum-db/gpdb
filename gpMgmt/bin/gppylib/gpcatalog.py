@@ -304,6 +304,11 @@ class GPCatalog():
         self._tables['pg_class']._setKnownDifferences(
             "relowner relfilenode relpages reltuples relallvisible relhasindex relhasrules relhastriggers relfrozenxid relminmxid")
 
+        # pg_extension:
+        #   - postgis has extra entry for extconfig and extcondition column
+        #   - there will not be any problem if extension's catalog data is inconsistent
+        self._tables['pg_extension']._setKnownDifferences("extconfig extcondition")
+
         # pg_type: typowner has its own checks:
         #       => may want to separate out "owner" columns like acl and oid
         self._tables['pg_type']._setKnownDifferences("typowner")

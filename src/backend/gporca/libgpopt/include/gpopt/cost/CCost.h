@@ -20,7 +20,7 @@ namespace gpopt
 using namespace gpos;
 
 class CCost;
-typedef CDynamicPtrArray<CCost, CleanupDelete> CCostArray;
+using CCostArray = CDynamicPtrArray<CCost, CleanupDelete>;
 
 //---------------------------------------------------------------------------
 //	@class:

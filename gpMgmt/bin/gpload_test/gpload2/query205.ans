@@ -1,9 +1,10 @@
-2020-12-17 11:42:02|INFO|gpload session started 2020-12-17 11:42:02
-2020-12-17 11:42:02|INFO|setting schema 'public' for table 'texttable2'
-2020-12-17 11:42:02|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2020-12-17 11:42:02|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d311e440_4019_11eb_aedb_00505698d059
-2020-12-17 11:42:02|ERROR|unexpected error -- backtrace written to log file
-2020-12-17 11:42:02|INFO|rows Inserted          = 0
-2020-12-17 11:42:02|INFO|rows Updated           = 0
-2020-12-17 11:42:02|INFO|data formatting errors = 0
-2020-12-17 11:42:02|INFO|gpload failed
+2021-11-29 11:56:45|INFO|gpload session started 2021-11-29 11:56:45
+2021-11-29 11:56:45|INFO|setting schema 'public' for table 'texttable2'
+2021-11-29 11:56:45|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-11-29 11:56:45|INFO|did not find an external table to reuse. creating ext_gpload_reusable_5e8c16ac_50c8_11ec_a3c6_0050569e2380
+2021-11-29 11:56:45|ERROR|could not run SQL "create external table ext_gpload_reusable_5e8c16ac_50c8_11ec_a3c6_0050569e2380("s1" text,"s2" text)location('gpfdist://10.117.190.10:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '' null '\N' escape '\' ) encoding'UTF8' ": ERROR:  COPY delimiter must be a single one-byte character, or 'off'
+
+2021-11-29 11:56:45|INFO|rows Inserted          = 0
+2021-11-29 11:56:45|INFO|rows Updated           = 0
+2021-11-29 11:56:45|INFO|data formatting errors = 0
+2021-11-29 11:56:45|INFO|gpload failed

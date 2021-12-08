@@ -35,7 +35,7 @@ using namespace gpos;
 class CXMLSerializer
 {
 	// stack of strings
-	typedef CStack<const CWStringBase> StrStack;
+	using StrStack = CStack<const CWStringBase>;
 
 private:
 	// memory pool

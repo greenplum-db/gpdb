@@ -74,7 +74,9 @@ SELECT * FROM tbl_on_heap ORDER BY s1;
 
 -- test disable tls1.0 and tls1.1
 CREATE EXTERNAL WEB TABLE curl_with_tls10 (x text)
-execute E'curl -H "X-GP-PROTO: 1" https://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl -vk --cert @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.crt --key @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.key --tlsv1.0 --tls-max 1.0 >/dev/null 2>&1;ret=$?;
+execute E'
+curl --help | grep tls-max >/dev/null 2>&1;ret=$?;if [ $ret -eq 0 ];then max_tls="--tls-max 1.0";fi;
+curl -H "X-GP-PROTO: 1" https://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl -vk --cert @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.crt --key @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.key --tlsv1.0 $max_tls >/dev/null 2>&1;ret=$?;
 if [ $ret -eq 35 ];then
     echo "success";
 else
@@ -83,7 +85,9 @@ fi'
 on SEGMENT 0
 FORMAT 'text';
 CREATE EXTERNAL WEB TABLE curl_with_tls11 (x text)
-execute E'curl -H "X-GP-PROTO: 1" https://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl -vk --cert @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.crt --key @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.key --tlsv1.1 --tls-max 1.1 >/dev/null 2>&1;ret=$?;
+execute E'
+curl --help | grep tls-max >/dev/null 2>&1;ret=$?;if [ $ret -eq 0 ];then max_tls="--tls-max 1.1";fi;
+curl -H "X-GP-PROTO: 1" https://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl -vk --cert @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.crt --key @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.key --tlsv1.1 $max_tls >/dev/null 2>&1;ret=$?;
 if [ $ret -eq 35 ];then
     echo "success";
 else
@@ -92,7 +96,9 @@ fi'
 on SEGMENT 0
 FORMAT 'text';
 CREATE EXTERNAL WEB TABLE curl_with_tls12 (x text)
-execute E'curl -H "X-GP-PROTO: 1" https://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl -vk --cert @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.crt --key @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.key --tlsv1.2 --tls-max 1.2 >/dev/null 2>&1;ret=$?;
+execute E'
+curl --help | grep tls-max >/dev/null 2>&1;ret=$?;if [ $ret -eq 0 ];then max_tls="--tls-max 1.2";fi;
+curl -H "X-GP-PROTO: 1" https://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl -vk --cert @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.crt --key @abs_srcdir@/data/gpfdist_ssl/certs_matching/client.key --tlsv1.2 $max_tls >/dev/null 2>&1;ret=$?;
 if [ $ret -ne 35 ];then
     echo "success";
 else

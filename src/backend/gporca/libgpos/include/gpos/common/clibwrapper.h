@@ -27,7 +27,7 @@ namespace gpos
 {
 namespace clib
 {
-typedef INT (*Comparator)(const void *, const void *);
+using Comparator = INT (*)(const void *, const void *);
 
 // compare a specified number of bytes of two regions of memory
 INT Memcmp(const void *left, const void *right, SIZE_T num_bytes);

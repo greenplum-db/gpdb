@@ -433,7 +433,7 @@ WHERE buyer_name = 'ABC'
         </dxl:LogicalWindow>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="6">
+    <dxl:Plan Id="0" SpaceSize="4">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.008986" Rows="1.000000" Width="25"/>

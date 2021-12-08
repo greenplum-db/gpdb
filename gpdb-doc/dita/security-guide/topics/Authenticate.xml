@@ -518,7 +518,7 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
 </codeblock></p></li>
           </ul></p>
       </section>
-      <section>
+      <section id="openssl_config">
         <title>OpenSSL Configuration</title>
         <p>You can make changes to the OpenSSL configuration by updating the
             <codeph>openssl.cnf</codeph> file under your OpenSSL installation directory, or the file

@@ -40,6 +40,30 @@ SELECT '' AS three, * FROM CHECK_TBL;
        | 6
 (3 rows)
 
+CREATE TABLE CHECK_TBL1 (x int,
+	CONSTRAINT CHECK_CON CHECK ((x > 3) IS TRUE));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO CHECK_TBL1 VALUES (5);
+INSERT INTO CHECK_TBL1 VALUES (4);
+INSERT INTO CHECK_TBL1 VALUES (3);
+ERROR:  new row for relation "check_tbl1" violates check constraint "check_con"  (seg0 127.0.0.1:7002 pid=24328)
+DETAIL:  Failing row contains (3).
+INSERT INTO CHECK_TBL1 VALUES (2);
+ERROR:  new row for relation "check_tbl1" violates check constraint "check_con"  (seg0 127.0.0.1:7002 pid=24328)
+DETAIL:  Failing row contains (2).
+INSERT INTO CHECK_TBL1 VALUES (6);
+INSERT INTO CHECK_TBL1 VALUES (1);
+ERROR:  new row for relation "check_tbl1" violates check constraint "check_con"  (seg1 127.0.0.1:7003 pid=24329)
+DETAIL:  Failing row contains (1).
+SELECT '' AS three, * FROM CHECK_TBL1;
+ three | x 
+-------+---
+       | 4
+       | 5
+       | 6
+(3 rows)
+
 --
 -- Primary keys
 --

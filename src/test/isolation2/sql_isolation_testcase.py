@@ -848,7 +848,7 @@ class SQLIsolationTestCase:
             &: expect blocking behavior
             >: running in background without blocking
             <: join an existing session
-            q: quit the given session
+            q: quit the given session without blocking
 
             U: connect in utility mode to primary contentid from gp_segment_configuration
             U&: expect blocking behavior in utility mode (does not currently support an asterisk target)
@@ -939,6 +939,9 @@ class SQLIsolationTestCase:
         2q:  ---> Will quit the session established with test2db.
 
         The subsequent 2: @db_name test: <sql> will open a new session with the database test and execute the sql against that session.
+        Note: Do not expect blocking behavior from explicit quit statements.
+        This implies that a subsequent statement can execute while the relevant
+        session is still undergoing exit.
 
         Shell Execution for SQL or Output:
 

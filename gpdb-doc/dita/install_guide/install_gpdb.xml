@@ -11,9 +11,8 @@
     <ol>
       <li><xref href="#topic_oy5_21n_1jb" format="dita">Install Greenplum Database</xref>:
         <ul>
-          <li otherprops="oss-only"><xref href="#topic_oss" format="dita">Obtain the Greenplum Database Server Software</xref></li>
-          <li otherprops="pivotal"><xref href="#topic_download" format="dita">Download the Greenplum Database Server Software</xref></li>
-          <li otherprops="pivotal"><xref href="#topic_verify_sha" format="dita">Verify the Greenplum Database Software</xref></li>
+          <li><xref href="#topic_download" format="dita">Download the Greenplum Database Server Software </xref> (VMware Tanzu Greenplum)</li>
+          <li><xref href="#topic_verify_sha" format="dita">Verify the Greenplum Database Software</xref> (VMware Tanzu Greenplum)</li>
           <li><xref href="#topic_install" format="dita">Install the Greenplum Database Software</xref></li>
           <li><xref href="#topic_dj4_ssr_cmb" format="dita">(Optional) Install to a Non-Default Directory</xref></li>
         </ul>
@@ -27,16 +26,11 @@
     <title>Installing Greenplum Database</title>
     <body>
       <p>You must install Greenplum Database on each host machine of the Greenplum Database
-          system.<ph otherprops="oss-only"> You can configure a minimal Greenplum Database system to
-          run on a single host system with the coordinator instance and segment instances running on the
-          same host system.</ph><ph otherprops="pivotal"> VMware distributes the Greenplum Database
+      system.</p>
+      <p>VMware distributes the Greenplum Database
           software as a downloadable package that you install on each host system with the operating
-          system's package management system.</ph></p>
-    </body>
-    <topic id="topic_oss" otherprops="oss-only">
-      <title>Obtaining the Greenplum Database Server Software</title>
-      <body>
-        <p otherprops="oss-only">Greenplum Database releases are available as: source code tarballs,
+          system's package management system.</p>
+      <p>Open source Greenplum Database releases are available as: source code tarballs,
           RPM installers for CentOS, and DEB packages for Debian and Ubuntu. See <xref
             href="https://greenplum.org/download/" format="html" scope="external"
             >https://greenplum.org/download/</xref> for links to source code and instructions to
@@ -46,8 +40,8 @@
           system.</p>
       </body>
     </topic>
-    <topic id="topic_download" otherprops="pivotal">
-      <title>Downloading the Greenplum Database Server Software</title>
+    <topic id="topic_download">
+      <title>Downloading the Greenplum Database Server Software (VMware Tanzu Greenplum)</title>
       <body>
         <p>You can download the <b>Greenplum Database Server</b> software package from
           <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
@@ -55,8 +49,8 @@
         <p>Be sure to note the name and the file system location of the downloaded file.</p>
       </body>
     </topic>
-    <topic id="topic_verify_sha" otherprops="pivotal">
-      <title>Verifying the Greenplum Database Software</title>
+    <topic id="topic_verify_sha">
+      <title>Verifying the Greenplum Database Software (VMware Tanzu Greenplum)</title>
       <body>
         <p>VMware generates a SHA256 fingerprint for each Greenplum Database software
           download available from Tanzu Network. This fingerprint enables you to verify that
@@ -76,8 +70,7 @@
       <p>See <xref href="ansible-example.xml#Untitled1"/> for an example script that shows how you
         can automate creating the <codeph>gpadmin</codeph> user and installing the Greenplum
         Database.</p>
-      <p>Follow these instructions to install Greenplum Database<ph otherprops="oss-only"> from a
-          pre-built binary</ph>.</p>
+      <p>Follow these instructions to install Greenplum Database from a pre-built binary.</p>
       <note type="important">You require sudo or root user access to install from a pre-built RPM or
         DEB file. </note>
       <ol id="ol_mm5_v1n_1jb">
@@ -213,7 +206,7 @@ sdw3-2</codeblock></li>
         problems before continuing on to the next task.</p>
       <ol id="ol_yjk_knz_thb">
         <li id="ji162490">Log in to the coordinator host as
-          <codeph>gpadmin</codeph>:<codeblock>$ su - <varname>gpadmin</varname></codeblock></li>
+          <codeph>gpadmin</codeph>:<codeblock>$ su - gpadmin</codeblock></li>
         <li id="ji162506">Use the <codeph>gpssh</codeph> utility to see if you can log in to all
           hosts without a password prompt, and to confirm that the Greenplum software was installed
           on all hosts. Use the <codeph>hostfile_exkeys</codeph> file you used to set up

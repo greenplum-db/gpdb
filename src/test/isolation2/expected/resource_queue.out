@@ -46,11 +46,11 @@ PREPARE
  ResourceQueue   | ResourceQueue 
  ResourceQueue   | ResourceQueue 
 (2 rows)
-0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue';
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
  granted | locktype       | mode          
 ---------+----------------+---------------
- t       | resource queue | ExclusiveLock 
  f       | resource queue | ExclusiveLock 
+ t       | resource queue | ExclusiveLock 
  f       | resource queue | ExclusiveLock 
 (3 rows)
 
@@ -72,6 +72,13 @@ END
 (1 row)
 3:END;
 END
+
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 1             | 0             
+(1 row)
 
 0:DROP role role_concurrency_test;
 DROP

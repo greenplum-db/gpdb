@@ -12,6 +12,7 @@
 
 typedef struct ini_t ini_t;
 
+ini_t*      ini_load_from_url(const char *url, const char *datadir);
 ini_t*      ini_load(const char *filename);
 void        ini_free(ini_t *ini);
 bool        ini_section_exist(ini_t *ini, const char* section);

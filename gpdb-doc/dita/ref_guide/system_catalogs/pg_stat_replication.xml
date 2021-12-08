@@ -55,6 +55,12 @@
             <entry colname="col4">Client IP address.</entry>
           </row>
           <row>
+            <entry><codeph>client_hostname</codeph></entry>
+            <entry>text</entry>
+            <entry/>
+            <entry>The host name of the client machine.</entry>
+          </row>
+          <row>
             <entry colname="col1"><codeph>client_port </codeph></entry>
             <entry colname="col2">integer</entry>
             <entry colname="col3"/>
@@ -65,6 +71,12 @@
             <entry colname="col2">timestamp </entry>
             <entry colname="col3"/>
             <entry colname="col4">Operation start timestamp. </entry>
+          </row>
+          <row>
+            <entry><codeph>backend_xmin</codeph></entry>
+            <entry>xid</entry>
+            <entry/>
+            <entry>The current backend's <codeph>xmin</codeph> horizon.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>state</codeph></entry>

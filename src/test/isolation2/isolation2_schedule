@@ -61,6 +61,13 @@ test: misc
 
 test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue bitmap_index_ao_sparse
 
+# Test deadlock situation when waiting on a resource queue lock
+test: resource_queue_deadlock
+
+# Test simple cancellation for resource queues and cancellation/deadlocks for
+# sessions with multiple portals.
+test: resource_queue_cancel resource_queue_multi_portal
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 test: gp_terminate_mpp_backends
@@ -84,6 +91,7 @@ test: ao_upgrade
 test: bitmap_index_concurrent
 test: bitmap_index_crash
 test: bitmap_update_words_backup_block
+test: bitmap_union
 
 # below test utilizes fault injectors so it needs to be in a group by itself
 test: external_table

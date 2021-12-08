@@ -87,6 +87,9 @@
             <topicref href="guc-list.xml#gp_dbid"/>
             <topicref href="guc-list.xml#gp_debug_linger"/>
             <topicref href="guc-list.xml#gp_default_storage_options"/>
+            <topicref href="guc-list.xml#gp_dispatch_keepalives_count"/>
+            <topicref href="guc-list.xml#gp_dispatch_keepalives_idle"/>
+            <topicref href="guc-list.xml#gp_dispatch_keepalives_interval"/>
             <topicref href="guc-list.xml#gp_dynamic_partition_pruning"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct_pruning"/>

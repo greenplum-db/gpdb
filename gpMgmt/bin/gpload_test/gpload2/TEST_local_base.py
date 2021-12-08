@@ -164,7 +164,7 @@ coordinatorPort = getPortCoordinatorOnly()
 def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=coordinatorPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
     ssl=None,columns=None, format='text', force_not_null=[], log_errors=None, error_limit=None, delimiter="'|'", encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None, transform_config=None, max_line_length=None, 
     table='texttable', mode='insert', update_columns=['n2'], update_condition=None, match_columns=['n1','s1','s2'], staging_table=None, mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,
-    sql=False, before=None, after=None, error_table=None):
+    sql=False, before=None, after=None, error_table=None, newline=None):
 
     f = open(config,'w', encoding="utf-8")
     f.write("VERSION: "+version)
@@ -206,7 +206,10 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
         f.write("\n    - ERROR_LIMIT: "+str(error_limit))
     if error_table:
         f.write("\n    - ERROR_TABLE: "+error_table)
-    f.write("\n    - DELIMITER: "+delimiter)
+    if delimiter:
+        f.write("\n    - DELIMITER: "+delimiter)
+    if newline:
+        f.write("\n    - NEWLINE: "+str(newline))
     if encoding:
         f.write("\n    - ENCODING: "+encoding)
     if escape:
@@ -221,8 +224,8 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
         f.write("\n    - FILL_MISSING_FIELDS: "+str(fill_missing_fields))
     if quote:
         f.write("\n    - QUOTE: "+quote)
-    if header:
-        f.write("\n    - HEADER: "+header)
+    if header != None:
+        f.write("\n    - HEADER: "+str(header))
     if transform:
         f.write("\n    - TRANSFORM: "+transform)
     if transform_config:
@@ -444,11 +447,11 @@ def drop_tables():
         name = i[1]
         match = re.search('ext_gpload',name)
         if match:
-            queryString = f'DROP EXTERNAL TABLE "{schema}"."{name}";'
+            queryString = 'DROP EXTERNAL TABLE "%s"."%s";'%(schema, name)
             db.query(queryString.encode('utf-8'))
 
         else:
-            queryString = f'DROP TABLE "{schema}"."{name}";'
+            queryString = 'DROP TABLE "%s"."%s";'%(schema, name)
             db.query(queryString.encode('utf-8'))
 
 class PSQLError(Exception):
@@ -502,7 +505,7 @@ def ModifyOutFile(file,old_str,new_str):
     os.remove(file)
     os.rename("%s.bak" % file, file)
 
-Modify_Output_Case = [46,51,57,65]
+Modify_Output_Case = [46,51,57,65,76,260,402]
 
 
 def doTest(num):
@@ -520,7 +523,9 @@ def doTest(num):
         newpat2 = 'pathto/data_file'
         pat3 = r', SSL off$'
         newpat3 = ''
-        ModifyOutFile(str(num), [pat1,pat2,pat3], [newpat1,newpat2,newpat3])  # some strings in outfile are different each time, such as host and file location
+        pat4 = r'LINE 1: ...[a-zA-Z0-9\_]*\('
+        newpat4 = 'LINE 1: ...('
+        ModifyOutFile(str(num), [pat1,pat2,pat3,pat4], [newpat1,newpat2,newpat3,newpat4])  # some strings in outfile are different each time, such as host and file location
         # we modify the out file here to make it match the ans file
 
     check_result(file,num=num)

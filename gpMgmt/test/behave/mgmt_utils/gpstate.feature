@@ -436,7 +436,7 @@ Feature: gpstate tests
                   distribution_policy_names text,
                   distribution_policy_coloids text,
                   distribution_policy_type text,
-                  root_partition_name text,
+                  root_partition_oid oid,
                   storage_options text,
                   rank int,
                   status text,
@@ -562,5 +562,5 @@ Feature: gpstate tests
         Given the database is running
         And all the segments are running
         And the user runs command "unset PGDATABASE && $GPHOME/bin/gpstate -e -v"
-        Then command should print "pg_isready -q -h .* -p .*" to stdout
+        Then command should print "pg_isready -q -h .* -p .* -d postgres" to stdout
         And command should print "All segments are running normally" to stdout

@@ -35,11 +35,11 @@ class COptimizationContext;
 class CDrvdPropPlan;
 
 // optimization context pointer definition
-typedef COptimizationContext *OPTCTXT_PTR;
+using OPTCTXT_PTR = COptimizationContext *;
 
 // array of optimization contexts
-typedef CDynamicPtrArray<COptimizationContext, CleanupRelease>
-	COptimizationContextArray;
+using COptimizationContextArray =
+	CDynamicPtrArray<COptimizationContext, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

@@ -489,7 +489,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="22893">
+    <dxl:Plan Id="0" SpaceSize="9648">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1324469.354209" Rows="1.000000" Width="16"/>

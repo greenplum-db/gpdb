@@ -27,7 +27,7 @@ class CSearchStage;
 class CExpression;
 
 // definition of array of search stages
-typedef CDynamicPtrArray<CSearchStage, CleanupDelete> CSearchStageArray;
+using CSearchStageArray = CDynamicPtrArray<CSearchStage, CleanupDelete>;
 
 
 //---------------------------------------------------------------------------

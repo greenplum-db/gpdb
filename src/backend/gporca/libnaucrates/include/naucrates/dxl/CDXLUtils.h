@@ -51,7 +51,7 @@ class CParseHandlerDXL;
 class CDXLMemoryManager;
 class CQueryToDXLResult;
 
-typedef CDynamicPtrArray<CStatistics, CleanupRelease> CStatisticsArray;
+using CStatisticsArray = CDynamicPtrArray<CStatistics, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

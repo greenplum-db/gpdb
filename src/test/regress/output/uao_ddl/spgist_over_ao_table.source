@@ -1,0 +1,36 @@
+--
+-- Check spgist index work with AO tables
+--
+create schema spgist_over_ao_table@amname@;
+set search_path="$user",spgist_over_ao_table@amname@,public;
+set default_table_access_method='@amname@';
+-- insert to AO table with spgist index
+create table spgist_ins_uao(idx_col int4range)
+with (appendonly=true);
+create index spgist_ins_uao_idx on spgist_ins_uao
+using spgist(idx_col);
+--insert should not fall with spgutils.c:724 assertion
+insert into spgist_ins_uao
+select int4range(i, i, '[]')
+from generate_series(0,10000) i;
+-- update to AO table with spgist index
+create table spgist_upd_uao(idx_col int4range)
+with (appendonly=true);
+insert into spgist_upd_uao
+select int4range(i, i, '[]')
+from generate_series(0,10000) i;
+create index spgist_upd_uao_idx on spgist_upd_uao
+using spgist(idx_col);
+--update should not fall with spgutils.c:724 assertion
+update spgist_upd_uao set idx_col = int4range(1, 2, '[]');
+-- copy to AO table with spgist index
+create table spgist_copy_uao(idx_col int4range)
+with (appendonly=true);
+insert into spgist_copy_uao
+select int4range(i, i, '[]')
+from generate_series(0,10000) i;
+create index spgist_copy_uao_idx on spgist_copy_uao
+using spgist(idx_col);
+copy spgist_copy_uao to '/tmp/spgist_test';
+--copy should not fall with spgutils.c:724 assertion or any segment failures
+copy spgist_copy_uao from '/tmp/spgist_test';

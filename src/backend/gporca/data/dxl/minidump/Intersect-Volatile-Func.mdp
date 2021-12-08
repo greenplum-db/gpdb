@@ -109,7 +109,7 @@
         </dxl:LogicalProject>
       </dxl:Intersect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="935">
+    <dxl:Plan Id="0" SpaceSize="476">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.000404" Rows="1.000000" Width="4"/>

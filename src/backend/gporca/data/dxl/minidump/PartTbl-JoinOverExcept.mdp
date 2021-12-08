@@ -1788,7 +1788,7 @@ select * from (select * from p1 except select * from p2) as p, tt where p.b=tt.b
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="196">
+    <dxl:Plan Id="0" SpaceSize="103">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1298.385913" Rows="4000.000000" Width="16"/>

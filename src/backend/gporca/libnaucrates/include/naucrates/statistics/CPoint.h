@@ -99,7 +99,7 @@ public:
 };	// class CPoint
 
 // array of CPoints
-typedef CDynamicPtrArray<CPoint, CleanupRelease> CPointArray;
+using CPointArray = CDynamicPtrArray<CPoint, CleanupRelease>;
 }  // namespace gpnaucrates
 
 #endif	// !GPNAUCRATES_CPoint_H

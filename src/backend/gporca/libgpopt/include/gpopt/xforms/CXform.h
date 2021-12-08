@@ -222,6 +222,7 @@ public:
 		ExfExpandDynamicGetWithExternalPartitions____removed,
 		ExfLeftJoin2RightJoin,
 		ExfRightOuterJoin2HashJoin,
+		ExfImplementInnerJoin,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};
@@ -352,8 +353,8 @@ operator<<(IOstream &os, CXform &xform)
 }
 
 // shorthands for enum sets and iterators of xform ids
-typedef CEnumSet<CXform::EXformId, CXform::ExfSentinel> CXformSet;
-typedef CEnumSetIter<CXform::EXformId, CXform::ExfSentinel> CXformSetIter;
+using CXformSet = CEnumSet<CXform::EXformId, CXform::ExfSentinel>;
+using CXformSetIter = CEnumSetIter<CXform::EXformId, CXform::ExfSentinel>;
 }  // namespace gpopt
 
 

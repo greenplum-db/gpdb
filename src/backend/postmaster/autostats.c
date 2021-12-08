@@ -31,6 +31,7 @@
 #include "postmaster/autostats.h"
 #include "postmaster/autovacuum.h"
 #include "utils/acl.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
@@ -314,6 +315,8 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 
 	Assert(cmdType >= 0 && cmdType <= AUTOSTATS_CMDTYPE_SENTINEL);		/* it is a valid command
 																		 * as per auto-stats */
+
+	SIMPLE_FAULT_INJECTOR("before_auto_stats");
 
 	GpAutoStatsModeValue actual_gp_autostats_mode;
 

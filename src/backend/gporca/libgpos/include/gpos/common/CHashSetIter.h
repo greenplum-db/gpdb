@@ -19,7 +19,7 @@ template <class T, ULONG (*HashFn)(const T *),
 class CHashSetIter : public CStackObject
 {
 	// short hand for hashset type
-	typedef CHashSet<T, HashFn, EqFn, CleanupFn> TSet;
+	using TSet = CHashSet<T, HashFn, EqFn, CleanupFn>;
 
 private:
 	// set to iterate

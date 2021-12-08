@@ -52,6 +52,13 @@
                 from 0-<i>N-1</i>, where <i>N</i> is the number of segments in Greenplum Database.</p><p>For the master, the value is -1.</p></entry>
           </row>
           <row>
+            <entry><codeph>valid</codeph></entry>
+            <entry>boolean</entry>
+            <entry>gp_segment_configuration.mode</entry>
+            <entry>Whether or not this instance is up and the mode is either <i>s</i>(synchronized)
+              or <i>n</i> (not in sync). </entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>definedprimary</codeph>
             </entry>

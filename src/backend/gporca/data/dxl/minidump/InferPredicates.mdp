@@ -460,7 +460,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
         </dxl:LogicalWindow>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="24">
+    <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000549" Rows="1.000000" Width="8"/>

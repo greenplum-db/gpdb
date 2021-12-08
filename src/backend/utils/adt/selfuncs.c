@@ -131,6 +131,7 @@
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/datum.h"
+#include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/index_selfuncs.h"
 #include "utils/lsyscache.h"
@@ -7047,6 +7048,16 @@ bmcostestimate(struct PlannerInfo *root,
 
 	*indexStartupCost = costs.indexStartupCost;
 	*indexTotalCost = costs.indexTotalCost;
+	#ifdef FAULT_INJECTOR
+		/* Simulate an bitmapAnd plan by changing bitmap cost. */
+		if (FaultInjector_InjectFaultIfSet("simulate_bitmap_and",
+									DDLNotSpecified,
+									"",
+									"") == FaultInjectorTypeSkip)
+		{
+			*indexTotalCost = 0;
+		}
+	#endif
 	*indexSelectivity = costs.indexSelectivity;
 	*indexCorrelation = costs.indexCorrelation;
 	*indexPages = costs.numIndexPages;

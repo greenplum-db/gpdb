@@ -28,7 +28,7 @@ using namespace gpmd;
 class CXMLSerializer;
 class CDXLColDescr;
 
-typedef CDynamicPtrArray<CDXLColDescr, CleanupRelease> CDXLColDescrArray;
+using CDXLColDescrArray = CDynamicPtrArray<CDXLColDescr, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

@@ -57,6 +57,8 @@ MAX_COORDINATOR_NUM_WORKERS=64
 # recovery is active.
 RECOVERY_REWIND_APPNAME = '__gprecoverseg_pg_rewind__'
 
+PGDATABASE_FOR_COMMON_USE= 'postgres'
+
 def get_postmaster_pid_locally(datadir):
     cmdStr = "ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name = "get postmaster"
@@ -75,7 +77,7 @@ def getPostmasterPID(hostname, datadir):
     try:
         cmd.run(validateAfter=True)
         sout=cmd.get_results().stdout.lstrip(' ')
-        return int(sout.split('START_CMD_OUTPUT')[1].split()[1])
+        return int(sout.split('START_CMD_OUTPUT\n')[1].split()[1])
     except:
         return -1
 
@@ -425,39 +427,6 @@ class SegmentIsShutDown(Command):
         cmd=SegmentIsShutDown(name,directory)
         cmd.run(validateAfter=True)
 
-#-----------------------------------------------
-class SegmentRewind(Command):
-    """
-    SegmentRewind is used to run pg_rewind using source server.
-    """
-
-    def __init__(self, name, target_host, target_datadir,
-                 source_host, source_port, progress_file,
-                 verbose=False, ctxt=REMOTE):
-
-        # Construct the source server libpq connection string
-        # We set application_name here so gpstate can identify whether an
-        # incremental recovery is occurring.
-        source_server = "host={} port={} dbname=template1 application_name={}".format(
-            source_host, source_port, RECOVERY_REWIND_APPNAME
-        )
-
-        # Build the pg_rewind command. Do not run pg_rewind if standby.signal
-        # file exists in target data directory because the target instance can
-        # be started up normally as a mirror for WAL replication catch up.
-        rewind_cmd = '[ -f %s/standby.signal ] || PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (target_datadir, source_server, target_datadir)
-
-        if verbose:
-            rewind_cmd = rewind_cmd + ' --progress'
-
-        # pg_rewind prints progress updates to stdout, but it also prints
-        # errors relating to relevant failures(like it will not rewind due to
-        # a corrupted pg_control file) to stderr.
-        rewind_cmd = rewind_cmd + " > {} 2>&1".format(pipes.quote(progress_file))
-
-        self.cmdStr = rewind_cmd
-
-        Command.__init__(self, name, self.cmdStr, ctxt, target_host)
 
 #
 # list of valid segment statuses that can be requested
@@ -514,8 +483,6 @@ class GpGetStatusUsingTransitionArgs(CmdArgs):
         @param status_request
         """
         CmdArgs.__init__(self, [
-            "env",
-            "pgdatabase=%s" % os.getenv('PGDATABASE'),
             "$GPHOME/sbin/gpgetstatususingtransition.py",
             "-s", str(status_request)
         ])
@@ -1001,6 +968,40 @@ class ConfigureNewSegment(Command):
                                                           progressFile
             )
         return result
+
+#-----------------------------------------------
+
+
+class GpSegSetupRecovery(Command):
+    """
+    Format gpsegsetuprecovery call for running recovery setup on remoteHost for the segments passed in confinfo
+    """
+    def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite):
+        cmdStr = _get_cmd_for_recovery_wrapper('gpsegsetuprecovery', confinfo, logdir, batchSize, verbose,forceoverwrite)
+        Command.__init__(self, name, cmdStr, REMOTE, remoteHost)
+
+
+class GpSegRecovery(Command):
+    """
+    Format gpsegrecovery call for running pg_basebackup/pg_rewind on remoteHost for the segments passed in confinfo
+    """
+    def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite):
+        cmdStr = _get_cmd_for_recovery_wrapper('gpsegrecovery', confinfo, logdir, batchSize, verbose, forceoverwrite)
+        Command.__init__(self, name, cmdStr, REMOTE, remoteHost)
+
+
+def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize, verbose, forceoverwrite):
+    cmdStr = '$GPHOME/sbin/{}.py -c {} -l {}'.format(wrapper_filename, pipes.quote(confinfo), pipes.quote(logdir))
+
+    if verbose:
+        cmdStr += ' -v '
+    if batchSize:
+        cmdStr += ' -b %s' % batchSize
+    if forceoverwrite:
+        cmdStr += " --force-overwrite"
+
+    return cmdStr
+
 
 #-----------------------------------------------
 class GpVersion(Command):
@@ -1508,7 +1509,7 @@ def chk_local_db_running(datadir, port):
 
        1) /tmp/.s.PGSQL.<PORT> and /tmp/.s.PGSQL.<PORT>.lock
        2) DATADIR/postmaster.pid
-       3) netstat
+       3) ss
 
        Returns tuple in format (postmaster_pid_file_exists, tmpfile_exists, lockfile_exists, port_active, postmaster_pid)
 
@@ -1536,9 +1537,9 @@ def chk_local_db_running(datadir, port):
     tmpfile_exists = os.path.exists("/tmp/.s.PGSQL.%d" % port)
     lockfile_exists = os.path.exists(get_lockfile_name(port))
 
-    netstat_port_active = PgPortIsActive.local('check netstat for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
+    netstat_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
 
-    logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s netstat port: %s  pid: %s" %\
+    logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s ss port: %s  pid: %s" %\
                 (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value))
 
     return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value)
@@ -1630,7 +1631,7 @@ class IfAddrs:
             args = cmd
 
         result = subprocess.check_output(args).decode()
-        return result.split('START_CMD_OUTPUT')[1].strip().splitlines()
+        return result.split('START_CMD_OUTPUT\n')[1].splitlines()
 
 if __name__ == '__main__':
 

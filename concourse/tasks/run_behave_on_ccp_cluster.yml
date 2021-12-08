@@ -25,6 +25,15 @@ run:
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
     '"
 
+    # Set max_connections values if specified
+    if (( $COORDINATOR_MAX_CONNECT > 0 && $SEGMENT_MAX_CONNECT > 0 )); then
+        ssh -n mdw "
+          source /usr/local/greenplum-db-devel/greenplum_path.sh
+          export COORDINATOR_DATA_DIRECTORY='/data/gpdata/master/gpseg-1'
+          gpconfig -c max_connections -v $SEGMENT_MAX_CONNECT -m $COORDINATOR_MAX_CONNECT
+        "
+    fi
+
     # ensure cluster is stopped
     ssh -n mdw "
         source /usr/local/greenplum-db-devel/greenplum_path.sh

@@ -559,11 +559,11 @@ bool RelIsExternalTable(Oid relid);
 // and the parts are distributed differently, return Random distribution
 GpPolicy *GetDistributionPolicy(Relation rel);
 
-#if 0
-    // return true if the table is partitioned and hash-distributed, and one of  
-    // the child partitions is randomly distributed
-    gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
+// return true if the table is partitioned and hash-distributed, and one of
+// the child partitions is randomly distributed
+gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
 
+#if 0
     // return true if the table is partitioned and any of the child partitions
     // have a trigger of the given type
     gpos::BOOL ChildPartHasTriggers(Oid oid, int trigger_type);

@@ -1957,22 +1957,17 @@ gpdb::GetDistributionPolicy(Relation rel)
 	return nullptr;
 }
 
-#if 0
 gpos::BOOL
-gpdb::IsChildPartDistributionMismatched
-	(
-	Relation rel
-	)
+gpdb::IsChildPartDistributionMismatched(Relation rel)
 {
-    GP_WRAP_START;
-    {
-    	/* catalog tables: pg_class, pg_inherits */
-    	return child_distribution_mismatch(rel);
-    }
-    GP_WRAP_END;
-    return false;
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_class, pg_inherits */
+		return child_distribution_mismatch(rel);
+	}
+	GP_WRAP_END;
+	return false;
 }
-#endif
 
 bool
 gpdb::RelationExists(Oid oid)

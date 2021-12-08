@@ -169,17 +169,15 @@ public:
 };
 
 // common structures over metadata id elements
-typedef CDynamicPtrArray<IMDId, CleanupRelease> IMdIdArray;
+using IMdIdArray = CDynamicPtrArray<IMDId, CleanupRelease>;
 
 // hash set for mdid
-typedef CHashSet<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
-				 CleanupRelease<IMDId> >
-	MdidHashSet;
+using MdidHashSet =
+	CHashSet<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare, CleanupRelease<IMDId>>;
 
 // iterator over the hash set for column id information for missing statistics
-typedef CHashSetIter<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
-					 CleanupRelease<IMDId> >
-	MdidHashSetIter;
+using MdidHashSetIter = CHashSetIter<IMDId, IMDId::MDIdHash, IMDId::MDIdCompare,
+									 CleanupRelease<IMDId>>;
 
 }  // namespace gpmd
 

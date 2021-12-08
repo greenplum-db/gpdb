@@ -26,7 +26,7 @@ class CDrvdPropCtxt;
 class CDrvdProp;
 
 // dynamic array for properties
-typedef CDynamicPtrArray<CDrvdPropCtxt, CleanupRelease> CDrvdPropCtxtArray;
+using CDrvdPropCtxtArray = CDynamicPtrArray<CDrvdPropCtxt, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

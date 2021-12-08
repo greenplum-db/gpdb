@@ -74,19 +74,19 @@ class CCache
 
 public:
 	// type definition of key hashing and equality functions
-	typedef ULONG (*HashFuncPtr)(const K &);
-	typedef BOOL (*EqualFuncPtr)(const K &, const K &);
+	using HashFuncPtr = ULONG (*)(const K &);
+	using EqualFuncPtr = BOOL (*)(const K &, const K &);
 
 private:
-	typedef CCacheEntry<T, K> CCacheHashTableEntry;
+	using CCacheHashTableEntry = CCacheEntry<T, K>;
 
 	// type definition of hashtable, accessor and iterator
-	typedef CSyncHashtable<CCacheHashTableEntry, K> CCacheHashtable;
-	typedef CSyncHashtableAccessByKey<CCacheHashTableEntry, K>
-		CCacheHashtableAccessor;
-	typedef CSyncHashtableIter<CCacheHashTableEntry, K> CCacheHashtableIter;
-	typedef CSyncHashtableAccessByIter<CCacheHashTableEntry, K>
-		CCacheHashtableIterAccessor;
+	using CCacheHashtable = CSyncHashtable<CCacheHashTableEntry, K>;
+	using CCacheHashtableAccessor =
+		CSyncHashtableAccessByKey<CCacheHashTableEntry, K>;
+	using CCacheHashtableIter = CSyncHashtableIter<CCacheHashTableEntry, K>;
+	using CCacheHashtableIterAccessor =
+		CSyncHashtableAccessByIter<CCacheHashTableEntry, K>;
 
 	// memory pool for allocating hashtable and cache entries
 	CMemoryPool *m_mp;

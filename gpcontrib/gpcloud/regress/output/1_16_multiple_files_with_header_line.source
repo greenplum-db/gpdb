@@ -1,8 +1,8 @@
 --- test set 1: multiple files with header and different EOLs ---
 -- with line terminator '\n' (LF)
+SET client_min_messages TO 'warning';
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_with_header_line_lf(date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@') FORMAT 'csv' (HEADER NEWLINE 'LF');
-NOTICE:  HEADER means that each one of the data files has a header row
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_lf;
  count 
 -------
@@ -12,7 +12,6 @@ SELECT count(*) FROM s3regress_multiple_files_with_header_line_lf;
 -- with line terminator '\r\n' (CRLF)
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_with_header_line_crlf(date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header_crlf/ config=@config_file@') FORMAT 'csv' (HEADER NEWLINE 'CRLF');
-NOTICE:  HEADER means that each one of the data files has a header row
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf;
  count 
 -------
@@ -34,16 +33,17 @@ SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf crlf, s3regr
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_lf wh, s3regress_multiple_files_without_header_line_lf nh where wh.volume = nh.volume;
  count 
 -------
-    17
+     3
 (1 row)
 
 -- join query between a table without header + LF and the other table with header + CRLF.
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf whcrlf, s3regress_multiple_files_without_header_line_lf nhlf where whcrlf.volume = nhlf.volume;
  count 
 -------
-    17
+     3
 (1 row)
 
 DROP EXTERNAL TABLE s3regress_multiple_files_with_header_line_lf;
 DROP EXTERNAL TABLE s3regress_multiple_files_without_header_line_lf;
 DROP EXTERNAL TABLE s3regress_multiple_files_with_header_line_crlf;
+RESET client_min_messages;

@@ -2517,7 +2517,7 @@ ExecModifyTable(PlanState *pstate)
 												 &isNull);
 					/* shouldn't ever get a null result... */
 					if (isNull)
-						elog(ERROR, "action is NULL");
+						elog(ERROR, "gp_segment_id is NULL");
 
 					segid = DatumGetInt32(datum);
 				}
@@ -2528,7 +2528,7 @@ ExecModifyTable(PlanState *pstate)
 												 &isNull);
 					/* shouldn't ever get a null result... */
 					if (isNull)
-						elog(ERROR, "gp_segment_id is NULL");
+						elog(ERROR, "action is NULL");
 
 					action = DatumGetInt32(datum);
 				}

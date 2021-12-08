@@ -87,22 +87,22 @@ private:
 	};
 
 	// hash map mapping ULONG -> SConsumerCounter
-	typedef CHashMap<ULONG, SConsumerCounter, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupDelete<SConsumerCounter> >
-		UlongToConsumerCounterMap;
+	using UlongToConsumerCounterMap =
+		CHashMap<ULONG, SConsumerCounter, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupDelete<SConsumerCounter>>;
 
 	// map iterator
-	typedef CHashMapIter<ULONG, SConsumerCounter, gpos::HashValue<ULONG>,
-						 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-						 CleanupDelete<SConsumerCounter> >
-		UlongToConsumerCounterMapIter;
+	using UlongToConsumerCounterMapIter =
+		CHashMapIter<ULONG, SConsumerCounter, gpos::HashValue<ULONG>,
+					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+					 CleanupDelete<SConsumerCounter>>;
 
 	// hash map mapping ULONG -> UlongToConsumerCounterMap: maps from CTE producer ID to all consumers inside this CTE
-	typedef CHashMap<ULONG, UlongToConsumerCounterMap, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupRelease<UlongToConsumerCounterMap> >
-		UlongToProducerConsumerMap;
+	using UlongToProducerConsumerMap =
+		CHashMap<ULONG, UlongToConsumerCounterMap, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<UlongToConsumerCounterMap>>;
 
 	//-------------------------------------------------------------------
 	//	@struct:
@@ -169,16 +169,16 @@ private:
 	};	//class CCTEInfoEntry
 
 	// hash maps mapping ULONG -> CCTEInfoEntry
-	typedef CHashMap<ULONG, CCTEInfoEntry, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupRelease<CCTEInfoEntry> >
-		UlongToCTEInfoEntryMap;
+	using UlongToCTEInfoEntryMap =
+		CHashMap<ULONG, CCTEInfoEntry, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<CCTEInfoEntry>>;
 
 	// map iterator
-	typedef CHashMapIter<ULONG, CCTEInfoEntry, gpos::HashValue<ULONG>,
-						 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-						 CleanupRelease<CCTEInfoEntry> >
-		UlongToCTEInfoEntryMapIter;
+	using UlongToCTEInfoEntryMapIter =
+		CHashMapIter<ULONG, CCTEInfoEntry, gpos::HashValue<ULONG>,
+					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+					 CleanupRelease<CCTEInfoEntry>>;
 
 	// memory pool
 	CMemoryPool *m_mp;

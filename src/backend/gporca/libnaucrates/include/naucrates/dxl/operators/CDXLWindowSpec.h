@@ -98,7 +98,7 @@ public:
 	}
 };
 
-typedef CDynamicPtrArray<CDXLWindowSpec, CleanupRelease> CDXLWindowSpecArray;
+using CDXLWindowSpecArray = CDynamicPtrArray<CDXLWindowSpec, CleanupRelease>;
 }  // namespace gpdxl
 #endif	// !GPDXL_CDXLWindowSpec_H
 

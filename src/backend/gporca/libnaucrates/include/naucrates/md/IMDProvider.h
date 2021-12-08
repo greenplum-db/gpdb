@@ -60,7 +60,7 @@ public:
 };
 
 // arrays of MD providers
-typedef CDynamicPtrArray<IMDProvider, CleanupRelease> CMDProviderArray;
+using CMDProviderArray = CDynamicPtrArray<IMDProvider, CleanupRelease>;
 
 }  // namespace gpmd
 

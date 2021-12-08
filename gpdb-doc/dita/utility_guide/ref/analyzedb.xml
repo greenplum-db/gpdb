@@ -19,9 +19,9 @@
    [ <b>--gen_profile_only</b> ]   
    [ <b>-p</b> <varname>parallel-level</varname> ]
    [ <b>--full</b> ]
+   [ <b>--skip_root_stats</b> ]
    [ <b>--skip_orca_root_stats</b> ]
    [ <b>-v</b> | <b>--verbose</b> ]
-   [ <b>--debug</b> ]
    [ <b>-a</b> ]
 
 <b>analyzedb</b> { <b>--clean_last</b> | <b>--clean_all</b> }
@@ -102,13 +102,6 @@
             specified for the connection is used.</pd>
         </plentry>
         <plentry>
-          <pt> --debug</pt>
-          <pd>If specified, sets the logging level to debug. During command execution, debug level
-            information is written to the log file and to the command line. The information includes
-            the commands run by the utility and the duration of each <codeph>ANALYZE</codeph>
-            operation.</pd>
-        </plentry>
-        <plentry>
           <pt>-f <varname>config-file</varname> | --file <varname>config-file</varname></pt>
           <pd>Text file that contains a list of tables to be analyzed. A relative file path from
             current directory can be specified.</pd>
@@ -160,6 +153,10 @@ public.lineitem -i l_shipdate,l_receiptdate </codeblock></pd>
           <pt>-p <varname>parallel-level</varname></pt>
           <pd>The number of tables that are analyzed in parallel. <varname>parallel level</varname>
             can be an integer between 1 and 10, inclusive. Default value is 5. </pd>
+        </plentry>
+        <plentry>
+          <pt>--skip_root_stats</pt>
+          <pd>This option is no longer used, you may remove it from your scripts.</pd>
         </plentry>
         <plentry>
           <pt>--skip_orca_root_stats</pt>

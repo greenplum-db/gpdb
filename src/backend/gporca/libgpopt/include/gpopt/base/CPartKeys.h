@@ -24,7 +24,7 @@ class CColRefSet;
 class CPartKeys;
 
 // array of part keys
-typedef CDynamicPtrArray<CPartKeys, CleanupRelease> CPartKeysArray;
+using CPartKeysArray = CDynamicPtrArray<CPartKeys, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

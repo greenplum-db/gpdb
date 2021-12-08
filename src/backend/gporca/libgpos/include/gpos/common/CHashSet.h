@@ -111,12 +111,12 @@ private:
 	ULONG m_size;
 
 	// each hash chain is an array of hashset elements
-	typedef CDynamicPtrArray<CHashSetElem, CleanupDelete> HashSetElemArray;
+	using HashSetElemArray = CDynamicPtrArray<CHashSetElem, CleanupDelete>;
 	HashSetElemArray **m_chains;
 
 	// array for elements
 	// We use CleanupNULL because the elements are owned by the hash table
-	typedef CDynamicPtrArray<T, CleanupNULL> Elements;
+	using Elements = CDynamicPtrArray<T, CleanupNULL>;
 	Elements *const m_elements;
 
 	IntPtrArray *const m_filled_chains;

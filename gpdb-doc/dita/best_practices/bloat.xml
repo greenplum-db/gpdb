@@ -44,10 +44,10 @@
         data to the new table, and then drops old table. This is an expensive operation that can
         take an exceptional amount of time to complete with a large table. </p>
       <note type="warning"><codeph>VACUUM FULL</codeph> acquires an <codeph>ACCESS
-          EXCLUSIVE</codeph> lock on tables. You should not run <codeph>VACUUM FULL
-          &lt;database_name></codeph>. If you run <codeph>VACUUM FULL</codeph> on tables, run it
-        during a time when users and applications do not require access to the tables, such as
-        during a time of low activity, or during a maintenance window.</note>
+          EXCLUSIVE</codeph> lock on tables. You should not run <codeph>VACUUM FULL</codeph>. If you
+        run <codeph>VACUUM FULL</codeph> on tables, run it during a time when users and applications
+        do not require access to the tables, such as during a time of low activity, or during a
+        maintenance window.</note>
     </section>
     <section id="detect_bloat">
       <title>Detecting Bloat</title>
@@ -147,10 +147,10 @@
         when creating explain plans. System catalogs are scanned frequently and if they become
         bloated, overall system performance is degraded. </p>
       <p>It is recommended to run <codeph>VACUUM</codeph> on system catalog tables nightly and at
-        least weekly. At the same time, running <codeph>REINDEX SYSTEM</codeph> removes bloat from
-        the indexes. Alternatively, you can reindex system tables using the
-          <codeph>reindexdb</codeph> utility with the <codeph>-s</codeph>
-        (<codeph>--system</codeph>) option. After removing catalog bloat, run
+        least weekly. At the same time, running <codeph>REINDEX SYSTEM</codeph> on system catalog
+        tables removes bloat from the indexes. Alternatively, you can reindex system tables using
+        the <codeph>reindexdb</codeph> utility with the <codeph>-s</codeph>
+          (<codeph>--system</codeph>) option. After removing catalog bloat, run
           <codeph>ANALYZE</codeph> to update catalog table statistics. </p>
       <p>These are Greenplum Database system catalog maintenance steps.<ol id="ol_un5_p1l_f2b">
           <li>Perform a <codeph>REINDEX</codeph> on the system catalog tables to rebuild the system

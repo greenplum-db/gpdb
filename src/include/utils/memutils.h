@@ -134,6 +134,7 @@ extern void MemoryContextAllowInCriticalSection(MemoryContext context,
 extern void MemoryContextCheck(MemoryContext context);
 #endif
 extern bool MemoryContextContains(MemoryContext context, void *pointer);
+extern bool MemoryContextContainsGenericAllocation(MemoryContext context, void *pointer);
 
 extern void MemoryContextError(int errorcode, MemoryContext context,
                                const char *sfile, int sline,
@@ -218,6 +219,8 @@ extern MemoryContext AllocSetContextCreateInternal(MemoryContext parent,
 #define AllocSetContextCreate \
 	AllocSetContextCreateInternal
 #endif
+
+extern bool AllocSetContains(MemoryContext context, void *pointer);
 
 /* slab.c */
 extern MemoryContext SlabContextCreate(MemoryContext parent,
