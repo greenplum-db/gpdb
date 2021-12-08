@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="ji162018">Verifying the Greenplum Database Software Download</title>
+  <title id="ji162018">Verifying the VMware Tanzu Greenplum Software Download</title>
   <shortdesc>Describes how to verify Greenplum Database software that you download
     from VMware Tanzu Network.</shortdesc>
   <body>
