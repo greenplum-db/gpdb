@@ -1841,7 +1841,7 @@
   <topic id="enable_implicit_timeformat_YYYYMMDDHH24MISS">
     <title>enable_implicit_timeformat_YYYYMMDDHH24MISS</title>
     <body>
-      <p>Enables or disables implicit conversion of a string with the deprecated
+      <p>Enables or disables the deprecated implicit conversion of a string with the
         <i>YYYYMMDDHH24MISS</i> timestamp format to a valid date/time type.</p>
       <p>The default value is <codeph>off</codeph>. When this parameter is set to
         <codeph>on</codeph>, Greenplum Database converts a string with the
