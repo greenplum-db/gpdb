@@ -4799,7 +4799,7 @@ FillSliceGangInfo(Slice *slice, int numsegments)
 				slice->gangSize = numsegments;
 				slice->segments = NIL;
 				for (i = 0; i < numsegments; i++)
-					slice->segments = lappend_int(slice->segments, i);
+					slice->segments = lappend_int(slice->segments, i % getgpsegmentCount());
 			}
 			break;
 		case GANGTYPE_ENTRYDB_READER:
