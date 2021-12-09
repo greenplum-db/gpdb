@@ -57,10 +57,11 @@ class BuildMirrorsTestCase(GpTestCase):
         configurationInterface.getConfigurationProvider = Mock()
 
     def _common_asserts_with_stop_and_logger(self, buildMirrorSegs_obj, expected_logger_msg, expected_segs_to_stop,
-                                             expected_segs_to_markdown, expected_segs_to_update, cleanup_count):
+                                             expected_segs_to_markdown, expected_segs_to_update, cleanup_count,
+                                             info_call_count=3):
         self.mock_logger.info.assert_any_call(expected_logger_msg)
         #TODO assert all logger info msgs
-        self.assertEqual(3, self.mock_logger.info.call_count)
+        self.assertEqual(info_call_count, self.mock_logger.info.call_count)
 
         self.assertEqual([call(expected_segs_to_stop)],
                          buildMirrorSegs_obj._get_running_postgres_segments.call_args_list)
@@ -132,15 +133,19 @@ class BuildMirrorsTestCase(GpTestCase):
             with self.subTest(msg=test["name"]):
                 mirrors_to_build.append(GpMirrorToBuild(test["failed"], test["live"], test["failover"],
                                                         test["forceFull"]))
-                expected_segs_to_stop.append(test["failed"])
+                #TODO better way to check for this condition
+                if not test["failed"].unreachable:
+                    expected_segs_to_stop.append(test["failed"])
                 if 'is_failed_segment_up' in test and test["is_failed_segment_up"]:
                     expected_segs_to_markdown.append(test['failed'])
 
         buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
 
+        # TODO improve the logic that passes info_call_count
         self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 3 failed segment(s) are stopped",
                                                   expected_segs_to_stop,
-                                                  expected_segs_to_markdown, {1: True, 5: True, 9: True}, 1)
+                                                  expected_segs_to_markdown, {1: True, 5: True, 9: True}, 1,
+                                                  info_call_count=4)
 
         for test in tests:
             self.assertEqual('n', test['live'].getSegmentMode())
@@ -159,9 +164,11 @@ class BuildMirrorsTestCase(GpTestCase):
         self.assertTrue(buildMirrorSegs_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
         return buildMirrorSegs_obj
 
-    def create_primary(self, dbid='1', contentid='0', state='n', status='u', host='sdw1'):
-        return Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|21000|/primary/gpseg0'
-                                      .format(dbid, contentid, state, status, host, host))
+    def create_primary(self, dbid='1', contentid='0', state='n', status='u', host='sdw1', unreachable=False):
+        seg = Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|21000|/primary/gpseg0'
+                                     .format(dbid, contentid, state, status, host, host))
+        seg.unreachable = unreachable
+        return seg
 
     def create_mirror(self, dbid='2', contentid='0', state='n', status='u', host='sdw2'):
         return Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|22000|/mirror/gpseg0'
@@ -239,6 +246,14 @@ class BuildMirrorsTestCase(GpTestCase):
                 "failover": self.create_primary(dbid='9', status='d'),
                 "forceFull": False,
             },
+            {
+                "name": "both_failed_failover_failed_is_unreachable",
+                "failed": self.create_primary(dbid='9', status='d', unreachable=True),
+                "live": self.create_mirror(dbid='10', state='s'),
+                "failover": self.create_primary(dbid='9', status='d'),
+                "forceFull": False,
+            },
+
         ]
         self._run_both_failed_failover_tests(tests)
 

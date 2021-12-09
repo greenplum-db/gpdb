@@ -180,7 +180,8 @@ class GpMirrorListToBuild:
                                                                 targetSegment.getSegmentDbId())
 
     def _cleanup_before_recovery(self, gpEnv):
-        self._stop_failed_segments(gpEnv)
+        failed_reachable_segments = self._get_failed_reachable_segments()
+        self._stop_failed_segments(gpEnv, failed_reachable_segments)
 
         self._wait_fts_to_mark_down_segments(gpEnv, self._get_segments_to_mark_down())
 
@@ -504,18 +505,26 @@ class GpMirrorListToBuild:
             return datadir
         return results.stdout.strip()
 
-    def _get_failed_segments(self):
+    def _get_failed_reachable_segments(self):
         # will stop the failed segment.  Note that we do this even if we are recovering to a different location!
-        return [ toRecover.getFailedSegment() for toRecover in self.__mirrorsToBuild if toRecover.getFailedSegment() is not None ]
+        failed_reachable_segments = []
+        for toRecover in self.__mirrorsToBuild:
+            failed = toRecover.getFailedSegment()
+            if failed is not None:
+                if failed.unreachable:
+                    self.__logger.info('Skipping gpsegstop on unreachable host: %s segment: %s'
+                                       % (failed.getSegmentHostName(), failed.getSegmentContentId()))
+                else:
+                    failed_reachable_segments.append(failed)
+        return failed_reachable_segments
 
     #TODO add tests for this function ??
-    def _stop_failed_segments(self, gpEnv):
-        failed_segments = self._get_failed_segments()
-        if len(failed_segments) == 0:
+    def _stop_failed_segments(self, gpEnv, failed_reachable_segments):
+        if len(failed_reachable_segments) == 0:
             return
 
-        self.__logger.info("Ensuring %d failed segment(s) are stopped" % (len(failed_segments)))
-        segments = self._get_running_postgres_segments(failed_segments)
+        self.__logger.info("Ensuring %d failed segment(s) are stopped" % (len(failed_reachable_segments)))
+        segments = self._get_running_postgres_segments(failed_reachable_segments)
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
 
