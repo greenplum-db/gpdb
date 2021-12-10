@@ -1896,6 +1896,23 @@ def impl(context, dbname):
     drop_database_if_exists(context, dbname)
     create_database(context, dbname)
 
+@then('validate gpcheckcat logs contain skipping ACL and Owner tests')
+def imp(context):
+    dirname = 'gpAdminLogs'
+    absdirname = "%s/%s" % (os.path.expanduser("~"), dirname)
+    if not os.path.exists(absdirname):
+        raise Exception('No such directory: %s' % absdirname)
+    pattern = "%s/gpcheckcat_*.log" % (absdirname)
+    logs_for_a_util = glob.glob(pattern)
+    if not logs_for_a_util:
+        raise Exception('Logs matching "%s" were not created' % pattern)
+    rc, error, output = run_cmd("grep 'Default skipping test:acl' %s" % pattern)
+    if rc:
+        raise Exception("Error executing grep on gpcheckcat logs while finding ACL: %s" % error)
+
+    rc, error, output = run_cmd("grep 'Default skipping test:owner' %s" % pattern)
+    if rc:
+        raise Exception("Error executing grep on gpcheckcat logs while finding Owner: %s" % error)
 
 @then('validate and run gpcheckcat repair')
 def impl(context):
