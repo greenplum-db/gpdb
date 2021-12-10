@@ -539,7 +539,7 @@ Feature: gpcheckcat tests
 
     Scenario: run all the checks in gpcheckcat and default skips acl, owner tests  a
         Given database "all_good" is dropped and recreated
-        Then the user runs "gpcheckcat -Av"
+        Then the user runs "gpcheckcat -v"
         Then gpcheckcat should return a return code of 0
         And validate gpcheckcat logs contain skipping ACL and Owner tests
         And the user runs "dropdb all_good"
