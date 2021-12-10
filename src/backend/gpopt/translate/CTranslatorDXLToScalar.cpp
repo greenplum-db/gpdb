@@ -1359,7 +1359,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCastWithChildExpr(
 	relabel_type->location = -1;
 	relabel_type->relabelformat = COERCE_IMPLICIT_CAST;
 	// GPDB_91_MERGE_FIXME: collation
-	relabel_type->resultcollid = gpdb::TypeCollation(relabel_type->resulttype);
+	relabel_type->resultcollid = gpdb::ExprCollation((Node *) child_expr);
 
 	return (Expr *) relabel_type;
 }
