@@ -332,7 +332,7 @@ def impl(context, content, mode):
                 fd.write('{} {}\n'.format(valid_config, valid_config_new))
             break
 
-
+data_dirs_created = {}
 @given("edit the input file to recover mirror with content {content} to a new directory on remote host with mode {mode}")
 def impl(context, content, mode):
     content = int(content)
@@ -350,7 +350,19 @@ def impl(context, content, mode):
                                                  target_datadir)
             with open(context.mirror_context.input_file_path(), 'a') as fd:
                 fd.write('{} {}\n'.format(valid_config, valid_config_new))
+            data_dirs_created[seg.mirrorDB.getSegmentHostName()] = target_datadir
             break
+
+@given("the mode of all the created data directories is changed to 0700")
+@when("the mode of all the created data directories is changed to 0700")
+@then("the mode of all the created data directories is changed to 0700")
+def impl(context):
+    for hostname, data_dir in data_dirs_created.items():
+        command = 'ssh {} "chmod -R 700 {}"'.format(hostname, data_dir)
+        run_command(context, command)
+
+    data_dirs_created.clear()
+
 
 def make_temp_dir_on_remote(context, hostname, tmp_base_dir_remote, mode='700'):
     if not tmp_base_dir_remote:
@@ -402,6 +414,15 @@ def impl(context, num, parent_dir, mode):
         os.mkdir(ith_dir, int(mode,8))
         context.mirror_context.working_directory.append(ith_dir)
 
+@given("the mode of the saved data directory is changed to 700")
+@when("the mode of the saved data directory is changed to 700")
+@then("the mode of the saved data directory is changed to 700")
+def impl(context):
+    data_dir = context.mirror_context.working_directory[0]
+    print("changing mode of data dir {}".format(data_dir))
+    command = 'chmod -R 700 {}'.format(data_dir)
+    print("running command {}".format(command))
+    run_command(context, command)
 
 @given("a '{file_type}' gpmovemirrors file is created")
 def impl(context, file_type):

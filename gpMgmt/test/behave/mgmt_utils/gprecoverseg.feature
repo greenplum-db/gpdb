@@ -167,6 +167,7 @@ Feature: gprecoverseg tests
       And an FTS probe is triggered
       And the mirror for content 1 are up
       And the segments are synchronized for content 1
+      And the mode of the saved data directory is changed to 700
       And the user runs "gprecoverseg -aF && gprecoverseg -ar"
       And all the segments are running
       And the segments are synchronized
@@ -258,6 +259,7 @@ Feature: gprecoverseg tests
       And verify that mirror on content 0 is down
       And the mirror for content 1,2 are up
       And the segments are synchronized for content 1,2
+      And the mode of the saved data directory is changed to 700
       And the user runs "gprecoverseg -aF && gprecoverseg -ar"
       And all the segments are running
       And the segments are synchronized
@@ -527,7 +529,9 @@ Feature: gprecoverseg tests
       And an FTS probe is triggered
       And the mirror for content 1,2 are up
       And the segments are synchronized for content 1,2
+      And the mode of all the created data directories is changed to 0700
       And the user runs "gprecoverseg -aF && gprecoverseg -ar"
+      And gprecoverseg should return a return code of 0
       And all the segments are running
       And the segments are synchronized
       And gprecoverseg should return a return code of 0

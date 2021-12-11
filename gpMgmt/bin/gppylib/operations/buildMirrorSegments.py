@@ -251,8 +251,6 @@ class GpMirrorListToBuild:
 
         self._validate_gparray(gpArray)
 
-        self._run_recovery(gpEnv)
-
         # should use mainUtils.getProgramName but I can't make it work!
         programName = os.path.split(sys.argv[0])[-1]
 
@@ -270,6 +268,8 @@ class GpMirrorListToBuild:
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+
+        self._run_recovery(gpEnv)
 
         #TODO when should this return False ? when basebackup/rewind/start fail for even one segment ?
         return True
