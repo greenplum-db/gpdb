@@ -162,7 +162,7 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 										attr,
 										RelationGetRelationName(rel),
 										/* title */ titleBuf.data,
-										RelationNeedsWAL(rel));
+										XLogIsNeeded() && RelationNeedsWAL(rel));
 
 	}
 }
@@ -1992,7 +1992,7 @@ aocs_addcol_init(Relation rel,
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, 0, blksz /* safeFSWriteSize */ ,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
-											   RelationNeedsWAL(rel));
+											   XLogIsNeeded() && RelationNeedsWAL(rel));
 	}
 	return desc;
 }
