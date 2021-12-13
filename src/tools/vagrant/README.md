@@ -167,7 +167,7 @@ that were posted on each day. Pretty cool!
 
 (Note if you want to exit the `psql` shell above, type in `\q`.)
 
-## 4: Using GDBP
+## 4: Using GPDB
 If you are doing serious development, you will likely need to use a debugger.
 Here is how you do that.
 
