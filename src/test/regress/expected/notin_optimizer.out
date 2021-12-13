@@ -1316,9 +1316,173 @@ select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in
  000181202006010000003158 | a  | INC | 0000000001
 (1 row)
 
+--
+-- Multi Column NOT-IN
+-- Please refer to https://github.com/greenplum-db/gpdb/issues/12930
+--
+create table t1_12930(a int not null, b int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2_12930(a int not null, b int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+insert into t1_12930 values (1, 1), (2, 2);
+insert into t2_12930 values (1, 1), (2, 3), (3,3);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ a | b 
+---+---
+ 2 | 2
+(1 row)
+
+explain select * from t1_12930 where (a+1, b+1) not in (select a, b from t2_12930);
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..413635.27 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..413635.05 rows=5 width=8)
+         Hash Cond: (((t1_12930.a + 1) = t2_12930.a) AND ((t1_12930.b + 1) = t2_12930.b))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..895.00 rows=28700 width=8)
+               Hash Key: (t1_12930.a + 1)
+               ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from t1_12930 where (a+1, b+1) not in (select a, b from t2_12930);
+ a | b 
+---+---
+ 1 | 1
+(1 row)
+
+explain select * from t1_12930 where (a,b) <> ALL (select a, b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from t1_12930 where (a,b) <> ALL (select a, b from t2_12930);
+ a | b 
+---+---
+ 2 | 2
+(1 row)
+
+-- non-nullable: t1.a, t2.a, t2.b
+-- nullable: t1.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b set not null;
+alter table t1_12930 alter column b drop not null;
+insert into t1_12930 values (1, null);
+insert into t2_12930 values (1, 1);
+explain select * from t1_12930 where (a, b) <>ALL (select a, b from t2_12930);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10079226671.22 rows=16 width=8)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10079226671.00 rows=5 width=8)
+         Join Filter: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                     ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) <>ALL (select a, b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+-- non-nullable: t1.a, t1.b, t2.a
+-- nullable: t2.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b drop not null;
+insert into t1_12930 values (1, 1);
+insert into t2_12930 values (1, null);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10079226671.22 rows=16 width=8)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10079226671.00 rows=5 width=8)
+         Join Filter: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                     ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+-- non-nullable: t1.a, t2.a, t2.b
+-- nullable: t1.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b set not null;
+alter table t1_12930 alter column b drop not null;
+insert into t1_12930 values (1, null);
+insert into t2_12930 values (1, 1);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10079226671.22 rows=16 width=8)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10079226671.00 rows=5 width=8)
+         Join Filter: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                     ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..206932.71 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..206932.49 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28671 width=8)
+               Filter: (b IS NOT NULL)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
+ a | b 
+---+---
+(0 rows)
+
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to 16 other objects
+NOTICE:  drop cascades to 18 other objects
 DETAIL:  drop cascades to table notin.t1
 drop cascades to table notin.t2
 drop cascades to table notin.t3
@@ -1335,3 +1499,5 @@ drop cascades to table notin.table_source2
 drop cascades to table notin.table_source3
 drop cascades to table notin.table_source4
 drop cascades to table notin.table_config
+drop cascades to table notin.t1_12930
+drop cascades to table notin.t2_12930
