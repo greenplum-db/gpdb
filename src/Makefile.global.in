@@ -200,7 +200,7 @@ with_libbz2	= @with_libbz2@
 with_apr_config	= @with_apr_config@
 with_apu_config	= @with_apu_config@
 with_libsigar	= @with_libsigar@
-enable_shared	= @enable_shared@
+with_gssapi	= @with_gssapi@
 enable_rpath	= @enable_rpath@
 # NLS is not supported in Greenplum, see comment documenting
 # this in configure.in

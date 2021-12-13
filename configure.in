@@ -941,6 +941,7 @@ PGAC_ARG_BOOL(with, gssapi, no, [build with GSSAPI support],
   krb_srvtab="FILE:\$(sysconfdir)/krb5.keytab"
 ])
 AC_MSG_RESULT([$with_gssapi])
+AC_SUBST(with_gssapi)
 
 
 AC_SUBST(krb_srvtab)
