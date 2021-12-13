@@ -2,7 +2,7 @@ set enable_seqscan=off;
 
 CREATE TABLE test_money (
 	i money
-);
+); -- NOTE: Greenplum dose not support hash for money type, distributed by NULL is expected
 
 INSERT INTO test_money VALUES ('-2'),('-1'),('0'),('1'),('2'),('3');
 
