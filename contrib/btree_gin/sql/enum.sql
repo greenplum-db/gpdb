@@ -16,6 +16,7 @@ SELECT * FROM test_enum WHERE i='g'::rainbow ORDER BY i;
 SELECT * FROM test_enum WHERE i>='g'::rainbow ORDER BY i;
 SELECT * FROM test_enum WHERE i>'g'::rainbow ORDER BY i;
 
+set optimizer=off; -- force use planner to reduce noise
 explain (costs off) SELECT * FROM test_enum WHERE i>='g'::rainbow ORDER BY i;
 
 

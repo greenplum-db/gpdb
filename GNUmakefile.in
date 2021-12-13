@@ -23,6 +23,7 @@ all:
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
+	$(MAKE) -C contrib/btree_gin all
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
@@ -56,6 +57,7 @@ install:
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
+	$(MAKE) -C contrib/btree_gin $@
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
 endif
@@ -144,7 +146,7 @@ $(call recurse,checkprep,  src/test src/pl src/interfaces/ecpg contrib src/bin g
 # probably pull anything order-dependent out of recurse() and back into the
 # recipe body).
 ICW_TARGETS  = src/test src/pl src/interfaces/gppc
-ICW_TARGETS += contrib/auto_explain contrib/citext
+ICW_TARGETS += contrib/auto_explain contrib/citext contrib/btree_gin
 ICW_TARGETS += contrib/file_fdw contrib/formatter_fixedwidth
 ICW_TARGETS += contrib/extprotocol contrib/dblink
 ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto

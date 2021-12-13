@@ -45,19 +45,25 @@ SELECT * FROM test_enum WHERE i>'g'::rainbow ORDER BY i;
  v
 (3 rows)
 
+set optimizer=off; -- force use planner to reduce noise
 explain (costs off) SELECT * FROM test_enum WHERE i>='g'::rainbow ORDER BY i;
-                  QUERY PLAN                   
------------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_enum
-         Recheck Cond: (i >= 'g'::rainbow)
-         ->  Bitmap Index Scan on idx_enum
-               Index Cond: (i >= 'g'::rainbow)
-(6 rows)
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_enum
+               Recheck Cond: (i >= 'g'::rainbow)
+               ->  Bitmap Index Scan on idx_enum
+                     Index Cond: (i >= 'g'::rainbow)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 -- make sure we handle the non-evenly-numbered oid case for enums
 create type e as enum ('0', '2', '3');
 alter type e add value '1' after '0';
 create table t as select (i % 4)::text::e from generate_series(0, 100000) as i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'e' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create index on t using gin (e);

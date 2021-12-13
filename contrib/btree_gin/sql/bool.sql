@@ -20,6 +20,7 @@ SELECT * FROM test_bool WHERE i=false ORDER BY i;
 SELECT * FROM test_bool WHERE i>=false ORDER BY i;
 SELECT * FROM test_bool WHERE i>false ORDER BY i;
 
+set optimizer=off; -- force use planner to reduce noise
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i<true ORDER BY i;
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i<=true ORDER BY i;
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i=true ORDER BY i;

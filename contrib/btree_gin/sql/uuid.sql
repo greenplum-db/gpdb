@@ -21,6 +21,7 @@ SELECT * FROM test_uuid WHERE i='ce41c936-6acb-4feb-8c91-852a673e5a5c'::uuid ORD
 SELECT * FROM test_uuid WHERE i>='ce41c936-6acb-4feb-8c91-852a673e5a5c'::uuid ORDER BY i;
 SELECT * FROM test_uuid WHERE i>'ce41c936-6acb-4feb-8c91-852a673e5a5c'::uuid ORDER BY i;
 
+set optimizer=off; -- force use planner to reduce noise
 EXPLAIN (COSTS OFF) SELECT * FROM test_uuid WHERE i<'ce41c936-6acb-4feb-8c91-852a673e5a5c'::uuid ORDER BY i;
 EXPLAIN (COSTS OFF) SELECT * FROM test_uuid WHERE i<='ce41c936-6acb-4feb-8c91-852a673e5a5c'::uuid ORDER BY i;
 EXPLAIN (COSTS OFF) SELECT * FROM test_uuid WHERE i='ce41c936-6acb-4feb-8c91-852a673e5a5c'::uuid ORDER BY i;

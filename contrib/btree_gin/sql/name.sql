@@ -14,6 +14,7 @@ SELECT * FROM test_name WHERE i='abc' ORDER BY i;
 SELECT * FROM test_name WHERE i>='abc' ORDER BY i;
 SELECT * FROM test_name WHERE i>'abc' ORDER BY i;
 
+set optimizer=off; -- force use planner to reduce noise
 EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i<'abc' ORDER BY i;
 EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i<='abc' ORDER BY i;
 EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i='abc' ORDER BY i;
