@@ -88,7 +88,7 @@ public:
 	PopConvert(COperator *pop)
 	{
 		GPOS_ASSERT(nullptr != pop);
-		GPOS_ASSERT(EopScalarArrayRefIndexList == pop->Eopid());
+		GPOS_ASSERT(EopScalarValuesList == pop->Eopid());
 
 		return dynamic_cast<CScalarValuesList *>(pop);
 	}

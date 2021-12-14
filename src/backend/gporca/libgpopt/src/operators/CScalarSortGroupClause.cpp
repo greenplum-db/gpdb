@@ -45,21 +45,6 @@ CScalarSortGroupClause::CScalarSortGroupClause(CMemoryPool *mp,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CScalarSortGroupClause::HashValue
-//
-//	@doc:
-//		Operator specific hash function; combined hash of operator id and
-//		hash of constant value
-//
-//---------------------------------------------------------------------------
-ULONG
-CScalarSortGroupClause::HashValue() const
-{
-	return 0;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CScalarSortGroupClause::Matches
 //
 //	@doc:

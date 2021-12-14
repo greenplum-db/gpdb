@@ -23,7 +23,7 @@ namespace gpdxl
 {
 using namespace gpos;
 
-enum AggrefChildIndeces
+enum EAggrefChildIndices
 {
 	EdxlParseHandlerAggrefIndexArgs = 0,
 	EdxlParseHandlerAggrefIndexDirectArgs,

@@ -2134,21 +2134,32 @@ CTranslatorQueryToDXL::CreateSimpleGroupBy(
 
 			if (has_grouping_sets)
 			{
-				BOOL hasMissingVars = false;
+				// If the grouping set is an ordered aggregate with direct
+				// args, then we need to ensure that every direct arg exists in
+				// the group by columns bitset. This is important when a ROLLUP
+				// uses direct args. For example, consider the followinng
+				// query:
+				//
+				// ```
+				// SELECT a, rank(a) WITHIN GROUP (order by b nulls last)
+				// FROM (values (1,1),(1,4),(1,5),(3,1),(3,2)) v(a,b)
+				// GROUP BY ROLLUP (a) ORDER BY a;
+				// ```
+				//
+				// ROLLUP (a) on values produces sets: (1), (3), ().
+				//
+				// In this case we need to ensure that () set will fetch direct
+				// arg "a" as NULL. Whereas (1) and (3) will fetch "a" off of
+				// any tuple in their respective sets.
 				ListCell *ilc = nullptr;
 				ForEach(ilc, ((Aggref *) target_entry->expr)->aggdirectargs)
 				{
-					Expr *e = (Expr *) lfirst(ilc);
-					if (ExpressionContainsMissingVars(e, grpby_cols_bitset))
+					if (ExpressionContainsMissingVars((Expr *) lfirst(ilc),
+													  grpby_cols_bitset))
 					{
-						hasMissingVars = true;
+						((Aggref *) target_entry->expr)->aggdirectargs = NIL;
 						break;
 					}
-				}
-
-				if (hasMissingVars)
-				{
-					((Aggref *) target_entry->expr)->aggdirectargs = NIL;
 				}
 			}
 

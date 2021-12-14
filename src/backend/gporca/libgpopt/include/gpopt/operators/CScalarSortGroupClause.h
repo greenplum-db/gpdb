@@ -89,9 +89,6 @@ public:
 		return "CScalarSortGroupClause";
 	}
 
-	// operator specific hash function
-	ULONG HashValue() const override;
-
 	// match function
 	BOOL Matches(COperator *op) const override;
 

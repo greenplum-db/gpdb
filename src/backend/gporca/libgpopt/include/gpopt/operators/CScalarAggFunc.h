@@ -31,6 +31,15 @@ enum EAggfuncStage
 	EaggfuncstageSentinel
 };
 
+enum EAggfuncChildIndices
+{
+	EaggfuncIndexArgs = 0,
+	EaggfuncIndexDirectArgs,
+	EaggfuncIndexOrder,
+	EaggfuncIndexDistinct,
+	EaggfuncIndexSentinel
+};
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CScalarAggFunc
