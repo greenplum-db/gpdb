@@ -2994,7 +2994,8 @@ all_checks = {
             "fn": lambda: checkACL(),
             "version": 'main',
             "order": 6,
-            "online": True
+            "online": True,
+            "defaultSkip": True
         },
     "pgclass":
         {
@@ -3034,7 +3035,8 @@ all_checks = {
             "fn": lambda: checkOwners(),
             "version": 'main',
             "order": 11,
-            "online": True
+            "online": True,
+            "defaultSkip": True
         },
     "part_integrity":
         {
@@ -3131,7 +3133,10 @@ def runAllChecks(run_tests):
     '''
     for name in sorted(all_checks, key=lambda x: all_checks[x]["order"]):
         if all_checks[name]["version"] >= GV.version and name in run_tests:
-            runOneCheck(name)
+            if (not GV.opt['-R'] and  "defaultSkip" in all_checks[name] and all_checks[name]["defaultSkip"] == True):
+                logger.debug("Default skipping test:"+name)
+            else:
+                runOneCheck(name)
 
     closeDbs()
     logger.info("------------------------------------")
