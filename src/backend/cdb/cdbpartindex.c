@@ -107,6 +107,7 @@ static IndexInfo *populateIndexInfo(Relation indRel);
 static Node *mergeIntervals(Node *intervalFst, Node *intervalSnd);
 static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd);
 static void extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst, Oid *opno);
+static void recordIndexForLeaf(Oid partOid, Oid rootOid, AttrNumber *attmap, struct IndexInfo *ii, LogicalIndexType indType, Oid	indexoid, PartitionIndexNode *pNode);
 
 /*
  * TODO: similar routines in cdbpartition.c. Move up to cdbpartition.h ?
@@ -557,14 +558,10 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 						Oid partOid,
 						Oid rootOid)
 {
-	char	   *partIndexHashKey;
-	bool		foundPartIndexHash;
-	bool		foundLogicalIndexHash;
 	bool 		computeAttMapping = true;
 	AttrNumber *attmap = NULL;
 	struct IndexInfo *ii = NULL;
-	PartitionIndexHashEntry *partIndexHashEntry;
-	LogicalIndexInfoHashEntry *logicalIndexInfoHashEntry;
+	struct IndexInfo *ii2 = NULL;
 	PartitionIndexNode *pNode = *pNodePtr;
 	List	   *indexoidlist;
 	ListCell   *lc;
@@ -615,7 +612,10 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			TupleDesc	rootTupDesc = rootRel->rd_att;
 			TupleDesc	partTupDesc = partRel->rd_att;
 
-			attmap = varattnos_map(partTupDesc, rootTupDesc);
+			if (!attmap)
+			{
+				attmap = varattnos_map(partTupDesc, rootTupDesc);
+			}
 
 			/* can we close here ? */
 			heap_close(rootRel, AccessShareLock);
@@ -624,79 +624,109 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			computeAttMapping = false;
 		}
 
-		/* populate index info structure */
+		/*
+		 * populate index info structure. This is modified while constructing
+		 * the index hash key, so we need separate index infos here
+		 */
 		ii = populateIndexInfo(indRel);
+		ii2 = populateIndexInfo(indRel);
 
+		bool isBtreeIndex = (BTREE_AM_OID == indRel->rd_rel->relam);
 		index_close(indRel, NoLock);
 
-		/* construct hash key for the index */
-		partIndexHashKey = constructIndexHashKey(partOid, rootOid, attmap, ii, indType);
+		recordIndexForLeaf(partOid, rootOid, attmap, ii, indType, indexoid, pNode);
 
-		/* lookup PartitionIndexHash table */
-		partIndexHashEntry = (PartitionIndexHashEntry *) hash_search(PartitionIndexHash,
-																	 (void *) partIndexHashKey,
-																	 HASH_ENTER,
-																	 &foundPartIndexHash);
+		/*
+		 * This is a bit of a hack to get around the GPDB executor not
+		 * supporting index scans on AO tables. If a heap partition has
+		 * a btree index, also create a "fake" bitmap index on the
+		 * partition. This way, if there is a mix heap and AO tables,
+		 * Orca can perform a bitmap scan on the entire table. When
+		 * constructing the root indexes, we check for homogenity, and
+		 * if a btree index also exists on the heap table, we can mark
+		 * the entire partitioned table as containing a bitmap index.
+		 */
 
-		if (!foundPartIndexHash)
+		if (RELSTORAGE_HEAP == relstorage && isBtreeIndex)
 		{
-			/* first time seeing this index */
-			partIndexHashEntry->key = partIndexHashKey;
-
-			/* assign a logical index id */
-			partIndexHashEntry->logicalIndexId = logicalIndexId++;
-
-			/*
-			 * insert the entry into LogicalIndexInfoHash to keep track of
-			 * logical indexes
-			 */
-			logicalIndexInfoHashEntry = (LogicalIndexInfoHashEntry *) hash_search(LogicalIndexInfoHash,
-																				  (void *) &(partIndexHashEntry->logicalIndexId),
-																				  HASH_ENTER,
-																				  &foundLogicalIndexHash);
-
-
-			if (foundLogicalIndexHash)
-			{
-				/*
-				 * we should not find the entry in the logical index hash as
-				 * this is the first time we are seeing it
-				 */
-				ereport(ERROR,
-						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
-								indexoid
-								)));
-			}
-
-			logicalIndexInfoHashEntry->logicalIndexId = partIndexHashEntry->logicalIndexId;
-			logicalIndexInfoHashEntry->logicalIndexOid = indexoid;
-			logicalIndexInfoHashEntry->ii = ii;
-			logicalIndexInfoHashEntry->partList = NIL;
-			logicalIndexInfoHashEntry->defaultPartList = NIL;
-			logicalIndexInfoHashEntry->indType = indType;
+			recordIndexForLeaf(partOid, rootOid, attmap, ii2, INDTYPE_BITMAP, indexoid, pNode);
 		}
-		else
-		{
-			/*
-			 * we can release IndexInfo as we already have the information in
-			 * the hash
-			 */
-			if (ii->ii_Expressions)
-				pfree(ii->ii_Expressions);
-			if (ii->ii_Predicate)
-				pfree(ii->ii_Predicate);
-			pfree(ii);
-		}
-
-
-		/* update the PartitionIndexNode -> index bitmap */
-		pNode->index = bms_add_member(pNode->index, partIndexHashEntry->logicalIndexId);
 	}
+
 
 	heap_close(partRel, AccessShareLock);
 }
 
+static void
+recordIndexForLeaf(Oid partOid, Oid rootOid, AttrNumber *attmap, struct IndexInfo *ii, LogicalIndexType indType, Oid	indexoid, PartitionIndexNode *pNode)
+{
+	bool		foundPartIndexHash;
+	bool		foundLogicalIndexHash;
+
+	/* construct hash key for the index */
+	char *partIndexHashKey = constructIndexHashKey(partOid, rootOid, attmap, ii, indType);
+
+	/* lookup PartitionIndexHash table */
+	PartitionIndexHashEntry *partIndexHashEntry = (PartitionIndexHashEntry *) hash_search(PartitionIndexHash,
+																 (void *) partIndexHashKey,
+																 HASH_ENTER,
+																 &foundPartIndexHash);
+
+	if (!foundPartIndexHash)
+	{
+		/* first time seeing this index */
+		partIndexHashEntry->key = partIndexHashKey;
+
+		/* assign a logical index id */
+		partIndexHashEntry->logicalIndexId = logicalIndexId++;
+
+		/*
+		 * insert the entry into LogicalIndexInfoHash to keep track of
+		 * logical indexes
+		 */
+		LogicalIndexInfoHashEntry *logicalIndexInfoHashEntry = (LogicalIndexInfoHashEntry *) hash_search(LogicalIndexInfoHash,
+																			  (void *) &(partIndexHashEntry->logicalIndexId),
+																			  HASH_ENTER,
+																			  &foundLogicalIndexHash);
+
+
+		if (foundLogicalIndexHash)
+		{
+			/*
+			 * we should not find the entry in the logical index hash as
+			 * this is the first time we are seeing it
+			 */
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
+							indexoid
+							)));
+		}
+
+		logicalIndexInfoHashEntry->logicalIndexId = partIndexHashEntry->logicalIndexId;
+		logicalIndexInfoHashEntry->logicalIndexOid = indexoid;
+		logicalIndexInfoHashEntry->ii = ii;
+		logicalIndexInfoHashEntry->partList = NIL;
+		logicalIndexInfoHashEntry->defaultPartList = NIL;
+		logicalIndexInfoHashEntry->indType = indType;
+	}
+	else
+	{
+		/*
+		 * we can release IndexInfo as we already have the information in
+		 * the hash
+		 */
+		if (ii->ii_Expressions)
+			pfree(ii->ii_Expressions);
+		if (ii->ii_Predicate)
+			pfree(ii->ii_Predicate);
+		pfree(ii);
+	}
+
+
+	/* update the PartitionIndexNode -> index bitmap */
+	pNode->index = bms_add_member(pNode->index, partIndexHashEntry->logicalIndexId);
+}
 /*
  * collapseIndexes
  *   Walk the PartitionNode tree

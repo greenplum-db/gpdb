@@ -579,13 +579,28 @@ BOOL
 CMDRelationGPDB::IsPartialIndex(IMDId *mdid) const
 {
 	const ULONG indexes = IndexCount();
+	bool foundPartial = false;
 
+	// if the index is a bitmap index, there can exist both a partial and
+	// non-partial entry for a given MDid. In this case, we prefer the non-partial entry
 	for (ULONG ul = 0; ul < indexes; ++ul)
 	{
 		if (CMDIdGPDB::MDIdCompare(IndexMDidAt(ul), mdid))
 		{
-			return (*m_mdindex_info_array)[ul]->IsPartial();
+			if (!(*m_mdindex_info_array)[ul]->IsPartial())
+			{
+				return false;
+			}
+			else
+			{
+				foundPartial = true;
+			}
 		}
+	}
+
+	if (foundPartial)
+	{
+		return true;
 	}
 
 	// Not found

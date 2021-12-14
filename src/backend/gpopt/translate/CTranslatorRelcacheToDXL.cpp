@@ -1199,15 +1199,46 @@ CTranslatorRelcacheToDXL::LookupLogicalIndexById(
 				0 <= logical_indexes->numLogicalIndexes);
 
 	const ULONG num_index = logical_indexes->numLogicalIndexes;
-
+	LogicalIndexInfo *bitmapInfo = NULL;
+	LogicalIndexInfo *otherIndexInfo = NULL;
 	for (ULONG ul = 0; ul < num_index; ul++)
 	{
 		LogicalIndexInfo *index_info = (logical_indexes->logicalIndexInfo)[ul];
 
+		//  if both btree and bitmap index exist for a given index OID
+		//  (implying that this is a btree index on a homogenous heap
+		//  partitioned table), use the full bitmap index only if a full btree
+		//  index does not exist
+		// When considering an index by the OID, we give preference as follows:
+		// 1. full btree index
+		// 2. full bitmap index
+		// 3. any other index (the first instance, to preserve existing behavior)
+
+		BOOL isFullIndex =
+			(index_info->partCons == NULL && index_info->defaultLevels == NIL);
 		if (oid == index_info->logicalIndexOid)
 		{
-			return index_info;
+			if (index_info->indType == INDTYPE_BTREE && isFullIndex)
+			{
+				return index_info;
+			}
+			else if (index_info->indType == INDTYPE_BITMAP && isFullIndex)
+			{
+				bitmapInfo = index_info;
+			}
+			else if (otherIndexInfo == NULL)
+			{
+				otherIndexInfo = index_info;
+			}
 		}
+	}
+	if (bitmapInfo != NULL)
+	{
+		return bitmapInfo;
+	}
+	else if (otherIndexInfo != NULL)
+	{
+		return otherIndexInfo;
 	}
 
 	return NULL;

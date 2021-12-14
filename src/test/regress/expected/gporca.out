@@ -14162,6 +14162,60 @@ SELECT gp_segment_id, * FROM result_tab;
 DROP TABLE IF EXISTS dist_tab_a;
 DROP TABLE IF EXISTS dist_tab_b;
 DROP TABLE IF EXISTS result_tab;
+-- Test if orca produces bitmap scan on mixed partitions
+create table mixed_part( a int) distributed randomly
+partition by range (a)
+( partition a1 start (1) end (100) with (appendonly='true'),
+partition a2 start (100) end (200) with (appendonly='false'));
+NOTICE:  CREATE TABLE will create partition "mixed_part_1_prt_a1" for table "mixed_part"
+NOTICE:  CREATE TABLE will create partition "mixed_part_1_prt_a2" for table "mixed_part"
+create index idx_mixed_part on mixed_part using btree(a);
+insert into mixed_part select i from generate_series(1,199)i;
+insert into mixed_part select 12 from generate_series(1,100)i;
+analyze mixed_part;
+explain select * from mixed_part where a=3;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.49 rows=2 width=4)
+   ->  Append  (cost=0.00..3.49 rows=1 width=4)
+         ->  Seq Scan on mixed_part_1_prt_a1  (cost=0.00..3.49 rows=1 width=4)
+               Filter: (a = 3)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select * from mixed_part where a=3;
+ a 
+---
+ 3
+(1 row)
+
+-- Test that orca still produces index scan on heap partitions
+create table heap_part( a int) distributed randomly
+partition by range (a)
+( partition a1 start (1) end (100) with (appendonly='false'),
+partition a2 start (100) end (200) with (appendonly='false'));
+NOTICE:  CREATE TABLE will create partition "heap_part_1_prt_a1" for table "heap_part"
+NOTICE:  CREATE TABLE will create partition "heap_part_1_prt_a2" for table "heap_part"
+create index idx_heap_part on heap_part using btree(a);
+insert into heap_part select i from generate_series(1,199)i;
+insert into heap_part select 12 from generate_series(1,100)i;
+analyze heap_part;
+explain select * from heap_part where a=3;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..5.49 rows=2 width=4)
+   ->  Append  (cost=0.00..5.49 rows=1 width=4)
+         ->  Seq Scan on heap_part_1_prt_a1  (cost=0.00..5.49 rows=1 width=4)
+               Filter: (a = 3)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select * from heap_part where a=3;
+ a 
+---
+ 3
+(1 row)
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 NOTICE:  drop cascades to 167 other objects

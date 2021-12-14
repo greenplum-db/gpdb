@@ -50,7 +50,8 @@ select nColumns, indKey, indUnique, indPred, indExprs, partCons, defaultLevels, 
  ncolumns | indkey | indunique | indpred | indexprs | partcons | defaultlevels | indtype 
 ----------+--------+-----------+---------+----------+----------+---------------+---------
         1 | 1      | f         |         |          |          |               |       0
-(1 row)
+        1 | 1      | f         |         |          |          |               |       1
+(2 rows)
 
 -- partial index on all part
 -- output shows 1 logical index with partial predicate 
@@ -63,7 +64,8 @@ where indpred is NOT NULL;
  indkey |           pg_get_expr            | partcons 
 --------+----------------------------------+----------
  1      | (part_key >= 1), (part_key < 10) | 
-(1 row)
+ 1      | (part_key >= 1), (part_key < 10) | 
+(2 rows)
 
 -- add a new part - index automatically created 
 alter table part_table1 add partition part4 start('31') end ('40');
@@ -72,7 +74,7 @@ NOTICE:  CREATE TABLE will create partition "part_table1_1_prt_part4" for table 
 select count(*) from gp_build_logical_index('part_table1'::regclass);
  count 
 -------
-     2
+     4
 (1 row)
 
 select indKey, pg_get_expr(indpred, 'part_table1'::regclass), partCons from gp_build_logical_index('part_table1'::regclass)
@@ -80,7 +82,8 @@ where indpred is NOT NULL;
  indkey |           pg_get_expr            | partcons 
 --------+----------------------------------+----------
  1      | (part_key >= 1), (part_key < 10) | 
-(1 row)
+ 1      | (part_key >= 1), (part_key < 10) | 
+(2 rows)
 
 -- create index on just 1 part
 create index rp_i2 on part_table1_1_prt_part4(part_key, content);
@@ -88,7 +91,7 @@ create index rp_i2 on part_table1_1_prt_part4(part_key, content);
 select count(*) from gp_build_logical_index('part_table1'::regclass);
  count 
 -------
-     3
+     6
 (1 row)
 
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table1'::regclass)
@@ -96,7 +99,8 @@ where partcons is NOT NULL;
  indkey | defaultlevels |                partcons                
 --------+---------------+----------------------------------------
  1 2    |               | ((part_key >= 31) AND (part_key < 40))
-(1 row)
+ 1 2    |               | ((part_key >= 31) AND (part_key < 40))
+(2 rows)
 
 -- split a part into 2 parts - index created on both the parts
 -- the existing part4 along with indexes is dropped 
@@ -112,7 +116,9 @@ select indKey, defaultLevels, partCons from gp_build_logical_index('part_table1'
 --------+---------------+----------
  1      |               | 
  1      |               | 
-(2 rows)
+ 1      |               | 
+ 1      |               | 
+(4 rows)
 
 --
 -- ************************************************************
@@ -144,7 +150,8 @@ where indExprs is NOT NULL;
  indkey |  pg_get_expr   |                partcons                
 --------+----------------+----------------------------------------
  0      | lower(content) | ((part_key >= 11) AND (part_key < 20))
-(1 row)
+ 0      | lower(content) | ((part_key >= 11) AND (part_key < 20))
+(2 rows)
 
 --
 -- ************************************************************
@@ -304,7 +311,8 @@ select indKey, defaultLevels, partCons from gp_build_logical_index('part_table2'
  indkey | defaultlevels | partcons 
 --------+---------------+----------
  1      |               | 
-(1 row)
+ 1      |               | 
+(2 rows)
 
 -- create a partial index on part_table2 (will be created on all parts/subparts)
 create index second_index on part_table2(trans_id)  
@@ -380,7 +388,8 @@ where indPred is NOT NULL;
  indkey |              pg_get_expr              | defaultlevels | partcons 
 --------+---------------------------------------+---------------+----------
  1      | (trans_id >= 1000), (trans_id < 2000) |               | 
-(1 row)
+ 1      | (trans_id >= 1000), (trans_id < 2000) |               | 
+(2 rows)
 
 -- create index on expression on all parts
 create index third_index on part_table2(lower(region));
@@ -455,7 +464,8 @@ where indExprs is NOT NULL;
  indkey | indpred |  pg_get_expr  | partcons 
 --------+---------+---------------+----------
  0      |         | lower(region) | 
-(1 row)
+ 0      |         | lower(region) | 
+(2 rows)
 
 -- create indexes on all leaf parts of a mid-level partition
 -- logical index should be pulled up to the mid-level partition.
@@ -470,10 +480,14 @@ order by indKey;
  indkey |                            partcons                            
 --------+----------------------------------------------------------------
  0      | 
+ 0      | 
+ 1      | 
+ 1      | 
  1      | 
  1      | 
  2      | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
-(4 rows)
+ 2      | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+(8 rows)
 
 -- Create an index on the mid-level -- internal part -- will not show up
 -- in the result.  Adding indexes to mid-level/internal root partitions will
@@ -488,10 +502,14 @@ order by indKey;
  indkey | defaultlevels |                            partcons                            
 --------+---------------+----------------------------------------------------------------
  0      |               | 
+ 0      |               | 
+ 1      |               | 
+ 1      |               | 
  1      |               | 
  1      |               | 
  2      |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
-(4 rows)
+ 2      |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+(8 rows)
 
 -- create an index on a default part
 -- result should show this as an extra row
@@ -503,11 +521,16 @@ order by indKey;
  indkey | defaultlevels |                            partcons                            
 --------+---------------+----------------------------------------------------------------
  0      |               | 
+ 0      |               | 
  1      |               | 
  1      |               | 
+ 1      |               | 
+ 1      |               | 
+ 2      | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
  2      |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
  2      | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
-(5 rows)
+ 2      |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+(10 rows)
 
 -- create an index on a bunch of default partitions 
 create index subset_index1 on part_table2_1_prt_7_2_prt_other_regions(upper(region));
@@ -518,12 +541,17 @@ where partcons is NOT NULL
 order by partcons;
   pg_get_expr  | defaultlevels |                            partcons                            
 ---------------+---------------+----------------------------------------------------------------
-               |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
-               | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
  upper(region) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
+ upper(region) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
+               | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
+               | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
+ upper(region) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
  upper(region) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
  upper(region) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
-(5 rows)
+               |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+               |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+ upper(region) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+(10 rows)
 
 create index subset_index4 on part_table2_1_prt_7_2_prt_other_regions(upper(region));
 create index subset_index5 on part_table2_1_prt_outlying_years_2_prt_other_regions(upper(region));
@@ -532,12 +560,17 @@ where partcons is NOT NULL
 order by partcons;
   pg_get_expr  | defaultlevels |                            partcons                            
 ---------------+---------------+----------------------------------------------------------------
-               |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
-               | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
  upper(region) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
+ upper(region) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
+               | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
+               | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
+ upper(region) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
  upper(region) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
  upper(region) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
-(5 rows)
+               |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+               |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+ upper(region) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+(10 rows)
 
 --
 -- ************************************************************
@@ -594,7 +627,8 @@ select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'
  indkey | defaultlevels | partcons 
 --------+---------------+----------
  1 4    |               | 
-(1 row)
+ 1 4    |               | 
+(2 rows)
 
 -- truncate partitions until table is empty
 select * from part_table3;
@@ -645,7 +679,8 @@ select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'
  indkey | defaultlevels | partcons 
 --------+---------------+----------
  1 4    |               | 
-(1 row)
+ 1 4    |               | 
+(2 rows)
 
 -- the index i1 on this part has atts - 1 3
 alter table part_table3 add partition part3 start(date '2010-01-01') end (date '2011-01-01')
@@ -657,7 +692,8 @@ select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'
  indkey | defaultlevels | partcons 
 --------+---------------+----------
  1 4    |               | 
-(1 row)
+ 1 4    |               | 
+(2 rows)
 
 -- extra row just on the default part show up
 create index i2 on part_table3(region);
@@ -675,8 +711,10 @@ order by nColumns;
  indkey | defaultlevels | partcons 
 --------+---------------+----------
  2      |               | 
+ 2      |               | 
  1 4    |               | 
-(2 rows)
+ 1 4    |               | 
+(4 rows)
 
 -- create an index on ALL subparts of 2 parts (part3 no dropped col)
 -- on part3 index is on attnum 3
@@ -690,9 +728,12 @@ order by indKey;
  indkey | defaultlevels |                                                              partcons                                                              
 --------+---------------+------------------------------------------------------------------------------------------------------------------------------------
  1 4    |               | 
+ 1 4    |               | 
+ 2      |               | 
  2      |               | 
  4      |               | (((date >= '01-01-2008'::date) AND (date < '01-01-2009'::date)) OR ((date >= '01-01-2010'::date) AND (date < '01-01-2011'::date)))
-(3 rows)
+ 4      |               | (((date >= '01-01-2008'::date) AND (date < '01-01-2009'::date)) OR ((date >= '01-01-2010'::date) AND (date < '01-01-2011'::date)))
+(6 rows)
 
 -- dropped cols in the ind expr 
 -- index expr varno are different
@@ -706,7 +747,8 @@ order by indKey;
  pg_get_expr  |                            partcons                            
 --------------+----------------------------------------------------------------
  ceil(amount) | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
-(1 row)
+ ceil(amount) | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
+(2 rows)
 
 -- dropped cols in the ind pred
 create index i52 on part_table3_1_prt_part2_2_prt_usa(amount) where amount < 1000;
@@ -718,7 +760,8 @@ order by indKey;
  indpred | pg_get_expr  | defaultlevels |                            partcons                            
 ---------+--------------+---------------+----------------------------------------------------------------
          | ceil(amount) |               | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
-(1 row)
+         | ceil(amount) |               | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
+(2 rows)
 
 --
 -- ************************************************************
@@ -871,7 +914,8 @@ where defaultLevels is NULL and partcons is NULL;
  pg_get_expr | indexprs | partcons 
 -------------+----------+----------
  (c1 < 100)  |          | 
-(1 row)
+ (c1 < 100)  |          | 
+(2 rows)
 
 -- returns 1 row with index on whole table
 select pg_get_expr(indPred, 'part_table5'::regclass) from gp_build_logical_index('part_table5'::regclass)
@@ -879,7 +923,8 @@ where partCons is NULL;
  pg_get_expr 
 -------------
  (c1 < 100)
-(1 row)
+ (c1 < 100)
+(2 rows)
 
 -- returns 1 row with index on default part
 select pg_get_expr(indExprs, 'part_table5'::regclass), defaultLevels from gp_build_logical_index('part_table5'::regclass)
@@ -887,7 +932,8 @@ where defaultLevels is NOT NULL;
  pg_get_expr | defaultlevels 
 -------------+---------------
  abs(c1)     | (i 0)
-(1 row)
+ abs(c1)     | (i 0)
+(2 rows)
 
 -- ************************************************************
 -- * Scenario 7
@@ -1006,32 +1052,38 @@ select 'part_table6', partCons, defaultLevels from gp_build_logical_index('part_
   ?column?   | partcons | defaultlevels 
 -------------+----------+---------------
  part_table6 | (a <= 3) | 
-(1 row)
+ part_table6 | (a <= 3) | 
+(2 rows)
 
 select 'part_table7', partCons, defaultLevels from gp_build_logical_index('part_table7'::regclass);
   ?column?   | partcons | defaultlevels 
 -------------+----------+---------------
  part_table7 | (a > 2)  | 
-(1 row)
+ part_table7 | (a > 2)  | 
+(2 rows)
 
 select 'part_table8', partCons, defaultLevels from gp_build_logical_index('part_table8'::regclass);
   ?column?   | partcons | defaultlevels 
 -------------+----------+---------------
  part_table8 |          | 
-(1 row)
+ part_table8 |          | 
+(2 rows)
 
 select 'part_table9', partCons, defaultLevels from gp_build_logical_index('part_table9'::regclass);
   ?column?   |               partcons               | defaultlevels 
 -------------+--------------------------------------+---------------
- part_table9 | ((a <= 1) OR ((a > 2) AND (a <= 3))) | 
  part_table9 | ((a > 1) AND (a <= 2))               | 
-(2 rows)
+ part_table9 | ((a > 1) AND (a <= 2))               | 
+ part_table9 | ((a <= 1) OR ((a > 2) AND (a <= 3))) | 
+ part_table9 | ((a <= 1) OR ((a > 2) AND (a <= 3))) | 
+(4 rows)
 
 select 'part_table10', partCons, defaultLevels from gp_build_logical_index('part_table10'::regclass);
    ?column?   |                     partcons                      | defaultlevels 
 --------------+---------------------------------------------------+---------------
  part_table10 | (((a > 1) AND (a < 2)) OR ((a > 2) AND (a <= 3))) | 
-(1 row)
+ part_table10 | (((a > 1) AND (a < 2)) OR ((a > 2) AND (a <= 3))) | 
+(2 rows)
 
 -- AO partitioned tables: Orca treats them as bitmap indexes
 create table part_table11(a int, b int, c int) with (appendonly=true) partition by list(b) (partition p1 values(1), partition p2 values(2));
@@ -1070,7 +1122,7 @@ select 'part_table12', partCons, defaultLevels, indType from gp_build_logical_in
    ?column?   |       partcons       | defaultlevels | indtype 
 --------------+----------------------+---------------+---------
  part_table12 | ((b = 1) OR (b = 4)) |               |       0
- part_table12 | ((b = 2) OR (b = 3)) |               |       1
+ part_table12 |                      |               |       1
 (2 rows)
 
 -- ************************************************************
@@ -1102,10 +1154,10 @@ create index part_table13_3_idx on part_table13_1_prt_p3 using bitmap(c);
 -- heap/bitmap
 create index part_table13_4_idx on part_table13_1_prt_p4 using bitmap(c); 
 select 'part_table13', partCons, defaultLevels, indType from gp_build_logical_index('part_table13'::regclass);
-   ?column?   |         partcons         | defaultlevels | indtype 
---------------+--------------------------+---------------+---------
- part_table13 | ((b >= 1) AND (b < 10))  |               |       0
- part_table13 | ((b >= 10) AND (b < 40)) |               |       1
+   ?column?   |        partcons         | defaultlevels | indtype 
+--------------+-------------------------+---------------+---------
+ part_table13 | ((b >= 1) AND (b < 10)) |               |       0
+ part_table13 |                         |               |       1
 (2 rows)
 
 --
