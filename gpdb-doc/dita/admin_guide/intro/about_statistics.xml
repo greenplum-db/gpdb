@@ -309,10 +309,9 @@
             </dlentry>
             <dlentry>
               <dt>correlation</dt>
-              <dd>Greenplum Database computes correlation statistics for heap tables. These
-               statistics are used by the Postgres Planner. Greenplum does not compute
-               correlation statistics for AO and AOCO tables; the value in this column for
-               these table types is undefined.</dd>
+              <dd>Greenplum Database computes correlation statistics for both heap and
+               AO/AOCO tables, but the Postgres Planner uses these statistics only for heap
+               tables.</dd>
             </dlentry>
             <dlentry>
               <dt>most_common_elems</dt>
