@@ -576,9 +576,9 @@ chunksize = 67108864</codeblock></p>
             capture the output and create an <codeph>s3</codeph> configuration file to connect to
             Amazon S3. </p><p>The utility is installed in the Greenplum Database
                <codeph>$GPHOME/bin</codeph> directory.</p><b>Syntax</b>
-         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname> | config_server=<varname>url</varname>]"
+         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
 
-gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname> | config_server=<varname>url</varname>]"
+gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
 gpcheckcloud <b>-t</b>
 
 gpcheckcloud <b>-h</b></codeblock>
@@ -631,9 +631,10 @@ gpcheckcloud <b>-h</b></codeblock>
                href="#amazon-emr/section_c2f_zvs_3x" format="dita"/>.</p><p>This example attempts to
             connect to an S3 bucket location with the <codeph>s3</codeph> protocol configuration file
                <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p>
-         <p>This example attempts to connect to an S3 bucket location using an 
-           <codeph>s3</codeph> protocol configuration file served by an <codeph>https</codeph> server:
-           <codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config_server=https://203.0.113.0:8553"</codeblock></p>
+         <p>This example attempts to connect to an S3 bucket location using the default
+           location for the <codeph>s3</codeph> protocol configuration file 
+           (<codeph>s3/s3.conf</codeph> in segment data directories):
+           <codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc"</codeblock></p>
          <p>Download
             all files from the S3 bucket location and send the output to <codeph>STDOUT</codeph>.
             <codeblock>gpcheckcloud -d "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p></section>
