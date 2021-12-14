@@ -441,6 +441,8 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	List           *oidList = NIL;
 	int				nest_level;
 
+	SIMPLE_FAULT_INJECTOR("cdb_copy_end_internal_start");
+
 	initStringInfo(&io_err_msg);
 
 	/*
@@ -690,7 +692,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 		elog(LOG, "COPY signals FTS to probe segments");
 
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
-		DisconnectAndDestroyAllGangs(true);
+		resetSessionForPrimaryGangLoss();
 
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

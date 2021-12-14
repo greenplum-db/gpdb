@@ -44,7 +44,7 @@ INSERT 20
 -- the gang used by the previous insert is no longer valid. It must be destroyed
 -- and the transaction must be aborted.
 1:insert into test_fts_session_reset select * from generate_series(21,40);
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 1:select count(*) from test_fts_session_reset;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 1:END;
