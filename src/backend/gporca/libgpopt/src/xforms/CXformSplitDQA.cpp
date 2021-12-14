@@ -878,9 +878,11 @@ CXformSplitDQA::ExtractDistinctCols(
 		if (popScAggFunc->IsDistinct())
 		{
 			// CScalarValuesList
-			for (ULONG ul = 0; ul < (*pexprAggFunc)[EaggfuncIndexArgs]->Arity(); ul++)
+			for (ULONG ul = 0; ul < (*pexprAggFunc)[EaggfuncIndexArgs]->Arity();
+				 ul++)
 			{
-				CExpression *pexprArg = (*(*pexprAggFunc)[EaggfuncIndexArgs])[ul];
+				CExpression *pexprArg =
+					(*(*pexprAggFunc)[EaggfuncIndexArgs])[ul];
 				GPOS_ASSERT(nullptr != pexprArg);
 				CColRef *pcrDistinctCol = phmexprcr->Find(pexprArg);
 				if (nullptr == pcrDistinctCol)
