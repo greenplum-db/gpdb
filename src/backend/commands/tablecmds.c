@@ -16397,7 +16397,6 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 		root_dist->numsegments = new_numsegments;
 
 		GpPolicyReplace(relid, root_dist);
-		rel->rd_cdbpolicy = root_dist;
 	}
 	else
 	{
@@ -16424,7 +16423,6 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 			/* we change policy type to randomly for regular leaf partitions distributed by hash */
 			GpPolicy *random_dist = createRandomPartitionedPolicy(new_numsegments);
 			GpPolicyReplace(relid, random_dist);
-			rel->rd_cdbpolicy = random_dist;
 		}
 	}
 }
