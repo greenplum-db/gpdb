@@ -24,6 +24,7 @@ all:
 	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C contrib/btree_gin all
+	$(MAKE) -C contrib/pg_trgm all
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
@@ -58,6 +59,7 @@ install:
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C contrib/btree_gin $@
+	$(MAKE) -C contrib/pg_trgm $@
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
 endif
@@ -148,7 +150,7 @@ $(call recurse,checkprep,  src/test src/pl src/interfaces/ecpg contrib src/bin g
 ICW_TARGETS  = src/test src/pl src/interfaces/gppc
 ICW_TARGETS += contrib/auto_explain contrib/citext contrib/btree_gin
 ICW_TARGETS += contrib/file_fdw contrib/formatter_fixedwidth
-ICW_TARGETS += contrib/extprotocol contrib/dblink
+ICW_TARGETS += contrib/extprotocol contrib/dblink contrib/pg_trgm
 ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)

@@ -1,3 +1,4 @@
+set optimizer=off; -- force use planner to reduce noise
 CREATE EXTENSION pg_trgm;
 
 -- Check whether any of our opclasses fail amvalidate
