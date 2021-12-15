@@ -102,23 +102,6 @@ extern char *output_files[];
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
-/* OID system catalog preservation added during PG 9.0 development */
-#define TABLE_SPACE_SUBDIRS_CAT_VER 201001111
-/* postmaster/postgres -b (binary_upgrade) flag added during PG 9.1 development */
-/* In GPDB, it was introduced during GPDB 5.0 development. */
-#define BINARY_UPGRADE_SERVER_FLAG_CAT_VER 301607301
-
-/*
- *	Visibility map changed with this 9.2 commit,
- *	8f9fe6edce358f7904e0db119416b4d1080a83aa; pick later catalog version.
- */
-#define VISIBILITY_MAP_CRASHSAFE_CAT_VER 201107031
-
-/*
- * change in JSONB format during 9.4 beta
- */
-#define JSONB_FORMAT_CHANGE_CAT_VER 201409291
-
 /*
  * The format of visibility map is changed with this 9.6 commit,
  */
@@ -567,8 +550,6 @@ bool		check_for_data_types_usage(ClusterInfo *cluster,
 bool		check_for_data_type_usage(ClusterInfo *cluster,
 									  const char *type_name,
 									  const char *output_path);
-void		new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster,
-													 bool check_mode);
 void		old_9_3_check_for_line_data_type_usage(ClusterInfo *cluster);
 void		old_9_6_check_for_unknown_data_type_usage(ClusterInfo *cluster);
 void		old_9_6_invalidate_hash_indexes(ClusterInfo *cluster,
