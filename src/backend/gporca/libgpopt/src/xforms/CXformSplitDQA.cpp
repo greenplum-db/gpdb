@@ -318,10 +318,9 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 			CExpressionArray *pdrgpexprArgs = GPOS_NEW(mp) CExpressionArray(mp);
 			pdrgpexprArgs->Append(CUtils::PexprScalarIdent(mp, pcrDistinctCol));
 
-			CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
-			CExpression *e = GPOS_NEW(mp) CExpression(mp, lv, pdrgpexprArgs);
-
-			pdrgpexprArgsLocal->Append(e);
+			// agg args
+			pdrgpexprArgsLocal->Append(GPOS_NEW(mp) CExpression(
+				mp, GPOS_NEW(mp) CScalarValuesList(mp), pdrgpexprArgs));
 
 			for (ULONG i = 1; i < pexprAggFunc->Arity(); i++)
 			{
@@ -357,13 +356,15 @@ CXformSplitDQA::PexprSplitIntoLocalDQAGlobalAgg(
 
 			CExpressionArray *pdrgpexprArgsGlobal =
 				GPOS_NEW(mp) CExpressionArray(mp);
-			CExpressionArray *pdrgpexprArgs2 =
+			CExpressionArray *pdrgpexprArgsGlobalArgs =
 				GPOS_NEW(mp) CExpressionArray(mp);
-			pdrgpexprArgs2->Append(CUtils::PexprScalarIdent(mp, pcrLocal));
+			pdrgpexprArgsGlobalArgs->Append(
+				CUtils::PexprScalarIdent(mp, pcrLocal));
 
-			CScalarValuesList *glv = GPOS_NEW(mp) CScalarValuesList(mp);
-			CExpression *ge = GPOS_NEW(mp) CExpression(mp, glv, pdrgpexprArgs2);
-			pdrgpexprArgsGlobal->Append(ge);
+			// agg args
+			pdrgpexprArgsGlobal->Append(
+				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 pdrgpexprArgsGlobalArgs));
 
 			for (ULONG i = 1; i < pexprAggFunc->Arity(); i++)
 			{
@@ -574,18 +575,22 @@ CXformSplitDQA::PexprPrElAgg(CMemoryPool *mp, CExpression *pexprAggFunc,
 	{
 		CExpressionArray *pdrgpargs = GPOS_NEW(mp) CExpressionArray(mp);
 		pdrgpargs->Append(CUtils::PexprScalarIdent(mp, pcrPreviousStage));
-		CScalarValuesList *lv = GPOS_NEW(mp) CScalarValuesList(mp);
-		CExpression *args = GPOS_NEW(mp) CExpression(mp, lv, pdrgpargs);
 
 		pdrgpexprArg = GPOS_NEW(mp) CExpressionArray(mp);
-		pdrgpexprArg->Append(args);
 
+		// agg args
+		pdrgpexprArg->Append(GPOS_NEW(mp) CExpression(
+			mp, GPOS_NEW(mp) CScalarValuesList(mp), pdrgpargs));
+
+		// agg direct args
 		pdrgpexprArg->Append(
 			GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
 									 GPOS_NEW(mp) CExpressionArray(mp)));
+		// agg order
 		pdrgpexprArg->Append(
 			GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
 									 GPOS_NEW(mp) CExpressionArray(mp)));
+		// agg distinct
 		pdrgpexprArg->Append(
 			GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
 									 GPOS_NEW(mp) CExpressionArray(mp)));
