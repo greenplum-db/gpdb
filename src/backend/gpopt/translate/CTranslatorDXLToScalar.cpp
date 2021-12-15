@@ -609,10 +609,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	aggref->aggorder = TranslateScalarListChildren(
 		(*aggref_node)[EdxlscalaraggrefIndexAggOrder], colid_var);
 
-	CHAR *paggkind = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
-		dxlop->GetAggKind()->GetBuffer());
-	aggref->aggkind = *paggkind;
-	gpdb::GPDBFree(paggkind);
+	aggref->aggkind = CTranslatorUtils::GetAggKind(dxlop->GetAggKind());
 
 	// 'indexes' stores the position of the TargetEntry which is referenced by
 	// a SortGroupClause.

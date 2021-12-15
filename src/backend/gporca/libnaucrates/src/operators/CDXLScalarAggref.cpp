@@ -34,7 +34,7 @@ using namespace gpdxl;
 CDXLScalarAggref::CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_func_mdid,
 								   IMDId *resolved_rettype_mdid,
 								   BOOL is_distinct, EdxlAggrefStage agg_stage,
-								   CWStringDynamic *aggkind,
+								   EdxlAggrefKind aggkind,
 								   ULongPtrArray *argtypes)
 	: CDXLScalar(mp),
 	  m_agg_func_mdid(agg_func_mdid),
@@ -62,7 +62,6 @@ CDXLScalarAggref::~CDXLScalarAggref()
 {
 	m_agg_func_mdid->Release();
 	CRefCount::SafeRelease(m_resolved_rettype_mdid);
-	GPOS_DELETE(m_aggkind);
 	CRefCount::SafeRelease(m_argtypes);
 }
 
@@ -117,6 +116,23 @@ CDXLScalarAggref::GetDXLStrAggStage() const
 			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefStageFinal);
 		default:
 			GPOS_ASSERT(!"Unrecognized aggregate stage");
+			return nullptr;
+	}
+}
+
+const CWStringConst *
+CDXLScalarAggref::GetDXLStrAggKind() const
+{
+	switch (m_aggkind)
+	{
+		case EdxlaggkindNormal:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKindNormal);
+		case EdxlaggkindOrderedSet:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKindOrderedSet);
+		case EdxlaggkindHypothetical:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKindHypothetical);
+		default:
+			GPOS_ASSERT(!"Unrecognized aggregate kind");
 			return nullptr;
 	}
 }
@@ -227,7 +243,7 @@ CDXLScalarAggref::SerializeToDXL(CXMLSerializer *xml_serializer,
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
 	}
 	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKind), m_aggkind);
+		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKind), GetDXLStrAggKind());
 
 	CWStringDynamic *argtypes = CDXLUtils::Serialize(m_mp, m_argtypes);
 	xml_serializer->AddAttribute(

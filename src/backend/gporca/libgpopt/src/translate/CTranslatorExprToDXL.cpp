@@ -5788,15 +5788,32 @@ CTranslatorExprToDXL::PdxlnScAggref(CExpression *pexprAggFunc)
 		edxlaggrefstage = EdxlaggstagePartial;
 	}
 
+	EdxlAggrefKind edxlaggrefkind = EdxlaggkindNormal;
+	switch (popScAggFunc->AggKind())
+	{
+		case EaggfunckindNormal:
+		{
+			edxlaggrefkind = EdxlaggkindNormal;
+			break;
+		}
+		case EaggfunckindOrderedSet:
+		{
+			edxlaggrefkind = EdxlaggkindOrderedSet;
+			break;
+		}
+		case EaggfunckindHypothetical:
+		{
+			edxlaggrefkind = EdxlaggkindHypothetical;
+			break;
+		}
+	}
+
 	ULongPtrArray *argtypes = popScAggFunc->GetArgTypes();
 	argtypes->AddRef();
 
 	CDXLScalarAggref *pdxlopAggRef = GPOS_NEW(m_mp) CDXLScalarAggref(
 		m_mp, pmdidAggFunc, resolved_rettype, popScAggFunc->IsDistinct(),
-		edxlaggrefstage,
-		GPOS_NEW(m_mp)
-			CWStringDynamic(m_mp, popScAggFunc->AggKind()->GetBuffer()),
-		argtypes);
+		edxlaggrefstage, edxlaggrefkind, argtypes);
 
 	CDXLNode *pdxlnAggref = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopAggRef);
 

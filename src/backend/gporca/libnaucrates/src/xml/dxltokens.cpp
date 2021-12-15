@@ -356,6 +356,9 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenAggrefStagePartial, GPOS_WSZ_LIT("Partial")},
 		{EdxltokenAggrefStageIntermediate, GPOS_WSZ_LIT("Intermediate")},
 		{EdxltokenAggrefStageFinal, GPOS_WSZ_LIT("Final")},
+		{EdxltokenAggrefKindNormal, GPOS_WSZ_LIT("n")},
+		{EdxltokenAggrefKindOrderedSet, GPOS_WSZ_LIT("o")},
+		{EdxltokenAggrefKindHypothetical, GPOS_WSZ_LIT("h")},
 
 		{EdxltokenArrayType, GPOS_WSZ_LIT("ArrayType")},
 		{EdxltokenArrayElementType, GPOS_WSZ_LIT("ElementType")},

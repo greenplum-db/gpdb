@@ -3132,6 +3132,26 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 	}
 	BOOL fSplit = (EdxlaggstageNormal != dxl_op->GetDXLAggStage());
 
+	EAggfuncKind agg_func_kind = EaggfunckindNormal;
+	switch (dxl_op->GetAggKind())
+	{
+		case EdxlaggkindNormal:
+		{
+			agg_func_kind = EaggfunckindNormal;
+			break;
+		}
+		case EdxlaggkindOrderedSet:
+		{
+			agg_func_kind = EaggfunckindOrderedSet;
+			break;
+		}
+		case EdxlaggkindHypothetical:
+		{
+			agg_func_kind = EaggfunckindHypothetical;
+			break;
+		}
+	}
+
 	IMDId *resolved_return_type_mdid = dxl_op->GetDXLResolvedRetTypeMDid();
 	if (nullptr != resolved_return_type_mdid)
 	{
@@ -3145,8 +3165,7 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
 		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
-		GPOS_NEW(m_mp) CWStringDynamic(m_mp, dxl_op->GetAggKind()->GetBuffer()),
-		dxl_op->GetArgTypes());
+		agg_func_kind, dxl_op->GetArgTypes());
 
 	CExpression *pexprAggFunc = nullptr;
 

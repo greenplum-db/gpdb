@@ -31,6 +31,13 @@ enum EAggfuncStage
 	EaggfuncstageSentinel
 };
 
+enum EAggfuncKind
+{
+	EaggfunckindNormal = 0,
+	EaggfunckindOrderedSet,
+	EaggfunckindHypothetical
+};
+
 enum EAggfuncChildIndices
 {
 	EaggfuncIndexArgs = 0,
@@ -69,7 +76,7 @@ private:
 	// distinct aggregate computation
 	BOOL m_is_distinct;
 
-	CWStringDynamic *m_aggkind;
+	EAggfuncKind m_aggkind;
 
 	ULongPtrArray *m_argtypes;
 
@@ -86,7 +93,7 @@ public:
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
 				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
-				   CWStringDynamic *aggkind, ULongPtrArray *argtypes);
+				   EAggfuncKind aggkind, ULongPtrArray *argtypes);
 
 	// dtor
 	~CScalarAggFunc() override
@@ -95,7 +102,6 @@ public:
 		CRefCount::SafeRelease(m_pmdidResolvedRetType);
 		CRefCount::SafeRelease(m_return_type_mdid);
 		GPOS_DELETE(m_pstrAggFunc);
-		GPOS_DELETE(m_aggkind);
 		CRefCount::SafeRelease(m_argtypes);
 	}
 
@@ -168,7 +174,7 @@ public:
 		m_is_distinct = val;
 	}
 
-	CWStringDynamic *
+	EAggfuncKind
 	AggKind() const
 	{
 		return m_aggkind;

@@ -39,6 +39,13 @@ enum EdxlAggrefStage
 	EdxlaggstageSentinel
 };
 
+enum EdxlAggrefKind
+{
+	EdxlaggkindNormal = 0,
+	EdxlaggkindOrderedSet,
+	EdxlaggkindHypothetical
+};
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CDXLScalarAggref
@@ -65,7 +72,7 @@ private:
 	// Denotes the MPP Stage
 	EdxlAggrefStage m_agg_stage;
 
-	CWStringDynamic *m_aggkind;
+	EdxlAggrefKind m_aggkind;
 
 	ULongPtrArray *m_argtypes;
 
@@ -75,7 +82,7 @@ public:
 	// ctor/dtor
 	CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_mdid, IMDId *resolved_rettype,
 					 BOOL is_distinct, EdxlAggrefStage agg_stage,
-					 CWStringDynamic *aggkind, ULongPtrArray *argtypes);
+					 EdxlAggrefKind aggkind, ULongPtrArray *argtypes);
 
 	~CDXLScalarAggref() override;
 
@@ -92,9 +99,11 @@ public:
 
 	EdxlAggrefStage GetDXLAggStage() const;
 
+	const CWStringConst *GetDXLStrAggKind() const;
+
 	BOOL IsDistinct() const;
 
-	CWStringDynamic *
+	EdxlAggrefKind
 	GetAggKind() const
 	{
 		return m_aggkind;

@@ -305,6 +305,9 @@ enum Edxltoken
 	EdxltokenAggrefStagePartial,
 	EdxltokenAggrefStageIntermediate,
 	EdxltokenAggrefStageFinal,
+	EdxltokenAggrefKindNormal,
+	EdxltokenAggrefKindOrderedSet,
+	EdxltokenAggrefKindHypothetical,
 
 	EdxltokenArrayType,
 	EdxltokenArrayElementType,

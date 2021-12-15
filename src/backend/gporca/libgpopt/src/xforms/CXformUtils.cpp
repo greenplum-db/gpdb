@@ -3822,8 +3822,7 @@ CXformUtils::PexprWinFuncAgg2ScalarAgg(CMemoryPool *mp,
 						   popScWinFunc->IsDistinct(), EaggfuncstageGlobal,
 						   false,	 // fSplit
 						   nullptr,	 // pmdidResolvedReturnType
-						   GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("n")),
-						   GPOS_NEW(mp) ULongPtrArray(mp)),
+						   EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp)),
 		pdrgpexprFullWinFuncArgs);
 }
 
