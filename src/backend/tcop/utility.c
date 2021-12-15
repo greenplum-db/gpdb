@@ -1168,7 +1168,7 @@ ProcessUtilitySlow(Node *parsetree,
 							CommandCounterIncrement();
 
 							/* Add column encoding entries based on the WITH clauses */
-							if (cstmt->isCtas && cstmt->options)
+							if (cstmt->isCtas && (cstmt->options || relStorage == RELSTORAGE_AOCOLS))
 							{
 								Relation rel = heap_open(relOid, AccessExclusiveLock);
 								AddDefaultRelationAttributeOptions(rel, cstmt->options);
