@@ -160,3 +160,11 @@ from
 
 -- then refresh should error out
 refresh materialized view sro_mv_issue_11999;
+
+
+-- CTAS into AOCS table with not crash
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/12936
+
+set gp_default_storage_options to 'appendonly=true,blocksize=32768,compresstype=zstd,compresslevel=1,checksum=true,orientation=column';
+CREATE TABLE test_issue_12936 AS (SELECT 'test' as test) WITH NO DATA;
+SELECT * FROM test_issue_12936;
