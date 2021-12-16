@@ -16,9 +16,7 @@ SELECT * FROM test_enum WHERE i='g'::rainbow ORDER BY i;
 SELECT * FROM test_enum WHERE i>='g'::rainbow ORDER BY i;
 SELECT * FROM test_enum WHERE i>'g'::rainbow ORDER BY i;
 
-set optimizer=off; -- force use planner to reduce noise
 explain (costs off) SELECT * FROM test_enum WHERE i>='g'::rainbow ORDER BY i;
-
 
 -- make sure we handle the non-evenly-numbered oid case for enums
 create type e as enum ('0', '2', '3');

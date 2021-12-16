@@ -64,7 +64,6 @@ SELECT * FROM test_bool WHERE i>false ORDER BY i;
  t
 (1 row)
 
-set optimizer=off; -- force use planner to reduce noise
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i<true ORDER BY i;
                    QUERY PLAN                    
 -------------------------------------------------
