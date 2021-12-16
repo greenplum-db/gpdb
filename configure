@@ -13996,6 +13996,18 @@ fi
 
 done
 
+ac_fn_c_check_decl "$LINENO" "gss_store_cred_into" "ac_cv_have_decl_gss_store_cred_into" "#include <gssapi/gssapi_ext.h>
+"
+if test "x$ac_cv_have_decl_gss_store_cred_into" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_GSSAPI_PROXY $ac_have_decl
+_ACEOF
+
 fi
 
 if test "$with_openssl" = yes ; then
@@ -16291,7 +16303,6 @@ $as_echo "#define HAVE_IPV6 1" >>confdefs.h
 
          HAVE_IPV6=yes
 fi
-
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PS_STRINGS" >&5

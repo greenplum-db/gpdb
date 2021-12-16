@@ -77,7 +77,7 @@ pg_GSS_error_be(int severity, const char *errmsg,
 			 errdetail_internal("%s: %s", msg_major, msg_minor)));
 }
 
-
+#if HAVE_GSSAPI_PROXY
 void
 pg_store_proxy_credential(gss_cred_id_t cred)
 {
@@ -114,3 +114,9 @@ pg_store_proxy_credential(gss_cred_id_t cred)
 	 * gss_acquire_cred calls. */
 	putenv("KRB5CCNAME=MEMORY:");
 }
+#else
+void
+pg_store_proxy_credential(gss_cred_id_t cred){
+
+}
+#endif
