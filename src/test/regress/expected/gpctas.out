@@ -271,3 +271,10 @@ SELECT * FROM test_issue_12936;
  test 
 ------
 (0 rows)
+
+SELECT reloptions, attnum, attoptions FROM pg_class c JOIN pg_attribute_encoding ON (oid = attrelid) WHERE relname = 'test_issue_12936';
+                       reloptions                       | attnum |                     attoptions                      
+--------------------------------------------------------+--------+-----------------------------------------------------
+ {appendonly=true,compresstype=zstd,orientation=column} |      1 | {compresstype=zstd,blocksize=32768,compresslevel=1}
+(1 row)
+

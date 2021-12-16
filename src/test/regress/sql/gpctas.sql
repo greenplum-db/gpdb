@@ -168,3 +168,4 @@ refresh materialized view sro_mv_issue_11999;
 set gp_default_storage_options to 'appendonly=true,blocksize=32768,compresstype=zstd,compresslevel=1,checksum=true,orientation=column';
 CREATE TABLE test_issue_12936 AS (SELECT 'test' as test) WITH NO DATA;
 SELECT * FROM test_issue_12936;
+SELECT reloptions, attnum, attoptions FROM pg_class c JOIN pg_attribute_encoding ON (oid = attrelid) WHERE relname = 'test_issue_12936';

@@ -308,8 +308,8 @@ create_ctas_nodata(List *tlist, IntoClause *into, QueryDesc *queryDesc)
 
 	/* Add column encoding entries based on the WITH clause */
 	Relation rel = heap_open(intoRelationOid, AccessExclusiveLock);
-	if (into->options || RelationIsAoCols(rel))
-		AddDefaultRelationAttributeOptions(rel, into->options);
+	/* Noop for non-AOCS */
+	AddDefaultRelationAttributeOptions(rel, into->options);
 	heap_close(rel, NoLock);
 	return intoRelationOid;
 }
