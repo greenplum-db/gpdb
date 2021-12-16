@@ -4730,7 +4730,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_ExpandPartitionTablePrepare:
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
 
-			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
 			if (!recursing)
 			{
 				Oid 		relid = RelationGetRelid(rel);
