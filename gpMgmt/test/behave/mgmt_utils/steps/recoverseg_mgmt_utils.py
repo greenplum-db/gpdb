@@ -123,6 +123,27 @@ def impl(context, output, segment_type):
         expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
         check_stdout_msg(context, expected)
 
+@then('gprecoverseg should print "{error_type}" errors to stdout for content {content_ids}')
+@when('gprecoverseg should print "{error_type}" errors to stdout for content {content_ids}')
+def impl(context, error_type, content_ids):
+    if error_type not in ("basebackup", "rewind", "start"):
+        raise Exception("Expected error_type to be 'basebackup', 'rewind' or 'start, but found '%s'." % error_type)
+    content_list = [int(c) for c in content_ids.split(',')]
+
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    segments = filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
+                                  seg.content in content_list, all_segments)
+    for segment in segments:
+        if error_type == 'start':
+            expected = r'hostname: {}; port: {}; datadir: {}'.format(segment.getSegmentHostName(), segment.getSegmentPort(),
+                                                                     segment.getSegmentDataDirectory())
+        else:
+            expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/pg_{}.\d{{8}}_\d{{6}}.dbid{}.out'.format(
+                segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"), error_type,
+                segment.getSegmentDbId())
+        check_stdout_msg(context, expected)
+
+
 @then('gprecoverseg should print "{output}" to stdout for mirrors with content {content_ids}')
 def impl(context, output, content_ids):
     content_list = [int(c) for c in content_ids.split(',')]

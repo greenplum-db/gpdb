@@ -16,6 +16,7 @@ from gppylib.commands.base import CommandResult, Command
 
 class ValidationForFullRecoveryTestCase(GpTestCase):
     def setUp(self):
+        self.maxDiff = None
         self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
         p = Segment.initFromString("1|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         m = Segment.initFromString("2|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
@@ -24,7 +25,7 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
                                               m.getSegmentDbId(),
                                               p.getSegmentHostName(),
                                               p.getSegmentPort(),
-                                              True, '/test_progress_file')
+                                              True, '/tmp/test_progress_file')
 
         self.validation_recovery_cmd = gpsegsetuprecovery.ValidationForFullRecovery(
             name='test validation for full recovery', recovery_info=self.seg_recovery_info,
@@ -119,9 +120,10 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
             self.validation_recovery_cmd.forceoverwrite = False
 
             self.validation_recovery_cmd.run()
-            expected_error = "for segment with port {}: Segment directory '{}' exists but is not empty!"\
-                .format(self.seg_recovery_info.target_port, os.path.dirname(d))
 
+            error_str = "for segment with port 50000: Segment directory '{}' exists but is not empty!".format(os.path.dirname(d))
+            expected_error = '{{"error_type": "validation", "error_msg": "{}", "dbid": 2, "datadir": "{}", "port": 50000, ' \
+                             '"progress_file": "/tmp/test_progress_file"}}'.format(error_str, os.path.dirname(d))
             self._assert_failed(expected_error)
 
     @patch('gpsegsetuprecovery.os.makedirs' , side_effect=Exception('mkdirs failed'))
@@ -136,7 +138,9 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
         finally:
             self._remove_dir_and_upper_dir_if_exists(tmp_dir)
 
-        self._assert_failed("mkdirs failed")
+        self._assert_failed('{"error_type": "validation", "error_msg": "mkdirs failed", "dbid": 2, '
+                            '"datadir": "/tmp/nonexistent_dir2/test_datadir", "port": 50000, '
+                            '"progress_file": "/tmp/test_progress_file"}')
 
 
 class SetupForIncrementalRecoveryTestCase(GpTestCase):
@@ -154,7 +158,7 @@ class SetupForIncrementalRecoveryTestCase(GpTestCase):
                                               m.getSegmentDbId(),
                                               p.getSegmentHostName(),
                                               p.getSegmentPort(),
-                                              True, '/test_progress_file')
+                                              True, '/tmp/test_progress_file')
 
         self.setup_for_incremental_recovery_cmd = gpsegsetuprecovery.SetupForIncrementalRecovery(
             name='setup for incremental recovery', recovery_info=self.seg_recovery_info, logger=self.mock_logger)
@@ -244,12 +248,11 @@ class SegSetupRecoveryTestCase(GpTestCase):
         buf = io.StringIO()
         with redirect_stderr(buf):
             with self.assertRaises(SystemExit) as ex:
-                mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([self.full_r1, self.incr_r2])
+                mix_confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1, self.incr_r2])
                 sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '--era', '1234_2021',
                             '-c {}'.format(mix_confinfo)]
-                seg_setup_recovery = SegSetupRecovery()
-                seg_setup_recovery.main()
-        self.assertEqual('', buf.getvalue())
+                SegSetupRecovery().main()
+        self.assertEqual('', buf.getvalue().strip())
         self.assertEqual(0, ex.exception.code)
         mock_validate_datadir.assert_called_once()
         mock_dburl.assert_called_once()
@@ -268,12 +271,15 @@ class SegSetupRecoveryTestCase(GpTestCase):
         buf = io.StringIO()
         with redirect_stderr(buf):
             with self.assertRaises(SystemExit) as ex:
-                mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([self.full_r1, self.incr_r2])
+                mix_confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1, self.incr_r2])
                 sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '--era', '1234_2021',
                             '-c {}'.format(mix_confinfo)]
-                seg_setup_recovery = SegSetupRecovery()
-                seg_setup_recovery.main()
-        self.assertEqual('connect failed\n', buf.getvalue())
+                SegSetupRecovery().main()
+
+        self.assertEqual('[{"error_type": "validation", "error_msg": "connect failed", "dbid": 4, "datadir": "target_data_dir4", '
+                         '"port": 5004, "progress_file": "/tmp/progress_file4"}]',
+                         buf.getvalue().strip())
+
         self.assertEqual(1, ex.exception.code)
         mock_validate_datadir.assert_called_once()
         mock_dburl.assert_called_once()
@@ -285,11 +291,9 @@ class SegSetupRecoveryTestCase(GpTestCase):
     @patch('recovery_base.RecoveryBase.main')
     @patch('gpsegsetuprecovery.SegSetupRecovery.get_setup_cmds')
     def test_get_recovery_cmds_is_called(self, mock_get_setup_cmds, mock_recovery_base_main, mock_logger):
-        mix_confinfo = gppylib.recoveryinfo.serialize_recovery_info_list([self.full_r1, self.incr_r2])
-        sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '-f',
-                    '-c {}'.format(mix_confinfo)]
-        seg_setup_recovery = SegSetupRecovery()
-        seg_setup_recovery.main()
+        mix_confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1, self.incr_r2])
+        sys.argv = ['gpsegsetuprecovery', '-l', '/tmp/logdir', '-f', '-c {}'.format(mix_confinfo)]
+        SegSetupRecovery().main()
         mock_get_setup_cmds.assert_called_once_with([self.full_r1, self.incr_r2], True, mock_logger.return_value)
         mock_recovery_base_main.assert_called_once_with(mock_get_setup_cmds.return_value)
 

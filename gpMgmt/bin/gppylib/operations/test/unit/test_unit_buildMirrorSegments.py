@@ -2,18 +2,29 @@
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
+from collections import OrderedDict
 import io
 import logging
-from mock import ANY, call, patch, Mock
 
-from gppylib import gplog
-from gppylib.commands import base
+from mock import ANY, call, patch, Mock
+from gppylib import gplog, recoveryinfo
+from gppylib.commands import base, gp
+from gppylib.commands.base import CommandResult
 from gppylib.gparray import Segment, GpArray
+from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.buildMirrorSegments import GpMirrorToBuild, GpMirrorListToBuild, GpStopSegmentDirectoryDirective
 from gppylib.operations.startSegments import StartSegmentsResult
 from gppylib.system import configurationInterface
 from test.unit.gp_unittest import GpTestCase
 
+from gppylib.recoveryinfo import RecoveryInfo, RecoveryResult
+
+class Contains(str): #TODO should we move this somewhere
+    """
+    This class is used as a way to assert for partial match in unittests
+    """
+    def __eq__(self, other):
+        return self in other
 
 class BuildMirrorsTestCase(GpTestCase):
     """
@@ -34,73 +45,184 @@ class BuildMirrorsTestCase(GpTestCase):
 
         gplog.get_unittest_logger()
         self.apply_patches([
-            patch('gppylib.operations.buildMirrorSegments.GpArray.getSegmentsByHostName')
+            patch('gppylib.operations.buildMirrorSegments.GpArray.getSegmentsByHostName'),
+            patch('gppylib.operations.buildMirrorSegments.gplog.get_logger_dir', return_value='/tmp/logdir'),
+            patch('gppylib.operations.buildMirrorSegments.read_era', return_value='dummy_era'),
         ])
         self.mock_get_segments_by_hostname = self.get_mock_from_apply_patch('getSegmentsByHostName')
+        self.mock_logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        self.default_build_mirrors_obj = GpMirrorListToBuild(
+            toBuild=Mock(),
+            pool=Mock(),
+            quiet=True,
+            parallelDegree=0,
+            logger=self.mock_logger
+        )
+        self.progress_file_dbid2='/tmp/progress_file2'
+        self.progress_file_dbid3='/tmp/progress_file3'
+        self.progress_file_dbid4='/tmp/progress_file4'
 
         self.action = 'recover'
         self.gpEnv = Mock()
         self.gpArray = GpArray([self.coordinator, self.primary, self.mirror])
-        self.mock_logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        self.recovery_info1 = RecoveryInfo('/datadir2', 7001, 2, 'source_host_for_dbid2', 7002, True, self.progress_file_dbid2)
+        self.recovery_info2 = RecoveryInfo('/datadir3', 7003, 3, 'source_host_for_dbid3', 7004, True, self.progress_file_dbid3)
+        self.recovery_info3 = RecoveryInfo('/datadir4', 7005, 4, 'source_host_for_dbid4', 7006, True, self.progress_file_dbid4)
 
     def tearDown(self):
         super(BuildMirrorsTestCase, self).tearDown()
 
-    def _setup_mocks(self, buildMirrorSegs_obj):
-        buildMirrorSegs_obj._GpMirrorListToBuild__startAll = Mock(return_value=True)
+    def _setup_mocks(self, build_mirrors_obj):
         markdown_mock = Mock()
-        buildMirrorSegs_obj._wait_fts_to_mark_down_segments = markdown_mock
-        buildMirrorSegs_obj._run_recovery = Mock()
-        buildMirrorSegs_obj._clean_up_failed_segments = Mock()
-        buildMirrorSegs_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
-        buildMirrorSegs_obj._get_running_postgres_segments = Mock()
+        build_mirrors_obj._wait_fts_to_mark_down_segments = markdown_mock
+        # TODO maybe remove this patch ?
+        build_mirrors_obj._run_recovery = Mock()
+        build_mirrors_obj._run_setup_recovery = Mock(return_value=RecoveryResult('action', [], None))
+        build_mirrors_obj._clean_up_failed_segments = Mock()
+        build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
+        build_mirrors_obj._get_running_postgres_segments = Mock()
         configurationInterface.getConfigurationProvider = Mock()
 
-    def _common_asserts_with_stop_and_logger(self, buildMirrorSegs_obj, expected_logger_msg, expected_segs_to_stop,
+    def _common_asserts_with_stop_and_logger(self, build_mirrors_obj, expected_logger_msg, expected_segs_to_stop,
                                              expected_segs_to_markdown, expected_segs_to_update, cleanup_count,
                                              info_call_count=3):
         self.mock_logger.info.assert_any_call(expected_logger_msg)
         #TODO assert all logger info msgs
         self.assertEqual(info_call_count, self.mock_logger.info.call_count)
 
-        self.assertEqual([call(expected_segs_to_stop)],
-                         buildMirrorSegs_obj._get_running_postgres_segments.call_args_list)
-        self._common_asserts(buildMirrorSegs_obj,  expected_segs_to_markdown,
-                             expected_segs_to_update, cleanup_count)
+        self.assertEqual([call(expected_segs_to_stop)], build_mirrors_obj._get_running_postgres_segments.call_args_list)
+        self._common_asserts(build_mirrors_obj,  expected_segs_to_markdown, expected_segs_to_update, cleanup_count)
 
-    def _common_asserts(self, buildMirrorSegs_obj,  expected_segs_to_markdown,
-                        expected_segs_to_update, cleanup_count):
+    def _common_asserts(self, build_mirrors_obj,  expected_segs_to_markdown, expected_segs_to_update, cleanup_count):
         self.assertEqual([call(self.gpEnv, expected_segs_to_markdown)],
-                         buildMirrorSegs_obj._wait_fts_to_mark_down_segments.call_args_list)
-        self.assertEqual(cleanup_count, buildMirrorSegs_obj._clean_up_failed_segments.call_count)
+                         build_mirrors_obj._wait_fts_to_mark_down_segments.call_args_list)
+        self.assertEqual(cleanup_count, build_mirrors_obj._clean_up_failed_segments.call_count)
 
-        self.assertEqual(1, buildMirrorSegs_obj._run_recovery.call_count)
-
+        self.assertEqual(1, build_mirrors_obj._run_recovery.call_count)
         self.assertEqual([call(self.gpArray, ANY, dbIdToForceMirrorRemoveAdd=expected_segs_to_update,
                                useUtilityMode=False, allowPrimary=False)],
                          configurationInterface.getConfigurationProvider.return_value.updateSystemConfig.call_args_list)
-        self.assertEqual(0, buildMirrorSegs_obj._GpMirrorListToBuild__startAll.call_count)
 
-    def _run_no_failed_tests(self, tests):
+    def _set_run_recovery(self, host_errors=[], is_setup=False):
+
+        host1_recovery_output = gp.GpSegRecovery('test recover 1', 'dummy_info1', '/tmp/log1/', False, 1, 'host1', 'dummy_era1', True)
+        host2_recovery_output = gp.GpSegRecovery('test recover 2', 'dummy_info2', '/tmp/log2/', True, 2, 'host2', 'dummy_era2', False)
+
+        host1_result = CommandResult(0, ''.encode(), ''.encode(), True, False)
+        host2_result = CommandResult(0, ''.encode(), ''.encode(), True, False)
+        if host_errors:
+            host1_result = CommandResult(1, 'failed 1'.encode(), host_errors[0].encode(), True, False)
+            host2_result = CommandResult(1, 'failed 1'.encode(), host_errors[1].encode(), True, False)
+        host1_recovery_output.get_results = Mock(return_value = host1_result)
+        host2_recovery_output.get_results = Mock(return_value = host2_result)
+        self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
+
+        completed_items = [host1_recovery_output, host2_recovery_output]
+        if is_setup:
+            self.default_build_mirrors_obj._do_setup_for_recovery = Mock()
+            self.default_build_mirrors_obj._do_setup_for_recovery.return_value = completed_items
+        else:
+            self.default_build_mirrors_obj._do_setup_for_recovery = Mock(return_value=[])
+        self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.return_value = completed_items
+
+    def _run_buildMirrors(self, mirrors_to_build):
+        build_mirrors_obj = GpMirrorListToBuild(
+            toBuild=mirrors_to_build,
+            pool=Mock(),
+            quiet=True,
+            parallelDegree=0,
+            logger=self.mock_logger
+        )
+        self._setup_mocks(build_mirrors_obj)
+        self.assertTrue(build_mirrors_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
+        return build_mirrors_obj
+
+    def _create_primary(self, dbid='1', contentid='0', state='n', status='u', host='sdw1', unreachable=False):
+        seg = Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|21000|/primary/gpseg0'
+                                     .format(dbid, contentid, state, status, host, host))
+        seg.unreachable = unreachable
+        return seg
+
+    def _create_mirror(self, dbid='2', contentid='0', state='n', status='u', host='sdw2'):
+        return Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|22000|/mirror/gpseg0'
+                                      .format(dbid, contentid, state, status, host, host))
+
+    def test_buildMirrors_noMirrors(self):
+        build_mirrors_obj = GpMirrorListToBuild(
+            toBuild=[],
+            pool=None,
+            quiet=True,
+            parallelDegree=0,
+            logger=self.mock_logger
+        )
+        self.assertTrue(build_mirrors_obj.buildMirrors(None, None, None))
+        self.assertTrue(build_mirrors_obj.buildMirrors(self.action, None, None))
+
+        self.assertEqual([call('No segments to None'), call('No segments to recover')],
+                         self.mock_logger.info.call_args_list)
+
+    def test_buildMirrors_no_failed_pass(self):
+        tests = [
+            {
+                "name": "no_failed_full",
+                "live": self._create_primary(),
+                "failover": self._create_mirror(),
+                "forceFull": False,
+            },
+            {
+                "name": "no_failed_full2",
+                "live": self._create_primary(dbid='3'),
+                "failover": self._create_mirror(dbid='4'),
+                "forceFull": True,
+            }
+        ]
+
         mirrors_to_build = []
-
         for test in tests:
             with self.subTest(msg=test["name"]):
                 mirrors_to_build.append(GpMirrorToBuild(None, test["live"], test["failover"],
                                                         test["forceFull"]))
 
-        buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
+        build_mirrors_obj = self._run_buildMirrors(mirrors_to_build)
 
         self.assertEqual(2, self.mock_logger.info.call_count)
-        self.assertEqual(0, buildMirrorSegs_obj._get_running_postgres_segments.call_count)
-        self._common_asserts(buildMirrorSegs_obj, [], {2: True, 4: True}, 1)
+        self.assertEqual(0, build_mirrors_obj._get_running_postgres_segments.call_count)
+        self._common_asserts(build_mirrors_obj, [], {2: True, 4: True}, cleanup_count=1)
 
         for test in tests:
             self.assertEqual('n', test['live'].getSegmentMode())
             self.assertEqual('d', test['failover'].getSegmentStatus())
             self.assertEqual('n', test['failover'].getSegmentMode())
 
-    def _run_no_failover_tests(self, tests):
+    def test_buildMirrors_no_failover_pass(self):
+        tests = [
+            {
+                "name": "no_failover",
+                "failed": self._create_mirror(status='d'),
+                "live": self._create_primary(),
+                "forceFull": False,
+            },
+            {
+                "name": "no_failover_full",
+                "failed": self._create_mirror(status='d', dbid='4'),
+                "live": self._create_primary(),
+                "forceFull": True,
+            },
+            {
+                "name": "no_failover_failed_seg_exists_in_gparray",
+                "failed": self.mirror,
+                "live": self._create_primary(),
+                "forceFull": True,
+                "forceoverwrite": True
+            },
+            {
+                "name": "no_failover_failed_segment_is_up",
+                "failed": self._create_mirror(dbid='5'),
+                "live": self._create_primary(dbid='6'),
+                "is_failed_segment_up": True,
+                "forceFull": False,
+            }
+        ]
         mirrors_to_build = []
         expected_segs_to_stop = []
         expected_segs_to_markdown = []
@@ -113,9 +235,9 @@ class BuildMirrorsTestCase(GpTestCase):
                 if 'is_failed_segment_up' in test and test["is_failed_segment_up"]:
                     expected_segs_to_markdown.append(test['failed'])
 
-        buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
+        build_mirrors_obj = self._run_buildMirrors(mirrors_to_build)
 
-        self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 4 failed segment(s) are stopped",
+        self._common_asserts_with_stop_and_logger(build_mirrors_obj, "Ensuring 4 failed segment(s) are stopped",
                                                   expected_segs_to_stop,
                                                   expected_segs_to_markdown, {4: True, 30: True},
                                                   1)
@@ -124,7 +246,39 @@ class BuildMirrorsTestCase(GpTestCase):
             self.assertEqual('d', test['failed'].getSegmentStatus())
             self.assertEqual('n', test['failed'].getSegmentMode())
 
-    def _run_both_failed_failover_tests(self, tests):
+    def test_buildMirrors_both_failed_failover_pass(self):
+        tests = [
+            {
+                "name": "both_failed_failover_full",
+                "failed": self._create_primary(status='d'),
+                "live": self._create_mirror(),
+                "failover": self._create_primary(status='d', host='sdw3'),
+                "forceFull": True
+            },
+            {
+                "name": "both_failed_failover_failed_segment_is_up",
+                "failed": self._create_primary(dbid='5'),
+                "live": self._create_mirror(dbid='6'),
+                "failover": self._create_primary(dbid='5', host='sdw3'),
+                "is_failed_segment_up": True,
+                "forceFull": True
+            },
+            {
+                "name": "both_failed_failover_failover_is_down_live_is_marked_as_sync",
+                "failed": self._create_primary(dbid='9', status='d'),
+                "live": self._create_mirror(dbid='10', state='s'),
+                "failover": self._create_primary(dbid='9', status='d'),
+                "forceFull": False,
+            },
+            {
+                "name": "both_failed_failover_failed_is_unreachable",
+                "failed": self._create_primary(dbid='9', status='d', unreachable=True),
+                "live": self._create_mirror(dbid='10', state='s'),
+                "failover": self._create_primary(dbid='9', status='d'),
+                "forceFull": False,
+            },
+
+        ]
         mirrors_to_build = []
         expected_segs_to_stop = []
         expected_segs_to_markdown = []
@@ -139,10 +293,10 @@ class BuildMirrorsTestCase(GpTestCase):
                 if 'is_failed_segment_up' in test and test["is_failed_segment_up"]:
                     expected_segs_to_markdown.append(test['failed'])
 
-        buildMirrorSegs_obj = self._run_buildMirrors(mirrors_to_build)
+        build_mirrors_obj = self._run_buildMirrors(mirrors_to_build)
 
         # TODO improve the logic that passes info_call_count
-        self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 3 failed segment(s) are stopped",
+        self._common_asserts_with_stop_and_logger(build_mirrors_obj, "Ensuring 3 failed segment(s) are stopped",
                                                   expected_segs_to_stop,
                                                   expected_segs_to_markdown, {1: True, 5: True, 9: True}, 1,
                                                   info_call_count=4)
@@ -152,117 +306,12 @@ class BuildMirrorsTestCase(GpTestCase):
             self.assertEqual('d', test['failover'].getSegmentStatus())
             self.assertEqual('n', test['failover'].getSegmentMode())
 
-    def _run_buildMirrors(self, mirrors_to_build):
-        buildMirrorSegs_obj = GpMirrorListToBuild(
-            toBuild=mirrors_to_build,
-            pool=None,
-            quiet=True,
-            parallelDegree=0,
-            logger=self.mock_logger
-        )
-        self._setup_mocks(buildMirrorSegs_obj)
-        self.assertTrue(buildMirrorSegs_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
-        return buildMirrorSegs_obj
-
-    def create_primary(self, dbid='1', contentid='0', state='n', status='u', host='sdw1', unreachable=False):
-        seg = Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|21000|/primary/gpseg0'
-                                     .format(dbid, contentid, state, status, host, host))
-        seg.unreachable = unreachable
-        return seg
-
-    def create_mirror(self, dbid='2', contentid='0', state='n', status='u', host='sdw2'):
-        return Segment.initFromString('{}|{}|p|p|{}|{}|{}|{}|22000|/mirror/gpseg0'
-                                      .format(dbid, contentid, state, status, host, host))
-
-    def test_buildMirrors_failed_null_pass(self):
-        failed_null_tests = [
-            {
-                "name": "no_failed_full",
-                "live": self.create_primary(),
-                "failover": self.create_mirror(),
-                "forceFull": False,
-            },
-            {
-                "name": "no_failed_full2",
-                "live": self.create_primary(dbid='3'),
-                "failover": self.create_mirror(dbid='4'),
-                "forceFull": True,
-            }
-        ]
-        self._run_no_failed_tests(failed_null_tests)
-
-    def test_buildMirrors_no_failover_pass(self):
-        tests = [
-            {
-                "name": "no_failover",
-                "failed": self.create_mirror(status='d'),
-                "live": self.create_primary(),
-                "forceFull": False,
-            },
-            {
-                "name": "no_failover_full",
-                "failed": self.create_mirror(status='d', dbid='4'),
-                "live": self.create_primary(),
-                "forceFull": True,
-            },
-            {
-                "name": "no_failover_failed_seg_exists_in_gparray",
-                "failed": self.mirror,
-                "live": self.create_primary(),
-                "forceFull": True,
-                "forceoverwrite": True
-            },
-            {
-                "name": "no_failover_failed_segment_is_up",
-                "failed": self.create_mirror(dbid='5'),
-                "live": self.create_primary(dbid='6'),
-                "is_failed_segment_up": True,
-                "forceFull": False,
-            }
-        ]
-        self._run_no_failover_tests(tests)
-
-    def test_buildMirrors_both_failed_failover_pass(self):
-        tests = [
-            {
-                "name": "both_failed_failover_full",
-                "failed": self.create_primary(status='d'),
-                "live": self.create_mirror(),
-                "failover": self.create_primary(status='d', host='sdw3'),
-                "forceFull": True
-            },
-            {
-                "name": "both_failed_failover_failed_segment_is_up",
-                "failed": self.create_primary(dbid='5'),
-                "live": self.create_mirror(dbid='6'),
-                "failover": self.create_primary(dbid='5', host='sdw3'),
-                "is_failed_segment_up": True,
-                "forceFull": True
-            },
-            {
-                "name": "both_failed_failover_failover_is_down_live_is_marked_as_sync",
-                "failed": self.create_primary(dbid='9', status='d'),
-                "live": self.create_mirror(dbid='10', state='s'),
-                "failover": self.create_primary(dbid='9', status='d'),
-                "forceFull": False,
-            },
-            {
-                "name": "both_failed_failover_failed_is_unreachable",
-                "failed": self.create_primary(dbid='9', status='d', unreachable=True),
-                "live": self.create_mirror(dbid='10', state='s'),
-                "failover": self.create_primary(dbid='9', status='d'),
-                "forceFull": False,
-            },
-
-        ]
-        self._run_both_failed_failover_tests(tests)
-
     def test_buildMirrors_forceoverwrite_true(self):
-        failed = self.create_primary(status='d')
-        live = self.create_mirror()
-        failover = self.create_primary(host='sdw3')
+        failed = self._create_primary(status='d')
+        live = self._create_mirror()
+        failover = self._create_primary(host='sdw3')
 
-        buildMirrorSegs_obj = GpMirrorListToBuild(
+        build_mirrors_obj = GpMirrorListToBuild(
             toBuild=[GpMirrorToBuild(failed, live, failover, False)],
             pool=None,
             quiet=True,
@@ -270,10 +319,10 @@ class BuildMirrorsTestCase(GpTestCase):
             logger=self.mock_logger,
             forceoverwrite=True
         )
-        self._setup_mocks(buildMirrorSegs_obj)
-        self.assertTrue(buildMirrorSegs_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
+        self._setup_mocks(build_mirrors_obj)
+        self.assertTrue(build_mirrors_obj.buildMirrors(self.action, self.gpEnv, self.gpArray))
 
-        self._common_asserts_with_stop_and_logger(buildMirrorSegs_obj, "Ensuring 1 failed segment(s) are stopped",
+        self._common_asserts_with_stop_and_logger(build_mirrors_obj, "Ensuring 1 failed segment(s) are stopped",
                                                   [failed], [], {1: True}, 0)
         self.assertEqual('n', live.getSegmentMode())
         self.assertEqual('d', failover.getSegmentStatus())
@@ -283,32 +332,32 @@ class BuildMirrorsTestCase(GpTestCase):
         tests = [
             {
                 "name": "failed_seg_exists_in_gparray1",
-                "failed": self.create_primary(status='d'),
-                "failover": self.create_primary(status='d'),
-                "live": self.create_mirror(),
+                "failed": self._create_primary(status='d'),
+                "failover": self._create_primary(status='d'),
+                "live": self._create_mirror(),
                 "forceFull": True,
                 "forceoverwrite": False
             },
             {
                 "name": "failed_seg_exists_in_gparray2",
-                "failed": self.create_primary(dbid='3', status='d'),
-                "failover": self.create_primary(dbid='3', status='d'),
-                "live": self.create_mirror(dbid='4'),
+                "failed": self._create_primary(dbid='3', status='d'),
+                "failover": self._create_primary(dbid='3', status='d'),
+                "live": self._create_mirror(dbid='4'),
                 "forceFull": False,
                 "forceoverwrite": False
             },
             {
                 "name": "failed_seg_exists_in_gparray2",
-                "failed": self.create_primary(dbid='3', status='d'),
-                "failover": self.create_primary(dbid='3', status='d'),
-                "live": self.create_mirror(dbid='4'),
+                "failed": self._create_primary(dbid='3', status='d'),
+                "failover": self._create_primary(dbid='3', status='d'),
+                "live": self._create_mirror(dbid='4'),
                 "forceFull": False,
                 "forceoverwrite": True
             }
         ]
         for test in tests:
             mirror_to_build = GpMirrorToBuild(test["failed"], test["live"], test["failover"], test["forceFull"])
-            buildMirrorSegs_obj = GpMirrorListToBuild(
+            build_mirrors_obj = GpMirrorListToBuild(
                 toBuild=[mirror_to_build,],
                 pool=None,
                 quiet=True,
@@ -316,33 +365,33 @@ class BuildMirrorsTestCase(GpTestCase):
                 logger=self.mock_logger,
                 forceoverwrite=test['forceoverwrite']
             )
-            self._setup_mocks(buildMirrorSegs_obj)
+            self._setup_mocks(build_mirrors_obj)
             local_gp_array = GpArray([self.coordinator, test["failed"]])
             expected_error = "failed segment should not be in the new configuration if failing over to"
             with self.subTest(msg=test["name"]):
                 with self.assertRaisesRegex(Exception, expected_error):
-                    buildMirrorSegs_obj.buildMirrors(self.action, self.gpEnv, local_gp_array)
+                    build_mirrors_obj.buildMirrors(self.action, self.gpEnv, local_gp_array)
 
     def test_clean_up_failed_segments(self):
-        failed1 = self.create_primary(status='d')
-        live1 = self.create_mirror()
+        failed1 = self._create_primary(status='d')
+        live1 = self._create_mirror()
 
-        failed2 = self.create_primary(dbid='3', status='d')
-        failover2 = self.create_primary(dbid='3', status='d')
-        live2 = self.create_mirror(dbid='4')
+        failed2 = self._create_primary(dbid='3', status='d')
+        failover2 = self._create_primary(dbid='3', status='d')
+        live2 = self._create_mirror(dbid='4')
 
-        failed3 = self.create_primary(dbid='5')
-        live3 = self.create_mirror(dbid='6')
+        failed3 = self._create_primary(dbid='5')
+        live3 = self._create_mirror(dbid='6')
 
-        failed4 = self.create_primary(dbid='5')
-        live4 = self.create_mirror(dbid='7')
+        failed4 = self._create_primary(dbid='5')
+        live4 = self._create_mirror(dbid='7')
 
         inplace_full1 = GpMirrorToBuild(failed1, live1, None, True)
         not_inplace_full = GpMirrorToBuild(failed2, live2, failover2, True)
         inplace_full2 = GpMirrorToBuild(failed3, live3, None, True)
         inplace_not_full = GpMirrorToBuild(failed4, live4, None, False)
 
-        buildMirrorSegs_obj = GpMirrorListToBuild(
+        build_mirrors_obj = GpMirrorListToBuild(
             toBuild=[inplace_full1, not_inplace_full, inplace_full2, inplace_not_full],
             pool=None,
             quiet=True,
@@ -350,25 +399,25 @@ class BuildMirrorsTestCase(GpTestCase):
             logger=self.mock_logger,
             forceoverwrite=True
         )
-        buildMirrorSegs_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
+        build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
 
-        buildMirrorSegs_obj._clean_up_failed_segments()
+        build_mirrors_obj._clean_up_failed_segments()
 
         self.mock_get_segments_by_hostname.assert_called_once_with([failed1, failed3])
         self.mock_logger.info.called_once_with('"Cleaning files from 2 segment(s)')
 
     def test_clean_up_failed_segments_no_segs_to_cleanup(self):
-        failed2 = self.create_primary(dbid='3', status='d')
-        failover2 = self.create_primary(dbid='3', status='d')
-        live2 = self.create_mirror(dbid='4')
+        failed2 = self._create_primary(dbid='3', status='d')
+        failover2 = self._create_primary(dbid='3', status='d')
+        live2 = self._create_mirror(dbid='4')
 
-        failed4 = self.create_primary(dbid='5')
-        live4 = self.create_mirror(dbid='7')
+        failed4 = self._create_primary(dbid='5')
+        live4 = self._create_mirror(dbid='7')
 
         not_inplace_full = GpMirrorToBuild(failed2, live2, failover2, True)
         inplace_not_full = GpMirrorToBuild(failed4, live4, None, False)
 
-        buildMirrorSegs_obj = GpMirrorListToBuild(
+        build_mirrors_obj = GpMirrorListToBuild(
             toBuild=[not_inplace_full, inplace_not_full],
             pool=None,
             quiet=True,
@@ -376,25 +425,261 @@ class BuildMirrorsTestCase(GpTestCase):
             logger=self.mock_logger,
             forceoverwrite=True
         )
-        buildMirrorSegs_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
+        build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
 
-        buildMirrorSegs_obj._clean_up_failed_segments()
+        build_mirrors_obj._clean_up_failed_segments()
         self.assertEqual(0, self.mock_get_segments_by_hostname.call_count)
         self.assertEqual(0, self.mock_logger.info.call_count)
 
-    def test_buildMirrors_noMirrors(self):
-        buildMirrorSegs_obj = GpMirrorListToBuild(
-            toBuild=[],
-            pool=None,
-            quiet=True,
-            parallelDegree=0,
-            logger=self.mock_logger
-        )
-        self.assertTrue(buildMirrorSegs_obj.buildMirrors(None, None, None))
-        self.assertTrue(buildMirrorSegs_obj.buildMirrors(self.action, None, None))
+    def test_run_recovery_no_errors(self):
+        recovery_info = OrderedDict() #We use ordered dict to deterministically assert the side effects of _run_recovery
+        recovery_info['host1'] = [self.recovery_info1]
+        recovery_info['host2'] = [self.recovery_info2, self.recovery_info3]
+        recoveryinfo.build_recovery_info = Mock(return_value=recovery_info)
+        self._set_run_recovery()
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        seg_recovery_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[0][0][0]
+        progress_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[0][1]['progressCmds']
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
 
-        self.assertEqual([call('No segments to None'), call('No segments to recover')],
-                         self.mock_logger.info.call_args_list)
+        #TODO fix formatting
+        expected_recovery_cmd_strs = ["""$GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/datadir2", "target_port": 7001, "target_segment_dbid": 2, "source_hostname": "source_host_for_dbid2", "source_port": 7002, "is_full_recovery": true, "progress_file": "/tmp/progress_file2"}]' -l /tmp/logdir -b 64 --era=dummy_era""", """$GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/datadir3", "target_port": 7003, "target_segment_dbid": 3, "source_hostname": "source_host_for_dbid3", "source_port": 7004, "is_full_recovery": true, "progress_file": "/tmp/progress_file3"}, {"target_datadir": "/datadir4", "target_port": 7005, "target_segment_dbid": 4, "source_hostname": "source_host_for_dbid4", "source_port": 7006, "is_full_recovery": true, "progress_file": "/tmp/progress_file4"}]' -l /tmp/logdir -b 64 --era=dummy_era"""]
+        self.assertEqual(2, len(seg_recovery_cmds))
+        self.assertEqual('host1', seg_recovery_cmds[0].remoteHost)
+        self.assertEqual(sorted(expected_recovery_cmd_strs[0]), sorted(seg_recovery_cmds[0].cmdStr))
+        self.assertEqual('host2', seg_recovery_cmds[1].remoteHost)
+        self.assertEqual(sorted(expected_recovery_cmd_strs[1]), sorted(seg_recovery_cmds[1].cmdStr))
+
+        self.assertEqual(3, len(progress_cmds))
+        self.assertEqual('host1', progress_cmds[0].remoteHost)
+        self.assertEqual("set -o pipefail; touch -a /tmp/progress_file2; tail -1 /tmp/progress_file2 | tr '\\r' '\\n' | tail -1",
+                         progress_cmds[0].cmdStr)
+        self.assertEqual('host2', progress_cmds[1].remoteHost)
+        self.assertEqual("set -o pipefail; touch -a /tmp/progress_file3; tail -1 /tmp/progress_file3 | tr '\\r' '\\n' | tail -1",
+                         progress_cmds[1].cmdStr)
+        self.assertEqual('host2', progress_cmds[2].remoteHost)
+        self.assertEqual("set -o pipefail; touch -a /tmp/progress_file4; tail -1 /tmp/progress_file4 | tr '\\r' '\\n' | tail -1",
+                         progress_cmds[2].cmdStr)
+
+        self.assertEqual(3, len(rm_cmds))
+        self.assertEqual("host1", rm_cmds[0].remoteHost)
+        self.assertEqual("rm -f /tmp/progress_file2", rm_cmds[0].cmdStr)
+        self.assertEqual("host2", rm_cmds[1].remoteHost)
+        self.assertEqual("rm -f /tmp/progress_file3", rm_cmds[1].cmdStr)
+        self.assertEqual("host2", rm_cmds[2].remoteHost)
+        self.assertEqual("rm -f /tmp/progress_file4", rm_cmds[2].cmdStr)
+
+    def test_run_setup_recovery_errors(self):
+        recovery_info = {'host1': [self.recovery_info1, self.recovery_info2], 'host2': [self.recovery_info3]}
+        host1_error = '[{"error_type": "validation", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                      '{"error_type": "validation", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]'
+        host2_error = '[{"error_type": "validation", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error], is_setup=True)
+        with self.assertRaises(ExceptionNoStackTraceNeeded):
+            self.default_build_mirrors_obj._run_setup_recovery(self.action, recovery_info)
+        expected_info_msgs = [call(Contains('-----')),
+                              call('Failed to setup recovery for the following segments')]
+        expected_error_msgs = [call(Contains('hostname: host1; port: 7001; error: some error for dbid 2')),
+                              call(Contains('hostname: host1; port: 7003; error: some error for dbid 3')),
+                              call(Contains('hostname: host2; port: 7005; error: some error for dbid 4'))]
+
+        self.assertCountEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+        self.assertCountEqual(expected_error_msgs, self.mock_logger.error.call_args_list)
+
+    def test_run_setup_recovery_invalid_errors(self):
+        recovery_info = {'host1': [self.recovery_info1, self.recovery_info2], 'host2': [self.recovery_info3]}
+        host1_error = 'invalid value before error1 [{"error_type": "validation", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                      'invalid value before error2 {"error_type": "validation", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]'
+        host2_error = '[{"error_type": "validation", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error], is_setup=True)
+        with self.assertRaises(ExceptionNoStackTraceNeeded):
+            self.default_build_mirrors_obj._run_setup_recovery(self.action, recovery_info)
+        expected_info_msgs = [call(Contains('-----')),
+                              call('Failed to setup recovery for the following segments')]
+
+        expected_error_msgs = [call(Contains('Unable to parse recovery error. hostname: host1, error: invalid value before error1')),
+                               call(Contains('hostname: host2; port: 7005; error: some error for dbid 4'))]
+
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+        self.assertCountEqual(expected_error_msgs, self.mock_logger.error.call_args_list)
+
+    def test_run_setup_recovery_empty_errors(self):
+        recovery_info = {'host1': [self.recovery_info1], 'host2': [self.recovery_info3]}
+        host1_error = ''
+        host2_error = ''
+        self._set_run_recovery([host1_error, host2_error], is_setup=True)
+        with self.assertRaises(ExceptionNoStackTraceNeeded):
+            self.default_build_mirrors_obj._run_setup_recovery(self.action, recovery_info)
+        expected_error_msgs = [call(Contains('Unable to parse recovery error. hostname: host1, error: ')),
+                               call(Contains('Unable to parse recovery error. hostname: host2, error: '))]
+        self.assertEqual([], self.mock_logger.info.call_args_list)
+        self.assertEqual(expected_error_msgs, self.mock_logger.error.call_args_list)
+
+    def test_run_recovery_invalid_errors(self):
+        recovery_info = {'host1': [self.recovery_info1, self.recovery_info2], 'host2': [self.recovery_info3]}
+        host1_error = 'invalid error1'
+        host2_error = '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error])
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        expected_info_msgs = [call('Initiating segment recovery. Upon completion, will start the successfully recovered segments'),
+                              call(Contains('-----')),
+                              call(Contains('Failed to recover the following segments')),
+                              call(Contains(' hostname: host2; port: 7005; logfile: /tmp/progress4'))]
+
+        expected_error_msgs = [call(Contains('Unable to parse recovery error. hostname: host1, error: invalid error1'))]
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+        self.assertEqual(expected_error_msgs, self.mock_logger.error.call_args_list)
+
+    def test_run_recovery_empty_errors(self):
+        recovery_info = {'host1': [self.recovery_info1, self.recovery_info2], 'host2': [self.recovery_info3]}
+        host1_error = ''
+        host2_error = ''
+        self._set_run_recovery([host1_error, host2_error])
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        expected_info_msgs = [call('Initiating segment recovery. Upon completion, will start the successfully recovered segments')]
+
+        expected_error_msgs = [call(Contains('Unable to parse recovery error. hostname: host1, error: ')),
+                               call(Contains('Unable to parse recovery error. hostname: host2, error: '))]
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+        self.assertEqual(expected_error_msgs, self.mock_logger.error.call_args_list)
+
+    # TODO remove duplicate code from run_recovery tests
+    def test_run_recovery_all_dbids_fail_only_bb_rewind_errors(self):
+        recovery_info = {'host1': [self.recovery_info1, self.recovery_info2], 'host2': [self.recovery_info3]}
+        host1_error = '[{"error_type": "full", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                      '{"error_type": "incremental", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]'
+        host2_error = '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error])
+
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
+
+        self.assertEqual(0, len(rm_cmds))
+        expected_info_msgs = [call(Contains('Initiating segment recovery')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to recover the following segments')),
+                              call(Contains('hostname: host1; port: 7001; logfile: /tmp/progress2; recoverytype: full')),
+                              call(Contains('hostname: host1; port: 7003; logfile: /tmp/progress3; recoverytype: incremental')),
+                              call(Contains('hostname: host2; port: 7005; logfile: /tmp/progress4; recoverytype: full'))]
+        self.assertCountEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+
+    def test_run_recovery_some_dbids_fail_all_recovery_errors(self):
+        recovery_info = {'host1': [self.recovery_info1], 'host2': [self.recovery_info2, self.recovery_info3]}
+        host1_error = '[{"error_type": "full", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}]'
+        host2_error = '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error])
+
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
+
+        self.assertEqual(1, len(rm_cmds))
+        self.assertEqual("host2", rm_cmds[0].remoteHost)
+        self.assertEqual("rm -f /tmp/progress_file3", rm_cmds[0].cmdStr)
+        expected_info_msgs = [call(Contains('Initiating segment recovery')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to recover the following segments')),
+                              call(Contains('hostname: host1; port: 7001; logfile: /tmp/progress2')),
+                              call(Contains('hostname: host2; port: 7005; logfile: /tmp/progress4'))]
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+
+    def test_run_recovery_all_dbids_fail_all_start_errors(self):
+        recovery_info = {'host1': [self.recovery_info1], 'host2': [self.recovery_info2, self.recovery_info3]}
+        host1_error = '[{"error_type": "start", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                      '{"error_type": "start", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]'
+        host2_error = '[{"error_type": "start", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error])
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
+
+        self.assertEqual(3, len(rm_cmds))
+        expected_info_msgs = [call(Contains('Initiating segment recovery')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to start the following segments')),
+                              call(Contains('hostname: host1; port: 7001; datadir: /datadir2')),
+                              call(Contains('hostname: host1; port: 7003; datadir: /datadir3')),
+                              call(Contains('hostname: host2; port: 7005; datadir: /datadir4'))]
+
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+
+    def test_run_recovery_some_dbids_fail_all_start_errors(self):
+        recovery_info = {'host1': [self.recovery_info1], 'host2': [self.recovery_info2, self.recovery_info3]}
+        host1_error = '[{"error_type": "start", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}]'
+        host2_error = '[{"error_type": "start", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+
+        self._set_run_recovery([host1_error, host2_error])
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
+
+        self.assertEqual(3, len(rm_cmds))
+        expected_info_msgs = [call(Contains('Initiating segment recovery')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to start the following segments')),
+                              call(Contains('hostname: host1; port: 7001; datadir: /datadir2')),
+                              call(Contains('hostname: host2; port: 7005; datadir: /datadir4'))]
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+
+    def test_run_recovery_all_dbids_fail_both_recovery_and_start_errors(self):
+        recovery_info = {'host1': [self.recovery_info1, self.recovery_info2], 'host2': [self.recovery_info3]}
+        host1_error = '[{"error_type": "full",  "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                      '{"error_type": "start",  "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]'
+        host2_error = '[{"error_type": "full",  "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error])
+
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
+
+        # Since start passed for dbid:3, we should have deleted it's progress file
+        self.assertEqual(1, len(rm_cmds))
+        self.assertEqual("host1", rm_cmds[0].remoteHost)
+        self.assertEqual("rm -f /tmp/progress_file3", rm_cmds[0].cmdStr)
+
+        expected_info_msgs = [call(Contains('Initiating segment recovery')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to recover the following segments')),
+                              call(Contains('hostname: host1; port: 7001; logfile: /tmp/progress2')),
+                              call(Contains('hostname: host2; port: 7005; logfile: /tmp/progress4')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to start the following segments. Please check the latest logs')),
+                              call(Contains('hostname: host1; port: 7003; datadir: /datadir3'))]
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
+
+    def test_run_recovery_all_dbids_fail_both_recovery_and_default_errors(self):
+        recovery_info = {'host1': [self.recovery_info1], 'host2': [self.recovery_info2, self.recovery_info3]}
+        host1_error = '[{"error_type": "start",  "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                      '{"error_type": "default",  "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]'
+        host2_error = '[{"error_type": "incremental",  "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]'
+        self._set_run_recovery([host1_error, host2_error])
+
+        self.default_build_mirrors_obj._run_recovery(self.action, recovery_info, self.gpEnv)
+
+        self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
+                         self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list)
+        rm_cmds = self.default_build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear.call_args_list[1][0][0]
+
+        self.assertEqual(2, len(rm_cmds))
+        self.assertEqual("host1", rm_cmds[0].remoteHost)
+        self.assertEqual("rm -f /tmp/progress_file2", rm_cmds[0].cmdStr)
+        expected_info_msgs = [call(Contains('Initiating segment recovery')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to recover the following segments')),
+                              call(Contains('hostname: host2; port: 7005; logfile: /tmp/progress4')),
+                              call(Contains('-----')),
+                              call(Contains('Failed to start the following segments. Please check the latest logs')),
+                              call(Contains('hostname: host1; port: 7001; datadir: /datadir2'))]
+        self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
 
 
 class BuildMirrorSegmentsTestCase(GpTestCase):
@@ -418,6 +703,17 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
             parallelDegree = 0,
             logger=self.mock_logger
             )
+
+    # def test_run_recovery(self):
+    #     self.buildMirrorSegs = GpMirrorListToBuild(
+    #         toBuild = [],
+    #         pool = None,
+    #         quiet = True,
+    #         parallelDegree = 0,
+    #         logger=self.mock_logger
+    #     )
+    #     self.buildMirrorSegs._run_recovery(Mock())
+    #     pass
 
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster')
@@ -489,27 +785,26 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
         self.mock_logger.warning.assert_any_call('Unable to determine if /tmp/seg0 is symlink. Assuming it is not symlink')
 
-    @patch('gppylib.operations.buildMirrorSegments.read_era')
-    @patch('gppylib.operations.startSegments.StartSegmentsOperation')
-    def test_startAll_succeeds(self, mock1, mock2):
-        result = StartSegmentsResult()
-        result.getFailedSegmentObjs()
-        mock1.return_value.startSegments.return_value = result
-        result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
-        self.assertTrue(result)
-
-    @patch('gppylib.operations.buildMirrorSegments.read_era')
-    @patch('gppylib.operations.startSegments.StartSegmentsOperation')
-    def test_startAll_fails(self, mock1, mock2):
-        result = StartSegmentsResult()
-        failed_segment = Segment.initFromString(
-            "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
-        result.addFailure(failed_segment, 'reason', 'reasoncode')
-        mock1.return_value.startSegments.return_value = result
-        result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
-        self.assertFalse(result)
-        self.mock_logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
-                                         'Segment: sdw1:/data/primary0:content=0:dbid=2:role=p:preferred_role=p:mode=s:status=u: REASON: reason')
+    #TODO Do we need to move these tests now that the startAll function has been deleted
+    # @patch('gppylib.operations.buildMirrorSegments.read_era')
+    # @patch('gppylib.operations.startSegments.StartSegmentsOperation')
+    # def test_startAll_succeeds(self, mock1, mock2):
+    #     result = StartSegmentsResult()
+    #     result.getFailedSegmentObjs()
+    #     mock1.return_value.startSegments.return_value = result
+    #     self.assertTrue(result)
+    #
+    # @patch('gppylib.operations.buildMirrorSegments.read_era')
+    # @patch('gppylib.operations.startSegments.StartSegmentsOperation')
+    # def test_startAll_fails(self, mock1, mock2):
+    #     result = StartSegmentsResult()
+    #     failed_segment = Segment.initFromString(
+    #         "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
+    #     result.addFailure(failed_segment, 'reason', 'reasoncode')
+    #     mock1.return_value.startSegments.return_value = result
+    #     self.assertFalse(result)
+    #     self.mock_logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
+    #                                      'Segment: sdw1:/data/primary0:content=0:dbid=2:role=p:preferred_role=p:mode=s:status=u: REASON: reason')
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.coordinator = Segment.initFromString(
