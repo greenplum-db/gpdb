@@ -1292,8 +1292,82 @@ select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in
  000181202006010000003158 | a  | INC | 0000000001
 (1 row)
 
+-- Test notin with outerrefs in the subquery
+--
+-- q47
+--
+create table outerref (a int, b text, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into outerref (a,b,c) values(1,'1',1);
+insert into outerref (a,b,c) values(1,'1',2);
+-- For a cluster with only 1 segment, this test doesn't crash without the fix.
+-- We can disable_xform('CXformSimplifySelectWithSubquery'); for testing for a
+-- cluster with only 1 segment. Not adding here as it changes the default plan
+-- that ORCA picks
+explain select b from outerref where b not in (select distinct b where c>1);
+                                                                                                                                                                QUERY PLAN                                                                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.11 rows=1 width=2)
+   ->  Result  (cost=0.00..882688.11 rows=1 width=2)
+         ->  Table Scan on outerref  (cost=0.00..882688.11 rows=1 width=2)
+               Filter: (subplan)
+               SubPlan 1
+                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                             Filter: (CASE WHEN (sum((CASE WHEN $0 = ($0) THEN 1 ELSE 0 END))) IS NULL THEN true WHEN (sum((CASE WHEN ($0) IS NULL THEN 1 ELSE 0 END))) > 0::bigint THEN NULL::boolean WHEN $0 IS NULL THEN NULL::boolean WHEN (sum((CASE WHEN $0 = ($0) THEN 1 ELSE 0 END))) = 0::bigint THEN true ELSE false END) = true
+                             ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                   ->  Aggregate  (cost=0.00..0.00 rows=1 width=16)
+                                         ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                               ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                                           One-Time Filter: $1 > 1
+                                                           ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Optimizer status: PQO version 3.122.0
+(16 rows)
+
+select b from outerref where b not in (select distinct b where c>1);
+ b 
+---
+ 1
+(1 row)
+
+create table outerref_int (a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into outerref_int (a,b,c) values(1,2,1);
+insert into outerref_int (a,b,c) values(1,2,2);
+explain select b from outerref_int where b not in (select distinct b where c>1);
+                                                                                                                                                                QUERY PLAN                                                                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.11 rows=1 width=4)
+   ->  Result  (cost=0.00..882688.11 rows=1 width=4)
+         ->  Table Scan on outerref_int  (cost=0.00..882688.11 rows=1 width=4)
+               Filter: (subplan)
+               SubPlan 1
+                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                             Filter: (CASE WHEN (sum((CASE WHEN $0 = ($0) THEN 1 ELSE 0 END))) IS NULL THEN true WHEN (sum((CASE WHEN ($0) IS NULL THEN 1 ELSE 0 END))) > 0::bigint THEN NULL::boolean WHEN $0 IS NULL THEN NULL::boolean WHEN (sum((CASE WHEN $0 = ($0) THEN 1 ELSE 0 END))) = 0::bigint THEN true ELSE false END) = true
+                             ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                   ->  Aggregate  (cost=0.00..0.00 rows=1 width=16)
+                                         ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                               ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                                                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                                           One-Time Filter: $1 > 1
+                                                           ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Optimizer status: PQO version 3.122.0
+(16 rows)
+
+select b from outerref_int where b not in (select distinct b where c>1);
+ b 
+---
+ 2
+(1 row)
+
 reset search_path;
 drop schema notin cascade;
+NOTICE:  drop cascades to table notin.outerref_int
+NOTICE:  drop cascades to table notin.outerref
 NOTICE:  drop cascades to table notin.table_config
 NOTICE:  drop cascades to table notin.table_source4
 NOTICE:  drop cascades to table notin.table_source2

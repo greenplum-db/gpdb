@@ -397,6 +397,27 @@ select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in
 explain select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
 select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
 
+-- Test notin with outerrefs in the subquery
+--
+-- q47
+--
+create table outerref (a int, b text, c int);
+insert into outerref (a,b,c) values(1,'1',1);
+insert into outerref (a,b,c) values(1,'1',2);
+
+-- For a cluster with only 1 segment, this test doesn't crash without the fix.
+-- We can disable_xform('CXformSimplifySelectWithSubquery'); for testing for a
+-- cluster with only 1 segment. Not adding here as it changes the default plan
+-- that ORCA picks
+explain select b from outerref where b not in (select distinct b where c>1);
+select b from outerref where b not in (select distinct b where c>1);
+
+create table outerref_int (a int, b int, c int);
+insert into outerref_int (a,b,c) values(1,2,1);
+insert into outerref_int (a,b,c) values(1,2,2);
+
+explain select b from outerref_int where b not in (select distinct b where c>1);
+select b from outerref_int where b not in (select distinct b where c>1);
 
 reset search_path;
 drop schema notin cascade;
