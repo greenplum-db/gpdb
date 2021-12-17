@@ -1,6 +1,9 @@
+import os
 from os import path
 from gppylib.commands.base import REMOTE
 import socket
+import subprocess
+import tempfile
 
 from behave import given, when, then
 from test.behave_utils.utils import *
@@ -75,11 +78,30 @@ def add_three_mirrors_with_args(context, args):
 def add_three_mirrors(context):
     add_three_mirrors_with_args(context, '')
 
+@when("gpaddmirrors adds 3 mirrors with one mirror's datadir not being empty")
+def add_three_mirrors_with_one_mirror_not_empty(context):
+    datadir_config = _write_datadir_config_for_three_mirrors()
+    mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
+    cmd_str = 'gpaddmirrors -o %s -m %s' % (mirror_config_output_file, datadir_config)
+    Command('generate mirror_config file', cmd_str).run(validateAfter=True)
+
+    # Get the path of one of the datadirs from the config file
+    datadir_cmd = "cat {} | tail -1 | awk '-F|' '{{print $4}}'".format(mirror_config_output_file)
+    datadir = subprocess.check_output(["bash", "-c", datadir_cmd]).decode('utf-8').strip()
+
+    os.mkdir(datadir)
+    # Create a file within this datadir to make gprecoverseg fail with a validation error
+    with tempfile.NamedTemporaryFile(dir=datadir):
+        cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s' % (mirror_config_output_file))
+        cmd.run(validateAfter=False)
+    context.ret_code = cmd.get_results().rc
+    context.stdout_message = cmd.get_results().stdout
+    context.error_message = cmd.get_results().stderr
+
 def add_mirrors(context, options):
     context.mirror_config = _generate_input_config()
     cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s %s' % (context.mirror_config, options))
     cmd.run(validateAfter=True)
-
 
 def make_data_directory_called(data_directory_name):
     mdd_parent_parent = os.path.realpath(
@@ -332,11 +354,12 @@ def impl(context, content, mode):
                 fd.write('{} {}\n'.format(valid_config, valid_config_new))
             break
 
-data_dirs_created = {}
+# data_dirs_created = {} #TODO remove this global var
 @given("edit the input file to recover mirror with content {content} to a new directory on remote host with mode {mode}")
 def impl(context, content, mode):
     content = int(content)
     segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    context.data_dirs_created = {}
     for seg in segments:
         if seg.mirrorDB.getSegmentContentId() == content:
             mirror = seg.mirrorDB
@@ -350,18 +373,18 @@ def impl(context, content, mode):
                                                  target_datadir)
             with open(context.mirror_context.input_file_path(), 'a') as fd:
                 fd.write('{} {}\n'.format(valid_config, valid_config_new))
-            data_dirs_created[seg.mirrorDB.getSegmentHostName()] = target_datadir
+            context.data_dirs_created[seg.mirrorDB.getSegmentHostName()] = target_datadir
             break
 
 @given("the mode of all the created data directories is changed to 0700")
 @when("the mode of all the created data directories is changed to 0700")
 @then("the mode of all the created data directories is changed to 0700")
 def impl(context):
-    for hostname, data_dir in data_dirs_created.items():
+    for hostname, data_dir in context.data_dirs_created.items():
         command = 'ssh {} "chmod -R 700 {}"'.format(hostname, data_dir)
         run_command(context, command)
 
-    data_dirs_created.clear()
+    context.data_dirs_created.clear()
 
 
 def make_temp_dir_on_remote(context, hostname, tmp_base_dir_remote, mode='700'):

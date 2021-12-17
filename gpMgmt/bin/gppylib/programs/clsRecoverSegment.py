@@ -356,6 +356,7 @@ class GpRecoverSegmentProgram:
             contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
             update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.parallelDegree, contentsToUpdate)
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+                self.logger.error("gprecoverseg failed. Please check the output for more details.")
                 sys.exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \

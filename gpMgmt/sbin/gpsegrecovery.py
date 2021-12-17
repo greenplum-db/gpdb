@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+from gppylib.recoveryinfo import RecoveryErrorType
 from gppylib.commands.pg import PgBaseBackup, PgRewind
-from recovery_base import RecoveryBase
-from gppylib.commands.base import set_cmd_results, Command
+from recovery_base import RecoveryBase, set_recovery_cmd_results
+from gppylib.commands.base import Command
 from gppylib.commands.gp import SegmentStart
 from gppylib.gparray import Segment
 
@@ -14,16 +15,17 @@ class FullRecovery(Command):
         self.replicationSlotName = 'internal_wal_replication_slot'
         self.forceoverwrite = forceoverwrite
         self.era = era
-        # TODO test for this cmdstr. also what should this cmdstr be ?
+        # FIXME test for this cmdstr. also what should this cmdstr be ?
         cmdStr = ''
-
         #cmdstr = 'TODO? : {} {}'.format(str(recovery_info), self.verbose)
         Command.__init__(self, self.name, cmdStr)
-        #TODO this logger has to come after the init and is duplicated in all the 4 classes
+        #FIXME this logger has to come after the init and is duplicated in all the 4 classes
         self.logger = logger
+        self.error_type = RecoveryErrorType.DEFAULT_ERROR
 
-    @set_cmd_results
+    @set_recovery_cmd_results
     def run(self):
+        self.error_type = RecoveryErrorType.BASEBACKUP_ERROR
         cmd = PgBaseBackup(self.recovery_info.target_datadir,
                            self.recovery_info.source_hostname,
                            str(self.recovery_info.source_port),
@@ -34,7 +36,9 @@ class FullRecovery(Command):
 
         self.logger.info("Running pg_basebackup with progress output temporarily in %s" % self.recovery_info.progress_file)
         cmd.run(validateAfter=True)
+        self.error_type = RecoveryErrorType.DEFAULT_ERROR
         self.logger.info("Successfully ran pg_basebackup for dbid: {}".format(self.recovery_info.target_segment_dbid))
+        self.error_type = RecoveryErrorType.START_ERROR
         start_segment(self.recovery_info, self.logger, self.era)
 
 
@@ -43,45 +47,40 @@ class IncrementalRecovery(Command):
         self.name = name
         self.recovery_info = recovery_info
         self.era = era
-        # TODO test for this cmdstr. also what should this cmdstr be ?
         cmdStr = ''
-
-        #cmdstr = 'TODO? : {} {}'.format(str(recovery_info), self.verbose)
         Command.__init__(self, self.name, cmdStr)
         self.logger = logger
+        self.error_type = RecoveryErrorType.DEFAULT_ERROR
 
-    @set_cmd_results
+    @set_recovery_cmd_results
     def run(self):
-        # Note the command name, we use the dbid later to
-        # correlate the command results with GpMirrorToBuild
-        # object.
         self.logger.info("Running pg_rewind with progress output temporarily in %s" % self.recovery_info.progress_file)
+        self.error_type = RecoveryErrorType.REWIND_ERROR
         cmd = PgRewind('rewind dbid: {}'.format(self.recovery_info.target_segment_dbid),
                        self.recovery_info.target_datadir, self.recovery_info.source_hostname,
                        self.recovery_info.source_port, self.recovery_info.progress_file)
         cmd.run(validateAfter=True)
-        self.logger.info("Successfully ran pg_rewind for dbid: {}".format(
-            self.recovery_info.target_segment_dbid))
+        self.logger.info("Successfully ran pg_rewind for dbid: {}".format(self.recovery_info.target_segment_dbid))
 
+        self.error_type = RecoveryErrorType.START_ERROR
         start_segment(self.recovery_info, self.logger, self.era)
 
 
 def start_segment(recovery_info, logger, era):
     seg = Segment(None, None, None, None, None, None, None, None,
                   recovery_info.target_port, recovery_info.target_datadir)
-    segStartCmd = SegmentStart(
+    cmd = SegmentStart(
         name="Starting new segment with dbid %s:" % (str(recovery_info.target_segment_dbid))
         , gpdb=seg
         , numContentsInCluster=0
         , era=era
         , mirrormode="mirror"
         , utilityMode=True)
-    #TODO is this log msg for start segment ebnough?
-    logger.info(str(segStartCmd))
-    segStartCmd.run(validateAfter=True)
+    logger.info(str(cmd))
+    cmd.run(validateAfter=True)
 
 
-#TODO we may not need this class
+#FIXME we may not need this class
 class SegRecovery(object):
     def __init__(self):
         pass
@@ -91,7 +90,6 @@ class SegRecovery(object):
         recovery_base.main(self.get_recovery_cmds(recovery_base.seg_recovery_info_list, recovery_base.options.forceoverwrite,
                                                   recovery_base.logger, recovery_base.options.era))
 
-    # TODO should we pass the recovery_base obj instead ?
     def get_recovery_cmds(self, seg_recovery_info_list, forceoverwrite, logger, era):
         cmd_list = []
         for seg_recovery_info in seg_recovery_info_list:

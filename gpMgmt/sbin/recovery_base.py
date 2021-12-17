@@ -1,3 +1,5 @@
+import functools
+import json
 import os
 import sys
 
@@ -56,7 +58,7 @@ class RecoveryBase(object):
         if self.options.verbose:
             gplog.enable_verbose_logging()
 
-        self.seg_recovery_info_list = recoveryinfo.deserialize_recovery_info_list(self.options.confinfo)
+        self.seg_recovery_info_list = recoveryinfo.deserialize_list(self.options.confinfo)
         if len(self.seg_recovery_info_list) == 0:
             raise Exception('No segment configuration values found in --confinfo argument')
 
@@ -81,7 +83,6 @@ class RecoveryBase(object):
         print >> sys.stderr, e
         sys.exit(1)
 
-    # TODO: how to log multiple errors. New workflow reports errors from all segments.
     def run_cmd_list(self, cmd_list, logger, options, pool):
         for cmd in cmd_list:
             pool.addCommand(cmd)
@@ -90,13 +91,43 @@ class RecoveryBase(object):
         errors = []
         for item in pool.getCompletedItems():
             if not item.get_results().wasSuccessful():
-                errors.append(str(item.get_results().stderr).replace("\n", " "))
+                err_str = item.get_results().stderr
+                try:
+                    error_obj = json.loads(err_str)
+                except ValueError:
+                    #TODO Do we need this except and can we set dbid to None or should we rely on item.recovery_info?
+                    error_obj = recoveryinfo.RecoveryError(recoveryinfo.RecoveryErrorType.DEFAULT_ERROR, err_str, None,
+                                                            None, None, None)
+                errors.append(error_obj)
         if not errors:
             sys.exit(0)
 
-        str_error = "\n".join(errors)
+        str_error = recoveryinfo.serialize_list(errors)
         print >> sys.stderr, str_error
         if options.verbose:
             logger.exception(str_error)
         logger.error(str_error)
         sys.exit(1)
+
+
+def set_recovery_cmd_results(run_func):
+    """
+    Decorator function to run a command on the seg and set the results on the command object for that segment.
+    :param run_func: The function to run
+    :return:
+    """
+    @functools.wraps(run_func)
+    def run_and_set_output(recovery_cmd):
+        try:
+            run_func(recovery_cmd)
+        except Exception as e:
+            serialized_error = str(recoveryinfo.RecoveryError(recovery_cmd.error_type, str(e),
+                                                              recovery_cmd.recovery_info.target_segment_dbid,
+                                                              recovery_cmd.recovery_info.target_datadir,
+                                                              recovery_cmd.recovery_info.target_port,
+                                                              recovery_cmd.recovery_info.progress_file))
+            recovery_cmd.set_results(CommandResult(1, b'', serialized_error.encode(), True, False))
+        else:
+            recovery_cmd.set_results(CommandResult(0, b'', b'', True, False))
+
+    return run_and_set_output

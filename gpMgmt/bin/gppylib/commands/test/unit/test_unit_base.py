@@ -4,8 +4,7 @@
 #
 
 import unittest
-from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME, LocalExecutionContext,\
-    set_cmd_results
+from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME, LocalExecutionContext
 
 
 class WorkerPoolTestCase(unittest.TestCase):
@@ -54,43 +53,3 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.subject.execute(cmd)
         self.assertEquals("bar=1 && foo=1 && ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 localhost "
                           "\". gphome/greenplum_path.sh; bar=1 && foo=1 && ls /tmp\"", cmd.cmdStr)
-
-
-class SetCmdResultsTestCase(unittest.TestCase):
-
-    def _assert_cmd_passed(self, cmd):
-        self.assertEqual(0, cmd.get_results().rc)
-        self.assertEqual('', cmd.get_results().stdout)
-        self.assertEqual('', cmd.get_results().stderr)
-        self.assertEqual(True, cmd.get_results().completed)
-        self.assertEqual(False, cmd.get_results().halt)
-        self.assertEqual(True, cmd.get_results().wasSuccessful())
-
-    def _assert_cmd_failed(self, cmd, expected_stderr='running the cmd failed'):
-        self.assertEqual(1, cmd.get_results().rc)
-        self.assertEqual('', cmd.get_results().stdout)
-        self.assertTrue(expected_stderr in cmd.get_results().stderr)
-        self.assertEqual(True, cmd.get_results().completed)
-        self.assertEqual(False, cmd.get_results().halt)
-        self.assertEqual(False, cmd.get_results().wasSuccessful())
-
-    def test_set_cmd_results_no_exception(self):
-        @set_cmd_results
-        def test_decorator(cmd):
-            cmd.name = 'new name'
-
-        test_cmd = Command(name='original name', cmdStr='echo foo')
-        test_decorator(test_cmd)
-        self.assertEqual('new name', test_cmd.name)
-        self._assert_cmd_passed(test_cmd)
-
-    def test_set_cmd_results_catch_exception(self):
-        @set_cmd_results
-        def test_decorator(cmd):
-            cmd.name = 'new name'
-            raise Exception('running the cmd failed')
-
-        test_cmd = Command(name='original name', cmdStr='echo foo')
-        test_decorator(test_cmd)
-        self.assertEqual('new name', test_cmd.name)
-        self._assert_cmd_failed(test_cmd)

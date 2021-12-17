@@ -29,12 +29,26 @@ Feature: Tests for gpaddmirrors
         And user stops all primary processes
         And user can start transactions
         And the tablespace is valid
-
     Examples:
         | args      | master_workers | segHost_workers |
         | -B 1 -b 1 |  1             |  1              |
         | -B 2 -b 1 |  2             |  1              |
         | -B 1 -b 2 |  1             |  2              |
+
+    Scenario: gpaddmirrors fails for recovery setup errors
+        Given the cluster is generated with "3" primaries only
+        When gpaddmirrors adds 3 mirrors with one mirror's datadir not being empty
+        Then gpaddmirrors should return a return code of 2
+        And gpaddmirrors should print "Failed to setup recovery for the following segments" to stdout
+        And gpaddmirrors should print "gpaddmirrors error" to stdout
+        And gpaddmirrors should print " hostname: .*; port: .*; error: for segment with port .*: Segment directory .*" to stdout
+        And gpaddmirrors should not print "Initiating segment recovery" to stdout
+        #TODO run backout scripts before adding the mirrors again
+#        When gpaddmirrors adds 3 mirrors
+#        Then gpaddmirrors should return a return code of 0
+#        And an FTS probe is triggered
+#        And the segments are synchronized
+#        And verify the database has mirrors
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
