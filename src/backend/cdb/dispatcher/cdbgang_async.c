@@ -78,8 +78,11 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	/*
 	 * If we're in a global transaction, and there is some primary segment down,
 	 * we have to error out so that the current global transaction can be aborted.
-	 * Before error out, we need to clean up QEs, destroy the gang, and reset
-	 * the session.
+	 * Before error out, we need to reset the session instead of disconnectAndDestroyAllGangs.
+	 * The latter will drop CdbComponentsContext what we will use in AtAbort_Portals.
+	 * Because some primary segment is down writerGangLost will be marked when recycling gangs,
+	 * All Gangs will be destroyed in AtAbort_DispatcherState.
+	 *
 	 * We shouldn't error out in transaction abort state to avoid recursive abort.
 	 * In such case, the dispatcher would catch the error and then dtm does (retry)
 	 * abort.
@@ -90,7 +93,7 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 		{
 			if (FtsIsSegmentDown(newGangDefinition->db_descriptors[i]->segment_database_info))
 			{
-				DisconnectAndDestroyAllGangs(true);
+				resetSessionForPrimaryGangLoss();
 				elog(ERROR, "gang was lost due to cluster reconfiguration");
 			}
 		}

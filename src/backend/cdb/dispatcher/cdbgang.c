@@ -73,8 +73,6 @@ CreateGangFunc pCreateGangFunc = cdbgang_createGang_async;
 static bool NeedResetSession = false;
 static Oid	OldTempNamespace = InvalidOid;
 
-static void resetSessionForPrimaryGangLoss(void);
-
 /*
  * cdbgang_createGang:
  *
@@ -688,6 +686,11 @@ getCdbProcessesForQD(int isPrimary)
 	return list;
 }
 
+/*
+ * This function should not be used in the context of named portals
+ * as it destroys the CdbComponentsContext, which is accessed later
+ * during named portal cleanup.
+ */
 void
 DisconnectAndDestroyAllGangs(bool resetSession)
 {
@@ -826,7 +829,7 @@ CheckForResetSession(void)
 	}
 }
 
-static void
+void
 resetSessionForPrimaryGangLoss(void)
 {
 	if (ProcCanSetMppSessionId())
