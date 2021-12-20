@@ -255,6 +255,7 @@ test: workfile_mgr_test
 
 # Cancel test
 test: cancel_plpython
+test: cancel_query
 
 # Tests for getting numsegments in utility mode
 test: upgrade_numsegments
