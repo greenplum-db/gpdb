@@ -11,13 +11,16 @@ PARTITION BY RANGE(a_date)
     (
     PARTITION p1 START ('2018-01-01'::date) END ('2018-12-31'::date) WITH (appendonly='true', orientation='column')
               COLUMN a_date ENCODING (compresstype=zlib)
-              COLUMN a_bigint ENCODING (compresstype=zlib),
+              COLUMN a_bigint ENCODING (compresstype=zlib)
+              COLUMN b_bigint ENCODING (compresstype=zlib),
     PARTITION p2 START ('2019-01-01'::date) END ('2019-12-31'::date) WITH (appendonly='true', orientation='column')
               COLUMN a_date ENCODING (compresstype=zlib)
-              COLUMN a_bigint ENCODING (compresstype=zlib),
+              COLUMN a_bigint ENCODING (compresstype=zlib)
+              COLUMN b_bigint ENCODING (compresstype=zlib),
     PARTITION p3 START ('2020-01-01'::date) END ('2020-12-31'::date) WITH (appendonly='true', orientation='column')
               COLUMN a_date ENCODING (compresstype=zlib)
               COLUMN a_bigint ENCODING (compresstype=zlib)
+              COLUMN b_bigint ENCODING (compresstype=zlib)
     );
 0:INSERT INTO a_partition_table_for_analyze_cancellation VALUES(timestamp '2018-01-01 10:00:00', 1, 3);
 0:INSERT INTO a_partition_table_for_analyze_cancellation VALUES(timestamp '2019-01-01 12:00:00', 2, 4);
