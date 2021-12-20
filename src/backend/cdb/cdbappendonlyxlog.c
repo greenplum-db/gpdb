@@ -203,6 +203,14 @@ appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 	uint8         xl_info = record->xl_info;
 	uint8         info = xl_info & ~XLR_INFO_MASK;
 
+	/*
+	 * Do not perform redo of AO XLOG records for crash recovery mode. We do
+	 * not need to replay AO XLOG records in this case because fsync
+	 * is performed on file close.
+	 */
+	if (IsCrashRecoveryOnly())
+		return;
+
 	switch (info)
 	{
 		case XLOG_APPENDONLY_INSERT:

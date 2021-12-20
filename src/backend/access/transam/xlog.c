@@ -12312,6 +12312,18 @@ IsStandbyMode(void)
 }
 
 /*
+ * True if we are running crash recovery.
+ * False if we are running standby continious recovery or not in recovery at all
+ * This only works in the startup process as the ArchiveRecoveryRequested and
+ * StandbyModeRequested flags are not in shared memory.
+ */
+bool
+IsCrashRecoveryOnly(void)
+{
+	return ArchiveRecoveryRequested == false && StandbyModeRequested == false;
+}
+
+/*
  * Report the last WAL replay location
  */
 XLogRecPtr
