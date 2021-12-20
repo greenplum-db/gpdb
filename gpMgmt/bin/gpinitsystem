@@ -210,8 +210,8 @@ USE_FIRST_SET_ARG (){
 CHK_PARAMS () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		LOG_MSG "[INFO]:-Checking configuration parameters, please wait..." 1
-		if [ $USER_NAME == "root" ]; then
-				ERROR_EXIT "[FATAL]:-Unable to run this script as $USER"
+		if [ "$EUID" -eq 0 ] || [ $(id -u) = 0 ]; then
+				ERROR_EXIT "[FATAL]:-Unable to run this script as root user: $USER."
 		fi
 		if [ x"" = x"$GPHOME" ]; then
 				LOG_MSG "[FATAL]:-Environment variable \$GPHOME not set" 1
