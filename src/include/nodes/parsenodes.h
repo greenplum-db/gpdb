@@ -1501,7 +1501,6 @@ typedef enum AlterTableType
 	AT_ExpandTable,          /* EXPAND DISTRIBUTED */
 	AT_ExpandPartitionTablePrepare,	/* EXPAND PARTITION PREPARE */
 
-	/* GPDB: Legacy commands to manipulate partitions */
 	/* CDB: Partitioned Tables */
 	AT_PartAdd,					/* Add */
 	AT_PartAddForSplit,			/* Add, as subcommand of a split */
