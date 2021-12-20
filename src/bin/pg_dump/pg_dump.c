@@ -7274,6 +7274,55 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 	}
 	appendPQExpBufferChar(tbloids, '}');
 
+	resetPQExpBuffer(query);
+
+	appendPQExpBuffer(query,
+					  "SELECT t.tableoid, t.oid, i.indrelid, "
+					  "t.relname AS indexname, "
+					  "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
+					  "i.indkey, i.indisclustered, "
+					  "c.contype, c.conname, "
+					  "c.condeferrable, c.condeferred, "
+					  "c.tableoid AS contableoid, "
+					  "c.oid AS conoid, "
+					  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
+					  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
+					  "t.reloptions AS indreloptions, ");
+
+
+	if (fout->remoteVersion >= 90400)
+		appendPQExpBuffer(query,
+						  "i.indisreplident, ");
+	else
+		appendPQExpBuffer(query,
+						  "false AS indisreplident, ");
+
+	if (fout->remoteVersion >= 110000)
+		appendPQExpBuffer(query,
+						  "inh.inhparent AS parentidx, "
+						  "i.indnkeyatts AS indnkeyatts, "
+						  "i.indnatts AS indnatts, "
+						  "(SELECT pg_catalog.array_agg(attnum ORDER BY attnum) "
+						  "  FROM pg_catalog.pg_attribute "
+						  "  WHERE attrelid = i.indexrelid AND "
+						  "    attstattarget >= 0) AS indstatcols, "
+						  "(SELECT pg_catalog.array_agg(attstattarget ORDER BY attnum) "
+						  "  FROM pg_catalog.pg_attribute "
+						  "  WHERE attrelid = i.indexrelid AND "
+						  "    attstattarget >= 0) AS indstatvals ");
+	else
+		appendPQExpBuffer(query,
+						  "0 AS parentidx, "
+						  "i.indnatts AS indnkeyatts, "
+						  "i.indnatts AS indnatts, "
+						  "'' AS indstatcols, "
+						  "'' AS indstatvals ");
+
+	appendPQExpBuffer(query,
+							"FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
+							"JOIN pg_catalog.pg_index i ON (src.tbloid = i.indrelid) "
+							"JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) ",
+							tbloids->data);
 	/*
 	 * The point of the messy-looking outer join is to find a constraint that
 	 * is related by an internal dependency link to the index. If we find one,
@@ -7287,32 +7336,6 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 	if (fout->remoteVersion >= 110000)
 	{
 		appendPQExpBuffer(query,
-						  "SELECT t.tableoid, t.oid, i.indrelid, "
-						  "t.relname AS indexname, "
-						  "inh.inhparent AS parentidx, "
-						  "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-						  "i.indnkeyatts AS indnkeyatts, "
-						  "i.indnatts AS indnatts, "
-						  "i.indkey, i.indisclustered, "
-						  "i.indisreplident, "
-						  "c.contype, c.conname, "
-						  "c.condeferrable, c.condeferred, "
-						  "c.tableoid AS contableoid, "
-						  "c.oid AS conoid, "
-						  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
-						  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-						  "t.reloptions AS indreloptions, "
-						  "(SELECT pg_catalog.array_agg(attnum ORDER BY attnum) "
-						  "  FROM pg_catalog.pg_attribute "
-						  "  WHERE attrelid = i.indexrelid AND "
-						  "    attstattarget >= 0) AS indstatcols,"
-						  "(SELECT pg_catalog.array_agg(attstattarget ORDER BY attnum) "
-						  "  FROM pg_catalog.pg_attribute "
-						  "  WHERE attrelid = i.indexrelid AND "
-						  "    attstattarget >= 0) AS indstatvals "
-						  "FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
-						  "JOIN pg_catalog.pg_index i ON (src.tbloid = i.indrelid) "
-						  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
 						  "JOIN pg_catalog.pg_class t2 ON (t2.oid = i.indrelid) "
 						  "LEFT JOIN pg_catalog.pg_constraint c "
 						  "ON (i.indrelid = c.conrelid AND "
@@ -7322,8 +7345,7 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 						  "ON (inh.inhrelid = indexrelid) "
 						  "WHERE (i.indisvalid OR t2.relkind = 'p') "
 						  "AND i.indisready "
-						  "ORDER BY i.indrelid, indexname",
-						  tbloids->data);
+						  "ORDER BY i.indrelid, indexname");
 	}
 	else if (fout->remoteVersion >= 90400)
 	{
@@ -7332,102 +7354,25 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 		 * earlier/later versions
 		 */
 		appendPQExpBuffer(query,
-						  "SELECT t.tableoid, t.oid, i.indrelid, "
-						  "t.relname AS indexname, "
-						  "0 AS parentidx, "
-						  "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-						  "i.indnatts AS indnkeyatts, "
-						  "i.indnatts AS indnatts, "
-						  "i.indkey, i.indisclustered, "
-						  "i.indisreplident, "
-						  "c.contype, c.conname, "
-						  "c.condeferrable, c.condeferred, "
-						  "c.tableoid AS contableoid, "
-						  "c.oid AS conoid, "
-						  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
-						  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-						  "t.reloptions AS indreloptions, "
-						  "'' AS indstatcols, "
-						  "'' AS indstatvals "
-						  "FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
-						  "JOIN pg_catalog.pg_index i ON (src.tbloid = i.indrelid) "
-						  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
 						  "LEFT JOIN pg_catalog.pg_constraint c "
 						  "ON (i.indrelid = c.conrelid AND "
 						  "i.indexrelid = c.conindid AND "
 						  "c.contype IN ('p','u','x')) "
 						  "WHERE i.indisvalid AND i.indisready "
-						  "ORDER BY i.indrelid, indexname",
-						  tbloids->data);
-	}
-	else if (fout->remoteVersion >= 90000)
-	{
-		/*
-		 * the test on indisready is necessary in 9.2, and harmless in
-		 * earlier/later versions
-		 */
-		appendPQExpBuffer(query,
-						  "SELECT t.tableoid, t.oid, i.indrelid, "
-						  "t.relname AS indexname, "
-						  "0 AS parentidx, "
-						  "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-						  "i.indnatts AS indnkeyatts, "
-						  "i.indnatts AS indnatts, "
-						  "i.indkey, i.indisclustered, "
-						  "false AS indisreplident, "
-						  "c.contype, c.conname, "
-						  "c.condeferrable, c.condeferred, "
-						  "c.tableoid AS contableoid, "
-						  "c.oid AS conoid, "
-						  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
-						  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-						  "t.reloptions AS indreloptions, "
-						  "'' AS indstatcols, "
-						  "'' AS indstatvals "
-						  "FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
-						  "JOIN pg_catalog.pg_index i ON (src.tbloid = i.indrelid) "
-						  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
-						  "LEFT JOIN pg_catalog.pg_constraint c "
-						  "ON (i.indrelid = c.conrelid AND "
-						  "i.indexrelid = c.conindid AND "
-						  "c.contype IN ('p','u','x')) "
-						  "WHERE i.indisvalid AND i.indisready "
-						  "ORDER BY i.indrelid, indexname",
-						  tbloids->data);
+						  "ORDER BY i.indrelid, indexname");
 	}
 	else
 	{
 		appendPQExpBuffer(query,
-						  "SELECT t.tableoid, t.oid, i.indrelid, "
-						  "t.relname AS indexname, "
-						  "0 AS parentidx, "
-						  "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-						  "i.indnatts AS indnkeyatts, "
-						  "i.indnatts AS indnatts, "
-						  "i.indkey, i.indisclustered, "
-						  "false AS indisreplident, "
-						  "c.contype, c.conname, "
-						  "c.condeferrable, c.condeferred, "
-						  "c.tableoid AS contableoid, "
-						  "c.oid AS conoid, "
-						  "null AS condef, "
-						  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-						  "t.reloptions AS indreloptions, "
-						  "'' AS indstatcols, "
-						  "'' AS indstatvals "
-						  "FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
-						  "JOIN pg_catalog.pg_index i ON (src.tbloid = i.indrelid) "
-						  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
-						  "LEFT JOIN pg_catalog.pg_depend d "
-						  "ON (d.classid = t.tableoid "
-						  "AND d.objid = t.oid "
-						  "AND d.deptype = 'i') "
-						  "LEFT JOIN pg_catalog.pg_constraint c "
-						  "ON (d.refclassid = c.tableoid "
-						  "AND d.refobjid = c.oid) "
-						  "WHERE i.indisvalid "
-						  "ORDER BY i.indrelid, indexname",
-						  tbloids->data);
+							"LEFT JOIN pg_catalog.pg_depend d "
+							"ON (d.classid = t.tableoid "
+							"AND d.objid = t.oid "
+							"AND d.deptype = 'i') "
+							"LEFT JOIN pg_catalog.pg_constraint c "
+							"ON (d.refclassid = c.tableoid "
+							"AND d.refobjid = c.oid) "
+							"WHERE i.indisvalid "
+							"ORDER BY i.indrelid, indexname");
 	}
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
