@@ -692,6 +692,11 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 		elog(LOG, "COPY signals FTS to probe segments");
 
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
+		/*
+		 * Before error out, we need to reset the session. Gang will be cleaned up
+		 * when next transaction start, since it will find FTS version bump and
+		 * call cdbcomponent_updateCdbComponents().
+		 */
 		resetSessionForPrimaryGangLoss();
 
 		ereport(ERROR,
