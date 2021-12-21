@@ -4754,6 +4754,13 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 										errdetail("only root partition can be expanded partition prepare")));
 					}
 				}
+				else if (Gp_role == GP_ROLE_EXECUTE)
+				{
+					/* Partition catalogs are not maintained on segments, So we
+					 * just left an assertion here to indicate what happened in QE
+					 */
+					Assert(ps == PART_STATUS_NONE);
+				}
 			}
 
 			ATSimpleRecursion(wqueue, rel, cmd, recurse, lockmode);
