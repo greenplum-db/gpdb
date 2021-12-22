@@ -26,6 +26,8 @@ test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
 test: ao_fsync_panic
 
+test: prevent_ao_wal
+
 # Tests for packcore, will use the coredumps generated in crash_recovery_dtm,
 # so must be scheduled after that one.
 test: packcore

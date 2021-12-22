@@ -63,6 +63,7 @@ test__aocs_addcol_init(void **state)
 	int			nattr = 5;
 	StdRdOptions **opts =
 	(StdRdOptions **) malloc(sizeof(StdRdOptions *) * nattr);
+	wal_level = WAL_LEVEL_ARCHIVE;
 
 	/* 3 existing columns */
 	opts[0] = opts[1] = opts[2] = (StdRdOptions *) NULL;
