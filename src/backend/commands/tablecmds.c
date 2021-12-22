@@ -16389,20 +16389,19 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 		GpPolicy	 *new_policy;
 		MemoryContext oldcontext;
 
-		oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
 		/*
 		 * we only change numsegments for root/interior/leaf partitions distributed randomly
-		 * and root/interior partitions distributed by hash
+		 * and root/interior partitions distributed by hash, and change the numsegments of policy to
+		 * current cluster size
 		 */
+		oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
 		new_policy = GpPolicyCopy(rel->rd_cdbpolicy);
-		/* change numsegments of policy to current cluster size */
 		new_policy->numsegments = new_numsegments;
+		MemoryContextSwitchTo(oldcontext);
 
 		GpPolicyReplace(relid, new_policy);
-
 		/* We should make the policy between on-disk catalog and on-memory relation cache consistently */
 		rel->rd_cdbpolicy = new_policy;
-		MemoryContextSwitchTo(oldcontext);
 	}
 	else
 	{
@@ -16420,17 +16419,15 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 					GpPolicy	 *new_policy;
 					MemoryContext oldcontext;
 
-					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-
 					/* Just modify the numsegments for external writable leaves */
+					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
 					new_policy = GpPolicyCopy(rel->rd_cdbpolicy);
 					new_policy->numsegments = new_numsegments;
+					MemoryContextSwitchTo(oldcontext);
 
 					GpPolicyReplace(relid, new_policy);
-
 					/* We should make the policy between on-disk catalog and on-memory relation cache consistently */
 					rel->rd_cdbpolicy = new_policy;
-					MemoryContextSwitchTo(oldcontext);
 				}
 			}
 		}
@@ -16439,15 +16436,14 @@ ATExecExpandPartitionTablePrepare(Relation rel)
 			GpPolicy	 *new_policy;
 			MemoryContext oldcontext;
 
-			oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-
 			/* we change policy type to randomly for regular leaf partitions distributed by hash */
+			oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
 			new_policy = createRandomPartitionedPolicy(new_numsegments);
-			GpPolicyReplace(relid, new_policy);
+			MemoryContextSwitchTo(oldcontext);
 
+			GpPolicyReplace(relid, new_policy);
 			/* We should make the policy between on-disk catalog and on-memory relation cache consistently */
 			rel->rd_cdbpolicy = new_policy;
-			MemoryContextSwitchTo(oldcontext);
 		}
 	}
 }
