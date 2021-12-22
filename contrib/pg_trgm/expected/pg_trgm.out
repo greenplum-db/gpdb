@@ -2351,7 +2351,6 @@ select t <-> 'q0987wertyu0988', t from test_trgm order by t <-> 'q0987wertyu0988
          ->  Limit
                ->  Index Scan using trgm_idx on test_trgm
                      Order By: (t <-> 'q0987wertyu0988'::text)
- Optimizer: Postgres query optimizer
 (7 rows)
 
 select t <-> 'q0987wertyu0988', t from test_trgm order by t <-> 'q0987wertyu0988' limit 2;
@@ -3518,7 +3517,6 @@ explain (costs off)
          Recheck Cond: (t ~~ '%BCD%'::text)
          ->  Bitmap Index Scan on test2_idx_gin
                Index Cond: (t ~~ '%BCD%'::text)
- Optimizer: Postgres query optimizer
 (6 rows)
 
 explain (costs off)
@@ -3530,7 +3528,6 @@ explain (costs off)
          Recheck Cond: (t ~~* '%BCD%'::text)
          ->  Bitmap Index Scan on test2_idx_gin
                Index Cond: (t ~~* '%BCD%'::text)
- Optimizer: Postgres query optimizer
 (6 rows)
 
 select * from test2 where t like '%BCD%';
@@ -3583,7 +3580,6 @@ explain (costs off)
          Recheck Cond: (t ~ '[abc]{3}'::text)
          ->  Bitmap Index Scan on test2_idx_gin
                Index Cond: (t ~ '[abc]{3}'::text)
- Optimizer: Postgres query optimizer
 (6 rows)
 
 explain (costs off)
@@ -3595,7 +3591,6 @@ explain (costs off)
          Recheck Cond: (t ~* 'DEF'::text)
          ->  Bitmap Index Scan on test2_idx_gin
                Index Cond: (t ~* 'DEF'::text)
- Optimizer: Postgres query optimizer
 (6 rows)
 
 select * from test2 where t ~ '[abc]{3}';
