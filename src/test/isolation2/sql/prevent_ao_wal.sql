@@ -49,7 +49,7 @@
 -1Uq:
 
 -- Validate wal records
-! pushd ${COORDINATOR_DATA_DIRECTORY}/pg_wal > /dev/null && last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -r appendonly && popd > /dev/null;
+! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
 
 -- *********** Set wal_level=minimal **************
 !\retcode gpconfig -c wal_level -v minimal --masteronly;
@@ -72,7 +72,7 @@
 -1U: VACUUM;
 
 -- Validate wal records
-! pushd ${COORDINATOR_DATA_DIRECTORY}/pg_wal > /dev/null && last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -r appendonly && popd > /dev/null;
+! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
 
 -1U: DROP TABLE ao_foo; 
 -1U: DROP TABLE aoco_foo;

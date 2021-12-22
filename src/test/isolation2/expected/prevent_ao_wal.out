@@ -64,7 +64,7 @@ VACUUM
 -1Uq: ... <quitting>
 
 -- Validate wal records
-! pushd ${COORDINATOR_DATA_DIRECTORY}/pg_wal > /dev/null && last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -r appendonly && popd > /dev/null;
+! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
 rmgr: Appendonly  len (rec/tot):    186/   186, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:0/0 len:136
 rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:128/0 len:0
 rmgr: Appendonly  len (rec/tot):    130/   130, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:0/0 len:80
@@ -121,7 +121,7 @@ DELETE 5
 VACUUM
 
 -- Validate wal records
-! pushd ${COORDINATOR_DATA_DIRECTORY}/pg_wal > /dev/null && last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -r appendonly && popd > /dev/null;
+! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
 
 
 -1U: DROP TABLE ao_foo;
