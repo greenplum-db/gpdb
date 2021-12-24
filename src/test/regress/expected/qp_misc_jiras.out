@@ -4785,28 +4785,25 @@ BEFORE INSERT OR UPDATE ON qp_misc_jiras.test_trig
 FOR EACH ROW
     EXECUTE PROCEDURE fn_trig();
 INSERT INTO qp_misc_jiras.test_trig VALUES (0, 'after creating trigger');
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 NOTICE:  1  (seg1 127.0.0.1:40001 pid=16301)
 INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'aaa');
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 NOTICE:  2  (seg1 127.0.0.1:40001 pid=16301)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
              1 |  1 | before creating trigger
-             1 |  1 | after creating trigger1
-             1 |  2 | aaa1
-(3 rows)
+(1 row)
 
 UPDATE qp_misc_jiras.test_trig SET id = id;
 NOTICE:  2  (seg1 127.0.0.1:40001 pid=16301)
-NOTICE:  2  (seg1 127.0.0.1:40001 pid=16301)
-NOTICE:  3  (seg1 127.0.0.1:40001 pid=16301)
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:1344)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
- gp_segment_id | id |           aaa            
----------------+----+--------------------------
-             1 |  2 | before creating trigger1
-             1 |  2 | after creating trigger11
-             1 |  3 | aaa11
-(3 rows)
+ gp_segment_id | id |           aaa           
+---------------+----+-------------------------
+             1 |  1 | before creating trigger
+(1 row)
 
 DROP TABLE qp_misc_jiras.test_trig;
 DROP FUNCTION fn_trig();

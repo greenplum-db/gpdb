@@ -84,7 +84,13 @@ static ResultRelInfo *getTargetResultRelInfo(ModifyTableState *node);
 static void ExecSetupChildParentMapForSubplan(ModifyTableState *mtstate);
 static TupleConversionMap *tupconv_map_for_subplan(ModifyTableState *node,
 												   int whichplan);
-
+static void GetDistributedKeysValue(Relation relation,
+									TupleTableSlot *slot,
+									Datum *values,
+									bool *isnulls,
+									int16 *typlens,
+									bool *typbyvals,
+									int16 *nkeys);
 /*
  * Verify that the tuples to be produced by INSERT or UPDATE match the
  * target relation's rowtype
@@ -407,8 +413,66 @@ ExecInsert(ModifyTableState *mtstate,
 		resultRelInfo->ri_TrigDesc->trig_insert_before_row &&
 		!splitUpdate)
 	{
+		Datum		values[MaxPolicyAttributeNumber];
+		int16		nkeys;
+		int16		coltyplen[MaxPolicyAttributeNumber];
+		bool		isnull[MaxPolicyAttributeNumber];
+		bool		coltypbyval[MaxPolicyAttributeNumber];
+		bool		check = false;
+		/*
+		 * If is distributed relation, get distributed keys value for latter
+		 * check if distributed keys were modified by the trigger, if modified, give
+		 * an error.
+		 * We only neek check in EXECUTE role.
+		 */
+		if (Gp_role == GP_ROLE_EXECUTE &&
+		    POLICYTYPE_PARTITIONED == resultRelationDesc->rd_cdbpolicy->ptype)
+		{
+			GetDistributedKeysValue(resultRelationDesc,
+									slot,
+									values,
+									isnull,
+									coltyplen,
+									coltypbyval,
+									&nkeys);
+			check = true;
+		}
+
 		if (!ExecBRInsertTriggers(estate, resultRelInfo, slot))
 			return NULL;		/* "do nothing" */
+
+		if (check)
+		{
+			/*
+			 * We do not have to define new_nkeys, new_coltyplen and new_coltypbyval
+			 * , since trigger invocation can guarantee that the row structure(columns
+			 * number and columns type) keep consistent.
+			 */
+			Datum	new_values[MaxPolicyAttributeNumber];
+			bool	new_isnull[MaxPolicyAttributeNumber];
+			int		i;
+			GetDistributedKeysValue(resultRelationDesc,
+									slot,
+									new_values,
+									new_isnull,
+									coltyplen,
+									coltypbyval,
+									&nkeys);
+
+			for (i = 0; i < nkeys; ++i)
+			{
+				if (isnull[i] && new_isnull[i])
+				{
+					continue;
+				}
+
+				if ((isnull[i] || new_isnull[i]) ||
+					!datum_image_eq(values[i], new_values[i], coltypbyval[i], coltyplen[i]))
+				{
+					elog(ERROR, "Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported");
+				}
+			}
+		}
 	}
 
 	/* INSTEAD OF ROW INSERT Triggers */
@@ -1221,9 +1285,66 @@ ExecUpdate(ModifyTableState *mtstate,
 	if (resultRelInfo->ri_TrigDesc &&
 		resultRelInfo->ri_TrigDesc->trig_update_before_row)
 	{
+		Datum		values[MaxPolicyAttributeNumber];
+		int16		nkeys;
+		int16		coltyplen[MaxPolicyAttributeNumber];
+		bool		isnull[MaxPolicyAttributeNumber];
+		bool		coltypbyval[MaxPolicyAttributeNumber];
+		bool		check = false;
+		/*
+		 * If distributed relation, fetch distributed key values, for latter
+		 * check if distributed-keys was modified by the trigger, if did, give
+		 * an error, we only do check in .
+		 */
+		if (Gp_role == GP_ROLE_EXECUTE &&
+		    POLICYTYPE_PARTITIONED == resultRelationDesc->rd_cdbpolicy->ptype)
+		{
+			GetDistributedKeysValue(resultRelationDesc,
+									slot,
+									values,
+									isnull,
+									coltyplen,
+									coltypbyval,
+									&nkeys);
+			check = true;
+		}
+
 		if (!ExecBRUpdateTriggers(estate, epqstate, resultRelInfo,
 								  tupleid, oldtuple, slot))
 			return NULL;		/* "do nothing" */
+
+		if (check)
+		{
+			/*
+			 * We do not have to define new_nkeys, new_coltyplen and new_coltypbyval
+			 * , since trigger invocation can guarantee that the row structure(columns
+			 * number and columns type) keep consistent.
+			 */
+			Datum	new_values[MaxPolicyAttributeNumber];
+			bool	new_isnull[MaxPolicyAttributeNumber];
+			int		i;
+			GetDistributedKeysValue(resultRelationDesc,
+									slot,
+									new_values,
+									new_isnull,
+									coltyplen,
+									coltypbyval,
+									&nkeys);
+
+			for (i = 0; i < nkeys; ++i)
+			{
+				if (isnull[i] && new_isnull[i])
+				{
+					continue;
+				}
+
+				if ((isnull[i] || new_isnull[i]) ||
+					!datum_image_eq(values[i], new_values[i], coltypbyval[i], coltyplen[i]))
+				{
+					elog(ERROR, "Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported");
+				}
+			}
+		}
 	}
 
 	/* INSTEAD OF ROW UPDATE Triggers */
@@ -2256,6 +2377,41 @@ tupconv_map_for_subplan(ModifyTableState *mtstate, int whichplan)
 
 	Assert(whichplan >= 0 && whichplan < mtstate->mt_nplans);
 	return mtstate->mt_per_subplan_tupconv_maps[whichplan];
+}
+
+/*
+ * 
+ */
+static void
+GetDistributedKeysValue(Relation relation,
+					    TupleTableSlot *slot,
+					    Datum *values,
+					    bool *isnulls,
+					    int16 *typlens,
+					    bool *typbyvals,
+					    int16 *nkeys)
+{
+	GpPolicy   *policy = relation->rd_cdbpolicy;
+	TupleDesc	tupdesc = relation->rd_att;
+	
+	Datum		value;
+	bool		isnull;
+	int			i, nattr;
+
+	for (i = 0; i < policy->nattrs; ++i)
+	{
+		Form_pg_attribute att;
+
+		nattr = policy->attrs[i];
+		value = slot_getattr(slot, nattr, &isnull);
+		att = TupleDescAttr(tupdesc, nattr - 1);
+		isnulls[i] = isnull;
+		typlens[i] = att->attlen;
+		typbyvals[i] = att->attbyval;
+		values[i] = datumCopy(value, att->attbyval, att->attlen);
+	}
+
+	*nkeys = i;
 }
 
 /* ----------------------------------------------------------------

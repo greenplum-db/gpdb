@@ -806,11 +806,9 @@ create table brtrigpartcon1 partition of brtrigpartcon for values in (1);
 create or replace function brtrigpartcon1trigf() returns trigger as $$begin new.a := 2; return new; end$$ language plpgsql;
 create trigger brtrigpartcon1trig before insert on brtrigpartcon1 for each row execute procedure brtrigpartcon1trigf();
 insert into brtrigpartcon values (1, 'hi there');
-ERROR:  new row for relation "brtrigpartcon1" violates partition constraint
-DETAIL:  Failing row contains (2, hi there).
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 insert into brtrigpartcon1 values (1, 'hi there');
-ERROR:  new row for relation "brtrigpartcon1" violates partition constraint
-DETAIL:  Failing row contains (2, hi there).
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 -- check that the message shows the appropriate column description in a
 -- situation where the partitioned table is not the primary ModifyTable node
 create table inserttest3 (f1 text default 'foo', f2 text default 'bar', f3 int);

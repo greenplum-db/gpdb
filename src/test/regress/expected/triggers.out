@@ -1715,42 +1715,36 @@ WARNING:  after insert (new): (1,black)
 insert into upsert values(2, 'red') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (2,red)
 WARNING:  before insert (new, modified): (3,"red trig modified")
-WARNING:  after insert (new): (3,"red trig modified")
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 insert into upsert values(3, 'orange') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (3,orange)
-WARNING:  before update (old): (3,"red trig modified")
-WARNING:  before update (new): (3,"updated red trig modified")
-WARNING:  after update (old): (3,"red trig modified")
-WARNING:  after update (new): (3,"updated red trig modified")
+WARNING:  after insert (new): (3,orange)
 insert into upsert values(4, 'green') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (4,green)
 WARNING:  before insert (new, modified): (5,"green trig modified")
-WARNING:  after insert (new): (5,"green trig modified")
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 insert into upsert values(5, 'purple') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (5,purple)
 WARNING:  after insert (new): (5,purple)
 insert into upsert values(6, 'white') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (6,white)
 WARNING:  before insert (new, modified): (7,"white trig modified")
-WARNING:  after insert (new): (7,"white trig modified")
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 insert into upsert values(7, 'pink') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (7,pink)
 WARNING:  after insert (new): (7,pink)
 insert into upsert values(8, 'yellow') on conflict (key) do update set color = 'updated ' || upsert.color;
 WARNING:  before insert (new): (8,yellow)
 WARNING:  before insert (new, modified): (9,"yellow trig modified")
-WARNING:  after insert (new): (9,"yellow trig modified")
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 select * from upsert;
- key |           color           
------+---------------------------
-   3 | updated red trig modified
-   5 | green trig modified
+ key | color  
+-----+--------
+   3 | orange
    7 | pink
-   9 | yellow trig modified
    1 | black
    5 | purple
-   7 | white trig modified
-(7 rows)
+(4 rows)
 
 drop table upsert;
 drop function upsert_before_func();

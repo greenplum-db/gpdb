@@ -43,37 +43,18 @@ truncate b;
 create trigger b_t before insert on b for each row execute procedure trig345();
 -- however with the trigger it is inserted on seg1
 insert into b select i from generate_series(1, 10) i;
+ERROR:  Modifying distributed key in a BEFORE FOR EACH ROW trigger is not supported (nodeModifyTable.c:472)
 select gp_segment_id, * from b;
  gp_segment_id | data 
 ---------------+------
-             1 |  345
-             1 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-(10 rows)
+(0 rows)
 
 -- data expansion should tolerant it
 alter table b expand table;
 select gp_segment_id, * from b;
  gp_segment_id | data 
 ---------------+------
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-             0 |  345
-(10 rows)
+(0 rows)
 
 -- start_ignore
 -- We need to do a cluster expansion which will check if there are partial
