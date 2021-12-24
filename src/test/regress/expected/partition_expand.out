@@ -1104,6 +1104,28 @@ select localoid::regclass, policytype, numsegments, distkey, distclass
 (10 rows)
 
 drop table t_random_subpartition;
+-- Test relcache when exec `ALTER TABLE xxx EXPAND PARTITION PREPARE`
+-- https://github.com/greenplum-db/gpdb/pull/12935
+create table partition_test_c3cd20(i int) distributed by (i) partition by range(i) (start(0) end(10001) every(1000)) ;
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_1" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_2" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_3" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_4" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_5" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_6" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_7" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_8" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_9" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_10" for table "partition_test_c3cd20"
+NOTICE:  CREATE TABLE will create partition "partition_test_c3cd20_1_prt_11" for table "partition_test_c3cd20"
+begin;
+ALTER TABLE partition_test_c3cd20 EXPAND PARTITION PREPARE;
+select * from partition_test_c3cd20;
+ i 
+---
+(0 rows)
+
+abort;
 --cleanup
 select gp_debug_reset_create_table_default_numsegments();
  gp_debug_reset_create_table_default_numsegments 
