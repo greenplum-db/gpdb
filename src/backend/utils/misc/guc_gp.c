@@ -218,6 +218,7 @@ int			gp_resqueue_priority_grouping_timeout;
 double		gp_resqueue_priority_cpucores_per_segment;
 char	   *gp_resqueue_priority_default_value;
 bool		gp_debug_resqueue_priority = false;
+bool		gp_log_resqueue_priority_sleep_time = false;
 
 /* Resource group GUCs */
 int			gp_resource_group_cpu_priority;
@@ -3134,6 +3135,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&enable_implicit_timeformat_YYYYMMDDHH24MISS,
 		false,
 		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_log_resqueue_priority_sleep_time", PGC_USERSET, RESOURCES_MGM,
+		 gettext_noop("If set, log the duration for which the statement was put to sleep in resource queue"),
+		 NULL,
+		 },
+		 &gp_log_resqueue_priority_sleep_time,
+		 false,
+		 NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
