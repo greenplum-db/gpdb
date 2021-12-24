@@ -71,6 +71,9 @@ extern bool gp_log_resqueue_priority_sleep_time;
 /* In ms */
 #define DEFAULT_SLEEP_TIME 100.0
 
+/* In ms */
+#define DEFAULT_SLEEP_TIME_LOGGING_INTERVAL 120000.0
+
 /**
  * A statement id consists of a session id and command count.
  */
@@ -101,6 +104,7 @@ typedef struct BackoffBackendLocalEntry
 										 * leader? */
 	double		totalSleepTime; /* Total duration (micro sec) pg_usleep was invoked
 								 * by BackOffBackend() for this statement */
+	double		lastLoggedSleepTime;	/* track last logged sleep time */
 
 }	BackoffBackendLocalEntry;
 
@@ -458,6 +462,7 @@ BackoffBackendEntryInit(int sessionid, int commandcount, Oid queueId)
 	myLocalEntry->lastSleepTime = DEFAULT_SLEEP_TIME;
 	myLocalEntry->groupingTimeExpired = false;
 	myLocalEntry->totalSleepTime = 0.0;
+	myLocalEntry->lastLoggedSleepTime = 0.0;
 	if (getrusage(RUSAGE_SELF, &myLocalEntry->lastUsage) < 0)
 	{
 		elog(ERROR, "Unable to execute getrusage(). Please disable query prioritization.");
@@ -589,6 +594,15 @@ BackoffBackend()
 				le->totalSleepTime += leftOver;
 			}
 
+			/* log after every 2 minute of sleeping if enabled*/
+			if (gp_log_resqueue_priority_sleep_time &&
+					((le->totalSleepTime - le->lastLoggedSleepTime) / 1000) >= DEFAULT_SLEEP_TIME_LOGGING_INTERVAL)
+			{
+				ereport(LOG,
+						(errmsg("until now sleep time spent in resource queue: %.3f ms",
+								le->totalSleepTime / 1000)));
+				le->lastLoggedSleepTime = le->totalSleepTime;
+			}
 		}
 	}
 	else
