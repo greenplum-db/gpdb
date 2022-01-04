@@ -774,6 +774,8 @@ static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
 
 static inline bool pollAcks(ChunkTransportState *transportStates, int fd, int timeout);
 
+static void sendtoWithRetry(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len, int retry, const char *errDetail);
+
 /* #define TRANSFER_PROTOCOL_STATS */
 
 #ifdef TRANSFER_PROTOCOL_STATS
@@ -1770,9 +1772,6 @@ destroyConnHashTable(ConnHashTable *ht)
 /*
  * sendControlMessage
  * 		Helper function to send a control message.
- *
- * It is different from sendOnce which retries on interrupts...
- * Here, we leave it to retransmit logic to handle these cases.
  */
 static inline void
 sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerLen)
@@ -1793,15 +1792,10 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	if (gp_interconnect_full_crc)
 		addCRC(pkt);
 
-	n = sendto(fd, (const char *) pkt, pkt->len, 0, addr, peerLen);
-
-	/*
-	 * No need to handle EAGAIN here: no-space just means that we dropped the
-	 * packet: our ordinary retransmit mechanism will handle that case
-	 */
-
-	if (n < pkt->len)
-		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %d", pkt->seq);
+	/* Retry for infinite times since we have no retransmit mechanism for control message */
+	sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, 0, errDetail);
 }
 
 /*
@@ -4544,28 +4538,16 @@ prepareXmit(MotionConn *conn)
 	}
 }
 
-/*
- * sendOnce
- * 		Send a packet.
- */
-static void
-sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
-{
+static void sendtoWithRetry(int socket, const void *message, size_t length,
+           int flags, const struct sockaddr *dest_addr,
+           socklen_t dest_len, int retry, const char *errDetail) {
 	int32		n;
-
-#ifdef USE_ASSERT_CHECKING
-	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
-	{
-#ifdef AMS_VERBOSE_LOGGING
-		write_log("THROW PKT with seq %d srcpid %d despid %d", buf->pkt->seq, buf->pkt->srcPid, buf->pkt->dstPid);
-#endif
-		return;
-	}
-#endif
+	int count = 0;
 
 xmit_retry:
-	n = sendto(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
-			   (struct sockaddr *) &conn->peer, conn->peer_len);
+	if (retry > 0 && ++count > retry)
+		return;
+	n = sendto(socket, message, length, flags, dest_addr, dest_len);
 	if (n < 0)
 	{
 		if (errno == EINTR)
@@ -4584,32 +4566,52 @@ xmit_retry:
 			ereport(LOG,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("Interconnect error writing an outgoing packet: %m"),
-					 errdetail("error during sendto() for Remote Connection: contentId=%d at %s",
-							   conn->remoteContentId, conn->remoteHostAndPort)));
+					 errdetail("error during sendto() %s", errDetail)));
 			return;
 		}
 
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect error writing an outgoing packet: %m"),
 						errdetail("error during sendto() call (error:%d).\n"
-								  "For Remote Connection: contentId=%d at %s",
-								  errno, conn->remoteContentId,
-								  conn->remoteHostAndPort)));
+								  "%s", errno, errDetail)));
 		/* not reached */
 	}
 
-	if (n != buf->pkt->len)
+	if (n != dest_len)
 	{
 		if (DEBUG1 >= log_min_messages)
 			write_log("Interconnect error writing an outgoing packet [seq %d]: short transmit (given %d sent %d) during sendto() call."
-					  "For Remote Connection: contentId=%d at %s", buf->pkt->seq, buf->pkt->len, n,
-					  conn->remoteContentId,
-					  conn->remoteHostAndPort);
+					  "%s", ((icpkthdr *) message)->seq, dest_len, n, errDetail);
 #ifdef AMS_VERBOSE_LOGGING
 		logPkt("PKT DETAILS ", buf->pkt);
 #endif
 	}
+}
 
+/*
+ * sendOnce
+ * 		Send a packet.
+ */
+static void
+sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
+{
+
+#ifdef USE_ASSERT_CHECKING
+	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
+	{
+#ifdef AMS_VERBOSE_LOGGING
+		write_log("THROW PKT with seq %d srcpid %d despid %d", buf->pkt->seq, buf->pkt->srcPid, buf->pkt->dstPid);
+#endif
+		return;
+	}
+#endif
+
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "For Remote Connection: contentId=%d at %s",
+					  conn->remoteContentId,
+					  conn->remoteHostAndPort);
+	sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
+                          (struct sockaddr *) &conn->peer, conn->peer_len, 0, errDetail);
 	return;
 }
 
@@ -7021,30 +7023,9 @@ SendDummyPacket(void)
 	/*
 	 * Send a dummy package to the interconnect listener, try 10 times
 	 */
-
-	counter = 0;
-	while (counter < 10)
-	{
-		counter++;
-		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
-		if (ret < 0)
-		{
-			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-				continue;
-			else
-			{
-				elog(LOG, "send dummy packet failed, sendto failed: %m");
-				goto send_error;
-			}
-		}
-		break;
-	}
-
-	if (counter >= 10)
-	{
-		elog(LOG, "send dummy packet failed, sendto failed: %m");
-		goto send_error;
-	}
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "Send dummy packet failed");
+	sendtoWithRetry(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen, 10, errDetail);
 
 	pg_freeaddrinfo_all(hint.ai_family, addrs);
 	closesocket(sockfd);
