@@ -60,15 +60,10 @@ def get_ip(hostname=None):
     hostinfo = socket.getaddrinfo(hostname, None)
     ipaddrlist = list(set([(ai[4][0]) for ai in hostinfo]))
     for myip in ipaddrlist:
-        '''
         if myip.find(":") > 0:
             ipv6 = myip
             return ipv6
         elif myip.find(".") > 0:
-            ipv4 = myip
-            return ipv4
-        '''
-        if myip.find(".") > 0:
             ipv4 = myip
             return ipv4
 
@@ -443,8 +438,10 @@ def modify_sql_file(num):
 def copy_data(source='',target=''):
     cmd = 'cp '+ mkpath('data/' + source) + ' ' + mkpath(target)
     p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    return p.communicate()
-
+    _, err = p.communicate()
+    if err != '':
+        sys.stderr.write(str(err))
+        sys.exit(2)
 
 def get_table_name():
     try:

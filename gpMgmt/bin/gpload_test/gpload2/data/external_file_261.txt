@@ -1,0 +1,5 @@
+line1|test1\.test1
+line2|test2\.test2
+line3|test3\.test3
+line4|test4\.test4
+line5|test5\.test5

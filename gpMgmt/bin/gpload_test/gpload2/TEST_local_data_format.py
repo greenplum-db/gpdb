@@ -424,7 +424,7 @@ def test_259_gpload_eol_CRLF_txt():
 @pytest.mark.order(260)
 @prepare_before_test(num=260,times=1)
 def test_260_gpload_eol_CRLF_csv():
-    "259 gpload csv file load error with invalid NEWLINE value"
+    "260 gpload csv file load error with invalid NEWLINE value"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_260.csv','data_file.csv')
@@ -441,7 +441,5 @@ def test_261_gpload_custom_format():
     "261 gpload loads text file without customer format"
     file = mkpath('setup.sql')
     runfile(file)
-    copy_data('external_file_253.txt','data_file.txt')
+    copy_data('external_file_261.txt','data_file.txt')
     write_config_file(reuse_tables=True,log_errors=True,error_limit=2,sql=True,before='set dataflow.prefer_custom_text = false;',file='data_file.txt',table='texttable2')
-
-    write_config_file(reuse_tables=True,format='csv',file='data_file.csv',table='texttable2')
