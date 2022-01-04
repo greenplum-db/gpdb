@@ -2947,6 +2947,29 @@ from material_test2
 where first_id in (select first_id from mat_w)
 and first_id in (select first_id from mat_w);
 
+-- Test to ensure bitmapscan doesn't project recheck/scalar filter columns
+create table material_bitmapscan(i int, j int, k timestamp, l timestamp) with(appendonly=true) distributed replicated;
+create index material_bitmapscan_idx on material_bitmapscan using btree(k);
+insert into material_bitmapscan
+select i, mod(i, 10),
+	timestamp '2021-06-01' + interval '1' day * mod(i, 30),
+	timestamp '2021-06-01' + interval '1' day * mod(i, 30)
+from generate_series(1, 10000) i;
+
+explain verbose with mat as(
+    select i, j from material_bitmapscan where i = 2 and j = 2
+    and k = timestamp '2021-06-03' and l = timestamp '2021-06-03'
+)
+select m1.i
+from mat m1 join mat m2 on m1.j = m2.j;
+
+with mat as(
+    select i, j from material_bitmapscan where i = 2 and j = 2
+    and k = timestamp '2021-06-03' and l = timestamp '2021-06-03'
+)
+select m1.i
+from mat m1 join mat m2 on m1.j = m2.j;
+
 create table tt_varchar(
 	data character varying
 ) distributed by (data);

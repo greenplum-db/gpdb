@@ -17,17 +17,16 @@ EXPLAIN SELECT id FROM aoco_gist_tbl
  ORDER BY id;
 
                           QUERY PLAN
-Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.00 rows=1 width=4)
-   Merge Key: id
-   ->  Result  (cost=0.00..0.00 rows=1 width=4)
-         ->  Sort  (cost=0.00..0.00 rows=1 width=4)
-               Sort Key: id
-               ->  Bitmap Table Scan on aoco_gist_tbl  (cost=0.00..0.00 rows=1 width=4)
-                     Recheck Cond: b ~= '(3,4),(1,2)'::box
-                     ->  Bitmap Index Scan on boxindex  (cost=0.00..0.00 rows=0 width=0)
-                           Index Cond: b ~= '(3,4),(1,2)'::box
- Optimizer status: PQO version 2.65.1
-(10 rows)
+Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
+  Merge Key: id
+  ->  Sort  (cost=0.00..391.30 rows=1 width=4)
+        Sort Key: id
+        ->  Bitmap Heap Scan on aoco_gist_tbl  (cost=0.00..391.30 rows=1 width=4)
+              Recheck Cond: (b ~= '(3,4),(1,2)'::box)
+              ->  Bitmap Index Scan on boxindex  (cost=0.00..0.00 rows=0 width=0)
+                    Index Cond: (b ~= '(3,4),(1,2)'::box)
+Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 -->
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Thread Id="0">
@@ -272,7 +271,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.00 rows=1 width=4)
         <dxl:SortingColumnList>
           <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
         </dxl:SortingColumnList>
-        <dxl:Result>
+        <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="391.295502" Rows="1.000000" Width="4"/>
           </dxl:Properties>
@@ -282,65 +281,47 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.00 rows=1 width=4)
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
-          <dxl:Sort SortDiscardDuplicates="false">
+          <dxl:SortingColumnList>
+            <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+          </dxl:SortingColumnList>
+          <dxl:LimitCount/>
+          <dxl:LimitOffset/>
+          <dxl:BitmapTableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="391.295502" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="391.295500" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id">
                 <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="1" Alias="b">
-                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.603.1.0"/>
-              </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList>
-              <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-            </dxl:SortingColumnList>
-            <dxl:LimitCount/>
-            <dxl:LimitOffset/>
-            <dxl:BitmapTableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="391.295500" Rows="1.000000" Width="4"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="0" Alias="id">
-                  <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="1" Alias="b">
-                  <dxl:Ident ColId="1" ColName="b" TypeMdid="0.603.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:RecheckCond>
+            <dxl:RecheckCond>
+              <dxl:Comparison ComparisonOperator="~=" OperatorMdid="0.499.1.0">
+                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.603.1.0"/>
+                <dxl:ConstValue TypeMdid="0.603.1.0" Value="AAAAAAAACEAAAAAAAAAQQAAAAAAAAPA/AAAAAAAAAEA="/>
+              </dxl:Comparison>
+            </dxl:RecheckCond>
+            <dxl:BitmapIndexProbe>
+              <dxl:IndexCondList>
                 <dxl:Comparison ComparisonOperator="~=" OperatorMdid="0.499.1.0">
                   <dxl:Ident ColId="1" ColName="b" TypeMdid="0.603.1.0"/>
                   <dxl:ConstValue TypeMdid="0.603.1.0" Value="AAAAAAAACEAAAAAAAAAQQAAAAAAAAPA/AAAAAAAAAEA="/>
                 </dxl:Comparison>
-              </dxl:RecheckCond>
-              <dxl:BitmapIndexProbe>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="~=" OperatorMdid="0.499.1.0">
-                    <dxl:Ident ColId="1" ColName="b" TypeMdid="0.603.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.603.1.0" Value="AAAAAAAACEAAAAAAAAAQQAAAAAAAAPA/AAAAAAAAAEA="/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.566300.1.0" IndexName="boxindex"/>
-              </dxl:BitmapIndexProbe>
-              <dxl:TableDescriptor Mdid="0.566277.1.0" TableName="aoco_gist_tbl">
-                <dxl:Columns>
-                  <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
-                  <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="5" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="6" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:BitmapTableScan>
-          </dxl:Sort>
-        </dxl:Result>
+              </dxl:IndexCondList>
+              <dxl:IndexDescriptor Mdid="0.566300.1.0" IndexName="boxindex"/>
+            </dxl:BitmapIndexProbe>
+            <dxl:TableDescriptor Mdid="0.566277.1.0" TableName="aoco_gist_tbl">
+              <dxl:Columns>
+                <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
+                <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                <dxl:Column ColId="5" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                <dxl:Column ColId="6" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:BitmapTableScan>
+        </dxl:Sort>
       </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>

@@ -946,58 +946,6 @@ CTranslatorExprToDXL::PdxlnBitmapTableScan(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorExprToDXL::AddBitmapFilterColumns
-//
-//	@doc:
-//		Add used columns in the bitmap recheck and the remaining scalar filter
-//		condition to the required output column
-//---------------------------------------------------------------------------
-void
-CTranslatorExprToDXL::AddBitmapFilterColumns(
-	CMemoryPool *mp, CPhysicalScan *pop, CExpression *pexprRecheckCond,
-	CExpression *pexprScalar,
-	CColRefSet *pcrsReqdOutput	// append the required column reference
-)
-{
-	GPOS_ASSERT(NULL != pop);
-	GPOS_ASSERT(COperator::EopPhysicalDynamicBitmapTableScan == pop->Eopid() ||
-				COperator::EopPhysicalBitmapTableScan == pop->Eopid());
-	GPOS_ASSERT(NULL != pcrsReqdOutput);
-
-	// compute what additional columns are required in the output of the (Dynamic) Bitmap Table Scan
-	CColRefSet *pcrsAdditional = GPOS_NEW(mp) CColRefSet(mp);
-
-	if (NULL != pexprRecheckCond)
-	{
-		// add the columns used in the recheck condition
-		pcrsAdditional->Include(pexprRecheckCond->DeriveUsedColumns());
-	}
-
-	if (NULL != pexprScalar)
-	{
-		// add the columns used in the filter condition
-		pcrsAdditional->Include(pexprScalar->DeriveUsedColumns());
-	}
-
-	CColRefSet *pcrsBitmap = GPOS_NEW(mp) CColRefSet(mp);
-	pcrsBitmap->Include(pop->PdrgpcrOutput());
-
-	// only keep the columns that are in the table associated with the bitmap
-	pcrsAdditional->Intersection(pcrsBitmap);
-
-	if (0 < pcrsAdditional->Size())
-	{
-		pcrsReqdOutput->Include(pcrsAdditional);
-	}
-
-	// clean up
-	pcrsAdditional->Release();
-	pcrsBitmap->Release();
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorExprToDXL::PdxlnBitmapTableScan
 //
 //	@doc:
@@ -1055,9 +1003,6 @@ CTranslatorExprToDXL::PdxlnBitmapTableScan(
 	CDXLNode *pdxlnRecheckCondFilter = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarRecheckCondFilter(m_mp),
 				 pdxlnRecheckCond);
-
-	AddBitmapFilterColumns(m_mp, pop, pexprRecheckCond, pexprScalar,
-						   pcrsOutput);
 
 	CDXLNode *proj_list_dxlnode = PdxlnProjList(pcrsOutput, colref_array);
 
@@ -1262,8 +1207,6 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 
 	// build projection list
 	CColRefSet *pcrsOutput = pexprScan->Prpp()->PcrsRequired();
-	AddBitmapFilterColumns(m_mp, pop, pexprRecheckCond, pexprScalar,
-						   pcrsOutput);
 	CDXLNode *proj_list_dxlnode = PdxlnProjList(pcrsOutput, colref_array);
 
 	pdxlnScan->AddChild(proj_list_dxlnode);

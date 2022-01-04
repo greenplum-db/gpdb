@@ -9,13 +9,12 @@
     EXPLAIN SELECT count(*) FROM t WHERE a @> '{}';
                                      QUERY PLAN
 -------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..68.13 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..68.13 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..68.13 rows=1 width=8)
-               ->  Bitmap Heap Scan on t  (cost=0.00..68.13 rows=1 width=1)
-                     Recheck Cond: (a @> '{}'::jsonb)
-                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
-                           Index Cond: (a @> '{}'::jsonb)
+  Aggregate  (cost=0.00..391.30 rows=1 width=8)
+    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=1)
+          ->  Bitmap Heap Scan on t  (cost=0.00..391.30 rows=1 width=1)
+                Recheck Cond: (a @> '{}'::jsonb)
+                ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                      Index Cond: (a @> '{}'::jsonb)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
@@ -283,11 +282,7 @@
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="391.295478" Rows="1.000000" Width="1"/>
               </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="0" Alias="a">
-                  <dxl:Ident ColId="0" ColName="a" TypeMdid="0.3802.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
+              <dxl:ProjList/>
               <dxl:Filter/>
               <dxl:RecheckCond>
                 <dxl:Comparison ComparisonOperator="@&gt;" OperatorMdid="0.3246.1.0">

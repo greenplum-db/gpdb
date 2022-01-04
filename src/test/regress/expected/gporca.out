@@ -13506,6 +13506,58 @@ and first_id in (select first_id from mat_w);
         1
 (8 rows)
 
+-- Test to ensure bitmapscan doesn't project recheck/scalar filter columns
+create table material_bitmapscan(i int, j int, k timestamp, l timestamp) with(appendonly=true) distributed replicated;
+create index material_bitmapscan_idx on material_bitmapscan using btree(k);
+insert into material_bitmapscan
+select i, mod(i, 10),
+	timestamp '2021-06-01' + interval '1' day * mod(i, 30),
+	timestamp '2021-06-01' + interval '1' day * mod(i, 30)
+from generate_series(1, 10000) i;
+explain verbose with mat as(
+    select i, j from material_bitmapscan where i = 2 and j = 2
+    and k = timestamp '2021-06-03' and l = timestamp '2021-06-03'
+)
+select m1.i
+from mat m1 join mat m2 on m1.j = m2.j;
+                                                                                         QUERY PLAN                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.03..0.09 rows=4 width=4)
+   Output: material_bitmapscan.i
+   ->  Hash Join  (cost=0.03..0.09 rows=4 width=4)
+         Output: material_bitmapscan.i
+         Hash Cond: (material_bitmapscan.j = m2.j)
+         ->  Bitmap Heap Scan on orca.material_bitmapscan  (cost=102.67..120.35 rows=1 width=8)
+               Output: material_bitmapscan.i, material_bitmapscan.j
+               Recheck Cond: (material_bitmapscan.k = 'Thu Jun 03 00:00:00 2021'::timestamp without time zone)
+               Filter: ((material_bitmapscan.i = 2) AND (material_bitmapscan.j = 2) AND (material_bitmapscan.l = 'Thu Jun 03 00:00:00 2021'::timestamp without time zone))
+               ->  Bitmap Index Scan on material_bitmapscan_idx  (cost=0.00..102.66 rows=334 width=0)
+                     Index Cond: (material_bitmapscan.k = 'Thu Jun 03 00:00:00 2021'::timestamp without time zone)
+         ->  Hash  (cost=0.02..0.02 rows=1 width=4)
+               Output: m2.j
+               ->  Subquery Scan on m2  (cost=0.00..0.02 rows=1 width=4)
+                     Output: m2.j
+                     ->  Bitmap Heap Scan on orca.material_bitmapscan material_bitmapscan_1  (cost=102.67..120.35 rows=1 width=8)
+                           Output: material_bitmapscan_1.i, material_bitmapscan_1.j
+                           Recheck Cond: (material_bitmapscan_1.k = 'Thu Jun 03 00:00:00 2021'::timestamp without time zone)
+                           Filter: ((material_bitmapscan_1.i = 2) AND (material_bitmapscan_1.j = 2) AND (material_bitmapscan_1.l = 'Thu Jun 03 00:00:00 2021'::timestamp without time zone))
+                           ->  Bitmap Index Scan on material_bitmapscan_idx  (cost=0.00..102.66 rows=334 width=0)
+                                 Index Cond: (material_bitmapscan_1.k = 'Thu Jun 03 00:00:00 2021'::timestamp without time zone)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(23 rows)
+
+with mat as(
+    select i, j from material_bitmapscan where i = 2 and j = 2
+    and k = timestamp '2021-06-03' and l = timestamp '2021-06-03'
+)
+select m1.i
+from mat m1 join mat m2 on m1.j = m2.j;
+ i 
+---
+ 2
+(1 row)
+
 create table tt_varchar(
 	data character varying
 ) distributed by (data);
