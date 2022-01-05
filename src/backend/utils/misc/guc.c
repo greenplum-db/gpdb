@@ -7520,10 +7520,7 @@ DispatchSetPGVariable(const char *name, List *args, bool is_local)
 						 * Plain string literal or identifier. Quote it.
 						 */
 
-						if (val[0] != '\'')
-							appendStringInfo(&buffer, "%s", quote_literal_cstr(val));
-						else
-							appendStringInfo(&buffer, "%s",val);
+						appendStringInfo(&buffer, "%s", quote_literal_cstr(val));
 
 
 						break;

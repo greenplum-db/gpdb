@@ -5473,16 +5473,39 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 		{
 			struct config_string *sguc = (struct config_string *) gconfig;
 			const char *str = *sguc->variable;
-			int			i;
 
 			appendStringInfo(&buffer, "%s TO ", gconfig->name);
 
 			/*
-			 * All whitespace characters must be escaped. See
-			 * pg_split_opts() in the backend.
+			 * If it's a list, we need to split the list into elements and
+			 * quote the elements individually.
+			 * else if it's empty or not a list, we should quote the whole src.
+			 *
+			 * This is the copied from pg_get_functiondef()'s handling of
+			 * proconfig options.
 			 */
-			for (i = 0; str[i] != '\0'; i++)
-				appendStringInfoChar(&buffer, str[i]);
+			if (sguc->gen.flags & GUC_LIST_QUOTE && str[0] != '\0')
+			{
+				List       *namelist;
+				ListCell   *lc;
+
+				/* Parse string into list of identifiers */
+				if (!SplitGUCList((char *) pstrdup(str), ',', &namelist))
+				{
+					/* this shouldn't fail really */
+					elog(ERROR, "invalid list syntax in proconfig item");
+				}
+				foreach(lc, namelist)
+				{
+					char       *curname = (char *) lfirst(lc);
+
+					appendStringInfoString(&buffer, quote_literal_cstr(curname));
+					if (lnext(lc))
+						appendStringInfoString(&buffer, ", ");
+				}
+			}
+			else
+				appendStringInfoString(&buffer, quote_literal_cstr(str));
 
 			break;
 		}
