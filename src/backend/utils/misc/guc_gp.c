@@ -5010,12 +5010,13 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 			/*
 			 * If it's a list, we need to split the list into elements and
 			 * quote the elements individually.
+			 * else if it's empty or not a list, we should quote the whole src.
 			 *
 			 * This is the copied from pg_get_functiondef()'s handling of
 			 * proconfig options.
 			 * .
 			 */
-			if (sguc->gen.flags & GUC_LIST_QUOTE)
+			if (sguc->gen.flags & GUC_LIST_QUOTE && str[0] != '\0')
 			{
 				List	   *namelist;
 				ListCell   *lc;

@@ -1634,6 +1634,13 @@ restore_guc_to_QE(void )
 			 * we can not keep alive gang anymore.
 			 */
 			DisconnectAndDestroyAllGangs(false);
+			/*
+			 * when qe elog an error, qd will use ReThrowError to
+			 * re throw the error, the errordata_stack_depth will ++,
+			 * when we catch the error we should reset errordata_stack_depth
+			 * by FlushErrorState.
+			 */
+			FlushErrorState();
 		}
 		PG_END_TRY();
 	}
