@@ -2416,12 +2416,12 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalCTEConsumer(
 							   m_mp, cte_id, colid_array_cte_consumer));
 
-		List *_target_list = (List *) gpdb::CopyObject(target_list);
+		List *target_list_copy = (List *) gpdb::CopyObject(target_list);
 
 		IntToUlongMap *groupby_attno_to_colid_mapping =
 			GPOS_NEW(m_mp) IntToUlongMap(m_mp);
 		CDXLNode *groupby_dxlnode = CreateSimpleGroupBy(
-			_target_list, group_clause, grouping_set_bitset, has_aggs,
+			target_list_copy, group_clause, grouping_set_bitset, has_aggs,
 			true,  // has_grouping_sets
 			cte_consumer_dxlnode, phmiulSortgrouprefColIdConsumer,
 			spj_consumer_output_attno_to_colid_mapping,
@@ -2429,19 +2429,19 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 
 		// add a project list for the NULL values
 		CDXLNode *project_dxlnode = CreateDXLProjectNullsForGroupingSets(
-			_target_list, groupby_dxlnode, grouping_set_bitset,
+			target_list_copy, groupby_dxlnode, grouping_set_bitset,
 			phmiulSortgrouprefColIdConsumer, groupby_attno_to_colid_mapping,
 			grpcol_index_to_colid_mapping);
 
 		ULongPtrArray *colids_outer_array =
 			CTranslatorUtils::GetOutputColIdsArray(
-				m_mp, _target_list, groupby_attno_to_colid_mapping);
+				m_mp, target_list_copy, groupby_attno_to_colid_mapping);
 		if (nullptr != unionall_dxlnode)
 		{
 			GPOS_ASSERT(nullptr != colid_array_inner);
 			CDXLColDescrArray *dxl_col_descr_array =
 				CTranslatorUtils::GetDXLColumnDescrArray(
-					m_mp, _target_list, colids_outer_array,
+					m_mp, target_list_copy, colids_outer_array,
 					true /* keep_res_junked */);
 
 			colids_outer_array->AddRef();
@@ -2469,7 +2469,7 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 			// add the sortgroup columns to output map of the last column
 			ULONG te_pos = 0;
 			ListCell *lc = nullptr;
-			ForEach(lc, _target_list)
+			ForEach(lc, target_list_copy)
 			{
 				TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 

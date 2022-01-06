@@ -12,38 +12,26 @@
   explain select sum(case when b in (select b from temp_b where t.a &gt c) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a &gt c)) then 1 else 0 end) from temp_a t;
 
                                                                               QUERY PLAN
-   Aggregate  (cost=0.00..1356698074.46 rows=1 width=16)
-       Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1356698074.46 rows=1 width=16)
-             Aggregate  (cost=0.00..1356698074.46 rows=1 width=16)
-                   GroupAggregate  (cost=0.00..1324038.43 rows=3 width=24)
-                       Group Key: temp_a.a, temp_a.b, temp_a.ctid, temp_a.gp_segment_id
-                         Sort  (cost=0.00..1324038.43 rows=3 width=34)
-                             Sort Key: temp_a.ctid, temp_a.gp_segment_id
-                               Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324038.43 rows=3 width=34)
-                                   Hash Key: temp_a.ctid, temp_a.gp_segment_id
-                                     Result  (cost=0.00..1324038.43 rows=3 width=34)
-                                           GroupAggregate  (cost=0.00..1324038.43 rows=3 width=34)
-                                               Group Key: temp_a.a, temp_a.b, temp_a.ctid, temp_a.gp_segment_id
-                                                 Sort  (cost=0.00..1324038.43 rows=4 width=23)
-                                                     Sort Key: temp_a.ctid, temp_a.gp_segment_id
-                                                       Result  (cost=0.00..1324038.43 rows=4 width=23)
-                                                             Nested Loop Left Join  (cost=0.00..1324038.43 rows=4 width=23)
-                                                                 Join Filter: ((temp_a.a &gt temp_b.c) AND ((temp_a.b = temp_b.b) IS NOT FALSE))
-                                                                   Seq Scan on temp_a  (cost=0.00..431.00 rows=3 width=18)
-                                                                   Result  (cost=0.00..431.00 rows=9 width=9)
-                                                                         Materialize  (cost=0.00..431.00 rows=9 width=8)
-                                                                               Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=8)
-                                                                                     Seq Scan on temp_b  (cost=0.00..431.00 rows=3 width=8)
-                 SubPlan 1  (slice4; segments: 3)
-                     Result  (cost=0.00..431.01 rows=3 width=5)
-                           Result  (cost=0.00..431.01 rows=3 width=5)
-                                 Result  (cost=0.00..431.01 rows=3 width=4)
-                                     Filter: (temp_a.a &gt temp_b_1.c)
-                                       Materialize  (cost=0.00..431.00 rows=9 width=8)
-                                             Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=9 width=8)
-                                                   Seq Scan on temp_b temp_b_1  (cost=0.00..431.00 rows=3 width=8)
-   Optimizer: Pivotal Optimizer (GPORCA) version 3.50.0
-  (31 rows)
+   Finalize Aggregate  (cost=0.00..1356692161.56 rows=1 width=16)
+      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1356692161.56 rows=1 width=16)
+            ->  Partial Aggregate  (cost=0.00..1356692161.56 rows=1 width=16)
+                  ->  GroupAggregate  (cost=0.00..1324032.67 rows=1 width=24)
+                        Group Key: temp_a.a, temp_a.b, temp_a.ctid, temp_a.gp_segment_id
+                        ->  Sort  (cost=0.00..1324032.67 rows=1 width=23)
+                              Sort Key: temp_a.a, temp_a.b, temp_a.ctid, temp_a.gp_segment_id
+                              ->  Nested Loop Left Join  (cost=0.00..1324032.67 rows=1 width=23)
+                                    Join Filter: ((temp_a.b = temp_b.b) IS NOT FALSE)
+                                    ->  Seq Scan on temp_a  (cost=0.00..431.00 rows=1 width=18)
+                                    ->  Result  (cost=0.00..431.00 rows=1 width=5)
+                                          ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                                                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                      ->  Seq Scan on temp_b  (cost=0.00..431.00 rows=1 width=4)
+                  SubPlan 1
+                    ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                          Filter: (temp_a.a > temp_b_1.c)
+                          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                      ->  Seq Scan on temp_b temp_b_1  (cost=0.00..431.00 rows=1 width=8)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
