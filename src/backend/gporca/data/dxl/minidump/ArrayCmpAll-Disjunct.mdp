@@ -245,7 +245,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.008636" Rows="101.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.008619" Rows="100.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -256,7 +256,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.007130" Rows="101.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.007128" Rows="100.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -264,22 +264,16 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter>
-            <dxl:Or>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-              </dxl:Comparison>
-              <dxl:ArrayComp OperatorName="&lt;&gt;" OperatorMdid="0.518.1.0" OperatorType="All">
-                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                </dxl:Array>
-              </dxl:ArrayComp>
-            </dxl:Or>
+            <dxl:ArrayComp OperatorName="&lt;&gt;" OperatorMdid="0.518.1.0" OperatorType="All">
+              <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+              <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+              </dxl:Array>
+            </dxl:ArrayComp>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.98308.1.0" TableName="t" LockMode="1">
+          <dxl:TableDescriptor Mdid="0.98308.1.0" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
