@@ -52,6 +52,7 @@
 #include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarSubqueryAll.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CGroupExpression.h"
@@ -4338,6 +4339,9 @@ CXformUtils::PexprWinFuncAgg2ScalarAgg(CMemoryPool *mp,
 	GPOS_ASSERT(NULL != pexprWinFunc);
 	GPOS_ASSERT(COperator::EopScalarWindowFunc == pexprWinFunc->Pop()->Eopid());
 
+	CExpressionArray *pdrgpexprFullWinFuncArgs =
+		GPOS_NEW(mp) CExpressionArray(mp);
+
 	CExpressionArray *pdrgpexprWinFuncArgs = GPOS_NEW(mp) CExpressionArray(mp);
 	const ULONG ulArgs = pexprWinFunc->Arity();
 	for (ULONG ul = 0; ul < ulArgs; ul++)
@@ -4346,6 +4350,19 @@ CXformUtils::PexprWinFuncAgg2ScalarAgg(CMemoryPool *mp,
 		pexprArg->AddRef();
 		pdrgpexprWinFuncArgs->Append(pexprArg);
 	}
+
+	pdrgpexprFullWinFuncArgs->Append(GPOS_NEW(mp) CExpression(
+		mp, GPOS_NEW(mp) CScalarValuesList(mp), pdrgpexprWinFuncArgs));
+
+	pdrgpexprFullWinFuncArgs->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+								 GPOS_NEW(mp) CExpressionArray(mp)));
+	pdrgpexprFullWinFuncArgs->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+								 GPOS_NEW(mp) CExpressionArray(mp)));
+	pdrgpexprFullWinFuncArgs->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+								 GPOS_NEW(mp) CExpressionArray(mp)));
 
 	CScalarWindowFunc *popScWinFunc =
 		CScalarWindowFunc::PopConvert(pexprWinFunc->Pop());
@@ -4358,9 +4375,10 @@ CXformUtils::PexprWinFuncAgg2ScalarAgg(CMemoryPool *mp,
 						   GPOS_NEW(mp) CWStringConst(
 							   mp, popScWinFunc->PstrFunc()->GetBuffer()),
 						   popScWinFunc->IsDistinct(), EaggfuncstageGlobal,
-						   false  // fSplit
-						   ),
-		pdrgpexprWinFuncArgs);
+						   false,  // fSplit
+						   NULL,   // pmdidResolvedReturnType
+						   EaggfunckindNormal),
+		pdrgpexprFullWinFuncArgs);
 }
 
 

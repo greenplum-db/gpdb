@@ -2518,4 +2518,54 @@ CTranslatorUtils::GetNumNonSystemColumns(const IMDRelation *rel)
 	return num_non_system_cols;
 }
 
+EdxlAggrefKind
+CTranslatorUtils::GetAggKind(CHAR aggkind)
+{
+	switch (aggkind)
+	{
+		case 'n':
+		{
+			return EdxlaggkindNormal;
+		}
+		case 'o':
+		{
+			return EdxlaggkindOrderedSet;
+		}
+		case 'h':
+		{
+			return EdxlaggkindHypothetical;
+		}
+		default:
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiExpr2DXLAttributeNotFound,
+					   GPOS_WSZ_LIT("Unknown aggkind value"));
+		}
+	}
+}
+
+CHAR
+CTranslatorUtils::GetAggKind(EdxlAggrefKind aggkind)
+{
+	switch (aggkind)
+	{
+		case EdxlaggkindNormal:
+		{
+			return 'n';
+		}
+		case EdxlaggkindOrderedSet:
+		{
+			return 'o';
+		}
+		case EdxlaggkindHypothetical:
+		{
+			return 'h';
+		}
+		default:
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2ExprAttributeNotFound,
+					   GPOS_WSZ_LIT("Unknown aggkind value"));
+		}
+	}
+}
+
 // EOF

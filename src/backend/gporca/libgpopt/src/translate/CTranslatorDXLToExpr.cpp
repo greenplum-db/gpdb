@@ -196,6 +196,9 @@ CTranslatorDXLToExpr::InitTranslators()
 		{EdxlopScalarArrayRef, &gpopt::CTranslatorDXLToExpr::PexprArrayRef},
 		{EdxlopScalarArrayRefIndexList,
 		 &gpopt::CTranslatorDXLToExpr::PexprArrayRefIndexList},
+		{EdxlopScalarValuesList, &gpopt::CTranslatorDXLToExpr::PexprValuesList},
+		{EdxlopScalarSortGroupClause,
+		 &gpopt::CTranslatorDXLToExpr::PexprSortGroupClause},
 	};
 
 	const ULONG translators_mapping_len = GPOS_ARRAY_SIZE(translators_mapping);
@@ -3056,6 +3059,31 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 	}
 	BOOL fSplit = (EdxlaggstageNormal != dxl_op->GetDXLAggStage());
 
+	EAggfuncKind agg_func_kind = EaggfunckindNormal;
+	switch (dxl_op->GetAggKind())
+	{
+		case EdxlaggkindNormal:
+		{
+			agg_func_kind = EaggfunckindNormal;
+			break;
+		}
+		case EdxlaggkindOrderedSet:
+		{
+			agg_func_kind = EaggfunckindOrderedSet;
+			break;
+		}
+		case EdxlaggkindHypothetical:
+		{
+			agg_func_kind = EaggfunckindHypothetical;
+			break;
+		}
+		default:
+		{
+			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
+					   GPOS_WSZ_LIT("Unknown aggkind"));
+		}
+	}
+
 	IMDId *resolved_return_type_mdid = dxl_op->GetDXLResolvedRetTypeMDid();
 	if (NULL != resolved_return_type_mdid)
 	{
@@ -3067,8 +3095,8 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		m_mp, agg_func_mdid,
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
-		dxl_op->IsDistinct(), agg_func_stage, fSplit,
-		resolved_return_type_mdid);
+		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
+		agg_func_kind);
 
 	CExpression *pexprAggFunc = NULL;
 
@@ -3078,9 +3106,9 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		CExpressionArray *pdrgpexprArgs = PdrgpexprChildren(pdxlnAggref);
 
 		// check if the arguments have set returning functions, if so raise an exception
-		for (ULONG ul = 0; ul < pdrgpexprArgs->Size(); ul++)
+		for (ULONG ul = 0; ul < (*pdrgpexprArgs)[0]->Arity(); ul++)
 		{
-			CExpression *pexprAggrefChild = (*pdrgpexprArgs)[ul];
+			CExpression *pexprAggrefChild = (*(*pdrgpexprArgs)[0])[ul];
 
 			if (pexprAggrefChild->DeriveHasNonScalarFunction())
 			{
@@ -3168,6 +3196,18 @@ CTranslatorDXLToExpr::PexprArrayRef(const CDXLNode *dxlnode)
 	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popArrayref, pdrgpexprChildren);
+}
+
+CExpression *
+CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
+{
+	CScalarValuesList *popScalarValuesList =
+		GPOS_NEW(m_mp) CScalarValuesList(m_mp);
+
+	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
+
+	return GPOS_NEW(m_mp)
+		CExpression(m_mp, popScalarValuesList, pdrgpexprChildren);
 }
 
 //---------------------------------------------------------------------------
@@ -3678,6 +3718,21 @@ CTranslatorDXLToExpr::PexprScalarConst(const CDXLNode *pdxlnConstVal)
 		CTranslatorDXLToExprUtils::PopConst(m_mp, m_pmda, dxl_op);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popConst);
+}
+
+CExpression *
+CTranslatorDXLToExpr::PexprSortGroupClause(const CDXLNode *pdxlnSortGroupClause)
+{
+	GPOS_ASSERT(NULL != pdxlnSortGroupClause);
+
+	// translate the dxl scalar const value
+	CDXLScalarSortGroupClause *dxl_op =
+		CDXLScalarSortGroupClause::Cast(pdxlnSortGroupClause->GetOperator());
+	CScalarSortGroupClause *sgc = GPOS_NEW(m_mp) CScalarSortGroupClause(
+		m_mp, dxl_op->Index(), dxl_op->EqOp(), dxl_op->SortOp(),
+		dxl_op->NullsFirst(), dxl_op->IsHashable());
+
+	return GPOS_NEW(m_mp) CExpression(m_mp, sgc);
 }
 
 //---------------------------------------------------------------------------

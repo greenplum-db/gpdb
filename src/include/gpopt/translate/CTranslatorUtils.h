@@ -359,6 +359,12 @@ public:
 
 	// return the count of non-system columns in the relation
 	static ULONG GetNumNonSystemColumns(const IMDRelation *mdrel);
+
+	// return agg kind as an EdxlAggrefKind
+	static EdxlAggrefKind GetAggKind(CHAR aggkind);
+
+	// return agg kind as a CHAR
+	static CHAR GetAggKind(EdxlAggrefKind aggkind);
 };
 }  // namespace gpdxl
 

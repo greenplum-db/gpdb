@@ -31,6 +31,22 @@ enum EAggfuncStage
 	EaggfuncstageSentinel
 };
 
+enum EAggfuncKind
+{
+	EaggfunckindNormal = 0,
+	EaggfunckindOrderedSet,
+	EaggfunckindHypothetical
+};
+
+enum EAggfuncChildIndices
+{
+	EaggfuncIndexArgs = 0,
+	EaggfuncIndexDirectArgs,
+	EaggfuncIndexOrder,
+	EaggfuncIndexDistinct,
+	EaggfuncIndexSentinel
+};
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CScalarAggFunc
@@ -60,6 +76,8 @@ private:
 	// distinct aggregate computation
 	BOOL m_is_distinct;
 
+	EAggfuncKind m_aggkind;
+
 	// stage of the aggregate function
 	EAggfuncStage m_eaggfuncstage;
 
@@ -73,7 +91,8 @@ public:
 	// ctor
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
-				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit);
+				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
+				   EAggfuncKind aggkind);
 
 	// dtor
 	virtual ~CScalarAggFunc()
@@ -151,6 +170,12 @@ public:
 	SetIsDistinct(BOOL val)
 	{
 		m_is_distinct = val;
+	}
+
+	EAggfuncKind
+	AggKind() const
+	{
+		return m_aggkind;
 	}
 
 	// stage of the aggregate function

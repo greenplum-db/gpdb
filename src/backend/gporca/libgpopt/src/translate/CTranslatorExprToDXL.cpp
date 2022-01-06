@@ -168,6 +168,8 @@ CTranslatorExprToDXL::InitScalarTranslators()
 		{COperator::EopScalarArrayCoerceExpr,
 		 &gpopt::CTranslatorExprToDXL::PdxlnScArrayCoerceExpr},
 		{COperator::EopScalarArray, &gpopt::CTranslatorExprToDXL::PdxlnArray},
+		{COperator::EopScalarValuesList,
+		 &gpopt::CTranslatorExprToDXL::PdxlnValuesList},
 		{COperator::EopScalarArrayCmp,
 		 &gpopt::CTranslatorExprToDXL::PdxlnArrayCmp},
 		{COperator::EopScalarArrayRef,
@@ -184,6 +186,8 @@ CTranslatorExprToDXL::InitScalarTranslators()
 		 &gpopt::CTranslatorExprToDXL::PdxlnBitmapIndexProbe},
 		{COperator::EopScalarBitmapBoolOp,
 		 &gpopt::CTranslatorExprToDXL::PdxlnBitmapBoolOp},
+		{COperator::EopScalarSortGroupClause,
+		 &gpopt::CTranslatorExprToDXL::PdxlnScSortGroupClause},
 	};
 
 	const ULONG translators_mapping_len = GPOS_ARRAY_SIZE(rgScalarTranslators);
@@ -6589,12 +6593,48 @@ CTranslatorExprToDXL::PdxlnScAggref(CExpression *pexprAggFunc)
 		edxlaggrefstage = EdxlaggstagePartial;
 	}
 
-	CDXLScalarAggref *pdxlopAggRef = GPOS_NEW(m_mp)
-		CDXLScalarAggref(m_mp, pmdidAggFunc, resolved_rettype,
-						 popScAggFunc->IsDistinct(), edxlaggrefstage);
+	EdxlAggrefKind edxlaggrefkind = EdxlaggkindNormal;
+	switch (popScAggFunc->AggKind())
+	{
+		case EaggfunckindNormal:
+		{
+			edxlaggrefkind = EdxlaggkindNormal;
+			break;
+		}
+		case EaggfunckindOrderedSet:
+		{
+			edxlaggrefkind = EdxlaggkindOrderedSet;
+			break;
+		}
+		case EaggfunckindHypothetical:
+		{
+			edxlaggrefkind = EdxlaggkindHypothetical;
+			break;
+		}
+		default:
+		{
+			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
+					   GPOS_WSZ_LIT("Unknown aggkind"));
+		}
+	}
+
+	CDXLScalarAggref *pdxlopAggRef = GPOS_NEW(m_mp) CDXLScalarAggref(
+		m_mp, pmdidAggFunc, resolved_rettype, popScAggFunc->IsDistinct(),
+		edxlaggrefstage, edxlaggrefkind);
 
 	CDXLNode *pdxlnAggref = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopAggRef);
-	TranslateScalarChildren(pexprAggFunc, pdxlnAggref);
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexArgs]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexDirectArgs]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexAggOrder]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexAggDistinct]));
 
 	return pdxlnAggref;
 }
@@ -7246,6 +7286,23 @@ CTranslatorExprToDXL::PdxlnArray(CExpression *pexpr)
 
 	return pdxlnArray;
 }
+CDXLNode *
+CTranslatorExprToDXL::PdxlnValuesList(CExpression *pexpr)
+{
+	GPOS_ASSERT(NULL != pexpr);
+
+	CDXLNode *pdxlnValuesList = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp));
+
+	for (ULONG ul = 0; ul < pexpr->Arity(); ul++)
+	{
+		CExpression *pexprChild = (*pexpr)[ul];
+		CDXLNode *child_dxlnode = PdxlnScalar(pexprChild);
+		pdxlnValuesList->AddChild(child_dxlnode);
+	}
+
+	return pdxlnValuesList;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -7453,6 +7510,23 @@ CTranslatorExprToDXL::PdxlnScConst(CExpression *pexprScConst)
 
 	CDXLNode *dxlnode =
 		GPOS_NEW(m_mp) CDXLNode(m_mp, pmdtype->GetDXLOpScConst(m_mp, datum));
+
+	return dxlnode;
+}
+
+CDXLNode *
+CTranslatorExprToDXL::PdxlnScSortGroupClause(
+	CExpression *pexprScSortGroupClause)
+{
+	GPOS_ASSERT(NULL != pexprScSortGroupClause);
+
+	CScalarSortGroupClause *pop =
+		CScalarSortGroupClause::PopConvert(pexprScSortGroupClause->Pop());
+
+	CDXLNode *dxlnode = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarSortGroupClause(
+						   m_mp, pop->Index(), pop->EqOp(), pop->SortOp(),
+						   pop->NullsFirst(), pop->IsHashable()));
 
 	return dxlnode;
 }

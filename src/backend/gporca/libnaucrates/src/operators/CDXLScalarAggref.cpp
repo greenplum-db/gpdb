@@ -12,7 +12,9 @@
 #include "naucrates/dxl/operators/CDXLScalarAggref.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/md/IMDAggregate.h"
 
@@ -31,12 +33,14 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLScalarAggref::CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_func_mdid,
 								   IMDId *resolved_rettype_mdid,
-								   BOOL is_distinct, EdxlAggrefStage agg_stage)
+								   BOOL is_distinct, EdxlAggrefStage agg_stage,
+								   EdxlAggrefKind agg_kind)
 	: CDXLScalar(mp),
 	  m_agg_func_mdid(agg_func_mdid),
 	  m_resolved_rettype_mdid(resolved_rettype_mdid),
 	  m_is_distinct(is_distinct),
-	  m_agg_stage(agg_stage)
+	  m_agg_stage(agg_stage),
+	  m_agg_kind(agg_kind)
 {
 	GPOS_ASSERT(NULL != agg_func_mdid);
 	GPOS_ASSERT_IMP(NULL != resolved_rettype_mdid,
@@ -113,6 +117,23 @@ CDXLScalarAggref::GetDXLStrAggStage() const
 	}
 }
 
+const CWStringConst *
+CDXLScalarAggref::GetDXLStrAggKind() const
+{
+	switch (m_agg_kind)
+	{
+		case EdxlaggkindNormal:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKindNormal);
+		case EdxlaggkindOrderedSet:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKindOrderedSet);
+		case EdxlaggkindHypothetical:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKindHypothetical);
+		default:
+			GPOS_ASSERT(!"Unrecognized aggregate kind");
+			return NULL;
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDXLScalarAggref::GetOpNameStr
@@ -172,6 +193,26 @@ CDXLScalarAggref::IsDistinct() const
 }
 
 //---------------------------------------------------------------------------
+//     @function:
+//             CDXLScalarAggref::SerializeValuesListChildToDXL
+//
+//     @doc:
+//             Serialize child CDXLScalarValuesList node in DXL format. Param index is
+//             one based.
+//
+//---------------------------------------------------------------------------
+void
+CDXLScalarAggref::SerializeValuesListChildToDXL(CXMLSerializer *xml_serializer,
+												const CDXLNode *dxlnode,
+												ULONG index,
+												const CHAR *attr_name) const
+{
+	CDXLScalarValuesList *child =
+		CDXLScalarValuesList::Cast(((*dxlnode)[index])->GetOperator());
+	child->SerializeToDXL(xml_serializer, (*dxlnode)[index], attr_name);
+}
+
+//---------------------------------------------------------------------------
 //	@function:
 //		CDXLScalarAggref::SerializeToDXL
 //
@@ -198,7 +239,13 @@ CDXLScalarAggref::SerializeToDXL(CXMLSerializer *xml_serializer,
 		m_resolved_rettype_mdid->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
 	}
-	dxlnode->SerializeChildrenToDXL(xml_serializer);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKind), GetDXLStrAggKind());
+
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 0, "aggargs");
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 1, "aggdirectargs");
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 2, "aggorder");
+	SerializeValuesListChildToDXL(xml_serializer, dxlnode, 3, "aggdistinct");
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);

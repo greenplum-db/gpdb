@@ -22,6 +22,9 @@ extern "C" {
 #include "utils/datum.h"
 #include "utils/uuid.h"
 }
+
+#include <vector>
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/string/CWStringDynamic.h"
@@ -266,7 +269,8 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		{T_SubLink, &CTranslatorScalarToDXL::TranslateSubLinkToDXL},
 		{T_ArrayExpr, &CTranslatorScalarToDXL::TranslateArrayExprToDXL},
 		{T_ArrayRef, &CTranslatorScalarToDXL::TranslateArrayRefToDXL},
-	};
+		{T_SortGroupClause,
+		 &CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL}};
 
 	const ULONG num_translators = GPOS_ARRAY_SIZE(translators);
 	NodeTag tag = expr->type;
@@ -1233,12 +1237,6 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 		{AGGSTAGE_FINAL, EdxlaggstageFinal},
 	};
 
-	if (aggref->aggorder != NIL)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-				   GPOS_WSZ_LIT("Ordered aggregates"));
-	}
-
 	if (aggref->aggdistinct)
 	{
 		is_distinct = true;
@@ -1258,7 +1256,6 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 	GPOS_ASSERT(EdxlaggstageSentinel != agg_stage && "Invalid agg stage");
 
 	CMDIdGPDB *agg_mdid = GPOS_NEW(m_mp) CMDIdGPDB(aggref->aggfnoid);
-	GPOS_ASSERT(!m_md_accessor->RetrieveAgg(agg_mdid)->IsOrdered());
 
 	if (0 != aggref->agglevelsup)
 	{
@@ -1274,14 +1271,6 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 				   GPOS_WSZ_LIT("Aggregate functions with FILTER"));
 	}
 
-	// ORCA doesn't support DISTINCT with multiple arguments yet.
-	if (gpdb::ListLength(aggref->aggdistinct) > 1)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT(
-					   "Aggregate functions with multiple DISTINCT arguments"));
-	}
-
 	IMDId *mdid_return_type = CScalarAggFunc::PmdidLookupReturnType(
 		agg_mdid, (EdxlaggstageNormal == agg_stage), m_md_accessor);
 	IMDId *resolved_ret_type = NULL;
@@ -1292,21 +1281,95 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 	}
 
 	CDXLScalarAggref *aggref_scalar = GPOS_NEW(m_mp) CDXLScalarAggref(
-		m_mp, agg_mdid, resolved_ret_type, is_distinct, agg_stage);
+		m_mp, agg_mdid, resolved_ret_type, is_distinct, agg_stage,
+		CTranslatorUtils::GetAggKind(aggref->aggkind));
 
 	// create the DXL node holding the scalar aggref
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, aggref_scalar);
 
 	// translate args
+	//
+	// 'indexes' stores the position of the TargetEntry which is referenced by
+	// a SortGroupClause.
+	std::vector<int> indexes(gpdb::ListLength(aggref->args) + 1, -1);
+	CDXLScalarValuesList *args_values =
+		GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp);
+	CDXLNode *args_value_list_dxlnode =
+		GPOS_NEW(m_mp) CDXLNode(m_mp, args_values);
+	int i = 0;
 	ListCell *lc;
-	ForEach(lc, aggref->args)
+	ForEachWithCount(lc, aggref->args, i)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
 		CDXLNode *child_node =
 			TranslateScalarToDXL(tle->expr, var_colid_mapping);
 		GPOS_ASSERT(NULL != child_node);
-		dxlnode->AddChild(child_node);
+		args_value_list_dxlnode->AddChild(child_node);
+
+		if (tle->ressortgroupref != 0)
+		{
+			// If tleSortGroupRef is non-zero then it means a SotGroupClause
+			// references this TargetEntry. We record that by mapping the
+			// ressortgroupref identifier to the corresponding index position
+			// of the TargetEntry.
+			indexes[tle->ressortgroupref] = i;
+		}
 	}
+	dxlnode->AddChild(args_value_list_dxlnode);
+
+	// translate direct args
+	CDXLScalarValuesList *dargs_values =
+		GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp);
+	CDXLNode *dargs_value_list_dxlnode =
+		GPOS_NEW(m_mp) CDXLNode(m_mp, dargs_values);
+	ForEach(lc, aggref->aggdirectargs)
+	{
+		Expr *expr = (Expr *) lfirst(lc);
+		CDXLNode *child_node = TranslateScalarToDXL(expr, var_colid_mapping);
+		GPOS_ASSERT(NULL != child_node);
+		dargs_value_list_dxlnode->AddChild(child_node);
+	}
+	dxlnode->AddChild(dargs_value_list_dxlnode);
+
+	// translate sort group clause
+	CDXLScalarValuesList *sgc_values =
+		GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp);
+	CDXLNode *sgc_value_list_dxlnode =
+		GPOS_NEW(m_mp) CDXLNode(m_mp, sgc_values);
+	ForEach(lc, aggref->aggorder)
+	{
+		Expr *expr = (Expr *) gpdb::CopyObject(lfirst(lc));
+		// Set SortGroupClause->tleSortGroupRef to corresponding index into
+		// targetlist. This avoids needing a separate structure to store this
+		// mapping.
+		((SortGroupClause *) expr)->tleSortGroupRef =
+			indexes[((SortGroupClause *) expr)->tleSortGroupRef];
+
+		CDXLNode *child_node = TranslateScalarToDXL(expr, var_colid_mapping);
+		GPOS_ASSERT(NULL != child_node);
+		sgc_value_list_dxlnode->AddChild(child_node);
+	}
+	dxlnode->AddChild(sgc_value_list_dxlnode);
+
+	// translate distinct
+	CDXLScalarValuesList *aggdistinct_values =
+		GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp);
+	CDXLNode *aggdistinct_value_list_dxlnode =
+		GPOS_NEW(m_mp) CDXLNode(m_mp, aggdistinct_values);
+	ForEach(lc, aggref->aggdistinct)
+	{
+		Expr *expr = (Expr *) gpdb::CopyObject(lfirst(lc));
+		// Set SortGroupClause->tleSortGroupRef to corresponding index into
+		// targetlist. This avoids needing a separate structure to store this
+		// mapping.
+		((SortGroupClause *) expr)->tleSortGroupRef =
+			indexes[((SortGroupClause *) expr)->tleSortGroupRef];
+
+		CDXLNode *child_node = TranslateScalarToDXL(expr, var_colid_mapping);
+		GPOS_ASSERT(NULL != child_node);
+		aggdistinct_value_list_dxlnode->AddChild(child_node);
+	}
+	dxlnode->AddChild(aggdistinct_value_list_dxlnode);
 
 	return dxlnode;
 }
@@ -1819,6 +1882,24 @@ CTranslatorScalarToDXL::TranslateArrayRefToDXL(
 
 	return dxlnode;
 }
+
+CDXLNode *
+CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL(
+	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+{
+	GPOS_ASSERT(IsA(expr, SortGroupClause));
+	const SortGroupClause *sgc = (SortGroupClause *) expr;
+
+	CDXLScalarSortGroupClause *sort_group_clause = GPOS_NEW(m_mp)
+		CDXLScalarSortGroupClause(m_mp, sgc->tleSortGroupRef, sgc->eqop,
+								  sgc->sortop, sgc->nulls_first, sgc->hashable);
+
+	// create the DXL node holding the scalar ident operator
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, sort_group_clause);
+
+	return dxlnode;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:

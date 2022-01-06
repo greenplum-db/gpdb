@@ -122,6 +122,7 @@
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
 #include "naucrates/dxl/operators/CDXLScalarSortColList.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
 #include "naucrates/dxl/operators/CDXLScalarSubquery.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryAll.h"

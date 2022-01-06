@@ -348,8 +348,13 @@ SQL: select count(distinct a) over(partition by a), sum(distinct a) over(partiti
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="22" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" TypeMdid="0.20.1.0">
+                      <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" TypeMdid="0.20.1.0" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="33" ColName="a" TypeMdid="0.23.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="33" Alias="a">
@@ -645,8 +650,13 @@ SQL: select count(distinct a) over(partition by a), sum(distinct a) over(partiti
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="105" Alias="count">
-                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" TypeMdid="0.20.1.0">
+                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Normal" TypeMdid="0.20.1.0" AggKind="n" AggArgTypes="">
+                          <dxl:ValuesList ParamType="aggargs">
                           <dxl:Ident ColId="95" ColName="a" TypeMdid="0.23.1.0"/>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
                         </dxl:AggFunc>
                       </dxl:ProjElem>
                       <dxl:ProjElem ColId="95" Alias="a">
@@ -753,8 +763,13 @@ SQL: select count(distinct a) over(partition by a), sum(distinct a) over(partiti
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="sum">
-                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="true" AggStage="Normal" TypeMdid="0.20.1.0">
+                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="true" AggStage="Normal" TypeMdid="0.20.1.0" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:Ident ColId="43" ColName="a" TypeMdid="0.23.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="44" Alias="b">

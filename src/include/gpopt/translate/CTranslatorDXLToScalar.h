@@ -216,6 +216,11 @@ private:
 	Expr *TranslateDXLScalarDMLActionToScalar(const CDXLNode *dml_action_node,
 											  CMappingColIdVar *colid_var);
 
+	List *TranslateScalarListChildren(const CDXLNode *dxlnode,
+									  CMappingColIdVar *colid_var);
+
+	Expr *TranslateDXLScalarSortGroupClauseToScalar(
+		const CDXLNode *dml_action_node, CMappingColIdVar *colid_var);
 
 	// translate children of DXL node, and add them to list
 	List *TranslateScalarChildren(List *list, const CDXLNode *dxlnode,
@@ -278,6 +283,9 @@ public:
 	// translate a scalar part list null test into an Expr
 	Expr *TranslateDXLScalarPartListNullTestToScalar(
 		const CDXLNode *part_list_null_test_node, CMappingColIdVar *colid_var);
+
+	Expr *TranslateDXLScalarValuesListToScalar(
+		const CDXLNode *scalar_values_list_node, CMappingColIdVar *colid_var);
 
 	// translate a scalar ident into an Expr
 	Expr *TranslateDXLScalarIdentToScalar(const CDXLNode *scalar_id_node,

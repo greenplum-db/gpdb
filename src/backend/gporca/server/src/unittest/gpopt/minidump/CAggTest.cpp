@@ -94,6 +94,7 @@ const CHAR *rgszAggFileNames[] = {
 	"../data/dxl/minidump/ProjectOutsideCountStar.mdp",
 	"../data/dxl/minidump/NestedProjectCountStarWithOuterRefs.mdp",
 	"../data/dxl/minidump/AggregateWithSkew.mdp",
+	"../data/dxl/minidump/OrderedAggUsingGroupColumnInDirectArg.mdp",
 };
 
 

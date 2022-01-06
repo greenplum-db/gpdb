@@ -11776,533 +11776,1063 @@ group by	pa11.dcal_month_id,
         </dxl:GroupingColumns>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1097" Alias="dcal_month_txt">
-            <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="1051" ColName="dcal_month_txt" TypeMdid="0.25.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1098" Alias="dpg_program_desc">
-            <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="1086" ColName="dpg_program_desc" TypeMdid="0.25.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1099" Alias="wjxbfs1">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="3" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1100" Alias="wjxbfs2">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="13" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1101" Alias="wjxbfs3">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="23" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1102" Alias="wjxbfs4">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="33" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1103" Alias="wjxbfs5">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="43" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1104" Alias="wjxbfs6">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="53" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1105" Alias="wjxbfs7">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="63" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1106" Alias="wjxbfs8">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="73" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1107" Alias="wjxbfs9">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="83" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1108" Alias="wjxbfsa">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="93" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1109" Alias="wjxbfsb">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="103" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1110" Alias="wjxbfsc">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="113" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1111" Alias="wjxbfsd">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="123" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1112" Alias="wjxbfse">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="133" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1113" Alias="wjxbfsf">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="143" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1114" Alias="wjxbfs10">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="153" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1115" Alias="wjxbfs11">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="163" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1116" Alias="wjxbfs12">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="173" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1117" Alias="wjxbfs13">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="183" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1118" Alias="wjxbfs14">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="193" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1119" Alias="wjxbfs15">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="203" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1120" Alias="wjxbfs16">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="213" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1121" Alias="wjxbfs17">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="223" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1122" Alias="wjxbfs18">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="233" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1123" Alias="wjxbfs19">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="243" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1124" Alias="wjxbfs1a">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="253" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1125" Alias="wjxbfs1b">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="263" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1126" Alias="wjxbfs1c">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="273" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1127" Alias="wjxbfs1d">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="283" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1128" Alias="wjxbfs1e">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="293" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1129" Alias="wjxbfs1f">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="303" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1130" Alias="wjxbfs20">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="313" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1131" Alias="wjxbfs21">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="323" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1132" Alias="wjxbfs22">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="333" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1133" Alias="wjxbfs23">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="343" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1134" Alias="wjxbfs24">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="353" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1135" Alias="wjxbfs25">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="363" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1136" Alias="wjxbfs26">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="373" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1137" Alias="wjxbfs27">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="383" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1138" Alias="wjxbfs28">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="393" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1139" Alias="wjxbfs29">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="403" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1140" Alias="wjxbfs2a">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="413" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1141" Alias="wjxbfs2b">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="423" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1142" Alias="wjxbfs2c">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="433" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1143" Alias="wjxbfs2d">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="443" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1144" Alias="wjxbfs2e">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="453" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1145" Alias="wjxbfs2f">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="463" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1146" Alias="wjxbfs30">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="473" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1147" Alias="wjxbfs31">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="483" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1148" Alias="wjxbfs32">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="493" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1149" Alias="wjxbfs33">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="503" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1150" Alias="wjxbfs34">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="513" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1151" Alias="wjxbfs35">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="523" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1152" Alias="wjxbfs36">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="533" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1153" Alias="wjxbfs37">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="543" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1154" Alias="wjxbfs38">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="553" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1155" Alias="wjxbfs39">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="563" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1156" Alias="wjxbfs3a">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="573" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1157" Alias="wjxbfs3b">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="583" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1158" Alias="wjxbfs3c">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="593" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1159" Alias="wjxbfs3d">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="603" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1160" Alias="wjxbfs3e">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="613" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1161" Alias="wjxbfs3f">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="623" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1162" Alias="wjxbfs40">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="633" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1163" Alias="wjxbfs41">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="643" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1164" Alias="wjxbfs42">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="653" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1165" Alias="wjxbfs43">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="663" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1166" Alias="wjxbfs44">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="673" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1167" Alias="wjxbfs45">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="683" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1168" Alias="wjxbfs46">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="693" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1169" Alias="wjxbfs47">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="703" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1170" Alias="wjxbfs48">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="713" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1171" Alias="wjxbfs49">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="723" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1172" Alias="wjxbfs4a">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="733" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1173" Alias="wjxbfs4b">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="743" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1174" Alias="wjxbfs4c">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="753" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1175" Alias="wjxbfs4d">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="763" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1176" Alias="wjxbfs4e">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="773" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1177" Alias="wjxbfs4f">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="783" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1178" Alias="wjxbfs50">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="793" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1179" Alias="wjxbfs51">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="803" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1180" Alias="wjxbfs52">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="813" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1181" Alias="wjxbfs53">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="823" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1182" Alias="wjxbfs54">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="833" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1183" Alias="wjxbfs55">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="843" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1184" Alias="wjxbfs56">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="853" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1185" Alias="wjxbfs57">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="863" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1186" Alias="wjxbfs58">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="873" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1187" Alias="wjxbfs59">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="883" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1188" Alias="wjxbfs5a">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="893" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1189" Alias="wjxbfs5b">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="903" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1190" Alias="wjxbfs5c">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="913" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1191" Alias="wjxbfs5d">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="923" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1192" Alias="wjxbfs5e">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="933" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1193" Alias="wjxbfs5f">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="943" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1194" Alias="wjxbfs60">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="953" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1195" Alias="wjxbfs61">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="963" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1196" Alias="wjxbfs62">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="973" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1197" Alias="wjxbfs63">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="983" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1198" Alias="wjxbfs64">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="993" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1199" Alias="wjxbfs65">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="1003" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1200" Alias="wjxbfs66">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="1013" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1201" Alias="wjxbfs67">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="1023" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="1202" Alias="wjxbfs68">
-            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="1033" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -15634,536 +16164,1066 @@ group by	pa11.dcal_month_id,
               <dxl:Ident ColId="1" ColName="dcal_month_id" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1096" Alias="dcal_month_txt">
-              <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1050" ColName="dcal_month_txt" TypeMdid="0.25.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="0" Alias="dpg_program_key">
               <dxl:Ident ColId="0" ColName="dpg_program_key" TypeMdid="0.20.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1097" Alias="dpg_program_desc">
-              <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1085" ColName="dpg_program_desc" TypeMdid="0.25.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1098" Alias="wjxbfs1">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="2" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1099" Alias="wjxbfs2">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="12" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1100" Alias="wjxbfs3">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="22" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1101" Alias="wjxbfs4">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="32" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1102" Alias="wjxbfs5">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="42" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1103" Alias="wjxbfs6">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="52" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1104" Alias="wjxbfs7">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="62" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1105" Alias="wjxbfs8">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="72" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1106" Alias="wjxbfs9">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="82" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1107" Alias="wjxbfsa">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="92" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1108" Alias="wjxbfsb">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="102" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1109" Alias="wjxbfsc">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="112" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1110" Alias="wjxbfsd">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="122" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1111" Alias="wjxbfse">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="132" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1112" Alias="wjxbfsf">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="142" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1113" Alias="wjxbfs10">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="152" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1114" Alias="wjxbfs11">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="162" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1115" Alias="wjxbfs12">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="172" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1116" Alias="wjxbfs13">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="182" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1117" Alias="wjxbfs14">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="192" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1118" Alias="wjxbfs15">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="202" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1119" Alias="wjxbfs16">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="212" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1120" Alias="wjxbfs17">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="222" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1121" Alias="wjxbfs18">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="232" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1122" Alias="wjxbfs19">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="242" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1123" Alias="wjxbfs1a">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="252" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1124" Alias="wjxbfs1b">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="262" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1125" Alias="wjxbfs1c">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="272" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1126" Alias="wjxbfs1d">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="282" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1127" Alias="wjxbfs1e">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="292" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1128" Alias="wjxbfs1f">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="302" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1129" Alias="wjxbfs20">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="312" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1130" Alias="wjxbfs21">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="322" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1131" Alias="wjxbfs22">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="332" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1132" Alias="wjxbfs23">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="342" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1133" Alias="wjxbfs24">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="352" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1134" Alias="wjxbfs25">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="362" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1135" Alias="wjxbfs26">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="372" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1136" Alias="wjxbfs27">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="382" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1137" Alias="wjxbfs28">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="392" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1138" Alias="wjxbfs29">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="402" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1139" Alias="wjxbfs2a">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="412" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1140" Alias="wjxbfs2b">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="422" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1141" Alias="wjxbfs2c">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="432" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1142" Alias="wjxbfs2d">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="442" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1143" Alias="wjxbfs2e">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="452" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1144" Alias="wjxbfs2f">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="462" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1145" Alias="wjxbfs30">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="472" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1146" Alias="wjxbfs31">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="482" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1147" Alias="wjxbfs32">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="492" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1148" Alias="wjxbfs33">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="502" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1149" Alias="wjxbfs34">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="512" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1150" Alias="wjxbfs35">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="522" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1151" Alias="wjxbfs36">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="532" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1152" Alias="wjxbfs37">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="542" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1153" Alias="wjxbfs38">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="552" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1154" Alias="wjxbfs39">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="562" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1155" Alias="wjxbfs3a">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="572" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1156" Alias="wjxbfs3b">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="582" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1157" Alias="wjxbfs3c">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="592" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1158" Alias="wjxbfs3d">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="602" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1159" Alias="wjxbfs3e">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="612" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1160" Alias="wjxbfs3f">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="622" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1161" Alias="wjxbfs40">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="632" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1162" Alias="wjxbfs41">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="642" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1163" Alias="wjxbfs42">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="652" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1164" Alias="wjxbfs43">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="662" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1165" Alias="wjxbfs44">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="672" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1166" Alias="wjxbfs45">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="682" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1167" Alias="wjxbfs46">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="692" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1168" Alias="wjxbfs47">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="702" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1169" Alias="wjxbfs48">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="712" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1170" Alias="wjxbfs49">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="722" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1171" Alias="wjxbfs4a">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="732" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1172" Alias="wjxbfs4b">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="742" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1173" Alias="wjxbfs4c">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="752" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1174" Alias="wjxbfs4d">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="762" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1175" Alias="wjxbfs4e">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="772" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1176" Alias="wjxbfs4f">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="782" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1177" Alias="wjxbfs50">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="792" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1178" Alias="wjxbfs51">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="802" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1179" Alias="wjxbfs52">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="812" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1180" Alias="wjxbfs53">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="822" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1181" Alias="wjxbfs54">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="832" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1182" Alias="wjxbfs55">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="842" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1183" Alias="wjxbfs56">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="852" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1184" Alias="wjxbfs57">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="862" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1185" Alias="wjxbfs58">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="872" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1186" Alias="wjxbfs59">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="882" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1187" Alias="wjxbfs5a">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="892" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1188" Alias="wjxbfs5b">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="902" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1189" Alias="wjxbfs5c">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="912" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1190" Alias="wjxbfs5d">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="922" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1191" Alias="wjxbfs5e">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="932" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1192" Alias="wjxbfs5f">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="942" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1193" Alias="wjxbfs60">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="952" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1194" Alias="wjxbfs61">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="962" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1195" Alias="wjxbfs62">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="972" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1196" Alias="wjxbfs63">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="982" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1197" Alias="wjxbfs64">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="992" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1198" Alias="wjxbfs65">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1002" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1199" Alias="wjxbfs66">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1012" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1200" Alias="wjxbfs67">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1022" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="1201" Alias="wjxbfs68">
-              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2115.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="1032" ColName="wjxbfs1" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>

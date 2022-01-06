@@ -240,15 +240,19 @@ public:
 	static CScalarAggFunc *PopAggFunc(
 		CMemoryPool *mp, IMDId *pmdidAggFunc, const CWStringConst *pstrAggFunc,
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
-		IMDId *pmdidResolvedReturnType =
-			NULL  // return type to be used if original return type is ambiguous
-	);
+		IMDId *
+			pmdidResolvedReturnType,  // return type to be used if original return type is ambiguous
+		EAggfuncKind aggkind);
 
 	// generate an aggregate function
 	static CExpression *PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 									 const CWStringConst *pstrAggFunc,
 									 const CColRef *colref, BOOL is_distinct,
 									 EAggfuncStage eaggfuncstage, BOOL fSplit);
+
+	// generate arguments of an aggregate function
+	static CExpressionArray *PexprAggFuncArgs(CMemoryPool *mp,
+											  CExpressionArray *pdrgpexprArgs);
 
 	// generate a count(*) expression
 	static CExpression *PexprCountStar(CMemoryPool *mp);

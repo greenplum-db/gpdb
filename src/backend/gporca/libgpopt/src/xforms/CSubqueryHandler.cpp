@@ -2176,6 +2176,7 @@ CSubqueryHandler::FProcessScalarOperator(CExpression *pexprOuter,
 		case COperator::EopScalarNullIf:
 		case COperator::EopScalarSwitch:
 		case COperator::EopScalarSwitchCase:
+		case COperator::EopScalarValuesList:
 			fSuccess = FRecursiveHandler(pexprOuter, pexprScalar, esqctxt,
 										 ppexprNewOuter, ppexprResidualScalar);
 			break;
