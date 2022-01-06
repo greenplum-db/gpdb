@@ -2879,7 +2879,7 @@ static struct config_string ConfigureNamesString[] =
 			GUC_SUPERUSER_ONLY
 		},
 		&Dynamic_library_path,
-		"$libdir",
+		"$libdir:/usr/local/madlib/Current/ports/greenplum/6/lib:/usr/local/greenplum-db-6-exts/lib",
 		NULL, NULL, NULL
 	},
 
