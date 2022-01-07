@@ -547,7 +547,6 @@ Feature: gpcheckcat tests
         And validate gpcheckcat logs contain skipping ACL and Owner tests
         And the user runs "dropdb all_good"
 
-
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
