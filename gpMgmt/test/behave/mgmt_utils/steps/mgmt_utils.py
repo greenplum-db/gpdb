@@ -1187,6 +1187,18 @@ def stop_all_primary_or_mirror_segments(context, segment_type):
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
     stop_segments(context, lambda seg: seg.getSegmentRole() == role and seg.content != -1)
 
+@given('user stops all {segment_type} processes on "{hosts}"')
+@given('user stops all {segment_type} processes on "{hosts}"')
+@given('user stops all {segment_type} processes on "{hosts}"')
+def stop_all_primary_or_mirror_segments_on_hosts(context, segment_type, hosts):
+    hosts = hosts.split(',')
+    if segment_type not in ("primary", "mirror"):
+        raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)
+
+    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
+    stop_segments(context, lambda seg: seg.getSegmentRole() == role and seg.content != -1 and seg.getSegmentHostName() in hosts)
+
+
 
 @given('the {role} on content {contentID} is stopped')
 def stop_segments_on_contentID(context, role, contentID):

@@ -22,12 +22,11 @@ Feature: gprecoverseg tests involving migrating to a new host
       And the cluster configuration is saved for "<test_case>"
       And the "before" and "<test_case>" cluster configuration matches with the expected for gprecoverseg newhost
       And the mirrors replicate and fail over and back correctly
-      And segment hosts <down> are reconnected to the cluster and to the spare segment hosts "<unused>"
-      And the original cluster state is recreated after cleaning up <down> hosts
-      And database "gptest" exists
+      And the cluster is rebalanced
+      And the original cluster state is recreated for "<test_case>"
       And the cluster configuration is saved for "after_recreation"
       And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
       Examples:
-      | test_case      |  down        | spare       | unused | used | acting_primary | gprecoverseg_cmd                               | down_sql                                              |
-      | one_host_down  |  "sdw1"      | "sdw5,sdw6" | sdw6   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5 --hba-hostnames"      | "hostname='sdw1' and status='u'"                      |
+      | test_case      |  down        | spare | unused | used | acting_primary | gprecoverseg_cmd                              | down_sql                                              |
+      | one_host_down  |  "sdw1"      | "sdw5" | "sdw6"   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5 --hba-hostnames"   | "hostname='sdw1' and status='u'"                      |
       | two_hosts_down |  "sdw1,sdw3" | "sdw5,sdw6" | none   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5,sdw6 --hba-hostnames" | "(hostname='sdw1' or hostname='sdw3') and status='u'" |
