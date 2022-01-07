@@ -12312,15 +12312,13 @@ IsStandbyMode(void)
 }
 
 /*
- * True if we are running crash recovery.
- * False if we are running standby continious recovery or not in recovery at all
- * This only works in the startup process as the ArchiveRecoveryRequested and
- * StandbyModeRequested flags are not in shared memory.
+ * True if we are currently performing crash recovery.
+ * False if we are running standby-mode continuous or archive recovery.
  */
 bool
 IsCrashRecoveryOnly(void)
 {
-	return ArchiveRecoveryRequested == false && StandbyModeRequested == false;
+	return !ArchiveRecoveryRequested && !StandbyModeRequested;
 }
 
 /*
