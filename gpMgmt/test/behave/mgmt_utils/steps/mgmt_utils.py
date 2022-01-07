@@ -1788,6 +1788,50 @@ def impl(context, filename, some, output):
         err_str = "xx Expected stdout string '%s' and found: '%s'" % (regexStr, contents)
         raise Exception(err_str)
 
+@given('verify that pg_hba.conf file has "{type}" entries in each segment data directories')
+@then('verify that pg_hba.conf file has "{type}" entries in each segment data directories')
+def impl(context, type):
+    conn = dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)
+    try:
+        curs = dbconn.query(conn,
+                            "SELECT hostname, datadir FROM gp_segment_configuration WHERE role='p' AND content > -1;")
+        result = curs.fetchall()
+        segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+    finally:
+        conn.close()
+
+    if (type == 'standby'):
+        checkForStandby = True
+    elif (type == 'replication'):
+        checkForStandby = False
+    else:
+        raise Exception("only 'standby' and 'replication' are valid inputs")
+
+    for info in segment_info:
+        host, datadir = info
+        filename = 'pg_hba.conf'
+        if checkForStandby:
+            standby_host = get_standby_host()
+            standby_host_address = gp.IfAddrs.list_addrs(standby_host)[0]
+            output = "host.*all.*" + standby_host_address + ".*trust"
+        else:
+            output = "host.*replication.*.*trust"
+
+        filepath = os.path.join(datadir, filename)
+        regex = "%s%s" % ("^[%s]*", output)
+        cmd_str = 'ssh %s "grep -c %s %s"' % (host, regex, filepath)
+        cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+        cmd.run(validateAfter=False)
+        try:
+            val = int(cmd.get_stdout().strip())
+            if not val:
+                raise Exception(
+                    'File %s on host %s does not have %s entry with "%s"(val error: %s)' % (filepath, host, type, output, val))
+        except:
+            raise Exception('File %s on host %s does not have %s entry start with "%s"(parse error)' % (filepath, host, type, output))
+
 @given('verify that the file "{filename}" in each segment data directory has "{some}" line starting with "{output}"')
 @then('verify that the file "{filename}" in each segment data directory has "{some}" line starting with "{output}"')
 def impl(context, filename, some, output):
