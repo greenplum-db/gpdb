@@ -1858,11 +1858,11 @@ def imp(context):
     logs_for_a_util = glob.glob(pattern)
     if not logs_for_a_util:
         raise Exception('Logs matching "%s" were not created' % pattern)
-    rc, error, output = run_cmd("grep 'Default skipping test:acl' %s" % pattern)
+    rc, error, output = run_cmd("grep 'Default skipping test: acl' %s" % pattern)
     if rc:
         raise Exception("Error executing grep on gpcheckcat logs while finding ACL: %s" % error)
 
-    rc, error, output = run_cmd("grep 'Default skipping test:owner' %s" % pattern)
+    rc, error, output = run_cmd("grep 'Default skipping test: owner' %s" % pattern)
     if rc:
         raise Exception("Error executing grep on gpcheckcat logs while finding Owner: %s" % error)
 
