@@ -97,6 +97,8 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 	int		endOccurrence = PG_GETARG_INT32(6);
 	int		extraArg = PG_GETARG_INT32(7);
 	int		dbid = PG_GETARG_INT32(8);
+	/*-1 means the fault canbe triggered by any process, others mean the fault can only be triggered by a specific session*/
+	int     gpSessionid = PG_GETARG_INT32(9);
 	char	*hostname;
 	int		port;
 	char	*response;
@@ -106,7 +108,7 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 	{
 		response = InjectFault(
 			faultName, type, ddlStatement, databaseName,
-			tableName, startOccurrence, endOccurrence, extraArg);
+			tableName, startOccurrence, endOccurrence, extraArg, gpSessionid);
 		if (!response)
 			elog(ERROR, "failed to inject fault locally (dbid %d)", dbid);
 		if (strncmp(response, "Success:",  strlen("Success:")) != 0)
@@ -138,14 +140,15 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 		if (!tableName || tableName[0] == '\0')
 			tableName = "#";
 		snprintf(msg, 1024, "faultname=%s type=%s ddl=%s db=%s table=%s "
-				 "start=%d end=%d extra=%d",
+				 "start=%d end=%d extra=%d sid=%d ",
 				 faultName, type,
 				 ddlStatement,
 				 databaseName,
 				 tableName,
 				 startOccurrence,
 				 endOccurrence,
-				 extraArg);
+				 extraArg,
+				 gpSessionid);
 		res = PQexec(conn, msg);
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
 			elog(ERROR, "failed to inject fault: %s", PQerrorMessage(conn));

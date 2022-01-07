@@ -62,7 +62,9 @@ typedef struct FaultInjectorEntry_s {
 	
 	int						extraArg;
 		/* in seconds, in use if fault injection type is sleep */
-		
+	int						gpSessionid;
+		/*-1 means the fault can be triggered by any process*/
+
 	DDLStatement_e			ddlStatement;
 	
 	char					databaseName[NAMEDATALEN];
@@ -106,7 +108,7 @@ extern int *numActiveFaults_ptr;
 
 extern char *InjectFault(
 	char *faultName, char *type, char *ddlStatement, char *databaseName,
-	char *tableName, int startOccurrence, int endOccurrence, int extraArg);
+	char *tableName, int startOccurrence, int endOccurrence, int extraArg, int gpSessionid);
 
 extern void HandleFaultMessage(const char* msg);
 
