@@ -34,6 +34,7 @@ try:
     from gppylib.operations.unix import CleanSharedMem
     from gppylib.operations.utils import ParallelOperation, RemoteOperation
     from gppylib.operations.rebalanceSegments import ReconfigDetectionSQLQueryCommand
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -321,16 +322,26 @@ class GpStop:
         logger.info('Cleaning up leftover shared memory')
         cluster_hosts = self.gparray.get_hostlist()
 
+        num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
+        unreachable_hosts = get_unreachable_segment_hosts(cluster_hosts, num_workers)
+
         operations = []
         for gphost in cluster_hosts:
-            operations.append(RemoteOperation(CleanSharedMem(self.gparray.getDbList()), gphost))
+            if gphost not in unreachable_hosts:
+                operations.append(RemoteOperation(CleanSharedMem(self.gparray.getDbList()), gphost))
+            else:
+                logger.warning("Skipping cleaning shared memory on %s because it's unreachable" % (gphost))
 
         operations.append(
             RemoteOperation(CleanSharedMem([self.gparray.master]), self.gparray.master.getSegmentHostName()))
 
         if self.gparray.standbyMaster:
-            operations.append(RemoteOperation(CleanSharedMem([self.gparray.standbyMaster]),
-                                              self.gparray.standbyMaster.getSegmentHostName()))
+            if self.gparray.standbyMaster.getSegmentHostName() not in unreachable_hosts:
+                operations.append(RemoteOperation(CleanSharedMem([self.gparray.standbyMaster]),
+                                                  self.gparray.standbyMaster.getSegmentHostName()))
+            else:
+                logger.warning("Skipping cleaning shared memory on %s because it's unreachable" % (
+                    self.gparray.standbyMaster.getSegmentHostName()))
 
         ParallelOperation(operations).run()
 
@@ -567,6 +578,10 @@ class GpStop:
 
         if self.gparray.standbyMaster:
             standby = self.gparray.standbyMaster
+
+            if get_unreachable_segment_hosts([standby.hostname], 1):
+                logger.warning("Standby is unreachable, continuing to stop other segments...")
+                return True
 
             logger.info("Stopping master standby host %s mode=fast" % standby.hostname)
             try:
