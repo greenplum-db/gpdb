@@ -60,6 +60,25 @@ def impl(context):
 
     context.add_cleanup(cleanup, context)
 
+@when('the standby host is made reachable')
+@then('the standby host is made reachable')
+def impl(context):
+
+    subprocess.check_call(['gpstart', '-am'])
+    _run_sql("""
+        SET allow_system_table_mods='true';
+        UPDATE gp_segment_configuration
+           SET hostname = master.hostname,
+                address = master.address
+          FROM (
+                 SELECT hostname, address
+                   FROM gp_segment_configuration
+                  WHERE content = -1 and role = 'p'
+               ) master
+         WHERE content = -1 AND role = 'm'
+    """, {'gp_session_role': 'utility'})
+    subprocess.check_call(['gpstop', '-am'])
+
 def _handle_sigpipe():
     """
     Work around https://bugs.python.org/issue1615376, which is not fixed until
