@@ -1345,6 +1345,25 @@ CTestUtils::PexprLeftOuterJoinOnNAryJoin(CMemoryPool *mp)
 					pexprLOJInnerChild, pexprPred);
 }
 
+CExpression *
+CTestUtils::PexprRightOuterJoin(CMemoryPool *mp)
+{
+	CExpression *pexprInnerChild = PexprLogicalGet(mp);
+	CExpression *pexprOuterChild = PexprLogicalGet(mp);
+
+	// get a random column from inner child output
+	CColRef *pcrLeft = pexprInnerChild->DeriveOutputColumns()->PcrAny();
+
+	// get a random column from outer child output
+	CColRef *pcrRight = pexprOuterChild->DeriveOutputColumns()->PcrAny();
+
+	CExpression *pexprPred = CUtils::PexprScalarEqCmp(mp, pcrLeft, pcrRight);
+
+	return GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CLogicalRightOuterJoin(mp),
+					pexprOuterChild, pexprInnerChild, pexprPred);
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:

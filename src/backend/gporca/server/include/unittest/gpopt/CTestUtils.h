@@ -352,6 +352,9 @@ public:
 	// generate left outer join on top of n-ary join expression
 	static CExpression *PexprLeftOuterJoinOnNAryJoin(CMemoryPool *mp);
 
+	// generate right outer join expression
+	static CExpression *PexprRightOuterJoin(CMemoryPool *mp);
+
 	// generate n-ary join on top of left outer join expression
 	static CExpression *PexprNAryJoinOnLeftOuterJoin(CMemoryPool *mp);
 

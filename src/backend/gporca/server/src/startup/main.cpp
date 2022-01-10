@@ -108,6 +108,7 @@
 #include "unittest/gpopt/xforms/CJoinOrderTest.h"
 #include "unittest/gpopt/xforms/CSubqueryHandlerTest.h"
 #include "unittest/gpopt/xforms/CXformFactoryTest.h"
+#include "unittest/gpopt/xforms/CXformRightOuterJoin2HashJoinTest.h"
 #include "unittest/gpopt/xforms/CXformTest.h"
 
 using namespace gpos;
@@ -179,6 +180,7 @@ static gpos::CUnittest rgut[] = {
 	GPOS_UNITTEST_STD(CConstTblGetTest),
 
 	GPOS_UNITTEST_STD(CSubqueryHandlerTest),
+	GPOS_UNITTEST_STD(CXformRightOuterJoin2HashJoinTest),
 	GPOS_UNITTEST_STD(CBindingTest),
 	GPOS_UNITTEST_STD(CEngineTest),
 	GPOS_UNITTEST_STD(CEquivalenceClassesTest),
