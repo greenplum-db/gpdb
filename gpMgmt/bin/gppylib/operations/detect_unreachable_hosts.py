@@ -42,10 +42,10 @@ def get_unreachable_segment_hosts(hosts, num_workers):
 
 def update_unreachable_flag_for_segments(gparray, unreachable_hosts):
     for i, segmentPair in enumerate(gparray.segmentPairs):
-        if segmentPair.primaryDB.getSegmentHostName() in unreachable_hosts:
+        if segmentPair.primaryDB and segmentPair.primaryDB.getSegmentHostName() in unreachable_hosts:
             gparray.segmentPairs[i].primaryDB.unreachable = True
 
-        if segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
+        if segmentPair.mirrorDB and segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
             gparray.segmentPairs[i].mirrorDB.unreachable = True
 
 
