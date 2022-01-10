@@ -627,6 +627,9 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
  *		returned; a TIDBitmap otherwise. Note that an index am's getmulti
  *		function can assume that the bitmap that it's given as argument is of
  *		the same type as what the function constructs itself.
+ *
+ *		Returns the number of matching tuples found.  (Note: this might be only
+ *		approximate, so it should only be used for statistical purposes.)
  * ----------------
  */
 int64
