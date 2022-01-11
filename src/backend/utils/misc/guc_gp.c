@@ -390,6 +390,7 @@ bool		optimizer_enable_associativity;
 bool		optimizer_enable_eageragg;
 bool		optimizer_enable_range_predicate_dpe;
 bool		optimizer_enable_push_join_below_union_all;
+bool		optimizer_enable_orderedagg;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -2852,6 +2853,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_allow_date_field_width_5digits,
 		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_orderedagg", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable ordered aggregate plans."),
+			NULL
+		},
+		&optimizer_enable_orderedagg,
+		true,
 		NULL, NULL, NULL
 	},
 	{
