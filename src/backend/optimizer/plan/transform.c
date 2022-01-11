@@ -50,19 +50,10 @@ static bool safe_to_replace_sirvf_rte(Query *query);
 Query *
 preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundParams)
 {
-#ifdef USE_ASSERT_CHECKING
-	Query *qcopy = (Query *) copyObject(query);
-#endif
-
 	/* fold all constant expressions */
 	Query *res = fold_constants(root, query, boundParams, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
 
-#ifdef USE_ASSERT_CHECKING
-	Assert(equal(qcopy, query) && "Preprocessing should not modify original query object");
-#endif
-
 	return res;
-
 }
 
 /**
