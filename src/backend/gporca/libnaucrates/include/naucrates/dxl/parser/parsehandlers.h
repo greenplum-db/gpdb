@@ -150,6 +150,7 @@
 #include "naucrates/dxl/parser/CParseHandlerScalarPartListNullTest.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarPartListValues.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarPartOid.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarSortGroupClause.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSubPlan.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParam.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"

@@ -43,55 +43,69 @@ SELECT * FROM test_name WHERE i>'abc' ORDER BY i;
 (2 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i<'abc' ORDER BY i;
-                 QUERY PLAN                  
----------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_name
-         Recheck Cond: (i < 'abc'::name)
-         ->  Bitmap Index Scan on idx_name
-               Index Cond: (i < 'abc'::name)
-(6 rows)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_name
+               Recheck Cond: (i < 'abc'::name)
+               ->  Bitmap Index Scan on idx_name
+                     Index Cond: (i < 'abc'::name)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i<='abc' ORDER BY i;
-                  QUERY PLAN                  
-----------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_name
-         Recheck Cond: (i <= 'abc'::name)
-         ->  Bitmap Index Scan on idx_name
-               Index Cond: (i <= 'abc'::name)
-(6 rows)
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_name
+               Recheck Cond: (i <= 'abc'::name)
+               ->  Bitmap Index Scan on idx_name
+                     Index Cond: (i <= 'abc'::name)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i='abc' ORDER BY i;
-              QUERY PLAN               
----------------------------------------
- Bitmap Heap Scan on test_name
-   Recheck Cond: (i = 'abc'::name)
-   ->  Bitmap Index Scan on idx_name
-         Index Cond: (i = 'abc'::name)
-(4 rows)
-
-EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i>='abc' ORDER BY i;
-                  QUERY PLAN                  
-----------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_name
-         Recheck Cond: (i >= 'abc'::name)
-         ->  Bitmap Index Scan on idx_name
-               Index Cond: (i >= 'abc'::name)
-(6 rows)
-
-EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i>'abc' ORDER BY i;
                  QUERY PLAN                  
 ---------------------------------------------
- Sort
-   Sort Key: i
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Bitmap Heap Scan on test_name
-         Recheck Cond: (i > 'abc'::name)
+         Recheck Cond: (i = 'abc'::name)
          ->  Bitmap Index Scan on idx_name
-               Index Cond: (i > 'abc'::name)
+               Index Cond: (i = 'abc'::name)
+ Optimizer: Postgres query optimizer
 (6 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i>='abc' ORDER BY i;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_name
+               Recheck Cond: (i >= 'abc'::name)
+               ->  Bitmap Index Scan on idx_name
+                     Index Cond: (i >= 'abc'::name)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM test_name WHERE i>'abc' ORDER BY i;
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_name
+               Recheck Cond: (i > 'abc'::name)
+               ->  Bitmap Index Scan on idx_name
+                     Index Cond: (i > 'abc'::name)
+ Optimizer: Postgres query optimizer
+(9 rows)
 

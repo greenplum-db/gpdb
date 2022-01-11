@@ -134,7 +134,7 @@ END
 -- session 2: in transaction, gxid is dispatched to writer gang, cann't
 --            update cdb_component_dbs, following query should fail
 2:END;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 -- session 3: in transaction and has a cursor, cann't update
 --            cdb_component_dbs, following query should fail
 3:FETCH ALL FROM c1;
@@ -142,12 +142,12 @@ ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
 ----+----
 (0 rows)
 3:END;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 -- session 4: not in transaction but has temp table, cann't update
 --            cdb_component_dbs, following query should fail and session
 --            is reset
 4:select * from tmp4;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 4:select * from tmp4;
 ERROR:  relation "tmp4" does not exist
 LINE 1: select * from tmp4;
@@ -155,7 +155,7 @@ LINE 1: select * from tmp4;
 -- session 5: has a subtransaction, cann't update cdb_component_dbs,
 --            following query should fail
 5:select * from tmp51;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:97)
+ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 5:ROLLBACK TO SAVEPOINT s1;
 ERROR:  Could not rollback to savepoint (ROLLBACK TO SAVEPOINT s1)
 5:END;

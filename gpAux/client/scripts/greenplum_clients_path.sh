@@ -1,5 +1,5 @@
 GPHOME_CLIENTS=`pwd`
-PATH=${GPHOME_CLIENTS}/bin:${GPHOME_CLIENTS}/ext/python/bin:${PATH}
+PATH=${GPHOME_CLIENTS}/bin:${PATH}
 PYTHONPATH=${GPHOME_CLIENTS}/bin/ext:${PYTHONPATH}
 
 # Export GPHOME_LOADERS for GPDB5 compatible
@@ -11,10 +11,10 @@ export PYTHONPATH
 
 # Mac OSX uses a different library path variable
 if [ xDarwin = x`uname -s` ]; then
-  DYLD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${DYLD_LIBRARY_PATH}
+  DYLD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${DYLD_LIBRARY_PATH}
   export DYLD_LIBRARY_PATH
 else
-  LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${LD_LIBRARY_PATH}
+  LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${LD_LIBRARY_PATH}
   export LD_LIBRARY_PATH
 fi
 

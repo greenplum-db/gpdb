@@ -32,6 +32,7 @@ sudo apt-get install -y \
 	openssh-client \
 	openssh-server \
 	openssl \
+	pkg-config \
 	python3-dev \
 	python3-pip \
 	python3-psutil \

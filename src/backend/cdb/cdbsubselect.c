@@ -72,9 +72,12 @@ static void SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *conte
 static void RemoveInnerJoinQuals(Query *subselect);
 static void RemoveInnerJoinQuals_walker(Node *jtree);
 
-static bool find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context);
+static bool cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context);
 static bool is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber);
-static bool is_targetlist_nullable(Query *subq);
+static List *fetch_targetlist_exprs(List *targetlist);
+static List *fetch_outer_exprs(Node *testexpr);
+static bool  is_exprs_nullable(Node *exprs, Query *query);
+static bool  is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars);
 
 #define DUMMY_COLUMN_NAME "zero"
 
@@ -953,7 +956,7 @@ is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber)
  *
  */
 static bool
-find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
+cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 {
 	Assert(context);
 	Assert(context->query);
@@ -1037,7 +1040,7 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 
 						c2.query = context->query;
 						c2.nonNullableVars = NIL;
-						expression_tree_walker(orArg, find_nonnullable_vars_walker, &c2);
+						expression_tree_walker(orArg, cdb_find_nonnullable_vars_walker, &c2);
 
 						if (orArgNum == 0)
 						{
@@ -1178,182 +1181,201 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 				return false;
 			}
 	}
-	return expression_tree_walker(node, find_nonnullable_vars_walker, context);
+	return expression_tree_walker(node, cdb_find_nonnullable_vars_walker, context);
 }
 
-
-/*
- * This function is used to determine whether the parameters of an expression in
- * ALL Sublink can be NULL.
- */
-static bool
-is_param_nullable(Node *node, Query *query, Value *oprname)
+static List *
+fetch_targetlist_exprs(List *targetlist)
 {
-	bool result = false;
-	NonNullableVarsContext context;
-	Expr *expr;
-	ListCell *lc;
-	Expr *arg;
+	List        *exprs = NIL;
+	ListCell    *lc    = NULL;
 
-	Assert(query);
-	context.query = query;
-	context.nonNullableVars = NIL;
-
-	/* Find nullable vars in the jointree */
-	expression_tree_walker((Node *) query->jointree, find_nonnullable_vars_walker, &context);
-
-	/*
-	 * A null value "not in / > all / < all" a non-empty set, the result is
-	 * always false, but a null value "not in / > all / < all" a empty set, the
-	 * result is always true. So if the param is nullable, we should not make
-	 * the locus as "Partitioned".
-	 * If the sql is "... a not in (select ...)", the node should be a BoolExpr.
-	 * if the sql is "... a < all (select ...), the node should be a OpExpr"
-	 */
-	if (nodeTag(node) == T_BoolExpr)
-	{
-		if(((BoolExpr *) node)->boolop != NOT_EXPR)
-			return false;
-		expr = lfirst(list_head(((BoolExpr*) node)->args));
-	}
-	else if (nodeTag(node) == T_OpExpr)
-	{
-		if(strcmp(oprname->val.str, "=") == 0)
-			return false;
-		expr = (Expr *) node;
-	}
-	else
-		return true;
-
-	if (nodeTag(expr) != T_OpExpr)
-		return true;
-
-	foreach(lc, ((OpExpr*)expr)->args)
-	{
-		arg = lfirst(lc);
-
-		if (nodeTag(arg) == T_RelabelType)
-			arg = ((RelabelType*)arg)->arg;
-
-		if (nodeTag(arg) == T_Param)
-			continue;
-		else if (nodeTag(arg) == T_Const)
-		{
-			/*
-			 * Is the constant entry in the targetlist null?
-			 */
-			Const	   *constant = (Const *) arg;
-
-			/*
-			 * Note: the 'dummy' column is not NULL, so we don't need any special handling for it
-			 */
-			if (constant->constisnull == true)
-				result = true;
-		}
-		else if (nodeTag(arg) == T_Var)
-		{
-			Var		   *var = (Var *) arg;
-
-			/* Was this var determined to be non-nullable? */
-			if (!list_member(context.nonNullableVars, var))
-			{
-				result = true;
-			}
-		}
-		else
-			result = true;
-	}
-
-	return result;
-}
-
-/**
- * This method determines if the targetlist of a query is nullable.
- * Consider a query of the form: select t1.x, t2.y from t1, t2 where t1.x > 5
- * This method simply determines if the targetlist i.e. (t1.x, t2.y) is nullable.
- * A targetlist is "nullable" if all entries in the targetlist
- * cannot be proven to be non-nullable.
- *
- * We don't use NULL for the 'dummy' column, because is_targetlist_nullable() 
- * would then treat the target list as nullable
- */
-static bool
-is_targetlist_nullable(Query *subq)
-{
-	Assert(subq);
-
-	if (subq->setOperations)
-	{
-		/* TODO: support setops in subselect someday */
-		return false;
-	}
-
-	/**
-	 * Find all non-nullable vars in the query i.e. the set of vars,
-	 * if part of the targetlist, that would be non-nullable. E.g.
-	 * select x from t1 where x is not null
-	 * would produce {x}.
-	 */
-	NonNullableVarsContext context;
-
-	context.query = subq;
-	context.nonNullableVars = NIL;
-	expression_tree_walker((Node *) subq->jointree, find_nonnullable_vars_walker, &context);
-
-	bool		result = false;
-
-	/**
-	 * Now cross-check with the actual targetlist of the query.
-	 */
-	ListCell   *lc = NULL;
-
-	foreach(lc, subq->targetList)
+	foreach(lc, targetlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
 
 		if (tle->resjunk)
 		{
-			/**
-			 * Be conservative.
+			/*
+			 * Previously, we take it nullable when we
+			 * see any resjunk target entry. I think it
+			 * is safe to just ignore them.
 			 */
-			result = true;
+			continue;
 		}
 
-		if (nodeTag(tle->expr) == T_Const)
-		{
-			/**
-			 * Is the constant entry in the targetlist null?
-			 */
-			Const	   *constant = (Const *) tle->expr;
-
-			/**
-			 *  Note: the 'dummy' column is not NULL, so we don't need any special handling for it 
-			 */	
-			if (constant->constisnull == true)
-			{
-				result = true;
-			}
-		}
-		else if (nodeTag(tle->expr) == T_Var)
-		{
-			Var		   *var = (Var *) tle->expr;
-
-			/* Was this var determined to be non-nullable? */
-			if (!list_member(context.nonNullableVars, var))
-			{
-				result = true;
-			}
-		}
-		else
-		{
-			/**
-			 * Be conservative.
-			 */
-			result = true;
-		}
+		exprs = lappend(exprs, tle->expr);
 	}
 
-	return result;
+	return exprs;
+}
+
+/*
+ * fetch_outer_exprs
+ *   @param testexpr: the NOT-IN sublink's test exprs
+ *
+ *   For a two-col NOT_IN query: select * from t1 where (a,b) not in (select a,b from t2)
+ *   this testexpr should be:
+ *   BoolExpr [boolop=NOT_EXPR]
+ *      BoolExpr [boolop=AND_EXPR]
+ *        OpExpr [opno=96 opfuncid=65 opresulttype=16 opretset=false]
+ *                Var [varno=1 varattno=1 vartype=23 varnoold=1 varoattno=1]
+ *                Param [paramkind=PARAM_SUBLINK paramid=1 paramtype=23]
+ *        OpExpr [opno=96 opfuncid=65 opresulttype=16 opretset=false]
+ *                Var [varno=1 varattno=2 vartype=23 varnoold=1 varoattno=2]
+ *                Param [paramkind=PARAM_SUBLINK paramid=2 paramtype=23]
+ *
+ *  For a two-col <> ALL query: select * from t1 where (a,b) <> (select a,b from t2)
+ *  this testexpr should be:
+ *  BoolExpr [boolop=OR_EXPR]
+ *     OpExpr [opno=518 opfuncid=144 opresulttype=16 opretset=false]
+ *              Var [varno=1 varattno=1 vartype=23 varnoold=1 varoattno=1]
+ *              Param [paramkind=PARAM_SUBLINK paramid=1 paramtype=23]
+ *      OpExpr [opno=518 opfuncid=144 opresulttype=16 opretset=false]
+ *              Var [varno=1 varattno=2 vartype=23 varnoold=1 varoattno=2]
+ *              Param [paramkind=PARAM_SUBLINK paramid=2 paramtype=23]
+ *
+ * This function fetches all the outer parts and put them in a list as the
+ * result.
+ *
+ * NOTE: we want to be conservative for cases we are not interested or
+ * we are not sure. Returning a NIL is conservative policy here since
+ * is_exprs_nullable will return true for NULL input.
+ */
+static List *
+fetch_outer_exprs(Node *testexpr)
+{
+	if (testexpr == NULL)
+		return NIL;
+
+	if (IsA(testexpr, BoolExpr))
+	{
+		BoolExpr *be = (BoolExpr *) testexpr;
+		bool      seen_not_atop;
+		Node     *expr;
+		seen_not_atop = be->boolop == NOT_EXPR;
+
+		/* strip off the top NOT */
+		if (seen_not_atop)
+			expr = linitial(be->args);
+		else
+			expr = (Node *) be;
+
+		/*
+		 * The above expr should be a single OpExpr when single-column not-in,
+		 * or a BoolExpr of AND when multi-column not-in. We are not interested
+		 * in other cases.
+		 */
+		if (IsA(expr, BoolExpr))
+		{
+			BoolExpr *be    = (BoolExpr *) expr;
+			List     *exprs = NIL;
+			ListCell *lc;
+
+			/*
+			 * The following cases should not happen, instead of
+			 * erroring out, let's be conservative by returning NIL.
+			 */
+			if (be->boolop == AND_EXPR && !seen_not_atop)
+				return NIL;
+			if (be->boolop == OR_EXPR && seen_not_atop)
+				return NIL;
+			if (be->boolop != OR_EXPR && be->boolop != AND_EXPR)
+				return NIL;
+
+			foreach(lc, be->args)
+			{
+				OpExpr *op_expr = (OpExpr *) lfirst(lc);
+				if (!IsA(op_expr, OpExpr))
+					return NIL;
+				exprs = lappend(exprs, linitial(op_expr->args));
+			}
+			return exprs;
+		}
+		else if (IsA(expr, OpExpr))
+			return list_make1(linitial(((OpExpr *)expr)->args));
+		else
+			return NIL;
+	}
+	else
+		return NIL;
+}
+
+/*
+ * is_exprs_nullable
+ *   Return true if any of the exprs might be null, otherwise false.
+ *   We want to be conservative for those cases either we are not
+ *   interested or not sure.
+ */
+static bool
+is_exprs_nullable(Node *exprs, Query *query)
+{
+	NonNullableVarsContext context;
+	context.query           = query;
+	context.nonNullableVars = NIL;
+
+	/* Find nullable vars in the jointree */
+	(void) expression_tree_walker((Node *) query->jointree,
+								  cdb_find_nonnullable_vars_walker, &context);
+
+	return is_exprs_nullable_internal(exprs, context.nonNullableVars);
+}
+
+static bool
+is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars)
+{
+	if (exprs == NULL)
+	{
+		/*
+		 * Be conservative when input is Empty. Keep consistent
+		 * with fetch_outer_exprs and fetch_targetlist_exprs.
+		 */
+		return true;
+	}
+
+	if (IsA(exprs, Var))
+	{
+		Var		   *var = (Var *) exprs;
+		return !list_member(nonnullable_vars, var);
+	}
+	else if (IsA(exprs, List))
+	{
+		ListCell *lc;
+		foreach(lc, (List *) exprs)
+		{
+			if (is_exprs_nullable_internal((Node *) lfirst(lc),
+										   nonnullable_vars))
+				return true;
+		}
+		return false;
+	}
+	else if (IsA(exprs, Const))
+	{
+		Const	   *constant = (Const *) exprs;
+		return constant->constisnull;
+	}
+	else if (IsA(exprs, RelabelType))
+	{
+		RelabelType    *rt = (RelabelType *) exprs;
+		return is_exprs_nullable_internal((Node *) rt->arg, nonnullable_vars);
+	}
+	else if (IsA(exprs, OpExpr))
+	{
+		OpExpr   *op_expr = (OpExpr *) exprs;
+		ListCell *lc;
+		foreach(lc, op_expr->args)
+		{
+			if (is_exprs_nullable_internal((Node *) lfirst(lc),
+										   nonnullable_vars))
+				return true;
+		}
+		return false;
+	}
+	else
+	{
+		/* Be conservative here */
+		return true;
+	}
 }
 
 /*
@@ -1384,21 +1406,22 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
 
 	if (safe_to_convert_NOTIN(sublink, available_rels))
 	{
-		int			subq_indx = add_notin_subquery_rte(parse, subselect);
-		bool		inner_nullable = is_targetlist_nullable(subselect);
+		int			subq_indx      = add_notin_subquery_rte(parse, subselect);
+		List       *inner_exprs    = NIL;
+		List       *outer_exprs    = NIL;
+		bool        inner_nullable = true;
+		bool        outer_nullable = true;
 
-		ListCell   *lc = list_head(sublink->operName);
-		bool		outer_nullable = is_param_nullable(sublink->testexpr,
-										   root->parse,
-										   lc? list_head(sublink->operName)->data.ptr_value : NULL);
+		inner_exprs = fetch_targetlist_exprs(subselect->targetList);
+		outer_exprs = fetch_outer_exprs(sublink->testexpr);
+		inner_nullable = is_exprs_nullable((Node *) inner_exprs, subselect);
+		outer_nullable = is_exprs_nullable((Node *) outer_exprs, parse);
+
 		JoinExpr   *join_expr = make_join_expr(NULL, subq_indx, JOIN_LASJ_NOTIN);
 
 		join_expr->quals = make_lasj_quals(root, sublink, subq_indx);
-
 		if (inner_nullable || outer_nullable)
-		{
 			join_expr->quals = add_null_match_clause(join_expr->quals);
-		}
 
 		return join_expr;
 	}

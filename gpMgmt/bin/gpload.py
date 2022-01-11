@@ -119,6 +119,7 @@ valid_tokens = {
     "delimiter": {'parse_children': True, 'parent': "input"},
     "escape": {'parse_children': True, 'parent': "input"},
     "null_as": {'parse_children': True, 'parent': "input"},
+    "newline": {'parse_children': True, 'parent': "input"},
     "quote": {'parse_children': True, 'parent': "input"},
     "encoding": {'parse_children': True, 'parent': "input"},
     "force_not_null": {'parse_children': False, 'parent': "input"},
@@ -378,6 +379,7 @@ keywords = {
 	"natural": True,
 	"nchar": True,
 	"new": True,
+	"newline": True,
 	"next": True,
 	"no": True,
 	"nocreatedb": True,
@@ -2374,7 +2376,6 @@ class gpload:
         else:
             self.formatOpts += "null %s " % quote_no_slash("\\N")
 
-
         esc = self.getconfig('gpload:input:escape', None, None)
         if esc:
             if type(esc) != str and type(esc) != str:
@@ -2405,6 +2406,15 @@ class gpload:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
             self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
 
+        if formatType == 'csv' or formatType == 'text':
+            if self.getconfig('gpload:input:fill_missing_fields', bool, False):
+                self.formatOpts += 'fill missing fields '
+
+        newline = self.getconfig('gpload:input:newline', str, False)
+        self.log(self.DEBUG, "newline " + str(newline))
+        if newline != False: # could be empty string
+            self.formatOpts += "newline %s " % quote_no_slash(newline)
+
         encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', str, None)
         if encodingStr is None:
@@ -2433,10 +2443,6 @@ class gpload:
             from_cols = [a for a in self.from_columns if a[3] != True]
         else:
             from_cols = self.from_columns
-
-        if formatType == 'csv' or formatType == 'text':
-            if self.getconfig('gpload:input:fill_missing_fields', bool, False):
-                self.formatOpts += 'fill missing fields'
 
         # If the 'reuse tables' option was specified we now try to find an
         # already existing external table in the catalog which will match
@@ -2520,7 +2526,7 @@ class gpload:
         try:
             self.db.query(sql.encode('utf-8'))
         except Exception as e:
-            self.log(self.ERROR, 'could not run SQL "%s": %s' % (sql, unicode(e)))
+            self.log(self.ERROR, 'could not run SQL "%s": %s' % (sql, str(e)))
 
         # set up to drop the external table at the end of operation, unless user
         # specified the 'reuse_tables' option, in which case we don't drop

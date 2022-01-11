@@ -34,8 +34,8 @@ BEGIN
 DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
 FETCH ALL FROM c1;
-ERROR:  Cannot specify 'FETCH' for PARALLEL RETRIEVE CURSOR.
-HINT:  Using 'RETRIEVE' statement on endpoint instead.
+ERROR:  cannot specify 'FETCH' for PARALLEL RETRIEVE CURSOR
+HINT:  Use 'RETRIEVE' statement on endpoint instead.
 ROLLBACK;
 ROLLBACK
 
@@ -44,8 +44,7 @@ BEGIN
 DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
 MOVE 10 FROM c1;
-ERROR:  The 'MOVE' statement for PARALLEL RETRIEVE CURSOR is not supported.
-HINT:  The 'PARALLEL RETRIEVE CURSOR' does not support SCROLLABLE option.
+ERROR:  the 'MOVE' statement for PARALLEL RETRIEVE CURSOR is not supported
 ROLLBACK;
 ROLLBACK
 
@@ -55,7 +54,7 @@ BEGIN
 DECLARE c1 CURSOR FOR SELECT * FROM t1;
 DECLARE
 SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
-ERROR:  this UDF only works for PARALLEL RETRIEVE CURSOR.
+ERROR:  cursor is not a PARALLEL RETRIEVE CURSOR
 ROLLBACK;
 ROLLBACK
 BEGIN;
@@ -63,7 +62,7 @@ BEGIN
 DECLARE c1 CURSOR FOR SELECT * FROM t1;
 DECLARE
 SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
-ERROR:  this UDF only works for PARALLEL RETRIEVE CURSOR.
+ERROR:  cursor is not a PARALLEL RETRIEVE CURSOR
 ROLLBACK;
 ROLLBACK
 
@@ -82,7 +81,7 @@ DECLARE c3 PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t1;
 DECLARE
 DO $$ DECLARE i int4; c4 refcursor = 'c3'; BEGIN FETCH FROM c4 INTO i; RAISE NOTICE '%', i; END; $$;
 ERROR:  The PARALLEL RETRIEVE CURSOR is not supported in SPI.
-HINT:  Using normal cursor statement instead.
+HINT:  Use normal cursor statement instead.
 CONTEXT:  PL/pgSQL function inline_code_block line 1 at FETCH
 ROLLBACK;
 ROLLBACK

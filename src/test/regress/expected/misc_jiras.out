@@ -35,3 +35,8 @@ select sum(cc) from (
 
 reset work_mem;
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+-- non-ASCII multibyte character should show up correctly in error messages.
+select '溋' || (B'1');
+ERROR:  "溋" is not a valid binary digit
+LINE 1: select '溋' || (B'1');
+               ^

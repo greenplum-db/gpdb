@@ -3,43 +3,49 @@ LINE 13:                  and pgext.fmtopts like '%delimiter '';'' nu...
                                                  ^
 HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
 WARNING:  nonstandard use of escape in a string literal
-LINE 1: .../data_file.txt') format'text' (delimiter ';' null '\N' escap...
+LINE 1: ...pathto/data_file.txt') format'text' (delimiter ';' null '\N' escap...
                                                              ^
 HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
 WARNING:  nonstandard use of \' in a string literal
 LINE 1: ...xt') format'text' (delimiter ';' null '\N' escape '\' ) enco...
                                                              ^
 HINT:  Use '' to write quotes in strings, or use the escape string syntax (E'...').
-2021-08-10 14:56:47|INFO|gpload session started 2021-08-10 14:56:47
-2021-08-10 14:56:47|INFO|setting schema 'public' for table 'chinese表'
-2021-08-10 14:56:47|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-08-10 14:56:47|INFO|did not find an external table to reuse. creating ext_gpload_reusable_211fb6e2_f9a8_11eb_9c97_0050569e2380
-2021-08-10 14:56:47|ERROR|unexpected error -- backtrace written to log file
-2021-08-10 14:56:47|INFO|rows Inserted          = 0
-2021-08-10 14:56:47|INFO|rows Updated           = 0
-2021-08-10 14:56:47|INFO|data formatting errors = 0
-2021-08-10 14:56:47|INFO|gpload failed
-2021-08-10 14:56:47|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 14
-2021-08-10 14:56:47|INFO|gpload session started 2021-08-10 14:56:47
-2021-08-10 14:56:47|INFO|setting schema 'public' for table 'chinese表'
-2021-08-10 14:56:47|ERROR|no mapping for input column "'列1'" to output table
-2021-08-10 14:56:47|INFO|rows Inserted          = 0
-2021-08-10 14:56:47|INFO|rows Updated           = 0
-2021-08-10 14:56:47|INFO|data formatting errors = 0
-2021-08-10 14:56:47|INFO|gpload failed
+2021-11-29 15:29:03|INFO|gpload session started 2021-11-29 15:29:03
+2021-11-29 15:29:03|INFO|setting schema 'public' for table 'chinese表'
+2021-11-29 15:29:03|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-11-29 15:29:03|INFO|did not find an external table to reuse. creating ext_gpload_reusable_075bc846_50e6_11ec_8cb7_0050569e2380
+2021-11-29 15:29:03|ERROR|could not run SQL "create external table ext_gpload_reusable_075bc846_50e6_11ec_8cb7_0050569e2380("列1" text,"列#2" int,"lie3" timestamp)location('gpfdist://*:pathto/data_file.txt') format'text' (delimiter ';' null '\N' escape '\' ) encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
+LINE 1: ...'text' (delimiter ';' null '\N' escape '\' ) encoding'UTF8' 
+                                                                 ^
+
+2021-11-29 15:29:03|INFO|rows Inserted          = 0
+2021-11-29 15:29:03|INFO|rows Updated           = 0
+2021-11-29 15:29:03|INFO|data formatting errors = 0
+2021-11-29 15:29:03|INFO|gpload failed
+2021-11-29 15:29:03|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 14
+2021-11-29 15:29:04|INFO|gpload session started 2021-11-29 15:29:04
+2021-11-29 15:29:04|INFO|setting schema 'public' for table 'chinese表'
+2021-11-29 15:29:04|ERROR|no mapping for input column "'列1'" to output table
+2021-11-29 15:29:04|INFO|rows Inserted          = 0
+2021-11-29 15:29:04|INFO|rows Updated           = 0
+2021-11-29 15:29:04|INFO|data formatting errors = 0
+2021-11-29 15:29:04|INFO|gpload failed
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '列1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 WARNING:  nonstandard use of \\ in a string literal
 LINE 13:                  and pgext.fmtopts like '%delimiter '';'' nu...
                                                  ^
 HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
-2021-08-10 14:56:47|INFO|gpload session started 2021-08-10 14:56:47
-2021-08-10 14:56:47|INFO|setting schema 'public' for table 'chinese表'
-2021-08-10 14:56:47|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-08-10 14:56:47|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
-2021-08-10 14:56:47|INFO|did not find an external table to reuse. creating ext_gpload_reusable_21691346_f9a8_11eb_a96a_0050569e2380
-2021-08-10 14:56:47|ERROR|unexpected error -- backtrace written to log file
-2021-08-10 14:56:47|INFO|rows Inserted          = 0
-2021-08-10 14:56:47|INFO|rows Updated           = 0
-2021-08-10 14:56:47|INFO|data formatting errors = 0
-2021-08-10 14:56:47|INFO|gpload failed
+2021-11-29 15:29:04|INFO|gpload session started 2021-11-29 15:29:04
+2021-11-29 15:29:04|INFO|setting schema 'public' for table 'chinese表'
+2021-11-29 15:29:04|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-11-29 15:29:04|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
+2021-11-29 15:29:04|INFO|did not find an external table to reuse. creating ext_gpload_reusable_07a3c70e_50e6_11ec_9873_0050569e2380
+2021-11-29 15:29:04|ERROR|could not run SQL "create external table ext_gpload_reusable_07a3c70e_50e6_11ec_9873_0050569e2380(列1 text,列#2 int,lie3 timestamp)location('gpfdist://*:pathto/data_file.txt') format'text' (delimiter ';' null '\N' escape '\' ) encoding'UTF8' ": ERROR:  syntax error at or near "#"
+LINE 1: ...(列1 text,列#2 int,lie...
+                                                             ^
+
+2021-11-29 15:29:04|INFO|rows Inserted          = 0
+2021-11-29 15:29:04|INFO|rows Updated           = 0
+2021-11-29 15:29:04|INFO|data formatting errors = 0
+2021-11-29 15:29:04|INFO|gpload failed

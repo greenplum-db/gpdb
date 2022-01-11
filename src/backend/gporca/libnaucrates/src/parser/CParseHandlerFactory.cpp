@@ -278,6 +278,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 
 		{EdxltokenScalarExpr, &CreateScExprParseHandler},
 		{EdxltokenScalarValuesList, &CreateScValuesListParseHandler},
+		{EdxltokenScalarSortGroupClause, &CreateScSortGroupClauseParseHandler},
 		{EdxltokenPhysicalValuesScan, &CreateValuesScanParseHandler},
 		{EdxltokenNLJIndexParamList, &CreateNLJIndexParamListParseHandler},
 		{EdxltokenNLJIndexParam, &CreateNLJIndexParamParseHandler}
@@ -2026,6 +2027,15 @@ CParseHandlerFactory::CreateScValuesListParseHandler(
 {
 	return GPOS_NEW(mp) CParseHandlerScalarValuesList(mp, parse_handler_mgr,
 													  parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateScSortGroupClauseParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerScalarSortGroupClause(
+		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a Values Scan operator

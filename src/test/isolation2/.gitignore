@@ -2,6 +2,19 @@ regression.diffs
 regression.out
 */dummy.sql
 */dummy.out
+sql/ao_upgrade.sql
+expected/ao_upgrade.out
+expected/ao_upgrade_optimizer.out
+sql/external_table.sql
+expected/external_table.out
+sql/fts_manual_probe.sql
+expected/fts_manual_probe.out
+sql/workfile_mgr_test.sql
+expected/workfile_mgr_test.out
+
+-- ignore generated pg_basebackup tests
+/sql/pg_basebackup*.sql
+/expected/pg_basebackup*.out
 
 # Local binaries and symbolic links
 /extended_protocol_test

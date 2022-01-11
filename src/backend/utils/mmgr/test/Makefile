@@ -2,7 +2,7 @@ subdir=src/backend/utils/mmgr
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=vmem_tracker redzone_handler runaway_cleaner idle_tracker event_version memprot
+TARGETS=vmem_tracker redzone_handler runaway_cleaner idle_tracker event_version memprot mcxt
 
 include $(top_srcdir)/src/backend/mock.mk
 
@@ -59,4 +59,7 @@ idle_tracker.t: \
 
 event_version.t: $(MOCK_DIR)/backend/storage/ipc/shmem_mock.o\
 	$(MOCK_DIR)/backend/access/hash/hash_mock.o\
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o
+
+mcxt.t: $(MOCK_DIR)/backend/access/hash/hashpage_mock.o \
 	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o

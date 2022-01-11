@@ -3274,11 +3274,16 @@
         </dxl:GroupingColumns>
         <dxl:ProjList>
           <dxl:ProjElem ColId="21" Alias="min">
-            <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:OpExpr OperatorName="%" OperatorMdid="0.530.1.0" OperatorType="0.23.1.0">
                 <dxl:Ident ColId="3" ColName="s1" TypeMdid="0.23.1.0"/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
               </dxl:OpExpr>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -3354,8 +3359,13 @@
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="min">
-                <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Final">
+                <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="1" Alias="g1">
@@ -3432,11 +3442,16 @@
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="21" Alias="ColRef_0021">
-                        <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Partial">
+                        <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                          <dxl:ValuesList ParamType="aggargs">
                           <dxl:OpExpr OperatorName="%" OperatorMdid="0.530.1.0" OperatorType="0.23.1.0">
                             <dxl:Ident ColId="2" ColName="s1" TypeMdid="0.23.1.0"/>
                             <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
                           </dxl:OpExpr>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
                         </dxl:AggFunc>
                       </dxl:ProjElem>
                       <dxl:ProjElem ColId="0" Alias="j1">

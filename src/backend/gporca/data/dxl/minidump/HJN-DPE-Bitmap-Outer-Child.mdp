@@ -1917,7 +1917,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="28">
+    <dxl:Plan Id="0" SpaceSize="20">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="829.034339" Rows="35.148716" Width="24"/>

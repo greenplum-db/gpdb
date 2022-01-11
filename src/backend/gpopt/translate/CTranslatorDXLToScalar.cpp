@@ -24,6 +24,8 @@ extern "C" {
 #include "utils/datum.h"
 }
 
+#include <vector>
+
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
@@ -59,7 +61,9 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarNullIf.h"
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/exception.h"
@@ -214,6 +218,15 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		case EdxlopScalarDMLAction:
 		{
 			return TranslateDXLScalarDMLActionToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarValuesList:
+		{
+			return TranslateDXLScalarValuesListToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarSortGroupClause:
+		{
+			return TranslateDXLScalarSortGroupClauseToScalar(dxlnode,
+															 colid_var);
 		}
 #if 0
 		// GPDB_12_MERGE_FIXME: These were removed from the server with the v12 merge
@@ -589,41 +602,81 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	}
 
 	// translate each DXL argument
-	List *exprs = TranslateScalarChildren(aggref->args, aggref_node, colid_var);
+	List *args = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexArgs], colid_var);
+	aggref->aggdirectargs = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexDirectArgs], colid_var);
+	aggref->aggorder = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexAggOrder], colid_var);
+
+	aggref->aggkind = CTranslatorUtils::GetAggKind(dxlop->GetAggKind());
+
+	// 'indexes' stores the position of the TargetEntry which is referenced by
+	// a SortGroupClause.
+	std::vector<int> indexes(gpdb::ListLength(args) + 1, -1);
+
+	{
+		int i;
+		ListCell *lc;
+		ForEachWithCount(lc, aggref->aggorder, i)
+		{
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lc);
+			indexes[gc->tleSortGroupRef] = gc->tleSortGroupRef;
+
+			// 'indexes' values are zero-based, but zero means TargetEntry
+			// doesn't have corresponding SortGroupClause. So convert back to
+			// one-based.
+			gc->tleSortGroupRef += 1;
+		}
+	}
+	if (dxlop->IsDistinct())
+	{
+		List *aggdistinct = TranslateScalarListChildren(
+			(*aggref_node)[EdxlscalaraggrefIndexAggDistinct], colid_var);
+
+		ULONG i;
+		ListCell *lc;
+		ForEachWithCount(lc, aggdistinct, i)
+		{
+			if (i >= gpdb::ListLength(args))
+			{
+				break;
+			}
+
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lc);
+			indexes[gc->tleSortGroupRef] = gc->tleSortGroupRef;
+
+			// 'indexes' values are zero-based, but zero means TargetEntry
+			// doesn't have corresponding SortGroupClause. So convert back to
+			// one-based.
+			gc->tleSortGroupRef += 1;
+
+			aggref->aggdistinct = gpdb::LAppend(aggref->aggdistinct, gc);
+		}
+	}
 
 	int attno;
 	aggref->args = NIL;
 	ListCell *lc;
-	int sortgrpindex = 1;
-	ForEachWithCount(lc, exprs, attno)
+	ForEachWithCount(lc, args, attno)
 	{
 		TargetEntry *new_target_entry = gpdb::MakeTargetEntry(
 			(Expr *) lfirst(lc), attno + 1, nullptr, false);
-		Oid aggargtype = gpdb::ExprType((Node *) lfirst(lc));
-		/*
-		 * Translate the aggdistinct bool set to true (in ORCA),
-		 * to a List of SortGroupClause in the PLNSTMT
-		 */
-		if (dxlop->IsDistinct())
-		{
-			new_target_entry->ressortgroupref = sortgrpindex;
-			SortGroupClause *gc = makeNode(SortGroupClause);
-			gc->tleSortGroupRef = sortgrpindex;
-			gc->eqop = gpdb::GetEqualityOp(
-				gpdb::ExprType((Node *) new_target_entry->expr));
-			gc->sortop = gpdb::GetOrderingOpForEqualityOp(gc->eqop, nullptr);
-			/*
-			 * Since ORCA doesn't yet support ordered aggregates, we are
-			 * setting nulls_first to false. This is also the default behavior
-			 * when no order by clause is provided so it is OK to set it to
-			 * false.
-			 */
-			gc->nulls_first = false;
-			aggref->aggdistinct = gpdb::LAppend(aggref->aggdistinct, gc);
-			sortgrpindex++;
-		}
+
 		aggref->args = gpdb::LAppend(aggref->args, new_target_entry);
-		aggref->aggargtypes = gpdb::LAppendOid(aggref->aggargtypes, aggargtype);
+		if (gpdb::ListLength(aggref->aggorder) > 0 ||
+			gpdb::ListLength(aggref->aggdistinct) > 0)
+		{
+			new_target_entry->ressortgroupref =
+				indexes[attno] == -1 ? 0 : (indexes[attno] + 1);
+		}
+	}
+
+	ULongPtrArray *argtypes = dxlop->GetArgTypes();
+	for (ULONG ul = 0; ul < argtypes->Size(); ul++)
+	{
+		aggref->aggargtypes =
+			gpdb::LAppendOid(aggref->aggargtypes, *(*argtypes)[ul]);
 	}
 
 	/*
@@ -644,7 +697,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	aggref->aggtranstype = aggtranstype;
 
 	// GPDB_91_MERGE_FIXME: collation
-	aggref->inputcollid = gpdb::ExprCollation((Node *) exprs);
+	aggref->inputcollid = gpdb::ExprCollation((Node *) args);
 	aggref->aggcollid = gpdb::TypeCollation(aggref->aggtype);
 
 	return (Expr *) aggref;
@@ -1562,6 +1615,23 @@ CTranslatorDXLToScalar::TranslateScalarChildren(List *list,
 	return new_list;
 }
 
+List *
+CTranslatorDXLToScalar::TranslateScalarListChildren(const CDXLNode *dxlnode,
+													CMappingColIdVar *colid_var)
+{
+	List *new_list = nullptr;
+
+	const ULONG arity = dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *child_dxl = (*dxlnode)[ul];
+		Expr *child_expr = TranslateDXLToScalar(child_dxl, colid_var);
+		new_list = gpdb::LAppend(new_list, child_expr);
+	}
+
+	return new_list;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToScalar::TranslateDXLScalarConstToScalar
@@ -1978,6 +2048,18 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayToScalar(
 	return (Expr *) gpdb::EvalConstExpressions((Node *) expr);
 }
 
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar(
+	const CDXLNode *scalar_array_node, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(nullptr != scalar_array_node);
+
+	List *values = nullptr;
+	values = TranslateScalarChildren(values, scalar_array_node, colid_var);
+
+	return (Expr *) values;
+}
+//
 // GPDB_12_MERGE_FIXME: ArrayRef was renamed in commit 558d77f20e4e9.
 // I've fixed the renamed type and fields but the wording "ArrayRef" is
 // still everywhere. Do we plan to rename them?
@@ -2085,6 +2167,25 @@ CTranslatorDXLToScalar::TranslateDXLScalarDMLActionToScalar(
 	return (Expr *) expr;
 }
 
+
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarSortGroupClauseToScalar(
+	const CDXLNode *node,
+	CMappingColIdVar *	//colid_var
+)
+{
+	CDXLScalarSortGroupClause *dxlop =
+		CDXLScalarSortGroupClause::Cast(node->GetOperator());
+
+	SortGroupClause *expr = MakeNode(SortGroupClause);
+	expr->tleSortGroupRef = dxlop->Index();
+	expr->eqop = dxlop->EqOp();
+	expr->sortop = dxlop->SortOp();
+	expr->nulls_first = dxlop->NullsFirst();
+	expr->hashable = dxlop->IsHashable();
+
+	return (Expr *) expr;
+}
 
 
 //---------------------------------------------------------------------------

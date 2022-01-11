@@ -34,6 +34,8 @@
             <topicref href="ref/gplogfilter.xml"/>
             <topicref href="ref/gpmapreduce.xml"/>
             <topicref href="ref/gpmapreduce-yaml.xml"/>
+            <topicref href="ref/gpmemreport.xml"/>
+            <topicref href="ref/gpmemwatcher.xml"/>
             <topicref href="ref/gpmovemirrors.xml"/>
             <topicref href="ref/gpmt.xml" otherprops="pivotal"/>
 <!-- hidden until testing is complete -msk
@@ -59,8 +61,8 @@
             <topicref href="ref/plcontainer.xml"/>
             <topicref href="ref/plcontainer-configuration.xml"/>
             <topicref href="ref/psql.xml"/>
-            <topicref href="../../pxf/5-15/ref/pxf.html" scope="external" navtitle="pxf"/>
-            <topicref href="../../pxf/5-15/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
+            <topicref href="../../pxf/latest/ref/pxf.html" scope="external" navtitle="pxf"/>
+            <topicref href="../../pxf/latest/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
             <topicref href="ref/reindexdb.xml"/>
             <topicref href="ref/vacuumdb.xml"/>
         </topicref>

@@ -434,17 +434,28 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="24" Alias="sum_qty">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="5" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="25" Alias="sum_base_price">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="26" Alias="sum_disc_price">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                   <dxl:Ident ColId="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
                   <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0">
@@ -452,10 +463,15 @@
                     <dxl:Ident ColId="7" ColName="l_discount" TypeMdid="0.1700.1.0"/>
                   </dxl:OpExpr>
                 </dxl:OpExpr>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="27" Alias="sum_charge">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                   <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                     <dxl:Ident ColId="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
@@ -469,25 +485,49 @@
                     <dxl:Ident ColId="8" ColName="l_tax" TypeMdid="0.1700.1.0"/>
                   </dxl:OpExpr>
                 </dxl:OpExpr>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="28" Alias="avg_qty">
-              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="5" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="29" Alias="avg_price">
-              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="30" Alias="avg_disc">
-              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="7" ColName="l_discount" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="31" Alias="count_order">
-              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs"/>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
+              </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalSelect>
@@ -586,17 +626,28 @@
               <dxl:Ident ColId="9" ColName="l_linestatus" TypeMdid="0.1042.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="23" Alias="sum_qty">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="4" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="24" Alias="sum_base_price">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="5" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="25" Alias="sum_disc_price">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                   <dxl:Ident ColId="5" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
                   <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0">
@@ -604,10 +655,15 @@
                     <dxl:Ident ColId="6" ColName="l_discount" TypeMdid="0.1700.1.0"/>
                   </dxl:OpExpr>
                 </dxl:OpExpr>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="26" Alias="sum_charge">
-              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                   <dxl:OpExpr OperatorName="*" OperatorMdid="0.1760.1.0">
                     <dxl:Ident ColId="5" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
@@ -621,25 +677,49 @@
                     <dxl:Ident ColId="7" ColName="l_tax" TypeMdid="0.1700.1.0"/>
                   </dxl:OpExpr>
                 </dxl:OpExpr>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="27" Alias="avg_qty">
-              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="4" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="28" Alias="avg_price">
-              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="5" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="29" Alias="avg_disc">
-              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2103.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="6" ColName="l_discount" TypeMdid="0.1700.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="30" Alias="count_order">
-              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs"/>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
+              </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>

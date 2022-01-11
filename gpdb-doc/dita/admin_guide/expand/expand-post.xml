@@ -38,11 +38,9 @@
       <section>
         <title>PXF 5</title>
         <ul id="ul_u44_r22_hpb">
-          <li>If you installed the PXF 5.x <codeph>rpm</codeph> or <codeph>deb</codeph> on your
-            Greenplum cluster, you must <codeph><xref href="../../../pxf/5-16/installing_pxf.html"
-                >install</xref></codeph> the same version on the new hosts.</li>
-          <li>If you are using the PXF version included with your Greenplum Database distribution,
-            no install action is required on your part.</li>
+          <li>You must <xref href="../../../pxf/latest/installing_pxf.html"
+                >install</xref> the same version of the PXF
+           <codeph>rpm</codeph> or <codeph>deb</codeph> on the new hosts.</li>
           <li>Log into the Greenplum Master and run the following
             commands:<codeblock>gpadmin@gpmaster$ pxf cluster reset
 gpadmin@gpmaster$ pxf cluster init</codeblock></li>
@@ -51,9 +49,9 @@ gpadmin@gpmaster$ pxf cluster init</codeblock></li>
       <section>
         <title>PXF 6</title>
         <ul id="ul_xwz_wc2_hpb">
-          <li>If you installed the PXF 6.x <codeph>rpm</codeph> or <codeph>deb</codeph> on your
-            Greenplum cluster, you must <codeph><xref href="../../../pxf/6-0/installing_pxf.html"
-                >install</xref></codeph> the same version on the new hosts.</li>
+          <li>You must <xref href="../../../pxf/latest/installing_pxf.html"
+                >install</xref> the same version of the PXF
+           <codeph>rpm</codeph> or <codeph>deb</codeph> on the new hosts.</li>
           <li>Log into the Greenplum Master and run the following commands:
             <codeblock>gpadmin@gpmaster$ pxf cluster register
 gpadmin@gpmaster$ pxf cluster sync</codeblock></li>

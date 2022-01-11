@@ -59,7 +59,7 @@
     <title>External Tables with Gpfdist</title>
     <body>
       <p>The fastest way to load large fact tables is to use external tables with
-          <codeph>gpdist</codeph>. <codeph>gpfdist</codeph> is a file server program using an HTTP
+          <codeph>gpfdist</codeph>. <codeph>gpfdist</codeph> is a file server program using an HTTP
         protocol that serves external data files to Greenplum Database segments in parallel. A
           <codeph>gpfdist</codeph> instance can serve 200 MB/second and many
           <codeph>gpfdist</codeph> processes can run simultaneously, each serving up a portion of
@@ -149,11 +149,6 @@ Segment 12 - gpfdist 4</screen></p>
             <codeph>gp_autostats_mode</codeph> configuration parameter to
           <codeph>NONE</codeph>.</li>
         <li>External tables are not intended for frequent or ad hoc access.</li>
-        <li>External tables have no statistics to inform the optimizer. You can set rough estimates
-          for the number of rows and disk pages for the external table in the
-            <codeph>pg_class</codeph> system catalog with a statement like the
-          following:<codeblock>UPDATE pg_class SET reltuples=400000, relpages=400
-WHERE relname='myexttable';</codeblock></li>
         <li>When using <codeph>gpfdist</codeph>, maximize network bandwidth by running one
             <codeph>gpfdist</codeph> instance for each NIC on the ETL server. Divide the source data
           evenly between the <codeph>gpfdist</codeph> instances.</li>

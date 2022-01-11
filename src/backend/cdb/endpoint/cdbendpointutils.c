@@ -59,7 +59,7 @@ endpoint_token_str2hex(int8 *token, const char *tokenStr)
 	else
 		ereport(FATAL,
 				(errcode(ERRCODE_INVALID_PASSWORD),
-				 errmsg("Retrieve auth token is invalid")));
+				 errmsg("retrieve auth token is invalid")));
 }
 
 /*
@@ -125,7 +125,7 @@ gp_wait_parallel_retrieve_cursor(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("this UDF only works for PARALLEL RETRIEVE CURSOR.")));
+				 errmsg("cursor is not a PARALLEL RETRIEVE CURSOR")));
 		PG_RETURN_BOOL(false);
 	}
 
@@ -234,11 +234,9 @@ gp_endpoints(PG_FUNCTION_ARGS)
 			if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
 			{
 				cdbdisp_clearCdbPgResults(&cdb_pgresults);
-				ereport(
-						ERROR,
-						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg(
-								"gp_segment_endpoints(): resultStatus is not tuples_Ok")));
+				ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("gp_segment_endpoints(): resultStatus is not TUPLES_OK")));
 			}
 			res_number += PQntuples(cdb_pgresults.pg_results[i]);
 		}

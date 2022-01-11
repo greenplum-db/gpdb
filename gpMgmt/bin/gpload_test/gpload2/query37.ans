@@ -1,24 +1,26 @@
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-2020-10-19 11:09:21|INFO|gpload session started 2020-10-19 11:09:21
-2020-10-19 11:09:21|INFO|setting schema 'public' for table 'texttable'
-2020-10-19 11:09:21|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2020-10-19 11:09:21|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
-2020-10-19 11:09:21|INFO|did not find an external table to reuse. creating ext_gpload_reusable_7bf26200_11b8_11eb_a45c_00505698707d
-2020-10-19 11:09:21|ERROR|unexpected error -- backtrace written to log file
-2020-10-19 11:09:21|INFO|rows Inserted          = 0
-2020-10-19 11:09:21|INFO|rows Updated           = 0
-2020-10-19 11:09:21|INFO|data formatting errors = 0
-2020-10-19 11:09:21|INFO|gpload failed
+2021-11-29 11:57:32|INFO|gpload session started 2021-11-29 11:57:32
+2021-11-29 11:57:32|INFO|setting schema 'public' for table 'texttable'
+2021-11-29 11:57:32|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-11-29 11:57:32|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2021-11-29 11:57:32|INFO|did not find an external table to reuse. creating ext_gpload_reusable_7ac93e9e_50c8_11ec_821e_0050569e2380
+2021-11-29 11:57:32|ERROR|could not run SQL "create external table ext_gpload_reusable_7ac93e9e_50c8_11ec_821e_0050569e2380("s1" text,"s2" text,"s3" text,"dt" timestamp without time zone,"n1" smallint,"n2" integer,"n3" bigint,"n4" numeric,"n5" numeric,"n6" real,"n7" double precision)location('gpfdist://10.117.190.10:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '|' null '\N' escape '\' ) encoding'xxxx' ": ERROR:  xxxx is not a valid encoding name
+
+2021-11-29 11:57:32|INFO|rows Inserted          = 0
+2021-11-29 11:57:32|INFO|rows Updated           = 0
+2021-11-29 11:57:32|INFO|data formatting errors = 0
+2021-11-29 11:57:32|INFO|gpload failed
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-2020-10-19 11:09:22|INFO|gpload session started 2020-10-19 11:09:22
-2020-10-19 11:09:22|INFO|setting schema 'public' for table 'texttable'
-2020-10-19 11:09:22|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2020-10-19 11:09:22|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
-2020-10-19 11:09:22|INFO|did not find an external table to reuse. creating ext_gpload_reusable_7c2d9dde_11b8_11eb_af8a_00505698707d
-2020-10-19 11:09:22|ERROR|unexpected error -- backtrace written to log file
-2020-10-19 11:09:22|INFO|rows Inserted          = 0
-2020-10-19 11:09:22|INFO|rows Updated           = 0
-2020-10-19 11:09:22|INFO|data formatting errors = 0
-2020-10-19 11:09:22|INFO|gpload failed
+2021-11-29 11:57:32|INFO|gpload session started 2021-11-29 11:57:32
+2021-11-29 11:57:32|INFO|setting schema 'public' for table 'texttable'
+2021-11-29 11:57:32|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-11-29 11:57:32|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2021-11-29 11:57:32|INFO|did not find an external table to reuse. creating ext_gpload_reusable_7ae5d7e8_50c8_11ec_9979_0050569e2380
+2021-11-29 11:57:32|ERROR|could not run SQL "create external table ext_gpload_reusable_7ae5d7e8_50c8_11ec_9979_0050569e2380("s1" text,"s2" text,"s3" text,"dt" timestamp without time zone,"n1" smallint,"n2" integer,"n3" bigint,"n4" numeric,"n5" numeric,"n6" real,"n7" double precision)location('gpfdist://10.117.190.10:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '|' null '\N' escape '\' ) encoding'xxxx' ": ERROR:  xxxx is not a valid encoding name
+
+2021-11-29 11:57:32|INFO|rows Inserted          = 0
+2021-11-29 11:57:32|INFO|rows Updated           = 0
+2021-11-29 11:57:32|INFO|data formatting errors = 0
+2021-11-29 11:57:32|INFO|gpload failed

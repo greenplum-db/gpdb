@@ -87,6 +87,9 @@
             <topicref href="guc-list.xml#gp_dbid"/>
             <topicref href="guc-list.xml#gp_debug_linger"/>
             <topicref href="guc-list.xml#gp_default_storage_options"/>
+            <topicref href="guc-list.xml#gp_dispatch_keepalives_count"/>
+            <topicref href="guc-list.xml#gp_dispatch_keepalives_idle"/>
+            <topicref href="guc-list.xml#gp_dispatch_keepalives_interval"/>
             <topicref href="guc-list.xml#gp_dynamic_partition_pruning"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct_pruning"/>
@@ -229,6 +232,7 @@
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_enable_multiple_distinct_aggs"/>
             <topicref href="guc-list.xml#optimizer_force_agg_skew_avoidance"/>
+            <topicref href="guc-list.xml#optimizer_force_comprehensive_join_implementation"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>
             <topicref href="guc-list.xml#optimizer_force_three_stage_scalar_dqa"/>
             <topicref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"/>

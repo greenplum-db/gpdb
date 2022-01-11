@@ -67,6 +67,7 @@
 #include "gpopt/operators/CScalarOp.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarSortGroupClause.h"
 #include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarSubqueryAll.h"
 #include "gpopt/operators/CScalarSubqueryAny.h"
@@ -74,6 +75,7 @@
 #include "gpopt/operators/CScalarSubqueryNotExists.h"
 #include "gpopt/operators/CScalarSwitch.h"
 #include "gpopt/operators/CScalarSwitchCase.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/operators/CDXLLogicalCTAS.h"
@@ -112,6 +114,7 @@
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSubquery.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryQuantified.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
@@ -2601,6 +2604,10 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 			return CTranslatorDXLToExpr::PexprArrayRef(dxlnode);
 		case EdxlopScalarArrayRefIndexList:
 			return CTranslatorDXLToExpr::PexprArrayRefIndexList(dxlnode);
+		case EdxlopScalarValuesList:
+			return CTranslatorDXLToExpr::PexprValuesList(dxlnode);
+		case EdxlopScalarSortGroupClause:
+			return CTranslatorDXLToExpr::PexprSortGroupClause(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3125,6 +3132,26 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 	}
 	BOOL fSplit = (EdxlaggstageNormal != dxl_op->GetDXLAggStage());
 
+	EAggfuncKind agg_func_kind = EaggfunckindNormal;
+	switch (dxl_op->GetAggKind())
+	{
+		case EdxlaggkindNormal:
+		{
+			agg_func_kind = EaggfunckindNormal;
+			break;
+		}
+		case EdxlaggkindOrderedSet:
+		{
+			agg_func_kind = EaggfunckindOrderedSet;
+			break;
+		}
+		case EdxlaggkindHypothetical:
+		{
+			agg_func_kind = EaggfunckindHypothetical;
+			break;
+		}
+	}
+
 	IMDId *resolved_return_type_mdid = dxl_op->GetDXLResolvedRetTypeMDid();
 	if (nullptr != resolved_return_type_mdid)
 	{
@@ -3132,12 +3159,13 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		resolved_return_type_mdid->AddRef();
 	}
 
+	dxl_op->GetArgTypes()->AddRef();
 	CScalarAggFunc *popScAggFunc = CUtils::PopAggFunc(
 		m_mp, agg_func_mdid,
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
-		dxl_op->IsDistinct(), agg_func_stage, fSplit,
-		resolved_return_type_mdid);
+		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
+		agg_func_kind, dxl_op->GetArgTypes());
 
 	CExpression *pexprAggFunc = nullptr;
 
@@ -3147,9 +3175,9 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		CExpressionArray *pdrgpexprArgs = PdrgpexprChildren(pdxlnAggref);
 
 		// check if the arguments have set returning functions, if so raise an exception
-		for (ULONG ul = 0; ul < pdrgpexprArgs->Size(); ul++)
+		for (ULONG ul = 0; ul < (*pdrgpexprArgs)[0]->Arity(); ul++)
 		{
-			CExpression *pexprAggrefChild = (*pdrgpexprArgs)[ul];
+			CExpression *pexprAggrefChild = (*(*pdrgpexprArgs)[0])[ul];
 
 			if (pexprAggrefChild->DeriveHasNonScalarFunction())
 			{
@@ -3237,6 +3265,18 @@ CTranslatorDXLToExpr::PexprArrayRef(const CDXLNode *dxlnode)
 	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popArrayref, pdrgpexprChildren);
+}
+
+CExpression *
+CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
+{
+	CScalarValuesList *popScalarValuesList =
+		GPOS_NEW(m_mp) CScalarValuesList(m_mp);
+
+	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
+
+	return GPOS_NEW(m_mp)
+		CExpression(m_mp, popScalarValuesList, pdrgpexprChildren);
 }
 
 //---------------------------------------------------------------------------
@@ -3747,6 +3787,21 @@ CTranslatorDXLToExpr::PexprScalarConst(const CDXLNode *pdxlnConstVal)
 		CTranslatorDXLToExprUtils::PopConst(m_mp, m_pmda, dxl_op);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popConst);
+}
+
+CExpression *
+CTranslatorDXLToExpr::PexprSortGroupClause(const CDXLNode *pdxlnSortGroupClause)
+{
+	GPOS_ASSERT(nullptr != pdxlnSortGroupClause);
+
+	// translate the dxl scalar const value
+	CDXLScalarSortGroupClause *dxl_op =
+		CDXLScalarSortGroupClause::Cast(pdxlnSortGroupClause->GetOperator());
+	CScalarSortGroupClause *sgc = GPOS_NEW(m_mp) CScalarSortGroupClause(
+		m_mp, dxl_op->Index(), dxl_op->EqOp(), dxl_op->SortOp(),
+		dxl_op->NullsFirst(), dxl_op->IsHashable());
+
+	return GPOS_NEW(m_mp) CExpression(m_mp, sgc);
 }
 
 //---------------------------------------------------------------------------

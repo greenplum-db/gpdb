@@ -281,8 +281,13 @@ where t.a in (select count(s.i) from s);
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="19" Alias="count">
-                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -320,7 +325,7 @@ where t.a in (select count(s.i) from s);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="24">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:HashJoin JoinType="In">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000729" Rows="1.000000" Width="12"/>
@@ -392,8 +397,13 @@ where t.a in (select count(s.i) from s);
           <dxl:GroupingColumns/>
           <dxl:ProjList>
             <dxl:ProjElem ColId="18" Alias="count">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -416,8 +426,13 @@ where t.a in (select count(s.i) from s);
               <dxl:GroupingColumns/>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="23" Alias="ColRef_0023">
-                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial">
+                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
               </dxl:ProjList>

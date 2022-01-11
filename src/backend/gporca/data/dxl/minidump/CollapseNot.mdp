@@ -352,13 +352,23 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="18" Alias="ColRef_0018">
-                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
-                    <dxl:Ident ColId="28" ColName="ColRef_0028" TypeMdid="0.20.1.0"/>
+                  <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="16">
+                    <dxl:ValuesList ParamType="aggargs">
+                      <dxl:Ident ColId="28" ColName="ColRef_0028" TypeMdid="0.20.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="20" Alias="ColRef_0020">
-                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-                    <dxl:Ident ColId="29" ColName="ColRef_0029" TypeMdid="0.20.1.0"/>
+                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="23">
+                    <dxl:ValuesList ParamType="aggargs">
+                      <dxl:Ident ColId="29" ColName="ColRef_0029" TypeMdid="0.20.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="0" Alias="cidr">
@@ -465,13 +475,23 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
                       </dxl:GroupingColumns>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="28" Alias="ColRef_0028">
-                          <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial">
-                            <dxl:Ident ColId="17" ColName="ColRef_0017" TypeMdid="0.16.1.0"/>
+                          <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="16">
+                            <dxl:ValuesList ParamType="aggargs">
+                              <dxl:Ident ColId="17" ColName="ColRef_0017" TypeMdid="0.16.1.0"/>
+                            </dxl:ValuesList>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="29" Alias="ColRef_0029">
-                          <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
-                            <dxl:Ident ColId="19" ColName="ColRef_0019" TypeMdid="0.23.1.0"/>
+                          <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="23">
+                            <dxl:ValuesList ParamType="aggargs">
+                              <dxl:Ident ColId="19" ColName="ColRef_0019" TypeMdid="0.23.1.0"/>
+                            </dxl:ValuesList>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="0" Alias="cidr">

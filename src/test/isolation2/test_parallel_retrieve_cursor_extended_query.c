@@ -503,7 +503,7 @@ main(int argc, char **argv)
 			PQclear(res);
 			goto LABEL_ERR;
 		}
-		printf("Call PQfn() via retrieve mode connection: %s \n", PQresultErrorMessage(res));
+		printf("Expected forbidden: Call PQfn() via retrieve mode connection: %s \n", PQresultErrorMessage(res));
 
 		PQclear(res);
 		printf("\n------ End of testing fast path(PQfn) in retrieve mode # ------.\n");

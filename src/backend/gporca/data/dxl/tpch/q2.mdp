@@ -2440,8 +2440,13 @@
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="111" Alias="min">
-                      <dxl:AggFunc AggMdid="0.2146.1.0" AggDistinct="false" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2146.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="67" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
@@ -2962,8 +2967,13 @@
                       </dxl:GroupingColumns>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="110" Alias="min">
-                          <dxl:AggFunc AggMdid="0.2146.1.0" AggDistinct="false" AggStage="Normal">
+                          <dxl:AggFunc AggMdid="0.2146.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                            <dxl:ValuesList ParamType="aggargs">
                             <dxl:Ident ColId="66" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
+                            </dxl:ValuesList>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="0" Alias="p_partkey">

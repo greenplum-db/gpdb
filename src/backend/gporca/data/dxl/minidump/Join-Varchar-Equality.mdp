@@ -3929,8 +3929,13 @@
         </dxl:GroupingColumns>
         <dxl:ProjList>
           <dxl:ProjElem ColId="53" Alias="sales">
-            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="7" ColName="sales" TypeMdid="0.23.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -4044,7 +4049,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="323272">
+    <dxl:Plan Id="0" SpaceSize="80990">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3422679.529071" Rows="19136.250000" Width="31"/>
@@ -4106,8 +4111,13 @@
                 <dxl:Ident ColId="39" ColName="shop_name" TypeMdid="0.1043.1.0"/>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="52" Alias="sales">
-                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
+                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="53" ColName="ColRef_0053" TypeMdid="0.20.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="29" Alias="month">
@@ -4187,8 +4197,13 @@
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="53" Alias="ColRef_0053">
-                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
+                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="6" ColName="sales" TypeMdid="0.23.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="27" Alias="year">

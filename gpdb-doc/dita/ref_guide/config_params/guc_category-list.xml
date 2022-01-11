@@ -77,6 +77,18 @@
                   >gp_connection_send_timeout</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#gp_dispatch_keepalives_count" type="section"
+                  >gp_dispatch_keepalives_count</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#gp_dispatch_keepalives_idle" type="section"
+                  >gp_dispatch_keepalives_idle</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#gp_dispatch_keepalives_interval" type="section"
+                  >gp_dispatch_keepalives_interval</xref>
+              </p>              
+              <p>
                 <xref href="guc-list.xml#gp_vmem_idle_resource_timeout" type="section"
                   >gp_vmem_idle_resource_timeout</xref>
               </p>
@@ -338,6 +350,9 @@
               >optimizer_enable_multiple_distinct_aggs</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_agg_skew_avoidance" type="section"
                 >optimizer_force_agg_skew_avoidance</xref></p>
+            <p><xref href="guc-list.xml#optimizer_force_comprehensive_join_implementation" type="section"
+                >optimizer_force_comprehensive_join_implementation</xref>
+            </p>
           </stentry>
           <stentry>
             <p><xref href="guc-list.xml#optimizer_force_multistage_agg" type="section"

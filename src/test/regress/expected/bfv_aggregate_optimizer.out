@@ -1806,16 +1806,18 @@ select 1, sum(col1) from group_by_const group by 1;
 -- that you get a one-phase aggregate plan.
 explain (costs off)
 select 1, median(col1) from group_by_const group by 1;
-                         QUERY PLAN                         
-------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  GroupAggregate
-         Group Key: 1
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: 1
-               ->  Seq Scan on group_by_const
- Optimizer: Postgres query optimizer
-(7 rows)
+         Group Key: (1)
+         ->  Sort
+               Sort Key: (1)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (1)
+                     ->  Seq Scan on group_by_const
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 select 1, median(col1) from group_by_const group by 1;
  ?column? | median 

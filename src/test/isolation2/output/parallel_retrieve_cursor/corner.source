@@ -227,7 +227,7 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
  a  
@@ -367,6 +367,11 @@ ROLLBACK
  state 
 -------
 (0 rows)
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test5: if conflict with normal cursors
 1: BEGIN;
@@ -414,7 +419,7 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
  a  
@@ -544,6 +549,11 @@ DECLARE
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test6: select order by limit
 1: BEGIN;
@@ -586,11 +596,14 @@ DECLARE
  10 
 (10 rows)
 
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#0retrieve> FATAL:  retrieve auth token is invalid
 
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#1retrieve> FATAL:  retrieve auth token is invalid
+
+
+#2retrieve> FATAL:  retrieve auth token is invalid
+
 
 -- test check and wait after finished retrieving
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', 0);
@@ -611,6 +624,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq: ... <quitting>
+Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
 
 -- Test7: select order by limit 0
 1: BEGIN;
@@ -649,11 +667,14 @@ DECLARE
 ---
 (0 rows)
 
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#0retrieve> FATAL:  retrieve auth token is invalid
 
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#1retrieve> FATAL:  retrieve auth token is invalid
+
+
+#2retrieve> FATAL:  retrieve auth token is invalid
+
 
 1<:  <... completed>
  finished 
@@ -673,6 +694,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq: ... <quitting>
+Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
 
 -- Test8: select empty table
 1: BEGIN;
@@ -711,7 +737,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a 
 ---
@@ -745,6 +772,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test9: select table with text column
 1: BEGIN;
@@ -783,7 +815,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a     
 -------
@@ -827,6 +860,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test10: select empty table with text column
 1: BEGIN;
@@ -865,7 +903,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a 
 ---
@@ -899,6 +938,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test11: endpoints on one segment.
 1: BEGIN;
@@ -944,6 +988,8 @@ DECLARE
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+1Rq: ... <quitting>
 
 -- Test12: PARALLEL RETRIEVE CURSOR for aggregate function: sum
 1: BEGIN;
@@ -988,6 +1034,8 @@ DECLARE
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+-1Rq: ... <quitting>
 
 -- Test13: PARALLEL RETRIEVE CURSOR for aggregate function: avg
 1: BEGIN;
@@ -1026,6 +1074,8 @@ DECLARE
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+-1Rq: ... <quitting>
 
 -- Test14: PARALLEL RETRIEVE CURSOR for count(*)
 1: BEGIN;
@@ -1060,6 +1110,8 @@ DECLARE
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+-1Rq: ... <quitting>
 
 -- Test15: PARALLEL RETRIEVE CURSOR for two tables' join;
 1: BEGIN;
@@ -1074,7 +1126,8 @@ DECLARE
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
 
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a | b 
 ---+---
@@ -1112,6 +1165,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test16: PARALLEL RETRIEVE CURSOR for the count of two tables' join;
 1: BEGIN;
@@ -1141,6 +1199,8 @@ DECLARE
 (1 row)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+-1Rq: ... <quitting>
 
 -- Test17: re-execute a PARALLEL RETRIEVE CURSOR and retrieve in same sessions.
 1: BEGIN;
@@ -1174,7 +1234,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a  
 ----
@@ -1324,7 +1385,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a  
 ----
@@ -1452,6 +1514,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test18: re-execute a PARALLEL RETRIEVE CURSOR and retrieve in different sessions.
 1: BEGIN;
@@ -1485,7 +1552,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a  
 ----
@@ -1639,7 +1707,8 @@ DECLARE
  READY 
 (1 row)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-ERROR:  The endpoint @ENDPOINT2 does not exist in the session
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
 
  a  
 ----
@@ -1767,6 +1836,11 @@ ERROR:  The endpoint @ENDPOINT2 does not exist in the session
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test19: PARALLEL RETRIEVE CURSOR and savepoint
 1: BEGIN;
@@ -1832,10 +1906,10 @@ DECLARE
 1: COMMIT;
 COMMIT
 1q: ... <quitting>
--1Rq: ... <quitting>
-0Rq: ... <quitting>
-1Rq: ... <quitting>
-2Rq: ... <quitting>
+*Rq:Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
 
 -- Test22: UDF plan should be able to run on entry db.
 1: BEGIN;
@@ -1883,13 +1957,13 @@ DECLARE
  9               
 (10 rows)
 
-#0retrieve> FATAL:  Retrieve auth token is invalid
+#0retrieve> FATAL:  retrieve auth token is invalid
 
 
-#1retrieve> FATAL:  Retrieve auth token is invalid
+#1retrieve> FATAL:  retrieve auth token is invalid
 
 
-#2retrieve> FATAL:  Retrieve auth token is invalid
+#2retrieve> FATAL:  retrieve auth token is invalid
 
 
 -- test check and wait after finished retrieving
@@ -1908,7 +1982,11 @@ DECLARE
 ROLLBACK
 1q: ... <quitting>
 -1Rq: ... <quitting>
-
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
 
 -- Test23: Catalog scan plan should be able to run on entry db.
 1: BEGIN;
@@ -1947,13 +2025,13 @@ DECLARE
  pg_class 
 (1 row)
 
-#0retrieve> FATAL:  Retrieve auth token is invalid
+#0retrieve> FATAL:  retrieve auth token is invalid
 
 
-#1retrieve> FATAL:  Retrieve auth token is invalid
+#1retrieve> FATAL:  retrieve auth token is invalid
 
 
-#2retrieve> FATAL:  Retrieve auth token is invalid
+#2retrieve> FATAL:  retrieve auth token is invalid
 
 
 -- test check and wait after finished retrieving
@@ -1970,7 +2048,11 @@ DECLARE
 (1 row)
 1: ROLLBACK;
 ROLLBACK
--1Rq: ... <quitting>
+-- cleanup retrieve connections
+*Rq: ... <quitting>
+Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
 
 -- Test24: endpoint name is too long and will be truncated.
 1: BEGIN;
@@ -1997,7 +2079,7 @@ DECLARE
  endpoint_id24_2 | token_id | host_id | port_id | READY
 (3 rows)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT24': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT24";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
  b 
@@ -2022,7 +2104,7 @@ DECLARE
  10 
 (4 rows)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT24_1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT24_1";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
  b 
@@ -2047,7 +2129,7 @@ DECLARE
  10 
 (4 rows)
 *R: @pre_run 'set_endpoint_variable @ENDPOINT24_2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT24_2";
-#-1retrieve> FATAL:  Retrieve auth token is invalid
+#-1retrieve> FATAL:  retrieve auth token is invalid
 
 
  b 
@@ -2073,9 +2155,11 @@ DECLARE
 (4 rows)
 1: ROLLBACK;
 ROLLBACK
-0Rq: ... <quitting>
-1Rq: ... <quitting>
-2Rq: ... <quitting>
+-- cleanup retrieve connections
+*Rq:Sessions not started cannot be quit
+ ... <quitting>
+ ... <quitting>
+ ... <quitting>
 
 -- Test25: cursor name is too long and will be truncated.
 1: BEGIN;
@@ -2167,13 +2251,13 @@ DECLARE
  10              
 (10 rows)
 
-#0retrieve> FATAL:  Retrieve auth token is invalid
+#0retrieve> FATAL:  retrieve auth token is invalid
 
 
-#1retrieve> FATAL:  Retrieve auth token is invalid
+#1retrieve> FATAL:  retrieve auth token is invalid
 
 
-#2retrieve> FATAL:  Retrieve auth token is invalid
+#2retrieve> FATAL:  retrieve auth token is invalid
 
 
 -- test check and wait after finished retrieving
@@ -2188,7 +2272,11 @@ DECLARE
 ----------
  FINISHED 
 (1 row)
--1Rq: ... <quitting>
+-- cleanup retrieve connections
+*Rq: ... <quitting>
+Sessions not started cannot be quit
+Sessions not started cannot be quit
+Sessions not started cannot be quit
 
 -- Test28: Parallel retrieve cursor should run on the dispatcher only.
 -1U: BEGIN;

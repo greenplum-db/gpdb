@@ -436,6 +436,8 @@ private:
 	// translate a scalar constant
 	CDXLNode *PdxlnScConst(CExpression *pexprScConst);
 
+	CDXLNode *PdxlnScSortGroupClause(CExpression *pexprScSortGroupClause);
+
 	// translate a scalar coalesce
 	CDXLNode *PdxlnScCoalesce(CExpression *pexprScCoalesce);
 
@@ -480,6 +482,8 @@ private:
 
 	// translate a scalar array coerce expr with element coerce function
 	CDXLNode *PdxlnScArrayCoerceExpr(CExpression *pexprScArrayCoerceExpr);
+
+	CDXLNode *PdxlnValuesList(CExpression *pexpr);
 
 	// translate an array
 	CDXLNode *PdxlnArray(CExpression *pexpr);

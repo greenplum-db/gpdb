@@ -529,64 +529,51 @@ internal_client_authentication(Port *port)
 {
 	if (IS_QUERY_DISPATCHER())
 	{
-		/* 
+		/*
 		 * The entry-DB (or QE at the master) case.
 		 *
 		 * The goal here is to block network connection from out of
 		 * master to master db with magic bit packet.
 		 * So, only when it comes from the same host, the connection
-		 * is authenticated, if this connection is TCP/UDP. We
-		 * don't assume the connection is via unix domain socket,
-		 * but if it comes, just authenticate it. We'll need to
-		 * verify user on UDS case, but for now we don't do too much
-		 * for the goal described above.
+		 * is authenticated, if this connection is TCP/UDP.
+		 *
+		 * If unix domain socket comes, just authenticate it.
 		 */
-		if(port->raddr.addr.ss_family == AF_INET
+		if (port->raddr.addr.ss_family == AF_INET
 #ifdef HAVE_IPV6
-				|| port->raddr.addr.ss_family == AF_INET6
+			|| port->raddr.addr.ss_family == AF_INET6
 #endif   /* HAVE_IPV6 */
-			   )
+		   )
 		{
-			if (check_same_host_or_net(&port->raddr, ipCmpSameHost) &&
-				!gp_reject_internal_tcp_conn)
+			if (check_same_host_or_net(&port->raddr, ipCmpSameHost))
 			{
-				elog(DEBUG1, "received same host internal TCP connection");
-				FakeClientAuthentication(port);
+				if (gp_reject_internal_tcp_conn)
+				{
+					elog(DEBUG1, "rejecting TCP connection to master using internal"
+						 "connection protocol, because the GUC gp_reject_internal_tcp_conn is true");
+					return false;
+				}
+				else
+				{
+					elog(DEBUG1, "received same host internal TCP connection");
+					FakeClientAuthentication(port);
+					return true;
+				}
 			}
-			else
-			{
-				/* Security violation? */
-				elog(LOG, "rejecting TCP connection to master using internal"
-					 "connection protocol");
-				return false;
-			}
-			return true;
+
+			/* Security violation? */
+			elog(LOG, "rejecting TCP connection to master using internal"
+				 "connection protocol");
+			return false;
 		}
 #ifdef HAVE_UNIX_SOCKETS
 		else if (port->raddr.addr.ss_family == AF_UNIX)
 		{
-			/* 
-			 * Internal connection via a domain socket -- use ident
+			/*
+			 * Internal connection via a domain socket -- consider it authenticated
 			 */
-			char *local_name;
-			struct passwd *pw;
-
-			pw = getpwuid(geteuid());
-			if (pw == NULL)
-			{
-				elog(LOG, "invalid effective UID %d ", geteuid());
-				return false;
-			}
-
-			local_name = pw->pw_name;
-
-			if (!auth_peer(port))
-				return false;
-			else
-			{
-				FakeClientAuthentication(port);
-				return true;
-			}
+			FakeClientAuthentication(port);
+			return true;
 		}
 #endif   /* HAVE_UNIX_SOCKETS */
 		else
@@ -1517,7 +1504,7 @@ pg_GSS_recvauth(Port *port)
 		gbuf.length = buf.len;
 		gbuf.value = buf.data;
 
-		elog(DEBUG4, "Processing received GSS token of length %u",
+		elog(DEBUG4, "processing received GSS token of length %u",
 			 (unsigned int) gbuf.length);
 
 		maj_stat = gss_accept_sec_context(
@@ -1795,7 +1782,7 @@ pg_SSPI_recvauth(Port *port)
 		outbuf.ulVersion = SECBUFFER_VERSION;
 
 
-		elog(DEBUG4, "Processing received SSPI token of length %u",
+		elog(DEBUG4, "processing received SSPI token of length %u",
 			 (unsigned int) buf.len);
 
 		r = AcceptSecurityContext(&sspicred,
@@ -3315,7 +3302,7 @@ radius_add_attribute(radius_packet *packet, uint8 type, const unsigned char *dat
 		 * fail.
 		 */
 		elog(WARNING,
-			 "Adding attribute code %d with length %d to radius packet would create oversize packet, ignoring",
+			 "adding attribute code %d with length %d to radius packet would create oversize packet, ignoring",
 			 type, len);
 		return;
 	}

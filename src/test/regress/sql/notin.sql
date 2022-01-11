@@ -424,6 +424,56 @@ select * from table_source3 where c3 = 'INC' and c4 = '0000000001' and c2 not in
 explain select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
 select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
 
+--
+-- Multi Column NOT-IN
+-- Please refer to https://github.com/greenplum-db/gpdb/issues/12930
+--
+create table t1_12930(a int not null, b int not null);
+create table t2_12930(a int not null, b int not null);
+
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+insert into t1_12930 values (1, 1), (2, 2);
+insert into t2_12930 values (1, 1), (2, 3), (3,3);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+explain select * from t1_12930 where (a+1, b+1) not in (select a, b from t2_12930);
+select * from t1_12930 where (a+1, b+1) not in (select a, b from t2_12930);
+explain select * from t1_12930 where (a,b) <> ALL (select a, b from t2_12930);
+select * from t1_12930 where (a,b) <> ALL (select a, b from t2_12930);
+
+-- non-nullable: t1.a, t2.a, t2.b
+-- nullable: t1.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b set not null;
+alter table t1_12930 alter column b drop not null;
+insert into t1_12930 values (1, null);
+insert into t2_12930 values (1, 1);
+explain select * from t1_12930 where (a, b) <>ALL (select a, b from t2_12930);
+select * from t1_12930 where (a, b) <>ALL (select a, b from t2_12930);
+
+-- non-nullable: t1.a, t1.b, t2.a
+-- nullable: t2.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b drop not null;
+insert into t1_12930 values (1, 1);
+insert into t2_12930 values (1, null);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+
+-- non-nullable: t1.a, t2.a, t2.b
+-- nullable: t1.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b set not null;
+alter table t1_12930 alter column b drop not null;
+insert into t1_12930 values (1, null);
+insert into t2_12930 values (1, 1);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
 
 reset search_path;
 drop schema notin cascade;

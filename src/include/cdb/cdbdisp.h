@@ -128,8 +128,9 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
  * know if QEs run as expected.
  *
  * message: specifies the expected ACK message to check.
- * wait: if true, this function will wait until required ACK messages
- *       have been received from required QEs.
+ * timeout_sec: the second that the dispatcher waits for the ack messages at most.
+ *       0 means checking immediately, and -1 means waiting until all ack
+ *       messages are received.
  *
  * QEs should call cdbdisp_sendAckMessageToQD to send acknowledge messages to QD.
  */

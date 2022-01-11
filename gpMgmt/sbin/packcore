@@ -128,7 +128,7 @@ def _getLibraryListWithGDB(coreFile, binary):
                                 # list shared libraries explicitly
                  '-c', coreFile,
                  binary],
-                stdout=PIPE, stderr=PIPE)
+                stdout=PIPE, stderr=PIPE, env=environ)
     result = cmd.communicate()[0].decode()
 
     # gdb output looks like below:

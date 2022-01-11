@@ -1238,7 +1238,12 @@ WHERE
                 <dxl:GroupingColumns/>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="73" Alias="count">
-                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs"/>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
+                    </dxl:AggFunc>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:LogicalSelect>
@@ -1277,7 +1282,7 @@ WHERE
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="128412">
+    <dxl:Plan Id="0" SpaceSize="52727">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1306.824501" Rows="199.680000" Width="148"/>
@@ -1608,8 +1613,13 @@ WHERE
                 </dxl:GroupingColumns>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="72" Alias="count">
-                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final">
+                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs">
                       <dxl:Ident ColId="74" ColName="ColRef_0074" TypeMdid="0.20.1.0"/>
+                      </dxl:ValuesList>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
                     </dxl:AggFunc>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="60" Alias="amopclaid">
@@ -1672,7 +1682,12 @@ WHERE
                       </dxl:GroupingColumns>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="74" Alias="ColRef_0074">
-                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial"/>
+                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                            <dxl:ValuesList ParamType="aggargs"/>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
+                          </dxl:AggFunc>
                         </dxl:ProjElem>
                         <dxl:ProjElem ColId="60" Alias="amopclaid">
                           <dxl:Ident ColId="60" ColName="amopclaid" TypeMdid="0.26.1.0"/>

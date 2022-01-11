@@ -8890,7 +8890,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="25">
+    <dxl:Plan Id="0" SpaceSize="12">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1773.052304" Rows="2163263.000000" Width="8"/>

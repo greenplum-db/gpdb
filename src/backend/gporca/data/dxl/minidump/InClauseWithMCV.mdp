@@ -635,7 +635,12 @@ explain select * from bar where a in (1, (select count(*) from bar));
                 <dxl:GroupingColumns/>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="17" Alias="count">
-                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs"/>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
+                    </dxl:AggFunc>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:LogicalGet>
@@ -721,8 +726,13 @@ explain select * from bar where a in (1, (select count(*) from bar));
               <dxl:GroupingColumns/>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="16" Alias="count">
-                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final">
+                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:Ident ColId="17" ColName="ColRef_0017" TypeMdid="0.20.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
               </dxl:ProjList>
@@ -745,7 +755,12 @@ explain select * from bar where a in (1, (select count(*) from bar));
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="17" Alias="ColRef_0017">
-                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial"/>
+                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs"/>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
+                      </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>

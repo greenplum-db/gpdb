@@ -126,6 +126,20 @@ const char *MD5Calc::Get() {
     return this->result.c_str();
 }
 
+Config::Config(const string &filename, const string &url, const char *datadir) : _conf(NULL) {
+    if (!url.empty()) {
+        this->_conf = ini_load_from_url(url.c_str(), datadir);
+    } else {
+        this->_conf = ini_load(filename.c_str());
+    }
+    if (this->_conf == NULL) {
+#ifndef S3_STANDALONE
+        write_log("Failed to load config file:'%s', url is '%s'\n", filename.c_str(), url.c_str());
+#else
+        S3ERROR("Failed to load config file:'%s'", filename.c_str());
+#endif
+    }
+}
 Config::Config(const string &filename) : _conf(NULL) {
     if (!filename.empty()) this->_conf = ini_load(filename.c_str());
     if (this->_conf == NULL) {

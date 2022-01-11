@@ -2837,7 +2837,12 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="111" Alias="numwait">
-              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs"/>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
+              </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalJoin JoinType="Inner">
@@ -3109,7 +3114,12 @@
                   <dxl:Ident ColId="1" ColName="s_name" TypeMdid="0.1042.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="110" Alias="numwait">
-                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs"/>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
+                  </dxl:AggFunc>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>

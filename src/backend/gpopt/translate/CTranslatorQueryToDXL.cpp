@@ -2013,6 +2013,41 @@ CTranslatorQueryToDXL::AddSortingGroupingColumn(
 	}
 }
 
+static BOOL
+ExpressionContainsMissingVars(const Expr *expr, CBitSet *grpby_cols_bitset)
+{
+	if (IsA(expr, Var) && !grpby_cols_bitset->Get(((Var *) expr)->varattno))
+	{
+		return true;
+	}
+	if (IsA(expr, SubLink) && IsA(((SubLink *) expr)->subselect, Query))
+	{
+		ListCell *lc = nullptr;
+		ForEach(lc, ((Query *) ((SubLink *) expr)->subselect)->targetList)
+		{
+			if (ExpressionContainsMissingVars(
+					((TargetEntry *) lfirst(lc))->expr, grpby_cols_bitset))
+			{
+				return true;
+			}
+		}
+	}
+	else if (IsA(expr, OpExpr))
+	{
+		ListCell *lc = nullptr;
+		ForEach(lc, ((OpExpr *) expr)->args)
+		{
+			if (ExpressionContainsMissingVars((Expr *) lfirst(lc),
+											  grpby_cols_bitset))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorQueryToDXL::CreateSimpleGroupBy
@@ -2095,6 +2130,37 @@ CTranslatorQueryToDXL::CreateSimpleGroupBy(
 				dqa_list = gpdb::LAppend(dqa_list,
 										 gpdb::CopyObject(target_entry->expr));
 				num_dqa++;
+			}
+
+			if (has_grouping_sets)
+			{
+				// If the grouping set is an ordered aggregate with direct
+				// args, then we need to ensure that every direct arg exists in
+				// the group by columns bitset. This is important when a ROLLUP
+				// uses direct args. For example, consider the followinng
+				// query:
+				//
+				// ```
+				// SELECT a, rank(a) WITHIN GROUP (order by b nulls last)
+				// FROM (values (1,1),(1,4),(1,5),(3,1),(3,2)) v(a,b)
+				// GROUP BY ROLLUP (a) ORDER BY a;
+				// ```
+				//
+				// ROLLUP (a) on values produces sets: (1), (3), ().
+				//
+				// In this case we need to ensure that () set will fetch direct
+				// arg "a" as NULL. Whereas (1) and (3) will fetch "a" off of
+				// any tuple in their respective sets.
+				ListCell *ilc = nullptr;
+				ForEach(ilc, ((Aggref *) target_entry->expr)->aggdirectargs)
+				{
+					if (ExpressionContainsMissingVars((Expr *) lfirst(ilc),
+													  grpby_cols_bitset))
+					{
+						((Aggref *) target_entry->expr)->aggdirectargs = NIL;
+						break;
+					}
+				}
 			}
 
 			// create a project element for aggregate
@@ -2350,10 +2416,12 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalCTEConsumer(
 							   m_mp, cte_id, colid_array_cte_consumer));
 
+		List *target_list_copy = (List *) gpdb::CopyObject(target_list);
+
 		IntToUlongMap *groupby_attno_to_colid_mapping =
 			GPOS_NEW(m_mp) IntToUlongMap(m_mp);
 		CDXLNode *groupby_dxlnode = CreateSimpleGroupBy(
-			target_list, group_clause, grouping_set_bitset, has_aggs,
+			target_list_copy, group_clause, grouping_set_bitset, has_aggs,
 			true,  // has_grouping_sets
 			cte_consumer_dxlnode, phmiulSortgrouprefColIdConsumer,
 			spj_consumer_output_attno_to_colid_mapping,
@@ -2361,19 +2429,19 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 
 		// add a project list for the NULL values
 		CDXLNode *project_dxlnode = CreateDXLProjectNullsForGroupingSets(
-			target_list, groupby_dxlnode, grouping_set_bitset,
+			target_list_copy, groupby_dxlnode, grouping_set_bitset,
 			phmiulSortgrouprefColIdConsumer, groupby_attno_to_colid_mapping,
 			grpcol_index_to_colid_mapping);
 
 		ULongPtrArray *colids_outer_array =
 			CTranslatorUtils::GetOutputColIdsArray(
-				m_mp, target_list, groupby_attno_to_colid_mapping);
+				m_mp, target_list_copy, groupby_attno_to_colid_mapping);
 		if (nullptr != unionall_dxlnode)
 		{
 			GPOS_ASSERT(nullptr != colid_array_inner);
 			CDXLColDescrArray *dxl_col_descr_array =
 				CTranslatorUtils::GetDXLColumnDescrArray(
-					m_mp, target_list, colids_outer_array,
+					m_mp, target_list_copy, colids_outer_array,
 					true /* keep_res_junked */);
 
 			colids_outer_array->AddRef();
@@ -2401,7 +2469,7 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 			// add the sortgroup columns to output map of the last column
 			ULONG te_pos = 0;
 			ListCell *lc = nullptr;
-			ForEach(lc, target_list)
+			ForEach(lc, target_list_copy)
 			{
 				TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 

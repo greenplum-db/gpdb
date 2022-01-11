@@ -1,9 +1,10 @@
-2021-01-05 17:03:42|INFO|gpload session started 2021-01-05 17:03:42
-2021-01-05 17:03:42|INFO|setting schema 'public' for table 'texttable'
-2021-01-05 17:03:42|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
-2021-01-05 17:03:42|INFO|did not find an external table to reuse. creating non_ext_schema_test.ext_gpload_reusable_e8969ec6_4f34_11eb_9b77_7085c2381836
-2021-01-05 17:03:42|ERROR|unexpected error -- backtrace written to log file
-2021-01-05 17:03:42|INFO|rows Inserted          = 0
-2021-01-05 17:03:42|INFO|rows Updated           = 0
-2021-01-05 17:03:42|INFO|data formatting errors = 0
-2021-01-05 17:03:42|INFO|gpload failed
+2021-11-30 15:17:58|INFO|gpload session started 2021-11-30 15:17:58
+2021-11-30 15:17:58|INFO|setting schema 'public' for table 'texttable'
+2021-11-30 15:17:58|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-11-30 15:17:58|INFO|did not find an external table to reuse. creating non_ext_schema_test.ext_gpload_reusable_a53b654a_51ad_11ec_b1b3_0050569e2380
+2021-11-30 15:17:58|ERROR|could not run SQL "create external table non_ext_schema_test.ext_gpload_reusable_a53b654a_51ad_11ec_b1b3_0050569e2380("s1" text,"s2" text,"s3" text,"dt" timestamp without time zone,"n1" smallint,"n2" integer,"n3" bigint,"n4" numeric,"n5" numeric,"n6" real,"n7" double precision)location('gpfdist://*:pathto/data_file.txt') format'text' (delimiter '|' null '\N' escape '\' ) encoding'UTF8' ": ERROR:  schema "non_ext_schema_test" does not exist
+
+2021-11-30 15:17:58|INFO|rows Inserted          = 0
+2021-11-30 15:17:58|INFO|rows Updated           = 0
+2021-11-30 15:17:58|INFO|data formatting errors = 0
+2021-11-30 15:17:58|INFO|gpload failed

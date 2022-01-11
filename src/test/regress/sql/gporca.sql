@@ -3420,6 +3420,21 @@ EXPLAIN (COSTS OFF) SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a
 SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
 RESET optimizer_enable_redistribute_nestloop_loj_inner_child;
 RESET optimizer_enable_hashjoin;
+
+--- Test if orca can produce the correct plan for CTAS
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+EXPLAIN CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+SELECT gp_segment_id, * FROM result_tab;
+DROP TABLE IF EXISTS dist_tab_a;
+DROP TABLE IF EXISTS dist_tab_b;
+DROP TABLE IF EXISTS result_tab;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

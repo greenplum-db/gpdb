@@ -1570,8 +1570,13 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="21" Alias="sum">
-              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="11" ColName="a" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -1604,7 +1609,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="31">
+    <dxl:Plan Id="0" SpaceSize="14">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.027662" Rows="101.010101" Width="24"/>
@@ -1898,8 +1903,13 @@
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="20" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="10" Alias="a">

@@ -35,6 +35,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLLogicalTVF.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDML.h"
 #include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
+#include "naucrates/dxl/operators/CDXLScalarAggref.h"
 #include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/IMDType.h"
@@ -373,6 +374,12 @@ public:
 
 	// return the count of non-system columns in the relation
 	static ULONG GetNumNonSystemColumns(const IMDRelation *mdrel);
+
+	// return agg kind as an EdxlAggrefKind
+	static EdxlAggrefKind GetAggKind(CHAR aggkind);
+
+	// return agg kind as a CHAR
+	static CHAR GetAggKind(EdxlAggrefKind aggkind);
 };
 }  // namespace gpdxl
 

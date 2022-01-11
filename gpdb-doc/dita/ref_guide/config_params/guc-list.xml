@@ -193,6 +193,15 @@
               <xref href="#gp_default_storage_options"/>
             </li>
             <li>
+              <xref href="#gp_dispatch_keepalives_count"/>
+            </li>
+            <li>
+              <xref href="#gp_dispatch_keepalives_idle"/>
+            </li>
+            <li>
+              <xref href="#gp_dispatch_keepalives_interval"/>
+            </li>
+            <li>
               <xref href="#gp_dynamic_partition_pruning"/>
             </li>
             <li>
@@ -433,6 +442,10 @@
             <li>
               <xref href="#optimizer_enable_multiple_distinct_aggs" type="section"
                 >optimizer_enable_multiple_distinct_aggs</xref>
+            </li>
+            <li>
+              <xref href="#optimizer_force_comprehensive_join_implementation" type="section"
+                >optimizer_force_comprehensive_join_implementation</xref>
             </li>
             <li>
               <xref href="#optimizer_force_multistage_agg" type="section"
@@ -1606,7 +1619,7 @@
             <row>
               <entry colname="col1">a list of absolute directory paths separated by colons</entry>
               <entry colname="col2">$libdir</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -2022,7 +2035,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer</entry>
+              <entry colname="col1">integer (-15 to 3)</entry>
               <entry colname="col2">0</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
@@ -2503,7 +2516,7 @@
             <row>
               <entry colname="col1">boolean</entry>
               <entry colname="col2">off</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -2668,6 +2681,91 @@
       <note>
         <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu
         Greenplum.</note>
+    </body>
+  </topic>
+  <topic id="gp_dispatch_keepalives_count">
+    <title>gp_dispatch_keepalives_count</title>
+    <body>
+      <p>Maximum number of TCP keepalive retransmits from a Greenplum Query Dispatcher to its Query
+        Executors. It controls the number of consecutive keepalive retransmits that can be lost
+        before a connection between a Query Dispatcher and a Query Executor is considered dead.</p>
+      <table id="table_orj_wng_rrb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 to 127</entry>
+              <entry colname="col2">0 (it uses the system default)</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_dispatch_keepalives_idle">
+    <title>gp_dispatch_keepalives_idle</title>
+    <body>
+      <p>Time in seconds between issuing TCP keepalives from a Greenplum Query Dispatcher to its
+        Query Executors.</p>
+      <table id="table_pwn_wng_rrb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 to 32767</entry>
+              <entry colname="col2">0  (it uses the system default)</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_dispatch_keepalives_interval">
+    <title>gp_dispatch_keepalives_interval</title>
+    <body>
+      <p>Time in seconds between TCP keepalive retransmits from a Greenplum Query Dispatcher to its
+        Query Executors.</p>
+      <table id="table_jpq_wng_rrb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 to 32767</entry>
+              <entry colname="col2">0  (it uses the system default)</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
     </body>
   </topic>
   <topic id="gp_dynamic_partition_pruning">
@@ -3316,7 +3414,7 @@
             <row>
               <entry colname="col1">10 - 3600 seconds</entry>
               <entry colname="col2">1min</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3344,7 +3442,7 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">5</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3372,7 +3470,7 @@
             <row>
               <entry colname="col1">10 - 3600 seconds</entry>
               <entry colname="col2">20 secs</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -3792,7 +3890,7 @@
             <row>
               <entry colname="col1">string (maximum length - 16384 bytes)</entry>
               <entry colname="col2"/>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4045,7 +4143,7 @@
             <row>
               <entry colname="col1">512-65536</entry>
               <entry colname="col2">8192</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4687,7 +4785,7 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">0</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -7300,6 +7398,38 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_force_comprehensive_join_implementation">
+    <title>optimizer_force_comprehensive_join_implementation</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter affects its consideration of
+        nested loop join and hash join alternatives.</p>
+      <p>The default value is <codeph>false</codeph>, GPORCA does not consider nested loop
+        join alternatives when a hash join is available, which significantly improves
+        optimization performance for most queries. When set to <codeph>true</codeph>,
+        GPORCA will explore nested loop join alternatives even when a hash join is possible.</p>
+      <table id="table_ofcji">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

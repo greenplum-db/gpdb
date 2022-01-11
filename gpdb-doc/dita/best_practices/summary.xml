@@ -307,11 +307,11 @@
         <li>A symmetric encryption scheme, where the same key is used to both encrypt and decrypt,
           has better performance than an asymmetric scheme and should be used when the key can be
           shared safely.</li>
-        <li>Use crytographic functions to encrypt data on disk. The data is encrypted and decrypted
+        <li>Use cryptographic functions to encrypt data on disk. The data is encrypted and decrypted
           in the database process, so it is important to secure the client connection with SSL to
           avoid transmitting unencrypted data.</li>
         <li>Use the gpfdists protocol to secure ETL data as it is loaded into or unloaded from the
-          database. .</li>
+          database.</li>
       </ul>
       <p>See <xref href="encryption.xml"/></p>
     </section>

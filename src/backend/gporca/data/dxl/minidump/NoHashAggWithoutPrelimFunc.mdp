@@ -1922,7 +1922,8 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
         </dxl:GroupingColumns>
         <dxl:ProjList>
           <dxl:ProjElem ColId="18" Alias="attr">
-            <dxl:AggFunc AggMdid="0.1553621.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.1553621.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
                 <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
                   <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
@@ -1937,6 +1938,10 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
                 </dxl:OpExpr>
                 <dxl:Ident ColId="3" ColName="attribute" TypeMdid="0.25.1.0"/>
               </dxl:OpExpr>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -1992,7 +1997,8 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
               <dxl:Ident ColId="0" ColName="product_id" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="17" Alias="attr">
-              <dxl:AggFunc AggMdid="0.1553621.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.1553621.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
                   <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
                     <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
@@ -2007,6 +2013,10 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
                   </dxl:OpExpr>
                   <dxl:Ident ColId="2" ColName="attribute" TypeMdid="0.25.1.0"/>
                 </dxl:OpExpr>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>

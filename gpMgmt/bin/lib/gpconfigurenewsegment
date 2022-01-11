@@ -421,7 +421,7 @@ try:
     if options.validationOnly:
         errors = []
         for item in pool.getCompletedItems():
-            if not item.get_results().wasSuccessful:
+            if not item.get_results().wasSuccessful():
                 errors.append(str(item.get_results().stderr).replace("\n", " "))
 
         if errors:

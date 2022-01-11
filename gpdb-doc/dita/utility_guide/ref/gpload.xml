@@ -208,6 +208,7 @@
     - <xref href="#topic1/cfformat" format="dita">FORMAT</xref>: text | csv
     - <xref href="#topic1/cfdelimiter" format="dita">DELIMITER</xref>: '<varname>delimiter_character</varname>'
     - <xref href="#topic1/cfescape" format="dita">ESCAPE</xref>: '<varname>escape_character</varname>' | 'OFF'
+    - <xref href="#topic1/newline" format="dita">NEWLINE</xref>: 'LF' | 'CR' | 'CRLF'
     - <xref href="#topic1/cfnullas" format="dita">NULL_AS</xref>: '<varname>null_string</varname>'
     - <xref href="#topic1/cfillfields" format="dita">FILL_MISSING_FIELDS</xref>: true | false
     - <xref href="#topic1/cfforcenotnull" format="dita">FORCE_NOT_NULL</xref>: true | false
@@ -509,6 +510,20 @@
                                                 This is very useful for data such as text-formatted
                                                 web log data that has many embedded backslashes that
                                                 are not intended to be escapes.</pd>
+                                        </plentry>
+                                        <plentry>
+                                            <pt id="newline">NEWLINE</pt>
+                                            <pd>Specifies the type of newline used in your data files, one of:
+                                            <ul>
+                                             <li>LF (Line feed, 0x0A)</li>
+                                             <li>CR (Carriage return, 0x0D)</li>
+                                             <li>CRLF (Carriage return plus line feed, 0x0D 0x0A).</li>
+                                            </ul>
+                                            <p>If not specified, Greenplum Database detects the
+                                             newline type by examining the first row of data that
+                                             it receives, and uses the first newline type that it
+                                             encounters.</p>
+                                          </pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfnullas">NULL_AS</pt>

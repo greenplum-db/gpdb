@@ -323,8 +323,13 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="19" Alias="sum">
-                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
               </dxl:ProjList>
@@ -440,8 +445,13 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="9" Alias="i">

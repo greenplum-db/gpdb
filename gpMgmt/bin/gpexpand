@@ -277,7 +277,7 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                         ( dbname text,
                           fq_name text,
                           table_oid oid,
-                          root_partition_name text,
+                          root_partition_oid oid,
                           rank int,
                           external_writable bool,
                           status text,
@@ -659,9 +659,9 @@ class SegmentTemplate:
 
         try:
             coordinatorSeg = self.gparray.coordinator
-            cmd = PgBaseBackup(pgdata=self.tempDir,
-                               host=coordinatorSeg.getSegmentAddress(),
-                               port=str(coordinatorSeg.getSegmentPort()),
+            cmd = PgBaseBackup(target_datadir=self.tempDir,
+                               source_host=coordinatorSeg.getSegmentAddress(),
+                               source_port=str(coordinatorSeg.getSegmentPort()),
                                recovery_mode=False,
                                target_gp_dbid=dummyDBID)
             cmd.run(validateAfter=True)
@@ -1582,7 +1582,7 @@ class gpexpand:
     current_database(),
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
-    NULL as root_partition_name,
+    NULL as root_partition_oid,
     2 as rank,
     pe.writable is not null as external_writable,
     '%s' as undone_status,
@@ -1628,14 +1628,17 @@ WHERE
 
     def _populate_partitioned_tables(self, dbname):
         """
-        population of status_detail for partitioned tables, leaf partition cannot
-        has different numsegments with root partition, we need to expand root
-        partition in one shot, so just populate root partition for now.
+        The policy of leaves can be different of the policy of root, But it must
+        follow below rules:
+        If a partitioned table is Hash distributed, then all its leaf partitions
+        must also be Hash partitioned on the same distribution key, with the
+        same 'numsegments', or randomly distributed with the same 'numsegments'.
+        If a partitioned table is Randomly distributed, then all the leaves must
+        be randomly distributed as well.
 
-        TODO:
-        We used to use a tricky but effective way to expand leaf partition in
-        in parallel, that way is still under discussion. Keep the old method
-        here in case we need bring it back someday.
+        population of status_detail for partitioned tables, leaf partition can
+        has different policy with root partition, we need to expand leaf
+        partitions separately in parallel.
 
         Step1:
            BEGIN;
@@ -1644,44 +1647,60 @@ WHERE
            Change all leaf partition to random distributed;
            COMMIT;
         Step2:
-           Change all leaf partition's policy back to old policy with a mandatory
-           data movement.
+           Change all leaf partition's policy back to parent's policy with set distributed
+           with(REORGANIZE=true)
         """
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
-        sql = """
-SELECT
-    current_database(),
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-    c.oid as tableoid,
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name,
-    2 as rank,
-    false as external_writable,
-    '%s' as undone_status,
-    NULL as expansion_started,
-    NULL as expansion_finished,
-    %s as source_bytes
-FROM
-    pg_class c,
-    pg_namespace n,
-    pg_partitioned_table p,
-    gp_distribution_policy d
-WHERE
-    c.relnamespace = n.oid
-    AND p.partrelid = c.oid
-    AND NOT c.relispartition
-    AND d.localoid = c.oid
-ORDER BY fq_name, tableoid desc
-                  """ % (undone_status, src_bytes_str)
-        self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
+
+        cursor = dbconn.query(table_conn, """
+            SELECT partrelid::regclass AS relname
+            FROM pg_partitioned_table, pg_class
+            WHERE partrelid = pg_class.oid AND relispartition = FALSE;
+        """)
+        for row in cursor:
+            prepare_cmd = """
+                ALTER TABLE %s EXPAND PARTITION PREPARE;
+            """ % (row.relname)
+            self.logger.debug(prepare_cmd)
+            dbconn.execSQL(table_conn, prepare_cmd, autocommit=False)
+
+        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(c.oid)"
+        get_status_detail_cmd = """
+             SELECT
+                current_database(),
+                quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
+                c.oid as tableoid,
+                d.oid as root_partition_oid,
+                2 as rank,
+                false as external_writable,
+                '%s' as undone_status,
+                NULL as expansion_started,
+                NULL as expansion_finished,
+                %s as source_bytes
+            FROM
+                pg_inherits a,
+                pg_partitioned_table b,
+                pg_class c, 
+                pg_class d,
+                pg_namespace n
+            WHERE
+                a.inhparent=b.partrelid and
+                a.inhrelid = c.oid and
+                a.inhparent = d.oid and
+                c.relnamespace = n.oid and
+                c.relkind != 'p' and
+                c.relkind != 'f'
+        """ % (undone_status, src_bytes_str)
+        self.logger.debug(get_status_detail_cmd)
 
         try:
             data_file = os.path.abspath('./status_detail.dat')
             self.logger.debug('status_detail data file: %s' % data_file)
-            copySQL = """COPY (%s) TO '%s'""" % (sql, data_file)
+            copySQL = """COPY (%s) TO '%s'""" % (get_status_detail_cmd, data_file)
 
             self.logger.debug(copySQL)
             dbconn.execSQL(table_conn, copySQL)
+            table_conn.commit()
             table_conn.close()
         except Exception as e:
             raise ExpansionError(e)
@@ -1907,22 +1926,19 @@ ORDER BY fq_name, tableoid desc
 class ExpandTable():
     def __init__(self, options, row=None):
         self.options = options
-        self.is_root_partition = False
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
-             self.root_partition_name,
+             self.root_partition_oid,
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
-        if self.fq_name == self.root_partition_name:
-            self.is_root_partition = True
 
     def add_table(self, conn):
         insertSQL = """INSERT INTO gpexpand.status_detail
                             VALUES ('%s','%s',%s,
-                                    '%s',%d,'%s','%s','%s','%s',%d)
+                                    '%d',%d,'%s','%s','%s','%s',%d)
                     """ % (self.dbname.replace("'", "''"), self.fq_name.replace("'", "''"), self.table_oid,
-                           self.root_partition_name.replace("'", "''"),
+                           self.root_partition_oid,
                            self.rank, self.external_writable, self.status,
                            self.expansion_started, self.expansion_finished,
                            self.source_bytes)
@@ -1960,11 +1976,19 @@ class ExpandTable():
         dbconn.execSQL(status_conn, sql)
 
     def expand(self, table_conn, cancel_flag):
-        # for root partition, we want to expand whose partition in one shot
-        # TODO: expand leaf partitions separately in parallel
-        only_str = "" if self.is_root_partition else "ONLY"
-        external_str = "EXTERNAL" if self.external_writable else ""
-        sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
+        # expand leaf partitions separately in parallel
+        # FIXME: alter table on external table does not throw
+        #        a warning, but it will throw error in 6X
+        #        do we still need using alter external table?
+        if self.root_partition_oid is not None:
+            get_dist_cmd = """
+                select pg_get_table_distributedby(%d) as distribution_policy;
+            """ % (self.root_partition_oid)
+            res = dbconn.queryRow(table_conn, get_dist_cmd)
+            sql = "ALTER TABLE %s SET WITH (REORGANIZE=true) %s" % (self.fq_name, res.distribution_policy)
+        else:
+            # FIXME: Can "ONLY" be allowed in "EXPAND TABLE"?
+            sql = 'ALTER TABLE %s EXPAND TABLE' % self.fq_name
 
         logger.info('Expanding %s.%s' % (self.dbname, self.fq_name))
         logger.debug("Expand SQL: %s" % sql)

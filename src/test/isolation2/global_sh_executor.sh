@@ -208,7 +208,7 @@ set_endpoint_variable() {
         fi
         i=$((i+1))
     done
-    # echo "Cannot find endpoint for postfix '$postfix', '$GP_HOSTNAME', '$GP_PORT'."
+    # echo "Cannot find endpoint for postfix '$CURRENT_ENDPOINT_POSTFIX', '$GP_HOSTNAME', '$GP_PORT'."
     echo $RAW_STR
 }
 

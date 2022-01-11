@@ -9,28 +9,59 @@
   <body>
     <p>Perform the following tasks in order:</p>
     <ol>
-      <li><xref href="#topic_oy5_21n_1jb" format="dita"/></li>
-      <li><xref href="#topic_xmb_gb5_vhb" format="dita"/></li>
-      <li><xref href="#topic10" format="dita">Confirm the software installation.</xref></li>
+      <li><xref href="#topic_oy5_21n_1jb" format="dita">Install Greenplum Database</xref>:
+        <ul>
+          <li><xref href="#topic_download" format="dita">Download the Greenplum Database Server Software </xref> (VMware Tanzu Greenplum)</li>
+          <li><xref href="#topic_verify_sha" format="dita">Verify the Greenplum Database Software</xref> (VMware Tanzu Greenplum)</li>
+          <li><xref href="#topic_install" format="dita">Install the Greenplum Database Software</xref></li>
+          <li><xref href="#topic_dj4_ssr_cmb" format="dita">(Optional) Install to a Non-Default Directory</xref></li>
+        </ul>
+      </li>
+      <li><xref href="#topic_xmb_gb5_vhb" format="dita">Enable Passwordless SSH</xref></li>
+      <li><xref href="#topic10" format="dita">Confirm the Software Installation</xref></li>
       <li><xref href="#topic_cwj_hzb_vhb" format="dita"/></li>
     </ol>
   </body>
   <topic id="topic_oy5_21n_1jb">
     <title>Installing Greenplum Database</title>
     <body>
-      <p>You must install Greenplum Database on each host machine of the Greenplum Database system.
-        VMware distributes the Greenplum Database software as a downloadable package that you
-        install on each host system with the operating system's package management system. You can
-        download the package from <xref href="https://network.pivotal.io/products/pivotal-gpdb"
-          format="html" scope="external">VMware Tanzu Network</xref>.</p>
-      <p>Open source Greenplum Database releases are available as: source code tarballs, RPM
-        installers for CentOS, and DEB packages for Debian and Ubuntu. See <xref
-          href="https://greenplum.org/download/" format="html" scope="external"
-          >https://greenplum.org/download/</xref> for links to source code and instructions to
-        compile Greenplum Database from source, and for links to download pre-built binaries in RPM
-        and DEB format. For the Ubuntu operating system, Greenplum also offers a binary that can be
-        installed via the <codeph>apt-get</codeph> command with the Ubuntu Personal Package Archive
-        system.</p>
+      <p>You must install Greenplum Database on each host machine of the Greenplum Database
+      system.</p>
+      <p>VMware distributes the Greenplum Database
+          software as a downloadable package that you install on each host system with the operating
+          system's package management system.</p>
+      <p>Open source Greenplum Database releases are available as: source code tarballs,
+          RPM installers for CentOS, and DEB packages for Debian and Ubuntu. See <xref
+            href="https://greenplum.org/download/" format="html" scope="external"
+            >https://greenplum.org/download/</xref> for links to source code and instructions to
+          compile Greenplum Database from source, and for links to download pre-built binaries in RPM
+          and DEB format. For the Ubuntu operating system, Greenplum also offers a binary that can be
+          installed via the <codeph>apt-get</codeph> command with the Ubuntu Personal Package Archive
+          system.</p>
+      </body>
+    </topic>
+    <topic id="topic_download">
+      <title>Downloading the Greenplum Database Server Software (VMware Tanzu Greenplum)</title>
+      <body>
+        <p>You can download the <b>Greenplum Database Server</b> software package from
+          <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
+            scope="external">VMware Tanzu Network</xref>.</p>
+        <p>Be sure to note the name and the file system location of the downloaded file.</p>
+      </body>
+    </topic>
+    <topic id="topic_verify_sha">
+      <title>Verifying the Greenplum Database Software (VMware Tanzu Greenplum)</title>
+      <body>
+        <p>VMware generates a SHA256 fingerprint for each Greenplum Database software
+          download available from Tanzu Network. This fingerprint enables you to verify that
+          your downloaded file is unaltered from the original.</p>
+        <p>Follow the instructions in <xref href="verify_sw.xml#topic1"/> to verify the
+          integrity of the <b>Greenplum Database Server</b> software.</p>
+      </body>
+    </topic>
+    <topic id="topic_install">
+      <title>Installing the Greenplum Database Software</title>
+      <body>
       <p>Before you begin installing Greenplum Database, be sure you have completed the steps in
           <xref href="prep_os.xml#topic1"/> to configure each of the coordinator, standby coordinator, and
         segment host machines for Greenplum Database.</p>
@@ -66,8 +97,8 @@
           <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*
 $ sudo chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
       </ol>
-    </body>
-  </topic>
+      </body>
+    </topic>
   <topic id="topic_dj4_ssr_cmb">
     <title>(Optional) Installing to a Non-Default Directory</title>
     <body>

@@ -2,6 +2,7 @@ test: 0_00_prepare_protocols
 
 # ~ 1s
 test: 1_03_bad_data 1_04_empty_prefix 1_05_one_line 1_06_1correct_1wrong 2_02_invalid_region 2_03_invalid_config 2_04_invalid_header 2_05_limit_zero 3_01_create_wet 3_02_quick_shoot_wet 3_11_write_with_encryption 4_01_create_invalid_wet 2_06_invalid_sub_query 1_17_no_eol_at_eof 2_07_wrong_proxy
+test: 5_01_normal_http_param
 
 # tens of seconds
 test: 1_01_normal 1_02_log_error 1_10_all_regions 1_11_gzipped_data 1_12_no_prefix 1_13_parallel1 1_13_parallel2 1_09_partition 3_09_write_big_row 3_10_write_mixed_length_rows 1_15_normal_sub_query 1_16_multiple_files_with_header_line 1_18_all_regions_version2 1_20_deflate_data

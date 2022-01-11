@@ -11631,7 +11631,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="176674">
+    <dxl:Plan Id="0" SpaceSize="87522">
       <dxl:Limit>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5904.512295" Rows="5.000000" Width="8"/>

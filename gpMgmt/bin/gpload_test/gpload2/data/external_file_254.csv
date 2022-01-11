@@ -1,0 +1,6 @@
+line1 with CR,eol_CRLF
+line2,eol_CRLF
+line3 with LF
+,eol_CRLF
+line4,eol_CRLF
+line5,eol_CRLF

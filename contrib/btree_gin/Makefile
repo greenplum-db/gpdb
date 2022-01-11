@@ -12,6 +12,7 @@ REGRESS = install_btree_gin int2 int4 int8 float4 float8 money oid \
 	timestamp timestamptz time timetz date interval \
 	macaddr macaddr8 inet cidr text varchar char bytea bit varbit \
 	numeric enum uuid name bool bpchar
+REGRESS_OPTS += --init-file=$(top_builddir)/src/test/regress/init_file
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

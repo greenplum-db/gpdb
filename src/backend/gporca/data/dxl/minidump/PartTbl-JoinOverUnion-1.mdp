@@ -1788,7 +1788,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="18">
+    <dxl:Plan Id="0" SpaceSize="9">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1297.273809" Rows="20000.000000" Width="16"/>

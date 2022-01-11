@@ -417,8 +417,13 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="33" Alias="tickets_cnt">
-                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="22" ColName="ticket_number" TypeMdid="0.23.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -454,7 +459,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="7695">
+    <dxl:Plan Id="0" SpaceSize="3190">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.002852" Rows="1.000000" Width="64"/>
@@ -708,8 +713,13 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="32" Alias="tickets_cnt">
-                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
+                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                          <dxl:ValuesList ParamType="aggargs">
                           <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.20.1.0"/>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
                         </dxl:AggFunc>
                       </dxl:ProjElem>
                       <dxl:ProjElem ColId="22" Alias="cid">
@@ -794,8 +804,13 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                             </dxl:GroupingColumns>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="33" Alias="ColRef_0033">
-                                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial">
+                                <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                  <dxl:ValuesList ParamType="aggargs">
                                   <dxl:Ident ColId="21" ColName="ticket_number" TypeMdid="0.23.1.0"/>
+                                  </dxl:ValuesList>
+                                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                                  <dxl:ValuesList ParamType="aggorder"/>
+                                  <dxl:ValuesList ParamType="aggdistinct"/>
                                 </dxl:AggFunc>
                               </dxl:ProjElem>
                               <dxl:ProjElem ColId="22" Alias="cid">

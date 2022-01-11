@@ -52,6 +52,13 @@ ROLLBACK
 1<:  <... completed>
 INSERT 1
 
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_deadlock_test';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 1             | 0             
+(1 row)
+
 -- Clean up the test
 0: DROP TABLE t_deadlock_test;
 DROP

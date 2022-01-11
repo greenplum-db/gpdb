@@ -588,6 +588,7 @@ SocketBackend(StringInfo inBuf)
 		case 'd':				/* copy data */
 		case 'c':				/* copy done */
 		case 'f':				/* copy fail */
+		case '?':				/* Greenplum sequence response */
 			doing_extended_query_message = false;
 			/* these are only legal in protocol 3 */
 			if (PG_PROTOCOL_MAJOR(FrontendProtocol) < 3)
@@ -1634,6 +1635,13 @@ restore_guc_to_QE(void )
 			 * we can not keep alive gang anymore.
 			 */
 			DisconnectAndDestroyAllGangs(false);
+			/*
+			 * when qe elog an error, qd will use ReThrowError to
+			 * re throw the error, the errordata_stack_depth will ++,
+			 * when we catch the error we should reset errordata_stack_depth
+			 * by FlushErrorState.
+			 */
+			FlushErrorState();
 		}
 		PG_END_TRY();
 	}
@@ -5717,6 +5725,17 @@ PostgresMain(int argc, char *argv[],
 				 * Accept but ignore these messages, per protocol spec; we
 				 * probably got here because a COPY failed, and the frontend
 				 * is still sending data.
+				 */
+				break;
+			case '?':			/* Greenplum sequence response */
+				/*
+				 * Accept but ignore this message, when QE process nextval
+				 * it sends NOTIFY to QD and asks QD to send nextval back to
+				 * QE, we probably got here because getting nextval on QD is
+				 * failed, QD send '?' message back to QE and cancel all
+				 * unfinished QEs, if the QE receives cancel before '?' message,
+				 * the message will stay in the socket, next time when we ReadCommand
+				 * we should ignore it.
 				 */
 				break;
 

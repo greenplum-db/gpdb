@@ -213,6 +213,8 @@ GPLOAD:
     - ERROR_LIMIT: <integer>
     - ERROR_TABLE: <schema>.<table_name>
     - LOG_ERRORS: true | false
+    - NEWLINE: 'LF' | 'CR' | 'CRLF'
+    
    EXTERNAL:
     - SCHEMA: <schema> | '%'
    OUTPUT:
@@ -366,6 +368,13 @@ DELIMITER - Optional. Specifies a single ASCII character that separates columns
             "\u001B". The escape string syntax, E'<character-code>', is also
             supported for non-printable characters. The ASCII or unicode character
             must be enclosed in single quotes. For example: E'\x1B' or E'\u001B'. 
+
+NEWLINE - Optional. Specifies the newline used in your data files – LF
+          (Line feed, 0x0A), CR (Carriage return, 0x0D), or CRLF
+          (Carriage return plus line feed, 0x0D 0x0A). If not
+          specified, a Greenplum Database segment will detect the
+          newline type by looking at the first row of data it receives
+          and using the first newline type encountered.
 
 ESCAPE - Specifies the single character that is used for C escape sequences
         (such as \n,\t,\100, and so on) and for escaping data characters 

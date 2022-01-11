@@ -1,9 +1,12 @@
-2020-12-21 17:35:27|INFO|gpload session started 2020-12-21 17:35:27
-2020-12-21 17:35:27|INFO|setting schema 'public' for table 'texttable2'
-2020-12-21 17:35:27|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
-2020-12-21 17:35:27|INFO|did not find an external table to reuse. creating ext_gpload_reusable_dbd968f6_436f_11eb_bfb0_00505698d059
-2020-12-21 17:35:27|ERROR|unexpected error -- backtrace written to log file
-2020-12-21 17:35:27|INFO|rows Inserted          = 0
-2020-12-21 17:35:27|INFO|rows Updated           = 0
-2020-12-21 17:35:27|INFO|data formatting errors = 0
-2020-12-21 17:35:27|INFO|gpload failed
+2021-11-29 11:56:55|INFO|gpload session started 2021-11-29 11:56:55
+2021-11-29 11:56:55|INFO|setting schema 'public' for table 'texttable2'
+2021-11-29 11:56:55|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2021-11-29 11:56:55|INFO|did not find an external table to reuse. creating ext_gpload_reusable_64b5f930_50c8_11ec_ad50_0050569e2380
+2021-11-29 11:56:55|ERROR|could not run SQL "create external table ext_gpload_reusable_64b5f930_50c8_11ec_ad50_0050569e2380("s1" text,"s2" text)location('gpfdist://10.117.190.10:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '|' null 'E''\x08E'\'' escape '\' ) encoding'UTF8' ": ERROR:  syntax error at or near "\"
+LINE 1: ....txt') format'text' (delimiter '|' null 'E''\x08E'\'' escape...
+                                                             ^
+
+2021-11-29 11:56:55|INFO|rows Inserted          = 0
+2021-11-29 11:56:55|INFO|rows Updated           = 0
+2021-11-29 11:56:55|INFO|data formatting errors = 0
+2021-11-29 11:56:55|INFO|gpload failed

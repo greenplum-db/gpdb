@@ -26,7 +26,7 @@ You need to setup both VirtualBox and Vagrant. If you don't have these
 installed already, then head over to https://www.virtualbox.org/wiki/Downloads
 and http://www.vagrantup.com/downloads to download and then install them.
 
-##2: Clone GPDB code from github
+## 2: Clone GPDB code from github
 Go to the directory in your machine where you want to check out the GPDB code,
 and clone the GPDB code by typing the following into a terminal window.
 
@@ -34,7 +34,7 @@ and clone the GPDB code by typing the following into a terminal window.
 git clone https://github.com/greenplum-db/gpdb.git
 ```
 
-##3: Setup and start the virtual machine
+## 3: Setup and start the virtual machine
 Next go to the `gpdb/src/tools/vagrant` directory. This directory has virtual machine
 configurations for different operating systems (for now there is only one).
 Pick the distro of your choice, and `cd` to that directory. For this document,
@@ -167,7 +167,7 @@ that were posted on each day. Pretty cool!
 
 (Note if you want to exit the `psql` shell above, type in `\q`.)
 
-##4: Using GDBP
+## 4: Using GPDB
 If you are doing serious development, you will likely need to use a debugger.
 Here is how you do that.
 
@@ -192,5 +192,5 @@ attach 25486
 Of course, you can change which function you want to break into, and change
 whether you want to debug the coordinator or the segment processes. Happy hacking!
 
-##4: GPDB without GPORCA
+## 5: GPDB without GPORCA
 If you want to run GPDB without the GPORCA query optimizer, run `vagrant up gpdb-without-gporca`.

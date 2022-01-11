@@ -308,6 +308,29 @@ def impl(context, mirror_config):
                 raise Exception('Expected primaries on %s to all be mirrored to the same host, but they are mirrored to %d different hosts' %
                         (primary_host, num_mirror_hosts))
 
+
+@given("a gprecoverseg input file is created for mixed recovery for {full} segments with full and {incr} incremental")
+def impl(context, full, incr):
+    full_seg_count = int(full)
+    incr_seg_count = int(incr)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    contents = ''
+    for i in range(len(segments)):
+        mirror = segments[i].mirrorDB
+        valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+                                     mirror.getSegmentPort(),
+                                     mirror.getSegmentDataDirectory())
+        if full_seg_count > 0:
+            full_seg_count -= 1
+            contents += '%s %s\n' % (valid_config, valid_config)
+        elif incr_seg_count > 0:
+            incr_seg_count -= 1
+            contents += '%s\n' % (valid_config)
+    context.mirror_context.input_file = "gprecoverseg_mixed.txt"
+    with open(context.mirror_context.input_file_path(), 'w') as fd:
+        fd.write(contents)
+
+
 @given("{num} gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
 @given("{num} gprecoverseg directory under '{parent_dir}' with mode '{mode}' is created")
 def impl(context, num, parent_dir, mode):

@@ -3890,13 +3890,23 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                               <dxl:GroupingColumns/>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="184" Alias="ColRef_0184">
-                                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final">
-                                    <dxl:Ident ColId="187" ColName="ColRef_0187" TypeMdid="0.20.1.0"/>
+                                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                                    <dxl:ValuesList ParamType="aggargs">
+                                      <dxl:Ident ColId="187" ColName="ColRef_0187" TypeMdid="0.20.1.0"/>
+                                    </dxl:ValuesList>
+                                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                                    <dxl:ValuesList ParamType="aggorder"/>
+                                    <dxl:ValuesList ParamType="aggdistinct"/>
                                   </dxl:AggFunc>
                                 </dxl:ProjElem>
                                 <dxl:ProjElem ColId="185" Alias="ColRef_0185">
-                                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-                                    <dxl:Ident ColId="188" ColName="ColRef_0188" TypeMdid="0.20.1.0"/>
+                                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="23">
+                                    <dxl:ValuesList ParamType="aggargs">
+                                      <dxl:Ident ColId="188" ColName="ColRef_0188" TypeMdid="0.20.1.0"/>
+                                    </dxl:ValuesList>
+                                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                                    <dxl:ValuesList ParamType="aggorder"/>
+                                    <dxl:ValuesList ParamType="aggdistinct"/>
                                   </dxl:AggFunc>
                                 </dxl:ProjElem>
                               </dxl:ProjList>
@@ -3922,11 +3932,21 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                   <dxl:GroupingColumns/>
                                   <dxl:ProjList>
                                     <dxl:ProjElem ColId="187" Alias="ColRef_0187">
-                                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial"/>
+                                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                        <dxl:ValuesList ParamType="aggargs"/>
+                                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                                        <dxl:ValuesList ParamType="aggorder"/>
+                                        <dxl:ValuesList ParamType="aggdistinct"/>
+                                      </dxl:AggFunc>
                                     </dxl:ProjElem>
                                     <dxl:ProjElem ColId="188" Alias="ColRef_0188">
-                                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
-                                        <dxl:Ident ColId="183" ColName="ColRef_0183" TypeMdid="0.23.1.0"/>
+                                      <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="23">
+                                        <dxl:ValuesList ParamType="aggargs">
+                                          <dxl:Ident ColId="183" ColName="ColRef_0183" TypeMdid="0.23.1.0"/>
+                                        </dxl:ValuesList>
+                                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                                        <dxl:ValuesList ParamType="aggorder"/>
+                                        <dxl:ValuesList ParamType="aggdistinct"/>
                                       </dxl:AggFunc>
                                     </dxl:ProjElem>
                                   </dxl:ProjList>
@@ -4301,13 +4321,23 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                         <dxl:GroupingColumns/>
                                         <dxl:ProjList>
                                           <dxl:ProjElem ColId="178" Alias="ColRef_0178">
-                                            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final">
-                                              <dxl:Ident ColId="181" ColName="ColRef_0181" TypeMdid="0.20.1.0"/>
+                                            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                                              <dxl:ValuesList ParamType="aggargs">
+                                                <dxl:Ident ColId="181" ColName="ColRef_0181" TypeMdid="0.20.1.0"/>
+                                              </dxl:ValuesList>
+                                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                                              <dxl:ValuesList ParamType="aggorder"/>
+                                              <dxl:ValuesList ParamType="aggdistinct"/>
                                             </dxl:AggFunc>
                                           </dxl:ProjElem>
                                           <dxl:ProjElem ColId="179" Alias="ColRef_0179">
-                                            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-                                              <dxl:Ident ColId="182" ColName="ColRef_0182" TypeMdid="0.20.1.0"/>
+                                            <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="23">
+                                              <dxl:ValuesList ParamType="aggargs">
+                                                <dxl:Ident ColId="182" ColName="ColRef_0182" TypeMdid="0.20.1.0"/>
+                                              </dxl:ValuesList>
+                                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                                              <dxl:ValuesList ParamType="aggorder"/>
+                                              <dxl:ValuesList ParamType="aggdistinct"/>
                                             </dxl:AggFunc>
                                           </dxl:ProjElem>
                                         </dxl:ProjList>
@@ -4333,11 +4363,21 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                             <dxl:GroupingColumns/>
                                             <dxl:ProjList>
                                               <dxl:ProjElem ColId="181" Alias="ColRef_0181">
-                                                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial"/>
+                                                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                                  <dxl:ValuesList ParamType="aggargs"/>
+                                                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                                                  <dxl:ValuesList ParamType="aggorder"/>
+                                                  <dxl:ValuesList ParamType="aggdistinct"/>
+                                                </dxl:AggFunc>
                                               </dxl:ProjElem>
                                               <dxl:ProjElem ColId="182" Alias="ColRef_0182">
-                                                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
-                                                  <dxl:Ident ColId="177" ColName="ColRef_0177" TypeMdid="0.23.1.0"/>
+                                                <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="23">
+                                                  <dxl:ValuesList ParamType="aggargs">
+                                                    <dxl:Ident ColId="177" ColName="ColRef_0177" TypeMdid="0.23.1.0"/>
+                                                  </dxl:ValuesList>
+                                                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                                                  <dxl:ValuesList ParamType="aggorder"/>
+                                                  <dxl:ValuesList ParamType="aggdistinct"/>
                                                 </dxl:AggFunc>
                                               </dxl:ProjElem>
                                             </dxl:ProjList>

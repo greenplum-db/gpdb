@@ -14190,3 +14190,37 @@ SELECT * FROM tone t1 LEFT OUTER JOIN tone t2 ON t1.a = t2.a;
 
 RESET optimizer_enable_redistribute_nestloop_loj_inner_child;
 RESET optimizer_enable_hashjoin;
+--- Test if orca can produce the correct plan for CTAS
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+EXPLAIN CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Redistribute Motion 3:3  (slice1; segments: 3)  (cost=274.75..32892.98 rows=448330 width=56)
+   Hash Key: a.a
+   ->  Hash Left Join  (cost=274.75..23926.38 rows=448330 width=56)
+         Hash Cond: ((a.a)::bpchar = b.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
+               Hash Key: a.a
+               ->  Seq Scan on dist_tab_a a  (cost=0.00..173.67 rows=13967 width=48)
+         ->  Hash  (cost=141.00..141.00 rows=10700 width=72)
+               ->  Seq Scan on dist_tab_b b  (cost=0.00..141.00 rows=10700 width=72)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+SELECT gp_segment_id, * FROM result_tab;
+ gp_segment_id |   a   | b 
+---------------+-------+---
+             0 | 3     | 3
+             2 | 1     | 1
+             1 | 2     | 2
+(3 rows)
+
+DROP TABLE IF EXISTS dist_tab_a;
+DROP TABLE IF EXISTS dist_tab_b;
+DROP TABLE IF EXISTS result_tab;

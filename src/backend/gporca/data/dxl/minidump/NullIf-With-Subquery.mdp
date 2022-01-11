@@ -370,7 +370,12 @@ FROM x
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="19" Alias="count">
-                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs"/>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
+                      </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:LogicalSelect>
@@ -536,7 +541,12 @@ FROM x
                 </dxl:GroupingColumns>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="18" Alias="count">
-                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs"/>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
+                    </dxl:AggFunc>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="9" Alias="i">
                     <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>

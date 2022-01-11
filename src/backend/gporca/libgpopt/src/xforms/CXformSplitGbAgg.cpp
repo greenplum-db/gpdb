@@ -23,6 +23,7 @@
 #include "gpopt/operators/CPatternMultiTree.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDAggregate.h"
 
@@ -200,22 +201,24 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 			CScalarAggFunc::PopConvert(pexprAggFunc->Pop());
 
 		popScAggFunc->MDId()->AddRef();
+		popScAggFunc->GetArgTypes()->AddRef();
 		CScalarAggFunc *popScAggFuncLocal = CUtils::PopAggFunc(
 			mp, popScAggFunc->MDId(),
 			GPOS_NEW(mp)
 				CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 			popScAggFunc->IsDistinct(), EaggfuncstageLocal, /* fGlobal */
-			true											/* fSplit */
-		);
+			true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
+			EaggfunckindNormal, popScAggFunc->GetArgTypes());
 
 		popScAggFunc->MDId()->AddRef();
+		popScAggFunc->GetArgTypes()->AddRef();
 		CScalarAggFunc *popScAggFuncGlobal = CUtils::PopAggFunc(
 			mp, popScAggFunc->MDId(),
 			GPOS_NEW(mp)
 				CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 			false /* is_distinct */, EaggfuncstageGlobal, /* fGlobal */
-			true										  /* fSplit */
-		);
+			true /* fSplit */, nullptr /* pmdidResolvedReturnType */,
+			EaggfunckindNormal, popScAggFunc->GetArgTypes());
 
 		// determine column reference for the new project element
 		const IMDAggregate *pmdagg =
@@ -238,12 +241,29 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 
 		// create a new global aggregate function adding the column reference of the
 		// intermediate result to the arguments of the global aggregate function
+		CExpressionArray *fullargs = GPOS_NEW(mp) CExpressionArray(mp);
+
 		CExpressionArray *pdrgpexprGlobal = GPOS_NEW(mp) CExpressionArray(mp);
-		CExpression *pexprArg = CUtils::PexprScalarIdent(mp, pcrLocal);
-		pdrgpexprGlobal->Append(pexprArg);
+		pdrgpexprGlobal->Append(CUtils::PexprScalarIdent(mp, pcrLocal));
+
+		CScalarValuesList *l = GPOS_NEW(mp) CScalarValuesList(mp);
+		CExpression *globall = GPOS_NEW(mp) CExpression(mp, l, pdrgpexprGlobal);
+		fullargs->Append(globall);
+
+		fullargs->Append(GPOS_NEW(mp)
+							 CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 GPOS_NEW(mp) CExpressionArray(mp)));
+
+		fullargs->Append(GPOS_NEW(mp)
+							 CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 GPOS_NEW(mp) CExpressionArray(mp)));
+
+		fullargs->Append(GPOS_NEW(mp)
+							 CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+										 GPOS_NEW(mp) CExpressionArray(mp)));
 
 		CExpression *pexprAggFuncGlobal =
-			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, pdrgpexprGlobal);
+			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, fullargs);
 
 		// create new project elements for the aggregate functions
 		CExpression *pexprProjElemLocal =

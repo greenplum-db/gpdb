@@ -294,7 +294,8 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="21" Alias="max">
-                      <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal">
+                      <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
                         <dxl:If TypeMdid="0.25.1.0">
                           <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
                             <dxl:FuncExpr FuncId="0.819.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
@@ -315,6 +316,10 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                             </dxl:Cast>
                           </dxl:OpExpr>
                         </dxl:If>
+                        </dxl:ValuesList>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                   </dxl:ProjList>
@@ -357,10 +362,15 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                 <dxl:GroupingColumns/>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="33" Alias="max">
-                    <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal">
+                    <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs">
                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                         <dxl:Ident ColId="25" ColName="u_folio" TypeMdid="0.1043.1.0"/>
                       </dxl:Cast>
+                      </dxl:ValuesList>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
                     </dxl:AggFunc>
                   </dxl:ProjElem>
                 </dxl:ProjList>
@@ -479,8 +489,13 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="32" Alias="max">
-                <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final">
+                <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="34" ColName="ColRef_0034" TypeMdid="0.25.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -650,10 +665,15 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="34" Alias="ColRef_0034">
-                        <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial">
+                        <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                          <dxl:ValuesList ParamType="aggargs">
                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                             <dxl:Ident ColId="24" ColName="u_folio" TypeMdid="0.1043.1.0"/>
                           </dxl:Cast>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
                         </dxl:AggFunc>
                       </dxl:ProjElem>
                       <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -845,8 +865,13 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                               </dxl:GroupingColumns>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="20" Alias="max">
-                                  <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final">
+                                  <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                                    <dxl:ValuesList ParamType="aggargs">
                                     <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.25.1.0"/>
+                                    </dxl:ValuesList>
+                                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                                    <dxl:ValuesList ParamType="aggorder"/>
+                                    <dxl:ValuesList ParamType="aggdistinct"/>
                                   </dxl:AggFunc>
                                 </dxl:ProjElem>
                                 <dxl:ProjElem ColId="10" Alias="u_vtgnr">
@@ -896,7 +921,8 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                                     </dxl:GroupingColumns>
                                     <dxl:ProjList>
                                       <dxl:ProjElem ColId="33" Alias="ColRef_0033">
-                                        <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial">
+                                        <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                          <dxl:ValuesList ParamType="aggargs">
                                           <dxl:If TypeMdid="0.25.1.0">
                                             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
                                               <dxl:FuncExpr FuncId="0.819.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
@@ -917,6 +943,10 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                                               </dxl:Cast>
                                             </dxl:OpExpr>
                                           </dxl:If>
+                                          </dxl:ValuesList>
+                                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                                          <dxl:ValuesList ParamType="aggorder"/>
+                                          <dxl:ValuesList ParamType="aggdistinct"/>
                                         </dxl:AggFunc>
                                       </dxl:ProjElem>
                                       <dxl:ProjElem ColId="10" Alias="u_vtgnr">

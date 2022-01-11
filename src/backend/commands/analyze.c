@@ -2235,7 +2235,7 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	 * Execute it.
 	 */
 	elog(elevel, "Executing SQL: %s", str.data);
-	CdbDispatchCommand(str.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
+	CdbDispatchCommand(str.data, DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR, &cdb_pgresults);
 
 	/*
 	 * Build a modified tuple descriptor for the table.

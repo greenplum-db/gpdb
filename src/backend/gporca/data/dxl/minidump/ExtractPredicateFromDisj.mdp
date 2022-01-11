@@ -15642,11 +15642,16 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="91" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0" OperatorType="0.1700.1.0">
                     <dxl:Ident ColId="43" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
                     <dxl:Ident ColId="40" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
                   </dxl:OpExpr>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -15774,7 +15779,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
         </dxl:LogicalProject>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="7020">
+    <dxl:Plan Id="0" SpaceSize="2386">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5944.261371" Rows="20169.272000" Width="76"/>
@@ -15964,11 +15969,16 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="90" Alias="sum">
-                  <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                  <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0" OperatorType="0.1700.1.0">
                       <dxl:Ident ColId="42" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
                       <dxl:Ident ColId="39" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
                     </dxl:OpExpr>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="1" Alias="c_customer_id">

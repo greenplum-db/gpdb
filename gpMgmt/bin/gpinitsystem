@@ -210,8 +210,8 @@ USE_FIRST_SET_ARG (){
 CHK_PARAMS () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		LOG_MSG "[INFO]:-Checking configuration parameters, please wait..." 1
-		if [ $USER_NAME == "root" ]; then
-				ERROR_EXIT "[FATAL]:-Unable to run this script as $USER"
+		if [ "$EUID" -eq 0 ] || [ $(id -u) = 0 ]; then
+				ERROR_EXIT "[FATAL]:-Unable to run this script as root user: $USER."
 		fi
 		if [ x"" = x"$GPHOME" ]; then
 				LOG_MSG "[FATAL]:-Environment variable \$GPHOME not set" 1
@@ -456,13 +456,13 @@ CHK_PARAMS () {
 		COORDINATOR_IP_ADDRESS=(`$ECHO ${COORDINATOR_IP_ADDRESS_ALL[@]} ${COORDINATOR_IPV6_LOCAL_ADDRESS_ALL[@]}|$TR ' ' '\n'|$SORT -u|$TR '\n' ' '`)
 		LOG_MSG "[INFO]:-Coordinator IP address array = ${COORDINATOR_IP_ADDRESS[@]}"
 		if [ x"" != x"$STANDBY_HOSTNAME" ];then
-			STANDBY_IP_ADDRESS_ALL=(`$TRUSTED_SHELL $STANDBY_HOSTNAME "$IPV4_ADDR_LIST_CMD |$GREP inet|$GREP -v \"127.0.0\"|$AWK '{print \\$2}'|$CUT -d'/' -f1" 2>>$LOG_FILE`) 
-            STANDBY_IPV6_ADDRESS_ALL=(`$TRUSTED_SHELL $STANDBY_HOSTNAME "$IPV6_ADDR_LIST_CMD |$GREP inet6|$AWK '{print \\$2}' |$CUT -d'/' -f1" 2>>$LOG_FILE`)
+			STANDBY_IP_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "$IPV4_ADDR_LIST_CMD |$GREP inet|$GREP -v \"127.0.0\"|$AWK '{print \$2}'|$CUT -d'/' -f1" 2>>$LOG_FILE ))
+			STANDBY_IPV6_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "$IPV6_ADDR_LIST_CMD |$GREP inet6|$AWK '{print \$2}' |$CUT -d'/' -f1" 2>>$LOG_FILE ))
 			STANDBY_IP_ADDRESS=(`$ECHO ${STANDBY_IP_ADDRESS_ALL[@]} ${STANDBY_IPV6_ADDRESS_ALL[@]}|$TR ' ' '\n'|$SORT -u|$TR '\n' ' '`)
 			ERROR_CHK $? "obtain IP address of standby Coordinator host" 2
 			LOG_MSG "[INFO]:-Standby IP address array = ${STANDBY_IP_ADDRESS[@]}"
 			#Check open files value
-			STANDBY_COORDINATOR_OPEN=`$TRUSTED_SHELL $STANDBY_HOSTNAME "ulimit -n"`
+			STANDBY_COORDINATOR_OPEN=$( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "ulimit -n" )
 			if [ $STANDBY_COORDINATOR_OPEN -lt $OS_OPENFILES ];then
 				LOG_MSG "[WARN]:-Standby Coordinator open file limit is $STANDBY_COORDINATOR_OPEN should be >= $OS_OPENFILES" 1
 				ULIMIT_WARN=1
@@ -545,7 +545,7 @@ CHK_MULTI_HOME () {
 	do
 		if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $NOLINE_ECHO ".\c";fi
 		PING_HOST $MHOST
-		SEG_HOSTNAME=`$TRUSTED_SHELL $MHOST "$HOSTNAME"`
+		SEG_HOSTNAME=$( REMOTE_EXECUTE_AND_GET_OUTPUT $MHOST "$HOSTNAME" )
 		if [ $? -ne 0 ];then
 			LOG_MSG "[FATAL]:-Remote command to host $MHOST failed to get value of hostname"
 			$ECHO "[FATAL]:-Remote command to host $MHOST failed to get value of hostname"
@@ -653,7 +653,7 @@ CHK_LOCALE_KNOWN () {
 		fi
 	else
 		# Hostname has been passed so check remote locale value
-		if [ `$TRUSTED_SHELL $1 "$LOCALE -a|$GREP -ic '$LOCALE_SETTING'"` -eq 0 ];then
+		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $1 "$LOCALE -a|$GREP -ic '$LOCALE_SETTING'" ) -eq 0 ];then
 			LOG_MSG "[INFO]:-Host $1 available locale values"
 			`$TRUSTED_SHELL $1 "$LOCALE -a"` >> $LOG_FILE
 			LOG_MSG "[FATAL]:-Unable to locate locale value $LOCALE_SETTING on $1" 1
@@ -680,7 +680,7 @@ CHK_DUPLICATES () {
 CHK_OPEN_FILES () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Checking $1"
-	OPEN_VALUE=`$TRUSTED_SHELL $1 "ulimit -n"`
+	OPEN_VALUE=$( REMOTE_EXECUTE_AND_GET_OUTPUT $1 "ulimit -n" )
 	if [ $OPEN_VALUE -lt $OS_OPENFILES ];then
 		LOG_MSG "[WARN]:-Host $1 open files limit is $OPEN_VALUE should be >= $OS_OPENFILES" 1
 		ULIMIT_WARN=1
@@ -746,7 +746,7 @@ CHK_QES () {
         fi
         # Check that the hostname is not associated with local host
         LOG_MSG "[INFO]:-Checking $GP_HOSTADDRESS $HOSTFILE for localhost set as $GP_HOSTADDRESS"
-        LOCAL_COUNT=`$TRUSTED_SHELL $GP_HOSTADDRESS "$GREP $GP_HOSTADDRESS $HOSTFILE|$GREP -c localhost"`
+        LOCAL_COUNT=$( REMOTE_EXECUTE_AND_GET_OUTPUT $GP_HOSTADDRESS "$GREP $GP_HOSTADDRESS $HOSTFILE|$GREP -c localhost")
         if [ $LOCAL_COUNT -ne 0 ];then
             LOG_MSG "[WARN]:-----------------------------------------------------------" 1
             LOG_MSG "[WARN]:-Host $GP_HOSTADDRESS is assigned as localhost in $HOSTFILE"  1

@@ -290,13 +290,13 @@ create table pt (i int, j int, k int) distributed by (i) partition by range(k)
 (start(1) end(10) every(2));
 alter table pt_1_prt_1 set distributed by (j);
 ERROR:  can't set the distribution policy of "pt_1_prt_1"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 alter table pt_1_prt_2 set distributed randomly;
 ERROR:  can't set the distribution policy of "pt_1_prt_2"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 alter table pt_1_prt_2 set distributed by (k);
 ERROR:  can't set the distribution policy of "pt_1_prt_2"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 insert into pt values(1, 1, 1);
 insert into pt values(2, 2, 2);
 insert into pt values(3, 3, 3);
@@ -351,8 +351,8 @@ create table pt(i int, j int, k int, l char(2)) distributed by (i)
 partition by range(k) subpartition by list(l) subpartition template(values('A'),
 values('B')) (start(30) end(50) every(10));
 alter table only pt set distributed randomly;
-ERROR:  can't set the distribution policy of ONLY "pt"
-HINT:  Distribution policy may be set for an entire partitioned table or one of its leaf parts.
+ERROR:  can't set the distribution policy of "pt" ONLY
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into pt values(35, 35, 35, 'A');
 insert into pt values(36, 35, 35, 'A');
 insert into pt values(37, 35, 35, 'A');
@@ -370,7 +370,7 @@ select gp_segment_id, * from pt_1;
 
 alter table only pt_1_prt_2 set distributed by (j);
 ERROR:  can't set the distribution policy of "pt_1_prt_2"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy can not be set for an interior branch.
 insert into pt values(45, 45, 45, 'B');
 insert into pt values(45, 46, 46, 'B');
 insert into pt values(45, 47, 47, 'B');
@@ -386,7 +386,7 @@ select gp_segment_id, * from pt_2;
 
 alter table pt_1_prt_2_2_prt_1 set distributed by (j);
 ERROR:  can't set the distribution policy of "pt_1_prt_2_2_prt_1"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 insert into pt values(45, 45, 45, 'A');
 insert into pt values(45, 46, 46, 'A');
 insert into pt values(45, 47, 47, 'A');

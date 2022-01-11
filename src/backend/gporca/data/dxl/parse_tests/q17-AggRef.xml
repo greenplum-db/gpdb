@@ -7,8 +7,13 @@
       </dxl:Properties>
       <dxl:ProjList>
         <dxl:ProjElem ColId="1" Alias="A">
-          <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
-            <dxl:Ident ColId="2" ColName="B" TypeMdid="0.23.1.0"/>
+          <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+            <dxl:ValuesList ParamType="aggargs">
+              <dxl:Ident ColId="2" ColName="B" TypeMdid="0.23.1.0"/>
+            </dxl:ValuesList>
+            <dxl:ValuesList ParamType="aggdirectargs"/>
+            <dxl:ValuesList ParamType="aggorder"/>
+            <dxl:ValuesList ParamType="aggdistinct"/>
           </dxl:AggFunc>
         </dxl:ProjElem>
       </dxl:ProjList>

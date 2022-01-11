@@ -670,7 +670,20 @@ CStatsPredUtils::CreateStatsPredDisj(CMemoryPool *mp,
 			continue;
 		}
 
-		AddSupportedStatsFilters(mp, pred_stats_disj_child, expr, outer_refs);
+		if (COperator::EopScalarArrayCmp == expr->Pop()->Eopid() &&
+			CScalarArrayCmp::EarrcmpAll ==
+				CScalarArrayCmp::PopConvert(expr->Pop())->Earrcmpt())
+		{
+			CStatsPredPtrArry *pred_stats = GPOS_NEW(mp) CStatsPredPtrArry(mp);
+			AddSupportedStatsFilters(mp, pred_stats, expr, outer_refs);
+			pred_stats_disj_child->Append(GPOS_NEW(mp)
+											  CStatsPredConj(pred_stats));
+		}
+		else
+		{
+			AddSupportedStatsFilters(mp, pred_stats_disj_child, expr,
+									 outer_refs);
+		}
 	}
 
 	// clean up

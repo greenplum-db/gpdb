@@ -1,5 +1,5 @@
 -- @Description Tests create parallel for some special query
--- 
+--
 
 --------- Test1: test for PARALLEL RETRIEVE CURSOR on select transient record types
 DROP TABLE IF EXISTS t1;

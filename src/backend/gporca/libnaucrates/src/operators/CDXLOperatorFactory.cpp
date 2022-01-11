@@ -1065,6 +1065,13 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 													 EdxltokenAggrefDistinct,
 													 EdxltokenScalarAggref);
 
+	const XMLCh *agg_kind_xml =
+		ExtractAttrValue(attrs, EdxltokenAggrefKind, EdxltokenScalarAggref);
+
+	ULongPtrArray *argtypelist = ExtractConvertValuesToArray(
+		dxl_memory_manager, attrs, EdxltokenAggrefArgTypes,
+		EdxltokenScalarAggref);
+
 	EdxlAggrefStage agg_stage = EdxlaggstageFinal;
 
 	if (0 ==
@@ -1100,6 +1107,34 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 			CDXLTokens::GetDXLTokenStr(EdxltokenScalarAggref)->GetBuffer());
 	}
 
+	EdxlAggrefKind agg_kind = EdxlaggkindNormal;
+	if (0 ==
+		XMLString::compareString(
+			CDXLTokens::XmlstrToken(EdxltokenAggrefKindNormal), agg_kind_xml))
+	{
+		agg_kind = EdxlaggkindNormal;
+	}
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenAggrefKindOrderedSet),
+					  agg_kind_xml))
+	{
+		agg_kind = EdxlaggkindOrderedSet;
+	}
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenAggrefKindHypothetical),
+					  agg_kind_xml))
+	{
+		agg_kind = EdxlaggkindHypothetical;
+	}
+	else
+	{
+		// turn Xerces exception in optimizer exception
+		GPOS_RAISE(
+			gpdxl::ExmaDXL, gpdxl::ExmiDXLInvalidAttributeValue,
+			CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKind)->GetBuffer(),
+			CDXLTokens::GetDXLTokenStr(EdxltokenScalarAggref)->GetBuffer());
+	}
+
 	IMDId *resolved_rettype = nullptr;
 	const XMLCh *return_type_xml =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenTypeId));
@@ -1109,8 +1144,9 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 			dxl_memory_manager, attrs, EdxltokenTypeId, EdxltokenScalarAggref);
 	}
 
-	return GPOS_NEW(mp) CDXLScalarAggref(mp, agg_mdid, resolved_rettype,
-										 is_distinct, agg_stage);
+	return GPOS_NEW(mp)
+		CDXLScalarAggref(mp, agg_mdid, resolved_rettype, is_distinct, agg_stage,
+						 agg_kind, argtypelist);
 }
 
 //---------------------------------------------------------------------------

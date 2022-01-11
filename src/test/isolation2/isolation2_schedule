@@ -25,6 +25,8 @@ test: unlogged_appendonly_tables
 test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
 
+test: prevent_ao_wal
+
 # Tests for packcore, will use the coredumps generated in crash_recovery_dtm,
 # so must be scheduled after that one.
 test: packcore
@@ -64,6 +66,10 @@ test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa
 # Test deadlock situation when waiting on a resource queue lock
 test: resource_queue_deadlock
 
+# Test simple cancellation for resource queues and cancellation/deadlocks for
+# sessions with multiple portals.
+test: resource_queue_cancel resource_queue_multi_portal
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 test: gp_terminate_mpp_backends
@@ -88,6 +94,7 @@ test: bitmap_index_concurrent
 test: bitmap_index_crash
 test: bitmap_update_words_backup_block
 test: bitmap_union
+test: bitmap_index_inspect
 
 # below test utilizes fault injectors so it needs to be in a group by itself
 test: external_table
@@ -244,6 +251,7 @@ test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_b
 
 # Cancel test
 test: cancel_plpython
+test: cancel_query
 
 # Tests for getting numsegments in utility mode
 test: upgrade_numsegments
@@ -278,3 +286,4 @@ test: check_gxid
 
 # test if GUC is synchronized from the QD to QEs.
 test: sync_guc
+

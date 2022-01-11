@@ -236,18 +236,6 @@ ignore_returned_result(long long int result)
 	(void) result;
 }
 
-/* verify string is correctly encoded, and escape it if invalid  */
-static void verify_and_replace_mbstr(char **str, int len)
-{
-	Assert(pg_verifymbstr(*str, len, true));
-
-	if (!pg_verifymbstr(*str, len, true))
-	{
-		pfree(*str);
-		*str = pstrdup("Message skipped due to incorrect encoding.");
-	}
-}
-
 static void setup_formatted_log_time(void);
 static void setup_formatted_start_time(void);
 
@@ -1060,9 +1048,6 @@ errmsg(const char *fmt,...)
 	edata->message_id = fmt;
 	EVALUATE_MESSAGE(edata->domain, message, false, true);
 
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->message), strlen(edata->message));
-
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
@@ -1092,9 +1077,6 @@ errmsg_internal(const char *fmt,...)
 	edata->message_id = fmt;
 	EVALUATE_MESSAGE(edata->domain, message, false, false);
 
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->message), strlen(edata->message));
-
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
@@ -1119,9 +1101,6 @@ errmsg_plural(const char *fmt_singular, const char *fmt_plural,
 	edata->message_id = fmt_singular;
 	EVALUATE_MESSAGE_PLURAL(edata->domain, message, false);
 
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->message), strlen(edata->message));
-
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
@@ -1143,8 +1122,6 @@ errdetail(const char *fmt,...)
 
 	EVALUATE_MESSAGE(edata->domain, detail, false, true);
 
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->detail), strlen(edata->detail));
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
@@ -1236,9 +1213,6 @@ errdetail_plural(const char *fmt_singular, const char *fmt_plural,
 
 	EVALUATE_MESSAGE_PLURAL(edata->domain, detail, false);
 
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->detail), strlen(edata->detail));
-
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
@@ -1259,9 +1233,6 @@ errhint(const char *fmt,...)
 	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
 
 	EVALUATE_MESSAGE(edata->domain, hint, false, true);
-
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->hint), strlen(edata->hint));
 
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
@@ -1287,9 +1258,6 @@ errcontext_msg(const char *fmt,...)
 	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
 
 	EVALUATE_MESSAGE(edata->context_domain, context, true, true);
-
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->context), strlen(edata->context));
 
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;

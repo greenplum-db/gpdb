@@ -98,6 +98,8 @@ extern bool segment_failure_due_to_missing_writer(const char *error_message);
  */
 extern void cdbgang_parse_gpqeid_params(struct Port *port, const char *gpqeid_value);
 
+extern void resetSessionForPrimaryGangLoss(void);
+
 /*
  * MPP Worker Process information
  *

@@ -48,6 +48,7 @@ class MD5Calc {
 
 class Config {
    public:
+    Config(const string& filename, const string& url, const char *datadir);
     Config(const string& filename);
     ~Config();
     bool SectionExist(const string& sec);

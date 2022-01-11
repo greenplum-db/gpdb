@@ -221,8 +221,13 @@
             <dxl:GroupingColumns/>
             <dxl:ProjList>
               <dxl:ProjElem ColId="3" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -318,8 +323,13 @@
                 <dxl:GroupingColumns/>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="2" Alias="sum">
-                    <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal">
+                    <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs">
                       <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+                      </dxl:ValuesList>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
                     </dxl:AggFunc>
                   </dxl:ProjElem>
                 </dxl:ProjList>

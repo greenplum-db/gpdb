@@ -1,0 +1,180 @@
+-- Here we ensure that we clean up resource queue in-memory state gracefully
+-- in the face of deadlocks and statement cancellations, when there is more than
+-- one active portal in the session.
+0:CREATE RESOURCE QUEUE rq_multi_portal WITH (active_statements = 2);
+CREATE
+0:CREATE ROLE role_multi_portal RESOURCE QUEUE rq_multi_portal;
+CREATE
+
+1:SET ROLE role_multi_portal;
+SET
+2:SET ROLE role_multi_portal;
+SET
+
+--
+-- Scenario 1:
+-- Multiple explicit cursors active in the same session with a deadlock.
+--
+
+1:BEGIN;
+BEGIN
+1:DECLARE c1 CURSOR FOR SELECT 1;
+DECLARE
+
+2:BEGIN;
+BEGIN
+2:DECLARE c2 CURSOR FOR SELECT 1;
+DECLARE
+
+-- There should be 2 active statements.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 2             
+(1 row)
+
+-- This should block as it will exceed the active statements limit.
+1&:DECLARE c3 CURSOR FOR SELECT 1;  <waiting ...>
+
+-- There should be 2 active statements.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 2             
+(1 row)
+
+-- This should cause a deadlock.
+2:DECLARE c4 CURSOR FOR SELECT 1;
+DECLARE
+
+-- After the deadlock report, one session should have ERRORed out with the
+-- deadlock report and aborted, while the other session should remain active
+-- and idle in transaction. The active statement count should be 2, contributed
+-- to by the session that is idle in transaction.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 2             
+(1 row)
+0:SELECT count(*) from pg_stat_activity WHERE query LIKE 'DECLARE c% CURSOR FOR SELECT 1;' AND state = 'idle in transaction';
+ count 
+-------
+ 1     
+(1 row)
+0:SELECT count(*) from pg_stat_activity WHERE query LIKE 'DECLARE c% CURSOR FOR SELECT 1;' AND state = 'idle in transaction (aborted)';
+ count 
+-------
+ 1     
+(1 row)
+
+-- After ending the transactions, there should be 0 active statements.
+1<:  <... completed>
+ERROR:  deadlock detected
+DETAIL:  Process 738539 waits for ExclusiveLock on resource queue 90366; blocked by process 738548.
+Process 738548 waits for ExclusiveLock on resource queue 90366; blocked by process 738539.
+HINT:  See server log for query details.
+1:END;
+END
+2:END;
+END
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 0             
+(1 row)
+
+--
+-- Scenario 2:
+-- Multiple explicit cursors active in the same session with a self deadlock.
+--
+1:BEGIN;
+BEGIN
+1:DECLARE c1 CURSOR FOR SELECT 1;
+DECLARE
+1:DECLARE c2 CURSOR FOR SELECT 1;
+DECLARE
+
+-- There should be 2 active statements.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 2             
+(1 row)
+
+-- This should cause a self-deadlock and session 1 should error out, aborting
+-- its transaction.
+1:DECLARE c3 CURSOR FOR SELECT 1;
+ERROR:  deadlock detected, locking against self
+
+-- There should be 0 active statements following the transaction abort.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 0             
+(1 row)
+
+1:END;
+END
+
+--
+-- Scenario 3:
+-- Multiple explicit cursors active in the same session with cancellation.
+--
+1:BEGIN;
+BEGIN
+1:DECLARE c1 CURSOR FOR SELECT 1;
+DECLARE
+
+2:BEGIN;
+BEGIN
+2:DECLARE c2 CURSOR FOR SELECT 1;
+DECLARE
+
+-- This should block as it will exceed the active statements limit.
+1&:DECLARE c3 CURSOR FOR SELECT 1;  <waiting ...>
+
+-- There should be 2 active statements.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 2             
+(1 row)
+
+-- Cancel session 1's transaction.
+0:SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE query = 'DECLARE c3 CURSOR FOR SELECT 1;';
+ pg_cancel_backend 
+-------------------
+ t                 
+(1 row)
+
+-- There should now only be one active statement, following the abort of session
+-- 1's transaction. The active statement is contributed by session 2.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 1             
+(1 row)
+0:SELECT query, state from pg_stat_activity WHERE query = 'DECLARE c2 CURSOR FOR SELECT 1;';
+ query                           | state               
+---------------------------------+---------------------
+ DECLARE c2 CURSOR FOR SELECT 1; | idle in transaction 
+(1 row)
+
+-- After ending the transactions, there should be 0 active statements.
+1<:  <... completed>
+ERROR:  canceling statement due to user request
+1:END;
+END
+2:END;
+END
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
+ rsqcountlimit | rsqcountvalue 
+---------------+---------------
+ 2             | 0             
+(1 row)
+
+-- Cleanup
+0:DROP ROLE role_multi_portal;
+DROP
+0:DROP RESOURCE QUEUE rq_multi_portal;
+DROP

@@ -421,6 +421,10 @@
             name format of the package is
               <codeph>DataSciencePython-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeph>.</p></li>
         <li>Copy the package to the Greenplum Database coordinator host.</li>
+        <li>Follow the instructions in <xref href="../install_guide/verify_sw.xml#topic1"
+           scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+          to verify the integrity of the <b>Greenplum Procedural Languages Python Data
+          Science Package</b> software.</li>
         <li>Use the <codeph>gppkg</codeph> command to install the package. For
               example:<codeblock>$ gppkg -i DataSciencePython-&lt;version&gt;-relhel&lt;N&gt;_x86_64.gppkg</codeblock><p><codeph>gppkg</codeph>
             installs the Python Data Science modules on all nodes in your Greenplum Database
