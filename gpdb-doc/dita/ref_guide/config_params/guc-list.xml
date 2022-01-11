@@ -9181,20 +9181,20 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
     <body>
       <p>Specifies tablespaces in which to create temporary objects (temp tables and indexes on temp
         tables) when a <codeph>CREATE</codeph> command does not explicitly specify a tablespace.
-        Temporary files for purposes such as sorting large data sets are also created in these
-        tablespaces.</p>
-      <p>The value is a comma-separated list of names of tablespaces. When there is more than one name in the list,
-        Greenplum chooses a random member of the list each time a temporary object is to be created;
-        except that within a transaction, successively created temporary objects are placed in
+        These tablespaces can also include temporary files for purposes such as large data set sorting. </p>
+      
+      <p>The value is a comma-separated list of tablespace names. When the list contains more than one name,
+        each time Greenplum creates a temporary object, it chooses a random member from the list. An exception applies
+        within a transaction, where successively created temporary objects are placed in
         successive tablespaces from the list. If the selected element of the list is an empty
         string, Greenplum automatically uses the default tablespace of the current database
         instead.</p>
-      <p>When <codeph>temp_tablespaces</codeph> is set interactively, specifying a nonexistent
-        tablespace is an error, as is specifying a tablespace for which the user does not have
-          <codeph>CREATE</codeph> privilege. However, when using a previously set value, nonexistent
-        tablespaces are ignored, as are tablespaces for which the user lacks <codeph>CREATE</codeph>
-        privilege. In particular, this rule applies when using a value set in
-          <codeph>postgresql.conf</codeph>.</p>
+      
+      <p>When setting <codeph>temp_tablespaces</codeph> interactively, avoid specifying a
+        nonexistent tablespace, or a tablespace for which the user does have <codeph>CREATE</codeph>
+        privileges. For non-superusers, add GRANT on the temp tablespace. When using a previously
+        set value (for example a value in <codeph>postgresql.conf</codeph>), nonexistent tablespaces
+        are ignored, as are tablespaces for which the user lacks <codeph>CREATE</codeph> privilege. </p>
       <p>The default value is an empty string, which results in all temporary objects being created
         in the default tablespace of the current database.</p>
       <p>See also <xref href="#default_tablespace" format="dita"/>.</p>
