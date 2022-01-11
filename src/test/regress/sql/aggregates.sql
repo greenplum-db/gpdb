@@ -4,6 +4,7 @@
 
 -- start_ignore
 SET optimizer_trace_fallback to on;
+SET optimizer_enable_orderedagg to on;
 -- end_ignore
 
 SELECT avg(four) AS avg_1 FROM onek;
@@ -397,6 +398,7 @@ select aggfns(distinct a,b,c order by a,c using ~<~,b)
 -- pg_get_viewdef() runs some internal queries on catalogs, and we don't want
 -- fallback notices about those.
 reset optimizer_trace_fallback;
+reset optimizer_enable_orderedagg;
 -- end_ignore
 
 create view agg_view1 as
@@ -455,6 +457,7 @@ drop view agg_view1;
 
 -- start_ignore
 SET optimizer_trace_fallback to on;
+SET optimizer_enable_orderedagg to on;
 -- end_ignore
 
 -- incorrect DISTINCT usage errors
@@ -613,11 +616,13 @@ select ten,
 -- pg_get_viewdef() runs some internal queries on catalogs, and we don't want
 -- fallback notices about those.
 reset optimizer_trace_fallback;
+reset optimizer_enable_orderedagg;
 -- end_ignore
 
 select pg_get_viewdef('aggordview1');
 -- start_ignore
 SET optimizer_trace_fallback to on;
+SET optimizer_enable_orderedagg to on;
 -- end_ignore
 select * from aggordview1 order by ten;
 drop view aggordview1;
@@ -777,10 +782,12 @@ select ten,
 -- pg_get_viewdef() runs some internal queries on catalogs, and we don't want
 -- fallback notices about those.
 reset optimizer_trace_fallback;
+reset optimizer_enable_orderedagg;
 -- end_ignore
 select pg_get_viewdef('aggordview1');
 -- start_ignore
 SET optimizer_trace_fallback to on;
+SET optimizer_enable_orderedagg to on;
 -- end_ignore
 select * from aggordview1 order by ten;
 drop view aggordview1;

@@ -486,6 +486,7 @@ extern bool optimizer_enable_indexscan;
 extern bool optimizer_enable_indexonlyscan;
 extern bool optimizer_enable_tablescan;
 extern bool optimizer_enable_eageragg;
+extern bool optimizer_enable_orderedagg;
 extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;

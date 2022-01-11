@@ -411,6 +411,7 @@ bool		optimizer_enable_space_pruning;
 bool		optimizer_enable_associativity;
 bool		optimizer_enable_eageragg;
 bool		optimizer_enable_range_predicate_dpe;
+bool		optimizer_enable_orderedagg;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -3058,6 +3059,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_eageragg,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_orderedagg", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable ordered aggregate plans."),
+			NULL
+		},
+		&optimizer_enable_orderedagg,
 		false,
 		NULL, NULL, NULL
 	},

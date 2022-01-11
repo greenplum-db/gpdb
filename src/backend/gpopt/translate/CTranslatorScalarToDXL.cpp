@@ -1237,6 +1237,14 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 		{AGGSTAGE_FINAL, EdxlaggstageFinal},
 	};
 
+	if (aggref->aggorder != NIL && !GPOS_FTRACE(EopttraceEnableOrderedAgg))
+	{
+		GPOS_RAISE(
+			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+			GPOS_WSZ_LIT(
+				"Ordered aggregates disabled. Enable by setting optimizer_enable_orderedagg=on"));
+	}
+
 	if (aggref->aggdistinct)
 	{
 		is_distinct = true;
