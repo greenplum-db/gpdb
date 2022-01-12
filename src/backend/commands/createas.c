@@ -59,6 +59,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
 #include "utils/metrics_utils.h"
+#include "utils/faultinjector.h"
 
 typedef struct
 {
@@ -339,6 +340,14 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("change_string_guc") == FaultInjectorTypeSkip)
+	{
+		set_config_option("search_path", "public",
+						 PGC_USERSET, PGC_S_SESSION,
+						 GUC_ACTION_SAVE, true, 0);
+	}
+#endif
 	/*
 	 * Create the tuple receiver object and insert info it will need
 	 */
