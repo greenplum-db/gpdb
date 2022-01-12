@@ -82,6 +82,9 @@ static const char *excludeDirContents[] =
 	/* Contents unique to each segment instance. */
 	"pg_log",
 
+	/* GPDB: Default gpbackup directory (backup contents) */
+	"backups",
+
 	/* end of list */
 	NULL
 };
@@ -112,6 +115,9 @@ static const char *excludeFiles[] =
 	"postmaster.opts",
 
 	GP_INTERNAL_AUTO_CONF_FILE_NAME,
+
+	/* GPDB: Default gpbackup directory (top-level directory) */
+	"backups",
 
 	/* end of list */
 	NULL
@@ -253,11 +259,11 @@ process_target_file(const char *path, file_type_t type, size_t size,
 	 * from the target data folder all paths which have been filtered out from
 	 * the source data folder when processing the source files.
 	 *
-	 * GPDB: GP_INTERNAL_AUTO_CONF_FILE_NAME and "pg_log" are in the excluded
-	 * file list.  These should not be copied but also should not be
-	 * removed. In the future, if there are more files or directories that
-	 * should not be copied but also should not be removed, then a separate
-	 * function for those would be better.
+	 * GPDB: GP_INTERNAL_AUTO_CONF_FILE_NAME, "pg_log", and "backups" are in
+	 * the excluded dir/file list.  These should not be copied but also should
+	 * not be removed. In the future, if there are more files or directories
+	 * that should not be copied but also should not be removed, then a
+	 * separate function for those would be better.
 	 */
 	{
 		const char *filename = last_dir_separator(path);
@@ -275,6 +281,9 @@ process_target_file(const char *path, file_type_t type, size_t size,
 		 * possibility to change it externally
 		 */
 		if (strstr(path, "pg_log/") == path)
+			return;
+		if (strstr(path, "backups/") == path ||
+			strcmp(path, "backups") == 0)
 			return;
 	}
 

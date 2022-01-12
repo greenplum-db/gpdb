@@ -35,12 +35,17 @@ function standby_following_master
   echo "in master2" > $TEST_MASTER/tst_master_dir/master_file2
   mkdir $TEST_MASTER/tst_master_dir/master_subdir/
   echo "in master3" > $TEST_MASTER/tst_master_dir/master_subdir/master_file3
+
+  # GPDB: gpbackup default directory should be ignored
+  mkdir $TEST_MASTER/backups
+  echo "backup data in master1" > $TEST_MASTER/backups/master_backup_file;
 }
 
 # See what files and directories are present after rewind.
 function after_rewind
 {
     (cd $TEST_MASTER; find tst_* | sort)
+    (cd $TEST_MASTER; find backups* | sort)
 }
 
 # Run the test
