@@ -96,6 +96,7 @@
 #include "unittest/gpopt/operators/CContradictionTest.h"
 #include "unittest/gpopt/operators/CExpressionPreprocessorTest.h"
 #include "unittest/gpopt/operators/CExpressionTest.h"
+#include "unittest/gpopt/operators/CLogicalGbAggTest.h"
 #include "unittest/gpopt/operators/CPredicateUtilsTest.h"
 #include "unittest/gpopt/operators/CScalarIsDistinctFromTest.h"
 #include "unittest/gpopt/search/COptimizationJobsTest.h"
@@ -160,7 +161,7 @@ static gpos::CUnittest rgut[] = {
 	GPOS_UNITTEST_STD(CCorrelatedExecutionTest),
 	GPOS_UNITTEST_STD(CDecorrelatorTest),
 	GPOS_UNITTEST_STD(CDistributionSpecTest), GPOS_UNITTEST_STD(CCastTest),
-	GPOS_UNITTEST_STD(CConstTblGetTest),
+	GPOS_UNITTEST_STD(CConstTblGetTest), GPOS_UNITTEST_STD(CLogicalGbAggTest),
 
 	GPOS_UNITTEST_STD(CSubqueryHandlerTest), GPOS_UNITTEST_STD(CBindingTest),
 	GPOS_UNITTEST_STD(CXformRightOuterJoin2HashJoinTest),
@@ -180,6 +181,7 @@ static gpos::CUnittest rgut[] = {
 	GPOS_UNITTEST_STD(CXformFactoryTest), GPOS_UNITTEST_STD(CXformTest),
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDefaultTest),
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDXLTest),
+
 	// disable CEnumeratorTest until it is fixed
 	//	GPOS_UNITTEST_STD(CEnumeratorTest),
 };
