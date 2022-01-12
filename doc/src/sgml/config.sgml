@@ -964,10 +964,10 @@ include_dir 'conf.d'
       <listitem>
        <para>
         Enables <acronym>SSL</> connections. Please read
-        <xref linkend="ssl-tcp"> before using this. The default
-        is <literal>off</>. This parameter can only be set at server
-        start.  <acronym>SSL</> communication is only possible with
-        TCP/IP connections.
+        <xref linkend="ssl-tcp"> before using this.
+        This parameter can only be set in the <filename>postgresql.conf</>
+        file or on the server command line.
+        The default is <literal>off</>.
        </para>
       </listitem>
      </varlistentry>
@@ -981,11 +981,16 @@ include_dir 'conf.d'
       <listitem>
        <para>
         Specifies the name of the file containing the SSL server certificate
-        authority (CA).  The default is empty, meaning no CA file is loaded,
-        and client certificate verification is not performed.  (In previous
-        releases of PostgreSQL, the name of this file was hard-coded
-        as <filename>root.crt</filename>.)  Relative paths are relative to the
-        data directory.  This parameter can only be set at server start.
+        authority (CA).
+        Relative paths are relative to the data directory.
+        This parameter can only be set in the <filename>postgresql.conf</>
+        file or on the server command line.
+        The default is empty, meaning no CA file is loaded,
+        and client certificate verification is not performed.
+       </para>
+       <para>
+         In previous releases of PostgreSQL, the name of this file was
+         hard-coded as <filename>root.crt</filename>.
        </para>
       </listitem>
      </varlistentry>
@@ -999,9 +1004,10 @@ include_dir 'conf.d'
       <listitem>
        <para>
         Specifies the name of the file containing the SSL server certificate.
-        The default is <filename>server.crt</filename>.  Relative paths are
-        relative to the data directory.  This parameter can only be set at
-        server start.
+        Relative paths are relative to the data directory.
+        This parameter can only be set in the <filename>postgresql.conf</>
+        file or on the server command line.
+        The default is <filename>server.crt</filename>.
        </para>
       </listitem>
      </varlistentry>
