@@ -220,3 +220,14 @@ command_ok(
 	'pg_basebackup runs with exclude-from file');
 ok(! -f "$exclude_tempdir/exclude/0", 'excluded files were not created');
 ok(-f "$exclude_tempdir/exclude/keep", 'other files were created');
+
+# GPDB: Exclude gpbackup default directory
+my $gpbackup_test_dir = "$tempdir/gpbackup_test_dir";
+mkdir "$tempdir/pgdata/backups";
+append_to_file("$tempdir/pgdata/backups/random_backup_file", "some random backup data");
+
+command_ok([ 'pg_basebackup', '-D', $gpbackup_test_dir, '--target-gp-dbid', '123' ],
+	'pg_basebackup does not copy over \'backups/\' directory created by gpbackup');
+
+ok(! -d "$gpbackup_test_dir/backups", 'gpbackup default backup directory should be excluded');
+rmtree($gpbackup_test_dir);

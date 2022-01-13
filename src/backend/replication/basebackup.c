@@ -179,6 +179,9 @@ static const char *excludeDirContents[] =
 	/* Contents unique to each segment instance. */
 	"pg_log",
 
+	/* GPDB: Default gpbackup directory (backup contents) */
+	"backups",
+
 	/* end of list */
 	NULL
 };
@@ -203,6 +206,9 @@ static const char *excludeFiles[] =
 	"postmaster.opts",
 
 	GP_INTERNAL_AUTO_CONF_FILE_NAME,
+
+	/* GPDB: Default gpbackup directory (top-level directory) */
+	"backups",
 
 	/* end of list */
 	NULL
