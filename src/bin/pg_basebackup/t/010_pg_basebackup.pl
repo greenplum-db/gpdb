@@ -6,7 +6,7 @@ use File::Basename qw(basename dirname);
 use File::Path qw(rmtree);
 use PostgresNode;
 use TestLib;
-use Test::More tests => 106 + 13;
+use Test::More tests => 106 + 15;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -644,3 +644,14 @@ $node->command_ok(
 	'pg_basebackup runs with exclude-from file');
 ok(! -f "$exclude_tempdir/exclude/0", 'excluded files were not created');
 ok(-f "$exclude_tempdir/exclude/keep", 'other files were created');
+
+# GPDB: Exclude gpbackup default directory
+my $gpbackup_test_dir = "$tempdir/gpbackup_test_dir";
+mkdir "$pgdata/backups";
+append_to_file("$pgdata/backups/random_backup_file", "some random backup data");
+
+$node->command_ok([ 'pg_basebackup', '-D', $gpbackup_test_dir, '--target-gp-dbid', '123' ],
+	'pg_basebackup does not copy over \'backups/\' directory created by gpbackup');
+
+ok(! -d "$gpbackup_test_dir/backups", 'gpbackup default backup directory should be excluded');
+rmtree($gpbackup_test_dir);
