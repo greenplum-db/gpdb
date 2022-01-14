@@ -127,7 +127,8 @@ $ sudo yum install tk
     The file name format of the package is `DataSciencePython-<version>-relhel<N>-x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
-3.  Use the `gppkg` command to install the package. For example:
+3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.xml#topic1) to verify the integrity of the *Greenplum Procedural Languages Python Data Science Package* software.
+4.  Use the `gppkg` command to install the package. For example:
 
     ```
     $ gppkg -i DataSciencePython-<version>-relhel<N>_x86_64.gppkg
@@ -135,7 +136,7 @@ $ sudo yum install tk
 
     `gppkg` installs the Python Data Science modules on all nodes in your Greenplum Database cluster. The command also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file.
 
-4.  Restart Greenplum Database. You must re-source `greenplum_path.sh` before restarting your Greenplum cluster:
+5.  Restart Greenplum Database. You must re-source `greenplum_path.sh` before restarting your Greenplum cluster:
 
     ```
     $ source /usr/local/greenplum-db/greenplum_path.sh

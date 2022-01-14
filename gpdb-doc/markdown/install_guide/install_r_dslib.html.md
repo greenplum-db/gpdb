@@ -284,6 +284,7 @@ Before you install the R Data Science Library package, make sure that your Green
     The file name format of the package is `DataScienceR-<version>-relhel<N>_x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
+3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.xml#topic1) to verify the integrity of the *Greenplum Procedural Languages R Data Science Package* software.
 3.  Use the `gppkg` command to install the package. For example:
 
     ```
