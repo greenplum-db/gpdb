@@ -25,7 +25,7 @@ VMware distributes the Greenplum Database software as a downloadable package tha
 
 Open source Greenplum Database releases are available as: source code tarballs, RPM installers for CentOS, and DEB packages for Debian and Ubuntu. See [https://greenplum.org/download/](https://greenplum.org/download/) for links to source code and instructions to compile Greenplum Database from source, and for links to download pre-built binaries in RPM and DEB format. For the Ubuntu operating system, Greenplum also offers a binary that can be installed via the `apt-get` command with the Ubuntu Personal Package Archive system.
 
-### <a id="topic_download></a>Downloading the Greenplum Database Server Software (VMware Tanzu Greenplum)
+### <a id="topic_download"></a>Downloading the Greenplum Database Server Software (VMware Tanzu Greenplum)
 
 You can download the *Greenplum Database Server* software package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 
