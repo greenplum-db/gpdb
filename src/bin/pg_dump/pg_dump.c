@@ -7101,6 +7101,17 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			 */
 			if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
 				tbinfo->attislocal[j] = false;
+
+			/*
+			 * GPDB: If the partition table root has a dropped column, we must
+			 * ignore it later when we dump the partition table DDL for binary
+			 * upgrade schema dumps. We assume here that all child partitions
+			 * will NOT have dropped columns (manual user intervention should
+			 * have been done after heterogeneous partition tables were
+			 * flagged via pg_upgrade --check).
+			 */
+			if (binary_upgrade && tbinfo->parparent && tbinfo->attisdropped[j])
+				tbinfo->ignoreRootPartDroppedAttr = true;
 		}
 
 		PQclear(res);
@@ -7351,7 +7362,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
-	if (binary_upgrade)
+	if (binary_upgrade && !tbinfo->ignoreRootPartDroppedAttr)
 		return true;
 	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
 	        !tbinfo->attisdropped[colno]);
@@ -14692,6 +14703,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * exclude indexes, toast tables, sequences and matviews, even though
 		 * they have storage, because we don't support altering or dropping
 		 * columns in them, nor can they be part of inheritance trees.
+		 *
+		 * GPDB: We ignore dropped columns for partition table DDL. We assume
+		 * here that all child partitions will NOT have dropped columns
+		 * (manual user intervention should have been done after heterogeneous
+		 * partition tables were flagged via pg_upgrade --check).
 		 */
 		if (binary_upgrade && (tbinfo->relkind == RELKIND_RELATION ||
 							   tbinfo->relkind == RELKIND_FOREIGN_TABLE))
@@ -14704,7 +14720,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 			for (j = 0; j < tbinfo->numatts; j++)
 			{
-				if (tbinfo->attisdropped[j])
+				if (tbinfo->attisdropped[j] && !tbinfo->ignoreRootPartDroppedAttr)
 				{
 					appendPQExpBufferStr(q, "\n-- For binary upgrade, recreate dropped column.\n");
 					appendPQExpBuffer(q, "UPDATE pg_catalog.pg_attribute\n"

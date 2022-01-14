@@ -348,6 +348,9 @@ typedef struct _tableInfo
 	bool		parparent;		/* true if the table is partition parent */
 	int			numTriggers;	/* number of triggers for table */
 	struct _triggerInfo *triggers;		/* array of TriggerInfo structs */
+
+	/* GPDB: true if need to ignore root partition's dropped columns */
+	bool		ignoreRootPartDroppedAttr;
 } TableInfo;
 
 typedef struct _attrDefInfo
