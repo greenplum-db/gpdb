@@ -21,15 +21,13 @@ sections:
   directory: 7-0/cloud
   subnav_template: cloud-subnav
 
-
-dita_sections:
 - repository:
-    name: dita
+    name: markdown
     at_path: install_guide
   directory: 7-0/install_guide
-  ditamap_location: install_guide.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
+  subnav_template: install-subnav
 
+dita_sections:
 
 - repository:
     name: dita
@@ -84,4 +82,4 @@ template_variables:
   support_link: <a href="https://github.com/greenplum-db/gpdb/wiki">Wiki</a>
   support_url: https://greenplum.org
 
-broken_link_exclusions: iefix|arrowhead|overview_pxf.html|pxf.html|pxf-cluster.html|pxf_kerbhdfs.html|cfginitstart_pxf.html|init_pxf.html|access_hdfs.html|intro_pxf.html|using_pxf.html|client_instcfg.html|install_java.html|pxfuserimpers.html|jdbc_cfg.html
+broken_link_exclusions: iefix|arrowhead|overview_pxf.html|pxf.html|pxf-cluster.html|pxf_kerbhdfs.html|cfginitstart_pxf.html|init_pxf.html|access_hdfs.html|intro_pxf.html|using_pxf.html|client_instcfg.html|install_java.html|pxfuserimpers.html|jdbc_cfg.html|gpcopy|client_tool_guides|postGIS

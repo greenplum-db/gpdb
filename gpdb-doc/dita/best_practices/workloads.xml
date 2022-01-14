@@ -84,13 +84,13 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
             should always be set to 2. It determines the method the OS uses for determining how much
             memory can be allocated to processes and 2 is the only safe setting for Greenplum
             Database. Please review the sysctl parameters in the <xref
-              href="../install_guide/prep_os.xml#topic3__sysctl_file" scope="peer" format="dita"
+              href="../install_guide/prep_os.html#topic3__sysctl_file" format="html" scope="external"
               >Greenplum Database Installation Guide</xref>.</p>
         </li>
         <li>
           <b>vm.overcommit_ratio</b>
           <p>This is a Linux kernel parameter, set in <xref
-              href="../install_guide/prep_os.xml#topic3__sysctl_file" format="dita" scope="peer"
+              href="../install_guide/prep_os.html#topic3__sysctl_file" format="html" scope="external"
                 ><codeph>/etc/sysctl.conf</codeph></xref>. It is the percentage of RAM that is used
             for application processes. The remainder is reserved for the operating system. The
             default on Red Hat is 50. </p><p>Setting <codeph>vm.overcommit_ratio</codeph> too high

@@ -22,8 +22,8 @@
         Greenplum Database. Before you can use the foreign data wrapper, you
         must register the <codeph>postgres_fdw</codeph> extension in each
         database in which you want to use the foreign data wrapper.
-        <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.xml"
-          format="dita" scope="peer">Installing Additional Supplied Modules</xref>
+        <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.html"
+          format="html" scope="external">Installing Additional Supplied Modules</xref>
         for more information.</ph></p>
     </body>
   </topic>

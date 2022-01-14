@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gppkg.xml has a conref to this topic. -->
     <title id="jt142031">gppkg</title>
     <body>
         <p>Installs Greenplum Database extensions in <codeph>.gppkg</codeph> format, such as
@@ -72,7 +71,7 @@
                     <pd>
                         <note>In general, it is best to avoid using the <codeph>--migrate</codeph>
                             option, and packages should be reinstalled, not migrated. See <xref
-                                href="../../install_guide/upgrading.xml#topic17">Upgrading from 6.x
+                                href="../../install_guide/upgrading.html#topic17" format="html" scope="external">Upgrading from 6.x
                                 to a Newer 6.x Release</xref>.</note>
                     </pd>
                     <pd>When migrating packages, these requirements must be met.<ul

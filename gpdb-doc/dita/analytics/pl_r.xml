@@ -273,8 +273,8 @@ CREATE TABLE wj_model_results_roi AS SELECT *
           libraries that can be used with the Greenplum Database PL/R language. You can download
           these libraries in <codeph>.gppkg</codeph> format from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-            >VMware Tanzu Network</xref>. For information about the libraries, see <xref scope="peer"
-            type="topic" format="dita" href="../install_guide/install_r_dslib.xml#topic1">R Data
+            >VMware Tanzu Network</xref>. For information about the libraries, see <xref scope="external"
+            type="html" href="../install_guide/install_r_dslib.html#topic1">R Data
             Science Library Package</xref>.</p>
         <note type="note">If you expand Greenplum Database and add segment hosts, you must install
           the R packages in the R installation of the new hosts. </note>

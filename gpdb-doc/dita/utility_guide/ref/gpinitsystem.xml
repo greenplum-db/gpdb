@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gpinitsystem.xml has a conref to this topic. -->
     <title id="it20941">gpinitsystem</title>
     <body>
         <p>Initializes a Greenplum Database system using configuration parameters specified in the

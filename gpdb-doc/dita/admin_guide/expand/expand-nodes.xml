@@ -15,7 +15,7 @@
       two network clusters, run tests on each cluster.</p>
     <note>Preparing host systems for use by a Greenplum Database system assumes that the new hosts'
       operating system has been properly configured to match the existing hosts, described in <xref
-        href="../../install_guide/prep_os.xml"/>.</note>
+        href="../../install_guide/prep_os.html" format="html" scope="external"/>.</note>
   </body>
   <topic id="topic18" xml:lang="en">
     <title id="no159311">Adding New Hosts to the Trusted Host Environment</title>

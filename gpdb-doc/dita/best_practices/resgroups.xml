@@ -36,7 +36,7 @@
         <li>
           <b>vm.overcommit_memory</b>
           <p>This Linux kernel parameter, set in <xref href="../install_guide/prep_os.html#topic3"
-              scope="peer" format="dita"><codeph>/etc/sysctl.conf</codeph></xref>, identifies the
+              format="html" scope="external"><codeph>/etc/sysctl.conf</codeph></xref>, identifies the
             method that the operating system uses to determine how much memory can be allocated to
             processes. <codeph>vm.overcommit_memory</codeph> must always be set to 2 for Greenplum
             Database systems. </p>
@@ -44,7 +44,7 @@
         <li>
           <b>vm.overcommit_ratio</b>
           <p>This Linux kernel parameter, set in <xref href="../install_guide/prep_os.html#topic3"
-              scope="peer" format="dita"><codeph>/etc/sysctl.conf</codeph></xref>,  identifies the
+              format="html" scope="external"><codeph>/etc/sysctl.conf</codeph></xref>,  identifies the
             percentage of RAM that is used for application processes; the remainder is reserved for
             the operating system. Tune the setting as necessary. If your memory utilization is too
             low, increase the value; if your memory or swap usage is too high, decrease the
@@ -94,8 +94,8 @@
       </ul>
       <p>Other considerations:</p>
       <ul id="ul_xv2_phn_2z">
-        <li>Do not configure the operating system to use huge pages. See the <xref format="dita"
-            href="../install_guide/prep_os.xml#topic3/huge_pages" scope="peer">Recommended OS
+        <li>Do not configure the operating system to use huge pages. See the <xref
+            href="../install_guide/prep_os.html#topic3/huge_pages" format="html" scope="external">Recommended OS
             Parameters Settings</xref> in the <cite>Greenplum Installation Guide</cite>.</li>
         <li>When you configure resource group memory, consider memory requirements
            for mirror segments that become primary segments during a failure to ensure
