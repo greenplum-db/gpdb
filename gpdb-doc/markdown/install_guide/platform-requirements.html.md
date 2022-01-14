@@ -384,7 +384,7 @@ Tanzu Greenplum 6.15 is compatible only with Tanzu Greenplum Command Center 6.4.
 
 ## <a id="topic36"></a>Hadoop Distributions 
 
-Greenplum Database provides access to HDFS with the [Greenplum Platform Extension Framework \(PXF\)](https://greenplum.docs.pivotal.io/pxf/latest/overview_pxf.html).
+Greenplum Database provides access to HDFS with the [Greenplum Platform Extension Framework \(PXF\)](https://greenplum.docs.pivotal.io/pxf/using/overview_pxf.html).
 
 PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop distributions. PXF bundles all of the JAR files on which it depends, including the following Hadoop libraries:
 
