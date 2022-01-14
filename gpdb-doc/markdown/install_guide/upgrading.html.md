@@ -125,7 +125,7 @@ An upgrade from Greenplum Database 6.x to a newer 6.x release involves stopping 
 
     Also copy any files that are used by the extensions \(such as JAR files, shared object files, and libraries\) from the previous version installation directory to the new version installation directory on the coordinator and segment host systems.
 
-12. If you configured PXF in your previous Greenplum Database installation, you may need to install PXF in your new Greenplum installation, and you may be required to re-initialize the PXF service after you upgrade Greenplum Database. Refer to the [Step 2](../pxf/upgrade_pxf_6x.html#pxfup) PXF upgrade procedure for instructions.
+12. If you configured PXF in your previous Greenplum Database installation, you may need to install PXF in your new Greenplum installation, and you may be required to re-initialize or register the PXF service after you upgrade Greenplum Database. Refer to the [Step 2](../pxf/upgrade_pxf_6x.html#pxfup) PXF upgrade procedure for instructions.
 13. For Tanzu Greenplum Database, if you configured GPSS in your previous installation, you may be required to perform some upgrade actions, and you must re-restart the GPSS service instances and jobs. Refer to [Step 2](http://greenplum.docs.pivotal.io/streaming-server/1-5/upgrading-gpss.html#step2) of the GPSS upgrade procedure for instructions.
 
 After upgrading Greenplum Database, ensure that all features work as expected. For example, test that backup and restore perform as expected, and Greenplum Database features such as user-defined functions, and extensions such as MADlib and PostGIS perform as expected.
