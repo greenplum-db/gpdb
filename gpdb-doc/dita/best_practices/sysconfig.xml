@@ -42,7 +42,7 @@
         options:<codeblock>rw,nodev,noatime,inode64</codeblock></p>
     </section>
     <section id="port_config"><p>See the <xref href="../install_guide/prep_os.html#topic3"
-          format="dita" scope="peer">recommended OS parameter settings</xref> in the <cite>Greenplum
+          format="html" scope="external">recommended OS parameter settings</xref> in the <cite>Greenplum
           Database Installation Guide</cite> for further details.</p><title>Port
         Configuration</title><p>Set up <codeph>ip_local_port_range</codeph> so it does not conflict
         with the Greenplum Database port ranges. For example, setting this range in
@@ -51,7 +51,7 @@
         Greenplum Database base port numbers to these
         values.<codeblock>PORT_BASE = 6000
 MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
-        href="../install_guide/prep_os.html#topic3" format="dita" scope="peer">Recommended OS
+        href="../install_guide/prep_os.html#topic3" format="html" scope="external">Recommended OS
         Parameters Settings</xref> in the <cite>Greenplum Database Installation Guide</cite> for
       further details.</section>
     <section id="io_config"><title>I/O Configuration</title><p>Set the blockdev read-ahead size to
@@ -61,7 +61,7 @@ MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
         the read-ahead size for
       <codeph>/dev/sdb</codeph>.</p><codeblock># /sbin/blockdev --getra /dev/sdb
 16384</codeblock>See
-      the <xref href="../install_guide/prep_os.html#topic3" format="dita" scope="peer">Recommended
+      the <xref href="../install_guide/prep_os.html#topic3" format="html" scope="external">Recommended
         OS Parameters Settings</xref> in the <cite>Greenplum Database Installation Guide</cite> for
       further details.<p>The deadline IO scheduler should be set for all data directory devices.
         </p><codeblock> # cat /sys/block/sdb/queue/scheduler
@@ -76,8 +76,8 @@ MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
       <title>OS Memory Configuration</title>
       <p>The Linux sysctl <codeph>vm.overcommit_memory</codeph> and
           <codeph>vm.overcommit_ratio</codeph> variables affect how the operating system manages
-        memory allocation. See the <xref href="../install_guide/prep_os.xml#topic3__sysctl_file"
-          scope="peer" format="dita"><codeph>/etc/sysctl.conf</codeph></xref> file parameters
+        memory allocation. See the <xref href="../install_guide/prep_os.html#topic3__sysctl_file"
+          format="html" scope="external"><codeph>/etc/sysctl.conf</codeph></xref> file parameters
         guidelines in the <cite>Greenplum Datatabase Installation Guide</cite> for further
         details.</p>
       <p><codeph>vm.overcommit_memory</codeph> determines the method the OS uses for determining how
@@ -105,14 +105,14 @@ MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
       <p>Greenplum Database uses shared memory to communicate between <codeph>postgres</codeph>
         processes that are part of the same <codeph>postgres</codeph> instance. The following shared
         memory settings should be set in <codeph>sysctl</codeph> and are rarely modified. See the
-          <xref format="dita" href="../install_guide/prep_os.xml#topic3__sysctl_file" scope="peer"
+          <xref format="dita" href="../install_guide/prep_os.html#topic3__sysctl_file" scope="peer"
             ><codeph>sysctl.conf </codeph></xref> file parameters in the <cite>Greenplum Database
           Installation Guide</cite> for further details.</p>
       <codeblock>kernel.shmmax = 810810728448
 kernel.shmmni = 4096
 kernel.shmall = 197951838</codeblock>
     </section>
-    <p>See <xref href="../install_guide/prep_os.xml#topic3/shared_memory_pages" format="dita">Setting the Greenplum Recommended OS Parameters</xref> for more details.</p>
+    <p>See <xref href="../install_guide/prep_os.html#topic3/shared_memory_pages" format="html" scope="external">Setting the Greenplum Recommended OS Parameters</xref> for more details.</p>
     <section id="host_segs">
       <title>Number of Segments per Host</title>
       <p>Determining the number of segments to run on each segment host has immense impact on

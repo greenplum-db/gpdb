@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gpdeletesystem.xml has a conref to this topic. -->
     <title id="jr20941">gpdeletesystem</title>
     <body>
         <p>Deletes a Greenplum Database system that was initialized using

@@ -35,7 +35,7 @@ Be sure to note the name and the file system location of the downloaded file.
 
 VMware generates a SHA256 fingerprint for each Greenplum Database software download available from Tanzu Network. This fingerprint enables you to verify that your downloaded file is unaltered from the original.
 
-Follow the instructions in [Verifying the VMware Tanzu Greenplum Software Download](verify_sw.xml#topic1) to verify the integrity of the *Greenplum Database Server* software.
+Follow the instructions in [Verifying the VMware Tanzu Greenplum Software Download](verify_sw.html) to verify the integrity of the *Greenplum Database Server* software.
 
 ### <a id="topic_install"></a>Installing the Greenplum Database Software
 
