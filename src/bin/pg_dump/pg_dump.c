@@ -6868,6 +6868,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 	for (i = 0; i < numTables; i++)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
+		bool rootPartHasDroppedAttr = false;
 
 		/* Don't bother to collect info for sequences */
 		if (tbinfo->relkind == RELKIND_SEQUENCE)
@@ -7101,6 +7102,13 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			 */
 			if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
 				tbinfo->attislocal[j] = false;
+
+			/*
+			 * GPDB: If root partition table has dropped column, we must do an
+			 * extra check later.
+			 */
+			if (binary_upgrade && tbinfo->parparent && tbinfo->attisdropped[j])
+				rootPartHasDroppedAttr = true;
 		}
 
 		PQclear(res);
@@ -7329,6 +7337,78 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			}
 			PQclear(res);
 		}
+
+		/*
+		 * GPDB: If root partition has a dropped attribute, check if its child
+		 * partitions do too. If all the child partitions have the same
+		 * dropped attribute then continue as normal. If none of the child
+		 * partitions have a dropped attribute, we will suppress the dropped
+		 * attribute from being dumped later in the CREATE TABLE PARTITION BY
+		 * DDL along with the respective ALTER TABLE DROP COLUMN. Child and
+		 * subroot partitions do not have their own DDL; they are completely
+		 * delegated by the root partition DDL.
+		 *
+		 * Note: This assumes that the dropped column reference is the same
+		 * between the root partition and its child partitions which should
+		 * have been confirmed by `pg_upgrade --check` heterogeneous partition
+		 * table check.
+		 */
+		if (binary_upgrade && rootPartHasDroppedAttr)
+		{
+			int numDistinctNatts;
+			int childPartNumNatts;
+
+			if (g_verbose)
+				write_msg(NULL, "checking if root partition table \"%s\" with dropped column(s) is synchronized with its child partitions.\n",
+						  tbinfo->dobj.name);
+
+			resetPQExpBuffer(q);
+			appendPQExpBuffer(q, "SELECT DISTINCT relnatts "
+							  "FROM pg_catalog.pg_class "
+							  "WHERE NOT relhassubclass AND "
+							  "oid IN (SELECT parchildrelid "
+							  "    FROM pg_catalog.pg_partition par "
+							  "    JOIN pg_catalog.pg_partition_rule rule ON par.oid=rule.paroid "
+							  "        AND NOT par.paristemplate "
+							  "        AND par.parrelid = '%u'::pg_catalog.oid)",
+							  tbinfo->dobj.catId.oid);
+
+			res = ExecuteSqlQuery(fout, q->data, PGRES_TUPLES_OK);
+			numDistinctNatts = PQntuples(res);
+			Assert(numDistinctNatts > 0);
+
+			/*
+			 * We encountered a heterogeneous partition table where all the
+			 * child partitions are not synchronized with the number of
+			 * attributes (e.g. one has a dropped column while the others do
+			 * not). This should have been fixed manually by the user before
+			 * running pg_dump --binary-upgrade (most likely as part of
+			 * addressing issues reported by `pg_upgrade --check`).
+			 */
+			if (numDistinctNatts != 1)
+			{
+				write_msg(NULL, "invalid heterogeneous partition table detected with root partition table \"%s\".\n",
+						  tbinfo->dobj.name);
+				exit_nicely(1);
+			}
+
+			/*
+			 * If the number of attributes from the child partitions match the
+			 * root partition then keep the dropped column reference. If they
+			 * do not match, then ignore the dropped column reference when
+			 * dumping the partition table DDL.
+			 */
+			childPartNumNatts = atoi(PQgetvalue(res, 0, 0));
+			if (childPartNumNatts != ntups)
+			{
+				if (g_verbose)
+					write_msg(NULL, "suppressing dropped column(s) for root partition table \"%s\".\n",
+							  tbinfo->dobj.name);
+				tbinfo->ignoreRootPartDroppedAttr = true;
+			}
+
+			PQclear(res);
+		}
 	}
 
 	destroyPQExpBuffer(q);
@@ -7347,11 +7427,16 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
  *
  * This function exists because there are scattered nonobvious places that
  * must be kept in sync with this decision.
+ *
+ * GPDB: For GPDB partition tables during binary_upgrade mode, dropped columns
+ * may or may not be printed depending on whether all the child partitions
+ * have the dropped column reference OR all the child partitions do not have
+ * the dropped column reference.
  */
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
-	if (binary_upgrade)
+	if (binary_upgrade && !tbinfo->ignoreRootPartDroppedAttr)
 		return true;
 	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
 	        !tbinfo->attisdropped[colno]);
@@ -14692,6 +14777,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * exclude indexes, toast tables, sequences and matviews, even though
 		 * they have storage, because we don't support altering or dropping
 		 * columns in them, nor can they be part of inheritance trees.
+		 *
+		 * GPDB: We ignore dropped columns for partition table DDL. We assume
+		 * here that all child partitions will NOT have dropped columns
+		 * (manual user intervention should have been done after heterogeneous
+		 * partition tables were flagged via pg_upgrade --check).
 		 */
 		if (binary_upgrade && (tbinfo->relkind == RELKIND_RELATION ||
 							   tbinfo->relkind == RELKIND_FOREIGN_TABLE))
@@ -14704,7 +14794,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 			for (j = 0; j < tbinfo->numatts; j++)
 			{
-				if (tbinfo->attisdropped[j])
+				if (tbinfo->attisdropped[j] && !tbinfo->ignoreRootPartDroppedAttr)
 				{
 					appendPQExpBufferStr(q, "\n-- For binary upgrade, recreate dropped column.\n");
 					appendPQExpBuffer(q, "UPDATE pg_catalog.pg_attribute\n"

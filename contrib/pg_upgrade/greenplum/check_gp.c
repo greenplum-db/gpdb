@@ -480,6 +480,35 @@ check_orphaned_toastrels(void)
 
 }
 
+/*
+ * check_heterogeneous_partition
+ *
+ * Detect if heterogeneous partition tables exists in the GPDB cluster. A
+ * heterogeneous partition table is defined as:
+ *
+ * 1. The root partition has no dropped column reference but at least one of
+ *    its child partitions has dropped column references.
+ * 2. The root partition has dropped column references but at least one of its
+ *    child partitions does not.
+ * 3. The root partition and all of its child partitions have dropped column
+ *    references but the columns are misaligned.
+ *
+ * Valid homogeneous partition tables are defined as:
+ *
+ * 1. The root partition and all of its child partitions have no dropped
+ *    column references.
+ * 2. The root partition and all of its child partitions have the same dropped
+ *    column references and the columns are aligned.
+ * 3. The root partition has a dropped column reference but none of its child
+ *    partitions do.
+ *
+ * Note: For homogeneous partition table definition (3), we assume that
+ * pg_dump --binary-upgrade will NOT output the dropped column reference in
+ * the partition table DDL schema dump by suppressing it. There is currently a
+ * GPDB hack that does this which is dependent on the logic in this function.
+ * If anything is to change here, please review if anything needs to be
+ * changed in the related GPDB hack for pg_dump --binary-upgrade.
+ */
 void
 check_heterogeneous_partition(void)
 {
@@ -499,100 +528,78 @@ check_heterogeneous_partition(void)
 		int			rowno;
 		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
 		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+		bool		db_used = false;
 
-		res = executeQueryOrDie(conn, CHECK_PARTITION_TABLE_MATCHES_COLUMN_COUNT);
-
+		/* Scenario 1: Check for dropped column references and number of attributes mismatch */
+		res = executeQueryOrDie(conn, CHECK_PARTITION_TABLE_DROPPED_COLUMN_REFERENCES);
 		ntups = PQntuples(res);
-
 		if (ntups != 0)
 		{
 			found = true;
-			if ((script = fopen(output_path, "w")) == NULL)
-				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("Could not open file \"%s\": %s\n",
+						 output_path, getErrorText());
 
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+
+			fprintf(script, "  Partitions with invalid dropped column references:\n");
 			for (rowno = 0; rowno < ntups; rowno++)
-				fprintf(script, "  %s has different number of columns in a child and root partition\n",
-						PQgetvalue(res, rowno, PQfnumber(res, "parrelid")));
-
-			fclose(script);
+			{
+				fprintf(script, "    %s.%s\n",
+						PQgetvalue(res, rowno, PQfnumber(res, "childnamespace")),
+						PQgetvalue(res, rowno, PQfnumber(res, "childrelname")));
+			}
 		}
 
 		PQclear(res);
 
-		res = executeQueryOrDie(conn, CHECK_PARTITION_TABLE_MATCHES_COLUMN_ATTRIBUTES);
-
+		/*
+		 * Scenario 2: Compare root and child partition dropped column
+		 * attributes for name, type, length, and alignment.
+		 */
+		res = executeQueryOrDie(conn, CHECK_PARTITION_TABLE_MATCHES_DROPPED_COLUMN_ATTRIBUTES);
 		ntups = PQntuples(res);
-
 		if (ntups != 0)
 		{
 			found = true;
-			if ((script = fopen(output_path, "a")) == NULL)
-				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("Could not open file \"%s\": %s\n",
+						 output_path, getErrorText());
 
+			if (!db_used)
+				fprintf(script, "Database: %s\n", active_db->db_name);
+
+			fprintf(script, "  Partitions with misaligned dropped column references:\n");
 			for (rowno = 0; rowno < ntups; rowno++)
-			{
-				if (strcmp(PQgetvalue(res, rowno, PQfnumber(res, "attname1")), PQgetvalue(res, rowno, PQfnumber(res, "attname2"))) != 0)
-					fprintf(script, "  column %s of parent table %s has different name '%s' from column %s of child table %s name '%s'\n",
-							PQgetvalue(res, rowno, PQfnumber(res, "attnum")),
-							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attnum")),
-							PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attname2")));
-				else if(strcmp(PQgetvalue(res, rowno, PQfnumber(res, "attisdropped1")), PQgetvalue(res, rowno, PQfnumber(res, "attisdropped2"))) != 0)
-				{
-					const char *droppedness1, *droppedness2;
-					if (strcmp(PQgetvalue(res, rowno, PQfnumber(res, "attisdropped1")), "t") == 0)
-					{
-						droppedness1 = "dropped";
-						droppedness2 = "not dropped";
-					}
-					else
-					{
-						droppedness1 = "not dropped";
-						droppedness2 = "dropped";
-					}
-					fprintf(script, "  column %s of parent table %s is %s, but it is %s in child table %s\n",
-							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
-							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
-							droppedness1,
-							droppedness2,
-							PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")));
-				}
-				else
-				{
-					fprintf(script, "  column %s of parent table %s has type %s of length %s and alignment '%s', but it is type %s of length %s and alignment '%s' in child table %s\n",
-							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
-							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
-							PQgetvalue(res, rowno, PQfnumber(res, "atttypid1")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attlen1")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attalign1")),
-							PQgetvalue(res, rowno, PQfnumber(res, "atttypid2")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attlen2")),
-							PQgetvalue(res, rowno, PQfnumber(res, "attalign2")),
-							PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")));
-				}
-
-			}
-
-			fclose(script);
+				fprintf(script, "    %s\n", PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")));
 		}
 
 		PQclear(res);
 		PQfinish(conn);
-
 	}
+
+	if (script)
+		fclose(script);
 
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
 		pg_log(PG_FATAL,
-			   "| Your installation contains heterogenous partitioned tables\n"
-			   "| where the root partition does not match one or more child\n"
-			   "| partitions' on disk representation. In order to make the\n"
-			   "| tables homogenous, create a new partition table with the same\n"
-			   "| schema as the old partition table, insert the old data into\n"
-			   "| the new table, and drop the old table.\n"
+			   "| Your installation contains heterogeneous partition tables. Either one or more\n"
+			   "| child partitions have invalid dropped column references or the columns are\n"
+			   "| misaligned compared to the root partition. Upgrade cannot output partition\n"
+			   "| table DDL to preserve the dropped columns for the detected child partitions\n"
+			   "| since ALTER statements can only be applied from the root partition (which will\n"
+			   "| cascade down the partition hierarchy). Preservation of these columns is\n"
+			   "| necessary for on-disk compatibility of the child partitions. In order to\n"
+			   "| correct the child partitions, create a new staging table with the same schema\n"
+			   "| as the child partition, insert the old data into the staging table, exchange\n"
+			   "| the child partition with the staging table, and drop the staging table.\n"
+			   "| Alternatively, the entire partition table can be recreated.\n"
 			   "| A list of the problem tables is in the file:\n" "| \t%s\n\n",
 			   output_path);
 	}

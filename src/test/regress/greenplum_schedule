@@ -15,6 +15,8 @@
 #   hitting max_connections limit on segments.
 #
 
+test: pg_dump_binary_upgrade
+
 test: gp_dispatch_keepalives
 
 # copy command
