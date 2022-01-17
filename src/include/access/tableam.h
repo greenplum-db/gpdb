@@ -816,6 +816,26 @@ table_beginscan_strat(Relation rel, Snapshot snapshot,
 }
 
 /*
+ * Like table_beginscan_strat(), but table_beginscan_strat_extractcolumns()
+ * extract columns for scan from target list and qualifications.
+ * This is mainly for AOCS tables.
+ */
+static inline TableScanDesc
+table_beginscan_strat_extractcolumns(Relation rel, Snapshot snapshot,
+									 List *targetlist, List *qual,
+									 bool allow_strat, bool allow_sync)
+{
+	uint32		flags = SO_TYPE_SEQSCAN | SO_ALLOW_PAGEMODE;
+
+	if (allow_strat)
+		flags |= SO_ALLOW_STRAT;
+	if (allow_sync)
+		flags |= SO_ALLOW_SYNC;
+
+	return rel->rd_tableam->scan_begin_extractcolumns(rel, snapshot, targetlist, qual, flags);
+}
+
+/*
  * table_beginscan_bm is an alternative entry point for setting up a
  * TableScanDesc for a bitmap heap scan.  Although that scan technology is
  * really quite unlike a standard seqscan, there is just enough commonality to
