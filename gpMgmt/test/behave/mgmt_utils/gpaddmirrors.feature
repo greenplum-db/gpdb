@@ -146,6 +146,67 @@ Feature: Tests for gpaddmirrors
             | some         | 0,1                    | 2                |
             | all          | None                   | 0,1,2            |
 
+
+    Scenario: gpaddmirrors can add mirrors and display progress in gpstate
+        Given the cluster is generated with "3" primaries only
+        And all files in gpAdminLogs directory are deleted
+        And sql "DROP TABLE if exists test_add; CREATE TABLE test_add AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
+        And a gprecoverseg directory under '/tmp' with mode '0700' is created
+        And a gpaddmirrors input file is created
+        And edit the input file to add mirror with content 0,1,2 to a new directory with mode 0700
+
+        When the user asynchronously runs gpaddmirrors with input file and additional args "-a" and the process is saved
+        And the user suspend the walsender on the primary on content 0
+        Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+        And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+        And the user reset the walsender on the primary on content 0
+        And the user waits until saved async process is completed
+        And recovery_progress.file should not exist in gpAdminLogs in gpAdminLogs
+        And the user waits until mirror on content 0,1,2 is up
+
+        And check if mirrors on content 0,1,2 are moved to new location on input file
+        And verify there are no recovery backout files
+
+        And verify the database has 3 mirrors
+        And user can start transactions
+        And verify that mirror on content 0,1,2 is up
+        And the segments are synchronized for content 0,1,2
+
+        And all the segments are running
+        And the segments are synchronized
+
+        And all files in gpAdminLogs directory are deleted
+
+
+#    Scenario: gpaddmirrors deletes progress file on SIGINT
+#        Given the cluster is generated with "3" primaries only
+#        And all files in gpAdminLogs directory are deleted
+#        And sql "DROP TABLE if exists test_add; CREATE TABLE test_add AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
+#        And a gprecoverseg directory under '/tmp' with mode '0700' is created
+#        And a gpaddmirrors input file is created
+#        And edit the input file to add mirror with content 0,1,2 to a new directory with mode 0700
+#
+#        When the user asynchronously runs gpaddmirrors with input file and additional args "-a" and the process is saved
+#        Then the user asynchronously sets up to end gpaddmirrors process when "Re-running pg_basebackup" is printed in the gpsegrecovery logs
+#        And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+#        And the user waits until saved async process is completed
+#        And recovery_progress.file should not exist in gpAdminLogs
+#        And the user waits until mirror on content 0,1,2 is up
+#
+#        And check if mirrors on content 0,1,2 are moved to new location on input file
+#        And verify there are no recovery backout files
+#
+#        And verify the database has 3 mirrors
+#        And user can start transactions
+#        And verify that mirror on content 0,1,2 is up
+#        And the segments are synchronized for content 0,1,2
+#
+#        And all the segments are running
+#        And the segments are synchronized
+#
+#        And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+#        And all files in gpAdminLogs directory are deleted
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 

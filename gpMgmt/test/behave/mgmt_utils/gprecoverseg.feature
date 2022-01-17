@@ -117,8 +117,8 @@ Feature: gprecoverseg tests
       And all files in gpAdminLogs directory are deleted
       And user immediately stops all primary processes
       And user can start transactions
-      And sql "DROP TABLE if exists test_mixed_recovery; CREATE TABLE test_mixed_recovery AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-      And the "test_mixed_recovery" table row count in "postgres" is saved
+      And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+      And the "test_recoverseg" table row count in "postgres" is saved
       And a gprecoverseg directory under '/tmp' with mode '0700' is created
       And a gprecoverseg input file is created
       And edit the input file to recover mirror with content 0 to a new directory with mode 0700
@@ -135,15 +135,15 @@ Feature: gprecoverseg tests
       And gpAdminLogs directory has no "pg_rewind*" files
       And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
       And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+      And the old data directories are cleaned up for content 0
 
       And all the segments are running
       And the segments are synchronized
       And the user runs "gprecoverseg -ar"
       And gprecoverseg should return a return code of 0
-      And the row count from table "test_mixed_recovery" in "postgres" is verified against the saved data
+      And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
-
-  Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
+    Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -266,6 +266,9 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+
+########################### @concourse_cluster tests ###########################
+# The @concourse_cluster tag denotes the scenario that requires a remote cluster
     @demo_cluster
     @concourse_cluster
     Scenario Outline: <scenario> recovery skips unreachable segments
@@ -282,8 +285,8 @@ Feature: gprecoverseg tests
 
       And the host for the primary on content 1 is made unreachable
 
-      And the user runs psql with "-c 'CREATE TABLE IF NOT EXISTS foo (i int)'" against database "postgres"
-      And the user runs psql with "-c 'INSERT INTO foo SELECT generate_series(1, 10000)'" against database "postgres"
+      And the user runs psql with "-c 'CREATE TABLE IF NOT EXISTS test_recoverseg (i int)'" against database "postgres"
+      And the user runs psql with "-c 'INSERT INTO test_recoverseg SELECT generate_series(1, 10000)'" against database "postgres"
 
       When the user runs "gprecoverseg <args>"
       Then gprecoverseg should print "Not recovering segment \d because invalid_host is unreachable" to stdout
@@ -298,16 +301,13 @@ Feature: gprecoverseg tests
       And content 0 is balanced
       And content 1 is unbalanced
 
-      And the user runs psql with "-c 'DROP TABLE foo'" against database "postgres"
+      And the user runs psql with "-c 'DROP TABLE test_recoverseg'" against database "postgres"
       And the cluster is returned to a good state
 
       Examples:
         | scenario    | args |
         | incremental | -a   |
         | full        | -aF  |
-
-########################### @concourse_cluster tests ###########################
-# The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
   @concourse_cluster
   Scenario: incremental recovery works with tablespaces on a multi-host environment
@@ -389,6 +389,139 @@ Feature: gprecoverseg tests
 
   @demo_cluster
   @concourse_cluster
+  Scenario: gprecoverseg creates recovery_progress.file in gpAdminLogs
+    Given the database is running
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And the user waits until mirror on content 0,1,2 is down
+    And user can start transactions
+    And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS a;" is executed in "postgres" db
+    When the user asynchronously runs "gprecoverseg -a" and the process is saved
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And the user waits until mirror on content 0,1,2 is up
+    And user can start transactions
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And a sample recovery_progress.file is created from saved lines
+    When the user runs "gpstate -e"
+    Then gpstate should print "Segments in recovery" to stdout
+#    And gpstate output contains "incremental,incremental,incremental" entries for mirrors of content 0,1,2
+#    And gpstate output looks like
+#      | Segment | Port   | Recovery type  | Completed bytes \(kB\) | Total bytes \(kB\) | Percentage completed |
+#      | \S+     | [0-9]+ | incremental    | [0-9]+                 | [0-9]+             | [0-9]+\%             |
+#      | \S+     | [0-9]+ | incremental    | [0-9]+                 | [0-9]+             | [0-9]+\%             |
+#      | \S+     | [0-9]+ | incremental    | [0-9]+                 | [0-9]+             | [0-9]+\%             |
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    And the user suspend the walsender on the primary on content 0
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And the user waits until mirror on content 0,1,2 is up
+    And user can start transactions
+
+    And a sample recovery_progress.file is created from saved lines
+    When the user runs "gpstate -e"
+    Then gpstate should print "Segments in recovery" to stdout
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg creates recovery_progress.file in gpAdminLogs for full recovery of mirrors
+    Given the database is running
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all mirror processes for content 0,1,2
+    And the user waits until mirror on content 0,1,2 is down
+    And user can start transactions
+    And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS a;" is executed in "postgres" db
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    And the user suspend the walsender on the primary on content 0
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And the user waits until mirror on content 0,1,2 is up
+    And user can start transactions
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg creates recovery_progress.file in custom logdir for full recovery of mirrors
+    Given the database is running
+    And all files in "/tmp/custom_logdir" directory are deleted on all hosts in the cluster
+    And user immediately stops all mirror processes for content 0,1,2
+    And the user waits until mirror on content 0,1,2 is down
+    And user can start transactions
+    When the user asynchronously runs "gprecoverseg -aF -l /tmp/custom_logdir" and the process is saved
+    And the user suspend the walsender on the primary on content 0
+    Then the user waits until recovery_progress.file is created in /tmp/custom_logdir and verifies its format
+    And verify that lines from recovery_progress.file are present in segment progress files in /tmp/custom_logdir
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in /tmp/custom_logdir
+    And the user waits until mirror on content 0,1,2 is up
+    And user can start transactions
+    And all files in "/tmp/custom_logdir" directory are deleted on all hosts in the cluster
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg -i creates recovery_progress.file in gpAdminLogs for mixed recovery of mirrors
+    Given the database is running
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And the user waits until mirror on content 0,1,2 is down
+    And user can start transactions
+    And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS a;" is executed in "postgres" db
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0700
+    And edit the input file to recover mirror with content 1 full inplace
+    And edit the input file to recover mirror with content 2 incremental
+    When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
+    And the user suspend the walsender on the primary on content 0
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And the user waits until mirror on content 0,1,2 is up
+    And the old data directories are cleaned up for content 0
+    And user can start transactions
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario:  SIGINT on gprecoverseg should delete the progress file
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS a;" is executed in "postgres" db
+    And the user suspend the walsender on the primary on content 0
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    When the user asynchronously sets up to end gprecoverseg process with SIGINT
+    And the user waits until saved async process is completed
+    Then recovery_progress.file should not exist in gpAdminLogs
+    Then the user reset the walsender on the primary on content 0
+    And the gprecoverseg lock directory is removed
+    And the user waits until mirror on content 0,1,2 is up
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+    And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
   Scenario: gprecoverseg mixed recovery segments come up even if one basebackup takes longer
     Given the database is running
     And all the segments are running
@@ -397,18 +530,19 @@ Feature: gprecoverseg tests
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
-    And sql "DROP TABLE if exists test_slow_basebackup; CREATE TABLE test_slow_basebackup AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-    And the "test_slow_basebackup" table row count in "postgres" is saved
+    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
+    And the "test_recoverseg" table row count in "postgres" is saved
     And a gprecoverseg directory under '/tmp' with mode '0700' is created
     And a gprecoverseg input file is created
     And edit the input file to recover mirror with content 0 full inplace
     And edit the input file to recover mirror with content 1 full inplace
     And edit the input file to recover mirror with content 2 incremental
     When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
-    Then the user waits until mirror on content 1 is up
-    And the user waits until mirror on content 2 is up
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And the user waits until mirror on content 1,2 is up
     And verify that mirror on content 0 is down
     And user can start transactions
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
@@ -416,7 +550,7 @@ Feature: gprecoverseg tests
     And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
     And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
     And the cluster is recovered in full and rebalanced
-    And the row count from table "test_slow_basebackup" in "postgres" is verified against the saved data
+    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -427,8 +561,8 @@ Feature: gprecoverseg tests
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
-    And sql "DROP TABLE if exists test_rewind_failure; CREATE TABLE test_rewind_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-    And the "test_rewind_failure" table row count in "postgres" is saved
+    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+    And the "test_recoverseg" table row count in "postgres" is saved
     And all files in pg_xlog directory are deleted from data directory of preferred primary of content 0
     When the user runs "gprecoverseg -a"
     Then gprecoverseg should return a return code of 1
@@ -442,7 +576,7 @@ Feature: gprecoverseg tests
     And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
 
     And the cluster is recovered in full and rebalanced
-    And the row count from table "test_rewind_failure" in "postgres" is verified against the saved data
+    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -455,8 +589,8 @@ Feature: gprecoverseg tests
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
 
-    And sql "DROP TABLE if exists test_rewind_failure; CREATE TABLE test_rewind_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-    And the "test_rewind_failure" table row count in "postgres" is saved
+    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+    And the "test_recoverseg" table row count in "postgres" is saved
     And all files in pg_xlog directory are deleted from data directory of preferred primary of content 0
 
     And a gprecoverseg directory under '/tmp' with mode '0700' is created
@@ -480,7 +614,7 @@ Feature: gprecoverseg tests
 
     And the mode of all the created data directories is changed to 0700
     And the cluster is recovered in full and rebalanced
-    And the row count from table "test_rewind_failure" in "postgres" is verified against the saved data
+    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -493,8 +627,8 @@ Feature: gprecoverseg tests
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
 
-    And sql "DROP TABLE if exists test_start_failure; CREATE TABLE test_start_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-    And the "test_start_failure" table row count in "postgres" is saved
+    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+    And the "test_recoverseg" table row count in "postgres" is saved
 
     And a gprecoverseg directory under '/tmp' with mode '0700' is created
     And a gprecoverseg input file is created
@@ -518,6 +652,7 @@ Feature: gprecoverseg tests
     And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
     And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
     And verify there are no recovery backout files
+    And the old data directories are cleaned up for content 0
 
     And the mode of all the created data directories is changed to 0700
     Then the user runs "gprecoverseg -a"
@@ -525,7 +660,7 @@ Feature: gprecoverseg tests
     And user can start transactions
     And the segments are synchronized
     And the cluster is rebalanced
-    And the row count from table "test_start_failure" in "postgres" is verified against the saved data
+    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
@@ -538,8 +673,8 @@ Feature: gprecoverseg tests
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
 
-    And sql "DROP TABLE if exists test_start_failure; CREATE TABLE test_start_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-    And the "test_start_failure" table row count in "postgres" is saved
+    And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+    And the "test_recoverseg" table row count in "postgres" is saved
 
     And a gprecoverseg directory under '/tmp' with mode '0700' is created
     And a gprecoverseg input file is created
@@ -562,13 +697,14 @@ Feature: gprecoverseg tests
     And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
     And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
     And verify there are no recovery backout files
+    And the old data directories are cleaned up for content 0,1,2
     And the mode of all the created data directories is changed to 0700
     Then the user runs "gprecoverseg -a"
     And gprecoverseg should return a return code of 0
     And user can start transactions
     And the segments are synchronized
     And the cluster is rebalanced
-    And the row count from table "test_start_failure" in "postgres" is verified against the saved data
+    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
     @concourse_cluster
     Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
@@ -712,7 +848,7 @@ Feature: gprecoverseg tests
           And user can start transactions
          Then the saved "primary" segment is marked down in config
 
-         When all files in gpAdminLogs directory are deleted
+         When all files in gpAdminLogs directory are deleted on all hosts in the cluster
           And the user asynchronously sets up to end gprecoverseg process when "Recovery type" is printed in the logs
           And the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of -15
@@ -817,9 +953,12 @@ Feature: gprecoverseg tests
     And user can start transactions
     And the primary on content 1 is stopped
     And user can start transactions
-    And an FTS probe is triggered
+    And the primary on content 2 is stopped
+    And user can start transactions
     And the status of the primary on content 0 should be "d"
     And the status of the primary on content 1 should be "d"
+    And the status of the primary on content 2 should be "d"
+    And user can start transactions
 
     And a gprecoverseg directory under '/tmp' with mode '0700' is created
     And a gprecoverseg input file is created
@@ -837,6 +976,7 @@ Feature: gprecoverseg tests
     And verify that mirror on content 2 is up
     And check if mirrors on content 0,1 are in their original configuration
     And check if mirrors on content 2 are moved to new location on input file
+    And the old data directories are cleaned up for content 2
     And the gp_configuration_history table should contain a backout entry for the primary segment for contents 0,1
 
     And the mode of all the created data directories is changed to 0700

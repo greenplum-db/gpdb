@@ -29,6 +29,7 @@ from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
+from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
@@ -380,6 +381,7 @@ def impl(context, content_ids):
 
 
 @given('the user {action} the walsender on the {segment} on content {content}')
+@when('the user {action} the walsender on the {segment} on content {content}')
 @then('the user {action} the walsender on the {segment} on content {content}')
 def impl(context, action, segment, content):
     if segment == 'mirror':
@@ -424,6 +426,62 @@ def impl(context, content):
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
+@then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
+def impl(context, logdir):
+    attempt = 0
+    num_retries = 60000
+    log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
+    recovery_progress_file = '{}/recovery_progress.file'.format(log_dir)
+    while attempt < num_retries:
+        attempt += 1
+        if os.path.exists(recovery_progress_file):
+            with open(recovery_progress_file, 'r') as fp:
+                context.recovery_lines = fp.readlines()
+            for line in context.recovery_lines:
+                recovery_type, dbid, progress = line.strip().split(':', 2)
+                progress_pattern = re.compile(get_recovery_progress_pattern())
+                # TODO: assert progress line in the actual hosts bb/rewind progress file
+                if re.search(progress_pattern, progress) and dbid.isdigit() and recovery_type in ['full', 'incremental']:
+                    return
+                else:
+                    raise Exception('File present but incorrect format line "{}"'.format(line))
+        time.sleep(0.01)
+        if attempt == num_retries:
+            raise Exception('Timed out after {} retries'.format(num_retries))
+
+
+@then('verify that lines from recovery_progress.file are present in segment progress files in {logdir}')
+def impl(context, logdir):
+    all_progress_lines_by_dbid = {}
+    for line in context.recovery_lines:
+        recovery_type, dbid, line_from_combined_progress_file = line.strip().split(':', 2)
+        all_progress_lines_by_dbid[int(dbid)] = [recovery_type, line_from_combined_progress_file]
+
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+
+    log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
+    for seg in all_segments:
+        seg_dbid = seg.getSegmentDbId()
+        if seg_dbid in all_progress_lines_by_dbid:
+            recovery_type, line_from_combined_progress_file = all_progress_lines_by_dbid[seg_dbid]
+            process_name = 'pg_basebackup' if recovery_type == 'full' else 'pg_rewind'
+            seg_progress_file = '{}/{}.*.dbid{}.out'.format(log_dir, process_name, seg_dbid)
+            check_cmd_str = 'grep "{}" {}'.format(line_from_combined_progress_file, seg_progress_file)
+            check_cmd = Command(name='check line in segment progress file',
+                          cmdStr=check_cmd_str,
+                          ctxt=REMOTE,
+                          remoteHost=seg.getSegmentHostName())
+            check_cmd.run()
+            if check_cmd.get_return_code() != 0:
+                raise Exception('Expected line {} in segment progress file {} on host {} but not found.'
+                                .format(line_from_combined_progress_file, seg_progress_file, seg.getSegmentHostName()))
+
+
+@then('recovery_progress.file should not exist in {logdir}')
+def impl(context, logdir):
+    log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
+    if os.path.exists('{}/recovery_progress.file'.format(log_dir)):
+        raise Exception('recovery_progress.file is still present under {}'.format(log_dir))
 
 def backup_bashrc():
     home_dir = os.environ.get('HOME')
@@ -545,6 +603,19 @@ def impl(context, process_name, log_msg):
               "fi; done" % (log_msg, process_name, process_name)
     run_async_command(context, command)
 
+@then('the user asynchronously sets up to end {kill_process_name} process when {log_msg} is printed in the {logfile_name} logs')
+def impl(context, kill_process_name, log_msg, logfile_name):
+    command = "while sleep 0.1; " \
+              "do if egrep --quiet %s  ~/gpAdminLogs/%s*log ; " \
+              "then ps ux | grep bin/%s |awk '{print $2}' | xargs kill -2 ;break 2; " \
+              "fi; done" % (log_msg, logfile_name, kill_process_name)
+    run_async_command(context, command)
+
+
+@when('the user asynchronously sets up to end {process_name} process with SIGINT')
+def impl(context, process_name):
+    command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -2" % (process_name)
+    run_async_command(context, command)
 
 @when('the user asynchronously sets up to end gpcreateseg process when it starts')
 def impl(context):
@@ -2525,7 +2596,19 @@ def impl(context, hosts):
                               remoteHost=host, ctxt=REMOTE)
         rm_cmd.run(validateAfter=True)
 
+@given('all files in "{dir}" directory are deleted on all hosts in the cluster')
+@then('all files in "{dir}" directory are deleted on all hosts in the cluster')
+def impl(context, dir):
+    host_list = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
+    for host in host_list:
+        rm_cmd = Command(name="remove files in {}".format(dir),
+                         cmdStr="rm -rf {}/*".format(dir),
+                         remoteHost=host, ctxt=REMOTE)
+        rm_cmd.run(validateAfter=True)
+
 @given('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
+@when('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
+@then('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
 def impl(context):
     host_list = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
     log_dir = _get_gpAdminLogs_directory()

@@ -2,11 +2,15 @@
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
+import os
 from collections import OrderedDict
 import logging
 import StringIO
+import shutil
+import tempfile
 
-from mock import ANY, call, patch, Mock
+
+from mock import ANY, call, patch, Mock, mock_open
 from gppylib import gplog, recoveryinfo
 from gppylib.commands import base, gp
 from gppylib.commands.base import CommandResult, LocalExecutionContext
@@ -951,21 +955,34 @@ class SegmentProgressTestCase(GpTestCase):
             parallelDegree=0,
             logger=Mock(spec=logging.Logger)
         )
+        self.tmp_log_dir = tempfile.mkdtemp()
+        self.apply_patches([
+            patch('recoveryinfo.gplog.get_logger_dir', return_value=self.tmp_log_dir),
+            patch('gppylib.operations.buildMirrorSegments.os.remove')
+        ])
+        self.mock_os_remove = self.get_mock_from_apply_patch("remove")
+        self.combined_progress_file = "{}/recovery_progress.file".format(self.tmp_log_dir)
+
+    def tearDown(self):
+        super(SegmentProgressTestCase, self).tearDown()
+        shutil.rmtree(self.tmp_log_dir)
+
+    def create_command(self, remoteHost, dbid, filepath, stdout=None, stderr=None):
+            cmd = Mock(spec=GpMirrorListToBuild.ProgressCommand)
+            cmd.remoteHost = remoteHost
+            cmd.dbid = dbid
+            cmd.filePath = filepath
+            cmd.get_results.return_value.stdout = stdout
+            cmd.get_results.return_value.stderr = stderr
+            return cmd
 
     def test_command_output_is_displayed_once_after_worker_pool_completes(self):
-        cmd = Mock(spec=base.Command)
-        cmd.remoteHost = 'localhost'
-        cmd.dbid = 2
-        cmd.get_results.return_value.stdout = "string 1\n"
-
-        cmd2 = Mock(spec=base.Command)
-        cmd2.remoteHost = 'host2'
-        cmd2.dbid = 4
-        cmd2.get_results.return_value.stdout = "string 2\n"
+        cmd1 = self.create_command('localhost', 2, './pg_basebackup.23432', "string 1\n")
+        cmd2 = self.create_command('host2', 4, './pg_basebackup.234324', "string 2\n")
 
         outfile = StringIO.StringIO()
         self.pool.join.return_value = True
-        self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], outfile=outfile)
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
 
         results = outfile.getvalue()
         self.assertEqual(results, (
@@ -974,9 +991,7 @@ class SegmentProgressTestCase(GpTestCase):
         ))
 
     def test_command_output_is_displayed_once_for_every_blocked_join(self):
-        cmd = Mock(spec=base.Command)
-        cmd.remoteHost = 'localhost'
-        cmd.dbid = 2
+        cmd = self.create_command('localhost', 2, './pg_basebackup.23432', "string 1\n")
 
         cmd.get_results.side_effect = [Mock(stdout="string 1"), Mock(stdout="string 2")]
 
@@ -991,19 +1006,16 @@ class SegmentProgressTestCase(GpTestCase):
         ))
 
     def test_inplace_display_uses_ansi_escapes_to_overwrite_previous_output(self):
-        cmd = Mock(spec=base.Command)
-        cmd.remoteHost = 'localhost'
-        cmd.dbid = 2
-        cmd.get_results.side_effect = [Mock(stdout="string 1"), Mock(stdout="string 2")]
+        cmd1 = self.create_command('localhost', 2, './pg_basebackup.234324', "string 1\n")
+        cmd2 = self.create_command('host2', 4, './pg_basebackup.234324', "string 2\n")
 
-        cmd2 = Mock(spec=base.Command)
-        cmd2.remoteHost = 'host2'
-        cmd2.dbid = 4
+        cmd1.get_results.side_effect = [Mock(stdout="string 1"), Mock(stdout="string 2")]
+
         cmd2.get_results.side_effect = [Mock(stdout="string 3"), Mock(stdout="string 4")]
 
         outfile = StringIO.StringIO()
         self.pool.join.side_effect = [False, True]
-        self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], inplace=True, outfile=outfile)
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], inplace=True, outfile=outfile)
 
         results = outfile.getvalue()
         self.assertEqual(results, (
@@ -1015,21 +1027,15 @@ class SegmentProgressTestCase(GpTestCase):
         ))
 
     def test_errors_during_command_execution_are_displayed(self):
-        cmd = Mock(spec=base.Command)
-        cmd.remoteHost = 'localhost'
-        cmd.dbid = 2
-        cmd.get_results.return_value.stderr = "some error\n"
-        cmd.run.side_effect = base.ExecutionError("Some exception", cmd)
+        cmd1 = self.create_command('localhost', 2, './pg_basebackup.234324', stderr="some error\n")
+        cmd2 = self.create_command('host2', 4, './pg_basebackup.234324', stderr='')
 
-        cmd2 = Mock(spec=base.Command)
-        cmd2.remoteHost = 'host2'
-        cmd2.dbid = 4
-        cmd2.get_results.return_value.stderr = ''
+        cmd1.run.side_effect = base.ExecutionError("Some exception", cmd1)
         cmd2.run.side_effect = base.ExecutionError("Some exception", cmd2)
 
         outfile = StringIO.StringIO()
         self.pool.join.return_value = True
-        self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], outfile=outfile)
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
 
         results = outfile.getvalue()
         self.assertEqual(results, (
@@ -1037,6 +1043,92 @@ class SegmentProgressTestCase(GpTestCase):
             'host2 (dbid 4): \n'
         ))
 
+    def test_successful_command_execution_should_delete_the_recovery_progress_file(self):
+        cmd1 = self.create_command('host1', 1, './pg_basebackup.23432', "1164848/1371715 kB (84%)\n")
+        cmd2 = self.create_command('host2', 2, './pg_rewind.23432', "1164858/1371715 kB (90%)\n")
+
+
+        outfile = StringIO.StringIO()
+        self.pool.join.return_value = True
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
+        self.mock_os_remove.assert_called_once_with(self.combined_progress_file)
+
+    def test_error_during_command_execution_should_delete_the_recovery_progress_file(self):
+        cmd1 = self.create_command('host1', 1, './pg_basebackup.23432', stderr="some error\n")
+        cmd2 = self.create_command('host2', 2, './pg_rewind.23432', stderr='')
+
+        cmd1.run.side_effect = Exception("Some exception1")
+        cmd2.run.side_effect = Exception("Some exception2")
+
+
+        outfile = StringIO.StringIO()
+        self.pool.join.return_value = True
+        with self.assertRaisesRegexp(Exception, "Some exception1"):
+            self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
+        self.mock_os_remove.assert_called_once_with(self.combined_progress_file)
+
+    def test_join_and_show_segment_progress_writes_progress_file(self):
+
+        cmd1 = self.create_command('host1', 1, './pg_basebackup.23432', "1164848/1371715 kB (84%)\n")
+        cmd2 = self.create_command('host2', 2, './pg_rewind.23432', "1164858/1371715 kB (90%)\n")
+
+        outfile = StringIO.StringIO()
+        self.pool.join.return_value = True
+
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
+
+        self.mock_os_remove.assert_called_once_with(self.combined_progress_file)
+
+        with open(self.combined_progress_file, 'r') as f:
+            results = f.readlines()
+        self.assertEqual(results, [
+            'full:1:1164848/1371715 kB (84%)\n',
+            'incremental:2:1164858/1371715 kB (90%)\n'
+        ])
+
+    def test_join_and_show_segment_progress_overwrites(self):
+        cmd1 = self.create_command('host1', 1, './pg_basebackup.23432', "1164848/1371715 kB (84%)\n")
+        cmd2 = self.create_command('host2', 2, './pg_rewind.23432', "1164858/1371715 kB (90%)\n")
+
+        outfile = StringIO.StringIO()
+        self.pool.join.return_value = True
+
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
+
+        self.mock_os_remove.assert_called_once_with(self.combined_progress_file)
+
+        with open(self.combined_progress_file, 'r') as f:
+            results = f.readlines()
+        self.assertEqual(results, [
+            'full:1:1164848/1371715 kB (84%)\n',
+            'incremental:2:1164858/1371715 kB (90%)\n'
+        ])
+
+        cmd1 = self.create_command('host11', 11, './pg_rewind.23432', "9964858/9971715 kB (1%)\n")
+        cmd2 = self.create_command('host22', 22, './pg_basebackup.23432', "9964848/9971715 kB (45%)\n")
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
+
+        with open(self.combined_progress_file, 'r') as f:
+            results = f.readlines()
+            self.assertEqual(results, [
+                'incremental:11:9964858/9971715 kB (1%)\n',
+                'full:22:9964848/9971715 kB (45%)\n'
+            ])
+
+    def test_verify_recovery_progress_file_when_command_results_are_not_in_expected_format(self):
+            cmd1 = self.create_command('host1', 1, './pg_basebackup.23432', "string 1\n")
+            cmd2 = self.create_command('host2', 2, './pg_basebackup.23432', "string 2\n")
+
+
+            outfile = StringIO.StringIO()
+            self.pool.join.return_value = True
+            self.buildMirrorSegs._join_and_show_segment_progress([cmd1, cmd2], outfile=outfile)
+
+            self.mock_os_remove.assert_called_once_with(self.combined_progress_file)
+
+            with open(self.combined_progress_file, 'r') as f:
+                results = f.readlines()
+            self.assertEqual(results, [])
 
 if __name__ == '__main__':
     run_tests()

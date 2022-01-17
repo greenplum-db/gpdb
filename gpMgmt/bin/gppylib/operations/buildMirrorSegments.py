@@ -3,6 +3,7 @@ import os
 import pipes
 import signal
 import time
+import re
 
 from gppylib.recoveryinfo import RecoveryResult
 from gppylib.mainUtils import *
@@ -54,6 +55,15 @@ gDatabaseFiles = [
     "postmaster.opts",
     "postmaster.pid",
 ]
+
+
+def get_recovery_progress_file(gplog):
+    # recovery progress file on the coordinator, used by gpstate to read and show progress
+    return "{}/recovery_progress.file".format(gplog.get_logger_dir())
+
+
+def get_recovery_progress_pattern():
+    return r"\d+\/\d+ (kB|mB) \(\d+\%\)"
 
 #
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
@@ -358,11 +368,12 @@ class GpMirrorListToBuild:
                 usedDataDirectories[path] = dbid
 
     def _join_and_show_segment_progress(self, cmds, inplace=False, outfile=sys.stdout, interval=1):
-        written = False
 
         def print_progress():
             if written and inplace:
                 outfile.write("\x1B[%dA" % len(cmds))
+
+            complete_progress_output = []
 
             output = []
             for cmd in cmds:
@@ -387,15 +398,30 @@ class GpMirrorListToBuild:
                     output.append("\x1B[K")
                 output.append("\n")
 
+                if re.search(pattern, results):
+                    recovery_type = 'full' if os.path.basename(cmd.filePath).split('.')[0] == 'pg_basebackup' else 'incremental'
+                    complete_progress_output.extend("%s:%d:%s\n" % (recovery_type, cmd.dbid, results))
+
+            combined_progress_file.write("".join(complete_progress_output))
+            combined_progress_file.flush()
+
             outfile.write("".join(output))
             outfile.flush()
 
-        while not self.__pool.join(interval):
-            print_progress()
-            written = True
+        written = False
+        combined_progress_filepath = get_recovery_progress_file(gplog)
+        pattern = re.compile(get_recovery_progress_pattern())
+        try:
+            with open(combined_progress_filepath, 'w') as combined_progress_file:
+                while not self.__pool.join(interval):
+                    print_progress()
+                    written = True
+                # Make sure every line is updated with the final status.
+                print_progress()
+        finally:
+            if os.path.exists(combined_progress_filepath):
+                os.remove(combined_progress_filepath)
 
-        # Make sure every line is updated with the final status.
-        print_progress()
 
     def _get_progress_cmd(self, progressFile, targetSegmentDbId, targetHostname):
         """

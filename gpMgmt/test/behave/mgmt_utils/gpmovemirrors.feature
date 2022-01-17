@@ -151,7 +151,6 @@ Feature: Tests for gpmovemirrors
         And all the segments are running
         And the segments are synchronized
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And a gpmovemirrors directory under '/tmp' with mode '0700' is created
         And a gpmovemirrors input file is created
         And edit the input file to move mirror with content 0 to a new directory with mode 0700
@@ -179,6 +178,55 @@ Feature: Tests for gpmovemirrors
         And all the segments are running
         And the segments are synchronized
         And user can start transactions
+
+
+  @demo_cluster
+  Scenario: gpmovemirrors -i creates recovery_progress.file if some mirrors are moved
+    Given the database is running
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user can start transactions
+    And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
+    And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+    And a gpmovemirrors input file is created
+    And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0700
+    And edit the input file to recover mirror with content 1 to a new directory on remote host with mode 0700
+    When the user asynchronously runs gpmovemirrors with input file and additional args " " and the process is saved
+    And the user waits until mirror on content 0,1 is down
+    And the user suspend the walsender on the primary on content 0
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And the user waits until mirror on content 0,1 is up
+    And check if mirrors on content 0,1 are moved to new location on input file
+    And user can start transactions
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+
+  @demo_cluster
+  Scenario: gpmovemirrors -i creates recovery_progress.file if all mirrors are moved
+    Given the database is running
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user can start transactions
+    And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,100000000) AS i" is executed in "postgres" db
+    And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+    And a gpmovemirrors input file is created
+    And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0700
+    And edit the input file to recover mirror with content 1 to a new directory on remote host with mode 0700
+    And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0700
+    When the user asynchronously runs gpmovemirrors with input file and additional args " " and the process is saved
+    And the user waits until mirror on content 0,1,2 is down
+    And the user suspend the walsender on the primary on content 0
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And recovery_progress.file should not exist in gpAdminLogs
+    And the user waits until mirror on content 0,1,2 is up
+    And check if mirrors on content 0,1,2 are moved to new location on input file
+    And user can start transactions
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
@@ -286,8 +334,8 @@ Feature: Tests for gpmovemirrors
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2 is saved
 
-        And sql "DROP TABLE if exists test_start_failure; CREATE TABLE test_start_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-        And the "test_start_failure" table row count in "postgres" is saved
+        And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+        And the "test_movemirrors" table row count in "postgres" is saved
 
         And a gpmovemirrors directory under '/tmp' with mode '0700' is created
         And a gpmovemirrors input file is created
@@ -309,7 +357,7 @@ Feature: Tests for gpmovemirrors
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
-        And the row count from table "test_start_failure" in "postgres" is verified against the saved data
+        And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
     Scenario: gpmovemirrors mirrors come up even if one basebackup fails
@@ -320,8 +368,8 @@ Feature: Tests for gpmovemirrors
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2 is saved
 
-        And sql "DROP TABLE if exists test_start_failure; CREATE TABLE test_start_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-        And the "test_start_failure" table row count in "postgres" is saved
+        And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+        And the "test_movemirrors" table row count in "postgres" is saved
 
         And a gpmovemirrors directory under '/tmp' with mode '0700' is created
         And a gpmovemirrors input file is created
@@ -343,7 +391,7 @@ Feature: Tests for gpmovemirrors
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
-        And the row count from table "test_start_failure" in "postgres" is verified against the saved data
+        And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
     Scenario: gpmovemirrors mirrors works even if all the mirrors to moved fail during basebackup
@@ -354,8 +402,8 @@ Feature: Tests for gpmovemirrors
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2,3,4,5 is saved
 
-        And sql "DROP TABLE if exists test_start_failure; CREATE TABLE test_start_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-        And the "test_start_failure" table row count in "postgres" is saved
+        And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+        And the "test_movemirrors" table row count in "postgres" is saved
 
         And a gpmovemirrors directory under '/tmp' with mode '0700' is created
         And a gpmovemirrors input file is created
@@ -376,7 +424,7 @@ Feature: Tests for gpmovemirrors
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
-        And the row count from table "test_start_failure" in "postgres" is verified against the saved data
+        And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
     Scenario: gpmovemirrors mirrors works even if all mirrors are moved and all fail during basebackup
@@ -387,8 +435,8 @@ Feature: Tests for gpmovemirrors
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2,3,4,5 is saved
 
-        And sql "DROP TABLE if exists test_start_failure; CREATE TABLE test_start_failure AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-        And the "test_start_failure" table row count in "postgres" is saved
+        And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+        And the "test_movemirrors" table row count in "postgres" is saved
 
         And a gpmovemirrors directory under '/tmp' with mode '0700' is created
         And a gpmovemirrors input file is created
@@ -411,4 +459,4 @@ Feature: Tests for gpmovemirrors
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
-        And the row count from table "test_start_failure" in "postgres" is verified against the saved data
+        And the row count from table "test_movemirrors" in "postgres" is verified against the saved data

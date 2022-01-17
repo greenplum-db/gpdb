@@ -349,6 +349,7 @@ def impl(context, mirror_config):
 def impl(context, utility):
     context.mirror_context.input_file = "{}_config.txt".format(utility)
     context.data_dirs_created = defaultdict(list)
+    context.old_data_dirs = defaultdict(list)
     context.mirror_new_location = defaultdict(str)
     open(context.mirror_context.input_file_path(), 'w').close()
 
@@ -369,6 +370,7 @@ def impl(context, content_ids, mode):
                 valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
                                                  mirror.getSegmentPort(),
                                                  mirror.getSegmentDataDirectory())
+                context.old_data_dirs[content] = [mirror.getSegmentHostName(), mirror.getSegmentDataDirectory()]
 
                 valid_config_new = '{}|{}|{}'.format(mirror.getSegmentHostName(),
                                                      mirror.getSegmentPort(),
@@ -434,6 +436,7 @@ def impl(context, content, mode):
             valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
                                              mirror.getSegmentPort(),
                                              mirror.getSegmentDataDirectory())
+            context.old_data_dirs[content] = [mirror.getSegmentHostName(), mirror.getSegmentDataDirectory()]
 
             make_temp_dir_on_remote(context, mirror.getSegmentHostName(), '/tmp', mode)
             new_datadir = context.temp_base_dir_remote
@@ -445,6 +448,16 @@ def impl(context, content, mode):
             context.data_dirs_created[seg.mirrorDB.getSegmentHostName()].append(new_datadir)
             context.mirror_new_location[content] = valid_config_new
             break
+
+
+@then('the old data directories are cleaned up for content {content_ids}')
+def impl(context, content_ids):
+    for content in [int(c) for c in content_ids.split(',')]:
+        old_host, old_datadir = context.old_data_dirs[content]
+        rm_cmd = Command(name="Remove old datadirs on remote host", cmdStr='rm -rf {}'.format(old_datadir),
+                      remoteHost=old_host, ctxt=REMOTE)
+        rm_cmd.run(validateAfter=True)
+
 
 @given("the mode of all the created data directories is changed to 0700")
 @when("the mode of all the created data directories is changed to 0700")
@@ -653,10 +666,9 @@ def impl(context, utility, extra_args=''):
     run_gpcommand(context, cmd)
 
 
-@when('the user asynchronously runs gprecoverseg with input file and additional args "{extra_args}" and the process is saved')
-def impl(context, extra_args=''):
-    cmd = "gprecoverseg -i %s %s" % (
-        context.mirror_context.input_file_path(), extra_args)
+@when('the user asynchronously runs {utility} with input file and additional args "{extra_args}" and the process is saved')
+def impl(context, utility, extra_args=''):
+    cmd = "%s -i %s %s" % (utility, context.mirror_context.input_file_path(), extra_args)
     run_gpcommand_async(context, cmd)
 
 

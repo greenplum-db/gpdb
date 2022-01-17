@@ -533,11 +533,14 @@ def impl(context, filename, content):
 
 
 
-@when('the user waits until mirror on content {content} is {expected_status}')
-@then('the user waits until mirror on content {content} is {expected_status}')
-def impl(context, content, expected_status):
-    query = "SELECT gp_request_fts_probe_scan(); SELECT status FROM gp_segment_configuration where role = 'm' and content = {};".format(content)
-    wait_for_desired_query_result(dbconn.DbURL(), query, 'u' if expected_status == 'up' else 'd')
+@given('the user waits until mirror on content {content_ids} is {expected_status}')
+@when('the user waits until mirror on content {content_ids} is {expected_status}')
+@then('the user waits until mirror on content {content_ids} is {expected_status}')
+def impl(context, content_ids, expected_status):
+    contents = content_ids.split(',')
+    for content in contents:
+        query = "SELECT gp_request_fts_probe_scan(); SELECT status FROM gp_segment_configuration where role = 'm' and content = {};".format(content)
+        wait_for_desired_query_result(dbconn.DbURL(), query, 'u' if expected_status == 'up' else 'd')
 
 
 @then('the contents {contents} should have their original data directory in the system configuration')
