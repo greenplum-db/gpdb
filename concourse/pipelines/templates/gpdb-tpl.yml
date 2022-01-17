@@ -249,7 +249,12 @@ groups:
 {% endif %}
 {% if "Interconnect" in test_sections %}
   ## --------------------------------------------------------------------
-  - interconnect
+{% if "centos7" in os_types %}
+  - interconnect_centos7
+{% endif %}
+{% if "rhel8" in os_types %}
+  - interconnect_rhel8
+{% endif %}
 {% endif %}
 {% if "ResourceGroups" in test_sections %}
   ## --------------------------------------------------------------------
@@ -384,7 +389,11 @@ groups:
 - name: Interconnect
   jobs:
   - compile_gpdb_centos7
-  - interconnect
+  - interconnect_centos7
+{% endif %}
+{% if "rhel8" in os_types %}
+  - compile_gpdb_rhel8
+  - interconnect_rhel8
 {% endif %}
 
 {% endif %}
@@ -1439,7 +1448,7 @@ jobs:
 ## |___|_| \_| |_| |_____|_| \_\\____\___/|_| \_|_| \_|_____\____| |_|
 ## ======================================================================
 {% if "centos7" in os_types %}
-- name: interconnect
+- name: interconnect_centos7
   plan:
   - in_parallel:
       steps:
@@ -1453,6 +1462,26 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+        BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
+      TEST_OS: centos
+{% endif %}
+{% if "rhel8" in os_types %}
+- name: interconnect_rhel8
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_rhel8]
+      - get: bin_gpdb
+        passed: [compile_gpdb_rhel8]
+        resource: bin_gpdb_rhel8
+        trigger: [[ test_trigger ]]
+      - get: gpdb7-rhel8-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb7-rhel8-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
@@ -2327,6 +2356,7 @@ jobs:
         - icw_gporca_ictcp_centos7
         - icw_extensions_gpcloud_centos7
         - resource_group_centos7
+        - interconnect_centos7
         - icw_gporca_rhel8
         - icw_planner_rhel8
         - icw_gporca_icproxy_rhel8
@@ -2349,6 +2379,7 @@ jobs:
 {% if "rhel8" in os_types %}
         - [[ test.name ]]_rhel8
         - resource_group_rhel8
+        - interconnect_rhel8
 {% endif %}
 {% endfor %}
  ##     - madlib_build_gppkg
@@ -2357,7 +2388,6 @@ jobs:
         - pg_upgrade
         - gpexpand
         - check_centos
-        - interconnect
       - get: bin_gpdb_centos7
         trigger: true
         passed:
@@ -2377,7 +2407,7 @@ jobs:
  ##     - MADlib_Test_planner_centos7
         - gpexpand
         - check_centos
-        - interconnect
+        - interconnect_centos7
       - get: bin_gpdb_clients_centos7
         passed:
         - compile_gpdb_centos7
@@ -2391,6 +2421,7 @@ jobs:
         - icw_planner_icproxy_rhel8
         - icw_gporca_ictcp_rhel8
         - resource_group_rhel8
+        - interconnect_rhel8
   {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_rhel8
 {% endfor %}
