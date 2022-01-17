@@ -259,7 +259,7 @@ SELECT gp_inject_fault('restore_string_guc', 'error', 1);
 -- set search_path to '';
 SELECT pg_catalog.set_config('search_path', '', false);
 -- trigger inject fault of change_string_guc, and add this guc to gp_guc_restore_list
-create  MATERIALIZED VIEW public.view_restore_guc_test as select * from public.restore_guc_test;
+create MATERIALIZED VIEW public.view_restore_guc_test as select * from public.restore_guc_test;
 
 --we should restore gucs in gp_guc_restore_list to qe, no error occurs.
 drop MATERIALIZED VIEW public.view_restore_guc_test;
