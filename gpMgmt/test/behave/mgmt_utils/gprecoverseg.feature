@@ -241,6 +241,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+    @backup_restore_bashrc
     Scenario: gprecoverseg should not return error when banner configured on host
         Given the database is running
         And all the segments are running

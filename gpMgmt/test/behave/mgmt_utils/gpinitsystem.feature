@@ -255,12 +255,14 @@ Feature: gpinitsystem tests
         And the database locales "lc_ctype" match the installed UTF locale
         And the database locales "lc_messages,lc_monetary,lc_numeric,lc_time" match the system locale
 
+    @backup_restore_bashrc
     Scenario: gpinitsystem succeeds if there is banner on host
         Given the database is not running
         When the user sets banner on host
         And a demo cluster is created using gpinitsystem args " "
         And gpinitsystem should return a return code of 0
 
+    @backup_restore_bashrc
     Scenario: gpinitsystem succeeds if there is multi-line banner on host
         Given the database is not running
         When the user sets multi-line banner on host

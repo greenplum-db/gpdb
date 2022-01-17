@@ -133,6 +133,7 @@ Feature: Tests for gpinitstandby feature
         Then gpinitstandby should return a return code of 0
         And verify that the file "pg_hba.conf" in the coordinator data directory has "no" line starting with "host.*replication.*(127.0.0.1|::1).*trust"
 
+    @backup_restore_bashrc
     Scenario: gpinitstandby should not throw error when banner exists on the host
         Given the database is running
         And the standby is not initialized

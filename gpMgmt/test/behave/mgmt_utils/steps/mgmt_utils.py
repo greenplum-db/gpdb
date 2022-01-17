@@ -408,10 +408,11 @@ def impl(context, content):
 
 
 def backup_bashrc():
-    file = '~/.bashrc'
-    backup_fle = '~/.bashrc.backup'
+    home_dir = os.environ.get('HOME')
+    file = home_dir + '/.bashrc'
+    backup_fle = home_dir + '/.bashrc.backup'
     if (os.path.isfile(file)):
-        command = "cp -f %s %s.backup" % (file, backup_fle)
+        command = "cp -f %s %s" % (file, backup_fle)
         result = run_cmd(command)
         if (result[0] != 0):
             raise Exception("Error while backing up bashrc file. STDERR:%s" % (result[2]))
@@ -420,10 +421,11 @@ def backup_bashrc():
 
 
 def restore_bashrc():
-    file = '~/.bashrc'
-    backup_fle = '~/.bashrc.backup'
+    home_dir = os.environ.get('HOME')
+    file = home_dir + '/.bashrc'
+    backup_fle = home_dir + '/.bashrc.backup'
     if (os.path.isfile(backup_fle)):
-        command = "mv -f %s.backup %s" % (backup_fle, file)
+        command = "mv -f %s %s" % (backup_fle, file)
     else:
         command = "rm -f %s" % (file)
     result = run_cmd(command)
