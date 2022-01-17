@@ -265,7 +265,15 @@ groups:
 {% endif %}
 {% if "Interconnect" in test_sections %}
   ## --------------------------------------------------------------------
-  - interconnect
+{% if "centos6" in os_types %}
+  - interconnect_centos6
+{% endif %}
+{% if "centos7" in os_types %}
+  - interconnect_centos7
+{% endif %}
+{% if "rhel8" in os_types %}
+  - interconnect_rhel8
+{% endif %}
 {% endif %}
 {% if "ResourceGroups" in test_sections %}
   ## --------------------------------------------------------------------
@@ -349,7 +357,6 @@ groups:
 {% endif %}
 {% if "rhel8" in os_types %}
   - compile_gpdb_rhel8
-  - test_gpdb_clients_rhel8
 {% endif %}
 {% if "photon3" in os_types %}
   - compile_gpdb_photon3
@@ -359,11 +366,9 @@ groups:
 {% endif %}
 {% if "sles12" in os_types %}
   - compile_gpdb_sles12
-  - test_gpdb_clients_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
-  - test_gpdb_clients_windows
 {% endif %}
 
 {% if "ICW" in test_sections %}
@@ -431,7 +436,15 @@ groups:
 - name: Interconnect
   jobs:
   - compile_gpdb_centos6
-  - interconnect
+  - interconnect_centos6
+{% endif %}
+{% if "centos7" in os_types %}
+  - compile_gpdb_centos7
+  - interconnect_centos7
+{% endif %}
+{% if "rhel8" in os_types %}
+  - compile_gpdb_rhel8
+  - interconnect_rhel8
 {% endif %}
 
 {% endif %}
@@ -2077,7 +2090,7 @@ jobs:
 ## |___|_| \_| |_| |_____|_| \_\\____\___/|_| \_|_| \_|_____\____| |_|
 ## ======================================================================
 {% if "centos6" in os_types %}
-- name: interconnect
+- name: interconnect_centos6
   plan:
   - in_parallel:
       steps:
@@ -2091,6 +2104,46 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+        BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
+      TEST_OS: centos
+{% endif %}
+{% if "centos7" in os_types %}
+- name: interconnect_centos7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+      - get: bin_gpdb
+        passed: [compile_gpdb_centos7]
+        resource: bin_gpdb_centos7
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-centos7-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-centos7-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+        BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
+      TEST_OS: centos
+{% endif %}
+{% if "rhel8" in os_types %}
+- name: interconnect_rhel8
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_rhel8]
+      - get: bin_gpdb
+        passed: [compile_gpdb_rhel8]
+        resource: bin_gpdb_rhel8
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-rhel8-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-rhel8-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
@@ -3130,6 +3183,9 @@ jobs:
         - resource_group_centos6
         - resource_group_centos7
         - resource_group_rhel8
+        - interconnect_centos6
+        - interconnect_centos7
+        - interconnect_rhel8
         - gpperfmon_centos6
         - gpperfmon_centos7
         - test_gpdb_clients_windows
@@ -3147,7 +3203,6 @@ jobs:
         - pg_upgrade
         - gpexpand
         - check_centos
-        - interconnect
         - fips_centos7
       - get: bin_gpdb_centos6
         trigger: true
@@ -3160,6 +3215,7 @@ jobs:
         - icw_planner_ictcp_centos6
         - icw_extensions_gpcloud_centos6
         - resource_group_centos6
+        - interconnect_centos6
         - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]
@@ -3168,7 +3224,6 @@ jobs:
         - MADlib_Test_planner_centos6
         - gpexpand
         - check_centos
-        - interconnect
       - get: bin_gpdb_centos7
         trigger: true
         passed:
@@ -3180,6 +3235,7 @@ jobs:
         - icw_gporca_oracle7
         - icw_planner_oracle7
         - resource_group_centos7
+        - interconnect_centos7
         - MADlib_Test_orca_centos7
         - MADlib_Test_planner_centos7
       - get: bin_gpdb_rhel8
@@ -3191,6 +3247,7 @@ jobs:
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - resource_group_rhel8
+        - interconnect_rhel8
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_rhel8
 {% endfor %}
