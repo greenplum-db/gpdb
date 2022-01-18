@@ -23,7 +23,9 @@
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "naucrates/statistics/CFilterStatsProcessor.h"
 #include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;
 
@@ -50,15 +52,17 @@ CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp)
 //		ctor
 //
 //---------------------------------------------------------------------------
-CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
-									   CTableDescriptor *ptabdesc,
-									   ULONG ulPartIndex,
-									   CColRefArray *pdrgpcrOutput,
-									   CColRef2dArray *pdrgpdrgpcrPart,
-									   IMdIdArray *partition_mdids)
+CLogicalDynamicGet::CLogicalDynamicGet(
+	CMemoryPool *mp, const CName *pnameAlias, CTableDescriptor *ptabdesc,
+	ULONG ulPartIndex, CColRefArray *pdrgpcrOutput,
+	CColRef2dArray *pdrgpdrgpcrPart, IMdIdArray *partition_mdids,
+	CConstraint *partition_cnstrs_disj, BOOL static_pruned)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
-							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids)
+							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids),
+	  m_partition_cnstrs_disj(partition_cnstrs_disj),
+	  m_static_pruned(static_pruned)
 {
+	GPOS_ASSERT(static_pruned || (nullptr == partition_cnstrs_disj));
 }
 
 
@@ -87,7 +91,10 @@ CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 //		dtor
 //
 //---------------------------------------------------------------------------
-CLogicalDynamicGet::~CLogicalDynamicGet() = default;
+CLogicalDynamicGet::~CLogicalDynamicGet()
+{
+	CRefCount::SafeRelease(m_partition_cnstrs_disj);
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -152,10 +159,14 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 	m_ptabdesc->AddRef();
 	m_partition_mdids->AddRef();
+	if (m_partition_cnstrs_disj)
+	{
+		m_partition_cnstrs_disj->AddRef();
+	}
 
-	return GPOS_NEW(mp)
-		CLogicalDynamicGet(mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput,
-						   pdrgpdrgpcrPart, m_partition_mdids);
+	return GPOS_NEW(mp) CLogicalDynamicGet(
+		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
+		m_partition_mdids, m_partition_cnstrs_disj, m_static_pruned);
 }
 
 //---------------------------------------------------------------------------
@@ -260,6 +271,87 @@ CLogicalDynamicGet::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CStatistics::CastStats(stats)->AddCardUpperBound(upper_bound_NDVs);
 
 	return stats;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CLogicalDynamicGet::PstatsDeriveFilter
+//
+//	@doc:
+//		Derive stats from base table using filters on partition and/or index columns
+//
+//---------------------------------------------------------------------------
+IStatistics *
+CLogicalDynamicGet::PstatsDeriveFilter(CMemoryPool *mp,
+									   CExpressionHandle &exprhdl,
+									   CExpression *pexprFilter) const
+{
+	GPOS_ASSERT(COperator::EopLogicalDynamicGet == exprhdl.Pop()->Eopid());
+	CLogicalDynamicGet *dyn_get = CLogicalDynamicGet::PopConvert(exprhdl.Pop());
+
+	CColRefSet *pcrsStat = GPOS_NEW(mp) CColRefSet(mp);
+
+	if (nullptr != pexprFilter)
+	{
+		pexprFilter->AddRef();
+		pcrsStat->Include(pexprFilter->DeriveUsedColumns());
+	}
+
+	// requesting statistics on distribution columns to estimate data skew
+	if (nullptr != m_pcrsDist)
+	{
+		pcrsStat->Include(m_pcrsDist);
+	}
+
+	CStatistics *pstatsFullTable = dynamic_cast<CStatistics *>(
+		PstatsBaseTable(mp, exprhdl, m_ptabdesc, pcrsStat));
+
+	pcrsStat->Release();
+
+	if (nullptr == pexprFilter || pexprFilter->DeriveHasSubquery())
+	{
+		return pstatsFullTable;
+	}
+
+	CExpression *pexprFilterNew;
+	if (dyn_get->FStaticPruned())
+	{
+		// Static pruned Dynamic Table Scan uses the CExpression of
+		// selected partitions' combined constraints as the filter to
+		// derive stats
+		pexprFilter->Release();
+		CConstraint *cnstrDisj = dyn_get->GetPartitionConstraintsDisj();
+		if (cnstrDisj)
+		{
+			pexprFilterNew = cnstrDisj->PexprScalar(mp);
+			pexprFilterNew->AddRef();
+		}
+		else
+		{
+			// Default partition is the only child partition
+			GPOS_ASSERT(dyn_get->GetPartitionMdids()->Size() == 1);
+			return pstatsFullTable;
+		}
+	}
+	else
+	{
+		// Dynamic partition elimination uses the partition predicate
+		// from the original query as the filter to derive stats
+		// FIXME: why don't we also use the disjunctive constraints for DPE?
+		pexprFilterNew = pexprFilter;
+	}
+
+	CStatsPred *pred_stats = CStatsPredUtils::ExtractPredStats(
+		mp, pexprFilterNew, nullptr /*outer_refs*/
+	);
+	pexprFilterNew->Release();
+
+	IStatistics *result_stats = CFilterStatsProcessor::MakeStatsFilter(
+		mp, pstatsFullTable, pred_stats, true /* do_cap_NDVs */);
+	pred_stats->Release();
+	pstatsFullTable->Release();
+
+	return result_stats;
 }
 
 // EOF

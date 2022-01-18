@@ -59,10 +59,6 @@ protected:
 							ULongPtrArray *colids,
 							ULongPtrArray *pdrgpulPos) const;
 
-	// derive stats from base table using filters on partition and/or index columns
-	IStatistics *PstatsDeriveFilter(CMemoryPool *mp, CExpressionHandle &exprhdl,
-									CExpression *pexprFilter) const;
-
 	// Child partitions
 	IMdIdArray *m_partition_mdids = nullptr;
 	// Map of Root colref -> col index in child tabledesc

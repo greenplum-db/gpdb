@@ -1181,7 +1181,6 @@ CLogical::PstatsBaseTable(
 	return stats;
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogical::PstatsDeriveDummy
