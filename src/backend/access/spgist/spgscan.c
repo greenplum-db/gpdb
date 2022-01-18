@@ -583,7 +583,7 @@ Datum
 spggetbitmap(PG_FUNCTION_ARGS)
 {
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node	  **bmNodeP = (Node *) PG_GETARG_POINTER(1);
+	Node	  **bmNodeP = (Node **) PG_GETARG_POINTER(1);
 	TIDBitmap  *tbm;
 	SpGistScanOpaque so = (SpGistScanOpaque) scan->opaque;
 

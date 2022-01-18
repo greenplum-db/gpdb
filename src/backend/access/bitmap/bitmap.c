@@ -198,7 +198,7 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 {
 	/* We ignore the second argument as we're returning a hash bitmap */
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node		**bmNodeP = (Node *)PG_GETARG_POINTER(1);
+	Node		**bmNodeP = (Node **)PG_GETARG_POINTER(1);
 	IndexStream	 *is;
 	BMScanPosition	scanPos;
 	bool res;
