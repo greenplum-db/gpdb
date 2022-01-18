@@ -101,6 +101,9 @@ test: external_table
 
 test: fsync_ao
 
+# Disable auto-vacuum for below tests
+test: disable_autovacuum
+
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
@@ -199,8 +202,6 @@ test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
 test: uao/bitmapindex_rescan_column
 
-# Disable auto-ANALYZE for below tests
-test: disable_autovacuum
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
 test: prepare_limit
