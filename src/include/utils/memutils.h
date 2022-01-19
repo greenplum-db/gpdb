@@ -226,6 +226,7 @@ extern void dump_memory_allocation_ctxt(FILE * ofile, void *ctxt);
 #ifdef MEMORY_CONTEXT_CHECKING
 extern void MemoryContextCheck(MemoryContext context);
 #endif
+extern bool MemoryContextContains(MemoryContext context, void *pointer);
 extern bool MemoryContextContainsGenericAllocation(MemoryContext context, void *pointer);
 
 /* Functions called only by context-type-specific memory managers... */

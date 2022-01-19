@@ -927,7 +927,7 @@ MemoryContextCheck(MemoryContext context)
  * false-positive result, since the bits right before it might look like
  * a valid chunk header by chance.
  */
-static bool
+bool
 MemoryContextContains(MemoryContext context, void *pointer)
 {
 	StandardChunkHeader *header;
