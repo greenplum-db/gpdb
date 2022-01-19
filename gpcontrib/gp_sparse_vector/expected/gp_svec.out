@@ -249,6 +249,7 @@ SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9
           5
 (1 row)
 
+-- Test operator == as a joining condition when this column could be null. (See issue #12986)
 SELECT DISTINCT a.table_name, a.character_maximum_length
 FROM information_schema.columns a INNER JOIN information_schema.columns b ON a.table_name=b.table_name AND a.column_name=b.column_name 
 WHERE a.character_maximum_length == b.character_maximum_length ORDER BY a.table_name;
@@ -282,4 +283,4 @@ WHERE a.character_maximum_length == b.character_maximum_length ORDER BY a.table_
 (25 rows)
 
 DROP EXTENSION gp_sparse_vector;
-SET search_path TO DEFAULT;
+RESET search_path;
