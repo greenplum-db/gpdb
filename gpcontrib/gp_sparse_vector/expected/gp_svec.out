@@ -249,13 +249,38 @@ SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9
           5
 (1 row)
 
-select a.table_name,b.column_name,a.character_maximum_length as char_maxlen_a,b.character_maximum_length as char_maxlen_b,case when ((a.character_maximum_length == b.character_maximum_length) or ( a.numeric_precision==b.numeric_precision) or (a.numeric_scale==b.numeric_scale)) then 'Y' else 'N' end from information_schema.columns a inner join information_schema.columns b on a.table_name=b.table_name and a.column_name=b.column_name where a.table_name='applicable_roles' order by a.ordinal_position;
-    table_name    | column_name  | char_maxlen_a | char_maxlen_b | case 
-------------------+--------------+---------------+---------------+------
- applicable_roles | grantee      |               |               | N
- applicable_roles | role_name    |               |               | N
- applicable_roles | is_grantable |             3 |             3 | Y
-(3 rows)
+-- Test operator == as a joining condition when this column could be null. (See issue #12986)
+SELECT DISTINCT a.table_name, a.character_maximum_length
+FROM information_schema.columns a INNER JOIN information_schema.columns b ON a.table_name=b.table_name AND a.column_name=b.column_name 
+WHERE a.character_maximum_length == b.character_maximum_length ORDER BY a.table_name;
+            table_name             | character_maximum_length 
+-----------------------------------+--------------------------
+ administrable_role_authorizations |                        3
+ applicable_roles                  |                        3
+ attributes                        |                        3
+ column_privileges                 |                        3
+ columns                           |                        3
+ domain_constraints                |                        3
+ parameters                        |                        3
+ role_column_grants                |                        3
+ role_routine_grants               |                        3
+ role_table_grants                 |                        3
+ role_udt_grants                   |                        3
+ role_usage_grants                 |                        3
+ routine_privileges                |                        3
+ routines                          |                        3
+ sequences                         |                        3
+ sql_features                      |                        3
+ sql_packages                      |                        3
+ sql_parts                         |                        3
+ table_constraints                 |                        3
+ table_privileges                  |                        3
+ tables                            |                        3
+ udt_privileges                    |                        3
+ usage_privileges                  |                        3
+ user_defined_types                |                        3
+ views                             |                        3
+(25 rows)
 
 DROP EXTENSION gp_sparse_vector;
-SET search_path TO DEFAULT;
+RESET search_path;
