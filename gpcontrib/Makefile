@@ -95,11 +95,6 @@ installcheck:
 	fi
 	if [ "$(enable_orafce)" = "yes" ]; then $(MAKE) -C orafce installcheck; fi
 	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw installcheck; fi
-
-ifeq "$(with_zstd)" "yes"
-	$(MAKE) -C zstd installcheck
-endif
-
-ifeq "$(with_quicklz)" "yes"
-	$(MAKE) -C quicklz installcheck
-endif
+	if [ "$(with_zstd)" = "yes" ]; then $(MAKE) -C zstd installcheck; fi
+	if [ "$(with_quicklz)" = "yes" ]; then $(MAKE) -C quicklz installcheck; fi
+	$(MAKE) -C gp_sparse_vector installcheck
