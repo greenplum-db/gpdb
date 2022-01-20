@@ -430,7 +430,7 @@ def restore_bashrc():
         command = "rm -f %s" % (file)
     result = run_cmd(command)
     if (result[0] != 0):
-        raise Exception("Error while restoring up bashrc file. STDERR:%s" % (result[2])
+        raise Exception("Error while restoring up bashrc file. STDERR:%s" % (result[2]))
 
 
 @given('the user runs "{command}"')
