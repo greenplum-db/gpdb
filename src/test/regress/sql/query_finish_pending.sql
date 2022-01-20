@@ -88,3 +88,14 @@ select gp_inject_fault('fts_probe', 'reset', 1);
 
 drop table _tmp_table1;
 drop table _tmp_table2;
+
+-- test if a query with mode() does not crash when QueryFinishPending set to true
+create table _tmp_table3(a char, b int);
+insert into _tmp_table3 values ('a', 1), ('a', 1), ('a', 2), ('b', 1), ('b', 1), ('b', 1), ('c', 3), ('c', 3);
+select gp_inject_fault('before_tuplesort_getdatum_in_mode_final', 'finish_pending', dbid) FROM gp_segment_configuration WHERE role='p' AND content <> -1;
+-- Make sure that no fault is triggered like
+-- DETAIL:  FailedAssertion("!(pointer != ((void *)0))", File: "mcxt.c", Line: 1291)
+select b, mode() within group(order by a) from _tmp_table3 group by b order by b;
+select gp_inject_fault('before_tuplesort_getdatum_in_mode_final', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content <> -1;
+
+drop table _tmp_table3;

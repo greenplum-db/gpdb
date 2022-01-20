@@ -28,6 +28,7 @@
 #include "utils/lsyscache.h"
 #include "utils/timestamp.h"
 #include "utils/tuplesort.h"
+#include "utils/faultinjector.h"
 
 
 /*
@@ -1121,6 +1122,8 @@ mode_final(PG_FUNCTION_ARGS)
 	/* Finish the sort */
 	tuplesort_performsort(osastate->sortstate);
 
+	SIMPLE_FAULT_INJECTOR("before_tuplesort_getdatum_in_mode_final");
+
 	/* Scan tuples and count frequencies */
 	while (tuplesort_getdatum(osastate->sortstate, true, &val, &isnull))
 	{
@@ -1165,7 +1168,7 @@ mode_final(PG_FUNCTION_ARGS)
 		CHECK_FOR_INTERRUPTS();
 	}
 
-	if (shouldfree && !last_val_is_mode)
+	if (shouldfree && !last_val_is_mode && PointerIsValid(DatumGetPointer(last_val)))
 		pfree(DatumGetPointer(last_val));
 
 	/*
