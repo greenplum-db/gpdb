@@ -796,6 +796,13 @@
                   >debug_print_slice_table</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#gp_log_format" type="section">gp_log_format</xref>
+              </p>
+              <p><xref href="guc-list.xml#gp_log_interconnect">gp_log_interconnect</xref>
+              </p>
+              <p><xref href="guc-list.xml#gp_log_resqueue_priority_sleep_time">gp_log_resqueue_priority_sleep_time</xref>
+              </p>
+              <p>
                 <xref href="guc-list.xml#log_autostats" type="section">log_autostats</xref>
               </p>
               <p>
@@ -805,6 +812,8 @@
                 <xref href="guc-list.xml#log_disconnections" type="section"
                   >log_disconnections</xref>
               </p>
+            </stentry>
+            <stentry>
               <p>
                 <xref href="guc-list.xml#log_dispatch_stats" type="section"
                   >log_dispatch_stats</xref>
@@ -812,16 +821,12 @@
               <p>
                 <xref href="guc-list.xml#log_duration" type="section">log_duration</xref>
               </p>
-            </stentry>
-            <stentry>
               <p>
                 <xref href="guc-list.xml#log_executor_stats" type="section"
                   >log_executor_stats</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_hostname" type="section">log_hostname</xref>
-              </p>
-              <p><xref href="guc-list.xml#gp_log_interconnect">gp_log_interconnect</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_parser_stats" type="section">log_parser_stats</xref>
@@ -841,9 +846,6 @@
               </p>
               <p>
                 <xref href="guc-list.xml#gp_debug_linger" type="section">gp_debug_linger</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_log_format" type="section">gp_log_format</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_reraise_signal" type="section">gp_reraise_signal</xref>
@@ -1130,6 +1132,10 @@
       <simpletable id="kh157161" frame="none">
         <strow>
           <stentry>
+            <p>
+              <xref href="guc-list.xml#gp_log_resqueue_priority_sleep_time" type="section"
+                >gp_log_resqueue_priority_sleep_time</xref>
+            </p>
             <p>
               <xref href="guc-list.xml#gp_resqueue_memory_policy" type="section"
                 >gp_resqueue_memory_policy</xref>

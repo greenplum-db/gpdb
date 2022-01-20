@@ -3803,6 +3803,39 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_log_resqueue_priority_sleep_time">
+    <title>gp_log_resqueue_priority_sleep_time</title>
+    <body>
+      <p>Controls the logging of per-statement sleep time when resource queue-based resource
+        management is active. You can use this information for post-query analysis of
+        statement concurrency.</p>
+      <p>The default value is <codeph>false</codeph>, do not log the statement sleep time.
+        When set to <codeph>true</codeph>, Greenplum Database logs the duration for which
+        each statement was put to sleep in a resource queue. The information is written to
+        the server log.</p>
+      <table id="table_xkm_nqr_y1b">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="gp_gpperfmon_send_interval">
     <title>gp_gpperfmon_send_interval</title>
     <body>

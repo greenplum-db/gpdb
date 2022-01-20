@@ -137,6 +137,7 @@
             <topicref href="guc-list.xml#gp_log_fts"/>
             <topicref href="guc-list.xml#gp_log_gang"/>
             <topicref href="guc-list.xml#gp_log_interconnect"/>
+            <topicref href="guc-list.xml#gp_log_resqueue_priority_sleep_time"/>
             <topicref href="guc-list.xml#gp_max_local_distributed_cache"/>
             <topicref href="guc-list.xml#gp_max_packet_size"/>
             <topicref href="guc-list.xml#gp_max_plan_size"/>
