@@ -3807,12 +3807,13 @@
     <title>gp_log_resqueue_priority_sleep_time</title>
     <body>
       <p>Controls the logging of per-statement sleep time when resource queue-based resource
-        management is active. You can use this information for post-query analysis of
-        statement concurrency.</p>
+        management is active. You can use this information for analysis of sleep time for
+        queries.</p>
       <p>The default value is <codeph>false</codeph>, do not log the statement sleep time.
-        When set to <codeph>true</codeph>, Greenplum Database logs the duration for which
-        each statement was put to sleep in a resource queue. The information is written to
-        the server log.</p>
+        When set to <codeph>true</codeph>, Greenplum Database:<ul>
+          <li>Logs the current amount of sleep time for a running query every two minutes.</li>
+          <li>Logs the total of sleep time duration for a query at the end of a query.</li>
+        </ul> The information is written to the server log.</p>
       <table id="table_xkm_nqr_y1b">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
