@@ -50,25 +50,25 @@
                 <plentry>
                     <pt>mpp_execute { 'master' | 'any' | 'all segments' }</pt>
                     <pd>
-                        <p>An option that identifies the host from which the foreign data-wrapper
+                        <p>An option that identifies the host from which the foreign-data wrapper
                             reads or writes data: <ul id="ul_zcg_2vd_mgb">
                                 <li><codeph>master</codeph> (the default)—Read or write data from the
                                     master host.</li>
                                 <li><codeph>any</codeph>—Read data from either the master host or
                                     any one segment, depending on which path costs less.</li>
                                 <li><codeph>all segments</codeph>—Read or write data from all segments. To
-                                    support this option value, the foreign data-wrapper must have a
+                                    support this option value, the foreign-data wrapper must have a
                                     policy that matches the segments to data.
                                   <note>Greenplum Database supports parallel writes to foreign tables
                                    only when you set <codeph>mpp_execute 'all segments'</codeph>.</note></li>
                             </ul></p>
-                        <p>Use of the foreign table <codeph>mpp_execute</codeph> option, and the
-                            specific modes supported, is foreign data-wrapper-specific.</p>
+                        <p>Support for the foreign-data wrapper <codeph>mpp_execute</codeph> option,
+                            and the specific modes, is foreign-data wrapper-specific.</p>
                         <p>The <codeph>mpp_execute</codeph> option can be specified in multiple
                             commands: <codeph>CREATE FOREIGN TABLE</codeph>, <codeph>CREATE
                                 SERVER</codeph>, and <codeph>CREATE FOREIGN DATA WRAPPER</codeph>.
                             The foreign table setting takes precedence over the foreign server
-                            setting, followed by the foreign data wrapper setting.</p>
+                            setting, followed by the foreign-data wrapper setting.</p>
                     </pd>
                 </plentry>
             </parml>
