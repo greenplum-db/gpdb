@@ -34,7 +34,9 @@ const CHAR *rgszSubqueryHandlerMinidumpFileNames[] = {
 	"../data/dxl/minidump/CorrelatedSubqueryWithAggWindowFunc.mdp",
 	"../data/dxl/minidump/AllSubqueryWithSubqueryInScalar.mdp",
 	"../data/dxl/minidump/AnySubqueryWithAllSubqueryInScalar.mdp",
-	"../data/dxl/minidump/AnySubqueryWithSubqueryInScalar.mdp"};
+	"../data/dxl/minidump/AnySubqueryWithSubqueryInScalar.mdp",
+	"../data/dxl/minidump/ScalarSubq-Eq-SubqAll-1.mdp",
+	"../data/dxl/minidump/ScalarSubq-Eq-SubqAll-2.mdp"};
 
 //---------------------------------------------------------------------------
 //	@function:
