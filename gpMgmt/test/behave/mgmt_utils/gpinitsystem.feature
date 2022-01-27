@@ -292,6 +292,7 @@ Feature: gpinitsystem tests
         # the log file must have the entry indicating that DCA specific configuration has been set
         And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
 
+    @backup_restore_bashrc
       Scenario: gpinitsystem succeeds if there is banner on host
         Given the database is not running
         And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
@@ -303,6 +304,7 @@ Feature: gpinitsystem tests
         And gpinitsystem should return a return code of 0
         Then gpstate should return a return code of 0
 
+    @backup_restore_bashrc
     Scenario: gpinitsystem succeeds if there is multi-line banner on host
         Given the database is not running
         And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
