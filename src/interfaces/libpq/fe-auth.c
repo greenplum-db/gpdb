@@ -49,6 +49,9 @@
 #include "fe-auth.h"
 #include "libpq/md5.h"
 
+#include <gssapi/gssapi_ext.h>
+#include <gssapi/gssapi_krb5.h>
+
 #ifdef ENABLE_GSS
 /*
  * GSSAPI authentication system.
@@ -107,12 +110,19 @@ pg_GSS_error(const char *mprefix, PGconn *conn,
 static bool
 pg_GSS_have_ccache(gss_cred_id_t *cred_out)
 {
-	OM_uint32	major,
-				minor;
+	OM_uint32	major, minor;
 	gss_cred_id_t cred = GSS_C_NO_CREDENTIAL;
+	gss_key_value_element_desc cc;
+	gss_key_value_set_desc ccset;
+	const char *ccache_name = "MEMORY:proxy";
 
-	major = gss_acquire_cred(&minor, GSS_C_NO_NAME, 0, GSS_C_NO_OID_SET,
-							 GSS_C_INITIATE, &cred, NULL, NULL);
+	cc.key = "ccache";
+	cc.value = ccache_name;
+	ccset.count = 1;
+	ccset.elements = &cc;
+
+	major = gss_acquire_cred_from(&minor, GSS_C_NO_NAME, GSS_C_INDEFINITE, GSS_C_NO_OID_SET,
+							 GSS_C_INITIATE, &ccset, &cred, NULL, NULL);
 	if (major != GSS_S_COMPLETE)
 	{
 		*cred_out = NULL;

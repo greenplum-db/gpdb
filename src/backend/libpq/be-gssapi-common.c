@@ -82,13 +82,12 @@ void
 pg_store_proxy_credential(gss_cred_id_t cred)
 {
 	OM_uint32 major, minor;
-	gss_OID_set mech;
-	gss_cred_usage_t usage;
 	gss_key_value_element_desc cc;
 	gss_key_value_set_desc ccset;
+	const char *ccache_name = "MEMORY:proxy";
 
 	cc.key = "ccache";
-	cc.value = "MEMORY:";
+	cc.value = ccache_name;
 	ccset.count = 1;
 	ccset.elements = &cc;
 
@@ -100,23 +99,18 @@ pg_store_proxy_credential(gss_cred_id_t cred)
 		true, /* overwrite */
 		true, /* make default */
 		&ccset,
-		&mech,
-		&usage);
+		NULL,
+		NULL);
 
 
 	if (major != GSS_S_COMPLETE)
 	{
 		pg_GSS_error_be(ERROR, "gss_store_cred", major, minor);
 	}
-
-	/* quite strange that gss_store_cred doesn't work with "KRB5CCNAME=MEMORY:",
-	 * we have to use gss_store_cred_into instead and set the env for later
-	 * gss_acquire_cred calls. */
-	putenv("KRB5CCNAME=MEMORY:");
 }
 #else
 void
 pg_store_proxy_credential(gss_cred_id_t cred){
-
+	elog(DEBUG, "HAVE_GSSAPI_PROXY=0!");
 }
 #endif
