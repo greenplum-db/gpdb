@@ -352,7 +352,7 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 		/* Hit MOP limit */
 		ereport(ERROR, (errcode(ERRCODE_GP_MEMPROT_KILL),
 				errmsg("Out of memory"),
-				errdetail("VM Protect failed to allocate %d bytes, %d MB available",
+				errdetail("Vmem limit reached, failed to allocate %d bytes from tracker, which has %d MB available",
 						sz, VmemTracker_GetAvailableVmemMB()
 				)
 		));
@@ -362,7 +362,7 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 		/* Hit MOP limit */
 		ereport(ERROR, (errcode(ERRCODE_GP_MEMPROT_KILL),
 				errmsg("Out of memory"),
-				errdetail("Per-query VM protect limit reached: current limit is %d kB, requested %d bytes, available %d MB",
+				errdetail("Per-query memory limit reached: current limit is %d kB, requested %d bytes, has %d MB avaiable for this query",
 						gp_vmem_limit_per_query, sz, VmemTracker_GetAvailableQueryVmemMB()
 				)
 		));
@@ -371,9 +371,7 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_MEMPROT_KILL),
 				errmsg("Out of memory"),
-				errdetail("VM protect failed to allocate %d bytes from system, VM Protect %d MB available",
-						sz, VmemTracker_GetAvailableVmemMB()
-				)
+				errdetail("System memory limit reached, failed to allocate %d bytes from system", sz)
 		));
 	}
 	else if (ec == MemoryFailure_ResourceGroupMemoryExhausted)
