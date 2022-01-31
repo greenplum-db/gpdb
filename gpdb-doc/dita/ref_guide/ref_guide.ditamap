@@ -149,6 +149,7 @@
 			<topicref href="sql_commands/REINDEX.xml"/>
 			<topicref href="sql_commands/RELEASE_SAVEPOINT.xml"/>
 			<topicref href="sql_commands/RESET.xml"/>
+			<topicref href="sql_commands/RETRIEVE.xml"/>
 			<topicref href="sql_commands/REVOKE.xml"/>
 			<topicref href="sql_commands/ROLLBACK.xml"/>
 			<topicref href="sql_commands/ROLLBACK_TO_SAVEPOINT.xml"/>

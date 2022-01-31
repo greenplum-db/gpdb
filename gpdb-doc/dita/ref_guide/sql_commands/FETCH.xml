@@ -11,6 +11,9 @@
     FORWARD <varname>count</varname>
     FORWARD ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>FETCH</codeph> retrieves rows using a previously-created cursor.
 </p>
+<note>You cannot <codeph>FETCH</codeph> from a <codeph>PARALLEL RETRIEVE CURSOR</codeph>,
+  you must <codeph><xref href="RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>
+  the rows from it.</note>
 <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different. See <xref
           href="../../analytics/pl_sql.xml#topic1" scope="peer" format="dita">PL/pgSQL function</xref>.</note><p>A cursor has an associated position, which is used by <codeph>FETCH</codeph>.

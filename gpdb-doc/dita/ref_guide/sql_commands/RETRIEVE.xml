@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="dr20941">RETRIEVE</title>
+  <body>
+    <p id="sql_command_desc">Retrieves rows from a query using a parallel retrieve cursor.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">RETRIEVE { <varname>count</varname> | ALL } FROM ENDPOINT <varname>endpoint_name</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>RETRIEVE</codeph> retrieves rows using a previously-created parallel
+        retrieve cursor. You retrieve the rows in a retrieve session, a separate direct
+        connection to each endpoint that has collected the query results.</p>
+      <p>A parallel retrieve cursor has an associated position, which is used by
+        <codeph>RETRIEVE</codeph>. The cursor position can be before the first row of the
+        query result, on any particular row of the result, or after the last row of the
+        result.</p>
+      <p>When it is created, a parallel retrieve cursor is positioned before the
+        first row. After retrieving some rows, the cursor is positioned on the row most
+        recently retrieved.</p>
+      <p>If <codeph>RETRIEVE</codeph> runs off the end of the available rows then
+        the cursor is left positioned after the last row.</p>
+      <p><codeph>RETRIEVE ALL</codeph> always leaves the parallel retrieve cursor positioned
+        after the last row.</p>
+      <note>Greenplum Database does not support scrollable cursors; you can only move a
+        cursor forward in position using the <codeph>RETRIEVE</codeph> command.</note>
+      <sectiondiv id="section4">
+        <b>Outputs</b>
+        <p>On successful completion, a <codeph>RETRIEVE</codeph> command returns the fetched
+          rows (possibly empty) and a count of the number of rows fetched (possibly
+          zero).</p>
+      </sectiondiv>
+    </section>
+    <section id="section5">
+      <title>Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>count</varname></pt>
+            <pd>Retrieve the next <varname>count</varname> number of rows.
+              <varname>count</varname> must be a positive number.</pd>
+          </plentry>
+          <plentry>
+            <pt>ALL</pt>
+            <pd>Retrieve all remaining rows.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>endpoint_name</varname></pt>
+            <pd>The name of the endpoint from which to retrieve the rows.</pd>
+          </plentry>
+        </parml>
+    </section>
+    <section id="section6">
+      <title>Notes</title>
+      <p>Use <codeph>DECLARE ... PARALLEL RETRIEVE CURSOR</codeph> to define a parallel
+        retrieve cursor.</p>
+      <p>Parallel retrieve cursors do not support <codeph>FETCH</codeph> or
+        <codeph>MOVE</codeph> operations.</p>
+    </section>
+    <section id="section7">
+      <title>Examples</title>
+      <p>-- Start the transaction:</p>
+      <codeblock>BEGIN;</codeblock>
+      <p>-- Create a parallel retrieve cursor:</p>
+      <codeblock>DECLARE mycursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM films;</codeblock>
+      <p>-- List the cursor endpoints:</p>
+      <codeblock>SELECT * FROM gp_endpoints() WHERE cursorname='mycursor';</codeblock>
+      <p>-- In another terminal window, initiate a retrieve session using a hostname, port, and <codeph>auth_token</codeph> returned from the previous query:</p>
+      <codeblock>PGOPTIONS='-c gp_retrieve_conn=true' psql -d testdb -h sdw3 -p 6001;</codeblock>
+      <p>-- Fetch all rows from the endpoint <codeph>prc10000001100000005</codeph>:</p>
+      <codeblock>RETRIEVE ALL FROM ENDPOINT prc10000001100000005;</codeblock>
+      <p>-- Exit the retrieve session</p>
+      <p>-- Back in the original session, close the cursor and end the transaction:</p>
+      <codeblock>CLOSE mycursor;
+COMMIT;</codeblock>
+    </section>
+    <section id="section8">
+      <title>Compatibility</title>
+      <p><codeph>RETRIEVE</codeph> is a Greenplum Database extension. The SQL standard makes
+        no provisions for parallel retrieve cursors.</p>
+    </section>
+    <section id="section9">
+      <title>See Also</title>
+        <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
+          <codeph><xref href="CLOSE.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>
+
