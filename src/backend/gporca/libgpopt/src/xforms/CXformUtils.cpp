@@ -847,7 +847,8 @@ CXformUtils::SubqueryAnyToAgg(
 	CExpression *pexprResult = nullptr;
 	CSubqueryHandler sh(mp, false /* fEnforceCorrelatedApply */);
 	CExpression *pexprSubqPred =
-		sh.PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult);
+		sh.PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult,
+							 CSubqueryHandler::EsqctxtFilter);
 	CScalarCmp *scalarCmp = CScalarCmp::PopConvert(pexprSubqPred->Pop());
 
 	GPOS_ASSERT(nullptr != scalarCmp);

@@ -272,7 +272,8 @@ public:
 	// build an expression for the quantified comparison of the subquery
 	CExpression *PexprSubqueryPred(CExpression *pexprOuter,
 								   CExpression *pexprSubquery,
-								   CExpression **ppexprResult);
+								   CExpression **ppexprResult,
+								   CSubqueryHandler::ESubqueryCtxt esqctxt);
 
 	// main driver
 	BOOL FProcess(
