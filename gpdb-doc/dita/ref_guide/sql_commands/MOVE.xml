@@ -13,7 +13,10 @@
     FORWARD ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>MOVE</codeph> repositions a cursor
         without retrieving any data. <codeph>MOVE</codeph> works exactly like the <codeph><xref
             href="FETCH.xml#topic1" type="topic" format="dita"/></codeph> command, except it only
-        positions the cursor and does not return rows. </p><p>Note that it is not possible to move a
+        positions the cursor and does not return rows. </p>
+
+       <note>You cannot <codeph>MOVE</codeph> a <codeph>PARALLEL RETRIEVE CURSOR</codeph>.</note>
+       <p>It is not possible to move a
         cursor position backwards in Greenplum Database, since scrollable cursors are not supported.
         You can only move a cursor forward in position using <codeph>MOVE</codeph>.</p><sectiondiv
         id="section4"><b>Outputs</b><p>On successful completion, a <codeph>MOVE</codeph> command

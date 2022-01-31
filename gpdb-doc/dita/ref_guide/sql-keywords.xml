@@ -703,6 +703,11 @@
               <entry>reserved</entry>
             </row>
             <row>
+              <entry>ENDPOINT</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
               <entry>ENUM</entry>
               <entry>unreserved</entry>
               <entry>unreserved</entry>
@@ -1819,6 +1824,11 @@
             </row>
             <row>
               <entry>RESTRICT</entry>
+              <entry>unreserved</entry>
+              <entry>unreserved</entry>
+            </row>
+            <row>
+              <entry>RETRIEVE</entry>
               <entry>unreserved</entry>
               <entry>unreserved</entry>
             </row>
