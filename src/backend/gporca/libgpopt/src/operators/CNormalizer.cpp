@@ -18,6 +18,7 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalProject.h"
@@ -1078,7 +1079,6 @@ CNormalizer::PushThru(CMemoryPool *mp, CExpression *pexprLogical,
 		case COperator::EopLogicalInnerCorrelatedApply:
 		case COperator::EopLogicalLeftOuterJoin:
 		case COperator::EopLogicalLeftOuterApply:
-		case COperator::EopLogicalLeftOuterCorrelatedApply:
 		case COperator::EopLogicalLeftSemiApply:
 		case COperator::EopLogicalLeftSemiApplyIn:
 		case COperator::EopLogicalLeftSemiCorrelatedApplyIn:
@@ -1088,9 +1088,19 @@ CNormalizer::PushThru(CMemoryPool *mp, CExpression *pexprLogical,
 		case COperator::EopLogicalLeftSemiJoin:
 			PushThruJoin(mp, pexprLogical, pexprConj, ppexprResult);
 			break;
-
+		case COperator::EopLogicalLeftOuterCorrelatedApply:
 		default:
 		{
+			if (COperator::EopLogicalLeftOuterCorrelatedApply ==
+					pexprLogical->Pop()->Eopid() &&
+				CLogicalLeftOuterCorrelatedApply::PopConvert(
+					pexprLogical->Pop())
+					->IsPredicatePushDownAllowed())
+			{
+				PushThruJoin(mp, pexprLogical, pexprConj, ppexprResult);
+				break;
+			}
+
 			// can't push predicates through, start a new normalization path
 			CExpression *pexprNormalized =
 				PexprRecursiveNormalize(mp, pexprLogical);
