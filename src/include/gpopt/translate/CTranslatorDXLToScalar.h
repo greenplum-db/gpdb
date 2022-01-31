@@ -150,6 +150,7 @@ private:
 	Expr *TranslateDXLSubplanTestExprToScalar(CDXLNode *test_expr_node,
 											  SubLinkType slink,
 											  CMappingColIdVar *colid_var,
+											  BOOL has_outer_refs,
 											  List **param_ids_list);
 
 	// translate subplan parameters
