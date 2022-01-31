@@ -2539,7 +2539,7 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	cpuset_len = ntohl(itmp);
 	if (cpuset_len >= sizeof(capsOut->cpuset))
 		elog(ERROR, "malformed serialized resource group info");
-	memcpy(capsOut->cpuset, ptr, len); ptr += cpuset_len;
+	memcpy(capsOut->cpuset, ptr, cpuset_len); ptr += cpuset_len;
 	capsOut->cpuset[cpuset_len] = '\0';
 
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
