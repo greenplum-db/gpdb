@@ -757,7 +757,7 @@ BUILD_COORDINATOR_PG_HBA_FILE () {
         if [ $HBA_HOSTNAMES -eq 0 ];then
             local COORDINATOR_IP_ADDRESS_NO_LOOPBACK=($("$GPHOME"/libexec/ifaddrs --no-loopback))
             if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$COORDINATOR_HOSTNAME" ];then
-                local STANDBY_IP_ADDRESS_NO_LOOPBACK=$( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "'$GPHOME'/libexec/ifaddrs --no-loopback" )
+                local STANDBY_IP_ADDRESS_NO_LOOPBACK=($( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "'$GPHOME'/libexec/ifaddrs --no-loopback" ))
             fi
             for ADDR in "${COORDINATOR_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}"
             do
