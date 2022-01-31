@@ -178,7 +178,8 @@ CSubqueryHandler::PexprReplace(CMemoryPool *mp, CExpression *pexprInput,
 CExpression *
 CSubqueryHandler::PexprSubqueryPred(CExpression *pexprOuter,
 									CExpression *pexprSubquery,
-									CExpression **ppexprResult)
+									CExpression **ppexprResult,
+									CSubqueryHandler::ESubqueryCtxt esqctxt)
 {
 	GPOS_ASSERT(CUtils::FQuantifiedSubquery(pexprSubquery->Pop()));
 
@@ -186,7 +187,6 @@ CSubqueryHandler::PexprSubqueryPred(CExpression *pexprOuter,
 	CExpression *pexprNewLogical = NULL;
 
 	CExpression *pexprScalarChild = (*pexprSubquery)[1];
-	CSubqueryHandler::ESubqueryCtxt esqctxt = CSubqueryHandler::EsqctxtFilter;
 
 	// If pexprScalarChild is a non-scalar subquery such as follows,
 	// EXPLAIN SELECT * FROM t3 WHERE (c = ANY(SELECT c FROM t2)) IN (SELECT b from t1);
@@ -1226,7 +1226,7 @@ CSubqueryHandler::FCreateCorrelatedApplyForQuantifiedSubquery(
 	CExpression *pexprResult = NULL;
 	CSubqueryHandler sh(mp, true /* fEnforceCorrelatedApply */);
 	CExpression *pexprPredicate =
-		sh.PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult);
+		sh.PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult, esqctxt);
 
 	pexprInner->AddRef();
 	if (EsqctxtFilter == esqctxt)
@@ -1451,7 +1451,7 @@ CSubqueryHandler::FRemoveAnySubquery(CExpression *pexprOuter,
 	// build subquery quantified comparison
 	CExpression *pexprResult = NULL;
 	CExpression *pexprPredicate =
-		PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult);
+		PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult, esqctxt);
 
 	// generate a select for the quantified predicate
 	pexprInner->AddRef();
@@ -1622,8 +1622,8 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 		{
 			// build subquery quantified comparison
 			CExpression *pexprResult = NULL;
-			CExpression *pexprPredicate =
-				PexprSubqueryPred(pexprInner, pexprSubquery, &pexprResult);
+			CExpression *pexprPredicate = PexprSubqueryPred(
+				pexprInner, pexprSubquery, &pexprResult, esqctxt);
 
 			*ppexprResidualScalar =
 				CUtils::PexprScalarConstBool(mp, true /*value*/);
