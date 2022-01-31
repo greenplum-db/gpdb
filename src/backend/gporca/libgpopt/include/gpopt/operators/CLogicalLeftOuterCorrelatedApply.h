@@ -33,6 +33,8 @@ private:
 	// private copy ctor
 	CLogicalLeftOuterCorrelatedApply(const CLogicalLeftOuterCorrelatedApply &);
 
+	BOOL m_allow_predicate_pushdown;
+
 public:
 	// ctor
 	CLogicalLeftOuterCorrelatedApply(CMemoryPool *mp,
@@ -76,6 +78,12 @@ public:
 	FCorrelated() const
 	{
 		return true;
+	}
+
+	BOOL
+	IsPredicatePushDownAllowed() const
+	{
+		return m_allow_predicate_pushdown;
 	}
 
 	// conversion function

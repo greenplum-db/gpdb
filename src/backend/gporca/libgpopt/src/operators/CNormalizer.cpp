@@ -17,6 +17,7 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalProject.h"
@@ -1082,7 +1083,14 @@ CNormalizer::PushThru(CMemoryPool *mp, CExpression *pexprLogical,
 		}
 	}
 
-	if (NULL != pfnpt)
+	// We must be careful when pushing left correlated outer apply
+	bool is_pushable =
+		COperator::EopLogicalLeftOuterCorrelatedApply !=
+			pexprLogical->Pop()->Eopid() ||
+		CLogicalLeftOuterCorrelatedApply::PopConvert(pexprLogical->Pop())
+			->IsPredicatePushDownAllowed();
+
+	if (NULL != pfnpt && is_pushable)
 	{
 		pfnpt(mp, pexprLogical, pexprConj, ppexprResult);
 		return;
