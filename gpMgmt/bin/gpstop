@@ -330,7 +330,7 @@ class GpStop:
             if gphost not in unreachable_hosts:
                 operations.append(RemoteOperation(CleanSharedMem(self.gparray.getDbList()), gphost))
             else:
-                logger.warning("Skipping cleaning shared memory on %s because it's unreachable" % (gphost))
+                logger.warning("Not attempting shared memory cleanup on %s as it is unreachable" % (gphost))
 
         operations.append(
             RemoteOperation(CleanSharedMem([self.gparray.master]), self.gparray.master.getSegmentHostName()))
@@ -340,7 +340,7 @@ class GpStop:
                 operations.append(RemoteOperation(CleanSharedMem([self.gparray.standbyMaster]),
                                                   self.gparray.standbyMaster.getSegmentHostName()))
             else:
-                logger.warning("Skipping cleaning shared memory on %s because it's unreachable" % (
+                logger.warning("Not attempting shared memory cleanup on %s as it is unreachable" % (
                     self.gparray.standbyMaster.getSegmentHostName()))
 
         ParallelOperation(operations).run()
