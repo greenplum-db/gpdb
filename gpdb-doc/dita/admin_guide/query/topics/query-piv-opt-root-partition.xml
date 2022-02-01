@@ -37,9 +37,9 @@
         there are significant changes to leaf partition data.</p>
       <p>Follow these best practices for running <codeph>ANALYZE</codeph> or <codeph>ANALYZE
           ROOTPARTITION</codeph> on partitioned tables in your system:<ul id="ul_vm4_fsn_wbb">
-          <li>Run <codeph>ANALYZE &lt;<varname>root_partition_table</varname>></codeph> on a new
+          <li>Run <codeph>ANALYZE &lt;<varname>root_partition_table_name</varname>></codeph> on a new
             partitioned table after adding initial data. Run <codeph>ANALYZE
-                &lt;<varname>leaf_partition_table</varname>></codeph> on a new leaf partition or a leaf
+                &lt;<varname>leaf_partition_table_name</varname>></codeph> on a new leaf partition or a leaf
             partition where data has changed. By default, running the command on a leaf partition
             updates the root partition statistics if the other leaf partitions have statistics.</li>
           <li>Update root partition statistics when you observe query performance regression in
