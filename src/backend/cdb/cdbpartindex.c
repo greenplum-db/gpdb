@@ -939,7 +939,8 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 		{
 			int16		key_elem = DatumGetInt16(dats[i]);
 
-			keys = lappend_int(keys, key_elem);
+			AttrNumber mapped_key_elem = attrMap(map, key_elem);
+			keys = lappend_int(keys, mapped_key_elem);
 		}
 	}
 
@@ -1589,7 +1590,7 @@ logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 	TupleDesc	partTupDesc = partRel->rd_att;
 
 	char		relstorage = partRel->rd_rel->relstorage;
-	AttrNumber *attMap = varattnos_map(rootTupDesc, partTupDesc);
+	AttrNumber *attMap = varattnos_map(partTupDesc, rootTupDesc);
 
 	heap_close(rootRel, AccessShareLock);
 	heap_close(partRel, AccessShareLock);

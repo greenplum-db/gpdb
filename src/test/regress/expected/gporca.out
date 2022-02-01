@@ -14216,6 +14216,46 @@ select * from heap_part where a=3;
  3
 (1 row)
 
+-- Generate bitmap scan for mixed index types
+create table part_table13(a int, b int, c int)
+partition by range(b)
+(
+partition p1 start(1) end(10),
+partition p2 start(10) end (20) with (appendonly=true),
+partition p3 start(20) end (30) with (appendonly=true,orientation=column),
+partition p4 start(30) end (40)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "part_table13_1_prt_p1" for table "part_table13"
+NOTICE:  CREATE TABLE will create partition "part_table13_1_prt_p2" for table "part_table13"
+NOTICE:  CREATE TABLE will create partition "part_table13_1_prt_p3" for table "part_table13"
+NOTICE:  CREATE TABLE will create partition "part_table13_1_prt_p4" for table "part_table13"
+create index part_table13_1_idx on part_table13_1_prt_p1 using btree(c);
+create index part_table13_2_idx on part_table13_1_prt_p2 using btree(c);
+create index part_table13_3_idx on part_table13_1_prt_p3 using bitmap(c);
+create index part_table13_4_idx on part_table13_1_prt_p4 using bitmap(c);
+explain select * from part_table13 where c=7;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4295.00 rows=312 width=12)
+   ->  Append  (cost=0.00..4295.00 rows=104 width=12)
+         ->  Seq Scan on part_table13_1_prt_p1  (cost=0.00..1073.75 rows=26 width=12)
+               Filter: (c = 7)
+         ->  Seq Scan on part_table13_1_prt_p2  (cost=0.00..1073.75 rows=26 width=12)
+               Filter: (c = 7)
+         ->  Seq Scan on part_table13_1_prt_p3  (cost=0.00..1073.75 rows=26 width=12)
+               Filter: (c = 7)
+         ->  Seq Scan on part_table13_1_prt_p4  (cost=0.00..1073.75 rows=26 width=12)
+               Filter: (c = 7)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from part_table13 where c=7;
+ a | b | c 
+---+---+---
+(0 rows)
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 NOTICE:  drop cascades to 167 other objects

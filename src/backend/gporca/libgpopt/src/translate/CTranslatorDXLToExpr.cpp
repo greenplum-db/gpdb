@@ -18,6 +18,7 @@
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CEnfdDistribution.h"
@@ -404,7 +405,19 @@ CTranslatorDXLToExpr::PexprTranslateScalar(const CDXLNode *dxlnode,
 			ULONG *pulKey = NULL;
 			if (NULL == pdrgpul)
 			{
-				pulKey = GPOS_NEW(m_mp) ULONG(ul + 1);
+				// We only go through this code path through GetPartConstraintExpr()
+				if (colref->Ecrt() == CColRef::EcrtTable)
+				{
+					// grab the attnum from the colref to use as the key, as this attnum is later used when looking up this colref via LookupColRef
+					CColRefTable *pcolrefTable =
+						CColRefTable::PcrConvert(colref);
+					pulKey = GPOS_NEW(m_mp) ULONG(pcolrefTable->AttrNum());
+				}
+				else
+				{
+					// for generated colrefs, we can only arbitrarily assign a key
+					pulKey = GPOS_NEW(m_mp) ULONG(ul + 1);
+				}
 			}
 			else
 			{
