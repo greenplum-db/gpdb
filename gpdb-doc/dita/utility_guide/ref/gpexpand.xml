@@ -238,7 +238,7 @@
         host. Also, if you enable segment mirroring, you must ensure that the expanded Greenplum
         system configuration supports failover if a host system fails. For information about
         Greenplum Database mirroring schemes, see <xref
-          href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/>.</p>
+          href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/>.</p>
       <p>For example, this is a <codeph>gpexpand</codeph> configuration file for a simple Greenplum
         system. The segment host <codeph>gp6s1</codeph> and <codeph>gp6s2</codeph> are configured
         with two NICs, <codeph>-s1</codeph> and <codeph>-s2</codeph>, where the Greenplum Database

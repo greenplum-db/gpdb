@@ -87,7 +87,7 @@
                 segment instances per host, and a system that is configured with group mirroring
                 requires at least two new hosts when expanding the system. For information about
                 segment mirroring configurations, see <xref
-                    href="../../../best_practices/ha.xml#topic_ngz_qf4_tt"/>. For information about
+                    href="../../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/>. For information about
                 expanding systems with segment mirroring enabled, see <xref
                     href="../../expand/expand-planning.xml#topic7"/>. </note>
         </section>
