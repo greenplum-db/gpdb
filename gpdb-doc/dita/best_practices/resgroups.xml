@@ -142,7 +142,7 @@
           group for the workload and the time of day.</li>
         <li>Use the <codeph>gp_toolkit</codeph> views to examine resource group resource
             usage and to monitor how the groups are working.</li>
-        <li otherprops="pivotal">Consider using Tanzu Greenplum Command Center
+        <li>Consider using Tanzu Greenplum Command Center
           to create and manage resource groups, and to define the criteria under which
           Command Center dynamically assigns a transaction to a resource group.</li>
       </ul>

@@ -235,7 +235,7 @@
               <p dir="ltr">If backups are saved to NFS mounts, use a scale-out NFS solution such as
                 Dell EMC Isilon to prevent IO bottlenecks.</p>
             </li>
-            <li dir="ltr" otherprops="pivotal">Consider streaming backups to the Dell EMC Data Domain enterprise backup platform.</li>
+            <li dir="ltr">Tanzuy Greenplum customers should consider streaming backups to the Dell EMC Data Domain enterprise backup platform.</li>
           </ul>
         </p>
       </section>
