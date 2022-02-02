@@ -217,9 +217,9 @@
             </li>
             <li dir="ltr">
               <p dir="ltr">Use the <codeph>gpbackup</codeph> command to specify only the schema and
-                tables that you want backed up. See the <codeph><xref
+                tables that you want backed up. See the <xref
                     href="https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html"
-                    format="html" scope="external">gpbackup</xref></codeph> reference for more
+                    format="html" scope="external">gpbackup</xref> reference for more
                 information.</p>
             </li>
             <li dir="ltr">
@@ -269,12 +269,12 @@
           <li><xref href="../admin_guide/managing/monitor.xml"/></li>
           <li><xref href="../admin_guide/highavail/topics/g-recovering-from-segment-failures.xml"/></li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
-            <li><codeph><xref href="../utility_guide/ref/gpstate.xml">gpstate</xref></codeph> - view
+            <li><xref href="../utility_guide/ref/gpstate.xml">gpstate</xref> - view
               state of the Greenplum system</li>
-            <li><codeph><xref href="../utility_guide/ref/gprecoverseg.xml"
-                >gprecoverseg</xref></codeph> - recover a failed segment</li>
-            <li><codeph><xref href="../utility_guide/ref/gpactivatestandby.xml"
-                  >gpactivatestandby</xref></codeph> - make the standby master the active
+            <li><xref href="../utility_guide/ref/gprecoverseg.xml"
+                >gprecoverseg</xref> - recover a failed segment</li>
+            <li><xref href="../utility_guide/ref/gpactivatestandby.xml"
+                  >gpactivatestandby</xref> - make the standby master the active
               master</li>
           </ul></p><p><xref href="http://tools.ietf.org/html/rfc1697" format="html" scope="external"
             >RDBMS MIB Specification</xref></p></section>
@@ -310,16 +310,16 @@
       <p>The two standard mirroring arrangements are <i>group mirroring</i> and <i>spread
           mirroring</i>:<ul id="ul_uwr_gkv_tt">
           <li><b>Group mirroring</b> — Each host mirrors another host's primary segments. This is
-            the default for <codeph><xref href="../utility_guide/ref/gpinitsystem.xml"
-                >gpinitsystem</xref></codeph> and <codeph><xref
-                href="../utility_guide/ref/gpaddmirrors.xml">gpaddmirrors</xref></codeph>.</li>
+            the default for <xref href="../utility_guide/ref/gpinitsystem.xml"
+                >gpinitsystem</xref> and <xref
+                href="../utility_guide/ref/gpaddmirrors.xml">gpaddmirrors</xref>.</li>
           <li><b>Spread mirroring</b> — Mirrors are spread across the available hosts. This requires
             that the number of hosts in the cluster is greater than the number of segments per
             host.</li>
         </ul></p>
       <p>You can design a custom mirroring configuration and use the Greenplum
-          <codeph>gpaddmirrors</codeph> or <codeph><xref
-            href="../utility_guide/ref/gpmovemirrors.xml">gpmovemirrors</xref></codeph> utilities to
+          <codeph>gpaddmirrors</codeph> or <xref
+            href="../utility_guide/ref/gpmovemirrors.xml">gpmovemirrors</xref> utilities to
         set up the configuration.</p>
       <p><i>Block mirroring</i> is a custom mirror configuration that divides hosts in the cluster
         into equally sized blocks and distributes mirrors evenly to hosts within the block. If a

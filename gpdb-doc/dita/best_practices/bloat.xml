@@ -54,9 +54,9 @@
       <p>The statistics collected by the <codeph>ANALYZE</codeph> statement can be used to calculate
         the expected number of disk pages required to store a table. The difference between the
         expected number of pages and the actual number of pages is a measure of bloat. The
-          <codeph>gp_toolkit</codeph> schema provides the <codeph><xref
+          <codeph>gp_toolkit</codeph> schema provides the <xref
             href="../ref_guide/gp_toolkit.xml#topic3" type="topic" format="dita"
-            class="- topic/xref "/></codeph> view that identifies table bloat by comparing the ratio
+            class="- topic/xref "/> view that identifies table bloat by comparing the ratio
         of expected to actual pages. To use it, make sure statistics are up to date for all of the
         tables in the database, then run the following
         SQL:<codeblock>gpadmin=# SELECT * FROM gp_toolkit.gp_bloat_diag;
