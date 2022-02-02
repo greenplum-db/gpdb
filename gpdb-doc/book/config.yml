@@ -27,6 +27,12 @@ sections:
   directory: 7-0/install_guide
   subnav_template: install-subnav
 
+- repository:
+    name: markdown
+    at_path: best_practices
+  directory: 7-0/best_practices
+  subnav_template: bp-subnav
+
 dita_sections:
 
 - repository:
@@ -49,13 +55,6 @@ dita_sections:
     at_path: security-guide
   directory: 7-0/security-guide
   ditamap_location: security-guide.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
-
-- repository:
-    name: dita
-    at_path: best_practices
-  directory: 7-0/best_practices
-  ditamap_location: best-practices.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
 - repository:
