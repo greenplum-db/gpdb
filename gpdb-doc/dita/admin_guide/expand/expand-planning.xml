@@ -269,7 +269,7 @@
           <li><b>Block Mirroring</b> — Adding one or more blocks of host systems. For example add a
             block of four or eight hosts. Block mirroring is a custom mirroring configuration. For
             more information about block mirroring, see <xref
-              href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/><ph otherprops="op-print"> in the
+              href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/><ph otherprops="op-print"> in the
                 <cite>Greenplum Database Best Practices Guide</cite></ph>.</li>
         </ul>
       </body>

@@ -566,7 +566,7 @@ cdw~cdw.local~7001~/data/mirror1/gpseg0~3~0
                 instances being added to the host. Also, if high availability is enabled, you must
                 ensure that the Greenplum system configuration supports failover if a host system
                 fails. For information about Greenplum Database mirroring schemes, see <xref
-                    href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/>.</p>
+                    href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/>.</p>
             <p>For this simple coordinator and segment instance configuration, the host system
                     <codeph>gp6m</codeph> is configured with two NICs <codeph>gp6m-1</codeph> and
                     <codeph>gp6m-2</codeph>. In the configuration, the <codeph><xref
