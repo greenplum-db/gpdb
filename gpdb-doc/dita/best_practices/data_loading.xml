@@ -175,7 +175,7 @@ Segment 12 - gpfdist 4</screen></p>
         <li>Recheck for segment skew in the table after loading a large amount of data. You can use
           a query like the following to check for
           skew:<codeblock outputclass="language-sql">SELECT gp_segment_id, count(*) 
-FROM <i>schema.table</i> 
+FROM schema.table 
 GROUP BY gp_segment_id ORDER BY 2;</codeblock></li>
         <li>By default, <codeph>gpfdist</codeph> assumes a maximum record size of 32K. To load data
           records larger than 32K, you must increase the maximum row size parameter by specifying

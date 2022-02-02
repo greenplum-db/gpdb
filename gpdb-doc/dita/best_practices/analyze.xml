@@ -28,7 +28,7 @@
         sub-partitioned tables store no data or statistics, so running <codeph>ANALYZE</codeph> on
         them does not work. You can find the names of the partition tables in the
           <codeph>pg_partitions</codeph> system
-        catalog:<codeblock>SELECT partitiontablename from pg_partitions WHERE tablename='<i>parent_table</i>';</codeblock></p>
+        catalog:<codeblock>SELECT partitiontablename from pg_partitions WHERE tablename='parent_table';</codeblock></p>
     </section>
     <section>
       <title>Improving Statistics Quality</title>
