@@ -224,6 +224,7 @@
 				<topicref href="system_catalogs/pg_compression.xml"/>
 				<topicref href="system_catalogs/pg_constraint.xml"/>
 				<topicref href="system_catalogs/pg_conversion.xml"/>
+				<topicref href="system_catalogs/pg_cursors.xml"/>
 				<topicref href="system_catalogs/pg_database.xml"/>
 				<topicref href="system_catalogs/pg_db_role_setting.xml"/>
 				<topicref href="system_catalogs/pg_depend.xml"/>
