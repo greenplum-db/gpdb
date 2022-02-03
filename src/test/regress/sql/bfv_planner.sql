@@ -441,6 +441,54 @@ drop table t4_12146;
 
 reset allow_system_table_mods;
 
+-- Test for ERRORDATA_STACK_SIZE exceeded issue
+-- The following test is copied from the commit 17c19c3f
+-- since that commit tests the code path that hash op
+-- not found in the opfamily (cdbpullup.c:cdbpullup_findEclassInTargetList).
+-- Commit 49ea956f refactor the cdbpullup.c:cdbpullup_findEclassInTargetList
+-- a bit and introduces a bug during the code path same as above. The bug
+-- is that it might leak ERRORDATA_STACK_SIZE.
+CREATE TABLE gp_timestamp_err_stack1
+(a int, d1 timestamp, e1 timestamptz,
+        d2 timestamp, e2 timestamptz,
+	d3 timestamp, e3 timestamptz,
+	d4 timestamp, e4 timestamptz,
+	d5 timestamp, e5 timestamptz,
+	d6 timestamp, e6 timestamptz,
+	d7 timestamp, e7 timestamptz,
+	d8 timestamp, e8 timestamptz,
+	d9 timestamp, e9 timestamptz,
+	d10 timestamp, e10 timestamptz,
+	d11 timestamp, e11 timestamptz)
+DISTRIBUTED BY (a, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11);
+CREATE TABLE gp_timestamp_err_stack2
+(c int, f1 timestamp, g1 timestamptz,
+        f2 timestamp, g2 timestamptz,
+	f3 timestamp, g3 timestamptz,
+	f4 timestamp, g4 timestamptz,
+	f5 timestamp, g5 timestamptz,
+	f6 timestamp, g6 timestamptz,
+	f7 timestamp, g7 timestamptz,
+	f8 timestamp, g8 timestamptz,
+	f9 timestamp, g9 timestamptz,
+	f10 timestamp, g10 timestamptz,
+	f11 timestamp, g11 timestamptz)
+DISTRIBUTED BY (c, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11);
+
+SELECT 1 FROM gp_timestamp_err_stack1 JOIN gp_timestamp_err_stack2
+ON a = c
+AND d1 = g1 AND f1 = e1 AND e1 = timestamp '2016/11/11'
+AND d2 = g2 AND f2 = e2 AND e2 = timestamp '2017/11/11'
+AND d3 = g3 AND f3 = e3 AND e3 = timestamp '2018/11/11'
+AND d4 = g4 AND f4 = e4 AND e4 = timestamp '2019/11/11'
+AND d5 = g5 AND f5 = e5 AND e5 = timestamp '2006/11/11'
+AND d6 = g6 AND f6 = e6 AND e6 = timestamp '2007/11/11'
+AND d7 = g7 AND f7 = e7 AND e7 = timestamp '2008/11/11'
+AND d8 = g8 AND f8 = e8 AND e8 = timestamp '2009/11/11'
+AND d9 = g9 AND f9 = e9 AND e9 = timestamp '2010/11/11'
+AND d10 = g10 AND f10 = e10 AND e10 = timestamp '2016/10/11'
+AND d11 = g11 AND f11 = e11 AND e11 = timestamp '2016/09/11';
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
@@ -448,4 +496,6 @@ drop table if exists bfv_planner_foo;
 drop table if exists testmedian;
 drop table if exists bfv_planner_t1;
 drop table if exists bfv_planner_t2;
+drop table if exists gp_timestamp_err_stack1;
+drop table if exists gp_timestamp_err_stack2;
 -- end_ignore

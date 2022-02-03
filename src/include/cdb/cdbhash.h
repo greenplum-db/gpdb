@@ -78,6 +78,7 @@ extern Oid cdb_get_opclass_for_column_def(List *opclass, Oid attrType);
 extern Oid cdb_default_distribution_opfamily_for_type(Oid typid);
 extern Oid cdb_default_distribution_opclass_for_type(Oid typid);
 extern Oid cdb_hashproc_in_opfamily(Oid opfamily, Oid typeoid);
+extern Oid cdb_hashproc_in_opfamily_no_error(Oid opfamily, Oid typeoid);
 extern Oid cdb_eqop_in_hash_opfamily(Oid opfamily, Oid typeoid);
 
 /* prototypes and other things, from cdblegacyhash.c */

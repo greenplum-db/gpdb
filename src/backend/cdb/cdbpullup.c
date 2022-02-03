@@ -24,7 +24,7 @@
 #include "parser/parsetree.h"	/* get_tle_by_resno() */
 #include "utils/lsyscache.h"	/* get_opfamily_member() */
 
-#include "cdb/cdbhash.h"		/* cdb_hashproc_in_opfamily */
+#include "cdb/cdbhash.h"		/* cdb_hashproc_in_opfamily_no_error */
 #include "cdb/cdbpullup.h"		/* me */
 
 /*
@@ -316,22 +316,10 @@ cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist,
 			 * there are binary compatible types, e.g. varchar and text.
 			 *
 			 * See Issue: https://github.com/greenplum-db/gpdb/issues/12700 for a detailed case.
-			 *
-			 * Since cdb_hashproc_in_opfamily might raise error, so we enclose the call by PG_TRY.
-			 * Error means we find nothing. Auto Variable hash_proc (without volatile in declartion)
-			 * is set in both Try clause and Catch clause.
 			 */
 			Oid hash_proc;
 
-			PG_TRY();
-			{
-				hash_proc = cdb_hashproc_in_opfamily(hashOpFamily, em->em_datatype);
-			}
-			PG_CATCH();
-			{
-				hash_proc = InvalidOid;
-			}
-			PG_END_TRY();
+			hash_proc = cdb_hashproc_in_opfamily_no_error(hashOpFamily, em->em_datatype);
 
 			if (!OidIsValid(hash_proc))
 				continue;
