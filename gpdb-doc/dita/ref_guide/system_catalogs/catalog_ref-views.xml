@@ -37,6 +37,7 @@
       <li>
         <xref href="./gpexpand_expansion_progress.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li><xref href="./pg_cursors.xml" type="topic" format="dita"/></li>
       <li>
         <xref href="./pg_matviews.xml" type="topic" format="dita"/></li>
       <li>
