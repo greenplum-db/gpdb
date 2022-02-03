@@ -299,6 +299,7 @@
             <li>
               <xref href="#gp_resource_manager"/>
             </li>
+            <li><xref href="#gp_retrieve_conn"/></li>
             <li>
               <xref href="#gp_use_legacy_hashops"/></li>
             <li><xref href="#gp_vmem_idle_resource_timeout"/></li>
@@ -5034,10 +5035,40 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_retrieve_conn">
+    <title>gp_retrieve_conn</title>
+    <body>
+      <p>A session that you initiate with <codeph>PGOPTIONS='-c gp_retrieve_conn=true'</codeph>
+        is a retrieve session. You use a retrieve session to retrieve query result tuples
+        from a specific endpoint instantiated for a parallel retrieve cursor.</p>
+      <p>The default value is <codeph>false</codeph>.</p>
+      <table id="gp_retrieve_conn_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">read only</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="gp_role">
     <title>gp_role</title>
     <body>
-      <p>The role of this server process " set to <i>dispatch</i> for the master and <i>execute</i>
+      <p>The role of this server process is set to <i>dispatch</i> for the master and <i>execute</i>
         for a segment.</p>
       <table id="gp_role_table">
         <tgroup cols="3">
