@@ -5,14 +5,11 @@
 --    But gp_array_agg() supports parallel aggregation
 --
 --
--- Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
--- Portions Copyright (c) 1994, Regents of the University of California
+-- Copyright (c) 2021-Present VMware, Inc. or its affiliates.
 --
 --
 ---------------------------------------------------------------------------
 
--- Assume the user defined functions are in $libdir/gp_array_agg
--- (we do not want to assume this is in the dynamic loader search path).
 -- Look at gp_array_agg.c for the source.  Note we mark them IMMUTABLE,
 -- since they always return the same outputs given the same inputs.
 

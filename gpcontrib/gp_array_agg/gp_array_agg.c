@@ -1,6 +1,8 @@
 /*
  * gpcontrib/gp_array_agg/gp_array_agg.c
  *
+ * Copyright (c) 2021-Present VMware, Inc. or its affiliates.
+ *
  ******************************************************************************
   This file contains routines that can be bound to a Postgres backend and
   called by the backend in the process of processing queries.  The calling
@@ -43,7 +45,9 @@ typedef struct DeserialIOData
 } DeserialIOData;
 
 
-/*
+/* Note : this is same as upstream initArrayResult, but allows the initial
+ * size  of the allocated arrays to be specified.
+ *
  * initArrayResultWithSize - initialize an empty ArrayBuildState
  *
  *	element_type is the array element type (must be a valid array element type)
@@ -78,7 +82,7 @@ initArrayResultWithSize(Oid element_type, MemoryContext rcontext, bool subcontex
     ArrayBuildState *astate;
     MemoryContext arr_context = rcontext;
 
-    /* Make a temporary context to hold all the junk */
+	/* Make a temporary context */
     if (subcontext)
         arr_context = AllocSetContextCreate(rcontext,
                                             "accumArrayResult",
@@ -87,7 +91,7 @@ initArrayResultWithSize(Oid element_type, MemoryContext rcontext, bool subcontex
     astate = (ArrayBuildState *)
             MemoryContextAlloc(arr_context, sizeof(ArrayBuildState));
     astate->mcontext = arr_context;
-    astate->alen = initsize;	/* arbitrary starting array size */
+	astate->alen = initsize;
     astate->dvalues = (Datum *)
             MemoryContextAlloc(arr_context, astate->alen * sizeof(Datum));
     astate->dnulls = (bool *)
@@ -111,9 +115,9 @@ PG_FUNCTION_INFO_V1(array_agg_combine);
 PG_FUNCTION_INFO_V1(array_agg_serialize);
 PG_FUNCTION_INFO_V1(array_agg_deserialize);
 
-Datum		array_agg_combine(PG_FUNCTION_ARGS);
-Datum		array_agg_serialize(PG_FUNCTION_ARGS);
-Datum		array_agg_deserialize(PG_FUNCTION_ARGS);
+Datum array_agg_combine(PG_FUNCTION_ARGS);
+Datum array_agg_serialize(PG_FUNCTION_ARGS);
+Datum array_agg_deserialize(PG_FUNCTION_ARGS);
 
 Datum
 array_agg_combine(PG_FUNCTION_ARGS)

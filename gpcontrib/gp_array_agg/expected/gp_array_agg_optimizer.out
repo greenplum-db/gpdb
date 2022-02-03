@@ -101,21 +101,24 @@ select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
 order by 1,2;
-                           QUERY PLAN                           
-----------------------------------------------------------------
- Sort
-   Sort Key: r.a, r.b
-   ->  Append
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  HashAggregate
-                     Group Key: r.a, r.b
-                     ->  Seq Scan on mergeappend_test r
-         ->  Aggregate
-               ->  Gather Motion 3:1  (slice2; segments: 3)
-                     ->  Aggregate
-                           ->  Seq Scan on mergeappend_test r_1
- Optimizer: Postgres query optimizer
-(12 rows)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Merge Key: mergeappend_test.a, mergeappend_test.b
+   ->  Sort
+         Sort Key: mergeappend_test.a, mergeappend_test.b
+         ->  Append
+               ->  Result
+                     ->  HashAggregate
+                           Group Key: mergeappend_test.a, mergeappend_test.b
+                           ->  Seq Scan on mergeappend_test
+               ->  Result
+                     ->  Redistribute Motion 1:3  (slice2)
+                           ->  Aggregate
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                                       ->  Seq Scan on mergeappend_test mergeappend_test_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
 
 select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
@@ -136,30 +139,34 @@ explain analyze select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
 order by 1,2;
-                                                                   QUERY PLAN                                                                   
-------------------------------------------------------------------------------------------------------------------------------------------------
- Sort  (cost=23.67..23.77 rows=37 width=40) (actual time=0.881..0.884 rows=7 loops=1)
-   Sort Key: r.a, r.b
-   Sort Method:  quicksort  Memory: 33kB
-   ->  Append  (cost=11.75..22.71 rows=37 width=40) (actual time=0.378..0.832 rows=7 loops=1)
-         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=11.75..13.37 rows=36 width=40) (actual time=0.377..0.772 rows=6 loops=1)
-               ->  HashAggregate  (cost=11.75..12.29 rows=12 width=40) (actual time=0.360..0.375 rows=4 loops=1)
-                     Group Key: r.a, r.b
-                     Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 4 of 32 buckets; total 0 expansions.
+                                                                                 QUERY PLAN                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.06 rows=22 width=16) (actual time=2.203..2.223 rows=7 loops=1)
+   Merge Key: mergeappend_test.a, mergeappend_test.b
+   ->  Sort  (cost=0.00..862.06 rows=8 width=16) (actual time=1.377..1.382 rows=4 loops=1)
+         Sort Key: mergeappend_test.a, mergeappend_test.b
+         Sort Method:  quicksort  Memory: 99kB
+         ->  Append  (cost=0.00..862.06 rows=8 width=16) (actual time=0.275..1.342 rows=4 loops=1)
+               ->  Result  (cost=0.00..431.05 rows=7 width=16) (actual time=0.275..0.290 rows=4 loops=1)
+                     ->  HashAggregate  (cost=0.00..431.05 rows=7 width=16) (actual time=0.270..0.283 rows=4 loops=1)
+                           Group Key: mergeappend_test.a, mergeappend_test.b
+                           Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 4 of 32 buckets; total 0 expansions.
  
-                     ->  Seq Scan on mergeappend_test r  (cost=0.00..8.00 rows=167 width=12) (actual time=0.010..0.047 rows=301 loops=1)
-         ->  Aggregate  (cost=9.32..9.33 rows=1 width=40) (actual time=0.055..0.056 rows=1 loops=1)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=9.25..9.30 rows=1 width=32) (actual time=0.007..0.011 rows=3 loops=1)
-                     ->  Aggregate  (cost=9.25..9.26 rows=1 width=32) (actual time=0.185..0.186 rows=1 loops=1)
-                           ->  Seq Scan on mergeappend_test r_1  (cost=0.00..8.00 rows=167 width=4) (actual time=0.010..0.088 rows=301 loops=1)
- Planning time: 0.330 ms
-   (slice0)    Executor memory: 224K bytes.  Work_mem: 33K bytes max.
-   (slice1)    Executor memory: 172K bytes avg x 3 workers, 188K bytes max (seg0).
-   (slice2)    Executor memory: 58K bytes avg x 3 workers, 59K bytes max (seg0).
+                           ->  Seq Scan on mergeappend_test  (cost=0.00..431.00 rows=167 width=12) (actual time=0.007..0.035 rows=301 loops=1)
+               ->  Result  (cost=0.00..431.01 rows=1 width=16) (actual time=1.264..1.264 rows=1 loops=1)
+                     ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.01 rows=1 width=8) (actual time=1.258..1.258 rows=1 loops=1)
+                           ->  Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=1.142..1.142 rows=1 loops=1)
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=500 width=4) (actual time=0.337..0.991 rows=500 loops=1)
+                                       ->  Seq Scan on mergeappend_test mergeappend_test_1  (cost=0.00..431.00 rows=167 width=4) (actual time=0.007..0.070 rows=301 loops=1)
+ Planning time: 148.363 ms
+   (slice0)    Executor memory: 127K bytes.
+   (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
+   (slice2)    Executor memory: 215K bytes (entry db).
+   (slice3)    Executor memory: 216K bytes avg x 3 workers, 228K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: Postgres query optimizer
- Execution time: 1.359 ms
-(21 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Execution time: 3.266 ms
+(25 rows)
 
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
