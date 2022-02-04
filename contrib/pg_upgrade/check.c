@@ -72,6 +72,19 @@ output_check_banner(bool live_check)
 	}
 }
 
+/*
+ * wrapper around pg_fatal to continue check when running in check mode
+ * with --continue-check-on-error
+ */
+void
+gp_fatal_log(const char *fmt,...)
+{
+	va_list		args;
+
+	va_start(args, fmt);
+	pg_log(is_contine_check_on_error()? PG_WARNING : PG_FATAL, fmt, args);
+	va_end(args);
+}
 
 void
 check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
@@ -206,7 +219,7 @@ check_new_cluster(void)
 	 * matching install-user oids.
 	 */
 	if (old_cluster.install_role_oid != new_cluster.install_role_oid)
-		pg_fatal("Old and new cluster install users have different values for pg_authid.oid.\n");
+		gp_fatal_log("Old and new cluster install users have different values for pg_authid.oid.\n");
 
 	/*
 	 * We only allow the install user in the new cluster because other defined
@@ -222,7 +235,7 @@ check_new_cluster(void)
 	if (is_greenplum_dispatcher_mode())
 	{
 		if (new_cluster.role_count != 1)
-			pg_fatal("Only the install user can be defined in the new cluster.\n");
+			gp_fatal_log("Only the install user can be defined in the new cluster.\n");
 	}
 
 	check_for_prepared_transactions(&new_cluster);
@@ -234,7 +247,8 @@ report_clusters_compatible(void)
 {
 	if (user_opts.check)
 	{
-		pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
+		pg_log(PG_REPORT, (is_contine_check_on_error() ?
+								"\n*Clusters are NOT compatible*\n" : "\n*Clusters are compatible*\n"));
 		/* stops new cluster */
 		stop_postmaster(false);
 		exit(0);
@@ -343,8 +357,7 @@ check_cluster_versions(void)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
 		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
 	{
-		pg_log(PG_FATAL,
-			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
+		gp_fatal_log("old and new cluster cannot both be Greenplum 4.3.x installations\n");
 	}
 
 	/*
@@ -359,11 +372,11 @@ check_cluster_versions(void)
 	 * this will cover most cases.
 	 */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
-		pg_fatal("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
+		gp_fatal_log("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
 
 	/* Only current PG version is supported as a target */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
-		pg_fatal("This utility can only upgrade to Greenplum version %s.\n",
+		gp_fatal_log("This utility can only upgrade to Greenplum version %s.\n",
 				 PG_MAJORVERSION);
 
 	/*
@@ -372,7 +385,7 @@ check_cluster_versions(void)
 	 * older versions.
 	 */
 	if (old_cluster.major_version > new_cluster.major_version)
-		pg_fatal("This utility cannot be used to downgrade to older major Greenplum versions.\n");
+		gp_fatal_log("This utility cannot be used to downgrade to older major Greenplum versions.\n");
 
 	/* get old and new binary versions */
 	get_bin_version(&old_cluster);
@@ -381,10 +394,10 @@ check_cluster_versions(void)
 	/* Ensure binaries match the designated data directories */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
 		GET_MAJOR_VERSION(old_cluster.bin_version))
-		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
+		gp_fatal_log("Old cluster data and binary directories are from different major versions.\n");
 	if (GET_MAJOR_VERSION(new_cluster.major_version) !=
 		GET_MAJOR_VERSION(new_cluster.bin_version))
-		pg_fatal("New cluster data and binary directories are from different major versions.\n");
+		gp_fatal_log("New cluster data and binary directories are from different major versions.\n");
 
 	check_ok();
 }
@@ -401,17 +414,17 @@ check_cluster_compatibility(bool live_check)
 	/* Is it 9.0 but without tablespace directories? */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) == 900 &&
 		new_cluster.controldata.cat_ver < TABLE_SPACE_SUBDIRS_CAT_VER)
-		pg_fatal("This utility can only upgrade to PostgreSQL version 9.0 after 2010-01-11\n"
+		gp_fatal_log("This utility can only upgrade to PostgreSQL version 9.0 after 2010-01-11\n"
 				 "because of backend API changes made during development.\n");
 
 	/* We read the real port number for PG >= 9.1 */
 	if (live_check && GET_MAJOR_VERSION(old_cluster.major_version) < 901 &&
 		old_cluster.port == DEF_PGUPORT)
-		pg_fatal("When checking a pre-PG 9.1 live old server, "
+		gp_fatal_log("When checking a pre-PG 9.1 live old server, "
 				 "you must specify the old server's port number.\n");
 
 	if (live_check && old_cluster.port == new_cluster.port)
-		pg_fatal("When checking a live server, "
+		gp_fatal_log("When checking a live server, "
 				 "the old and new port numbers must be different.\n");
 }
 
@@ -481,13 +494,13 @@ check_locale_and_encoding(ControlData *oldctrl,
 						  ControlData *newctrl)
 {
 	if (!equivalent_locale(LC_COLLATE, oldctrl->lc_collate, newctrl->lc_collate))
-		pg_fatal("lc_collate cluster values do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("lc_collate cluster values do not match:  old \"%s\", new \"%s\"\n",
 				 oldctrl->lc_collate, newctrl->lc_collate);
 	if (!equivalent_locale(LC_CTYPE, oldctrl->lc_ctype, newctrl->lc_ctype))
-		pg_fatal("lc_ctype cluster values do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("lc_ctype cluster values do not match:  old \"%s\", new \"%s\"\n",
 				 oldctrl->lc_ctype, newctrl->lc_ctype);
 	if (!equivalent_encoding(oldctrl->encoding, newctrl->encoding))
-		pg_fatal("encoding cluster values do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("encoding cluster values do not match:  old \"%s\", new \"%s\"\n",
 				 oldctrl->encoding, newctrl->encoding);
 }
 
@@ -590,7 +603,7 @@ check_new_cluster_is_empty(void)
 		{
 			/* pg_largeobject and its index should be skipped */
 			if (strcmp(rel_arr->rels[relnum].nspname, "pg_catalog") != 0)
-				pg_fatal("New cluster database \"%s\" is not empty\n",
+				gp_fatal_log("New cluster database \"%s\" is not empty\n",
 						 new_cluster.dbarr.dbs[dbnum].db_name);
 		}
 	}
@@ -622,7 +635,7 @@ create_script_for_cluster_analyze(char **analyze_script_file_name)
 	*analyze_script_file_name = psprintf("analyze_new_cluster.%s", SCRIPT_EXT);
 
 	if ((script = fopen_priv(*analyze_script_file_name, "w")) == NULL)
-		pg_fatal("Could not open file \"%s\": %s\n",
+		gp_fatal_log("Could not open file \"%s\": %s\n",
 				 *analyze_script_file_name, getErrorText());
 
 #ifndef WIN32
@@ -677,7 +690,7 @@ create_script_for_cluster_analyze(char **analyze_script_file_name)
 
 #ifndef WIN32
 	if (chmod(*analyze_script_file_name, S_IRWXU) != 0)
-		pg_fatal("Could not add execute permission to file \"%s\": %s\n",
+		gp_fatal_log("Could not add execute permission to file \"%s\": %s\n",
 				 *analyze_script_file_name, getErrorText());
 #endif
 
@@ -719,14 +732,14 @@ check_proper_datallowconn(ClusterInfo *cluster)
 		{
 			/* avoid restore failure when pg_dumpall tries to create template0 */
 			if (strcmp(datallowconn, "t") == 0)
-				pg_fatal("template0 must not allow connections, "
+				gp_fatal_log("template0 must not allow connections, "
 						 "i.e. its pg_database.datallowconn must be false\n");
 		}
 		else
 		{
 			/* avoid datallowconn == false databases from being skipped on restore */
 			if (strcmp(datallowconn, "f") == 0)
-				pg_fatal("All non-template0 databases must allow connections, "
+				gp_fatal_log("All non-template0 databases must allow connections, "
 						 "i.e. their pg_database.datallowconn must be true\n");
 		}
 	}
@@ -795,7 +808,7 @@ create_script_for_old_cluster_deletion(char **deletion_script_file_name)
 	prep_status("Creating script to delete old cluster");
 
 	if ((script = fopen_priv(*deletion_script_file_name, "w")) == NULL)
-		pg_fatal("Could not open file \"%s\": %s\n",
+		gp_fatal_log("Could not open file \"%s\": %s\n",
 				 *deletion_script_file_name, getErrorText());
 
 #ifndef WIN32
@@ -849,7 +862,7 @@ create_script_for_old_cluster_deletion(char **deletion_script_file_name)
 
 #ifndef WIN32
 	if (chmod(*deletion_script_file_name, S_IRWXU) != 0)
-		pg_fatal("Could not add execute permission to file \"%s\": %s\n",
+		gp_fatal_log("Could not add execute permission to file \"%s\": %s\n",
 				 *deletion_script_file_name, getErrorText());
 #endif
 
@@ -877,7 +890,7 @@ check_is_super_user(ClusterInfo *cluster)
 							"WHERE rolname = current_user");
 
 	if (PQntuples(res) != 1 || strcmp(PQgetvalue(res, 0, 0), "t") != 0)
-		pg_fatal("database user \"%s\" is not a superuser\n",
+		gp_fatal_log("database user \"%s\" is not a superuser\n",
 				 os_info.user);
 
 	cluster->install_role_oid = atooid(PQgetvalue(res, 0, 1));
@@ -889,7 +902,7 @@ check_is_super_user(ClusterInfo *cluster)
 							"FROM pg_catalog.pg_roles ");
 
 	if (PQntuples(res) != 1)
-		pg_fatal("could not determine the number of users\n");
+		gp_fatal_log("could not determine the number of users\n");
 
 	cluster->role_count = atoi(PQgetvalue(res, 0, 0));
 
@@ -920,7 +933,7 @@ check_for_prepared_transactions(ClusterInfo *cluster)
 							"FROM pg_catalog.pg_prepared_xacts");
 
 	if (PQntuples(res) != 0)
-		pg_fatal("The %s cluster contains prepared transactions\n",
+		gp_fatal_log("The %s cluster contains prepared transactions\n",
 				 CLUSTER_NAME(cluster));
 
 	PQclear(res);
@@ -985,7 +998,7 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 		{
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
-				pg_fatal("Could not open file \"%s\": %s\n",
+				gp_fatal_log("Could not open file \"%s\": %s\n",
 						 output_path, getErrorText());
 			if (!db_used)
 			{
@@ -1008,7 +1021,7 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains \"contrib/isn\" functions which rely on the\n"
+		gp_fatal_log("Your installation contains \"contrib/isn\" functions which rely on the\n"
 		  "bigint data type.  Your old and new clusters pass bigint values\n"
 		"differently so this cluster cannot currently be upgraded.  You can\n"
 				 "manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
@@ -1091,7 +1104,7 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 		{
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
-				pg_fatal("Could not open file \"%s\": %s\n",
+				gp_fatal_log("Could not open file \"%s\": %s\n",
 						 output_path, getErrorText());
 			if (!db_used)
 			{
@@ -1115,7 +1128,7 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains one of the reg* data types in user tables.\n"
+		gp_fatal_log("Your installation contains one of the reg* data types in user tables.\n"
 		 "These data types reference system OIDs that are not preserved by\n"
 		"pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
 				 "remove the problem tables and restart the upgrade.  A list of the problem\n"
@@ -1182,7 +1195,7 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 		{
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
-				pg_fatal("Could not open file \"%s\": %s\n",
+				gp_fatal_log("Could not open file \"%s\": %s\n",
 						 output_path, getErrorText());
 			if (!db_used)
 			{
@@ -1206,7 +1219,7 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains one of the JSONB data types in user tables.\n"
+		gp_fatal_log("Your installation contains one of the JSONB data types in user tables.\n"
 		 "The internal format of JSONB changed during 9.4 beta so this cluster cannot currently\n"
 				 "be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
 				 "of the problem columns is in the file:\n"
@@ -1230,7 +1243,7 @@ get_bin_version(ClusterInfo *cluster)
 
 	if ((output = popen(cmd, "r")) == NULL ||
 		fgets(cmd_output, sizeof(cmd_output), output) == NULL)
-		pg_fatal("Could not get pg_ctl version data using %s: %s\n",
+		gp_fatal_log("Could not get pg_ctl version data using %s: %s\n",
 				 cmd, getErrorText());
 
 	pclose(output);
@@ -1240,7 +1253,7 @@ get_bin_version(ClusterInfo *cluster)
 		*strchr(cmd_output, '\n') = '\0';
 
 	if (sscanf(cmd_output, "%*s %*s %*s %d.%d", &pre_dot, &post_dot) != 2)
-		pg_fatal("could not get version from %s\n", cmd);
+		gp_fatal_log("could not get version from %s\n", cmd);
 
 	cluster->bin_version = (pre_dot * 100 + post_dot) * 100;
 }
@@ -1261,7 +1274,7 @@ get_canonical_locale_name(int category, const char *locale)
 	/* get the current setting, so we can restore it. */
 	save = setlocale(category, NULL);
 	if (!save)
-		pg_fatal("failed to get the current locale\n");
+		gp_fatal_log("failed to get the current locale\n");
 
 	/* 'save' may be pointing at a modifiable scratch variable, so copy it. */
 	save = (char *) pg_strdup(save);
@@ -1270,13 +1283,13 @@ get_canonical_locale_name(int category, const char *locale)
 	res = setlocale(category, locale);
 
 	if (!res)
-		pg_fatal("failed to get system locale name for \"%s\"\n", locale);
+		gp_fatal_log("failed to get system locale name for \"%s\"\n", locale);
 
 	res = pg_strdup(res);
 
 	/* restore old value. */
 	if (!setlocale(category, save))
-		pg_fatal("failed to restore old locale \"%s\"\n", save);
+		gp_fatal_log("failed to restore old locale \"%s\"\n", save);
 
 	pg_free(save);
 

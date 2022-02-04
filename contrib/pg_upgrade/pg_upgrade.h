@@ -437,6 +437,7 @@ void		check_cluster_versions(void);
 void		check_cluster_compatibility(bool live_check);
 void		create_script_for_old_cluster_deletion(char **deletion_script_file_name);
 void		create_script_for_cluster_analyze(char **analyze_script_file_name);
+void 		gp_fatal_log(const char *fmt,...);
 
 
 /* controldata.c */
