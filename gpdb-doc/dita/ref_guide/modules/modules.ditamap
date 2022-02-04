@@ -4,6 +4,7 @@
   <topicref href="intro.xml" navtitle="Additional Supplied Modules" linking="targetonly">
     <topicref href="adv_passwd_check.xml"/>
     <topicref href="auto-explain.xml"/>
+    <topicref href="btree_gin.xml"/>
     <topicref href="citext.xml"/>
     <topicref href="dblink.xml"/>
     <topicref href="diskquota.xml"/>
@@ -13,6 +14,7 @@
     <topicref href="hstore.xml"/>
     <topicref href="orafce_ref.xml"/>
     <topicref href="pageinspect.xml"/>
+    <topicref href="pg_trgm.xml"/>
     <topicref href="pgcrypto.xml"/>
     <topicref href="postgres_fdw.xml"/>
     <topicref href="sslinfo.xml"/>

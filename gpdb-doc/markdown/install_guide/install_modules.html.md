@@ -23,6 +23,7 @@ You can register the following modules in this manner:
 <table cellpadding="4" cellspacing="0" summary="" border="1" class="simpletable"><col style="width:33.33333333333333%" /><col style="width:33.33333333333333%" /><thead></thead><tbody><tr>
           <td style="vertical-align:top;">
             <ul class="ul" id="topic_d45_wcw_pgb__ul_tc3_nlx_wp">
+              <li class="li"><a class="xref" href="../ref_guide/modules/btree_gin.html">btree_gin</a></li>
               <li class="li"><a class="xref" href="../ref_guide/modules/citext.html">citext</a></li>
 
               <li class="li"><a class="xref" href="../ref_guide/modules/dblink.html">dblink</a></li>
@@ -45,6 +46,7 @@ You can register the following modules in this manner:
 
               <li class="li"><a class="xref" href="../ref_guide/modules/pageinspect.html">pageinspect</a></li>
 
+              <li class="li"><a class="xref" href="../ref_guide/modules/pg_trgm.html">pg_trgm</a></li>
               <li class="li"><a class="xref" href="../ref_guide/modules/pgcrypto.html">pgcrypto</a></li>
 
               <li class="li"><a class="xref" href="../ref_guide/modules/postgres_fdw.html">postgres_fdw</a></li>
