@@ -14,6 +14,8 @@ typedef struct {
 	segmentMode segment_mode;
 	checksumMode checksum_mode;
 	char *old_tablespace_file_path;
+	bool continue_check_on_fatal;
+	bool error_on_continue_check;
 } GreenplumUserOpts;
 
 static GreenplumUserOpts greenplum_user_opts;
@@ -23,6 +25,8 @@ initialize_greenplum_user_options(void)
 {
 	greenplum_user_opts.segment_mode = SEGMENT;
 	greenplum_user_opts.old_tablespace_file_path = NULL;
+	greenplum_user_opts.continue_check_on_fatal = false;
+	greenplum_user_opts.error_on_continue_check = false;
 
 	old_cluster.greenplum_cluster_info = make_cluster_info();
 	new_cluster.greenplum_cluster_info = make_cluster_info();
@@ -69,6 +73,17 @@ process_greenplum_option(greenplumOption option)
 			greenplum_user_opts.old_tablespace_file_path = pg_strdup(optarg);
 			break;
 
+		case GREENPLUM_CONTINUE_CHECK_ON_FATAL:
+			if (user_opts.check)
+				greenplum_user_opts.continue_check_on_fatal = true;
+			else
+			{
+				pg_log(PG_FATAL,
+					"--continue-check-on-fault: should be used with check mode (-c)\n");
+				exit(1);
+			}
+			break;
+
 		default:
 			return false;
 	}
@@ -109,4 +124,22 @@ bool
 is_show_progress_mode(void)
 {
 	return greenplum_user_opts.progress;
+}
+
+bool
+is_continue_check_on_fatal(void)
+{
+	return greenplum_user_opts.continue_check_on_fatal;
+}
+
+void
+check_error_occured(void)
+{
+	greenplum_user_opts.error_on_continue_check = true;
+}
+
+bool
+get_check_error(void)
+{
+	return greenplum_user_opts.error_on_continue_check;
 }

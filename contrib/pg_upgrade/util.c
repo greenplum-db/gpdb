@@ -176,6 +176,27 @@ pg_fatal(const char *fmt,...)
 	exit(1);
 }
 
+/*
+ * wrapper around pg_fatal to continue check when running in check mode
+ * with --continue-check-on-fatal
+ */
+void
+gp_fatal_log(const char *fmt,...)
+{
+	va_list		args;
+	eLogType error_type = PG_FATAL;
+
+	if(is_continue_check_on_fatal())
+	{
+		check_error_occured();
+		error_type = PG_WARNING;
+	}
+
+	va_start(args, fmt);
+	pg_log_v(error_type, fmt, args);
+	va_end(args);
+}
+
 
 void
 check_ok(void)
