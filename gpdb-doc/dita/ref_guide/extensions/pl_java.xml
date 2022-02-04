@@ -176,7 +176,7 @@
       <p>For Greenplum Database, the PL/Java extension is available as a package. Download the
         package from the Greenplum Database page on <xref
           href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-          class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
+          class="- topic/xref ">VMware Tanzu Network</xref> and then install the software with the Greenplum
         Package Manager (<codeph>gppkg</codeph>). </p>
       <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
         dependencies, on all hosts across a cluster. It also automatically installs extensions on
@@ -212,8 +212,11 @@
         <ol>
           <li id="pv158485">Download the PL/Java extension package from the Greenplum Database page
             on <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-              format="html" class="- topic/xref ">Pivotal Network</xref> then copy it to the master
+              format="html" class="- topic/xref ">VMware Tanzu Network</xref> then copy it to the master
             host. </li>
+          <li>Follow the instructions in <xref href="../../install_guide/verify_sw.xml#topic1"
+            scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+            to verify the integrity of the <b>Greenplum Procedural Languages PL/Java</b> software.</li>
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux

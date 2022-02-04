@@ -447,7 +447,7 @@ $</codeblock></p>
         Python libraries that can be used with the Greenplum Database PL/Python language. You can
         download these libraries in <codeph>.gppkg</codeph> format from <xref
           href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-          >Pivotal Network</xref>. For information about the libraries, see <xref scope="peer"
+          >VMware Tanzu Network</xref>. For information about the libraries, see <xref scope="peer"
           type="topic" format="dita" href="../../install_guide/install_python_dsmod.xml#topic1"
           >Python Data Science Module Package</xref>.</p>
       <p>These sections describe installing and testing Python modules:<ul id="ul_ukh_4wr_wt">

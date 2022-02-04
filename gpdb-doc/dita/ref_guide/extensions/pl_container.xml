@@ -185,6 +185,10 @@
             version, from the <xref href="https://network.pivotal.io/products/pivotal-gpdb/"
               format="html" scope="external">VMware Tanzu Network</xref>. PL/Container is listed
             under Greenplum Procedural Languages. </li>
+          <li>Follow the instructions in <xref href="../../install_guide/verify_sw.xml#topic1"
+            scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+            to verify the integrity of the <b>Greenplum Procedural Languages PL/Container</b>
+            software.</li>
           <li>As <codeph>gpadmin</codeph>, copy the PL/Container language extension package to the
             master host.</li>
           <li>Run the package installation
@@ -216,7 +220,7 @@
         <ul id="ul_h5t_sbz_vkb">
           <li>Download the <codeph>tar.gz</codeph> file that contains the Docker images from <xref
               href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-              class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
+              class="- topic/xref ">VMware Tanzu Network</xref>. <ul id="ul_vsj_pxb_tbb">
               <li><codeph>plcontainer-python3-images-&lt;version>.tar.gz</codeph></li>
               <li><codeph>plcontainer-python-images-&lt;version>.tar.gz</codeph></li>
               <li><codeph>plcontainer-r-images-&lt;version>.tar.gz</codeph></li>

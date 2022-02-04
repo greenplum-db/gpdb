@@ -52,8 +52,12 @@
       <title id="ij168742">Greenplum PostGIS Extension</title>
       <body>
         <p><ph otherprops="pivotal">The Greenplum Database PostGIS extension package is available
-            from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html">Pivotal
-              Network</xref>. </ph>You can install the package using the Greenplum Package Manager
+            from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html">VMware Tanzu
+              Network</xref>. After you download the package, you can follow the
+           instructions in <xref href="../../install_guide/verify_sw.xml#topic1"
+             scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+           to verify the integrity of the <b>Greenplum Advanced Analytics PostGIS</b>
+           software.</ph> You can install the package using the Greenplum Package Manager
             (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph> in the <cite>Greenplum
             Database Utility Guide</cite>.</p>
         <p>Greenplum Database supports the PostGIS extension with these component versions.<ul

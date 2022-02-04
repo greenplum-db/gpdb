@@ -69,8 +69,11 @@
         <ol>
           <li id="pz214496" otherprops="pivotal">Download the MADlib extension package from <xref
               href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-              >Pivotal Network</xref>.</li>
+              >VMware Tanzu Network</xref>.</li>
           <li>Copy the MADlib package to the Greenplum Database master host.</li>
+          <li>Follow the instructions in <xref href="../../install_guide/verify_sw.xml#topic1"
+            scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+            to verify the integrity of the <b>Greenplum Advanced Analytics MADlib</b> software.</li>
           <li>Unpack the MADlib distribution package. For
             example:<codeblock>$ tar xzvf madlib-1.17.0-gp5-rhel7-x86_64.tar.gz</codeblock></li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>

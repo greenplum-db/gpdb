@@ -45,7 +45,7 @@
       <body>
         <p otherprops="pivotal">The PL/R extension is available as a package. Download the package
           from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
-            scope="external">Pivotal Network</xref> and install it with the Greenplum Package
+            scope="external">VMware Tanzu Network</xref> and install it with the Greenplum Package
           Manager (<codeph>gppkg</codeph>). </p>
         <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
           dependencies, on all hosts across a cluster. It also automatically installs extensions on
@@ -63,7 +63,10 @@
           <ol id="ol_nxv_ql2_4p">
             <li id="py213681" otherprops="pivotal">Download the PL/R extension package from <xref
                 href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
-                scope="external">Pivotal Network</xref>.</li>
+                scope="external">VMware Tanzu Network</xref>.</li>
+            <li>Follow the instructions in <xref href="../../install_guide/verify_sw.xml#topic1"
+              scope="peer" format="dita">Verifying the Greenplum Database Software Download</xref>
+              to verify the integrity of the <b>Greenplum Procedural Languages PL/R</b> software.</li>
             <li>Copy the PL/R package to the Greenplum Database master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
@@ -232,7 +235,7 @@ CREATE TABLE wj_model_results_roi AS SELECT *
           libraries that can be used with the Greenplum Database PL/R language. You can download
           these libraries in <codeph>.gppkg</codeph> format from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-            >Pivotal Network</xref>. For information about the libraries, see <xref scope="peer"
+            >VMware Tanzu Network</xref>. For information about the libraries, see <xref scope="peer"
             type="topic" format="dita" href="../../install_guide/install_r_dslib.xml#topic1">R Data
             Science Library Package</xref>.</p>
         <note type="note">If you expand Greenplum Database and add segment hosts, you must install
