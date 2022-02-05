@@ -14,6 +14,7 @@
         <li><xref href="#flow_of_events" type="topic" format="dita" class="- topic/xref "/></li>
         <li><xref href="#simple_example" type="topic" format="dita" class="- topic/xref "/></li>
         <li><xref href="#incremental_vs_full" type="topic" format="dita" class="- topic/xref "/></li>
+        <li><xref href="#recovery_fails" type="topic" format="dita" class="- topic/xref "/></li>
       </ul></p>
   </body>
   <topic id="recovery_basics">
@@ -237,6 +238,29 @@
           href="https://community.pivotal.io/s/article/5004y00001YA9fI1617805667833?language=en_US"
           format="html" scope="external">"VMware Tanzu Greenplum 6's gprecoverseg explained"</xref>
         in the VMware Tanzu Support Hub. </p>
+    </body>
+  </topic>
+  <topic id="recovery_fails">
+    <title>What If Segment Recovery Fails?</title>
+    <body>
+      <p>If you attempt a full recovery and it fails, you may choose to run a backout script to undo
+        changes to the <codeph>gp_segment_configuration</codeph> table.</p>
+      <p>
+        <note>The backout script is available for full recovery only.</note>
+      </p>
+      <p>Depending on the type of segment recovery, <codeph>gprecoverseg</codeph> may alter rows in
+        the <codeph>gp_segment_configuration</codeph> table on the master host – updating hostname,
+        port number, or data directory values. If segment recovery fails after
+          <codeph>gprecoverseg</codeph> has altered the <codeph>gp_segment_configuration
+          table</codeph>, <codeph>gprecoverseg</codeph> prompts you to run the backout script. You
+        may choose to run the backout script when prompted and attempt segment recovery again as
+        soon as possible. Alternatively, you may choose to investigate the system and make changes
+        or fix problems that led to the failed recovery.</p>
+      <p>The backout script reverts changes to rows in the <codeph>gp_segment_configuration</codeph>
+        whose host, data directory, or port number values were changed during the attempted segment
+        recovery. It does not alter any data on the host you are recovering to. </p>
+      <p>The backout script is located on the master host under
+          <codeph>~/gpAdminLogs/gprecoverseg_&lt;timestamp>_backout</codeph>.</p>
     </body>
   </topic>
 </topic>
