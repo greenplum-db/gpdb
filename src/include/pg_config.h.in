@@ -295,6 +295,9 @@
 /* Define to 1 if you have the <gssapi.h> header file. */
 #undef HAVE_GSSAPI_H
 
+/* Define to 1 if you have the <gssapi_ext.h> header file */
+#undef HAVE_GSSAPI_PROXY
+
 /* Define to 1 if you have the <history.h> header file. */
 #undef HAVE_HISTORY_H
 

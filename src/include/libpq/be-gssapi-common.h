@@ -18,7 +18,9 @@
 #include <gssapi.h>
 #else
 #include <gssapi/gssapi.h>
+#if HAVE_GSSAPI_PROXY
 #include <gssapi/gssapi_ext.h>
+#endif
 #endif
 
 void		pg_GSS_error_be(int severity, const char *errmsg,

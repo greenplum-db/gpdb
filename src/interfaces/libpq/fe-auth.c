@@ -49,8 +49,10 @@
 #include "fe-auth.h"
 #include "libpq/md5.h"
 
+#if HAVE_GSSAPI_PROXY
 #include <gssapi/gssapi_ext.h>
 #include <gssapi/gssapi_krb5.h>
+#endif
 
 #ifdef ENABLE_GSS
 /*
@@ -110,6 +112,7 @@ pg_GSS_error(const char *mprefix, PGconn *conn,
 static bool
 pg_GSS_have_ccache(gss_cred_id_t *cred_out)
 {
+#if HAVE_GSSAPI_PROXY
 	OM_uint32	major, minor;
 	gss_cred_id_t cred = GSS_C_NO_CREDENTIAL;
 	gss_key_value_element_desc cc;
@@ -130,6 +133,9 @@ pg_GSS_have_ccache(gss_cred_id_t *cred_out)
 	}
 	*cred_out = cred;
 	return true;
+#else
+	return false;
+#endif
 }
 
 /*

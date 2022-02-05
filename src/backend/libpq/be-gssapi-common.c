@@ -111,6 +111,6 @@ pg_store_proxy_credential(gss_cred_id_t cred)
 #else
 void
 pg_store_proxy_credential(gss_cred_id_t cred){
-	elog(DEBUG, "HAVE_GSSAPI_PROXY=0!");
+	elog(DEBUG1, "HAVE_GSSAPI_PROXY=0!");
 }
 #endif
