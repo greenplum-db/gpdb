@@ -37,11 +37,8 @@ uninstall:
 clean distclean maintainer-clean:
 	rm -f pg_upgrade$(X) $(OBJS)
 	rm -rf analyze_new_cluster.sh delete_old_cluster.sh log/ tmp_check/ \
-	       loadable_libraries.txt reindex_hash.sql \
-	       pg_upgrade_dump_globals.sql \
-	       pg_upgrade_dump_*.custom pg_upgrade_*.log \
-		   clusterConfigPostgresAddonsFile clusterConfigFile gpdemo-env.sh \
-		   hostfile regression.diffs aomd_filehandler.c
+				 reindex_hash.sql clusterConfigPostgresAddonsFile clusterConfigFile \
+				 gpdemo-env.sh hostfile regression.diffs aomd_filehandler.c
 
 greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_filehandler.c
 	rm -f $@ && cd greenplum && $(LN_S) ../$< aomd_filehandler.c
