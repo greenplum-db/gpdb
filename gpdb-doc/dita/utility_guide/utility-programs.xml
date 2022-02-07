@@ -58,7 +58,7 @@
                         <p><xref href="ref/gpcheckperf.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/gpconfig.xml#topic1" type="topic" format="dita"/></p>
                         <p otherprops="pivotal">
-                            <xref href="ref/gpcopy.xml#topic1" type="topic" format="dita"
+                            <xref href="ref/gpcopy.xml#topic1" type="topic" format="dita" otherprops="pivotal"
                                 /><sup>2</sup></p>
                     </stentry>
                     <stentry>

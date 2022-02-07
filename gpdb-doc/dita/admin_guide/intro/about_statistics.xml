@@ -2,9 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_gwc_jkd_3s">
   <title>About Database Statistics in Greenplum Database</title>
-  <shortdesc>An overview of statistics gathered by the <xref
-        href="../../ref_guide/sql_commands/ANALYZE.xml#topic1">ANALYZE</xref> command in
-    Greenplum Database.</shortdesc>
+  <shortdesc>An overview of statistics gathered by the ANALYZE command in Greenplum
+    Database.</shortdesc>
   <body>
     <p>Statistics are metadata that describe the data stored in the database. The query optimizer
       needs up-to-date statistics to choose the best execution plan for a query. For example, if a

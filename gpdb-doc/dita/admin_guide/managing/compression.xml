@@ -32,7 +32,7 @@
               format="dita"/>. </li>
         <li>The Greenplum Database utilities <xref href="../../utility_guide/ref/gpbackup.xml"
             format="dita"/>, <xref href="../../utility_guide/ref/gprestore.xml" format="dita"/>,
-            <xref href="../../utility_guide/ref/gpcopy.xml" format="dita"/>, <xref
+            <xref href="../../utility_guide/ref/gpcopy.xml" format="dita" otherprops="pivotal"/>, <xref
             href="../../utility_guide/ref/gpload.xml" format="dita"/>, and <xref
             href="../../utility_guide/ref/gplogfilter.xml" format="dita"/> support compression.</li>
       </ul></p>
