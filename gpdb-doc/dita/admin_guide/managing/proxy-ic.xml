@@ -23,13 +23,13 @@
         <codeph>UDPIFC</codeph> mode in a high-latency network. </p>
     <p>To enable interconnect proxies for the Greenplum system, set these system configuration
         parameters.<ul id="ul_vqk_34f_4mb">
-        <li>List the proxy ports with the parameter <codeph><xref
+        <li>List the proxy ports with the parameter <xref
               href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_proxy_addresses"
-              format="dita"/></codeph>. You must specify a proxy port for the master, standby
+              format="dita"/>. You must specify a proxy port for the master, standby
           master, and all segment instances.</li>
-        <li>Set the parameter <codeph><xref
+        <li>Set the parameter <xref
               href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_type" format="dita"
-            /></codeph> to <codeph>proxy</codeph>.</li>
+            /> to <codeph>proxy</codeph>.</li>
       </ul></p>
     <note>When expanding a Greenplum Database system, you must disable interconnect proxies before
       adding new hosts and segment instances to the system, and you must update the
@@ -40,11 +40,11 @@
     <title>Example</title>
     <body>
       <p>This example sets up a Greenplum system to use proxies for the Greenplum interconnect when
-        running queries. The example sets the <codeph><xref
+        running queries. The example sets the <xref
             href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_proxy_addresses"
-            format="dita"/></codeph> parameter and tests the proxies before setting the
-            <codeph><xref href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_type"
-            format="dita"/></codeph> parameter for the Greenplum system.<ul id="ul_mtf_wsm_4mb">
+            format="dita"/> parameter and tests the proxies before setting the
+            <xref href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_type"
+            format="dita"/> parameter for the Greenplum system.<ul id="ul_mtf_wsm_4mb">
           <li><xref href="#topic_z4l_lcg_4mb/set_proxy_address" format="dita">Setting the
               Interconnect Proxy Addresses</xref></li>
           <li><xref href="#topic_z4l_lcg_4mb/test_proxy" format="dita">Testing the Interconnect
@@ -60,9 +60,9 @@
         <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_address>:&lt;port>[, ... ]</codeblock>
         <p>For the master, standby master, and segment instance, the first three fields,
             <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_address</varname>
-          can be found in the <codeph><xref
+          can be found in the <xref
               href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
-              >gp_segment_configuration</xref></codeph> catalog table. The fourth field,
+              >gp_segment_configuration</xref> catalog table. The fourth field,
             <varname>port</varname>, is the proxy port for the Greenplum master or a segment
             instance.<ul id="ul_hxd_2qm_4mb">
             <li><varname>db_id</varname> is the <codeph>dbid</codeph> column in the catalog
@@ -143,8 +143,8 @@ $$ language plpythonu execute on master;</codeblock>
           <codeblock>select my_setup_ic_proxy(-1000, '');</codeblock></p>
         <p>This command runs the function to set the
           parameter.<codeblock>select my_setup_ic_proxy(-1000, 'update proxy');</codeblock></p>
-        <p>As an alternative, you can run the <codeph><xref
-              href="../../utility_guide/ref/gpconfig.xml">gpconfig</xref></codeph> utility to set
+        <p>As an alternative, you can run the s<xref
+              href="../../utility_guide/ref/gpconfig.xml">gpconfig</xref> utility to set
           the <codeph>gp_interconnect_proxy_addresses</codeph> parameter. To set the value as a
           string, the value is a single-quoted string that is enclosed in double quotes. The example
           Greenplum system consists of a master and a single segment instance. </p>

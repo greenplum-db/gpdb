@@ -8,7 +8,7 @@
       system to <codeph>stdout</codeph> .</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>restore_data_subset</b> <varname>plugin_config_file</varname> <varname>data_filenamekey</varname> <varname>offsets_file</varname></codeblock>
+      <codeblock>&lt;plugin_executable> restore_data_subset &lt;plugin_config_file> &lt;data_filenamekey> &lt;offsets_file></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

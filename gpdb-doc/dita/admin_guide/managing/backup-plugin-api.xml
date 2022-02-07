@@ -8,8 +8,9 @@
       Backup/Restore Storage Plugin API.</p>
     <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and
       integrate a custom backup storage system with the Greenplum Database <xref
-        href="../../utility_guide/ref/gpbackup.xml"><codeph>gpbackup</codeph></xref><ph
-        otherprops="pivotal">, <xref href="../../utility_guide/ref/gpbackup_manager.xml"><codeph>gpbackup_manager</codeph></xref>,</ph> and <xref
+        href="../../utility_guide/ref/gpbackup.xml"><codeph>gpbackup</codeph></xref>, <xref
+        href="../../utility_guide/ref/gpbackup_manager.xml"
+      ><codeph>gpbackup_manager</codeph></xref>, and <xref
         href="../../utility_guide/ref/gprestore.xml"><codeph>gprestore</codeph></xref>
       utilities.</p>
     <p>The Backup/Restore Storage Plugin API defines a set of interfaces that a plugin must support.
@@ -52,12 +53,12 @@
         plugin. The Backup/Restore Storage Plugin API defines the format of, and certain keywords
         used in, the plugin configuration file.</p>
       <p>A plugin configuration file is a YAML file in the following format:
-        <codeblock><b>executablepath</b>: <varname>path_to_plugin_executable</varname>
-<b>options</b>:
-  <varname>keyword1</varname>: <varname>value1</varname>
-  <varname>keyword2</varname>: <varname>value2</varname>
+        <codeblock>executablepath: &lt;path_to_plugin_executable>
+options:
+  &lt;keyword1>: &lt;value1>
+  &lt;keyword2>: &lt;value2>
   ...
-  <varname>keywordN</varname>: <varname>valueN</varname></codeblock></p>
+  &lt;keywordN>: &lt;valueN></codeblock></p>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> use the
             <codeph><b>executablepath</b></codeph> value to determine the file system location of
         the plugin executable program.</p>
@@ -107,14 +108,14 @@ options:
           instances. There might be some setup or cleanup required at the segment host level as
           compared to each segment instance.</li>
       </ul>
-      <p otherprops="pivotal">The Plugin API also defines the <codeph>delete_backup</codeph>
+      <p>The Plugin API also defines the <codeph>delete_backup</codeph>
         command, which is called by the <codeph>gpbackup_manager</codeph> utility. (The
           <codeph>gpbackup_manager</codeph> source code is proprietary and the utility is available
         only in the Tanzu Greenplum Backup and Restore download from <xref
           href="https://network.pivotal.io" format="html" scope="external">VMware Tanzu Network</xref>.)</p>
       <p>The Backup/Restore Storage Plugin API defines the following call syntax for a
         backup/restore storage plugin executable
-        program:<codeblock><varname>plugin_executable</varname> <varname>command</varname> <varname>config_file</varname> <varname>args</varname></codeblock></p>
+        program:<codeblock>plugin_executable command config_file args</codeblock></p>
 
       <p>where:</p>
       <ul>
@@ -275,7 +276,7 @@ options:
         which in turn individually call/test each Backup/Restore Storage Plugin API command
         implemented in the plugin.</p>
       <p>The test bench program calling syntax is:
-        <codeblock><b>plugin_test_bench.sh</b> <varname>plugin_executable plugin_config</varname></codeblock></p>
+        <codeblock>plugin_test_bench.sh &lt;plugin_executable plugin_config></codeblock></p>
       <section id="topic8339191" xml:lang="en">
         <title>Procedure</title>
         <p>To run the Backup/Restore Storage Plugin API test bench against a plugin:</p><ol>

@@ -13,10 +13,10 @@
     <p>The foreign-data wrappers included in the Greenplum Database open source
       github repository are good references when trying to write your own.
       You may want to examine the source code for the
-      <codeph><xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/file_fdw" scope="external">file_fdw</xref></codeph>
-      and <codeph><xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/postgres_fdw" scope="external">postgres_fdw</xref></codeph>
+      <xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/file_fdw" scope="external">file_fdw</xref>
+      and <xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/postgres_fdw" scope="external">postgres_fdw</xref>
       modules in the <codeph>contrib/</codeph> directory. The
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/></codeph>
+       <xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/>
       reference page also provides some useful details.</p>
     <note>The SQL standard specifies an interface for writing foreign-data
       wrappers. Greenplum Database does not implement that API, however,

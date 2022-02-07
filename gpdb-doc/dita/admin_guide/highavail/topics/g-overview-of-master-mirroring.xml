@@ -44,13 +44,13 @@
             </ul></p>
         <p>These Greenplum Database system catalog tables contain mirroring and replication
             information. <ul id="ul_tfw_btw_2fb">
-                <li>The catalog table <codeph><xref
+                <li>The catalog table <xref
                             href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml#topic1"
-                        /></codeph> contains the current configuration and state of primary and
+                        /> contains the current configuration and state of primary and
                     mirror segment instances and the master and standby master instance.</li>
-                <li>The catalog view <codeph><xref
+                <li>The catalog view <xref
                             href="../../../ref_guide/system_catalogs/gp_stat_replication.xml#topic1"
-                        /></codeph> contains replication statistics of the
+                        /> contains replication statistics of the
                         <codeph>walsender</codeph> processes that are used for Greenplum Database
                     master and segment mirroring.</li>
             </ul></p>

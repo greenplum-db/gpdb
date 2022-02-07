@@ -25,8 +25,8 @@
       disable Greenplum interconnect proxies by setting the interconnect to the default
         (<codeph>UDPIFC</codeph>) and reloading the <codeph>postgresql.conf</codeph> file to update
       the Greenplum system
-        configuration.<codeblock><codeph><xref href="../../utility_guide/ref/gpconfig.xml">gpconfig</xref></codeph> -r gp_interconnect_type
-<codeph><xref href="../../utility_guide/ref/gpstop.xml">gpstop</xref></codeph> -u</codeblock><p>For
+        configuration.<codeblock><xref href="../../utility_guide/ref/gpconfig.xml">gpconfig</xref> -r gp_interconnect_type
+<xref href="../../utility_guide/ref/gpstop.xml">gpstop</xref> -u</codeblock><p>For
         information about Greenplum interconnect proxies, see <xref
           href="../managing/proxy-ic.xml#topic1"/>.</p></note>
   </body>
@@ -101,8 +101,7 @@
               </row>
               <row>
                 <entry namest="c1" nameend="c2"><p><b>Offline Pre-Expansion Tasks</b></p>
-                  <ph otherprops="red">* The system is unavailable to all user activity during this
-                    process.</ph>
+                  <ph>* The system is unavailable to all user activity during this process.</ph>
                 </entry>
               </row>
               <row>
@@ -202,8 +201,8 @@
       <p>A deliberate, thorough approach to deploying compatible hardware greatly minimizes risk to
         the expansion process.</p>
       <p>Hardware resources and configurations for new segment hosts should match those of the
-        existing hosts.<ph otherprops="pivotal"> Work with <i>VMware Support</i> before making a
-          hardware purchase to expand Greenplum Database.</ph></p>
+        existing hosts. Work with <i>VMware Support</i> before making a hardware purchase to expand
+        Greenplum Database.</p>
       <p>The steps to plan and set up new hardware platforms vary for each deployment. Some
         considerations include how to:</p>
       <ul id="ul_alt_tl5_mr">
@@ -269,8 +268,8 @@
           <li><b>Block Mirroring</b> — Adding one or more blocks of host systems. For example add a
             block of four or eight hosts. Block mirroring is a custom mirroring configuration. For
             more information about block mirroring, see <xref
-              href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/><ph otherprops="op-print"> in the
-                <cite>Greenplum Database Best Practices Guide</cite></ph>.</li>
+              href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"
+            />.</li>
         </ul>
       </body>
     </topic>

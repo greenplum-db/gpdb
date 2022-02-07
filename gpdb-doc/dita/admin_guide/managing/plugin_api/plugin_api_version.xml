@@ -7,7 +7,7 @@
     <p>Plugin command to display the supported Backup Storage Plugin API version.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>plugin_api_version</b></codeblock>
+      <codeblock>&lt;plugin_executable> plugin_api_version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

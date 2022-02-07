@@ -7,8 +7,8 @@
     <p>Plugin command to clean up a storage plugin after backup.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>cleanup_plugin_for_backup</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname> <varname>scope</varname></codeblock>
-      <codeblock><varname>plugin_executable</varname> <b>cleanup_plugin_for_backup</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname> <varname>scope</varname> <varname>contentID</varname></codeblock>
+      <codeblock>&lt;plugin_executable> cleanup_plugin_for_backup &lt;plugin_config_file> &lt;local_backup_dir> &lt;scope></codeblock>
+      <codeblock>&lt;plugin_executable> cleanup_plugin_for_backup &lt;plugin_config_file> &lt;local_backup_dir> &lt;scope> &lt;contentID></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

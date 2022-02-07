@@ -161,7 +161,7 @@ $ gpfdist -d /var/load_files2 -p 8082 -l /home/<codeph>gpadmin</codeph>/log2 &am
                <cmdname>gpfdist</cmdname> is a web server: test connectivity by running the
             following command from each host in the Greenplum array (segments and master):</p>
          <p>
-            <codeblock>$ wget http://<i>gpfdist_hostname</i>:<i>port</i>/<i>filename</i>
+            <codeblock>$ wget http://&lt;gpfdist_hostname>:&lt;port>/&lt;filename>
          </codeblock>
          </p>
          <p>The <codeph>CREATE EXTERNAL TABLE</codeph> definition must have the correct host name,

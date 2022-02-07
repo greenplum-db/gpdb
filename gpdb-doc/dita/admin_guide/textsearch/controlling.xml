@@ -23,7 +23,7 @@
       <title>Parsing Documents</title>
       <p>Greenplum Database provides the function <codeph>to_tsvector</codeph> for converting a
         document to the <codeph>tsvector</codeph> data type.</p>
-      <codeblock>to_tsvector([<i>config</i> regconfig, ] <i>document</i> text) returns tsvector</codeblock>
+      <codeblock>to_tsvector([&lt;config> regconfig, ] &lt;document> text) returns tsvector</codeblock>
       <p><codeph>to_tsvector</codeph> parses a textual document into tokens, reduces the tokens to
         lexemes, and returns a <codeph>tsvector</codeph> which lists the lexemes together with their
         positions in the document. The document is processed according to the specified or default
@@ -87,7 +87,7 @@
           <codeph>plainto_tsquery</codeph> for converting a query to the <codeph>tsquery</codeph>
         data type. <codeph>to_tsquery</codeph> offers access to more features than
           <codeph>plainto_tsquery</codeph>, but is less forgiving about its input.</p>
-      <codeblock>to_tsquery([<i>config</i> regconfig, ] <i>querytext</i> text) returns tsquery</codeblock>
+      <codeblock>to_tsquery([&lt;config> regconfig, ] &lt;querytext> text) returns tsquery</codeblock>
       <p><codeph>to_tsquery</codeph> creates a <codeph>tsquery</codeph> value from <i>querytext</i>,
         which must consist of single tokens separated by the Boolean operators
           <codeph>&amp;</codeph> (AND), <codeph>|</codeph> (OR), and <codeph>!</codeph>(NOT). These
@@ -125,7 +125,7 @@
  'sn' &amp; !'crab'</codeblock>
       <p>Without quotes, <codeph>to_tsquery</codeph> will generate a syntax error for tokens that
         are not separated by an AND or OR operator.</p>
-      <codeblock>plainto_tsquery([ <i>config</i> regconfig, ] <i>querytext</i> ext) returns tsquery</codeblock>
+      <codeblock>plainto_tsquery([ &lt;config> regconfig, ] &lt;querytext> ext) returns tsquery</codeblock>
       <p><codeph>plainto_tsquery</codeph> transforms unformatted text
           <codeph><i>querytext</i></codeph> to <codeph>tsquery</codeph>. The text is parsed and
         normalized much as for <codeph>to_tsvector</codeph>, then the <codeph>&amp;</codeph> (AND)
@@ -278,7 +278,7 @@ LIMIT 10;
         fragments of the document with marked search terms. Greenplum Database
         provides a function <codeph>ts_headline</codeph> that implements this
         functionality.</p>
-      <codeblock>ts_headline([<i>config</i> regconfig, ] <i>document</i> text, <i>query</i> tsquery [, <i>options</i> text ]) returns text</codeblock>
+      <codeblock>ts_headline([&lt;config> regconfig, ] &lt;document> text, &lt;query> tsquery [, &lt;options> text ]) returns text</codeblock>
       <p><codeph>ts_headline</codeph> accepts a document along with a query, and
         returns an excerpt from the document in which terms from the query are
         highlighted. The configuration to be used to parse the document can be

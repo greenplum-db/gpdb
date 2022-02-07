@@ -243,7 +243,7 @@ SELECT '[1, 2, 3]'::jsonb @> '[1, 2, 2]'::jsonb;
 -- within the object on the left side:
 SELECT '{"product": "Greenplum", "version": "7.0.0", "jsonb":true}'::jsonb @> '{"version":"7.0.0"}'::jsonb;
 
--- The array on the right side is <b>not</b> considered contained within the
+-- The array on the right side is not considered contained within the
 -- array on the left, even though a similar array is nested within it:
 SELECT '[1, 2, [1, 3]]'::jsonb @> '[1, 3]'::jsonb;  -- yields false
 
@@ -458,7 +458,7 @@ Array with n elements > array with n - 1 elements</pre>
         <p>This table describes the operators that are available for use with the
             <codeph>json</codeph> and <codeph>jsonb</codeph> data types.</p>
         <table id="table_e41_y3w_mq">
-          <title><varname>json</varname> and <codeph>jsonb</codeph> Operators</title>
+          <title>json and jsonb Operators</title>
           <tgroup cols="5">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
             <colspec colnum="2" colname="col2" colwidth="1.17*"/>
@@ -582,7 +582,7 @@ Array with n elements > array with n - 1 elements</pre>
           be used to effectively index <codeph>jsonb</codeph> data, see <xref
             href="#topic_aqt_1tw_mq" format="dita"/>.</p>
         <table id="table_dcb_y3w_mq">
-          <title><codeph>jsonb</codeph> Operators</title>
+          <title>jsonb Operators</title>
           <tgroup cols="4">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
             <colspec colnum="2" colname="col2" colwidth="1.94*"/>
@@ -665,7 +665,7 @@ Array with n elements > array with n - 1 elements</pre>
           follow the ordering rules for B-tree operations described in <xref
             href="#topic_aqt_1tw_mq" format="dita"/>.</p>
         <table id="table_j4w_z5n_vq">
-          <title><codeph>jsonb</codeph> Comparison Operators</title>
+          <title>jsonb Comparison Operators</title>
           <tgroup cols="2">
             <colspec colnum="1" colname="col1"/>
             <colspec colnum="2" colname="col2"/>

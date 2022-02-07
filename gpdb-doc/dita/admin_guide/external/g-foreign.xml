@@ -36,10 +36,10 @@
       which can provide additional data such as a user name and password
       based on the current Greenplum Database role.</p>
     <p>For additional information, refer to the
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/></codeph>,
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_SERVER.xml#topic1"/></codeph>,
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_USER_MAPPING.xml#topic1"/></codeph>,
-        and <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_TABLE.xml#topic1"/></codeph>
+       <xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/>,
+       <xref href="../../ref_guide/sql_commands/CREATE_SERVER.xml#topic1"/>,
+       <xref href="../../ref_guide/sql_commands/CREATE_USER_MAPPING.xml#topic1"/>,
+        and <xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_TABLE.xml#topic1"/>
         SQL reference pages.</p>
   </body>
 </topic>

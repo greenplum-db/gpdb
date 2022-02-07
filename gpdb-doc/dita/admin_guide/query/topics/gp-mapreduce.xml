@@ -13,7 +13,7 @@
       for execution by the Greenplum Database parallel engine. The Greenplum Database system distributes
       the input data, runs the program across a set of machines, handles machine failures, and
       manages the required inter-machine communication.</p>
-    <p>Refer to <codeph><xref href="../../../utility_guide/ref/gpmapreduce.xml#topic1" type="topic" format="dita"/></codeph>
+    <p>Refer to <xref href="../../../utility_guide/ref/gpmapreduce.xml#topic1" type="topic" format="dita"/>
       for details about running the Greenplum MapReduce program.</p>
   </body>
   <topic id="topic2" xml:lang="en">
@@ -49,11 +49,11 @@
         the string must be quoted or the special character must be escaped with a backslash (
           <codeph>\</codeph> ).</p>
       <codeblock># Read each new line literally
-somekey: <i>|</i>   this value contains two lines
+somekey: |   this value contains two lines
    and each line is read literally
 # Treat each new line as a space
-anotherkey: <i>&gt;
-</i>   this value contains two lines
+anotherkey: &gt;
+   this value contains two lines
    but is treated as one continuous line
 # This quoted string contains a special character
 ThirdKey: "This is a string: not a mapping"</codeblock>
@@ -86,7 +86,7 @@ date: 1865
         to one another. The use of white space is significant. White space should not be used simply
         for formatting purposes, and tabs should not be used at all.</p>
       <p>Refer to
-        <codeph><xref href="../../../utility_guide/ref/gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/></codeph>
+        <xref href="../../../utility_guide/ref/gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/>
         for detailed information about the Greenplum MapReduce configuration file
 format
          and the keys and values supported.</p>

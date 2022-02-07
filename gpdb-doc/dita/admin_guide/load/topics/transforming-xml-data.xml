@@ -320,7 +320,7 @@ GPLOAD:
                the following command. (Run <cmdname>gpfdist</cmdname> first, using the command
                   <codeph>gpfdist -c config.yaml</codeph>).</p>
             <codeblock>CREATE READABLE EXTERNAL TABLE prices_readable (LIKE prices)
-   LOCATION ('gpfdist://hostname:8080/prices.xml<b>#transform=prices_input</b>')
+   LOCATION ('gpfdist://hostname:8080/prices.xml#transform=prices_input')
    FORMAT 'TEXT' (DELIMITER '|')
    LOG ERRORS SEGMENT REJECT LIMIT 10;
 </codeblock>
@@ -459,9 +459,9 @@ TRANSFORMATIONS:
          <p>The following examples demonstrate the complete process for different types of XML data
             and STX transformations. Files and detailed instructions associated with these examples
             are in the GitHub repo <codeph>github.com://greenplum-db/gpdb</codeph> in the
-                  <codeph><xref
+                  <xref
                   href="https://github.com/greenplum-db/gpdb/blob/master/gpMgmt/demo/gpfdist_transform"
-                  format="html" scope="external">gpMgmt/demo/gpfdist_transform</xref></codeph>
+                  format="html" scope="external">gpMgmt/demo/gpfdist_transform</xref>
             directory. Read the README file in the <i>Before You Begin</i> section before you run
             the examples. The README file explains how to download the example data file used in the
             examples.</p>

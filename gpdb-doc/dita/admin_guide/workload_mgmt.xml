@@ -97,9 +97,9 @@
         <codeph>MEMORY_LIMIT</codeph> parameter is set:</p>
     <ul id="ul_p5p_jxp_wq">
       <li>If no <codeph>MEMORY_LIMIT</codeph> is set for a resource queue, the amount of memory
-        allocated per query is the value of the <codeph><xref
+        allocated per query is the value of the <xref
             href="../ref_guide/config_params/guc-list.xml#statement_mem" type="section"
-            >statement_mem</xref></codeph> server configuration parameter. The maximum memory the
+            >statement_mem</xref> server configuration parameter. The maximum memory the
         resource queue can use is the product of <codeph>statement_mem</codeph> and
           <codeph>ACTIVE_STATEMENTS</codeph>. </li>
       <li>When a <codeph>MEMORY_LIMIT</codeph> is set on a resource queue, the number of queries
@@ -581,22 +581,22 @@ MEMORY_LIMIT='2000MB');
           To change the limits of a resource queue, specify the new values you want for the queue.
           For example:</p>
         <p>
-          <codeblock>=# ALTER RESOURCE QUEUE <i>adhoc</i> WITH (ACTIVE_STATEMENTS=5);
-=# ALTER RESOURCE QUEUE <i>exec</i> WITH (PRIORITY=MAX);
+          <codeblock>=# ALTER RESOURCE QUEUE &lt;adhoc> WITH (ACTIVE_STATEMENTS=5);
+=# ALTER RESOURCE QUEUE &lt;exec> WITH (PRIORITY=MAX);
 </codeblock>
         </p>
         <p>To reset active statements or memory limit to no limit, enter a value of
             <codeph>-1</codeph>. To reset the maximum query cost to no limit, enter a value of
             <codeph>-1.0</codeph>. For example:</p>
         <p>
-          <codeblock>=# ALTER RESOURCE QUEUE <i>adhoc</i> WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
+          <codeblock>=# ALTER RESOURCE QUEUE &lt;adhoc> WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
 </codeblock>
         </p>
         <p>You can use the <codeph>ALTER RESOURCE QUEUE</codeph> command to change the priority of
           queries associated with a resource queue. For example, to set a queue to the minimum
           priority level:</p>
         <p>
-          <codeblock>ALTER RESOURCE QUEUE <i>webuser</i> WITH (PRIORITY=MIN);
+          <codeblock>ALTER RESOURCE QUEUE &lt;webuser> WITH (PRIORITY=MIN);
 </codeblock>
         </p>
       </body>
@@ -610,7 +610,7 @@ MEMORY_LIMIT='2000MB');
           and <xref href="#topic27" type="topic" format="dita"/> for instructions on emptying a
           resource queue. To drop a resource queue:</p>
         <p>
-          <codeblock>=# DROP RESOURCE QUEUE <i>name</i>;
+          <codeblock>=# DROP RESOURCE QUEUE &lt;name>;
 </codeblock>
         </p>
       </body>
