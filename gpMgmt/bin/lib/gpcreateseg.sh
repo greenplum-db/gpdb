@@ -209,8 +209,8 @@ CREATE_QES_MIRROR () {
     # Add the samehost replication entry to support single-host development
     local PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} samehost trust"
     if [ $HBA_HOSTNAMES -eq 0 ];then
-        local MIRROR_ADDRESSES=$( REMOTE_EXECUTE_AND_GET_OUTPUT ${GP_HOSTADDRESS} "'${GPHOME}'/libexec/ifaddrs --no-loopback" )
-        local PRIMARY_ADDRESSES=$( REMOTE_EXECUTE_AND_GET_OUTPUT ${PRIMARY_HOSTADDRESS} "'${GPHOME}'/libexec/ifaddrs --no-loopback")
+        local MIRROR_ADDRESSES=($( REMOTE_EXECUTE_AND_GET_OUTPUT ${GP_HOSTADDRESS} "'${GPHOME}'/libexec/ifaddrs --no-loopback" ))
+        local PRIMARY_ADDRESSES=($( REMOTE_EXECUTE_AND_GET_OUTPUT ${PRIMARY_HOSTADDRESS} "'${GPHOME}'/libexec/ifaddrs --no-loopback"))
         for ADDR in "${MIRROR_ADDRESSES[@]}" "${PRIMARY_ADDRESSES[@]}"
         do
             CIDR_ADDR=$(GET_CIDRADDR $ADDR)
