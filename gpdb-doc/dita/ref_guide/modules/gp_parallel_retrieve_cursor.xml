@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic_gpprc">
+    <title>gp_parallel_retrieve_cursor (Beta)</title>
+    <body>
+      <p>The <codeph>gp_parallel_retrieve_cursor</codeph> module is an enhanced cursor
+        implementation that you can use to create a special kind of cursor on the Greenplum 
+        Database master node, and retrieve query results, on demand and in parallel,
+        directly from the Greenplum segments. Greenplum refers to such a cursor as a
+        <i>parallel retrieve cursor</i>.</p>
+      <p>The <codeph>gp_parallel_retrieve_cursor</codeph> module is a Greenplum Database-specific
+         cursor implementation loosely based on the PostgreSQL cursor.</p>
+      <p>This topic includes the following sections:</p>
+      <ul>
+        <li><xref href="#topic_reg" type="topic" format="dita"/></li>
+        <li><xref href="#topic_about" type="topic" format="dita"/></li>
+        <li><xref href="#topic_using" type="topic" format="dita"/></li>
+        <li><xref href="#topic_limits" type="topic" format="dita"/></li>
+        <li><xref href="#topic_addtldocs" type="topic" format="dita"/></li>
+        <li><xref href="#topic_examples" type="topic" format="dita"/></li>
+      </ul>
+    </body>
+    <topic id="topic_reg">
+      <title>Installing and Registering the Module</title>
+      <body>
+        <p>The <codeph>gp_parallel_retrieve_cursor</codeph> module is installed when you
+          install Greenplum Database. Before you can use any of the functions defined in the
+          module, you must register the <codeph>gp_parallel_retrieve_cursor</codeph>
+          extension in each database where you want to use the functionality:</p>
+        <codeblock>CREATE EXTENSION gp_parallel_retrieve_cursor;</codeblock>
+        <p>Refer to <xref href="../../install_guide/install_modules.html"
+            format="html" scope="peer">Installing Additional Supplied Modules</xref>
+          for more information.</p>
+      </body>
+    </topic>
+    <topic id="topic_about">
+      <title>About the gp_parallel_retrieve_cursor Module</title>
+      <body>
+        <p>You use a cursor to retrieve a smaller number of rows at a time from a larger
+          query. When you <codeph>DECLARE</codeph> a parallel retrieve cursor, the Greenplum
+          Database Query Dispatcher (QD) dispatches the query plan to each Query Executor
+          (QE), and creates an <i>endpoint</i> on each QE before it executes the query.
+          An endpoint is a query result source for a parallel retrieve cursor on a specific
+          QE. Instead of returning the query result to the QD, an endpoint retains the
+          query result for retrieval via a different process: a direct connection to the
+          endpoint. You open a special retrieve mode connection, called a <i>retrieve
+          session</i>, and use the new <codeph>RETRIEVE</codeph> SQL command to retrieve
+          query results from each parallel retrieve cursor endpoint.</p>
+        <p>The <codeph>gp_parallel_retrieve_cursor</codeph> modules provides the following
+          functions that you can use to view and manage parallel retrieve cursors and
+          endpoints:</p>
+        <table id="funcs">
+        <tgroup cols="2">
+          <colspec colname="col1" colnum="1" colwidth="177*"/>
+          <colspec colname="col2" colnum="2" colwidth="186*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Function Name</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">gp_get_endpoints()</entry>
+              <entry colname="col2">List the endpoints associated with all active parallel
+                retrieve cursors declared by the current session user in the current
+                database. When the Greenplum
+                Database superuser invokes this function, it returns a list of all endpoints
+                for all parallel retrieve cursors declared by all users in the current
+                database.</entry>
+            </row>
+            <row>
+              <entry colname="col1">gp_get_session_endpoints()</entry>
+              <entry colname="col2">List the endpoints associated with all parallel retrieve
+                cursors declared in the current session for the current session user.</entry>
+            </row>
+            <row>
+              <entry colname="col1">gp_get_segment_endpoints()</entry>
+              <entry colname="col2">List all retrieve sessions for the current endpoint.</entry>
+            </row>
+            <row>
+              <entry colname="col1">gp_wait_parallel_retrieve_cursor(cursorname text, timeout_sec int4 )</entry>
+              <entry colname="col2">Return cursor status or block and wait for results
+                to be retrieved from all endpoints associated with the specified
+                parallel retrieve cursor.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+        </table>
+        <note>Each of these functions is located in the <codeph>pg_catalog</codeph> schema,
+          and each function <codeph>RETURNS TABLE</codeph>.</note>
+      </body>
+    </topic>
+    <topic id="topic_using">
+      <title>Using the gp_parallel_retrieve_cursor Module</title>
+      <body>
+        <p>You will perform the following tasks when you use a Greenplum Database parallel
+          retrieve cursor to read query results in parallel from Greenplum segments:</p>
+        <ol>
+          <li><xref href="#topic_using/declare_cursor" type="topic"
+              format="dita">Declare the parallel retrieve cursor</xref>.</li>
+          <li><xref href="#topic_using/list_endpoints" type="topic"
+              format="dita">List the endpoints of the parallel retrieve cursor</xref>.</li>
+          <li><xref href="#topic_using/open_retrieve_conn" type="topic"
+              format="dita">Open a retrieve connection to each endpoint</xref>.</li>
+          <li><xref href="#topic_using/retrieve_data" type="topic"
+              format="dita">Retrieve data from each endpoint</xref>.</li>
+          <li><xref href="#topic_using/wait" type="topic"
+              format="dita">Wait for data retrieval to complete</xref>.</li>
+          <li><xref href="#topic_using/error_handling" type="topic"
+              format="dita">Handle data retrieval errors</xref>.</li>
+          <li><xref href="#topic_using/close" type="topic"
+              format="dita">Close the parallel retrieve cursor</xref>.</li>
+        </ol>
+        <p>In addition to the above, you may optionally choose to open a utility-mode
+          connection to an endpoint to <xref href="#topic_using/utility_endpoints" type="topic"
+              format="dita">List endpoint-specific retrieve session information</xref>.</p> 
+        <section id="declare_cursor">
+          <title>Declaring a Parallel Retrieve Cursor</title>
+          <p>You <codeph><xref href="../sql_commands/DECLARE.html#topic1" format="html"
+              scope="peer">DECLARE</xref></codeph> a cursor to retrieve a smaller number of rows
+            at a time from a
+            larger query. When you declare a parallel retrieve cursor, you can retrieve
+            the query results directly from the Greenplum Database segments.</p>
+          <p>The syntax for declaring a parallel retrieve cursor is similar to that of
+            declaring a regular cursor; you must additionally include the
+            <codeph>PARALLEL RETRIEVE</codeph> keywords in the command.
+            You can declare a parallel retrieve cursor only within a transaction, and the
+            cursor name that you specify when you declare the cursor must be unique within
+            the transaction.</p>
+          <p>For example, the following commands begin a transaction and declare a parallel
+            retrieve cursor named <codeph>prc1</codeph> to retrieve the results from a
+            specific query:</p>
+          <codeblock>BEGIN;
+DECLARE prc1 PARALLEL RETRIEVE CURSOR FOR <i>query</i>;</codeblock>
+          <p>Greenplum Database creates the endpoint(s) on the QD or QEs, depending on the
+            <i>query</i> parameters:</p>
+          <ul>
+            <li>Greenplum Database creates an endpoint on the QD when the query results must
+              be gathered by the master. This example <codeph>DECLARE</codeph> statement
+              requires that the master gather the query results:
+              <codeblock>DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 ORDER BY a;</codeblock>
+              <note>You may choose to run the <codeph>EXPLAIN</codeph> command on the
+                parallel retrieve cursor query to identify when motion is involved. Consider
+                using a regular cursor for such queries.</note></li>
+            <li>When the query involves direct dispatch (the query is filtered on the
+              distribution key), Greenplum Database creates the
+              endpoint(s) on specific segment host(s). This example <codeph>DECLARE</codeph>
+              statement may result in the creation of single endpoint:
+              <codeblock>DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 WHERE a=1;</codeblock></li>
+            <li>Greenplum Database creates the endpoints on all segment hosts when all hosts
+              contribute to the query results. This example <codeph>DECLARE</codeph> statement
+              results in all segments contributing query results:
+              <codeblock>DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;</codeblock></li>
+          </ul>
+          <p>The <codeph>DECLARE</codeph> command returns when the endpoints are ready and
+            query execution has begun.</p>
+        </section>
+        <section id="list_endpoints">
+          <title>Listing a Parallel Retrieve Cursor's Endpoints</title>
+          <p>You can obtain the information that you need to initiate a retrieve
+            connection to an endpoint by invoking the <codeph>gp_get_endpoints()</codeph>
+            function in a session on the Greenplum Database master host:</p>
+          <codeblock>SELECT * FROM gp_get_endpoints();</codeblock>
+          <p><codeph>gp_get_endpoints()</codeph> returns the list of endpoints in a table
+            with the following columns:</p>
+          <table id="gp_get_endpoints_table">
+            <tgroup cols="3">
+              <colspec colname="col1" colnum="1" colwidth="100"/>
+              <colspec colname="col2" colnum="2" colwidth="186*"/>
+              <colspec colname="col3" colnum="3" colwidth="186*"/>
+              <thead>
+                <row>
+                  <entry colname="col1">Column Name</entry>
+                  <entry colname="col2">Data Type</entry>
+                  <entry colname="col2">Description</entry>
+                </row>
+              </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">gp_segment_id</entry>
+                <entry colname="col2">integer</entry>
+                <entry colname="col3">The QE's endpoint <codeph>gp_segment_id</codeph>.</entry>
+              </row>
+              <row>
+                <entry colname="col1">auth_token</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The authentication token for a retrieve session.</entry>
+              </row>
+              <row>
+                <entry colname="col1">cursorname</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The name of the parallel retrieve cursor.</entry>
+              </row>
+              <row>
+                <entry colname="col1">sessionid</entry>
+                <entry colname="col2">integer</entry>
+                <entry colname="col3">The identifier of the session in which the parallel
+                  retrieve cursor was created.</entry>
+              </row>
+              <row>
+                <entry colname="col1">hostname</entry>
+                <entry colname="col2">varchar(64)</entry>
+                <entry colname="col3">The name of the host from which to retrieve the data
+                  for the endpoint.</entry>
+              </row>
+              <row>
+                <entry colname="col1">port</entry>
+                <entry colname="col2">integer</entry>
+                <entry colname="col3">The port number from which to retrieve the data for
+                  the endpoint.</entry>
+              </row>
+              <row>
+                <entry colname="col1">username</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The name of the session user (not the current user);
+                  <i>you must initiate the retrieve session as this user</i>.</entry>
+              </row>
+              <row>
+                <entry colname="col1">state</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The state of the endpoint; the valid states are:
+                  <p>READY: The endpoint is ready to be retrieved.</p>
+                  <p>ATTACHED: The endpoint is attached to a retrieve connection.</p>
+                  <p>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.</p>
+                  <p>FINISHED: The endpoint has been fully retrieved.</p>
+                  <p>RELEASED: Due to an error, the endpoint has been released and the connection
+                    closed.</p></entry>
+              </row>
+              <row>
+                <entry colname="col1">endpointname</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The endpoint identifier; you provide this identifier
+                  to the <codeph>RETRIEVE</codeph> command.</entry>
+              </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <p>You can similarly invoke the <codeph>gp_get_session_endpoints()</codeph> function
+            to list the endpoints created for the parallel retrieve cursors
+            declared in the current session and by the current user.</p>
+        </section>
+        <section id="open_retrieve_conn">
+          <title>Opening a Retrieve Session</title>
+          <p>After you declare a parallel retrieve cursor, you can open a retrieve session
+            to each endpoint. Only a single retrieve session may be open to an endpoint
+            at any given time.</p>
+          <note>A retrieve session is independent of the parallel retrieve cursor itself.</note>
+          <p>Retrieve session authentication does not depend on the <codeph>pg_hba.conf</codeph>
+            file, but rather on an authentication token (<codeph>auth_token</codeph>)
+            generated by Greenplum Database.</p>
+          <note>Because Greenplum Database skips <codeph>pg_hba.conf</codeph>-controlled
+            authentication for a retrieve session, for security purposes. you may invoke
+            only the <codeph>RETRIEVE</codeph> command in the session.</note>
+          <p>When you initiate a retrieve session to an endpoint:</p>
+          <ul>
+            <li>The user that you specify for the retrieve session must be the session user that
+              declared the parallel retrieve cursor (the <codeph>username</codeph> returned
+              by <codeph>gp_get_endpoints()</codeph>). This user must have Greenplum Database
+              login privileges.</li>
+            <li>You specify the <codeph>hostname</codeph> and <codeph>port</codeph>
+              returned by <codeph>gp_get_endpoints()</codeph> for the endpoint.</li>
+            <li>You authenticate the retrieve session by specifying the
+              <codeph>auth_token</codeph> returned for the endpoint via the
+              <codeph>PGPASSWORD</codeph> environment variable, or when prompted for
+              the retrieve session <codeph>Password</codeph>.</li>
+            <li>You must specify the
+              <codeph><xref href="../config_params/guc-list.html#gp_retrieve_conn"
+                format="html" scope="peer">gp_retrieve_conn</xref></codeph>
+              server configuration parameter on the connection request, and set the value
+              to <codeph>true</codeph> .</li>
+          </ul>
+          <p>For example, if you are initiating a retrieve session via <codeph>psql</codeph>:</p>
+          <codeblock>PGOPTIONS='-c gp_retrieve_conn=true' psql -h <i>hostname</i> -p <i>port</i> -u <i>username</i> -d <i>dbname</i></codeblock>
+          <p>To distinguish a retrieve session from other sessions running on a segment
+            host, Greenplum Database includes the <codeph>[retrieve]</codeph> tag on the
+            <codeph>ps</codeph> command output display for the process.</p>
+        </section>
+        <section id="retrieve_data">
+          <title>Retrieving Data From the Endpoint</title>
+          <p>Once you establish a retrieve session, you retrieve the tuples associated with
+            a query result on that endpoint using the
+            <codeph><xref href="../sql_commands/RETRIEVE.html#topic1" format="html"
+              scope="peer">RETRIEVE</xref></codeph> command.</p>
+          <p>You can specify a (positive) number of rows to retrieve, or
+            <codeph>ALL</codeph> rows:</p>
+          <codeblock>RETRIEVE 7 FROM ENDPOINT prc10000003300000003;
+RETRIEVE ALL FROM ENDPOINT prc10000003300000003;</codeblock>
+          <p>Greenplum Database returns an empty set if there are no more rows to retrieve
+            from the endpoint.</p>
+          <note>You can retrieve from multiple parallel retrieve cursors from the same
+            retrieve session only when their <codeph>auth_token</codeph>s match.</note>
+        </section>
+        <section id="wait">
+          <title>Waiting for Data Retrieval to Complete</title>
+          <p>Use the <codeph>gp_wait_parallel_retrieve_cursor()</codeph> function to
+            display the the status of data retrieval from a parallel retrieve cursor, or to
+            wait for all endpoints to finishing retrieving the data. You invoke this
+            function in the transaction block in which you declared the parallel retrieve
+            cursor.</p>
+          <p><codeph>gp_wait_parallel_retrieve_cursor()</codeph> returns <codeph>true</codeph>
+            only when all tuples are fully retrieved from all endpoints. In all other cases,
+            the function returns <codeph>false</codeph> and may additionally throw an error.</p>
+          <p>The function signatures of <codeph>gp_wait_parallel_retrieve_cursor()</codeph>
+            follow:</p>
+          <codeblock>gp_wait_parallel_retrieve_cursor( cursorname text )
+gp_wait_parallel_retrieve_cursor( cursorname text, timeout_sec int4 )</codeblock>
+          <p>You must identify the name of the cursor when you invoke this function.
+            The timeout argument is optional:</p>
+          <ul>
+            <li>The default timeout is <codeph>0</codeph> seconds: Greenplum Database checks
+              the status of all retrieve sessions and returns the result immediately.</li>
+            <li>A timeout value of <codeph>-1</codeph> seconds instructs Greenplum to block
+              until all data from all endpoints has been retrieved, or to block until an
+              error occurs.</li>
+            <li>The function reports the retrieval status after a timeout occurs for any
+              other positive timeout value that you specify.</li>
+          </ul>
+          <p><codeph>gp_wait_parallel_retrieve_cursor()</codeph> returns when it encounters
+            one of the following conditions:</p>
+          <ul>
+            <li>All data has been retrieved from all endpoints.</li>
+            <li>A timeout has occurred.</li>
+            <li>An error has occurred.</li>
+          </ul>
+        </section>
+        <section id="error_handling">
+          <title>Handling Data Retrieval Errors</title>
+          <p>An error can occur in a retrieve sesson when:</p>
+          <ul>
+            <li>You cancel or interrupt the retrieve operation.</li>
+            <li>The endpoint is only partially retrieved when the retrieve session quits.</li>
+          </ul>
+          <p>When an error occurs in a specific retrieve session, Greenplum Database removes
+            the endpoint from the QE. Other retrieve sessions continue to function as
+            normal.</p>
+          <p>If you close the transaction before fully retrieving from all endpoints, or
+            if <codeph>gp_wait_parallel_retrieve_cursor()</codeph> returns an error,
+            Greenplum Database terminates all remaining open retrieve sessions.</p>
+        </section>
+        <section id="close">
+          <title>Closing the Cursor</title>
+          <p>When you have completed retrieving data from the parallel retrieve cursor,
+             close the cursor and end the transaction:</p>
+          <codeblock>CLOSE prc1;
+END;</codeblock>
+          <note>When you close a parallel retrieve cursor, Greenplum Database terminates any
+            open retrieve sessions associated with the cursor.</note>
+          <p>On closing, Greenplum Database frees all resources associated with the parallel
+            retrieve cursor and its endpoints.</p>
+        </section>
+        <section id="utility_endpoints">
+          <title>Listing Endpoint-Specific Session Information</title>
+          <p></p>
+          <p>You can list all retrieve sessions for a specific endpoint when you initiate a
+            utility-mode connection to the endpoint. Example utility mode connection command:</p>
+          <codeblock>PGOPTIONS='-c gp_session_role=utility' psql -h sdw3 -U localuser -p 6001 -d testdb</codeblock>
+          <p>After connecting in utility mode, run the following query:</p>
+          <codeblock>SELECT * FROM gp_get_segment_endpoints();</codeblock>
+          <p><codeph>gp_get_segment_endpoints()</codeph> returns the endpoint information in a
+            table with the following columns:</p>
+          <table id="gp_get_segment_endpoints_table">
+            <tgroup cols="3">
+              <colspec colname="col1" colnum="1" colwidth="100"/>
+              <colspec colname="col2" colnum="2" colwidth="186*"/>
+              <colspec colname="col3" colnum="3" colwidth="186*"/>
+              <thead>
+                <row>
+                  <entry colname="col1">Column Name</entry>
+                  <entry colname="col2">Data Type</entry>
+                  <entry colname="col2">Description</entry>
+                </row>
+              </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">auth_token</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The authentication token for a the retrieve
+                  session.</entry>
+              </row>
+              <row>
+                <entry colname="col1">databaseid</entry>
+                <entry colname="col2">oid</entry>
+                <entry colname="col3">The identifier of the database in which the parallel
+                  retrieve cursor was created.</entry>
+              </row>
+              <row>
+                <entry colname="col1">senderpid</entry>
+                <entry colname="col2">integer</entry>
+                <entry colname="col3">The identifier of the process sending the query
+                  results.</entry>
+              </row>
+              <row>
+                <entry colname="col1">receiverpid</entry>
+                <entry colname="col2">integer</entry>
+                <entry colname="col3">The identifier of the process receiving the query
+                  results.</entry>
+              </row>
+              <row>
+                <entry colname="col1">state</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The state of the endpoint; the valid states are:
+                  <p>READY: The endpoint is ready to be retrieved.</p>
+                  <p>ATTACHED: The endpoint is attached to a retrieve connection.</p>
+                  <p>RETRIEVING: A retrieve session is retrieving data from the endpoint at this
+                    moment.</p>
+                  <p>FINISHED: The endpoint has been fully retrieved.</p>
+                  <p>RELEASED: Due to an error, the endpoint has been released and the
+                    connection closed.</p></entry>
+              </row>
+              <row>
+                <entry colname="col1">gp_segment_id</entry>
+                <entry colname="col2">oid</entry>
+                <entry colname="col3">The QE's endpoint <codeph>gp_segment_id</codeph>.</entry>
+              </row>
+              <row>
+                <entry colname="col1">sessionid</entry>
+                <entry colname="col2">integer</entry>
+                <entry colname="col3">The identifier of the session in which the parallel
+                  retrieve cursor was created.</entry>
+              </row>
+              <row>
+                <entry colname="col1">username</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The name of the session user that initiated the
+                  retrieve session.</entry>
+              </row>
+              <row>
+                <entry colname="col1">endpointname</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The endpoint identifier.</entry>
+              </row>
+              <row>
+                <entry colname="col1">cursorname</entry>
+                <entry colname="col2">text</entry>
+                <entry colname="col3">The name of the parallel retrieve cursor.</entry>
+              </row>
+              </tbody>
+            </tgroup>
+          </table>
+        </section>
+      </body>
+    </topic>
+    <topic id="topic_limits">
+      <title>Known Issues and Limitations</title>
+      <body>
+        <p>The <codeph>gp_parallel_retrieve_cursor</codeph> module has the following
+          limitations:</p>
+        <ul>
+          <li>The Pivotal Query Optimizer (GPORCA) does not support queries on a parallel
+            retrieve cursor.</li>
+          <li>Greenplum Database ignores the <codeph>BINARY</codeph> clause when you
+            declare a parallel retrieve cursor.</li>
+          <li>Parallel retrieve cursors cannot be declared <codeph>WITH HOLD</codeph>.</li>
+          <li>Parallel retrieve cursors do not support the <codeph>FETCH</codeph> and
+            <codeph>MOVE</codeph> cursor operations.</li>
+          <li>Parallel retrieve cursors are not supported in SPI; you cannot declare a
+            parallel retrieve cursor in a PL/pgSQL function.</li>
+        </ul>
+      </body>
+    </topic>
+    <topic id="topic_addtldocs">
+      <title>Additional Module Documentation</title>
+      <body>
+        <p>Refer to the <codeph>gp_parallel_retrieve_cursor</codeph> 
+          <xref href="https://github.com/greenplum-db/gpdb/tree/master/src/backend/cdb/endpoint/README"
+             format="html" scope="external">README</xref> in the Greenplum Database
+           <codeph>github</codeph> repository for additional information about this module.
+           You can also find parallel retrieve cursor
+           <xref href="https://github.com/greenplum-db/gpdb/tree/master/src/test/examples/"
+             format="html" scope="external">programming examples</xref> in the repository.</p>
+      </body>
+    </topic>
+    <topic id="topic_examples">
+      <title>Example</title>
+      <body>
+        <p>Create a parallel retrieve cursor and use it to pull query results from a
+          Greenplum Database cluster:</p>
+        <ol>
+          <li>Open a <codeph>psql</codeph> session to the Greenplum Database master host:
+            <codeblock>psql -d testdb</codeblock></li>
+          <li>Register the <codeph>gp_parallel_retrieve_cursor</codeph> extension if it does
+            not already exist:
+            <codeblock>CREATE EXTENSION IF NOT EXISTS gp_parallel_retrieve_cursor;</codeblock></li>
+          <li>Start the transaction:
+            <codeblock>BEGIN;</codeblock></li>
+          <li>Declare a parallel retrieve cursor named <codeph>prc1</codeph> for a
+            <codeph>SELECT *</codeph> query on a table:
+            <codeblock>DECLARE prc1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;</codeblock></li>
+          <li>Obtain the endpoints for this parallel retrieve cursor:
+          <codeblock>SELECT * FROM gp_get_endpoints() WHERE cursorname='prc1';
+ gp_segment_id |            auth_token            | cursorname | sessionid | hostname | port | username | state |     endpointname     
+---------------+----------------------------------+------------+-----------+----------+------+----------+-------+----------------------
+             2 | 39a2dc90a82fca668e04d04e0338f105 | prc1       |        51 | sdw1     | 6000 | bill     | READY | prc10000003300000003
+             3 | 1a6b29f0f4cad514a8c3936f9239c50d | prc1       |        51 | sdw1     | 6001 | bill     | READY | prc10000003300000003
+             4 | 1ae948c8650ebd76bfa1a1a9fa535d93 | prc1       |        51 | sdw2     | 6000 | bill     | READY | prc10000003300000003
+             5 | f10f180133acff608275d87966f8c7d9 | prc1       |        51 | sdw2     | 6001 | bill     | READY | prc10000003300000003
+             6 | dda0b194f74a89ed87b592b27ddc0e39 | prc1       |        51 | sdw3     | 6000 | bill     | READY | prc10000003300000003
+             7 | 037f8c747a5dc1b75fb10524b676b9e8 | prc1       |        51 | sdw3     | 6001 | bill     | READY | prc10000003300000003
+             8 | c43ac67030dbc819da9d2fd8b576410c | prc1       |        51 | sdw4     | 6000 | bill     | READY | prc10000003300000003
+             9 | e514ee276f6b2863142aa2652cbccd85 | prc1       |        51 | sdw4     | 6001 | bill     | READY | prc10000003300000003
+(8 rows)</codeblock></li>
+          <li>Wait until all endpoints are fully retrieved:
+          <codeblock>SELECT gp_wait_parallel_retrieve_cursor( 'prc1', -1 );</codeblock></li>
+          <li>For each endpoint:
+            <ol>
+              <li>Open a retrieve session. For example, to open a retrieve
+                session to the segment instance running on <codeph>sdw3</codeph>, port number
+                <codeph>6001</codeph>, run the following command in a <i>different terminal window</i>;
+                when prompted for the password, provide the <codeph>auth_token</codeph>
+                identified in row 7 of the <codeph>gp_get_endpoints()</codeph> output:
+                <codeblock>$ PGOPTIONS='-c gp_retrieve_conn=true' psql -h sdw3 -U localuser -p 6001 -d testdb
+Password:</codeblock></li>
+              <li>Retrieve data from the endpoint:
+                <codeblock>-- Retrieve 7 rows of data from this session
+RETRIEVE 7 FROM ENDPOINT prc10000003300000003
+-- Retrieve the remaining rows of data from this session
+RETRIEVE ALL FROM ENDPOINT prc10000003300000003</codeblock></li>
+              <li>Exit the retrieve session.
+                <codeblock>\q</codeblock></li>
+            </ol></li>
+          <li>In the original <codeph>psql</codeph> session (the session in which you
+            declared the parallel retrieve cursor), verify that the
+            <codeph>gp_wait_parallel_retrieve_cursor()</codeph> function returned
+            <codeph>t</codeph>. Then close the cursor and complete the transaction:
+            <codeblock>CLOSE prc1;
+END;</codeblock></li>
+        </ol>
+      </body>
+    </topic>
+  </topic>
+</dita>
+

@@ -31,6 +31,10 @@
              format="dita">gp_legacy_string_agg</xref></codeph> - Implements a
          legacy, single-argument <codeph>string_agg()</codeph> aggregate function that was
          present in Greenplum Database 5.</li>
+       <li><codeph><xref href="gp_parallel_retrieve_cursor.xml" scope="peer"
+             format="dita">gp_parallel_retrieve_cursor</xref></codeph> - Provides
+         extended cursor functionality to retrieve data, in parallel, directly from
+         Greenplum Database segments.</li>
        <li><codeph><xref href="gp_sparse_vector.xml" scope="peer"
              format="dita">gp_sparse_vector</xref></codeph> - Implements
          a Greenplum Database data type that uses compressed storage of zeros to make
