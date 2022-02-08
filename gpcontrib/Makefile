@@ -83,6 +83,7 @@ distclean:
 
 installcheck:
 	$(MAKE) -C gp_internal_tools installcheck
+	$(MAKE) -C gp_array_agg installcheck
 	if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce installcheck; \
 	fi
