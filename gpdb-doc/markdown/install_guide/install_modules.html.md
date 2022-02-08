@@ -32,6 +32,8 @@ You can register the following modules in this manner:
 
               <li class="li"><a class="xref" href="../ref_guide/modules/fuzzystrmatch.html">fuzzystrmatch</a></li>
 
+              <li class="li"><a class="xref" href="../ref_guide/modules/gp_parallel_retrieve_cursor.html">gp_parallel_retrieve_cursor</a></li>
+
               <li class="li"><a class="xref" href="../ref_guide/modules/gp_sparse_vector.html">gp_sparse_vector</a></li>
 
             </ul>

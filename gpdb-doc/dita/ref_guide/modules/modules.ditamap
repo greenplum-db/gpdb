@@ -10,6 +10,7 @@
     <topicref href="diskquota.xml"/>
     <topicref href="fuzzystrmatch.xml"/>
     <topicref href="gp_legacy_string_agg.xml"/>
+    <topicref href="gp_parallel_retrieve_cursor.xml"/>
     <topicref href="gp_sparse_vector.xml"/>
     <topicref href="hstore.xml"/>
     <topicref href="orafce_ref.xml"/>
