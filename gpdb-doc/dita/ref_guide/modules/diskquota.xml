@@ -140,9 +140,9 @@ $ gpstop -ar</codeblock></section>
     <title>Notes</title>
     <body>
       <p>The <codeph>diskquota.max_active_tables</codeph> server configuration parameter
-        identifies the maximum number of tables that the <codeph>diskquota</codeph>
-        module can monitor at the same time. The default value is
-        <codeph>1 * 1024 * 1024</codeph>. This value should be sufficient for most
+        identifies the maximum number of relations (including tables, indexes, etc.) that
+        the <codeph>diskquota</codeph> module can monitor at the same time. The default
+        value is <codeph>1 * 1024 * 1024</codeph>. This value should be sufficient for most
         Greenplum Database installations. Should you change the value of this
         configuration parameter, you must restart the Greenplum Database server.</p>
       <p>The <codeph>diskquota</codeph> module can be enabled in up to ten databases. One diskquota
