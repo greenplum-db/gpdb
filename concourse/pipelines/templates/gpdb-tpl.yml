@@ -1724,6 +1724,9 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: gpdb6-rhel8-test
     - task: ic_gpdb
+      {% if use_ICW_workers %}
+      tags: [icw-rhel8]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
       params:
@@ -1743,6 +1746,9 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: gpdb6-rhel8-test
     - task: ic_gpdb
+      {% if use_ICW_workers %}
+      tags: [icw-rhel8]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
       params:
@@ -1762,6 +1768,9 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: gpdb6-rhel8-test
     - task: ic_gpdb
+      {% if use_ICW_workers %}
+      tags: [icw-rhel8]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
       params:
@@ -1781,6 +1790,9 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: gpdb6-rhel8-test
     - task: ic_gpdb
+      {% if use_ICW_workers %}
+      tags: [icw-rhel8]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
       params:
