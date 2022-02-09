@@ -49,7 +49,8 @@ typedef enum {
 	GREENPLUM_OLD_GP_DBID = 5,
 	GREENPLUM_NEW_GP_DBID = 6,
 	GREENPLUM_OLD_TABLESPACES_FILE = 7,
-	GREENPLUM_CONTINUE_CHECK_ON_FATAL = 8
+	GREENPLUM_CONTINUE_CHECK_ON_FATAL = 8,
+	GREENPLUM_SKIP_TARGET_CHECK = 9
 } greenplumOption;
 
 
@@ -61,7 +62,8 @@ typedef enum {
 	{"old-gp-dbid", required_argument, NULL, GREENPLUM_OLD_GP_DBID}, \
 	{"new-gp-dbid", required_argument, NULL, GREENPLUM_NEW_GP_DBID}, \
 	{"old-tablespaces-file", required_argument, NULL, GREENPLUM_OLD_TABLESPACES_FILE}, \
-	{"continue-check-on-fatal", no_argument, NULL, GREENPLUM_CONTINUE_CHECK_ON_FATAL},
+	{"continue-check-on-fatal", no_argument, NULL, GREENPLUM_CONTINUE_CHECK_ON_FATAL}, \
+     {"skip-target-check", no_argument, NULL, GREENPLUM_SKIP_TARGET_CHECK},
 
 #define GREENPLUM_USAGE "\
       --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
@@ -72,6 +74,7 @@ typedef enum {
       --new-gp-dbid             greenplum database id of the new segment\n\
       --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
 	 --continue-check-on-fatal goes through all pg_upgrade checks, without upgrade\n\
+      --skip-target-check       skip checks all checks for new cluster\n\
 "
 
 /* option_gp.c */
@@ -81,6 +84,7 @@ bool is_greenplum_dispatcher_mode(void);
 bool is_checksum_mode(checksumMode mode);
 bool is_show_progress_mode(void);
 bool is_continue_check_on_fatal(void);
+bool is_skip_target_check(void);
 void check_error_occured(void);
 bool get_check_error(void);
 void validate_greenplum_options(void);

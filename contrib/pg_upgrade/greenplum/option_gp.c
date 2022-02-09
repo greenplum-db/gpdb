@@ -16,6 +16,7 @@ typedef struct {
 	char *old_tablespace_file_path;
 	bool continue_check_on_fatal;
 	bool error_on_continue_check;
+	bool skip_target_check;
 } GreenplumUserOpts;
 
 static GreenplumUserOpts greenplum_user_opts;
@@ -27,6 +28,7 @@ initialize_greenplum_user_options(void)
 	greenplum_user_opts.old_tablespace_file_path = NULL;
 	greenplum_user_opts.continue_check_on_fatal = false;
 	greenplum_user_opts.error_on_continue_check = false;
+	greenplum_user_opts.skip_target_check = false;
 
 	old_cluster.greenplum_cluster_info = make_cluster_info();
 	new_cluster.greenplum_cluster_info = make_cluster_info();
@@ -84,6 +86,17 @@ process_greenplum_option(greenplumOption option)
 			}
 			break;
 
+		case GREENPLUM_SKIP_TARGET_CHECK:
+			if (user_opts.check)
+					greenplum_user_opts.skip_target_check = true;
+			else
+			{
+					pg_log(PG_FATAL,
+						"--skip-target-check: should be used with check mode (-c)\n");
+					exit(1);
+			}
+			break;
+
 		default:
 			return false;
 	}
@@ -98,7 +111,7 @@ validate_greenplum_options(void)
 	if (!is_gp_dbid_set(old_cluster.greenplum_cluster_info))
 		pg_fatal("--old-gp-dbid must be set\n");
 
-	if (!is_gp_dbid_set(new_cluster.greenplum_cluster_info))
+	if (!is_gp_dbid_set(new_cluster.greenplum_cluster_info) & !is_skip_target_check())
 		pg_fatal("--new-gp-dbid must be set\n");
 
 	if (greenplum_user_opts.old_tablespace_file_path) {
@@ -142,4 +155,10 @@ bool
 get_check_error(void)
 {
 	return greenplum_user_opts.error_on_continue_check;
+}
+
+bool
+is_skip_target_check(void)
+{
+		return greenplum_user_opts.skip_target_check;
 }

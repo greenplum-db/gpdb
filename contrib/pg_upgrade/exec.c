@@ -14,6 +14,8 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
+#include "greenplum/pg_upgrade_greenplum.h"
+
 static void check_data_dir(const char *pg_data);
 static void check_bin_dir(ClusterInfo *cluster);
 static void validate_exec(const char *dir, const char *cmdName);
@@ -217,8 +219,12 @@ verify_directories(void)
 
 	check_bin_dir(&old_cluster);
 	check_data_dir(old_cluster.pgdata);
-	check_bin_dir(&new_cluster);
-	check_data_dir(new_cluster.pgdata);
+
+	if(!is_skip_target_check())
+	{
+	  check_bin_dir(&new_cluster);
+	  check_data_dir(new_cluster.pgdata);
+	}
 }
 
 
