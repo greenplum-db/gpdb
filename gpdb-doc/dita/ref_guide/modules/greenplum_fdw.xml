@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic1">
+  <title>greenplum_fdw (Beta)</title>
+  <body>
+    <p>The <codeph>greenplum_fdw</codeph> module is a foreign-data wrapper (FDW)
+      that you can use to run queries across one or more Greenplum Database version
+      6.20+ clusters.</p>
+    <p>The Greenplum Database <codeph>greenplum_fdw</codeph> module is an MPP extension of
+      the PostgreSQL <codeph>postgres_fdw</codeph> module.</p>
+    <p>This topic includes the following sections:</p>
+      <ul>
+        <li><xref href="#topic_reg" type="topic" format="dita"/></li>
+        <li><xref href="#topic_depend" type="topic" format="dita"/></li>
+        <li><xref href="#topic_about" type="topic" format="dita"/></li>
+        <li><xref href="#topic_using" type="topic" format="dita"/></li>
+        <li><xref href="#topic_other" type="topic" format="dita"/></li>
+        <li><xref href="#topic_limits" type="topic" format="dita"/></li>
+        <li><xref href="#topic_compat" type="topic" format="dita"/></li>
+        <li><xref href="#topic_examples" type="topic" format="dita"/></li>
+      </ul>
+  </body>
+  <topic id="topic_reg">
+    <title>Installing and Registering the Module</title>
+    <body>
+      <p>The <codeph>greenplum_fdw</codeph> module is installed when you install
+        Greenplum Database. Before you can use this FDW, you must register the
+        <codeph>greenplum_fdw</codeph> extension in each database in the source Greenplum
+        Database cluster in which you plan to use it:</p>
+      <codeblock>CREATE EXTENSION greenplum_fdw;</codeblock>
+      <p>Refer to <xref href="../../install_guide/install_modules.html"
+          format="html" scope="external">Installing Additional Supplied Modules</xref>
+        for more information about installing and registering modules in Greenplum
+        Database.</p>
+    </body>
+  </topic>
+  <topic id="topic_depend">
+    <title>About Module Dependencies</title>
+    <body>
+      <p><codeph>greenplum_fdw</codeph> depends on the 
+        <xref href="./gp_parallel_retrieve_cursor.html" format="html" scope="peer"/>
+        module.
+        <note>You must register the <codeph>gp_parallel_retrieve_cursor</codeph> module in
+          <b>each remote Greenplum database</b> with tables that you plan to access using 
+          the <codeph>greenplum_fdw</codeph> foreign-data wrapper.</note></p>
+    </body>
+  </topic>
+  <topic id="topic_about">
+    <title>About the greenplum_fdw Module</title>
+    <body>
+      <p><codeph>greenplum_fdw</codeph> is an MPP version of the
+        <xref href="https://www.postgresql.org/docs/9.4/postgres-fdw.html"
+          scope="external">postgres_fdw</xref> foreign-data wrapper. While it behaves
+        similarly to <codeph>postgres_fdw</codeph> in many respects,,,,
+        <codeph>greenplum_fdw</codeph> uses a Greenplum Database parallel retrieve cursor
+        to pull data directly from the segments of a remote Greenplum cluster to the
+        segments in the source Greenplum cluster, in parallel.</p>
+      <p>By supporting predicate pushdown, <codeph>greenplum_fdw</codeph> minimizes the
+        amount of data transferred between the Greenplum clusters by sending a query filter
+        condition to the remote Greenplum server where it is applied there.</p>
+    </body>
+  </topic>
+  <topic id="topic_using">
+    <title>Using the greenplum_fdw Module</title>
+    <body>
+      <p>You will perform the following tasks when you use <codeph>greenplum_fdw</codeph> to
+        access data that resides in a remote Greenplum Database cluster(s):</p>
+        <ol>
+          <li><xref href="#topic_using/create_server" type="topic"
+              format="dita">Create a server</xref> to represent each remote Greenplum
+            database to which you want to connect.</li>
+          <li><xref href="#topic_using/user_mapping" type="topic"
+              format="dita">Create a user mapping</xref> for each (source) Greenplum
+            Database user that you want to allow to access each server.</li>
+          <li><xref href="#topic_using/create_ftable" type="topic"
+              format="dita">Create a foreign table</xref> for each remote Greenplum
+            table that you want to access.</li>
+          <li><xref href="#topic_using/query_ftable" type="topic"
+              format="dita">Construct and run queries</xref>.</li>
+        </ol>
+        <section id="create_server">
+          <title>Creating a Server</title>
+          <p>To access a remote Greenplum Database cluster, you must first create a foreign
+            server object which specifies the host, port, and database connection details.
+            You provide these connection parameters in the <codeph>OPTIONS</codeph> clause
+            of the <codeph><xref href="../sql_commands/CREATE_SERVER.xml#topic1" type="topic"
+              format="dita"/></codeph> command.</p>
+          <p>A foreign server using the <codeph>greenplum_fdw</codeph> foreign-data wrapper
+            accepts and disallows the same options as that of a foreign server using the
+            <codeph>postgres_fdw</codeph> FDW; refer to the
+            <xref href="https://www.postgresql.org/docs/9.4/postgres-fdw.html"
+              scope="external">Connection Options</xref> topic in the PostgreSQL
+            <codeph>postgres_fdw</codeph> documentation for more information about
+            these options.</p>
+          <p>To obtain the full benefits of the parallel transfer feature provided by
+            <codeph>greenplum_fdw</codeph>, you must also specify:</p>
+            <codeblock>mpp_execute 'all segments'</codeblock>
+          <p>and</p>
+            <codeblock>num_segments '<varname>num</varname>'</codeblock>
+          <p>in the <codeph>OPTIONS</codeph> clause when you create the server. Set
+            <varname>num</varname> to the number of segments in the the remote Greenplum
+            Database cluster.</p>
+          <p>The following example command creates a server named
+            <codeph>gpc1_testdb</codeph> that will be used to access tables residing in
+            the database named <codeph>testdb</codeph> on the remote
+            <codeph>8</codeph>-segment Greenplum
+            Database cluster whose master is running on the host <codeph>gpc1_master</codeph>,
+            port <codeph>5432</codeph>:</p>
+          <codeblock>CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
+    OPTIONS (host 'gpc1_master', port '5432', dbname 'testdb', mpp_execute 'all segments', num_segments '8');</codeblock>
+        </section>
+        <section id="user_mapping">
+          <title>Creating a User Mapping</title>
+          <p>After you identify which users you will allow to access the remote Greenplum
+            Database cluster, you must create one or more mapping between a source
+            Greenplum user and a user on the remote Greenplum cluster. You create these
+            mappings with the
+            <codeph><xref href="../sql_commands/CREATE_USER_MAPPING.xml#topic1" type="topic"
+              format="dita"/></codeph> command.</p>
+          <p>User mappings that you create may include the following <codeph>OPTIONS</codeph>:</p>
+          <table id="umap_opts">
+            <tgroup cols="3">
+              <colspec colname="col1" colnum="1" colwidth="100"/>
+              <colspec colname="col2" colnum="2" colwidth="186*"/>
+              <colspec colname="col3" colnum="3" colwidth="186*"/>
+              <thead>
+                <row>
+                  <entry colname="col1">Option Name</entry>
+                  <entry colname="col2">Description</entry>
+                  <entry colname="col3">Default Value</entry>
+                </row>
+              </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">user</entry>
+                <entry colname="col2">The name of the remote Greenplum Database user to connect as.</entry>
+                <entry colname="col3">The name of the current Greenplum Database user.</entry>
+              </row>
+              <row>
+                <entry colname="col1">password</entry>
+                <entry colname="col2">The password for user on the remote Greenplum Database system.</entry>
+                <entry colname="col3">No default value.</entry>
+              </row>
+            </tbody>
+            </tgroup>
+          </table>
+          <p>Only a Greenplum Database superuser may connect to a Greenplum foreign server
+            without password authentication. Always specify the <codeph>password</codeph>
+            option for user mappings that you create for non-superusers.</p>
+          <p>The following command creates a default user mapping
+            on the source Greenplum cluster to the user named
+            <codeph>bill</codeph> on the remote Greenplum cluster that allows access to the
+            database identified by the <codeph>gpc1_testdb</codeph> server.
+            Specifying the <codeph>PUBLIC</codeph> source user name creates a mapping for
+            all current and future users when no user-specific mapping is applicable.</p>
+          <codeblock>CREATE USER MAPPING FOR PUBLIC SERVER gpc1_testdb
+    OPTIONS (user 'bill', password 'changeme');</codeblock>
+           <p>The remote user must have the appropriate privileges to access any table(s)
+             of interest in the database identified by the specified
+             <codeph>SERVER</codeph>.</p>
+        </section>
+        <section id="create_ftable">
+          <title>Creating a Foreign Table</title>
+          <p>You invoke the <codeph><xref href="../sql_commands/CREATE_FOREIGN_TABLE.xml#topic1"
+            type="topic" format="dita"/></codeph> command to create a foreign table. The
+            column data types that
+            you specify when you create the foreign table should exactly match those in the
+            referenced remote table. It is also recommended that the columns be declared
+            with exactly the same collations, if applicable, as the referenced columns of
+            the remote table.</p>
+          <p>Because <codeph>greenplum_fdw</codeph> matches foreign table columns to the
+            remote table by name, not position, you can create a foreign table with fewer
+            columns, or with a different column order, than the underlying remote table.</p>
+          <p>Foreign tables that you create may include the following
+            <codeph>OPTIONS</codeph>:</p>
+          <table id="ftable_opts">
+            <tgroup cols="3">
+              <colspec colname="col1" colnum="1" colwidth="100"/>
+              <colspec colname="col2" colnum="2" colwidth="186*"/>
+              <colspec colname="col3" colnum="3" colwidth="186*"/>
+              <thead>
+                <row>
+                  <entry colname="col1">Option Name</entry>
+                  <entry colname="col2">Description</entry>
+                  <entry colname="col3">Default Value</entry>
+                </row>
+              </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">schema_name</entry>
+                <entry colname="col2">The name of the schema in which the remote Greenplum
+                  Database table resides.</entry>
+                <entry colname="col3">The name of the schema in which the foreign table
+                  resides.</entry>
+              </row>
+              <row>
+                <entry colname="col1">table_name</entry>
+                <entry colname="col2">The name of the remote Greenplum Database table.</entry>
+                <entry colname="col3">The name of the foreign table.</entry>
+              </row>
+            </tbody>
+            </tgroup>
+          </table>
+          <p>The following command creates a foreign table named <codeph>f_gpc1_orders</codeph>
+            that references a table named <codeph>orders</codeph> located in the
+            <codeph>public</codeph> schema of the database identified by the
+            <codeph>gpc1_testdb</codeph> server (<codeph>testdb</codeph>):</p>
+          <codeblock>CREATE FOREIGN TABLE f_gpc1_orders ( id int, qty int, item text )
+    SERVER gpc1_testdb OPTIONS (schema_name 'public', table_name 'orders');</codeblock>
+          <p>You can additionally specify column name mappings via
+            <codeph>OPTIONS</codeph> that you provide in the column declaration of the
+            foreign table. The <codeph>column_name</codeph> option identifies the name of
+            the associated column in the remote Greenplum Database table, and defaults to
+            the foreign table column name when not specified.</p>
+        </section>
+        <section id="query_ftable">
+          <title>Constructing and Running Queries</title>
+          <p>You <codeph>SELECT</codeph> from a foreign table to access the data
+            stored in the underlying remote Greenplum Database table. By default, you can
+            also modify the remote table using <codeph>INSERT</codeph>,
+            <codeph>UPDATE</codeph>, or 
+            <codeph>DELETE</codeph> commands, provided that the remote user specified the
+            user mapping has the privileges to perform these operations. (Refer to
+            <xref href="#topic_update" type="topic" format="dita"/> for information about
+            changing the updatability of foreign tables.)</p>
+          <p><codeph>greenplum_fdw</codeph> attempts to optimize remote queries to reduce
+            the amount of data transferred from foreign servers. This is achieved by sending
+            query <codeph>WHERE</codeph> clauses to the remote Greenplum Database server for
+            execution, and by not retrieving table columns that are not needed for the
+            current query. To reduce the risk of misexecution of queries,
+            <codeph>greenplum_fdw</codeph> does not send <codeph>WHERE</codeph> clauses to
+            the remote server unless they use only built-in data types, operators, and
+            functions. Operators and functions in the clauses must be
+            <codeph>IMMUTABLE</codeph> as well.</p>
+          <p>You can run the <codeph>EXPLAIN VERBOSE</codeph> command to examine the query
+            that is actually sent to the remote Greenplum Database server for execution.</p>
+        </section>
+    </body>
+  </topic>
+  <topic id="topic_other">
+    <title>Additional Information</title>
+    <body>
+      <p>For more information about <codeph>greenplum_fdw</codeph> updatability and cost
+        estimation options, connection management, and transaction management, refer to
+        the individual topics below.</p>
+    </body>
+    <topic id="topic_update">
+      <title>About the Updatability Option</title>
+      <body>
+        <p>By default, all foreign tables created with <codeph>greenplum__fdw</codeph> are
+          assumed to be updatable. You can override this for a foreign server or a foreign
+          table using the following option:</p>
+        <dl>
+        <dlentry>
+        <dt><codeph>updatable</codeph></dt>
+        <dd>Controls whether <codeph>greenplum_fdw</codeph> allows foreign tables
+          to be modified using <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, and
+          <codeph>DELETE</codeph> commands. The default is true.</dd>
+        </dlentry>
+        </dl>
+        <p>Setting this option at the foreign table-level overrides a foreign server-level
+          option setting.</p>
+      </body>
+    </topic>
+    <topic id="topic_costest">
+      <title>About the Cost Estimation Options</title>
+      <body>
+        <p><codeph>greenplum_fdw</codeph> supports the same cost estimation options as
+          described in the
+            <xref href="https://www.postgresql.org/docs/9.4/postgres-fdw.html"
+              scope="external">Cost Estimation Options</xref> topic in the PostgreSQL
+          <codeph>postgres_fdw</codeph> documentation.</p>
+      </body>
+    </topic>
+    <topic id="topic_connmgmt">
+      <title>About Connection Management</title>
+      <body>
+        <p><codeph>greenplum_fdw</codeph> establishes a connection to a foreign server during
+          the first query on any foreign table associated with the server.
+          <codeph>greenplum_fdw</codeph> retains and reuses this connection for subsequent
+          queries submitted in the same session. However, if multiple user identities
+          (user mappings) are used to access the foreign server,
+          <codeph>greenplum_fdw</codeph> establishes a connection for each user mapping.</p>
+      </body>
+    </topic>
+    <topic id="topic_transmgmt">
+      <title>About Transaction Management</title>
+      <body>
+        <p><codeph>greenplum_fdw</codeph> manages transactions as described in the
+            <xref href="https://www.postgresql.org/docs/9.4/postgres-fdw.html"
+              scope="external">Transaction Management</xref> topic in the PostgreSQL
+          <codeph>postgres_fdw</codeph> documentation.</p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic_limits">
+    <title>Known Issues and Limitations</title>
+    <body>
+      <p>The <codeph>greenplum_fdw</codeph> module has the following known issues and
+        limitations:</p>
+        <ul>
+          <li>The Pivotal Query Optimizer (GPORCA) does not support queries on foreign
+            tables that you create with the <codeph>greenplum_fdw</codeph> foreign-data
+            wrapper.</li>
+        </ul>
+    </body>
+  </topic>
+  <topic id="topic_compat">
+    <title>Compatibility</title>
+    <body>
+      <p>You can use <codeph>greenplum_fdw</codeph> to access other remote Greenplum
+        Database clusters running version 6.20+.</p>
+    </body>
+  </topic>
+  <topic id="topic_examples">
+    <title>Example</title>
+    <body>
+      <p>In this example, you query data residing in a database named <codeph>rdb</codeph>
+        on the remote 16-segment Greenplum Database cluster whose master is running on host
+        <codeph>gpc2_master</codeph>, port <codeph>5432</codeph>:</p>
+      <ol>
+        <li>Open a <codeph>psql</codeph> session to the master host of the remote
+          Greenplum Database cluster:
+          <codeblock>psql -h gpc2_master -d rdb</codeblock></li>
+        <li>Register the <codeph>gp_parallel_retrieve_cursor</codeph> extension in the
+          database if it does not already exist:
+          <codeblock>CREATE EXTENSION IF NOT EXISTS gp_parallel_retrieve_cursor;</codeblock></li>
+        <li>Exit the session.</li>
+        <li>Initiate a <codeph>psql</codeph> session to the database named
+          <codeph>testdb</codeph> on the source (local in this case) Greenplum Database
+           master host:
+          <codeblock>$ psql -d testdb</codeblock></li>
+        <li>Register the <codeph>greenplum_fdw</codeph> extension in the database if it does
+          not already exist:
+        <codeblock>CREATE EXTENSION IF NOT EXISTS greenplum_fdw;</codeblock></li>
+        <li>Create a server to access the remote Greenplum Database cluster:
+        <codeblock>CREATE SERVER gpc2_rdb FOREIGN DATA WRAPPER greenplum_fdw
+    OPTIONS (host 'gpc2_master', port '5432', dbname 'rdb', mpp_execute 'all segments', num_segments '16');</codeblock></li>
+        <li>Create a user mapping for a user named <codeph>jane</codeph> on the local Greenplum
+          Database cluster and the user named <codeph>john</codeph> on the remote Greenplum
+          cluster and database represented by the server named <codeph>gpc2_rdb</codeph>:
+        <codeblock>CREATE USER MAPPING FOR jane SERVER gpc2_rdb OPTIONS (user 'john', password 'changeme');</codeblock></li>
+        <li>Create a foreign table named <codeph>f_gpc2_emea</codeph> to reference the table
+          named <codeph>emea</codeph> that is resides in the <codeph>public</codeph> schema
+          of the database identified by the <codeph>gpc2_rdb</codeph> server
+          (<codeph>rdb</codeph>):
+          <codeblock>CREATE FOREIGN TABLE f_gpc2_emea( bu text, income int )
+    SERVER gpcs2_rdb OPTIONS (schema_name 'public', table_name 'emea');</codeblock></li>
+        <li>Query the foreign table:
+          <codeblock>SELECT * FROM f_gpc2_emea;</codeblock></li>
+        <li>Join the results of a foreign table query with a local table named
+          <codeph>amer</codeph> that has similarly-named columns:
+          <codeblock>SELECT amer.bu, amer.income as amer_in, f_gpc2_emea.income as emea_in
+    FROM amer, f_gpc2_emea
+    WHERE amer.bu = f_gpc2_emea.bu;</codeblock></li>
+      </ol>
+    </body>
+  </topic>
+</topic>
+

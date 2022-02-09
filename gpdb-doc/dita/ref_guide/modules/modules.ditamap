@@ -12,6 +12,7 @@
     <topicref href="gp_array_agg.xml"/>
     <topicref href="gp_legacy_string_agg.xml"/>
     <topicref href="gp_sparse_vector.xml"/>
+    <topicref href="greenplum_fdw.xml"/>
     <topicref href="hstore.xml"/>
     <topicref href="orafce_ref.xml"/>
     <topicref href="pageinspect.xml"/>

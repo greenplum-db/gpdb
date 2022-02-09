@@ -41,6 +41,9 @@
              format="dita">gp_sparse_vector</xref></codeph> - Implements
          a Greenplum Database data type that uses compressed storage of zeros to make
          vector computations on floating point numbers faster.</li>
+       <li><codeph><xref href="greenplum_fdw.xml" format="dita"
+             >greenplum_fdw</xref></codeph> (Beta) - Provides a foreign data wrapper (FDW)
+         for accessing data stored in one or more external Greenplum Database clusters.</li>
        <li><codeph><xref href="hstore.xml" scope="peer" format="dita"
              >hstore</xref></codeph> - Provides a data type for storing sets of key/value pairs
          within a single PostgreSQL value.</li>
