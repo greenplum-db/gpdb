@@ -234,12 +234,17 @@ parseCommandLine(int argc, char *argv[])
 	/* Get values from env if not already set */
 	check_required_directory(&old_cluster.bindir, "PGBINOLD", false,
 							 "-b", "old cluster binaries reside");
-	check_required_directory(&new_cluster.bindir, "PGBINNEW", false,
-							 "-B", "new cluster binaries reside");
 	check_required_directory(&old_cluster.pgdata, "PGDATAOLD", false,
 							 "-d", "old cluster data resides");
-	check_required_directory(&new_cluster.pgdata, "PGDATANEW", false,
+
+	if(!is_skip_target_check())
+	{
+			check_required_directory(&new_cluster.pgdata, "PGDATANEW", false,
 							 "-D", "new cluster data resides");
+			check_required_directory(&new_cluster.bindir, "PGBINNEW", false,
+							 "-B", "new cluster binaries reside");
+	}
+
 	check_required_directory(&user_opts.socketdir, "PGSOCKETDIR", true,
 							 "-s", "sockets will be created");
 

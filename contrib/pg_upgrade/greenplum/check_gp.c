@@ -193,7 +193,7 @@ check_unique_primary_constraint(void)
 			found = true;
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary upgrade report file:  %s\n",
+				pg_fatal("Could not create necessary upgrade report file:  %s\n",
 					   output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
@@ -279,7 +279,7 @@ check_external_partition(void)
 			found = true;
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n",
+				pg_fatal("Could not create necessary file:  %s\n",
 					   output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
@@ -386,7 +386,7 @@ check_covering_aoindex(void)
 			found = true;
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n",
+				pg_fatal("Could not create necessary file:  %s\n",
 					   output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
@@ -456,7 +456,7 @@ check_orphaned_toastrels(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 
 			fprintf(script, "Database \"%s\" has %d orphaned toast tables\n", active_db->db_name, ntups);
 		}
@@ -508,7 +508,7 @@ check_heterogeneous_partition(void)
 		{
 			found = true;
 			if ((script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
 				fprintf(script, "  %s has different number of columns in a child and root partition\n",
@@ -527,7 +527,7 @@ check_heterogeneous_partition(void)
 		{
 			found = true;
 			if ((script = fopen(output_path, "a")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
 			{
@@ -664,7 +664,7 @@ check_partition_indexes(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database:  %s\n", active_db->db_name);
@@ -744,7 +744,7 @@ check_gphdfs_external_tables(void)
 			found = true;
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n",
+				pg_fatal("Could not create necessary file:  %s\n",
 					   output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
@@ -811,7 +811,7 @@ check_gphdfs_user_roles(void)
 	if (ntups > 0)
 	{
 		if ((script = fopen(output_path, "w")) == NULL)
-			gp_fatal_log("Could not create necessary file:  %s\n",
+			pg_fatal("Could not create necessary file:  %s\n",
 					output_path);
 
 		i_hdfs_read = PQfnumber(res, "hdfs_read");
@@ -958,7 +958,7 @@ check_partition_schemas(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
-				gp_fatal_log("Could not open file \"%s\": %s\n",
+				pg_fatal("Could not open file \"%s\": %s\n",
 						 output_path, getErrorText());
 
 			if (!db_used)
@@ -1024,7 +1024,7 @@ check_large_objects(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
-				gp_fatal_log("could not open file \"%s\": %s\n", output_path, getErrorText());
+				pg_fatal("could not open file \"%s\": %s\n", output_path, getErrorText());
 
 			/* We do not list out the objects (like other checks) since we only
 			 * have oids and finding associated tables could be time consuming.
@@ -1104,7 +1104,7 @@ check_invalid_indexes(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1173,7 +1173,7 @@ check_foreign_key_constraints_on_root_partition(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1247,7 +1247,7 @@ check_views_with_unsupported_lag_lead_function(void)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1323,7 +1323,7 @@ check_views_with_fabricated_anyarray_casts()
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1400,7 +1400,7 @@ check_views_with_fabricated_unknown_casts()
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1485,7 +1485,7 @@ check_views_referencing_deprecated_tables()
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1571,7 +1571,7 @@ check_views_referencing_deprecated_columns()
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				gp_fatal_log("Could not create necessary file:  %s\n", output_path);
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);

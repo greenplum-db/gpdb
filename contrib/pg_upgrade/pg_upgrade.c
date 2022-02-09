@@ -120,7 +120,8 @@ main(int argc, char **argv)
 	get_restricted_token(os_info.progname);
 
 	adjust_data_dir(&old_cluster);
-	adjust_data_dir(&new_cluster);
+	if(!is_skip_target_check())
+  	adjust_data_dir(&new_cluster);
 
 	setup(argv[0], &live_check);
 
@@ -132,15 +133,18 @@ main(int argc, char **argv)
 	get_sock_dir(&old_cluster, live_check);
 	get_sock_dir(&new_cluster, false);
 
-	check_cluster_compatibility(live_check);
+	if(!is_skip_target_check())
+		check_cluster_compatibility(live_check);
 
 	check_and_dump_old_cluster(live_check, &sequence_script_file_name);
 
+	if (!is_skip_target_check())
+	{
+	  /* -- NEW -- */
+	  start_postmaster(&new_cluster, true);
+	  check_new_cluster();
+	}
 
-	/* -- NEW -- */
-	start_postmaster(&new_cluster, true);
-
-	check_new_cluster();
 	log_with_timing(&t, "\nPerforming Consistency Checks took");
 	report_clusters_compatible();
 
