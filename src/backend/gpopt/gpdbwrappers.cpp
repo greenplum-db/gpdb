@@ -407,6 +407,17 @@ gpdb::WalkExpressionTree(Node *node, bool (*walker)(), void *context)
 	return false;
 }
 
+bool
+gpdb::WalkPlanTree(Node *node, bool (*walker)(), void *context)
+{
+	GP_WRAP_START;
+	{
+		return plan_tree_walker(node, walker, context);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
 Oid
 gpdb::ExprType(Node *expr)
 {
@@ -2591,6 +2602,17 @@ gpdb::GPDBMemoryContextDelete(MemoryContext context)
 		MemoryContextDelete(context);
 	}
 	GP_WRAP_END;
+}
+
+gpos::BOOL
+gpdb::IsImmutableUDFWithMutableContent(Oid funcid)
+{
+	GP_WRAP_START;
+	{
+		return is_immutable_udf_with_mutable_content(funcid);
+	}
+	GP_WRAP_END;
+	return false;
 }
 
 MemoryContext

@@ -769,6 +769,62 @@ contain_subplans_walker(Node *node, void *context)
  *		Check clauses for mutable functions
  *****************************************************************************/
 
+bool
+is_immutable_udf_with_mutable_content(Oid funcid)
+{
+	bool result = false;
+
+	HeapTuple	func_tuple;
+	Form_pg_proc funcform;
+	Datum		tmp;
+	bool		isNull;
+	char	   *src;
+	List	   *raw_parsetree_list;
+	Query	   *querytree;
+	Node	   *newexpr;
+
+	MemoryContext oldcxt;
+	MemoryContext mycxt;
+
+	mycxt = AllocSetContextCreate(CurrentMemoryContext,
+								  "is_immutable_udf_with_mutable_content",
+								  ALLOCSET_DEFAULT_MINSIZE,
+								  ALLOCSET_DEFAULT_INITSIZE,
+								  ALLOCSET_DEFAULT_MAXSIZE);
+	oldcxt = MemoryContextSwitchTo(mycxt);
+
+	func_tuple = SearchSysCache(PROCOID,
+								ObjectIdGetDatum(funcid),
+								0, 0, 0);
+	funcform = (Form_pg_proc) GETSTRUCT(func_tuple);
+
+	if (funcform->prolang == SQLlanguageId &&
+		funcform->provolatile == PROVOLATILE_IMMUTABLE)
+	{
+		tmp = SysCacheGetAttr(PROCOID,
+							  func_tuple,
+							  Anum_pg_proc_prosrc,
+							  &isNull);
+		src = TextDatumGetCString(tmp);
+
+		raw_parsetree_list = pg_parse_query(src);
+
+		querytree = parse_analyze(linitial(raw_parsetree_list), src,
+								  funcform->proargtypes.values, funcform->pronargs);
+
+		newexpr = (Node *) ((TargetEntry *) linitial(querytree->targetList))->expr;
+
+		result = contain_mutable_functions(newexpr);
+	}
+
+	ReleaseSysCache(func_tuple);
+
+	MemoryContextSwitchTo(oldcxt);
+	MemoryContextDelete(mycxt);
+
+	return result;
+}
+
 /*
  * contain_mutable_functions
  *	  Recursively search for mutable functions within a clause.

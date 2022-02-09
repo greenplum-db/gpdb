@@ -84,6 +84,8 @@ extern bool contain_window_functions(Node *clause);
 extern bool contain_nonstrict_functions(Node *clause);
 extern Relids find_nonnullable_rels(Node *clause);
 
+extern bool is_immutable_udf_with_mutable_content(Oid funcid);
+
 extern bool is_pseudo_constant_clause(Node *clause);
 extern bool is_pseudo_constant_clause_relids(Node *clause, Relids relids);
 

@@ -489,6 +489,9 @@ bool WalkExpressionTree(Node *node, bool (*walker)(), void *context);
 bool WalkQueryOrExpressionTree(Node *node, bool (*walker)(), void *context,
 							   int flags);
 
+// plan tree walker
+bool WalkPlanTree(Node *node, bool (*walker)(), void *context);
+
 // modify a query tree
 Query *MutateQueryTree(Query *query, Node *(*mutator)(), void *context,
 					   int flags);
@@ -694,6 +697,8 @@ void *GPDBMemoryContextAlloc(MemoryContext context, Size size);
 MemoryContext GPDBAllocSetContextCreate();
 
 void GPDBMemoryContextDelete(MemoryContext context);
+
+gpos::BOOL IsImmutableUDFWithMutableContent(Oid funcid);
 
 }  //namespace gpdb
 

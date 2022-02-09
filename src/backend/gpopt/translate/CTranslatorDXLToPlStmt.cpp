@@ -3437,6 +3437,32 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	return (Plan *) result;
 }
 
+static BOOL
+CheckFunctionVolatilityWalker(Node *node, BOOL *valid_volatility)
+{
+	if (NULL == node)
+	{
+		return false;
+	}
+	if (IsA(node, FuncExpr))
+	{
+		Oid funcid = ((FuncExpr *) node)->funcid;
+		if (gpdb::IsImmutableUDFWithMutableContent(funcid))
+		{
+			*valid_volatility = false;
+			return false;
+		}
+	}
+	if (IsA(node, SubPlan))
+	{
+		return false;
+	}
+
+	return gpdb::WalkPlanTree(node, (BOOL(*)()) CheckFunctionVolatilityWalker,
+							  valid_volatility);
+}
+
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLPartSelector
@@ -3553,7 +3579,12 @@ CTranslatorDXLToPlStmt::TranslateDXLPartSelector(
 	partition_selector->staticScanIds = NIL;
 	partition_selector->staticSelection = !has_childs;
 
-	if (partition_selector->staticSelection)
+	bool valid_volatility = true;
+	gpdb::WalkPlanTree((Node *) partition_selector,
+					   (BOOL(*)()) CheckFunctionVolatilityWalker,
+					   &valid_volatility);
+
+	if (partition_selector->staticSelection && valid_volatility)
 	{
 		SelectedParts *sp =
 			gpdb::RunStaticPartitionSelection(partition_selector);
