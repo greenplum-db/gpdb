@@ -2582,3 +2582,31 @@ select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i
         1
 (18 rows)
 
+---
+-- DPE: Ensure that when a UDF is incorrectly labeled "immutable"
+--      then we do not perform SPE and should instead perform DPE.
+--      N.B. built-in to_date() is "stable".
+---
+create function _to_date(integer, text) returns date as $$ select to_date($1::text,$2); $$ language sql immutable;
+explain select * from dpe_part where i = (_to_date(20210120 / 1, 'yyyymmdd'))::varchar::int;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..25.28 rows=1 width=4)
+   ->  Append  (cost=0.00..25.28 rows=1 width=4)
+         ->  Seq Scan on dpe_part_1_prt_dpe_part1 dpe_part  (cost=0.00..25.28 rows=1 width=4)
+               Filter: i = _to_date(20210120 / 1, 'yyyymmdd'::text)::character varying::integer
+ Settings:  optimizer=off; optimizer_nestloop_factor=1
+ Optimizer status: legacy query optimizer
+(6 rows)
+
+explain select * from dpe_part where i = to_number((_to_date(20210120 / 1, 'yyyymmdd'))::date::varchar , '999999');
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..25.28 rows=1 width=4)
+   ->  Append  (cost=0.00..25.28 rows=1 width=4)
+         ->  Seq Scan on dpe_part_1_prt_dpe_part1 dpe_part  (cost=0.00..25.28 rows=1 width=4)
+               Filter: i::numeric = to_number(_to_date(20210120 / 1, 'yyyymmdd'::text)::character varying::text, '999999'::text)
+ Settings:  optimizer=off; optimizer_nestloop_factor=1
+ Optimizer status: legacy query optimizer
+(6 rows)
+

@@ -460,3 +460,12 @@ set optimizer_nestloop_factor=1;
 explain select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i + a < c;
 
 select 1 from dpe_bar join (select * from dpe_part join dpe_foo on i = a) t on i + a < c;
+
+---
+-- DPE: Ensure that when a UDF is incorrectly labeled "immutable"
+--      then we do not perform SPE and should instead perform DPE.
+--      N.B. built-in to_date() is "stable".
+---
+create function _to_date(integer, text) returns date as $$ select to_date($1::text,$2); $$ language sql immutable;
+explain select * from dpe_part where i = (_to_date(20210120 / 1, 'yyyymmdd'))::varchar::int;
+explain select * from dpe_part where i = to_number((_to_date(20210120 / 1, 'yyyymmdd'))::date::varchar , '999999');
