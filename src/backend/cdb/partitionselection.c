@@ -533,9 +533,29 @@ varattnos_map(TupleDesc old, TupleDesc new)
 				j;
 
 	bool		mapRequired = false;
+	bool 		colsEqual = false;
 
 	attmap = (AttrNumber *) palloc0(sizeof(AttrNumber) * old->natts);
-	for (i = 1; i <= old->natts; i++)
+
+
+	/*
+	 * Make common case (when leaf/root partition attributes are symmetric) fast. If all
+	 * attributes are equal, we don't need to remap
+	 */
+	if (old->natts == new->natts)
+	{
+		colsEqual = true;
+		for (i = 1; i <= old->natts; i++)
+		{
+			if (!(strcmp(NameStr(old->attrs[i - 1]->attname),
+					   NameStr(new->attrs[i - 1]->attname)) == 0))
+			{
+				colsEqual = false;
+				break;
+			}
+		}
+	}
+	for (i = 1; !colsEqual && i <= old->natts; i++)
 	{
 		if (old->attrs[i - 1]->attisdropped)
 			continue;			/* leave the entry as zero */

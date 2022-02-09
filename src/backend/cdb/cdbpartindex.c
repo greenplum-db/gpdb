@@ -560,6 +560,7 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 	char	   *partIndexHashKey;
 	bool		foundPartIndexHash;
 	bool		foundLogicalIndexHash;
+	bool 		computeAttMapping = true;
 	AttrNumber *attmap = NULL;
 	struct IndexInfo *ii = NULL;
 	PartitionIndexHashEntry *partIndexHashEntry;
@@ -607,7 +608,7 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		 * when constructing hash key, we need to map attnums in part indexes
 		 * to root attnums. Get the attMap needed for mapping.
 		 */
-		if (!attmap)
+		if (computeAttMapping && !attmap)
 		{
 			Relation	rootRel = heap_open(rootOid, AccessShareLock);
 
@@ -618,6 +619,9 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 
 			/* can we close here ? */
 			heap_close(rootRel, AccessShareLock);
+
+			// only compute this mapping for the first index, then it can be reused, as varattnos_map can be expensive
+			computeAttMapping = false;
 		}
 
 		/* populate index info structure */
