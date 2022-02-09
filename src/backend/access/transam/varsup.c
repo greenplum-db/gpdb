@@ -24,6 +24,7 @@
 #include "postmaster/autovacuum.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/syscache.h"
 
@@ -600,6 +601,26 @@ GetNewObjectIdUnderLock(void)
 
 	(ShmemVariableCache->nextOid)++;
 	(ShmemVariableCache->oidCount)--;
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("bump_oid") == FaultInjectorTypeSkip)
+	{
+		/*
+		 * CDB: we encounter high oid issues several times, we should
+		 * have some test-utils to verify logic under larger oid.
+		 *
+		 * NOTE: we do not have undo-bump, so take care when you decide to
+		 * use this fault inject. Currently, only resgroup test job uses it,
+		 * that is safe, becase resgroup job is an independent pipeline job.
+		 */
+		Oid large_oid = (1U<<31)+5; /* this value will overflow if taken as int32 */
+		if (ShmemVariableCache->nextOid < large_oid)
+		{
+			ShmemVariableCache->nextOid = large_oid + 1;
+			result = large_oid;
+		}
+	}
+#endif
 
 	return result;
 }
