@@ -179,7 +179,6 @@ static List *pendingUnlinks = NIL;
 static CycleCtr mdsync_cycle_ctr = 0;
 static CycleCtr mdckpt_cycle_ctr = 0;
 
-
 typedef enum					/* behavior for mdopen & _mdfd_getseg */
 {
 	EXTENSION_FAIL,				/* ereport if segment not present */
@@ -195,6 +194,8 @@ static MdfdVec *mdopen(SMgrRelation reln, ForkNumber forknum,
 static void register_dirty_segment(SMgrRelation reln, ForkNumber forknum,
 					   MdfdVec *seg);
 static void register_unlink(RelFileNodeBackend rnode);
+static void register_forget_request(RelFileNodeBackend rnode, ForkNumber forknum,
+				BlockNumber segno);
 static MdfdVec *_fdvec_alloc(void);
 static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
 			  BlockNumber segno);
@@ -467,7 +468,7 @@ do_truncate(const char *path)
 	int			fd;
 
 	/* truncate(2) would be easier here, but Windows hasn't got it */
-	fd = OpenTransientFile(path, O_RDWR | PG_BINARY);
+	fd = OpenTransientFile(path, O_RDWR | PG_BINARY, 0);
 	if (fd >= 0)
 	{
 		ret = ftruncate(fd, 0);
@@ -539,13 +540,6 @@ mdunlinkfork(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char rel
 	 */
 	if (ret >= 0)
 	{
-		if (relstorage_is_ao(relstorage))
-		{
-			mdunlink_ao(path, forkNum);
-			pfree(path);
-			return;
-		}
-
 		char	   *segpath = (char *) palloc(strlen(path) + 12);
 		BlockNumber segno;
 
@@ -1626,6 +1620,31 @@ register_unlink(RelFileNodeBackend rnode)
 									UNLINK_RELATION_REQUEST, false))
 			pg_usleep(10000L);	/* 10 msec seems a good number */
 	}
+}
+
+/*
+ * register_forget_request() -- forget any fsyncs for a relation fork's segment
+ * its a patched version of what we have in master
+ * extracted from a bigger recfactor commit: 3eb77eb
+ */
+static void
+register_forget_request(RelFileNodeBackend rnode, ForkNumber forknum, BlockNumber segno)
+{
+
+	if (pendingOpsTable)
+	{
+		/* push it into local pending-ops table */
+		RememberFsyncRequest(rnode.node, MAIN_FORKNUM,
+							 FORGET_RELATION_FSYNC,
+							 false);
+	}
+	else
+	{
+		while (!ForwardFsyncRequest(rnode.node, MAIN_FORKNUM,
+									segno, true))
+			pg_usleep(10000L);	/* 10 msec seems a good number */
+	}
+
 }
 
 /*
