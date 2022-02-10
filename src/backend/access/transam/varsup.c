@@ -608,16 +608,9 @@ GetNewObjectIdUnderLock(void)
 		/*
 		 * CDB: we encounter high oid issues several times, we should
 		 * have some test-utils to verify logic under larger oid.
-		 *
-		 * NOTE: we do not have undo-bump, so take care when you decide to
-		 * use this fault inject. Currently, only resgroup test job uses it,
-		 * that is safe, becase resgroup job is an independent pipeline job.
 		 */
-		Oid large_oid = (1U<<31)+5; /* this value will overflow if taken as int32 */
-		if (ShmemVariableCache->nextOid < large_oid)
-		{
-			ShmemVariableCache->nextOid = large_oid + 1;
-			result = large_oid;
+		if (result <= PG_INT32_MAX) {
+			result = PG_INT32_MAX + result % (PG_UINT32_MAX - PG_INT32_MAX) + 1;
 		}
 	}
 #endif

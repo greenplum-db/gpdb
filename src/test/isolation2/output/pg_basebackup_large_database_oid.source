@@ -1,0 +1,43 @@
+-- Test database oid larger than int32.
+select gp_inject_fault('bump_oid', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+create database db_large_oid;
+CREATE
+
+select gp_inject_fault('bump_oid', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+select max(oid)::bigint > (power(2,31) + 1)::bigint from pg_database;
+ ?column? 
+----------
+ t        
+(1 row)
+
+select pg_basebackup(address, dbid, port, true, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+ pg_basebackup 
+---------------
+               
+(1 row)
+
+
+drop database db_large_oid;
+DROP
+
+0U: select * from pg_drop_replication_slot('some_replication_slot');
+ pg_drop_replication_slot 
+--------------------------
+                          
+(1 row)
+!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+

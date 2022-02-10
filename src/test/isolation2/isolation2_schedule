@@ -211,6 +211,7 @@ test: vacuum_after_vacuum_skip_drop_column
 test: workfile_mgr_test
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
+test: pg_basebackup_large_database_oid
 test: enable_autovacuum
 
 test: segwalrep/die_commit_pending_replication
