@@ -1,0 +1,102 @@
+include: helpers/server_helpers.sql;
+CREATE
+
+-- setup
+-- Set fsync on since we need to test the fsync code logic.
+!\retcode gpconfig -c fsync -v on --skipvalidation;
+(exited with code 0)
+-- Set create_restartpoint_on_ckpt_record_replay to trigger creating
+-- restart point easily.
+!\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
+CREATE TABLE t_ckpt_memleak_test(id int) WITH (appendonly=true);
+CREATE
+INSERT INTO t_ckpt_memleak_test values(1);
+INSERT 1
+CHECKPOINT;
+CHECKPOINT
+
+-- Inject fault to trigger the code that will check memory stats around checkpoint
+select gp_inject_fault_infinite('ckpt_mem_leak', 'skip', dbid) from gp_segment_configuration where role = 'm' and content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- Remember the current timestamp to filter the log later
+CREATE TABLE t_ckpt_memleak_test_timestamp AS SELECT CURRENT_TIMESTAMP;
+CREATE 1
+
+-- Do the checkpointing that we're going to examine
+INSERT INTO t_ckpt_memleak_test values(1);
+INSERT 1
+CHECKPOINT;
+CHECKPOINT
+
+-- Wait until checkpoint is done (the mirror will hit this fault 2 times, before and after checkpointing), and then clear the fault
+select gp_wait_until_triggered_fault('ckpt_mem_leak', 2, dbid) from gp_segment_configuration where role = 'm' and content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select gp_inject_fault('ckpt_mem_leak', 'reset', dbid) from gp_segment_configuration where role = 'm' and content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- We have to stop the primary and promote the mirror in order to run gp_toolkit.__gp_log_segment_ext
+-- on the new primary to check the old mirror's log.
+SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- If there's a memory leak we'll print a special log message. Search if such log record exists, if so,
+-- we might have a memory leak. Check the log for more information about the memory usage.
+-- Note that currently we are only checking MdCxt.
+select count(*) from gp_toolkit.__gp_log_segment_ext where logsegment = 'seg1' and logtime > (select * from t_ckpt_memleak_test_timestamp) and logmessage like '[CheckpointMemoryLeakTest] Possible memory leak %';
+ count 
+-------
+ 0     
+(1 row)
+
+-- Bring back primary and re-balance.
+!\retcode gprecoverseg -a;
+(exited with code 0)
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+!\retcode gprecoverseg -ra;
+(exited with code 0)
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- Cleanup
+DROP TABLE t_ckpt_memleak_test;
+DROP
+DROP TABLE t_ckpt_memleak_test_timestamp;
+DROP
+-- Explicitly turn fsync off as it's default to be on
+!\retcode gpconfig -c fsync -v off --skipvalidation;
+(exited with code 0)
+!\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)

@@ -165,4 +165,8 @@ extern PGDLLIMPORT file_truncate_hook_type file_truncate_hook;
 typedef void (*file_unlink_hook_type)(RelFileNodeBackend rnode);
 extern PGDLLIMPORT file_unlink_hook_type file_unlink_hook;
 
+/* Test utility */
+extern void GetMdCxtStat(uint64 *nBlocks, uint64 *nChunks, uint64 *currentAvailable,
+			uint64 *allAllocated, uint64 *allFreed, uint64 *maxHeld);
+
 #endif   /* SMGR_H */

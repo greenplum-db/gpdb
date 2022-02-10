@@ -241,6 +241,16 @@ mdinit(void)
 }
 
 /*
+ * Get the memory stats of MdCxt.
+ */
+void
+GetMdCxtStat(uint64 *nBlocks, uint64 *nChunks, uint64 *currentAvailable, 
+		uint64 *allAllocated, uint64 *allFreed, uint64 *maxHeld)
+{
+	(MdCxt->methods.stats)(MdCxt, nBlocks, nChunks, currentAvailable, allAllocated, allFreed, maxHeld);
+}
+
+/*
  * In archive recovery, we rely on checkpointer to do fsyncs, but we will have
  * already created the pendingOpsTable during initialization of the startup
  * process.  Calling this function drops the local pendingOpsTable so that

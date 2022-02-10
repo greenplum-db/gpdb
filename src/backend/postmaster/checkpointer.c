@@ -60,6 +60,7 @@
 #include "storage/smgr.h"
 #include "storage/spin.h"
 #include "tcop/tcopprot.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
@@ -389,6 +390,22 @@ CheckpointerMain(void)
 		/* Clear any already-pending wakeups */
 		ResetLatch(&MyProc->procLatch);
 
+#ifdef FAULT_INJECTOR
+		uint64 prevAvailable = 0;
+		if (SIMPLE_FAULT_INJECTOR("ckpt_mem_leak") == FaultInjectorTypeSkip)
+		{
+			elog(LOG, "[CheckpointMemoryLeakTest] Begin checkpointing. ");
+			MemoryContextStats(TopMemoryContext);
+			uint64 nBlocks = 0;
+			uint64 nChunks = 0;
+			uint64 currentAvailable = 0;
+			uint64 allAllocated = 0;
+			uint64 allFreed = 0;
+			uint64 maxHeld = 0;
+			GetMdCxtStat(&nBlocks, &nChunks, &currentAvailable, &allAllocated, &allFreed, &maxHeld);
+			prevAvailable = currentAvailable;
+		}
+#endif
 		/*
 		 * Process any requests or signals received recently.
 		 */
@@ -531,6 +548,26 @@ CheckpointerMain(void)
 			 * won't hang onto smgr references to deleted files indefinitely.
 			 */
 			smgrcloseall();
+#ifdef FAULT_INJECTOR
+			if (SIMPLE_FAULT_INJECTOR("ckpt_mem_leak") == FaultInjectorTypeSkip)
+			{
+				elog(LOG, "[CheckpointMemoryLeakTest] Checkpointing is done");
+				MemoryContextStats(TopMemoryContext);
+				uint64 nBlocks = 0;
+				uint64 nChunks = 0;
+				uint64 currentAvailable = 0;
+				uint64 allAllocated = 0;
+				uint64 allFreed = 0;
+				uint64 maxHeld = 0;
+				GetMdCxtStat(&nBlocks, &nChunks, &currentAvailable, &allAllocated, &allFreed, &maxHeld);
+				if (prevAvailable > currentAvailable)
+					elog(LOG, "[CheckpointMemoryLeakTest] Possible memory leak in MdCxt: " 
+							"previous available memory - %lu, "
+							"current available memory - %lu", 
+							prevAvailable, currentAvailable);
+				FaultInjector_InjectFaultIfSet("ckpt_mem_leak_done", DDLNotSpecified, "", "");
+			}
+#endif
 
 			/*
 			 * Indicate checkpoint completion to any waiting backends.

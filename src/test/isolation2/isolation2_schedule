@@ -83,6 +83,7 @@ test: gpexpand_catalog_lock
 test: reindex
 test: reindex_gpfastsequence
 test: checkpoint_prepare
+test: checkpoint_memleak
 test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
