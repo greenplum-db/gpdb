@@ -421,18 +421,6 @@ ClientAuthentication(Port *port)
 	char	   *logdetail = NULL;
 
 	/*
-	 * If this is a QD to QE connection, we might be able to short circuit
-	 * client authentication.
-	 */
-	if (is_internal_gpdb_conn(port))
-	{
-		if (internal_client_authentication(port))
-			return;
-
-		/* Else, try the normal authentication */
-	}
-
-	/*
 	 * Get the authentication method to use for this frontend/database
 	 * combination.  Note: we do not parse the file at this point; this has
 	 * already been done elsewhere.  hba.c dropped an error message into the
@@ -440,12 +428,7 @@ ClientAuthentication(Port *port)
 	 */
 	hba_getauthmethod(port);
 
-	/*
-	 * Enable immediate response to SIGTERM/SIGINT/timeout interrupts. (We
-	 * don't want this during hba_getauthmethod() because it might have to do
-	 * database access, eg for role membership checks.)
-	 */
-	ImmediateInterruptOK = true;
+
 	/* And don't forget to detect one that already arrived */
 	CHECK_FOR_INTERRUPTS();
 
@@ -456,28 +439,21 @@ ClientAuthentication(Port *port)
 	 */
 	if (port->hba->clientcert)
 	{
-		/*
-		 * When we parse pg_hba.conf, we have already made sure that we have
-		 * been able to load a certificate store. Thus, if a certificate is
-		 * present on the client, it has been verified against our root
-		 * certificate store, and the connection would have been aborted
-		 * already if it didn't verify ok.
-		 */
-#ifdef USE_SSL
+        if (!secure_loaded_verify_locations())
+            ereport(FATAL,
+                    (errcode(ERRCODE_CONFIG_FILE_ERROR),
+                            errmsg("client certificates can only be checked if a root certificate store is available")));
+        /*
+         * When we parse pg_hba.conf, we have already made sure that we have
+         * been able to load a certificate store. Thus, if a certificate is
+         * present on the client, it has been verified against our root
+         * certificate store, and the connection would have been aborted
+         * already if it didn't verify ok.
+         */
 		if (!port->peer)
-		{
 			ereport(FATAL,
-					(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-				  errmsg("connection requires a valid client certificate")));
-		}
-#else
-
-		/*
-		 * hba.c makes sure hba->clientcert can't be set unless OpenSSL is
-		 * present.
-		 */
-		Assert(false);
-#endif
+                    (errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
+                            errmsg("connection requires a valid client certificate")));
 	}
 
 	/*

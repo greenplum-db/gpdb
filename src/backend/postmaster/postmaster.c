@@ -369,6 +369,12 @@ static time_t AbortStartTime = 0;
 /* Set at database system is ready to accept connections */
 pg_time_t PMAcceptingConnectionsStartTime = 0;
 
+#ifdef USE_SSL
+/* Set when and if SSL has been initialized properly */
+    static bool LoadedSSL = false;
+#endif
+
+
 static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 {
 	{"ftsprobe process",
@@ -1127,9 +1133,14 @@ PostmasterMain(int argc, char *argv[])
 	/*
 	 * Initialize SSL library, if specified.
 	 */
+
+
 #ifdef USE_SSL
 	if (EnableSSL)
-		secure_initialize();
+    {
+        int tmp =  secure_initialize(true);
+		LoadedSSL = true;
+    }
 #endif
 
 	/*
@@ -2233,7 +2244,7 @@ ProcessStartupPacket(Port *port, bool SSLdone)
 
 #ifdef USE_SSL
 		/* No SSL when disabled or on Unix sockets */
-		if (!EnableSSL || IS_AF_UNIX(port->laddr.addr.ss_family))
+		if (!LoadedSSL || IS_AF_UNIX(port->laddr.addr.ss_family))
 			SSLok = 'N';
 		else
 			SSLok = 'S';		/* Support for SSL */
@@ -2971,12 +2982,29 @@ SIGHUP_handler(SIGNAL_ARGS)
 
 		/* Reload authentication config files too */
 		if (!load_hba())
-			ereport(WARNING,
+			ereport(LOG,
 					(errmsg("pg_hba.conf not reloaded")));
 
 		if (!load_ident())
-			ereport(WARNING,
+			ereport(LOG,
 					(errmsg("pg_ident.conf not reloaded")));
+
+#ifdef USE_SSL
+        /* Reload SSL configuration as well */
+		if (EnableSSL)
+		{
+			if (secure_initialize(false) == 0)
+				LoadedSSL = true;
+			else
+				ereport(LOG,
+						(errmsg("SSL context not reloaded")));
+		}
+		else
+		{
+			secure_destroy();
+			LoadedSSL = false;
+		}
+#endif
 
 #ifdef EXEC_BACKEND
 		/* Update the starting-point file for future children */
@@ -5330,7 +5358,13 @@ SubPostmasterMain(int argc, char *argv[])
 		 */
 #ifdef USE_SSL
 		if (EnableSSL)
-			secure_initialize();
+		{
+			if (secure_initialize(false) == 0)
+				LoadedSSL = true;
+			else
+				ereport(LOG,
+						(errmsg("SSL context could not be reloaded in child process")));
+		}
 #endif
 
 		/*
