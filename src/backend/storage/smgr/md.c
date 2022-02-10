@@ -1237,6 +1237,7 @@ mdsync(void)
 				{
 					SMgrRelation reln;
 					MdfdVec    *seg;
+					bool		closeSeg = false;
 					char	   *path;
 					int			save_errno;
 
@@ -1261,7 +1262,10 @@ mdsync(void)
 						/*
 						 * For AO table, only access what the segno denoted, instead
 						 * of the chain to the target segment as HEAP.
+						 * _mdf_openseg does not register the file in SMgrRelation
+						 * we must close and free it manually
 						 */
+						closeSeg = true;
 						seg = _mdfd_openseg(reln, forknum, segno, 0);
 					}
 					else
@@ -1291,8 +1295,20 @@ mdsync(void)
 								 processed,
 								 FilePathName(seg->mdfd_vfd),
 								 (double) elapsed / 1000);
+						if (closeSeg)
+						{
+							Assert(reln->md_fd[forknum] == NULL);
+							FileClose(seg->mdfd_vfd);
+							pfree(seg);
+						}
 
 						break;	/* out of retry loop */
+					}
+					if (seg != NULL && closeSeg)
+					{
+						Assert(reln->md_fd[forknum] == NULL);
+						FileClose(seg->mdfd_vfd);
+						pfree(seg);
 					}
 
 					/* Compute file name for use in message */
