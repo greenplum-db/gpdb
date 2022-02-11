@@ -228,7 +228,7 @@ ninja -v -C build
 We accept contributions via [Github Pull requests](https://help.github.com/articles/using-pull-requests) only.
 
 
-ORCA has a [style guide](StyleGuilde.md), try to follow the existing style in your contribution to be consistent.
+ORCA has a [style guide](StyleGuide.md), try to follow the existing style in your contribution to be consistent.
 
 [clang-format]: https://clang.llvm.org/docs/ClangFormat.html
 A set of [clang-format]-based rules are enforced in CI. Your editor or IDE may automatically support it. When in doubt, check formatting locally before submitting your PR:
