@@ -155,6 +155,13 @@ def check_string_not_present_stdout(context, msg):
         err_str = "Did not expect stdout string '%s' but found: '%s'" % (msg, context.stdout_message)
         raise Exception(err_str)
 
+def check_string_not_present_in_file(file ,msg):
+    pat = re.compile(msg)
+    for line in open(file):
+        if pat.search(line):
+            err_str = "Did not expect string '%s' but found: '%s'" % (msg, line)
+            raise Exception(err_str)
+
 
 def check_err_msg(context, err_msg):
     if not hasattr(context, 'exception'):

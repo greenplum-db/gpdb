@@ -698,6 +698,26 @@ def impl(context, command, out_msg, num):
         raise Exception("Expected %s to occur %s times. Found %d. stdout: %s" % (out_msg, num, count, msg_list))
 
 
+@then('the pg_log files on primary segments should not contain "{msg}"')
+def impl(context, msg):
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+
+    for seg in segments:
+        if seg.isSegmentPrimary():
+            pg_log_dir = seg.getSegmentDataDirectory() + "/log/"
+            if not os.path.exists(pg_log_dir):
+                raise Exception('Path does not exist! "%s"' % pg_log_dir)
+
+            rc, output, error = run_cmd("ls -t %s | grep gpdb.*csv | head -1" % pg_log_dir)
+
+            if output == "":
+                raise Exception("No log file exists under %s" % pg_log_dir)
+
+            check_string_not_present_in_file(pg_log_dir + output[:-1], msg)
+
+
 def lines_matching_both(in_str, str_1, str_2):
     lines = [x.strip() for x in in_str.split('\n')]
     return [x for x in lines if x.count(str_1) and x.count(str_2)]
