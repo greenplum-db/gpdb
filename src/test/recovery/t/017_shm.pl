@@ -14,10 +14,6 @@ if ($windows_os)
 {
 	plan skip_all => 'SysV shared memory not supported by this platform';
 }
-else
-{
-	plan tests => 5;
-}
 
 my $tempdir = PostgreSQL::Test::Utils::tempdir;
 my $port;
@@ -210,3 +206,5 @@ sub poll_start
 	$node->start && return 1;
 	return 0;
 }
+
+done_testing();

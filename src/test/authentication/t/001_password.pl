@@ -15,11 +15,6 @@ if ($windows_os)
 {
 	plan skip_all => "authentication tests cannot run on Windows";
 }
-else
-{
-	plan tests => 11;
-}
-
 
 # Delete pg_hba.conf from the given node, add a new entry to it
 # and then execute a reload to refresh it.
@@ -117,4 +112,6 @@ append_to_file($pgpassfile, qq!
 *:*:*:md5_role:p\\ass
 !);
 
-test_role($node, 'md5_role',   'password from pgpass', 0);
+test_role($node, 'md5_role', 'password from pgpass', 0);
+
+done_testing();

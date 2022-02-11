@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 14;
+use Test::More;
 use File::Copy;
 
 # Initialize primary node, doing archives
@@ -270,3 +270,5 @@ sub check_history_files
 	ok( !-f "$node_standby2_data/pg_wal/RECOVERYXLOG",
 		"RECOVERYXLOG removed after promotion");
 }
+
+done_testing();

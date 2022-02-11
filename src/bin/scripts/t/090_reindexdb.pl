@@ -3,7 +3,7 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 32;
+use Test::More;
 
 program_help_ok('reindexdb');
 program_version_ok('reindexdb');

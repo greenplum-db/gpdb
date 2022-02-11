@@ -2,10 +2,10 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Utils;
 use PostgreSQL::Test::Cluster;
-use Test::More tests => 1;
 
 # GPDB: Effectively disable this TAP test. We don't support logical decoding
 # yet. TAP needs at least 1 test so create a dummy one.
+use Test::More tests => 1;
 is(-1, -1, "Disable this TAP test");
 exit;
 
@@ -65,3 +65,5 @@ $node->command_ok(
 		'--start', '--endpos', "$nextlsn", '--no-loop', '-f', '-'
 	],
 	'replayed a transaction');
+
+done_testing();

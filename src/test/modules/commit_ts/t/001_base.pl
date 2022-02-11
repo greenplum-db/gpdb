@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use PostgreSQL::Test::Utils;
-use Test::More tests => 2;
+use Test::More;
 use PostgreSQL::Test::Cluster;
 
 my $node = PostgreSQL::Test::Cluster->new('foxtrot');
@@ -31,3 +31,5 @@ my $recovered_ts = $node->safe_psql('postgres',
 	'select ts.* from pg_class, pg_xact_commit_timestamp(xmin) ts where relname = \'t\''
 );
 is($recovered_ts, $ts, 'commit TS remains after crash recovery');
+
+done_testing();

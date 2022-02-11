@@ -3,7 +3,7 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 10;
+use Test::More;
 
 program_help_ok('pg_isready');
 program_version_ok('pg_isready');
@@ -18,3 +18,5 @@ $node->start;
 $node->command_ok(
 	[ 'pg_isready', "--timeout=$PostgreSQL::Test::Utils::timeout_default" ],
 	'succeeds with server running');
+
+done_testing();

@@ -4,8 +4,7 @@ use strict;
 use warnings;
 
 use PostgreSQL::Test::Utils;
-use Test::More tests => 1;
-# use Test::More tests => 2;
+use Test::More;
 use PostgreSQL::Test::Cluster;
 
 my $node = PostgreSQL::Test::Cluster->new('tango');
@@ -41,3 +40,5 @@ is($count, '1', "initial index state is correct");
 # );
 # is($count, 't', "index got summarized");
 $node->stop;
+
+done_testing();

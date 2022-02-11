@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 42;
+use Test::More;
 
 # Initialize a test cluster
 my $node = PostgreSQL::Test::Cluster->new('primary');
@@ -308,3 +308,5 @@ ok( $output =~
 run_sql_command('DROP TABLE quuux;');
 
 $node->stop('fast');
+
+done_testing();

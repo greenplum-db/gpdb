@@ -3,7 +3,7 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 5;
+use Test::More;
 use Time::HiRes qw(usleep);
 
 # Set up node with logging collector
@@ -106,3 +106,5 @@ like(
 	'found expected log file content in new log file');
 
 $node->stop();
+
+done_testing();

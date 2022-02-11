@@ -10,8 +10,6 @@ use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
 use Test::More;
 
-plan tests => 3;
-
 # Test: Create a physical replica that's missing the last WAL file,
 # then restart the primary to create a divergent WAL file and observe
 # that the replica replays the "overwrite contrecord" from that new
@@ -107,3 +105,5 @@ $node_standby->promote;
 
 $node->stop;
 $node_standby->stop;
+
+done_testing();

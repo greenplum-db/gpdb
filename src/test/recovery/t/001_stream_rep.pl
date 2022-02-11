@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 34;
+use Test::More;
 
 # Initialize primary node
 my $node_primary = PostgreSQL::Test::Cluster->new('primary');
@@ -385,3 +385,4 @@ chomp($phys_restart_lsn_post);
 ok(($phys_restart_lsn_pre cmp $phys_restart_lsn_post) == 0,
 	"physical slot advance persists across restarts");
 
+done_testing();

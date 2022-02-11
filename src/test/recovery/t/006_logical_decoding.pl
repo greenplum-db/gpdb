@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 12;
+use Test::More;
 use Config;
 
 # Initialize primary node
@@ -166,3 +166,5 @@ ok(($logical_restart_lsn_pre cmp $logical_restart_lsn_post) == 0,
 
 # done with the node
 $node_primary->stop;
+
+done_testing();

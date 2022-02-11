@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 9;
+use Test::More;
 use Time::HiRes qw(usleep);
 
 # Create and test a standby from given backup, with a certain recovery target.
@@ -173,3 +173,5 @@ foreach my $i (0..1800)
 $logfile = slurp_file($node_standby->logfile());
 ok($logfile =~ qr/FATAL:  recovery ended before configured recovery target was reached/,
 	'recovery end before target reached is a fatal error');
+
+done_testing();

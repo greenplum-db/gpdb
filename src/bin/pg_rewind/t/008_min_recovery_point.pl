@@ -31,7 +31,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 3;
+use Test::More;
 
 use File::Copy;
 
@@ -169,3 +169,5 @@ and this too), 'table foo after rewind');
 
 $result = $node_2->safe_psql('postgres', 'SELECT * FROM public.bar');
 is($result, qq(in both), 'table bar after rewind');
+
+done_testing();

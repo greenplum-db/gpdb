@@ -11,11 +11,7 @@ use lib $FindBin::RealBin;
 
 use SSLServer;
 
-if ($ENV{with_openssl} eq 'yes')
-{
-	plan tests => 75;
-}
-else
+if ($ENV{with_openssl} ne 'yes')
 {
 	plan skip_all => 'SSL not supported by this build';
 }
@@ -422,3 +418,5 @@ $node->connect_fails(
 # clean up
 unlink("ssl/client_tmp.key", "ssl/client_wrongperms_tmp.key",
 	"ssl/client-revoked_tmp.key");
+
+done_testing();

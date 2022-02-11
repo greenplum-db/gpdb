@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 16;
+use Test::More;
 
 my $node_primary = PostgreSQL::Test::Cluster->new('primary');
 $node_primary->init(allows_streaming => 1);
@@ -147,3 +147,5 @@ is($after_enable_disabled_ts, '',
 	'timestamp of disabled tx null after re-enable');
 
 $node_primary->stop;
+
+done_testing();

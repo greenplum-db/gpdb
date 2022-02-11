@@ -89,3 +89,5 @@ for my $i (1 .. 10)
 	);
 	test_index_replay("insert $i");
 }
+
+done_testing();

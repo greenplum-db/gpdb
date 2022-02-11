@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 2;
+use Test::More;
 
 my $node_publisher = PostgreSQL::Test::Cluster->new('publisher');
 $node_publisher->init(allows_streaming => 'logical');
@@ -63,3 +63,5 @@ is( $node_subscriber->safe_psql('postgres', q{SELECT a, b, c FROM test1}),
 
 $node_subscriber->stop;
 $node_publisher->stop;
+
+done_testing();

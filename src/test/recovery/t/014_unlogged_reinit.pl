@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 12;
+use Test::More;
 
 my $node = PostgreSQL::Test::Cluster->new('main');
 
@@ -77,3 +77,5 @@ ok( !-f "$pgdata/${ts1UnloggedPath}_vm",
 	'vm fork in tablespace removed at startup');
 ok( !-f "$pgdata/${ts1UnloggedPath}_fsm",
 	'fsm fork in tablespace removed at startup');
+
+done_testing();

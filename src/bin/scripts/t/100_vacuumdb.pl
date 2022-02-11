@@ -3,7 +3,7 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 54;
+use Test::More;
 
 program_help_ok('vacuumdb');
 program_version_ok('vacuumdb');
@@ -158,3 +158,5 @@ $node->issues_sql_like(
 								.*statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;
 								.*statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;/sx,
 	'vacuumdb -j4 with ten tables issues five vacuum commands');
+
+done_testing();

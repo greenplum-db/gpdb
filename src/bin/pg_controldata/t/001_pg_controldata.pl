@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 17;
+use Test::More;
 
 program_help_ok('pg_controldata');
 program_version_ok('pg_controldata');
@@ -39,3 +39,5 @@ command_checks_all(
 	],
 	[qr/^$/],
 	'pg_controldata with corrupted pg_control');
+
+done_testing();

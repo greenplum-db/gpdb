@@ -7,6 +7,7 @@ use File::Copy;
 use File::Path qw(rmtree);
 use PostgreSQL::Test::Utils;
 use Test::More;
+
 if ($windows_os)
 {
 	plan skip_all => 'symlinks not supported on Windows';
@@ -82,4 +83,4 @@ in standby, after promotion
 run_test('local');
 run_test('remote');
 
-exit(0);
+done_testing();

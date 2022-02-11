@@ -26,4 +26,5 @@ ok($logfile =~ qr/pg_rewind suspended for 10 seconds/,
 	'check for suspended pg_rewind log');
 
 RewindTest::clean_rewind_test();
-exit(0);
+
+done_testing();

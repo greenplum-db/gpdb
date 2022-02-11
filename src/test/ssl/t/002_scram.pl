@@ -51,4 +51,4 @@ $node->connect_ok(
 	"$common_connstr user=ssltestuser",
 	"Basic SCRAM authentication with SSL");
 
-
+done_testing();

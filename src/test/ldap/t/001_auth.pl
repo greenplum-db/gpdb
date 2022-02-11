@@ -4,11 +4,7 @@ use PostgreSQL::Test::Utils;
 use PostgreSQL::Test::Cluster;
 use Test::More;
 
-if ($ENV{with_ldap} eq 'yes')
-{
-	plan tests => 22;
-}
-else
+if ($ENV{with_ldap} ne 'yes')
 {
 	plan skip_all => 'LDAP not supported by this build';
 }
@@ -334,3 +330,5 @@ $node->restart;
 
 $ENV{"PGPASSWORD"} = 'secret1';
 test_access($node, 'test1', 2, 'bad combination of LDAPS and StartTLS');
+
+done_testing();

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Utils;
 use PostgreSQL::Test::Cluster;
-use Test::More tests => 19;
+use Test::More;
 
 program_help_ok('pg_receivewal');
 program_version_ok('pg_receivewal');
@@ -72,3 +72,5 @@ SKIP:
 	ok(check_mode_recursive($stream_dir, 0700, 0600),
 		"check stream dir permissions");
 }
+
+done_testing();

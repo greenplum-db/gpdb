@@ -8,7 +8,7 @@ use File::Path qw(rmtree);
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 107 + 25;
+use Test::More;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -740,3 +740,5 @@ ok(-f "$tempdir/backup/internal.auto.conf", 'internal.auto.conf was created');
 ok(-f "$tempdir/backup/postgresql.auto.conf", 'postgresql.auto.conf was created');
 ok(-f "$tempdir/backup/standby.signal",       'standby.signal was created');
 rmtree("$tempdir/backup");
+
+done_testing();

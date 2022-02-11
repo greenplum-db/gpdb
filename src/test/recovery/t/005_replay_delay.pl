@@ -4,7 +4,7 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 1;
+use Test::More;
 
 # Initialize primary node
 my $node_primary = PostgreSQL::Test::Cluster->new('primary');
@@ -52,3 +52,5 @@ $node_standby->poll_query_until('postgres',
 # the configured apply delay.
 ok(time() - $primary_insert_time >= $delay,
 	"standby applies WAL only after replication delay");
+
+done_testing();

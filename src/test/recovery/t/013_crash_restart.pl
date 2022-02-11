@@ -16,9 +16,6 @@ use Test::More;
 use Config;
 use Time::HiRes qw(usleep);
 
-plan tests => 18;
-
-
 # To avoid hanging while expecting some specific input from a psql
 # instance being driven by us, add a timeout high enough that it
 # should never trigger even on very slow machines, unless something
@@ -244,3 +241,5 @@ is( $node->safe_psql(
 	'can still write after orderly restart');
 
 $node->stop();
+
+done_testing();

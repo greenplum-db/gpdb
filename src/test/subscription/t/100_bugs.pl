@@ -3,7 +3,11 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
+<<<<<<< HEAD
 use Test::More tests => 5;
+=======
+use Test::More;
+>>>>>>> 549ec201d61... Replace Test::More plans with done_testing
 
 # Bug #15114
 
@@ -184,3 +188,5 @@ is( $node_subscriber->safe_psql(
 
 $node_publisher->stop('fast');
 $node_subscriber->stop('fast');
+
+done_testing();

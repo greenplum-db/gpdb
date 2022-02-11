@@ -6,7 +6,7 @@ use warnings;
 use File::Path qw(rmtree);
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 2;
+use Test::More;
 
 $ENV{PGDATABASE} = 'postgres';
 
@@ -66,3 +66,5 @@ $node_standby_1->wait_for_catchup($node_standby_2, 'replay',
 my $result =
   $node_standby_2->safe_psql('postgres', "SELECT count(*) FROM tab_int");
 is($result, qq(2000), 'check content of standby 2');
+
+done_testing();

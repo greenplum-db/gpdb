@@ -17,11 +17,7 @@ use PostgreSQL::Test::Utils;
 use PostgreSQL::Test::Cluster;
 use Test::More;
 
-if ($ENV{with_gssapi} eq 'yes')
-{
-	plan tests => 19;
-}
-else
+if ($ENV{with_gssapi} ne 'yes')
 {
 	plan skip_all => 'GSSAPI/Kerberos not supported by this build';
 }
@@ -357,3 +353,5 @@ test_access(
 	0,
 	'',
 	'succeeds with include_realm=0 and defaults');
+
+done_testing();

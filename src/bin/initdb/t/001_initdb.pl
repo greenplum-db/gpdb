@@ -8,7 +8,7 @@ use Fcntl ':mode';
 use File::stat qw{lstat};
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 22;
+use Test::More;
 
 my $tempdir = PostgreSQL::Test::Utils::tempdir;
 my $xlogdir = "$tempdir/pgxlog";
@@ -89,3 +89,5 @@ SKIP:
 	ok(check_mode_recursive($datadir_group, 0750, 0640),
 		'check PGDATA permissions');
 }
+
+done_testing();

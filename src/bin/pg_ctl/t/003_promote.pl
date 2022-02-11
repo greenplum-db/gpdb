@@ -3,7 +3,7 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More tests => 12;
+use Test::More;
 
 my $tempdir = PostgreSQL::Test::Utils::tempdir;
 
@@ -59,3 +59,5 @@ command_ok([ 'pg_ctl', '-D', $node_standby->data_dir, 'promote' ],
 
 is($node_standby->safe_psql('postgres', 'SELECT pg_is_in_recovery()'),
 	'f', 'promoted standby is not in recovery');
+
+done_testing();
