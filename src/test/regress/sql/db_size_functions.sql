@@ -41,7 +41,6 @@ select pg_total_relation_size('pg_tables');
 -- Test on functions are not allowed to run on entryDB.
 create temp table t1 as select pg_relation_size('pg_tables') from pg_class limit 1;
 create temp table t1 as select pg_total_relation_size('pg_tables') from pg_class limit 1;
-
 create temp table t1 as select gp_segment_id as seg_id from gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='pg_default'));
 create temp table t1 as select gp_segment_id as seg_id from gp_switch_wal();
 
