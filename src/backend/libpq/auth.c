@@ -420,6 +420,18 @@ ClientAuthentication(Port *port)
 	int			status = STATUS_ERROR;
 	char	   *logdetail = NULL;
 
+    /*
+     * If this is a QD to QE connection, we might be able to short circuit
+     * client authentication.
+    */
+    if (is_internal_gpdb_conn(port))
+    {
+        if (internal_client_authentication(port))
+            return;
+
+        /* Else, try the normal authentication */
+    }
+
 	/*
 	 * Get the authentication method to use for this frontend/database
 	 * combination.  Note: we do not parse the file at this point; this has
@@ -429,6 +441,7 @@ ClientAuthentication(Port *port)
 	hba_getauthmethod(port);
 
 
+    ImmediateInterruptOK = true;
 	/* And don't forget to detect one that already arrived */
 	CHECK_FOR_INTERRUPTS();
 
@@ -450,7 +463,7 @@ ClientAuthentication(Port *port)
          * certificate store, and the connection would have been aborted
          * already if it didn't verify ok.
          */
-        
+
 #ifdef USE_SSL
 		if (!port->peer)
 			ereport(FATAL,
