@@ -130,7 +130,7 @@
                     <pt> -n <varname>locale</varname> | --locale=<varname>locale</varname>
                     </pt>
                     <pd>Sets the default locale used by Greenplum Database. If not specified, the 
-                        default locale is <codeph>C</codeph>
+                        default locale is <codeph>en_US.utf8</codeph>
                             (<codeph>POSIX</codeph>). A locale identifier consists of a language
                         identifier and a region identifier, and optionally a character set encoding.
                         For example, <codeph>sv_SE</codeph> is Swedish as spoken in Sweden,
