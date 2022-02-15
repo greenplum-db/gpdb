@@ -130,7 +130,9 @@ options:
         <plentry id="s3-region">
           <pt>region</pt>
           <pd>Required for AWS S3. If connecting to an S3 compatible service, this option is not
-            required.</pd>
+            required, <b>with one exception</b>: If you are using Minio object storage and have
+            specified a value for the <codeph>Region</codeph> setting on the Minio server side you
+            must set this <codeph>region</codeph> option to the same value.</pd>
         </plentry>
         <plentry id="s3-endpoint">
           <pt>endpoint</pt>
