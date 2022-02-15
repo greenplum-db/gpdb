@@ -932,6 +932,14 @@ AC_MSG_RESULT([$with_python])
 AC_SUBST(with_python)
 
 #
+# Optionally build co-existing Python2 & Python3 modules (PL/Python)
+#
+AC_MSG_CHECKING([whether to build co-existing Python modules])
+PGAC_ARG_BOOL(with, python-both, no, [build co-existing Python modules (PL/Python)])
+AC_MSG_RESULT([$with_python_both])
+AC_SUBST(with_python_both)
+
+#
 # GSSAPI
 #
 AC_MSG_CHECKING([whether to build with GSSAPI support])
@@ -1272,6 +1280,15 @@ fi
 if test "$with_python" = yes; then
   PGAC_PATH_PYTHON
   PGAC_CHECK_PYTHON_EMBED_SETUP
+fi
+
+if test "$with_python_both" = yes; then
+  if test "$with_python" = yes; then
+    AC_MSG_ERROR([
+'--with-python' and '--with-python-both' cannot be supplied together.])
+  fi
+  PGAC_PATH_PYTHON_BOTH
+  PGAC_CHECK_PYTHON_BOTH_EMBED_SETUP
 fi
 
 if test "$cross_compiling" = yes && test -z "$with_system_tzdata"; then
@@ -2524,6 +2541,17 @@ if test "$with_python" = yes; then
   ac_save_CPPFLAGS=$CPPFLAGS
   CPPFLAGS="$python_includespec $CPPFLAGS"
   AC_CHECK_HEADER(Python.h, [], [AC_MSG_ERROR([header file <Python.h> is required for Python])])
+  CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
+if test "$with_python_both" = yes; then
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$python_includespec $CPPFLAGS"
+  AC_CHECK_HEADER(Python.h, [], [AC_MSG_ERROR([header file <Python.h> is required for Python2])])
+  CPPFLAGS=$ac_save_CPPFLAGS
+
+  CPPFLAGS="$python3_includespec $CPPFLAGS"
+  AC_CHECK_HEADER(Python.h, [], [AC_MSG_ERROR([header file <Python.h> is required for Python3])])
   CPPFLAGS=$ac_save_CPPFLAGS
 fi
 

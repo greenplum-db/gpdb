@@ -28,113 +28,113 @@ insert into gp_single_row values(1);
 -- Set up test functions first.
 CREATE FUNCTION test_return_void(s text) 
 RETURNS void AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_bool(s text) 
 RETURNS bool AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_text(s text) 
 RETURNS text AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_bytea(s text) 
 RETURNS bytea AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_circle(s text) 
 RETURNS circle AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_array_int(s text) 
 RETURNS int[] AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_array_text(s text) 
 RETURNS text[] AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_void(s text) 
 RETURNS setof void AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_bool(s text) 
 RETURNS setof bool AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_text(s text) 
 RETURNS setof text AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_bytea(s text) 
 RETURNS setof bytea AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_circle(s text) 
 RETURNS setof circle AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 
 -- RETURNS record types
 CREATE FUNCTION test_return_table_record(s text) 
 RETURNS table_record AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_type_record(s text) 
 RETURNS type_record AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_table_record(s text) 
 RETURNS table_record AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_setof_type_record(s text) 
 RETURNS type_record AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 
 -- RETURNS with OUT Parameters
 CREATE FUNCTION test_return_out_text(s text, OUT text) 
 AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_out_setof_text(s text, OUT text) 
 RETURNS setof text AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_out_record(s text, OUT first text, OUT second int4) 
 AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 CREATE FUNCTION test_return_out_setof_record(s text, OUT first text, OUT second int4)
 RETURNS setof record AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 
 -- RETURNS TABLE
 CREATE FUNCTION test_return_table(s text) RETURNS TABLE(first text, second int4)
 AS $$
-  exec('y = ' + s)
+  exec('y = ' + s, globals())
   return y
 $$ language plpythonu;
 
@@ -229,10 +229,10 @@ SELECT test_return_bool('{None: None}') FROM gp_single_row;
 
 -- From Python Object with bad str() function
 SELECT test_return_bool(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 SELECT * FROM test_return_bool(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 
 -- Error conditions
@@ -293,13 +293,13 @@ FROM gp_single_row;
 
 -- From Python Object with str() function
 SELECT test_return_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
 SELECT * FROM test_return_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
 SELECT test_return_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 ) FROM gp_single_row;
 
 
@@ -314,10 +314,10 @@ SELECT * FROM test_return_text(E'"test\\0"');
 
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 SELECT * FROM test_return_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 
 
@@ -378,13 +378,13 @@ FROM gp_single_row;
 
 -- From Python Object with str() function
 SELECT test_return_bytea(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
 SELECT * FROM test_return_bytea(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
 SELECT test_return_bytea(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 ) FROM gp_single_row;
 
 -- From Python String with null characters
@@ -397,13 +397,13 @@ FROM gp_single_row;
 
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_bytea(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 SELECT * FROM test_return_bytea(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 SELECT test_return_bytea(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 ) FROM gp_single_row;
 
 
@@ -1234,13 +1234,13 @@ FROM gp_single_row;
 
 -- From Python Object with str() function
 SELECT test_return_out_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
 SELECT * FROM test_return_out_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
 SELECT test_return_out_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\""); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 ) FROM gp_single_row;
 
 
@@ -1255,10 +1255,10 @@ SELECT * FROM test_return_out_text(E'"test\\0"');
 
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_out_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 SELECT * FROM test_return_out_text(
-    E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
+    E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
 );
 
 

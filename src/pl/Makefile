@@ -20,7 +20,9 @@ else
 ALWAYS_SUBDIRS += plperl
 endif
 
-ifeq ($(with_python), yes)
+ifeq ($(with_python_both), yes)
+SUBDIRS += plpython plpython3
+else ifeq ($(with_python), yes)
 SUBDIRS += plpython
 else
 ALWAYS_SUBDIRS += plpython

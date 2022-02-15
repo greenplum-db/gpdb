@@ -5,6 +5,13 @@ m/ \(plpy_exec\.c:\d+\)/
 s/ \(plpy_exec\.c:\d+\)//
 m/ \(plpython\.c:\d+\)/
 s/ \(plpython\.c:\d+\)//
+
+# TODO: Move these to init_file_python3
+m/"subtransaction_exit_subtransaction_in_with", line \d+/
+s/"subtransaction_exit_subtransaction_in_with", line \d+//
+m/with plpy\.subtransaction\(\) as s:/
+s/with plpy\.subtransaction\(\) as s:/s.__exit__(None, None, None)/
+
 -- end_matchsubs
 
 # Copied from src/test/regress/init_file:
