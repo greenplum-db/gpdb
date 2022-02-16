@@ -149,10 +149,10 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
 		 * column of a column oriented table.  Note: checksum is a table level
 		 * attribute.
 		 */
-		if (opts[attno] == NULL || opts[attno]->blocksize == 0)
+		if (opts[i] == NULL || opts[i]->blocksize == 0)
 			elog(ERROR, "No relation attribute options for '%s', column #%d  in pg_attribute_encoding",
 							RelationGetRelationName(rel),
-							attno + 1);
+							i + 1);
 		ct = opts[i]->compresstype;
 		clvl = opts[i]->compresslevel;
 		blksz = opts[i]->blocksize;
