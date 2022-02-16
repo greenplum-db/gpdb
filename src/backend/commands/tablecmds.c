@@ -16608,12 +16608,6 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
  * ALTER TABLE SET DISTRIBUTED BY
  *
  * set distribution policy for rel
- *
- * GPDB_12_MERGE_FIXME: this function used to close the relation. Previously, the
- * callers expected that, but not anymore. There are supposedly comments
- * below explaining why we have to close it, but I don't understand it.
- * I changed it so that we don't close the relation here, but I wonder why it
- * was done differently before? Was there a good reason to close it?
  */
 static void
 ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
