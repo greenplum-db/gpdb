@@ -608,7 +608,7 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		 * when constructing hash key, we need to map attnums in part indexes
 		 * to root attnums. Get the attMap needed for mapping.
 		 */
-		if (computeAttMapping && !attmap)
+		if (computeAttMapping)
 		{
 			Relation	rootRel = heap_open(rootOid, AccessShareLock);
 
