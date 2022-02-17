@@ -35,6 +35,8 @@
 /* GPORCA entry point */
 extern PlannedStmt * GPOPTOptimizedPlan(Query *parse, bool *had_unexpected_failure);
 
+extern bool InProgressGPOPT();
+
 /*
  * Logging of optimization outcome
  */
@@ -90,6 +92,14 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	List		   *invalItems;
 	ListCell	   *lc;
 	ListCell	   *lp;
+
+	/*
+	 * ORCA doesn't currently support nested optimization requests. This could
+	 * happen while evaluating a UDF used for static partition elimination.
+	 * Instead, fallback to planner.
+	 */
+	if (InProgressGPOPT())
+		return NULL;
 
 	/*
 	 * Initialize a dummy PlannerGlobal struct. ORCA doesn't use it, but the

@@ -57,3 +57,9 @@ TerminateGPOPT ()
 {
 	elog(ERROR, "mock implementation of TerminateGPOPT called");
 }
+
+void
+InProgressGPOPT()
+{
+	elog(ERROR, "mock implementation of InProgressGPOPT called");
+}

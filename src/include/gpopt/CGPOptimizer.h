@@ -49,6 +49,7 @@ extern PlannedStmt *GPOPTOptimizedPlan(Query *query,
 extern char *SerializeDXLPlan(Query *query);
 extern void InitGPOPT();
 extern void TerminateGPOPT();
+extern bool InProgressGPOPT();
 }
 
 #endif	// CGPOptimizer_H

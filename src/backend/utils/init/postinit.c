@@ -73,6 +73,7 @@ static void process_startup_options(Port *port, bool am_superuser);
 #ifdef USE_ORCA
 extern void InitGPOPT();
 extern void TerminateGPOPT();
+extern void InProgressGPOPT();
 #endif
 
 

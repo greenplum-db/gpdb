@@ -251,4 +251,12 @@ TerminateGPOPT()
 }
 }
 
+extern "C" {
+bool
+InProgressGPOPT()
+{
+	return gpos::CWorker::Self() != NULL;
+}
+}
+
 // EOF
