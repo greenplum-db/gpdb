@@ -1935,6 +1935,49 @@ SELECT * FROM part_tbl WHERE profile_key = 99999999;
 (2 rows)
 
 DROP TABLE part_tbl;
+-- A user-defined fuction inside partition selection that needs to be
+-- optimized, should perform still SPE and should not fall back.
+-- start_ignore
+drop table if exists pt;
+NOTICE:  table "pt" does not exist, skipping
+-- end_ignore
+CREATE TABLE pt(a int) PARTITION BY RANGE(a) (START(0)  END(10) EVERY(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_1" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_2" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_3" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_4" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_5" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_6" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_7" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_8" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_9" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_10" for table "pt"
+CREATE OR REPLACE FUNCTION to_date(integer, text) RETURNS date AS $$
+BEGIN
+   RETURN to_date($1::text, $2);
+END;
+$$ LANGUAGE PLPGSQL STABLE;
+INSERT INTO pt SELECT generate_series(0, 9);
+EXPLAIN SELECT * FROM pt WHERE a = to_number((to_date(20210120 / 1, 'yyyymmdd'))::varchar , '9');
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+         ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 1 (out of 10)
+         ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+               Filter: a::numeric = to_number(to_date(20210120 / 1, 'yyyymmdd'::text)::character varying::text, '9'::text)
+ Optimizer status: PQO version 3.122.0
+(7 rows)
+
+SELECT * FROM pt WHERE a = to_number((to_date(20210120 / 1, 'yyyymmdd'))::varchar , '9');
+ a 
+---
+ 0
+(1 row)
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;
