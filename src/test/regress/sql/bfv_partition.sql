@@ -816,6 +816,24 @@ EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
 SELECT * FROM part_tbl WHERE profile_key = 99999999;
 DROP TABLE part_tbl;
 
+-- A user-defined fuction inside partition selection that needs to be
+-- optimized, should perform still SPE and should not fall back.
+
+-- start_ignore
+drop table if exists pt;
+-- end_ignore
+CREATE TABLE pt(a int) PARTITION BY RANGE(a) (START(0)  END(10) EVERY(1));
+CREATE OR REPLACE FUNCTION to_date(integer, text) RETURNS date AS $$
+BEGIN
+   RETURN to_date($1::text, $2);
+END;
+$$ LANGUAGE PLPGSQL STABLE;
+
+INSERT INTO pt SELECT generate_series(0, 9);
+
+EXPLAIN SELECT * FROM pt WHERE a = to_number((to_date(20210120 / 1, 'yyyymmdd'))::varchar , '9');
+SELECT * FROM pt WHERE a = to_number((to_date(20210120 / 1, 'yyyymmdd'))::varchar , '9');
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;
