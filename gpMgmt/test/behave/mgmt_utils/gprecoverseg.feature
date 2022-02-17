@@ -536,6 +536,7 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the information of a "primary" segment on a remote host is saved
           And the gprecoverseg input file "newDirectoryFile" and all backout files are cleaned up
+          And coverage is installed
          When user kills a "primary" process with the saved information
           And user can start transactions
          Then the saved "primary" segment is marked down in config

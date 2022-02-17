@@ -366,3 +366,12 @@ def impl(context, seg, content):
         num_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
         if num_tuples != 1:
             raise Exception("Expected configuration history table to contain 1 entry for dbid %d, found %d" % (dbid, num_tuples))
+
+# HACK; DELETE BEFORE MERGING
+@given('coverage is installed')
+def impl(context):
+    with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+        result = dbconn.query(conn, "SELECT distinct(hostname) FROM gp_segment_configuration")
+        hosts = [r[0] for r in result]
+        cmd = Command(name='Install coverage', cmdStr = "gpssh -h %s PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user coverage" % (" -h ".join(hosts)))
+        cmd.run(validateAfter=True)

@@ -102,6 +102,8 @@ function install_python_requirements_on_single_host() {
 
     export PIP_CACHE_DIR=${PWD}/pip-cache-dir
     pip3 --retries 10 install -r ${requirements_txt}
+	# HACK; DELETE BEFORE MERGING
+	pip3 --retries 10 install coverage
 }
 
 function install_python_requirements_on_multi_host() {
@@ -117,6 +119,8 @@ function install_python_requirements_on_multi_host() {
     while read -r host; do
         scp ${requirements_txt} "$host":/tmp/requirements.txt
         ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user -r /tmp/requirements.txt
+        # HACK; DELETE BEFORE MERGING
+        ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user coverage
     done </tmp/hostfile_all
 }
 
