@@ -122,7 +122,7 @@ options
 :   Required. Begins the S3 storage plugin options section.
 
 region
-:   Required for AWS S3. If connecting to an S3 compatible service, this option is not required.
+:   Required for AWS S3. If connecting to an S3 compatible service, this option is not required, **with one exception**: If you are using Minio object storage and have specified a value for the `Region` setting on the Minio server side you must set this `region` option to the same value.
 
 endpoint
 :   Required for an S3 compatible service. Specify this option to connect to an S3 compatible service such as ECS. The plugin connects to the specified S3 endpoint \(hostname or IP address\) to access the S3 compatible data store.
