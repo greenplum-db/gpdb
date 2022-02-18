@@ -2414,12 +2414,6 @@ makeObjectName(const char *name1, const char *name2, const char *label)
 		overhead += strlen(label) + 1;
 
 	availchars = NAMEDATALEN - 1 - overhead;
-
-	/* GPDB_12_MERGE_FIXME: we're hitting this assertion with some SPLIT PARTITION
-	 * commands in regression tests.
-	 */
-	if (availchars <= 0)
-		elog(ERROR, "partition name too long");
 	Assert(availchars > 0);		/* else caller chose a bad label */
 
 	/*
