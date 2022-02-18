@@ -946,6 +946,8 @@ ProcKill(int code, Datum arg)
 
 	Assert(MyProc != NULL);
 
+	SIMPLE_FAULT_INJECTOR("proc_kill");
+
 	/* Make sure we're out of the sync rep lists */
 	SyncRepCleanupAtProcExit();
 
