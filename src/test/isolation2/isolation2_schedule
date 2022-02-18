@@ -213,6 +213,7 @@ test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: pg_basebackup_large_database_oid
 test: enable_autovacuum
+test: idle_gang_cleaner
 
 test: segwalrep/die_commit_pending_replication
 
