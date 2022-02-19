@@ -263,9 +263,7 @@ The `is_runaway`, `runaway_vmem_mb`, and `runaway_command_cnt` columns are not a
 |`is_runaway`|boolean| |Session is marked as runaway on the segment.|
 |`qe_count`|integer| |Number of query processes for the session.|
 |`active_qe_count`|integer| |Number of active query processes for the session.|
-|`dirty_qe_count`|integer| |Number of query processes that have not yet released their memory.The value is `-1` for sessions that are not running.
-
-|
+|`dirty_qe_count`|integer| |Number of query processes that have not yet released their memory. The value is `-1` for sessions that are not running.|
 |`runaway_vmem_mb`|integer| |Amount of vmem memory that the session was consuming when it was marked as a runaway session.|
 |`runaway_command_cnt`|integer| |Command count for the session when it was marked as a runaway session.|
 |`idle_start`|timestamptz| |The last time a query process in this session became idle.|
@@ -292,8 +290,8 @@ The server log files are written in comma-separated values \(CSV\) format. Some 
 
 The following fields are written to the log:
 
-|\#|Field Name|Data Type|Description|
-|--|----------|---------|-----------|
+|Number|Field Name|Data Type|Description|
+|------|----------|---------|-----------|
 |1|event\_time|timestamp with time zone|Time that the log entry was written to the log|
 |2|user\_name|varchar\(100\)|The database user name|
 |3|database\_name|varchar\(100\)|The database name|

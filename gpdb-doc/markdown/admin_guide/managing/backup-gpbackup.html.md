@@ -65,42 +65,57 @@ The `gpbackup` and `gprestore` utilities are compatible with these Greenplum Dat
 
 The following table lists the objects that are backed up and restored with `gpbackup` and `gprestore`. Database objects are backed up for the database you specify with the `--dbname` option. Global objects \(Greenplum Database system objects\) are also backed up by default, but they are restored only if you include the `--with-globals` option to `gprestore`.
 
-|Database \(for database specified with `--dbname`\)|Global \(requires the `--with-globals` option to restore\)|
-|---------------------------------------------------|----------------------------------------------------------|
-|-   Session-level configuration parameter settings \(GUCs\)
--   Schemas, see [Note](#schema_note)
--   Procedural language extensions
--   Sequences
--   Comments
--   Tables
--   Indexes
--   Owners
--   Writable External Tables \(DDL only\)
--   Readable External Tables \(DDL only\)
--   Functions
--   Aggregates
--   Casts
--   Types
--   Views
--   Materialized Views \(DDL only\)
--   Protocols
--   Triggers. \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)
--   Rules
--   Domains
--   Operators, operator families, and operator classes
--   Conversions
--   Extensions
--   Text search parsers, dictionaries, templates, and configurations
-
-|-   Tablespaces
--   Databases
--   Database-wide configuration parameter settings \(GUCs\)
--   Resource group definitions
--   Resource queue definitions
--   Roles
--   `GRANT` assignments of roles to databases
-
-|
+<table class="table frame-all" id="topic_x3s_lqj_tbb__table_vqq_3rj_tbb"><caption><span class="table--title-label">Table 1. </span><span class="title">Objects that are backed up and restored</span></caption><colgroup><col style="width:50%"><col style="width:50%"></colgroup><thead class="thead">
+              <tr class="row">
+                <th class="entry colsep-1 rowsep-1" id="topic_x3s_lqj_tbb__table_vqq_3rj_tbb__entry__1">Database (for database specified with <code class="ph codeph">--dbname</code>)</th>
+                <th class="entry colsep-1 rowsep-1" id="topic_x3s_lqj_tbb__table_vqq_3rj_tbb__entry__2">Global (requires the <code class="ph codeph">--with-globals</code> option to
+                  restore)</th>
+              </tr>
+            </thead><tbody class="tbody">
+              <tr class="row">
+                <td class="entry colsep-1 rowsep-1" headers="topic_x3s_lqj_tbb__table_vqq_3rj_tbb__entry__1">
+                  <ul class="ul" id="topic_x3s_lqj_tbb__ul_kpk_yrj_tbb">
+                    <li class="li">Session-level configuration parameter settings (GUCs)</li>
+                    <li class="li">Schemas, see <a class="xref" href="#topic_x3s_lqj_tbb__schema_note">Note</a></li>
+                    <li class="li">Procedural language extensions</li>
+                    <li class="li">Sequences</li>
+                    <li dir="ltr" class="li">Comments</li>
+                    <li dir="ltr" class="li">Tables</li>
+                    <li class="li">Indexes</li>
+                    <li dir="ltr" class="li">Owners</li>
+                    <li dir="ltr" class="li">Writable External Tables (DDL only) </li>
+                    <li dir="ltr" class="li">Readable External Tables (DDL only) </li>
+                    <li dir="ltr" class="li">Functions</li>
+                    <li dir="ltr" class="li">Aggregates</li>
+                    <li dir="ltr" class="li">Casts</li>
+                    <li dir="ltr" class="li">Types</li>
+                    <li dir="ltr" class="li">Views</li>
+                    <li class="li">Materialized Views (DDL only)</li>
+                    <li dir="ltr" class="li">Protocols</li>
+                    <li dir="ltr" class="li">Triggers. (While Greenplum Database does not support triggers, any
+                      trigger definitions that are present are backed up and restored.)</li>
+                    <li dir="ltr" class="li">Rules</li>
+                    <li dir="ltr" class="li">Domains</li>
+                    <li dir="ltr" class="li">Operators, operator families, and operator classes</li>
+                    <li dir="ltr" class="li">Conversions</li>
+                    <li class="li">Extensions</li>
+                    <li dir="ltr" class="li">Text search parsers, dictionaries, templates, and
+                      configurations</li>
+                  </ul>
+                </td>
+                <td class="entry colsep-1 rowsep-1" headers="topic_x3s_lqj_tbb__table_vqq_3rj_tbb__entry__2">
+                  <ul class="ul" id="topic_x3s_lqj_tbb__ul_d2t_wrj_tbb">
+                    <li class="li">Tablespaces</li>
+                    <li class="li">Databases</li>
+                    <li class="li">Database-wide configuration parameter settings (GUCs)</li>
+                    <li class="li">Resource group definitions</li>
+                    <li class="li">Resource queue definitions</li>
+                    <li class="li">Roles</li>
+                    <li class="li"><code class="ph codeph">GRANT</code> assignments of roles to databases</li>
+                  </ul>
+                </td>
+              </tr>
+            </tbody></table>
 
 **Note:** These schemas are not included in a backup.
 
@@ -481,24 +496,24 @@ contacts:
 **gpbackup**
 :   Optional. Begins the `gpbackup` email section.
 
-    **address**
-    :   Required. At least one email address must be specified. Multiple email `address` parameters can be specified. Each `address` requires a `status` section.
+**address**
+:   Required. At least one email address must be specified. Multiple email `address` parameters can be specified. Each `address` requires a `status` section.
 
-    :   user@domain is a single, valid email address.
+user@domain is a single, valid email address.
 
-    **status**
-    :   Required. Specify when the utility sends an email to the specified email address. The default is to not send email notification.
+**status**
+:   Required. Specify when the utility sends an email to the specified email address. The default is to not send email notification.
 
-    :   You specify sending email notifications based on the completion status of a backup or restore operation. At least one of these parameters must be specified and each parameter can appear at most once.
+You specify sending email notifications based on the completion status of a backup or restore operation. At least one of these parameters must be specified and each parameter can appear at most once.
 
-        **success**
-        :   Optional. Specify if an email is sent if the operation completes without errors. If the value is `true`, an email is sent if the operation completes without errors. If the value is `false` \(the default\), an email is not sent.
+**success**
+:   Optional. Specify if an email is sent if the operation completes without errors. If the value is `true`, an email is sent if the operation completes without errors. If the value is `false` \(the default\), an email is not sent.
 
-        **success\_with\_errors**
-        :   Optional. Specify if an email is sent if the operation completes with errors. If the value is `true`, an email is sent if the operation completes with errors. If the value is `false` \(the default\), an email is not sent.
+**success\_with\_errors**
+:   Optional. Specify if an email is sent if the operation completes with errors. If the value is `true`, an email is sent if the operation completes with errors. If the value is `false` \(the default\), an email is not sent.
 
-        **failure**
-        :   Optional. Specify if an email is sent if the operation fails. If the value is `true`, an email is sent if the operation fails. If the value is `false` \(the default\), an email is not sent.
+**failure**
+:   Optional. Specify if an email is sent if the operation fails. If the value is `true`, an email is sent if the operation fails. If the value is `false` \(the default\), an email is not sent.
 
 **gprestore**
 :   Optional. Begins the `gprestore` email section. This section contains the [address](#address_yml) and [status](#status_yml) parameters that are used to send an email notification after a `gprestore` operation. The syntax is the same as the [gpbackup](#gpbackup_yml) section.
@@ -532,74 +547,110 @@ A complete backup set for `gpbackup` includes multiple metadata files, supportin
 
 By default, metadata and supporting files are stored on the Greenplum Database master host in the directory $COORDINATOR\_DATA\_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/. If you specify a custom backup directory, this same file path is created as a subdirectory of the backup directory. The following table describes the names and contents of the metadata and supporting files.
 
-|File name|Description|
-|---------|-----------|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_metadata.sql|Contains global and database-specific metadata:-   DDL for objects that are global to the Greenplum Database cluster, and not owned by a specific database within the cluster.
--   DDL for objects in the backed-up database \(specified with `--dbname)` that must be created *before* to restoring the actual data, and DDL for objects that must be created *after* restoring the data.
-
-Global objects include:-   Tablespaces
--   Databases
--   Database-wide configuration parameter settings \(GUCs\)
--   Resource group definitions
--   Resource queue definitions
--   Roles
--   `GRANT` assignments of roles to databases
-
-**Note:** Global metadata is not restored by default. You must include the `--with-globals` option to the `gprestore` command to restore global metadata.
-
-Database-specific objects that must be created *before* to restoring the actual data include:-   Session-level configuration parameter settings \(GUCs\)
--   Schemas
--   Procedural language extensions
--   Types
--   Sequences
--   Functions
--   Tables
--   Protocols
--   Operators and operator classes
--   Conversions
--   Aggregates
--   Casts
--   Views
--   Materialized Views **Note:** Materialized view data is not restored, only the definition.
--   Constraints
-
-Database-specific objects that must be created *after* restoring the actual data include:-   Indexes
--   Rules
--   Triggers. \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)
-
-|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_toc.yaml|Contains metadata for locating object DDL in the \_predata.sql and \_postdata.sql files. This file also contains the table names and OIDs used for locating the corresponding table data in CSV data files that are created on each segment. See [Segment Data Files](#section_oys_cpj_tbb).|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_report|Contains information about the backup operation that is used to populate the email notice \(if configured\) that is sent after the backup completes. This file contains information such as:-   Command-line options that were provided
--   Database that was backed up
--   Database version
--   Backup type
-
-See [Configuring Email Notifications](#topic_qwd_d5d_tbb).|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_config.yaml|Contains metadata about the execution of the particular backup task, including: -   `gpbackup` version
--   Database name
--   Greenplum Database version
--   Additional option settings such as `--no-compression`, `--compression-level`, `--metadata-only`, `--data-only`, and `--with-stats`.
-
-|
-|gpbackup\_history.yaml|Contains information about options that were used when creating a backup with `gpbackup`, and information about incremental backups.Stored on the Greenplum Database master host in the Greenplum Database master data directory.
-
-This file is not backed up by `gpbackup`.
-
-For information about incremental backups, see [Creating and Using Incremental Backups with gpbackup and gprestore](backup-gpbackup-incremental.html).
-
-|
+<table class="table frame-all" id="topic_xnj_b4c_tbb__table_nrz_4gj_tbb"><caption><span class="table--title-label">Table 2. </span><span class="title">gpbackup Metadata Files (master)</span></caption><colgroup><col style="width:50%"><col style="width:50%"></colgroup><thead class="thead">
+              <tr class="row">
+                <th class="entry colsep-1 rowsep-1" id="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__1">File name</th>
+                <th class="entry colsep-1 rowsep-1" id="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__2">Description</th>
+              </tr>
+            </thead><tbody class="tbody">
+              <tr class="row">
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__1"><span class="ph filepath">gpbackup_&lt;YYYYMMDDHHMMSS&gt;_metadata.sql</span></td>
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__2">Contains global and database-specific metadata:<ul class="ul" id="topic_xnj_b4c_tbb__ul_l2c_dtv_scb">
+                    <li class="li">DDL for objects that are global to the Greenplum Database cluster, and not
+                      owned by a specific database within the cluster.</li>
+                    <li class="li">DDL for objects in the backed-up database (specified with
+                        <code class="ph codeph">--dbname)</code> that must be created <em class="ph i">before</em> to restoring
+                      the actual data, and DDL for objects that must be created <em class="ph i">after</em>
+                      restoring the data.</li>
+                  </ul>Global objects include:<ul class="ul" id="topic_xnj_b4c_tbb__ul_f1b_dhj_tbb">
+                    <li class="li">Tablespaces</li>
+                    <li class="li">Databases</li>
+                    <li class="li">Database-wide configuration parameter settings (GUCs)</li>
+                    <li class="li">Resource group definitions</li>
+                    <li class="li">Resource queue definitions</li>
+                    <li class="li">Roles</li>
+                    <li class="li"><code class="ph codeph">GRANT</code> assignments of roles to databases</li>
+                  </ul><p class="p"><strong class="ph b">Note:</strong> Global metadata is not restored by default. You must include
+                    the <code class="ph codeph">--with-globals</code> option to the <code class="ph codeph">gprestore</code>
+                    command to restore global metadata.</p>Database-specific objects that must be
+                  created <em class="ph i">before</em> to restoring the actual data include:<ul class="ul" id="topic_xnj_b4c_tbb__ul_vqn_vsv_scb">
+                    <li class="li">Session-level configuration parameter settings (GUCs)</li>
+                    <li class="li">Schemas</li>
+                    <li class="li">Procedural language extensions</li>
+                    <li class="li">Types</li>
+                    <li class="li">Sequences</li>
+                    <li class="li">Functions</li>
+                    <li class="li">Tables</li>
+                    <li class="li">Protocols</li>
+                    <li class="li">Operators and operator classes</li>
+                    <li class="li">Conversions</li>
+                    <li class="li">Aggregates</li>
+                    <li class="li">Casts</li>
+                    <li class="li">Views</li>
+                    <li class="li">Materialized Views <strong class="ph b">Note:</strong> Materialized view data is not restored, only
+                      the definition.</li>
+                    <li class="li">Constraints</li>
+                  </ul>Database-specific objects that must be created <em class="ph i">after</em> restoring the
+                  actual data include:<ul class="ul" id="topic_xnj_b4c_tbb__ul_br4_wsv_scb">
+                    <li dir="ltr" class="li">Indexes</li>
+                    <li dir="ltr" class="li">Rules</li>
+                    <li dir="ltr" class="li">Triggers. (While Greenplum Database does not support triggers, any
+                      trigger definitions that are present are backed up and restored.)</li>
+                  </ul></td>
+              </tr>
+              <tr class="row">
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__1"><span class="ph filepath">gpbackup_&lt;YYYYMMDDHHMMSS&gt;_toc.yaml</span></td>
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__2">Contains metadata for locating object DDL in the
+                    <span class="ph filepath">_predata.sql</span> and <span class="ph filepath">_postdata.sql</span> files.
+                  This file also contains the table names and OIDs used for locating the
+                  corresponding table data in CSV data files that are created on each segment. See
+                    <a class="xref" href="#topic_xnj_b4c_tbb__section_oys_cpj_tbb">Segment Data Files</a>.</td>
+              </tr>
+              <tr class="row">
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__1"><span class="ph filepath">gpbackup_&lt;YYYYMMDDHHMMSS&gt;_report</span></td>
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__2">Contains information about the backup operation that is used to populate the
+                  email notice (if configured) that is sent after the backup completes. This file
+                  contains information such as:<ul class="ul" id="topic_xnj_b4c_tbb__ul_bjr_2kj_tbb">
+                    <li class="li">Command-line options that were provided</li>
+                    <li class="li">Database that was backed up</li>
+                    <li class="li">Database version</li>
+                    <li class="li">Backup type</li>
+                  </ul>See <a class="xref" href="#topic_qwd_d5d_tbb">Configuring Email Notifications</a>.</td>
+              </tr>
+              <tr class="row">
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__1"><span class="ph filepath">gpbackup_&lt;YYYYMMDDHHMMSS&gt;_config.yaml</span></td>
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__2">Contains metadata about the execution of the particular backup task,
+                  including: <ul class="ul" id="topic_xnj_b4c_tbb__ul_ids_vgj_tbb">
+                    <li dir="ltr" class="li"><code class="ph codeph">gpbackup</code> version</li>
+                    <li dir="ltr" class="li">Database name</li>
+                    <li dir="ltr" class="li">Greenplum Database version</li>
+                    <li dir="ltr" class="li">Additional option settings such as
+                        <code class="ph codeph">--no-compression</code>, <code class="ph codeph">--compression-level</code>,
+                        <code class="ph codeph">--metadata-only</code>, <code class="ph codeph">--data-only</code>, and
+                        <code class="ph codeph">--with-stats</code>.</li>
+                  </ul></td>
+              </tr>
+              <tr class="row">
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__1"><span class="ph filepath">gpbackup_history.yaml</span></td>
+                <td class="entry colsep-1 rowsep-1" headers="topic_xnj_b4c_tbb__table_nrz_4gj_tbb__entry__2">Contains information about options that were used when creating a backup with
+                    <code class="ph codeph">gpbackup</code>, and information about incremental backups.<p class="p">Stored
+                    on the Greenplum Database master host in the Greenplum Database master data
+                    directory.</p><p class="p">This file is not backed up by <code class="ph codeph">gpbackup</code>.</p><p class="p">
+                    For information about incremental backups, see <a class="xref" href="backup-gpbackup-incremental.html">Creating and Using Incremental Backups with gpbackup and gprestore</a>.</p></td>
+              </tr>
+            </tbody></table>
 
 ### <a id="section_oys_cpj_tbb"></a>Segment Data Files 
 
-By default, each segment creates one compressed CSV file for each table that is backed up on the segment. You can optionally specify the `--single-data-file` option to create a single data file on each segment. The files are stored in <seg\_dir\>/backups/YYYYMMDD/YYYYMMDDHHMMSS/.
+By default, each segment creates one compressed CSV file for each table that is backed up on the segment. You can optionally specify the `--single-data-file` option to create a single data file on each segment. The files are stored in &lt;seg\_dir\>/backups/YYYYMMDD/YYYYMMDDHHMMSS/.
 
 If you specify a custom backup directory, segment data files are copied to this same file path as a subdirectory of the backup directory. If you include the `--leaf-partition-data` option, `gpbackup` creates one data file for each leaf partition of a partitioned table, instead of just one table for file.
 
-Each data file uses the file name format gpbackup\_<content\_id\>\_<YYYYMMDDHHMMSS\>\_<oid\>.gz where:
+Each data file uses the file name format gpbackup\_&lt;content\_id\>\_&lt;YYYYMMDDHHMMSS\>\_&lt;oid\>.gz where:
 
--   <content\_id\> is the content ID of the segment.
--   <YYYYMMDDHHMMSS\> is the timestamp of the `gpbackup` operation.
--   <oid\> is the object ID of the table. The metadata file gpbackup\_<YYYYMMDDHHMMSS\>\_toc.yaml references this <oid\> to locate the data for a specific table in a schema.
+-   &lt;content\_id\> is the content ID of the segment.
+-   &lt;YYYYMMDDHHMMSS\> is the timestamp of the `gpbackup` operation.
+-   &lt;oid\> is the object ID of the table. The metadata file gpbackup\_&lt;YYYYMMDDHHMMSS\>\_toc.yaml references this &lt;oid\> to locate the data for a specific table in a schema.
 
 You can optionally specify the gzip compression level \(from 1-9\) using the `--compression-level` option, or disable compression entirely with `--no-compression`. If you do not specify a compression level, `gpbackup` uses compression level 1 by default.
 

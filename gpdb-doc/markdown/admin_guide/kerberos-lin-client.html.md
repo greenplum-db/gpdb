@@ -39,7 +39,7 @@ The following are requirements to connect to a Greenplum Database that is enable
 -   The Kerberos `kinit` utility is required on the client machine. The `kinit` utility is available when you install the Kerberos packages:
 
     -   krb5-libs
-    -   krb5-workstation
+    -   krb5-workstation<br/>
     **Note:** When you install the Kerberos packages, you can use other Kerberos utilities such as `klist` to display Kerberos ticket information.
 
 

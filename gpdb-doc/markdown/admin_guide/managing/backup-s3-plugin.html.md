@@ -115,62 +115,62 @@ options:
 
 **Note:** The S3 storage plugin does not support filtered restore operations and the associated `restore_subset` plugin configuration property.
 
-executablepath
+`executablepath`
 :   Required. Absolute path to the plugin executable. For example, the Tanzu Greenplum installation location is `$GPHOME/bin/gpbackup_s3_plugin`. The plugin must be in the same location on every Greenplum Database host.
 
-options
+`options`
 :   Required. Begins the S3 storage plugin options section.
 
-region
+`region`
 :   Required for AWS S3. If connecting to an S3 compatible service, this option is not required, **with one exception**: If you are using Minio object storage and have specified a value for the `Region` setting on the Minio server side you must set this `region` option to the same value.
 
-endpoint
+`endpoint`
 :   Required for an S3 compatible service. Specify this option to connect to an S3 compatible service such as ECS. The plugin connects to the specified S3 endpoint \(hostname or IP address\) to access the S3 compatible data store.
 
-:   If this option is specified, the plugin ignores the `region` option and does not use AWS to resolve the endpoint. When this option is not specified, the plugin uses the `region` to determine AWS S3 endpoint.
+If this option is specified, the plugin ignores the `region` option and does not use AWS to resolve the endpoint. When this option is not specified, the plugin uses the `region` to determine AWS S3 endpoint.
 
-aws\_access\_key\_id
+`aws_access_key_id`
 :   Optional. The S3 ID to access the S3 bucket location that stores backup files.
 
-:   If this parameter is not specified, S3 authentication uses information from the session environment. See [aws\_secret\_access\_key](#s3-key)
+If this parameter is not specified, S3 authentication uses information from the session environment. See [aws\_secret\_access\_key](#s3-key)
 
-aws\_secret\_access\_key
+`aws_secret_access_key`
 :   Required only if you specify `aws_access_key_id`. The S3 passcode for the S3 ID to access the S3 bucket location.
 
-    If `aws_access_key_id` and `aws_secret_access_key` are not specified in the configuration file, the S3 plugin uses S3 authentication information from the system environment of the session running the backup operation. The S3 plugin searches for the information in these sources, using the first available source.
+If `aws_access_key_id` and `aws_secret_access_key` are not specified in the configuration file, the S3 plugin uses S3 authentication information from the system environment of the session running the backup operation. The S3 plugin searches for the information in these sources, using the first available source.
 
-    1.  The environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-    2.  The authentication information set with the AWS CLI command `aws configure`.
-    3.  The credentials of the Amazon EC2 IAM role if the backup is run from an EC2 instance.
+1.  The environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+2.  The authentication information set with the AWS CLI command `aws configure`.
+3.  The credentials of the Amazon EC2 IAM role if the backup is run from an EC2 instance.
 
-bucket
+`bucket`
 :   Required. The name of the S3 bucket in the AWS region or S3 compatible data store. The bucket must exist.
 
-folder
+`folder`
 :   Required. The S3 location for backups. During a backup operation, the plugin creates the S3 location if it does not exist in the S3 bucket.
 
-encryption
+`encryption`
 :   Optional. Enable or disable use of Secure Sockets Layer \(SSL\) when connecting to an S3 location. Default value is `on`, use connections that are secured with SSL. Set this option to `off` to connect to an S3 compatible service that is not configured to use SSL.
 
-:   Any value other than `on` or `off` is not accepted.
+Any value other than `on` or `off` is not accepted.
 
-backup\_max\_concurrent\_requests
+`backup_max_concurrent_requests`
 :   Optional. The segment concurrency level for a file artifact within a single backup/upload request. The default value is set to 6. Use this parameter in conjuction with the `gpbackup --jobs` flag, to increase your overall backup concurrency.
 
-:   Example: In a 4 node cluster, with 12 segments \(3 per node\), if the `--jobs` flag is set to 10, there could be 120 concurrent backup requests. With the `backup_max_concurrent_requests` parameter set to 6, the total S3 concurrent upload threads during a single backup session would reach 720 \(120 x 6\).
+Example: In a 4 node cluster, with 12 segments \(3 per node\), if the `--jobs` flag is set to 10, there could be 120 concurrent backup requests. With the `backup_max_concurrent_requests` parameter set to 6, the total S3 concurrent upload threads during a single backup session would reach 720 \(120 x 6\).
 
-:   **Note:** If the upload artifact is 10MB \(see [backup\_multipart\_chunksize](#multipart_chunksize)\), the `backup_max_concurrent_requests` parameter would not take effect since the file is smaller than the chunk size.
+**Note:** If the upload artifact is 10MB \(see [backup\_multipart\_chunksize](#multipart_chunksize)\), the `backup_max_concurrent_requests` parameter would not take effect since the file is smaller than the chunk size.
 
-backup\_multipart\_chunksize
+`backup_multipart_chunksize`
 :   Optional. The file chunk size of the S3 multipart upload request in Megabytes \(for example 20MB\), Gigabytes \(for example 1GB\), or bytes \(for example 1048576B\). The default value is 500MB and the minimum value is 5MB \(or 5242880B\). Use this parameter along with the `--jobs`flag and the `backup_max_concurrent_requests` parameter to fine tune your backups. Set the chunksize based on your individual segment file size. S3 supports up to 10,000 max total partitions for a single file upload.
 
-restore\_max\_concurrent\_requests
+`restore_max_concurrent_requests`
 :   Optional. The level of concurrency for downloading a file artifact within a single restore request. The default value is set to 6.
 
-restore\_multipart\_chunksize
+`restore_multipart_chunksize`
 :   Optional. The file chunk size of the S3 multipart download request in Megabytes \(for example 20MB\), Gigabytes \(for example 1GB\), or bytes \(for example 1048576B\). The default value is 500MB. Use this parameter along with the `restore_max_concurrent_requests` parameter to fine tune your restores.
 
-http\_proxy
+`http_proxy`
 :   Optional. Allow AWS S3 access via a proxy server. The parameter should contain the proxy url in the form of `http://username:password@proxy.example.com:proxy_port` or `http://proxy.example.com:proxy_port`.
 
 **Parent topic:**[Using gpbackup Storage Plugins](../managing/backup-plugins.html)

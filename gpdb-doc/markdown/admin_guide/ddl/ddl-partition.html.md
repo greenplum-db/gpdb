@@ -189,9 +189,7 @@ PARTITION BY RANGE (year)
 
 ```
 
-CAUTION:
-
-When you create multi-level partitions on ranges, it is easy to create a large number of subpartitions, some containing little or no data. This can add many entries to the system tables, which increases the time and memory required to optimize and run queries. Increase the range interval or choose a different partitioning strategy to reduce the number of subpartitions created.
+**CAUTION:** When you create multi-level partitions on ranges, it is easy to create a large number of subpartitions, some containing little or no data. This can add many entries to the system tables, which increases the time and memory required to optimize and run queries. Increase the range interval or choose a different partitioning strategy to reduce the number of subpartitions created.
 
 ### <a id="topic71"></a>Partitioning an Existing Table 
 

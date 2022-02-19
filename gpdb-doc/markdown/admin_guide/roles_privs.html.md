@@ -40,15 +40,15 @@ A database role may have a number of attributes that define what sort of tasks t
 
 |Attributes|Description|
 |----------|-----------|
-|`SUPERUSER | NOSUPERUSER`|Determines if the role is a superuser. You must yourself be a superuser to create a new superuser. `NOSUPERUSER` is the default.|
-|`CREATEDB | NOCREATEDB`|Determines if the role is allowed to create databases. `NOCREATEDB` is the default.|
-|`CREATEROLE | NOCREATEROLE`|Determines if the role is allowed to create and manage other roles. `NOCREATEROLE` is the default.|
-|`INHERIT | NOINHERIT`|Determines whether a role inherits the privileges of roles it is a member of. A role with the `INHERIT` attribute can automatically use whatever database privileges have been granted to all roles it is directly or indirectly a member of. `INHERIT` is the default.|
-|`LOGIN | NOLOGIN`|Determines whether a role is allowed to log in. A role having the `LOGIN` attribute can be thought of as a user. Roles without this attribute are useful for managing database privileges \(groups\). `NOLOGIN` is the default.|
+|`SUPERUSER` or `NOSUPERUSER`|Determines if the role is a superuser. You must yourself be a superuser to create a new superuser. `NOSUPERUSER` is the default.|
+|`CREATEDB` or `NOCREATEDB`|Determines if the role is allowed to create databases. `NOCREATEDB` is the default.|
+|`CREATEROLE` or `NOCREATEROLE`|Determines if the role is allowed to create and manage other roles. `NOCREATEROLE` is the default.|
+|`INHERIT` or `NOINHERIT`|Determines whether a role inherits the privileges of roles it is a member of. A role with the `INHERIT` attribute can automatically use whatever database privileges have been granted to all roles it is directly or indirectly a member of. `INHERIT` is the default.|
+|`LOGIN` or `NOLOGIN`|Determines whether a role is allowed to log in. A role having the `LOGIN` attribute can be thought of as a user. Roles without this attribute are useful for managing database privileges \(groups\). `NOLOGIN` is the default.|
 |`CONNECTION LIMIT *connlimit*`|If role can log in, this specifies how many concurrent connections the role can make. -1 \(the default\) means no limit.|
-|`CREATEEXTTABLE | NOCREATEEXTTABLE`|Determines whether a role is allowed to create external tables. `NOCREATEEXTTABLE` is the default. For a role with the `CREATEEXTTABLE` attribute, the default external table `type` is `readable` and the default `protocol` is `gpfdist`. Note that external tables that use the `file` or `execute` protocols can only be created by superusers.|
+|`CREATEEXTTABLE` or `NOCREATEEXTTABLE`|Determines whether a role is allowed to create external tables. `NOCREATEEXTTABLE` is the default. For a role with the `CREATEEXTTABLE` attribute, the default external table `type` is `readable` and the default `protocol` is `gpfdist`. Note that external tables that use the `file` or `execute` protocols can only be created by superusers.|
 |`PASSWORD '*password*'`|Sets the role's password. If you do not plan to use password authentication you can omit this option. If no password is specified, the password will be set to null and password authentication will always fail for that user. A null password can optionally be written explicitly as `PASSWORD NULL`.|
-|`ENCRYPTED | UNENCRYPTED`|Controls whether a new password is stored as a hash string in the `pg_authid` system catalog. If neither `ENCRYPTED` nor `UNENCRYPTED` is specified, the default behavior is determined by the `password_encryption` configuration parameter, which is `on` by default. If the supplied `*password*` string is already in hashed format, it is stored as-is, regardless of whether `ENCRYPTED` or `UNENCRYPTED` is specified.
+|`ENCRYPTED` or `UNENCRYPTED`|Controls whether a new password is stored as a hash string in the `pg_authid` system catalog. If neither `ENCRYPTED` nor `UNENCRYPTED` is specified, the default behavior is determined by the `password_encryption` configuration parameter, which is `on` by default. If the supplied `*password*` string is already in hashed format, it is stored as-is, regardless of whether `ENCRYPTED` or `UNENCRYPTED` is specified.
 
 See [Protecting Passwords in Greenplum Database](#topic9) for additional information about protecting login passwords.
 
@@ -112,105 +112,204 @@ The role attributes `LOGIN`, `SUPERUSER`, `CREATEDB`, `CREATEROLE`, `CREATEEXTTA
 
 When an object \(table, view, sequence, database, function, language, schema, or tablespace\) is created, it is assigned an owner. The owner is normally the role that ran the creation statement. For most kinds of objects, the initial state is that only the owner \(or a superuser\) can do anything with the object. To allow other roles to use it, privileges must be granted. Greenplum Database supports the following privileges for each object type:
 
-|Object Type|Privileges|
-|-----------|----------|
-|Tables, External Tables, Views|`SELECT`
-
- `INSERT`
-
- `UPDATE`
-
- `DELETE`
-
- `REFERENCES`
-
- `TRIGGER`
-
- `TRUNCATE`
-
- `ALL`
-
-|
-|Columns|`SELECT`
-
- `INSERT`
-
- `UPDATE`
-
- `REFERENCES`
-
- `ALL`
-
-|
-|Sequences|`USAGE`
-
- `SELECT`
-
- `UPDATE`
-
- `ALL`
-
-|
-|Databases|`CREATE`
-
- `CONNECT`
-
- `TEMPORARY`
-
- `TEMP`
-
- `ALL`
-
-|
-|Domains|`USAGE`
-
- `ALL`
-
-|
-|Foreign Data Wrappers|`USAGE`
-
- `ALL`
-
-|
-|Foreign Servers|`USAGE`
-
- `ALL`
-
-|
-|Functions|`EXECUTE`
-
- `ALL`
-
-|
-|Procedural Languages|`USAGE`
-
- `ALL`
-
-|
-|Schemas|`CREATE`
-
- `USAGE`
-
- `ALL`
-
-|
-|Tablespaces|`CREATE`
-
- `ALL`
-
-|
-|Types|`USAGE`
-
- `ALL`
-
-|
-|Protocols|`SELECT`
-
- `INSERT`
-
- `ALL`
-
-|
+<table class="table" id="topic6__iq139925"><caption><span class="table--title-label">Table 2. </span><span class="title">Object Privileges</span></caption><colgroup><col style="width:66.66666666666666%"><col style="width:33.33333333333333%"></colgroup><thead class="thead">
+            <tr class="row">
+              <th class="entry" id="topic6__iq139925__entry__1">Object Type</th>
+              <th class="entry" id="topic6__iq139925__entry__2">Privileges</th>
+            </tr>
+          </thead><tbody class="tbody">
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Tables, External Tables, Views</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                <code class="ph codeph">SELECT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">INSERT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">UPDATE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">DELETE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">REFERENCES</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">TRIGGER</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">TRUNCATE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Columns</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">SELECT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">INSERT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">UPDATE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">REFERENCES</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+                <td class="entry" headers="topic6__iq139925__entry__1">Sequences</td>
+                <td class="entry" headers="topic6__iq139925__entry__2">
+                  <p class="p">
+                    <code class="ph codeph">USAGE</code>
+                  </p>
+                  <p class="p">
+                    <code class="ph codeph">SELECT</code>
+                  </p>
+                  <p class="p">
+                    <code class="ph codeph">UPDATE</code>
+                  </p>
+                  <p class="p">
+                    <code class="ph codeph">ALL</code>
+                  </p>
+                </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Databases</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">CREATE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">CONNECT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">TEMPORARY</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">TEMP</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Domains</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                <code class="ph codeph">USAGE</code>
+                </p>
+                <p class="p">
+                <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Foreign Data Wrappers</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">USAGE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Foreign Servers</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">USAGE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Functions</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                <code class="ph codeph">EXECUTE</code>
+                </p>
+                <p class="p">
+                <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Procedural Languages</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                <code class="ph codeph">USAGE</code>
+                </p>
+                <p class="p">
+                <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Schemas</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                <code class="ph codeph">CREATE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">USAGE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Tablespaces</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">CREATE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Types</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">USAGE</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic6__iq139925__entry__1">Protocols</td>
+              <td class="entry" headers="topic6__iq139925__entry__2">
+                <p class="p">
+                  <code class="ph codeph">SELECT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">INSERT</code>
+                </p>
+                <p class="p">
+                  <code class="ph codeph">ALL</code>
+                </p>
+              </td>
+            </tr>
+          </tbody></table>
 
 **Note:** You must grant privileges for each object individually. For example, granting `ALL` on a database does not grant full access to the objects within that database. It only grants all of the database-level privileges \(`CONNECT`, `CREATE`, `TEMPORARY`\) to the database itself.
 

@@ -78,9 +78,9 @@ plugin_executable command config_file args
 
 where:
 
--   `plugin\_executable` - The absolute path of the backup/restore storage plugin executable program. This path is determined by the `executablepath` property value configured in the plugin's configuration YAML file.
+-   `plugin_executable` - The absolute path of the backup/restore storage plugin executable program. This path is determined by the `executablepath` property value configured in the plugin's configuration YAML file.
 -   `command` - The name of a Backup/Restore Storage Plugin API command that identifies a specific entry point to a `gpbackup` or `gprestore` lifecycle operation.
--   `config\_file` - The absolute path of the plugin's configuration YAML file.
+-   `config_file` - The absolute path of the plugin's configuration YAML file.
 -   `args` - The command arguments; the actual arguments differ depending upon the `command` specified.
 
 ### <a id="topic_commands"></a>Plugin Commands 

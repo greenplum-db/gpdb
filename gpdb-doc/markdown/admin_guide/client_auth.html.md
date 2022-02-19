@@ -37,37 +37,109 @@ local   database   role   authentication-method
 
 The following table describes meaning of each field.
 
-|Field|Description|
-|-----|-----------|
-|local|Matches connection attempts using UNIX-domain sockets. Without a record of this type, UNIX-domain socket connections are disallowed.|
-|host|Matches connection attempts made using TCP/IP. Remote TCP/IP connections will not be possible unless the server is started with an appropriate value for the `listen_addresses` server configuration parameter.|
-|hostssl|Matches connection attempts made using TCP/IP, but only when the connection is made with SSL encryption. SSL must be enabled at server start time by setting the `ssl` server configuration parameter.|
-|hostnossl|Matches connection attempts made over TCP/IP that do not use SSL.|
-|database|Specifies which database names this record matches. The value `all` specifies that it matches all databases. Multiple database names can be supplied by separating them with commas. A separate file containing database names can be specified by preceding the file name with a `@`.|
-|role|Specifies which database role names this record matches. The value `all` specifies that it matches all roles. If the specified role is a group and you want all members of that group to be included, precede the role name with a `+`. Multiple role names can be supplied by separating them with commas. A separate file containing role names can be specified by preceding the file name with a `@`.|
-|address|Specifies the client machine addresses that this record matches. This field can contain an IP address, an IP address range, or a host name. An IP address range is specified using standard numeric notation for the range's starting address, then a slash \(`/`\) and a CIDR mask length. The mask length indicates the number of high-order bits of the client IP address that must match. Bits to the right of this should be zero in the given IP address. There must not be any white space between the IP address, the `/`, and the CIDR mask length.
+<table class="table" id="topic2__ip141709"><caption><span class="table--title-label">Table 1. </span><span class="title">pg_hba.conf Fields</span></caption><colgroup><col style="width:25%"><col style="width:75%"></colgroup><thead class="thead">
+            <tr class="row">
+              <th class="entry" id="topic2__ip141709__entry__1">Field</th>
+              <th class="entry" id="topic2__ip141709__entry__2">Description</th>
+            </tr>
+          </thead><tbody class="tbody">
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">local</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Matches connection attempts using UNIX-domain sockets. Without a
+                record of this type, UNIX-domain socket connections are disallowed.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">host</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Matches connection attempts made using TCP/IP. Remote TCP/IP
+                connections will not be possible unless the server is started with an appropriate
+                value for the <code class="ph codeph">listen_addresses</code> server configuration
+                parameter.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">hostssl</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Matches connection attempts made using TCP/IP, but only when the
+                connection is made with SSL encryption. SSL must be enabled at server start time by
+                setting the <code class="ph codeph">ssl</code> server configuration parameter. </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">hostnossl</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Matches connection attempts made over TCP/IP that do not use
+                SSL.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">database</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Specifies which database names this record matches. The value
+                  <code class="ph codeph">all</code> specifies that it matches all databases. Multiple database
+                names can be supplied by separating them with commas. A separate file containing
+                database names can be specified by preceding the file name with a
+                <code class="ph codeph">@</code>.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">role</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Specifies which database role names this record matches. The
+                value <code class="ph codeph">all</code> specifies that it matches all roles. If the specified
+                role is a group and you want all members of that group to be included, precede the
+                role name with a <code class="ph codeph">+</code>. Multiple role names can be supplied by
+                separating them with commas. A separate file containing role names can be specified
+                by preceding the file name with a <code class="ph codeph">@</code>.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">address</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Specifies the client machine addresses that this record matches.
+                This field can contain an IP address, an IP address range, or a host name. <p class="p">An IP
+                  address range is specified using standard numeric notation for the range's
+                  starting address, then a slash (<code class="ph codeph">/</code>) and a CIDR mask length. The
+                  mask length indicates the number of high-order bits of the client IP address that
+                  must match. Bits to the right of this should be zero in the given IP address.
+                  There must not be any white space between the IP address, the <code class="ph codeph">/</code>,
+                  and the CIDR mask length.</p><p class="p">Typical examples of an IPv4 address range
+                  specified this way are <code class="ph codeph">172.20.143.89/32</code> for a single host, or
+                    <code class="ph codeph">172.20.143.0/24</code> for a small network, or
+                    <code class="ph codeph">10.6.0.0/16</code> for a larger one. An IPv6 address range might look
+                  like <code class="ph codeph">::1/128</code> for a single host (in this case the IPv6 loopback
+                  address) or <code class="ph codeph">fe80::7a31:c1ff:0000:0000/96</code> for a small network.
+                    <code class="ph codeph">0.0.0.0/0</code> represents all IPv4 addresses, and
+                    <code class="ph codeph">::0/0</code> represents all IPv6 addresses. To specify a single host,
+                  use a mask length of 32 for IPv4 or 128 for IPv6. In a network address, do not
+                  omit trailing zeroes.</p><div class="p">An entry given in IPv4 format will match only IPv4
+                  connections, and an entry given in IPv6 format will match only IPv6 connections,
+                  even if the represented address is in the IPv4-in-IPv6 range.
+                  <div class="note note note_note"><span class="note__title">Note:</span> Entries in IPv6 format will be rejected if the host system C library does
+                    not have support for IPv6 addresses.</div></div><p class="p">If a host name is specified
+                  (an address that is not an IP address or IP range is treated as a host name), that
+                  name is compared with the result of a reverse name resolution of the client IP
+                  address (for example, reverse DNS lookup, if DNS is used). Host name comparisons
+                  are case insensitive. If there is a match, then a forward name resolution (for
+                  example, forward DNS lookup) is performed on the host name to check whether any of
+                  the addresses it resolves to are equal to the client IP address. If both
+                  directions match, then the entry is considered to match. </p><p class="p">Some host name
+                  databases allow associating an IP address with multiple host names, but the
+                  operating system only returns one host name when asked to resolve an IP address.
+                  The host name that is used in <code class="ph codeph">pg_hba.conf</code> must be the one that
+                  the address-to-name resolution of the client IP address returns, otherwise the
+                  line will not be considered a match. </p><p class="p">When host names are specified in
+                    <code class="ph codeph">pg_hba.conf</code>, you should ensure that name resolution is
+                  reasonably fast. It can be of advantage to set up a local name resolution cache
+                  such as <code class="ph codeph">nscd</code>. Also, you can enable the server configuration
+                  parameter <code class="ph codeph">log_hostname</code> to see the client host name instead of the
+                  IP address in the log. </p></td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">IP-address<p class="p">IP-mask</p></td>
+              <td class="entry" headers="topic2__ip141709__entry__2">These fields can be used as an alternative to the CIDR address
+                notation. Instead of specifying the mask length, the actual mask is specified in a
+                separate column. For example, <code class="ph codeph">255.0.0.0</code> represents an IPv4 CIDR
+                mask length of 8, and <code class="ph codeph">255.255.255.255</code> represents a CIDR mask length
+                of 32.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic2__ip141709__entry__1">authentication-method</td>
+              <td class="entry" headers="topic2__ip141709__entry__2">Specifies the authentication method to use when connecting.
+                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/9.4/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 9.4.</td>
+            </tr>
+          </tbody></table>
 
-Typical examples of an IPv4 address range specified this way are `172.20.143.89/32` for a single host, or `172.20.143.0/24` for a small network, or `10.6.0.0/16` for a larger one. An IPv6 address range might look like `::1/128` for a single host \(in this case the IPv6 loopback address\) or `fe80::7a31:c1ff:0000:0000/96` for a small network. `0.0.0.0/0` represents all IPv4 addresses, and `::0/0` represents all IPv6 addresses. To specify a single host, use a mask length of 32 for IPv4 or 128 for IPv6. In a network address, do not omit trailing zeroes.
-
-An entry given in IPv4 format will match only IPv4 connections, and an entry given in IPv6 format will match only IPv6 connections, even if the represented address is in the IPv4-in-IPv6 range.
-
-**Note:** Entries in IPv6 format will be rejected if the host system C library does not have support for IPv6 addresses.
-
-If a host name is specified \(an address that is not an IP address or IP range is treated as a host name\), that name is compared with the result of a reverse name resolution of the client IP address \(for example, reverse DNS lookup, if DNS is used\). Host name comparisons are case insensitive. If there is a match, then a forward name resolution \(for example, forward DNS lookup\) is performed on the host name to check whether any of the addresses it resolves to are equal to the client IP address. If both directions match, then the entry is considered to match.
-
-Some host name databases allow associating an IP address with multiple host names, but the operating system only returns one host name when asked to resolve an IP address. The host name that is used in `pg_hba.conf` must be the one that the address-to-name resolution of the client IP address returns, otherwise the line will not be considered a match.
-
-When host names are specified in `pg_hba.conf`, you should ensure that name resolution is reasonably fast. It can be of advantage to set up a local name resolution cache such as `nscd`. Also, you can enable the server configuration parameter `log_hostname` to see the client host name instead of the IP address in the log.
-
-|
-|IP-addressIP-mask
-
-|These fields can be used as an alternative to the CIDR address notation. Instead of specifying the mask length, the actual mask is specified in a separate column. For example, `255.0.0.0` represents an IPv4 CIDR mask length of 8, and `255.255.255.255` represents a CIDR mask length of 32.|
-|authentication-method|Specifies the authentication method to use when connecting. Greenplum supports the [authentication methods](https://www.postgresql.org/docs/9.4/auth-methods.html) supported by PostgreSQL 9.4.|
-
-CAUTION:
-
-For a more secure system, consider removing records for remote connections that use trust authentication from the `pg_hba.conf` file. Trust authentication grants any user who can connect to the server access to the database using any role they specify. You can safely replace trust authentication with ident authentication for local UNIX-socket connections. You can also use ident authentication for local and remote TCP clients, but the client host must be running an ident service and you must trust the integrity of that machine.
+**CAUTION:** For a more secure system, consider removing records for remote connections that use trust authentication from the `pg_hba.conf` file. Trust authentication grants any user who can connect to the server access to the database using any role they specify. You can safely replace trust authentication with ident authentication for local UNIX-socket connections. You can also use ident authentication for local and remote TCP clients, but the client host must be running an ident service and you must trust the integrity of that machine.
 
 ### <a id="topic3"></a>Editing the pg\_hba.conf File 
 

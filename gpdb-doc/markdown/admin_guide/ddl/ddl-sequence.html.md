@@ -77,11 +77,11 @@ The [ALTER SEQUENCE](../../ref_guide/sql_commands/ALTER_SEQUENCE.html) command c
 
 Any parameters not set in the `ALTER SEQUENCE` command retain their prior settings.
 
-`ALTER SEQUENCE sequence START WITH start\_value` sets the sequence's `start_value` attribute to the new starting value. It has no effect on the `last_value` attribute or the value returned by the `nextval(sequence)` function.
+`ALTER SEQUENCE sequence START WITH start_value` sets the sequence's `start_value` attribute to the new starting value. It has no effect on the `last_value` attribute or the value returned by the `nextval(sequence)` function.
 
-`ALTER SEQUENCE sequence RESTART` resets the sequence's `last_value` attribute to the current value of the `start_value` attribute and the `is_called` attribute to `false`. The next call to the `nextval(sequence)` function returns start\_value.
+`ALTER SEQUENCE sequence RESTART` resets the sequence's `last_value` attribute to the current value of the `start_value` attribute and the `is_called` attribute to `false`. The next call to the `nextval(sequence)` function returns `start_value`.
 
-`ALTER SEQUENCE sequence RESTART WITH restart\_value` sets the sequence's last\_value attribute to the new value and the `is_called` attribute to `false`. The next call to the `nextval(sequence)` returns restart\_value. This is the equivalent of calling `setval(sequence, restart_value, false)`.
+`ALTER SEQUENCE sequence RESTART WITH restart_value` sets the sequence's `last_value` attribute to the new value and the `is_called` attribute to `false`. The next call to the `nextval(sequence)` returns `restart_value`. This is the equivalent of calling `setval(sequence, restart_value, false)`.
 
 The following command restarts the sequence named `myserial` at value `105`:
 

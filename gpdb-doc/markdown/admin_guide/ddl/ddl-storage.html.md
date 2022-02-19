@@ -101,10 +101,10 @@ The following table summarizes the available compression algorithms.
 
 |Table Orientation|Available Compression Types|Supported Algorithms|
 |-----------------|---------------------------|--------------------|
-|Row|Table|`ZLIB`, `ZSTD`, and `QUICKLZ`1|
-|Column|Column and Table|`RLE_TYPE`, `ZLIB`, `ZSTD`, and `QUICKLZ`1|
+|Row|Table|`ZLIB`, `ZSTD`, and `QUICKLZ`\*|
+|Column|Column and Table|`RLE_TYPE`, `ZLIB`, `ZSTD`, and `QUICKLZ`\*|
 
-**Note:** 1QuickLZ compression is not available in the open source version of Greenplum Database.
+**Note:** \*QuickLZ compression is not available in the open source version of Greenplum Database.
 
 When choosing a compression type and level for append-optimized tables, consider these factors:
 
@@ -139,14 +139,28 @@ The `WITH` clause of the `CREATE TABLE` command declares the table storage optio
 
 Greenplum provides built-in functions to check the compression ratio and the distribution of an append-optimized table. The functions take either the object ID or a table name. You can qualify the table name with a schema name.
 
-|Function|Return Type|Description|
-|--------|-----------|-----------|
-|get\_ao\_distribution\(name\)get\_ao\_distribution\(oid\)
-
-|Set of \(dbid, tuplecount\) rows|Shows the distribution of an append-optimized table's rows across the array. Returns a set of rows, each of which includes a segment *dbid* and the number of tuples stored on the segment.|
-|get\_ao\_compression\_ratio\(name\)get\_ao\_compression\_ratio\(oid\)
-
-|float8|Calculates the compression ratio for a compressed append-optimized table. If information is not available, this function returns a value of -1.|
+<table class="table" id="topic41__im161827"><caption><span class="table--title-label">Table 2. </span><span class="title">Functions for compressed append-optimized table metadata</span></caption><colgroup><col style="width:183pt"><col style="width:98pt"><col style="width:169pt"></colgroup><thead class="thead">
+            <tr class="row">
+              <th class="entry" id="topic41__im161827__entry__1">Function</th>
+              <th class="entry" id="topic41__im161827__entry__2">Return Type</th>
+              <th class="entry" id="topic41__im161827__entry__3">Description</th>
+            </tr>
+          </thead><tbody class="tbody">
+            <tr class="row">
+              <td class="entry" headers="topic41__im161827__entry__1">get_ao_distribution(name)<p class="p">get_ao_distribution(oid)</p></td>
+              <td class="entry" headers="topic41__im161827__entry__2">Set of (dbid, tuplecount) rows</td>
+              <td class="entry" headers="topic41__im161827__entry__3">Shows the distribution of an append-optimized table's rows
+                across the array. Returns a set of rows, each of which includes a segment
+                  <em class="ph i">dbid</em> and the number of tuples stored on the segment.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic41__im161827__entry__1">get_ao_compression_ratio(name)<p class="p">get_ao_compression_ratio(oid)</p></td>
+              <td class="entry" headers="topic41__im161827__entry__2">float8</td>
+              <td class="entry" headers="topic41__im161827__entry__3">Calculates the compression ratio for a compressed
+                append-optimized table. If information is not available, this function returns a
+                value of -1.</td>
+            </tr>
+          </tbody></table>
 
 The compression ratio is returned as a common ratio. For example, a returned value of `3.19`, or `3.19:1`, means that the uncompressed table is slightly larger than three times the size of the compressed table.
 
@@ -186,38 +200,70 @@ Add storage directives using the `CREATE TABLE`, `ALTER TABLE`, and `CREATE TYPE
 
 The following table details the types of storage directives and possible values for each.
 
-|Name|Definition|Values|Comment|
-|----|----------|------|-------|
-|`compresstype`|Type of compression.|`zstd:`Zstandard algorithm`zlib:`deflate algorithm
-
-`quicklz`: fast compression
-
-`RLE_TYPE`: run-length encoding
-
-`none`: no compression
-
-|Values are not case-sensitive.|
-|`compresslevel`|Compression level.|`zlib` compression: `1`-`9`|`1` is the fastest method with the least compression. `1` is the default.`9` is the slowest method with the most compression.
-
-|
-|`zstd` compression: `1`-`19`|`1` is the fastest method with the least compression. `1` is the default.`19` is the slowest method with the most compression.
-
-|
-|`QuickLZ` compression:`1` – use compression
-
-|`1` is the default.|
-|`RLE_TYPE` compression: `1` – `4``1` - apply RLE only
-
-`2` - apply RLE then apply zlib compression level 1
-
-`3` - apply RLE then apply zlib compression level 5
-
-`4` - apply RLE then apply zlib compression level 9
-
-|`1` is the fastest method with the least compression.`4` is the slowest method with the most compression. `1` is the default.
-
-|
-|`blocksize`|The size in bytes for each block in the table|`8192 – 2097152`|The value must be a multiple of 8192.|
+<table class="table" id="topic43__im198636"><caption><span class="table--title-label">Table 3. </span><span class="title">Storage Directives for Column-level Compression</span></caption><colgroup><col style="width:87pt"><col style="width:95pt"><col style="width:147pt"><col style="width:167.25pt"></colgroup><thead class="thead">
+            <tr class="row">
+              <th class="entry" id="topic43__im198636__entry__1">Name</th>
+              <th class="entry" id="topic43__im198636__entry__2">Definition</th>
+              <th class="entry" id="topic43__im198636__entry__3">Values</th>
+              <th class="entry" id="topic43__im198636__entry__4">Comment</th>
+            </tr>
+          </thead><tbody class="tbody">
+            <tr class="row">
+              <td class="entry" headers="topic43__im198636__entry__1">
+                <code class="ph codeph">compresstype</code>
+              </td>
+              <td class="entry" headers="topic43__im198636__entry__2">Type of compression.</td>
+              <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">zstd: </code>Zstandard
+                    algorithm<p class="p"><code class="ph codeph">zlib: </code>deflate
+                      algorithm</p><p class="p"><code class="ph codeph">quicklz</code>: fast
+                    compression</p><p class="p"><code class="ph codeph">RLE_TYPE</code>: run-length encoding
+                    </p><p class="p"><code class="ph codeph">none</code>: no compression</p></td>
+              <td class="entry" headers="topic43__im198636__entry__4">Values are not case-sensitive.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic43__im198636__entry__1" rowspan="4">
+                <code class="ph codeph">compresslevel</code>
+              </td>
+              <td class="entry" headers="topic43__im198636__entry__2" rowspan="4">Compression level.</td>
+              <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">zlib</code> compression:
+                  <code class="ph codeph">1</code>-<code class="ph codeph">9</code></td>
+              <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the fastest method with the least
+                compression. <code class="ph codeph">1</code> is the default.<p class="p"><code class="ph codeph">9</code> is the slowest
+                  method with the most compression.</p></td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">zstd</code> compression:
+                  <code class="ph codeph">1</code>-<code class="ph codeph">19</code></td>
+              <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the fastest method with the least
+                compression. <code class="ph codeph">1</code> is the default.<p class="p"><code class="ph codeph">19</code> is the slowest
+                  method with the most compression.</p></td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">QuickLZ</code> compression:<p class="p"><code class="ph codeph">1</code> – use
+                  compression</p></td>
+              <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the default.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">RLE_TYPE</code> compression: <code class="ph codeph">1</code> –
+                  <code class="ph codeph">4</code><p class="p"><code class="ph codeph">1</code> - apply RLE only</p><p class="p"><code class="ph codeph">2</code>
+                  - apply RLE then apply zlib compression level 1</p><p class="p"><code class="ph codeph">3</code> - apply
+                  RLE then apply zlib compression level 5</p><p class="p"><code class="ph codeph">4</code> - apply RLE then
+                  apply zlib compression level 9</p></td>
+              <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the fastest method with the least
+                    compression.<p class="p"><code class="ph codeph">4</code> is the slowest method with the most
+                  compression. <code class="ph codeph">1</code> is the default.</p></td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic43__im198636__entry__1">
+                <code class="ph codeph">blocksize</code>
+              </td>
+              <td class="entry" headers="topic43__im198636__entry__2">The size in bytes for each block in the table</td>
+              <td class="entry" headers="topic43__im198636__entry__3">
+                <code class="ph codeph">8192 – 2097152</code>
+              </td>
+              <td class="entry" headers="topic43__im198636__entry__4">The value must be a multiple of 8192.</td>
+            </tr>
+          </tbody></table>
 
 The following is the format for adding storage directives.
 

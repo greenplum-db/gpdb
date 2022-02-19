@@ -133,7 +133,7 @@ For each new segment, this format of expansion input file requires the following
 |datadir|Directory name|The data directory location for a segment as per the gp\_segment\_configuration system catalog.|
 |dbid|Integer. Must not conflict with existing *dbid* values.|Database ID for the segment. The values you enter should be incremented sequentially from existing *dbid* values shown in the system catalog `gp_segment_configuration`. For example, to add four segment instances to an existing ten-segment array with *dbid* values of 1-10, list new *dbid* values of 11, 12, 13 and 14.|
 |content|Integer. Must not conflict with existing *content* values.|The content ID of the segment. A primary segment and its mirror should have the same content ID, incremented sequentially from existing values. For more information, see *content* in the reference for `gp_segment_configuration`.|
-|preferred\_role|`p | m`|Determines whether this segment is a primary or mirror. Specify `p` for primary and `m` for mirror.|
+|preferred\_role|`p` or `m`|Determines whether this segment is a primary or mirror. Specify `p` for primary and `m` for mirror.|
 
 ## <a id="topic26"></a>Running gpexpand to Initialize New Segments 
 
