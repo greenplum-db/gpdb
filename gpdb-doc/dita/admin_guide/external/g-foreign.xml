@@ -41,7 +41,7 @@
     <body>
       <p>Most PostgreSQL foreign-data wrappers should work with Greenplum
         Database. However, PostgreSQL foreign-data wrappers connect only through 
-        the Greenplum Database master and do not access the Greenplum Database 
+        the Greenplum Database master by default and do not access the Greenplum Database 
         segment instances directly.</p>
       <p>Greenplum Database adds an <codeph>mpp_execute</codeph> option to FDW-related
         SQL commands. If the foreign-data wrapper supports it, you can specify
@@ -54,8 +54,13 @@
           <li><codeph>any</codeph>—Read data from either the master host or any one segment,
             depending on which path costs less.</li>
           <li><codeph>all segments</codeph>—Read or write data from all segments. If a foreign-data
-            wrapper supports this value, it must have a policy that matches segments to data.</li>
+            wrapper supports this value, for correct results it should have a policy that matches
+            segments to data.</li>
         </ul>
+      <p>(A PostgreSQL foreign-data wrapper may work with the various <codeph>mpp_execute</codeph>
+        option settings, but the results are not guaranteed to be correct. For example,
+        a segment may not be able to connect to the foriegn server, or segments may receive
+        overlapping results resulting in duplicate rows.)</p>
       <note>GPORCA does not support foreign tables, a query on a foreign table
         always falls back to the Postgres Planner.</note>
     </body>

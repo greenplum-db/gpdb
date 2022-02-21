@@ -437,7 +437,7 @@ GetForeignColumnOptions(Oid relid, AttrNumber attnum);</codeblock></entry>
         wrapper examines the <codeph>mpp_execute</codeph> option value
         and uses it to determine where to request or send data - from the
         <codeph>master</codeph> (the default), <codeph>any</codeph> (master or
-        any one segment), or <codeph>all segments</codeph> segments (parallel
+        any one segment), or <codeph>all segments</codeph> (parallel
         read/write).</p>
      <p>Greenplum Database supports all <codeph>mpp_execute</codeph> settings
         for a scan.</p>
