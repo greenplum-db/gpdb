@@ -45,15 +45,6 @@
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
 
-/*
- * GPDB_12_MERGE_FIXME:
- *		This enumaration does not fit in pg_compression. Also it should probably
- *		be treated as a new reloption kind and be unified in reloptions_gp
- */
-/* names we expect to see in ENCODING clauses */
-char *storage_directive_names[] = {"compresstype", "compresslevel",
-								   "blocksize", NULL};
-
 
 #ifdef HAVE_LIBZ
 /* Internal state for zlib */
@@ -536,85 +527,3 @@ compresstype_is_valid(char *comptype)
 	return false;
 }
 
-/*
- * GPDB_12_MERGE_FIXME:
- *		This function does not fit pg_compression and should probably be moved
- *		to pg_attribute_encoding or reloptions_gp.
- *
- *		The comment of the function does not match what the function is actually
- *		doing. Especially for blocksize, it is impossible for the value to be
- *		unset if an appendonly relation, hence the default is always ignored.
- *
- *		Currently used only in reloptions_gp.
- */
-/*
- * Make encoding (compresstype = ..., blocksize=...) based on
- * currently configured defaults.
- */
-List *
-default_column_encoding_clause(Relation rel)
-{
-	DefElem *e1, *e2, *e3;
-	const StdRdOptions *ao_opts = currentAOStorageOptions();
-	bool		appendonly;
-	int32		blocksize = -1;
-	int16		compresslevel = 0;
-	char	   *compresstype = NULL;
-	NameData	compresstype_nd;
-
-	appendonly = rel && RelationIsAppendOptimized(rel);
-	if (appendonly)
-	{
-		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
-									 &blocksize,
-									 NULL,
-									 &compresslevel,
-									 NULL,
-									 &compresstype_nd);
-		compresstype = NameStr(compresstype_nd);
-	}
-
-	if (compresstype && compresstype[0])
-		e1 = makeDefElem("compresstype", (Node *) makeString(pstrdup(compresstype)), -1);
-	else if (ao_opts->compresstype[0])
-		e1 = makeDefElem("compresstype", (Node *) makeString(pstrdup(ao_opts->compresstype)), -1);
-	else
-		e1 = makeDefElem("compresstype", (Node *) makeString("none"), -1);
-
-	if (appendonly)
-		e2 = makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1);
-	else if (ao_opts->blocksize != 0)
-		e2 = makeDefElem("blocksize", (Node *) makeInteger(ao_opts->blocksize), -1);
-	else
-		e2 = makeDefElem("blocksize", (Node *) makeInteger(AO_DEFAULT_BLOCKSIZE), -1);
-
-	if (appendonly && compresslevel != 0)
-		e3 = makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1);
-	else if (ao_opts->compresslevel != 0)
-		e3 = makeDefElem("compresslevel", (Node *) makeInteger(ao_opts->compresslevel), -1);
-	else
-		e3 = makeDefElem("compresslevel", (Node *) makeInteger(AO_DEFAULT_COMPRESSLEVEL), -1);
-
-	return list_make3(e1, e2, e3);
-}
-
-/*
- * GPDB_12_MERGE_FIXME:
- *		This function does not fit pg_compression and should probably be moved
- *		to pg_attribute_encoding or reloptions_gp.
- *
- *		Currently used only in typecmds.c
- */
-bool
-is_storage_encoding_directive(char *name)
-{
-	int i = 0;
-
-	while (storage_directive_names[i])
-	{
-		if (strcmp(name, storage_directive_names[i]) == 0)
-			return true;
-		i++;
-	}
-	return false;
-}

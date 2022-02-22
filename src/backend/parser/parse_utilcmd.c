@@ -36,6 +36,7 @@
 #include "catalog/index.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_am.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_opclass.h"
@@ -4800,56 +4801,6 @@ getLikeDistributionPolicy(TableLikeClause *e)
 	return likeDistributedBy;
 }
 
-
-/*
- * GPDB_12_MERGE_FIXME:
- *		This function seems to be better suited in pg_type.
- *		Also consider renaming to match the rest of the family of functions.
- */
-List *
-TypeNameGetStorageDirective(TypeName *typname)
-{
-	Relation	rel;
-	ScanKeyData scankey;
-	SysScanDesc sscan;
-	HeapTuple	tuple;
-	Oid			typid;
-	List	   *out = NIL;
-
-	typid = typenameTypeId(NULL, typname);
-
-	rel = heap_open(TypeEncodingRelationId, AccessShareLock);
-
-	/* SELECT typoptions FROM pg_type_encoding where typid = :1 */
-	ScanKeyInit(&scankey,
-				Anum_pg_type_encoding_typid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(typid));
-	sscan = systable_beginscan(rel, TypeEncodingTypidIndexId,
-							   true, NULL, 1, &scankey);
-	tuple = systable_getnext(sscan);
-	if (HeapTupleIsValid(tuple))
-	{
-		Datum options;
-		bool isnull;
-
-		options = heap_getattr(tuple,
-							   Anum_pg_type_encoding_typoptions,
-							   RelationGetDescr(rel),
-							   &isnull);
-
-		if (isnull)
-			elog(ERROR, "null typoptions attribute encountered for pg_type_encoding for typid %d",
-				 typid);
-
-		out = untransformRelOptions(options);
-	}
-
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
-
-	return out;
-}
 
 /*
  * transformPartitionCmd

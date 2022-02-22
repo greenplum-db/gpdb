@@ -146,6 +146,36 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 }
 
 /*
+ * Given a relation, get all column encodings for that relation as a list of
+ * ColumnReferenceStorageDirective structures.
+ */
+List *
+rel_get_column_encodings(Relation rel)
+{
+	List **colencs = RelationGetUntransformedAttributeOptions(rel);
+	List *out = NIL;
+
+	if (colencs)
+	{
+		AttrNumber attno;
+
+		for (attno = 0; attno < RelationGetNumberOfAttributes(rel); attno++)
+		{
+			if (colencs[attno] && !TupleDescAttr(rel->rd_att, attno)->attisdropped)
+			{
+				ColumnReferenceStorageDirective *d =
+					makeNode(ColumnReferenceStorageDirective);
+				d->column = pstrdup(NameStr(TupleDescAttr(rel->rd_att, attno)->attname));
+				d->encoding = colencs[attno];
+		
+				out = lappend(out, d);
+			}
+		}
+	}
+	return out;
+}
+
+/*
  * Add pg_attribute_encoding entries for newrelid. Make them identical to those
  * stored for oldrelid.
  */

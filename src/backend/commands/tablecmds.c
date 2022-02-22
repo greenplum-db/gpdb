@@ -949,50 +949,30 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	 *
 	 * This is done in dispatcher (and in utility mode). In QE, we receive
 	 * the already-processed options from the QD.
-	 *
-	 * GPDB_12_MERGE_FIXME:
-	 * 		Try to handle attribute encodings in a unified way under the same
-	 * 		interface for CREATE/ALTER statements and remove the diff footprint
-	 * 		with upstream.
-	 *
-	 *		One observed discrepancy between the two statements regarding
-	 *		precedence of, command specific options, environment (gucs), type
-	 *		specific encodings and relation wide options.
 	 */
 	if ((relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
 		 relkind == RELKIND_PARTITIONED_TABLE) &&
 		Gp_role != GP_ROLE_EXECUTE)
 	{
-		bool		found_enc;
-
-		stmt->attr_encodings = transformAttributeEncoding(schema,
-														  stmt->attr_encodings,
-														  stmt->options,
-														  relkind == RELKIND_PARTITIONED_TABLE,
-														  &found_enc);
-		if (amHandlerOid != AO_COLUMN_TABLE_AM_HANDLER_OID)
-		{
-			/*
-			 * ENCODING options were specified, but the table is not
-			 * column-oriented.
-			 *
-			 * That's normally an error. But if we're creating a partition as
-			 * part of a CREATE TABLE ... PARTITION BY ... command, ignore the
-			 * ENCODING options instead. The parent table might be AOCS, while
-			 * some of the partitions are not, or vice versa, so options can
-			 * make sense for some parts of the partition hierarchy, even if
-			 * it doesn't for this partition.
-			 */
-			if (found_enc && !stmt->partbound && !stmt->partspec)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("ENCODING clause only supported with column oriented tables")));
-			}
-
-			if (relkind != RELKIND_PARTITIONED_TABLE)
-				stmt->attr_encodings = NIL;
-		}
+		/*
+		 * Note that we disallow encoding clauses for non-AOCO table
+		 * besides only one exception: if we're creating a partition as
+		 * part of a CREATE TABLE ... PARTITION BY ... command, ignore the
+		 * ENCODING options instead. The parent table might be AOCS, while
+		 * some of the partitions are not, or vice versa, so options can
+		 * make sense for some parts of the partition hierarchy, even if
+		 * it doesn't for this partition.
+		 */
+		stmt->attr_encodings = transformColumnEncoding(NULL /* Relation */, 
+								schema,
+								stmt->attr_encodings,
+								stmt->options,
+								relkind == RELKIND_PARTITIONED_TABLE,
+								amHandlerOid != AO_COLUMN_TABLE_AM_HANDLER_OID 
+										&& !stmt->partbound 
+										&& !stmt->partspec /* errorOnEncodingClause */);
+		if (amHandlerOid != AO_COLUMN_TABLE_AM_HANDLER_OID && relkind != RELKIND_PARTITIONED_TABLE)
+			stmt->attr_encodings = NIL;
 	}
 
 	/*
@@ -6956,24 +6936,6 @@ static void
 ATPrepAddColumn(List **wqueue, Relation rel, bool recurse, bool recursing,
 				bool is_view, AlterTableCmd *cmd, LOCKMODE lockmode)
 {
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 *		This logic can possibly be moved in an encoding specific function
-	 *		during add column executiion, removing the diff with upstream.
-	 */	
-	/* 
-	 * If there's an encoding clause, this better be an append only
-	 * column oriented table.
-	 */
-	ColumnDef *def = (ColumnDef *)cmd->def;
-	if (def->encoding && !RelationIsAoCols(rel))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("ENCODING clause not supported on non column orientated table")));
-
-	if (def->encoding)
-		def->encoding = transformStorageEncodingClause(def->encoding, true);
-
 	if (rel->rd_rel->reloftype && !recursing)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -7013,6 +6975,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	ListCell   *child;
 	AclResult	aclresult;
 	ObjectAddress address;
+ 	List* enc;
 
 	/* At top level, permission check was done in ATPrepCmd, else do it */
 	if (recursing)
@@ -7386,45 +7349,24 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	add_column_datatype_dependency(myrelid, newattnum, attribute.atttypid);
 	add_column_collation_dependency(myrelid, newattnum, attribute.attcollation);
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 * 		Try to handle attribute encodings in a unified way under the same
-	 * 		interface for CREATE/ALTER statements and remove the diff footprint
-	 * 		with upstream.
-	 *
-	 *		One observed discrepancy between the two statements regarding
-	 *		precedence of, command specific options, environment (gucs), type
-	 *		specific encodings and relation wide options.
-	 */
-	if (!RelationIsAoCols(rel) && colDef->encoding)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("ENCODING clause not supported on non column orientated table")));
-
 	/* 
+	 * Process the encoding clauses.
+	 *
 	 * For AO/CO tables, always store an encoding clause. If no encoding
 	 * clause was provided, store the default encoding clause.
+	 * If there's an encoding clause for non AO/CO tables, we'll throw an error 
+	 * in the function (indicated by errorOnEncodingClause == true).
+	 */
+	enc = transformColumnEncoding(rel, list_make1(colDef), 
+					NULL /* COLUMN ENCODING clauses is only for CREATE TABLE */, 
+					NULL /* withOptions */,
+					false /* rootpartition */, 
+					!RelationIsAoCols(rel) /* errorOnEncodingClause */);
+	/* 
+	 * Store the encoding clause for AO/CO tables.
 	 */
 	if (RelationIsAoCols(rel))
-	{
-		ColumnReferenceStorageDirective *c;
-		
-		c = makeNode(ColumnReferenceStorageDirective);
-		c->column = colDef->colname;
-
-		if (colDef->encoding)
-			c->encoding = colDef->encoding;
-		else
-		{
-			/* Use the type specific storage directive, if one exists */
-			c->encoding = TypeNameGetStorageDirective(colDef->typeName);
-			
-			if (!c->encoding)
-				c->encoding = default_column_encoding_clause(rel);
-		}
-
-		AddRelationAttributeEncodings(rel, list_make1(c));
-	}
+		AddRelationAttributeEncodings(rel, enc);
 
 	/* MPP-6929: metadata tracking */
 	if ((Gp_role == GP_ROLE_DISPATCH) && MetaTrackValidKindNsp(rel->rd_rel))
@@ -16011,46 +15953,25 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 			rel->rd_rel->relhasindex)
 			cs->buildAoBlkdir = true;
 
-		/*
-		 * GPDB_12_MERGE_FIXME:
-		 *		Try to unify the logic for encoding: adding/moving/removing etc.
-		 *		The logic is possible to not have to leak outside reloptions or
-		 *		pg_attribute_encoding common code.
+		/* 
+		 * For AO/CO tables, need to remove table level compression settings 
+		 * for the AO_COLUMN case since they're set at the column level.
 		 */
 		if (RelationIsAoCols(rel))
 		{
-			if (useExistingColumnAttributes)
+			ListCell *lc;
+
+			foreach(lc, opts)
 			{
-				/* 
-				 * Need to remove table level compression settings for the
-				 * AO_COLUMN case since they're set at the column level.
-				 */
-				ListCell *lc;
+				DefElem *de = lfirst(lc);
 
-				foreach(lc, opts)
-				{
-					DefElem *de = lfirst(lc);
-
-					if (de->defname &&
-						(strcmp("compresstype", de->defname) == 0 ||
-						 strcmp("compresslevel", de->defname) == 0 ||
-						 strcmp("blocksize", de->defname) == 0))
-						continue;
-					else
-						cs->options = lappend(cs->options, de);
-				}
-				col_encs = RelationGetUntransformedAttributeOptions(rel);
-			}
-			else
-			{
-				ListCell *lc;
-
-				foreach(lc, opts)
-				{
-					DefElem *de = lfirst(lc);
+				if (!useExistingColumnAttributes || 
+						!de->defname || 
+						!is_storage_encoding_directive(de->defname))
 					cs->options = lappend(cs->options, de);
-				}
 			}
+			if (useExistingColumnAttributes)
+				col_encs = RelationGetUntransformedAttributeOptions(rel);
 		}
 		else
 			cs->options = opts;
@@ -17298,42 +17219,6 @@ make_distributedby_for_rel(Relation rel)
 	}
 
 	return dist;
-}
-
-/*
- * GPDB_12_MERGE_FIXME:
- *		This interface does not belong here. At worst it can be moved into
- *		greenplum specific tablecmds_gp; at best into pg_attribute_encoding or
- *		reloptions_gp.
- */
-/*
- * Given a relation, get all column encodings for that relation as a list of
- * ColumnReferenceStorageDirective structures.
- */
-List *
-rel_get_column_encodings(Relation rel)
-{
-	List **colencs = RelationGetUntransformedAttributeOptions(rel);
-	List *out = NIL;
-
-	if (colencs)
-	{
-		AttrNumber attno;
-
-		for (attno = 0; attno < RelationGetNumberOfAttributes(rel); attno++)
-		{
-			if (colencs[attno] && !TupleDescAttr(rel->rd_att, attno)->attisdropped)
-			{
-				ColumnReferenceStorageDirective *d =
-					makeNode(ColumnReferenceStorageDirective);
-				d->column = pstrdup(NameStr(TupleDescAttr(rel->rd_att, attno)->attname));
-				d->encoding = colencs[attno];
-		
-				out = lappend(out, d);
-			}
-		}
-	}
-	return out;
 }
 
 /*

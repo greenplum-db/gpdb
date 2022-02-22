@@ -22,6 +22,7 @@
 
 #include "access/bitmap.h"
 #include "access/reloptions.h"
+#include "catalog/pg_type.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
 #include "commands/defrem.h"
@@ -32,7 +33,6 @@
 #include "utils/memutils.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
-#include "parser/analyze.h"
 
 /*
  * Helper macro used for validation
@@ -1089,6 +1089,27 @@ get_option_set(relopt_value *options, int num_options, const char *opt_name)
  */
 
 /*
+ * Check if the name is one of the ENCODING clauses.
+ */
+bool
+is_storage_encoding_directive(char *name)
+{
+	/* names we expect to see in ENCODING clauses */
+	static char *storage_directive_names[] = {"compresstype", 
+						"compresslevel",
+						"blocksize"};
+
+	int i = 0;
+
+	for (i = 0; i < lengthof(storage_directive_names); i++)
+	{
+		if (strcmp(name, storage_directive_names[i]) == 0)
+			return true;
+	}
+	return false;
+}
+
+/*
  * Add any missing encoding attributes (compresstype = none,
  * blocksize=...).  The column specific encoding attributes supported
  * today are compresstype, compresslevel and blocksize.  Refer to
@@ -1200,6 +1221,50 @@ fillin_encoding(List *aocoColumnEncoding)
 		retList = lappend(retList, el);
 	}
 	return retList;
+}
+
+/*
+ * Make encoding (compresstype = ..., blocksize=...) based on
+ * currently configured defaults.
+ * For blocksize, it is impossible for the value to be unset
+ * if an appendonly relation, hence the default is always ignored.
+ */
+static List *
+default_column_encoding_clause(Relation rel)
+{
+	DefElem *e1, *e2, *e3;
+	const StdRdOptions *ao_opts = currentAOStorageOptions();
+	bool		appendonly;
+	int32		blocksize = -1;
+	int16		compresslevel = 0;
+	char	   *compresstype = NULL;
+	NameData	compresstype_nd;
+
+	appendonly = rel && RelationIsAppendOptimized(rel);
+	if (appendonly)
+	{
+		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
+									 &blocksize,
+									 NULL,
+									 &compresslevel,
+									 NULL,
+									 &compresstype_nd);
+		compresstype = NameStr(compresstype_nd);
+	}
+
+	compresstype = compresstype && compresstype[0] ? pstrdup(compresstype) : 
+					(ao_opts->compresstype[0] ? pstrdup(ao_opts->compresstype) : "none");
+	e1 = makeDefElem("compresstype", (Node *) makeString(pstrdup(compresstype)), -1);
+
+	blocksize = appendonly ? blocksize : 
+					(ao_opts->blocksize != 0 ? ao_opts->blocksize : AO_DEFAULT_BLOCKSIZE);
+	e2 = makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1);
+
+	compresslevel = appendonly && compresslevel != 0 ? compresslevel :
+					(ao_opts->compresslevel != 0 ? ao_opts->compresslevel : AO_DEFAULT_COMPRESSLEVEL);
+	e3 = makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1);
+
+	return list_make3(e1, e2, e3);
 }
 
 /*
@@ -1449,7 +1514,7 @@ transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
 /*
  * Find the column reference storage encoding clause for `column'.
  *
- * This is called by transformAttributeEncoding() in a loop but stenc should be
+ * This is called by transformColumnEncoding() in a loop but stenc should be
  * quite small in practice.
  */
 static ColumnReferenceStorageDirective *
@@ -1470,10 +1535,10 @@ find_crsd(const char *column, List *stenc)
 /*
  * Parse and validate COLUMN <col> ENCODING ... directives.
  *
- * The 'columns', 'stenc' and 'taboptions' arguments are parts of the
- * CREATE TABLE command:
+ * The 'colDefs', 'stenc' and 'taboptions' arguments are parts of the
+ * CREATE TABLE or ALTER TABLE command:
  *
- * 'columns' - list of ColumnDefs
+ * 'colDefs' - list of ColumnDefs
  * 'stenc' - list of ColumnReferenceStorageDirectives
  * 'withOptions' - list of WITH options
  *
@@ -1483,14 +1548,14 @@ find_crsd(const char *column, List *stenc)
  * they go into the ColumnReferenceStorageDirectives. And table-wide
  * defaults can be given in the WITH clause.
  *
- * If any ENCODING clauses were given, *found_enc is set to true.
- * That's a separate output argument, because the returned list will
- * include defaults from the GUCs etc. even if no ENCODING clause was
- * given in this CREATE TABLE command.
+ * Normally if any ENCODING clause was given for a non-AO/CO table,
+ * we should report an error. However, exception exists in DefineRelation()
+ * where we allow that to happen, so we pass in errorOnEncodingClause to
+ * indicate whether we should report this error. 
  *
  * This function is called for RELKIND_PARTITIONED_TABLE as well even if we
  * don't store entries in pg_attribute_encoding for rootpartition. The reason
- * is to transformAttributeEncoding for parent as need to use them later while
+ * is to transformColumnEncoding for parent as need to use them later while
  * creating partitions in GPDB legacy partitioning syntax. Hence, if
  * rootpartition add to the list, only encoding elements specified in command,
  * defaults based on GUCs and such are skipped. Each child partition would
@@ -1500,33 +1565,18 @@ find_crsd(const char *column, List *stenc)
  * and then need to add defaults only for remaining columns.
  *
  * NOTE: This is *not* performed during the parse analysis phase, like
- * most transformation, but only later in DefineRelation(). This needs
- * access to possible inherited columns, so it can only be done after
+ * most transformation, but only later in DefineRelation() or ATExecAddColumn(). 
+ * This needs access to possible inherited columns, so it can only be done after
  * expanding them.
- *
- * GPDB_12_AFTER_MERGE_FIXME:
- *		Attempt to code, precedence, merging and access to possibly existing
- *		encodings in this function, in a manner similar to
- *		validateColumnStorageEncodingClauses(). Currently the whole transform,
- *		merge, validate dance is happening both inside and outside this function
- *		but not consistently in all cases. Look at CREATE and ALTER table for
- *		specifics.
  */
-List *
-transformAttributeEncoding(List *columns,
-						   List *stenc,
-						   List *withOptions,
-						   bool rootpartition,
-						   bool *found_enc)
+List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *withOptions, bool rootpartition, bool errorOnEncodingClause)
 {
-	ListCell   *lc;
 	ColumnReferenceStorageDirective *deflt = NULL;
-	List	   *newenc = NIL;
-	List	   *tmpenc;
+	ListCell   *lc;
+	List	   *result = NIL;
 
-	*found_enc = false;
-
-	validateColumnStorageEncodingClauses(stenc, columns);
+	if (stenc)
+		validateColumnStorageEncodingClauses(stenc, colDefs);
 
 	/* get the default clause, if there is one. */
 	foreach(lc, stenc)
@@ -1534,6 +1584,10 @@ transformAttributeEncoding(List *columns,
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 		Assert(IsA(c, ColumnReferenceStorageDirective));
 
+		if (errorOnEncodingClause)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("ENCODING clause only supported with column oriented tables")));
 		if (c->deflt)
 		{
 			/*
@@ -1556,36 +1610,31 @@ transformAttributeEncoding(List *columns,
 						 errmsg("DEFAULT COLUMN ENCODING clause cannot override values set in WITH clause")));
 		}
 
-		*found_enc = true;
 	}
 
 	/*
 	 * If no default has been specified, we might create one out of the
 	 * WITH clause.
 	 */
-	tmpenc = form_default_storage_directive(withOptions);
-	if (tmpenc)
+	if (!deflt)
 	{
-		deflt = makeNode(ColumnReferenceStorageDirective);
-		deflt->deflt = true;
-		deflt->encoding = transformStorageEncodingClause(tmpenc, false);
+		List	   *tmpenc;
+		if ((tmpenc = form_default_storage_directive(withOptions)) != NULL)
+		{
+			deflt = makeNode(ColumnReferenceStorageDirective);
+			deflt->deflt = true;
+			deflt->encoding = transformStorageEncodingClause(tmpenc, false);
+		}
 	}
 
-	/*
-	 * Loop over all columns. If a column has a column reference storage clause
-	 * -- i.e., COLUMN name ENCODING () -- apply that. Otherwise, apply the
-	 * default.
-	 */
-	foreach(lc, columns)
+	foreach(lc, colDefs)
 	{
 		Node	   *elem = (Node *) lfirst(lc);
 		ColumnDef *d;
 		ColumnReferenceStorageDirective *c;
 		List *encoding = NIL;
 
-		/* GPDB_12_AFTER_MERGE_FIXME: can we have anything else here? This used to be an Insist */
-		if (!IsA(elem, ColumnDef))
-			continue;
+		Assert(IsA(elem, ColumnDef));
 
 		d = (ColumnDef *) elem;
 
@@ -1600,7 +1649,10 @@ transformAttributeEncoding(List *columns,
 		if (d->encoding)
 		{
 			encoding = transformStorageEncodingClause(d->encoding, true);
-			*found_enc = true;
+			if (errorOnEncodingClause)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("ENCODING clause only supported with column oriented tables")));
 		}
 		else
 		{
@@ -1614,17 +1666,10 @@ transformAttributeEncoding(List *columns,
 					encoding = copyObject(deflt->encoding);
 				else if (!rootpartition)
 				{
-					List	   *te;
-
 					if (d->typeName)
-						te = TypeNameGetStorageDirective(d->typeName);
-					else
-						te = NIL;
-
-					if (te)
-						encoding = copyObject(te);
-					else
-						encoding = default_column_encoding_clause(NULL);
+						encoding = get_type_encoding(d->typeName);
+					if (!encoding)
+						encoding = default_column_encoding_clause(rel);
 				}
 			}
 		}
@@ -1635,10 +1680,9 @@ transformAttributeEncoding(List *columns,
 			c->column = pstrdup(d->colname);
 			c->encoding = encoding;
 
-			newenc = lappend(newenc, c);
+			result = lappend(result, c);
 		}
 	}
 
-	Assert(rootpartition?true:list_length(newenc) == list_length(columns));
-	return newenc;
+	return result;
 }

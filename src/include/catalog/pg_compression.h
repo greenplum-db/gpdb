@@ -98,8 +98,6 @@ extern void callCompressionValidator(PGFunction func, char *comptype,
 									 Oid typid);
 
 extern bool compresstype_is_valid(char *compresstype);
-extern List *default_column_encoding_clause(Relation rel);
 extern PGFunction *GetCompressionImplementation(char *comptype);
-extern bool is_storage_encoding_directive(char *name);
 
 #endif   /* PG_COMPRESSION */
