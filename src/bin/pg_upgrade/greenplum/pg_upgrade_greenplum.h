@@ -60,7 +60,7 @@ typedef enum {
 
 /* option_gp.c */
 void initialize_greenplum_user_options(void);
-bool process_greenplum_option(greenplumOption option, char *option_value);
+bool process_greenplum_option(greenplumOption option);
 bool is_greenplum_dispatcher_mode(void);
 bool is_checksum_mode(checksumMode mode);
 bool is_show_progress_mode(void);
