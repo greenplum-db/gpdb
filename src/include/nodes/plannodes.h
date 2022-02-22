@@ -979,6 +979,9 @@ typedef struct ShareInputScan
 	ShareType 	share_type;
 	int 		share_id;
 	int 		driver_slice;   	/* slice id that will execute the underlying material/sort */
+
+    /* Discard the scan output? True for ORCA CTE producer, false otherwise. */
+    bool        discard_output;
 } ShareInputScan;
 
 /* ----------------
