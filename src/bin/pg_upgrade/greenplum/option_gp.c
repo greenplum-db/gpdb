@@ -10,9 +10,11 @@ typedef struct {
 	bool progress;
 	segmentMode segment_mode;
 	checksumMode checksum_mode;
+	bool continue_check_on_fatal;
 } GreenplumUserOpts;
 
 static GreenplumUserOpts greenplum_user_opts;
+static bool check_fatal_occurred;
 
 void
 initialize_greenplum_user_options(void)
@@ -48,6 +50,20 @@ process_greenplum_option(greenplumOption option, char *option_value)
 		case GREENPLUM_REMOVE_CHECKSUM_OPTION:        /* --remove-checksum */
 			greenplum_user_opts.checksum_mode = CHECKSUM_REMOVE;
 			break;
+
+		case GREENPLUM_CONTINUE_CHECK_ON_FATAL:
+			if (user_opts.check)
+			{
+				greenplum_user_opts.continue_check_on_fatal = true;
+				check_fatal_occurred = false;
+			}
+			else
+			{
+				pg_log(PG_FATAL,
+					"--continue-check-on-fatal: should be used with check mode (-c)\n");
+				exit(1);
+			}
+			break;
 		default:
 			return false;
 	}
@@ -73,3 +89,20 @@ is_show_progress_mode(void)
 	return greenplum_user_opts.progress;
 }
 
+bool
+is_continue_check_on_fatal(void)
+{
+	return greenplum_user_opts.continue_check_on_fatal;
+}
+
+void
+set_check_fatal_occured(void)
+{
+	check_fatal_occurred = true;
+}
+
+bool
+get_check_fatal_occurred(void)
+{
+	return check_fatal_occurred;
+}

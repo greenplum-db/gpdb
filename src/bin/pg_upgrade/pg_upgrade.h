@@ -556,6 +556,7 @@ void		check_ok(void);
 unsigned int str2uint(const char *str);
 uint64		str2uint64(const char *str);
 void		pg_putenv(const char *var, const char *val);
+void 		gp_fatal_log(const char *fmt,...);
 
 
 /* version.c */

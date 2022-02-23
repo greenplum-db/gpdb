@@ -240,7 +240,9 @@ report_clusters_compatible(void)
 {
 	if (user_opts.check)
 	{
-		pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
+		pg_log(PG_REPORT, (get_check_fatal_occurred() ?
+			"\n*Some cluster objects are not compatible*\n" : "\n*Clusters are compatible*\n"));
+
 		/* stops new cluster */
 		stop_postmaster(false);
 		exit(0);
@@ -428,10 +430,10 @@ check_locale_and_encoding(DbInfo *olddb, DbInfo *newdb)
 				 pg_encoding_to_char(olddb->db_encoding),
 				 pg_encoding_to_char(newdb->db_encoding));
 	if (!equivalent_locale(LC_COLLATE, olddb->db_collate, newdb->db_collate))
-		pg_fatal("lc_collate values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("lc_collate values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
 				 olddb->db_name, olddb->db_collate, newdb->db_collate);
 	if (!equivalent_locale(LC_CTYPE, olddb->db_ctype, newdb->db_ctype))
-		pg_fatal("lc_ctype values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("lc_ctype values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
 				 olddb->db_name, olddb->db_ctype, newdb->db_ctype);
 }
 
@@ -512,7 +514,7 @@ check_new_cluster_is_empty(void)
 		{
 			/* pg_largeobject and its index should be skipped */
 			if (strcmp(rel_arr->rels[relnum].nspname, "pg_catalog") != 0)
-				pg_fatal("New cluster database \"%s\" is not empty: found relation \"%s.%s\"\n",
+				gp_fatal_log("New cluster database \"%s\" is not empty: found relation \"%s.%s\"\n",
 						 new_cluster.dbarr.dbs[dbnum].db_name,
 						 rel_arr->rels[relnum].nspname,
 						 rel_arr->rels[relnum].relname);
@@ -794,7 +796,7 @@ check_is_install_user(ClusterInfo *cluster)
 	 */
 	if (PQntuples(res) != 1 ||
 		atooid(PQgetvalue(res, 0, 1)) != BOOTSTRAP_SUPERUSERID)
-		pg_fatal("database user \"%s\" is not the install user\n",
+		gp_fatal_log("database user \"%s\" is not the install user\n",
 				 os_info.user);
 
 	PQclear(res);
@@ -805,7 +807,7 @@ check_is_install_user(ClusterInfo *cluster)
 							"WHERE rolname !~ '^pg_'");
 
 	if (PQntuples(res) != 1)
-		pg_fatal("could not determine the number of users\n");
+		gp_fatal_log("could not determine the number of users\n");
 
 	/*
 	 * We only allow the install user in the new cluster because other defined
@@ -907,9 +909,9 @@ check_for_prepared_transactions(ClusterInfo *cluster)
 	if (PQntuples(res) != 0)
 	{
 		if (cluster == &old_cluster)
-			pg_fatal("The source cluster contains prepared transactions\n");
+			gp_fatal_log("The source cluster contains prepared transactions\n");
 		else
-			pg_fatal("The target cluster contains prepared transactions\n");
+			gp_fatal_log("The target cluster contains prepared transactions\n");
 	}
 
 	PQclear(res);
@@ -997,13 +999,14 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains \"contrib/isn\" functions which rely on the\n"
-				 "bigint data type.  Your old and new clusters pass bigint values\n"
-				 "differently so this cluster cannot currently be upgraded.  You can\n"
-				 "manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
-				 "\"contrib/isn\" from the old cluster and restart the upgrade.  A list of\n"
-				 "the problem functions is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains \"contrib/isn\" functions which rely on the\n"
+				"| bigint data type.  Your old and new clusters pass bigint values\n"
+				"| differently so this cluster cannot currently be upgraded.  You can\n"
+				"| manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
+				"| \"contrib/isn\" from the old cluster and restart the upgrade.  A list of\n"
+				"| the problem functions is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1076,11 +1079,12 @@ check_for_tables_with_oids(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains tables declared WITH OIDS, which is not supported\n"
-				 "anymore. Consider removing the oid column using\n"
-				 "    ALTER TABLE ... SET WITHOUT OIDS;\n"
-				 "A list of tables with the problem is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains tables declared WITH OIDS, which is not supported\n"
+				"| anymore. Consider removing the oid column using\n"
+				"|     ALTER TABLE ... SET WITHOUT OIDS;\n"
+				"| A list of tables with the problem is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1191,12 +1195,13 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains one of the reg* data types in user tables.\n"
-				 "These data types reference system OIDs that are not preserved by\n"
-				 "pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
-				 "remove the problem tables and restart the upgrade.  A list of the problem\n"
-				 "columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains one of the reg* data types in user tables.\n"
+				"| These data types reference system OIDs that are not preserved by\n"
+				"| pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
+				"| remove the problem tables and restart the upgrade.  A list of the problem\n"
+				"| columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1282,11 +1287,12 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"jsonb\" data type in user tables.\n"
-				 "The internal format of \"jsonb\" changed during 9.4 beta so this cluster cannot currently\n"
-				 "be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
-				 "of the problem columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"jsonb\" data type in user tables.\n"
+				"| The internal format of \"jsonb\" changed during 9.4 beta so this cluster cannot currently\n"
+				"| be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
+				"| of the problem columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1313,9 +1319,9 @@ check_for_pg_role_prefix(ClusterInfo *cluster)
 	if (PQntuples(res) != 0)
 	{
 		if (cluster == &old_cluster)
-			pg_fatal("The source cluster contains roles starting with \"pg_\"\n");
+			gp_fatal_log("The source cluster contains roles starting with \"pg_\"\n");
 		else
-			pg_fatal("The target cluster contains roles starting with \"pg_\"\n");
+			gp_fatal_log("The target cluster contains roles starting with \"pg_\"\n");
 	}
 
 	PQclear(res);

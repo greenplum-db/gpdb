@@ -324,6 +324,7 @@ usage(void)
 	printf(_("  -v, --verbose                 enable verbose internal logging\n"));
 	printf(_("  -V, --version                 display version information, then exit\n"));
 	printf(_("  --clone                       clone instead of copying files to new cluster\n"));
+	printf(_("  --continue-check-on-fatal     goes through all pg_upgrade checks; should be used with -c\n"));
 	printf(_("  -?, --help                    show this help, then exit\n"));
 	printf(_("\n"
 			 "Before running pg_upgrade you must:\n"
