@@ -856,6 +856,11 @@ DefineIndex(Oid relationId,
 		/* make sure the QE uses the same index name that we chose */
 		stmt->idxname = indexRelationName;
 		stmt->oldNode = InvalidOid;
+		/*
+		 * Please note, top snapshot dispatched here was taken before lock
+		 * acquiring, but it's OK since with don't use it - see IndexBuildScan
+		 * for used snapshots and more.
+		 */
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR |
 									DF_WITH_SNAPSHOT |
