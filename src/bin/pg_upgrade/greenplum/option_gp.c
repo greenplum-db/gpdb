@@ -11,6 +11,7 @@ typedef struct {
 	segmentMode segment_mode;
 	checksumMode checksum_mode;
 	bool continue_check_on_fatal;
+	bool skip_target_check;
 } GreenplumUserOpts;
 
 static GreenplumUserOpts greenplum_user_opts;
@@ -20,6 +21,8 @@ void
 initialize_greenplum_user_options(void)
 {
 	greenplum_user_opts.segment_mode = SEGMENT;
+	greenplum_user_opts.continue_check_on_fatal = false;
+	greenplum_user_opts.skip_target_check = false;
 }
 
 bool
@@ -64,6 +67,18 @@ process_greenplum_option(greenplumOption option, char *option_value)
 				exit(1);
 			}
 			break;
+
+		case GREENPLUM_SKIP_TARGET_CHECK:
+			if (user_opts.check)
+					greenplum_user_opts.skip_target_check = true;
+			else
+			{
+					pg_log(PG_FATAL,
+						"--skip-target-check: should be used with check mode (-c)\n");
+					exit(1);
+			}
+			break;
+
 		default:
 			return false;
 	}
@@ -105,4 +120,10 @@ bool
 get_check_fatal_occurred(void)
 {
 	return check_fatal_occurred;
+}
+
+bool
+is_skip_target_check(void)
+{
+	return greenplum_user_opts.skip_target_check;
 }

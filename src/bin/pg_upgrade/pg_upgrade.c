@@ -110,7 +110,9 @@ main(int argc, char **argv)
 	get_restricted_token();
 
 	adjust_data_dir(&old_cluster);
-	adjust_data_dir(&new_cluster);
+
+	if(!is_skip_target_check())
+		adjust_data_dir(&new_cluster);
 
 	setup(argv[0], &live_check);
 
@@ -120,16 +122,24 @@ main(int argc, char **argv)
 	check_cluster_versions();
 
 	get_sock_dir(&old_cluster, live_check);
-	get_sock_dir(&new_cluster, false);
 
+	if(!is_skip_target_check())
+		get_sock_dir(&new_cluster, false);
+
+	/* not skipped for is_skip_target_check because of some checks on
+	 * old_cluster are done independently of new_cluster
+	 */
 	check_cluster_compatibility(live_check);
 
 	/* Set mask based on PGDATA permissions */
-	if (!GetDataDirectoryCreatePerm(new_cluster.pgdata))
+	if (!is_skip_target_check())
 	{
-		pg_log(PG_FATAL, "could not read permissions of directory \"%s\": %s\n",
-			   new_cluster.pgdata, strerror(errno));
-		exit(1);
+		if (!GetDataDirectoryCreatePerm(new_cluster.pgdata))
+		{
+			pg_log(PG_FATAL, "could not read permissions of directory \"%s\": %s\n",
+					 new_cluster.pgdata, strerror(errno));
+			exit(1);
+		}
 	}
 
 	umask(pg_mode_mask);
@@ -138,9 +148,13 @@ main(int argc, char **argv)
 
 
 	/* -- NEW -- */
-	start_postmaster(&new_cluster, true);
 
-	check_new_cluster();
+	if(!is_skip_target_check())
+	{
+		start_postmaster(&new_cluster, true);
+		check_new_cluster();
+	}
+
 	report_clusters_compatible();
 
 	pg_log(PG_REPORT,
@@ -405,13 +419,16 @@ setup(char *argv0, bool *live_check)
 	}
 
 	/* same goes for the new postmaster */
-	if (pid_lock_file_exists(new_cluster.pgdata))
+	if (!is_skip_target_check())
 	{
-		if (start_postmaster(&new_cluster, false))
-			stop_postmaster(false);
-		else
-			pg_fatal("There seems to be a postmaster servicing the new cluster.\n"
-					 "Please shutdown that postmaster and try again.\n");
+		if (pid_lock_file_exists(new_cluster.pgdata))
+		{
+			if (start_postmaster(&new_cluster, false))
+				stop_postmaster(false);
+			else
+				pg_fatal("There seems to be a postmaster servicing the new cluster.\n"
+						 "Please shutdown that postmaster and try again.\n");
+		}
 	}
 
 	/* get path to pg_upgrade executable */

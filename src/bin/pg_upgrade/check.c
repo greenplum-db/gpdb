@@ -342,19 +342,6 @@ check_cluster_versions(void)
 
 	/* cluster versions should already have been obtained */
 	Assert(old_cluster.major_version != 0);
-	Assert(new_cluster.major_version != 0);
-
-	/*
-	 * Upgrading within a major version is a handy feature of pg_upgrade, but
-	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
-	 * version to be upgraded from.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
-		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
-	{
-		pg_log(PG_FATAL,
-			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
-	}
 
 	/*
 	 * We allow upgrades from/to the same major version for alpha/beta
@@ -370,6 +357,32 @@ check_cluster_versions(void)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
 		pg_fatal("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
 
+	/* Ensure binaries match the designated data directories */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
+		GET_MAJOR_VERSION(old_cluster.bin_version))
+		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
+
+	if(is_skip_target_check())
+	{
+		check_ok();
+		return;
+	}
+
+	/* cluster versions should already have been obtained */
+	Assert(new_cluster.major_version != 0);
+
+	/*
+	 * Upgrading within a major version is a handy feature of pg_upgrade, but
+	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
+	 * version to be upgraded from.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
+		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
+	{
+		pg_log(PG_FATAL,
+			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
+	}
+
 	/* Only current PG version is supported as a target */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
 		pg_fatal("This utility can only upgrade to Greenplum version %s.\n",
@@ -384,9 +397,6 @@ check_cluster_versions(void)
 		pg_fatal("This utility cannot be used to downgrade to older major Greenplum versions.\n");
 
 	/* Ensure binaries match the designated data directories */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
-		GET_MAJOR_VERSION(old_cluster.bin_version))
-		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
 	if (GET_MAJOR_VERSION(new_cluster.major_version) !=
 		GET_MAJOR_VERSION(new_cluster.bin_version))
 		pg_fatal("New cluster data and binary directories are from different major versions.\n");
@@ -400,8 +410,12 @@ check_cluster_compatibility(bool live_check)
 {
 	/* get/check pg_control data of servers */
 	get_control_data(&old_cluster, live_check);
-	get_control_data(&new_cluster, false);
-	check_control_data(&old_cluster.controldata, &new_cluster.controldata);
+
+	if(!is_skip_target_check())
+	{
+		get_control_data(&new_cluster, false);
+		check_control_data(&old_cluster.controldata, &new_cluster.controldata);
+	}
 
 	/* We read the real port number for PG >= 9.1 */
 	if (live_check && GET_MAJOR_VERSION(old_cluster.major_version) < 901 &&
@@ -409,9 +423,12 @@ check_cluster_compatibility(bool live_check)
 		pg_fatal("When checking a pre-PG 9.1 live old server, "
 				 "you must specify the old server's port number.\n");
 
-	if (live_check && old_cluster.port == new_cluster.port)
-		pg_fatal("When checking a live server, "
-				 "the old and new port numbers must be different.\n");
+	if(!is_skip_target_check())
+	{
+		if (live_check && old_cluster.port == new_cluster.port)
+			pg_fatal("When checking a live server, "
+					 "the old and new port numbers must be different.\n");
+	}
 }
 
 
