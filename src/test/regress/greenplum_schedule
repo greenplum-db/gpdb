@@ -291,4 +291,7 @@ test: run_utility_gpexpand_phase1
 # check correct error message when create extension error on segment
 test: create_extension_fail
 
+# Test that we are able to tune statement_mem for WindowAgg.
+test: statement_mem_for_windowagg
+
 # end of tests
