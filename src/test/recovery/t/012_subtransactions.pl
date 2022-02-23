@@ -4,7 +4,6 @@ use warnings;
 
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-use Test::More;
 
 # GPDB: Effectively disable this TAP test. We cannot run PREPARE
 # TRANSACTION in utility-mode. We need at least 1 test so create a

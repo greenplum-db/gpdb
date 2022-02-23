@@ -323,20 +323,18 @@ sub pump_until
 	while (1)
 	{
 		last if $$stream =~ /$until/;
-		if ($timeout->is_expired)
-		{
-			diag("pump_until: timeout expired when searching for \"$until\" with stream: \"$$stream\"");
-			return 0;
-		}
-		if (not $proc->pumpable())
-		{
-			diag("pump_until: process terminated unexpectedly when searching for \"$until\" with stream: \"$$stream\"");
-			return 0;
-		}
+		return 0 if ($timeout->is_expired);
+		return 0 if (not $proc->pumpable());
 		$proc->pump();
 	}
 	return 1;
 }
+
+=pod
+
+=item generate_ascii_string(from_char, to_char)
+
+=cut
 
 # Generate a string made of the given range of ASCII characters
 sub generate_ascii_string

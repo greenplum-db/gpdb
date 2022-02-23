@@ -82,3 +82,5 @@ $node->command_ok(
 $node->command_ok(
 	[qw(reindexdb --echo --system dbname=template1)],
 	'reindexdb system with connection string');
+
+done_testing();

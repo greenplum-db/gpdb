@@ -3,11 +3,7 @@ use strict;
 use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
-<<<<<<< HEAD
-use Test::More tests => 5;
-=======
 use Test::More;
->>>>>>> 549ec201d61... Replace Test::More plans with done_testing
 
 # Bug #15114
 

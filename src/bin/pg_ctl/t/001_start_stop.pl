@@ -125,3 +125,5 @@ if (not $windows_os)
 
 	system_or_bail 'pg_ctl', 'stop', '-D', "$tempdir/data", '-m', 'fast';
 }
+
+done_testing();
