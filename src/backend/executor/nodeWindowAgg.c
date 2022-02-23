@@ -690,22 +690,18 @@ perform_distinct_windowaggregate(WindowAggState *winstate,
 #ifdef FAULT_INJECTOR
 	/*
 	 * This routine is used for tracing whether the sort operation of DISTINCT-qualified
-	 * WindowAgg is spilled to disk.
+	 * WindowAgg spills to disk.
 	 */
 	if (SIMPLE_FAULT_INJECTOR("distinct_winagg_perform_sort") == FaultInjectorTypeSkip)
 	{
 		TuplesortInstrumentation sortstats;
 		tuplesort_get_stats(peraggstate->distinctSortState, &sortstats);
 		if (sortstats.spaceType == SORT_SPACE_TYPE_MEMORY)
-		{
 			ereport(NOTICE,
 					(errmsg("distinct winagg sortstats: sort operation fitted in memory")));
-		}
 		else
-		{
 			ereport(NOTICE,
 					(errmsg("distinct winagg sortstats: sort operation spilled to disk")));
-		}
 	}
 #endif
 
@@ -2464,22 +2460,18 @@ ExecWindowAgg(PlanState *pstate)
 	* we finishes spooling all the tuples of the first partition.
 	*/
 	if (winstate->partition_spooled &&
-		winstate->currentpos >= winstate->spooled_rows)
+		winstate->currentpos >= winstate->spooled_rows &&
+		SIMPLE_FAULT_INJECTOR("winagg_after_spool_tuples") == FaultInjectorTypeSkip)
 	{
-		if (SIMPLE_FAULT_INJECTOR("winagg_after_spool_tuples") == FaultInjectorTypeSkip)
+		if (winstate->buffer)
 		{
-			if (winstate->buffer)
-			{
-				if (tuplestore_in_memory(winstate->buffer))
-					ereport(NOTICE, (errmsg("winagg: tuplestore fitted in memory")));
-				else
-					ereport(NOTICE, (errmsg("winagg: tuplestore spilled to disk")));
-			}
+			if (tuplestore_in_memory(winstate->buffer))
+				ereport(NOTICE, (errmsg("winagg: tuplestore fitted in memory")));
 			else
-			{
-				ereport(NOTICE, (errmsg("winagg: no input rows")));
-			}
+				ereport(NOTICE, (errmsg("winagg: tuplestore spilled to disk")));
 		}
+		else
+			ereport(NOTICE, (errmsg("winagg: no input rows")));
 	}
 #endif
 
