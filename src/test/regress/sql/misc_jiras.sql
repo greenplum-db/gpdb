@@ -17,7 +17,7 @@ insert into misc_jiras.t1 select i % 13, md5(i::text), i % 3
 
 -- tuplestore in windowagg uses statement_mem to control the in-memory data size,
 -- set a small value to trigger the spilling.
-set statement_mem to '256kB';
+set statement_mem to '512kB';
 
 set extra_float_digits=0; -- the last decimal digits are somewhat random
 
