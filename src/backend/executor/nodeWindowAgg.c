@@ -2449,16 +2449,16 @@ ExecWindowAgg(PlanState *pstate)
 
 #ifdef FAULT_INJECTOR
 	/*
-	* This routine is used for testing if we have allocated enough memory
-	* for the tuplestore (winstate->buffer) in begin_partition(). If all
-	* tuples of the current partition can be fitted in the memory, we
-	* emit a notice saying 'fitted in memory'. If they cannot be fitted in
-	* the memory, we emit a notice saying 'spilled to disk'. If there're
-	* no input rows, we emit a notice saying 'no input rows'.
-	*
-	* NOTE: The fault-injector only triggers once, we emit the notice when
-	* we finishes spooling all the tuples of the first partition.
-	*/
+	 * This routine is used for testing if we have allocated enough memory
+	 * for the tuplestore (winstate->buffer) in begin_partition(). If all
+	 * tuples of the current partition can be fitted in the memory, we
+	 * emit a notice saying 'fitted in memory'. If they cannot be fitted in
+	 * the memory, we emit a notice saying 'spilled to disk'. If there're
+	 * no input rows, we emit a notice saying 'no input rows'.
+	 *
+	 * NOTE: The fault-injector only triggers once, we emit the notice when
+	 * we finishes spooling all the tuples of the first partition.
+	 */
 	if (winstate->partition_spooled &&
 		winstate->currentpos >= winstate->spooled_rows &&
 		SIMPLE_FAULT_INJECTOR("winagg_after_spool_tuples") == FaultInjectorTypeSkip)
