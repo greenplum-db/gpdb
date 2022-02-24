@@ -2865,7 +2865,7 @@ checkDependencies(const ObjectAddresses *objects,
 
 		findDependentObjects(thisobj,
 							 DEPFLAG_ORIGINAL,
-							 0, /* GPDB_12_MERGE_FIXME: new 'flags' field. need to pass something? */
+							 0,
 							 NULL,		/* empty stack */
 							 targetObjects,
 							 objects,
