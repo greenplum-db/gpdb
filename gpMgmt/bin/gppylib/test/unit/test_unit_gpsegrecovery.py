@@ -72,6 +72,8 @@ class IncrementalRecoveryTestCase(GpTestCase):
         self.assertEqual([call('Running pg_rewind with progress output temporarily in /tmp/test_progress_file')],
                          self.mock_logger.info.call_args_list)
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
+        self._assert_cmd_failed('{"error_type": "incremental", "error_msg": "pg_rewind failed", "dbid": 2, ' \
+                                '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
 
     def test_logger_info_exception(self):
         self.mock_logger.info.side_effect = [Exception('logger exception')]
@@ -80,6 +82,8 @@ class IncrementalRecoveryTestCase(GpTestCase):
         self.assertEqual(0, self.mock_pgrewind_run.call_count)
         self.assertEqual(1, self.mock_logger.info.call_count)
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
+        self._assert_cmd_failed('{"error_type": "default", "error_msg": "logger exception", "dbid": 2, ' \
+                                '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
 
     def test_incremental_start_segment_exception(self):
         gpsegrecovery.start_segment.side_effect = [Exception('pg_ctl start failed')]
@@ -97,7 +101,7 @@ class IncrementalRecoveryTestCase(GpTestCase):
 
 class FullRecoveryTestCase(GpTestCase):
     def setUp(self):
-        # TODO should we mock the set_cmd_results decorator and not worry about
+        # TODO should we mock the set_recovery_cmd_results decorator and not worry about
         # testing the command results in this test class
         self.maxDiff = None
         self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
@@ -130,8 +134,9 @@ class FullRecoveryTestCase(GpTestCase):
         self.assertEqual(expected_init_args, self.mock_pgbasebackup_init.call_args)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
         self.assertEqual(call(validateAfter=True), self.mock_pgbasebackup_run.call_args)
-        self.mock_logger.info.assert_any_call("Successfully ran pg_basebackup "
-                                              "for dbid: 2")
+        expected_logger_info_args = [call('Running pg_basebackup with progress output temporarily in /tmp/test_progress_file'),
+                                     call("Successfully ran pg_basebackup for dbid: 2")]
+        self.assertEqual(expected_logger_info_args, self.mock_logger.info.call_args_list)
         gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
 
     def _assert_cmd_passed(self):
@@ -304,7 +309,6 @@ class SegRecoveryTestCase(GpTestCase):
     @patch('gpsegrecovery.PgBaseBackup.run')
     def test_complete_workflow_exception(self, mock_pgbasebackup_run, mock_pgbasebackup_init, mock_pgrewind_run,
                                          mock_pgrewind_init):
-        #TODO should we change this to basebackup exception ?
         mock_pgrewind_run.side_effect = [Exception('pg_rewind failed')]
         mock_pgbasebackup_run.side_effect = [Exception('pg_basebackup failed once'),
                                              Exception('pg_basebackup failed twice')]

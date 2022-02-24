@@ -26,7 +26,11 @@ if gpstate > /dev/null 2>&1 ; then
 fi
 
 # TODO remove this pip install. only for debugging
-gpssh -f ~/segment_host_list -e 'pip3 install coverage --user'
+if [ -f ~/segment_host_list ]; then
+    gpssh -f ~/segment_host_list -e 'pip3 install coverage --user'
+fi
+
+ssh sdw5 'pip3 install coverage --user' > /dev/null 2>&1 || true
 
 cd /home/gpadmin/gpdb_src/gpMgmt
 make -f Makefile.behave behave flags="$BEHAVE_FLAGS"

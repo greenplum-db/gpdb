@@ -7,7 +7,7 @@ import sys
 from .gp_unittest import GpTestCase
 import gppylib
 from gpsegrecovery import FullRecovery
-from recovery_base import RecoveryBase, set_cmd_results
+from recovery_base import RecoveryBase, set_recovery_cmd_results
 from gppylib.recoveryinfo import RecoveryInfo
 from gppylib.commands.base import CommandResult, Command
 
@@ -35,7 +35,7 @@ class RecoveryBaseTestCase(GpTestCase):
         self.incr_r2 = RecoveryInfo('target_data_dir2', 5002, 2, 'source_hostname2',
                                     6002, False, '/tmp/progress_file2')
         self.confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1,
-                                                                           self.incr_r2])
+                                                             self.incr_r2])
 
     def tearDown(self):
         super(RecoveryBaseTestCase, self).tearDown()
@@ -69,8 +69,6 @@ class RecoveryBaseTestCase(GpTestCase):
         self.assertEqual([call(self.mock_cmd1), call(self.mock_cmd2)],
                          mock_workerpool.return_value.addCommand.call_args_list)
         self.assertEqual(1, mock_workerpool.return_value.join.call_count)
-        #TODO remove this once we are sure we don't need check_results
-        # self.assertEqual(check_results_count, mock_workerpool.return_value.check_results.call_count)
         self.assertEqual(1, mock_workerpool.return_value.haltWork.call_count)
 
     def _assert_exception_from_parseargs(self, ex, stderr_buf, expected_stderr_message):
@@ -307,8 +305,8 @@ class SetCmdResultsTestCase(GpTestCase):
         self.assertEqual(False, cmd.get_results().halt)
         self.assertEqual(False, cmd.get_results().wasSuccessful())
 
-    def test_set_cmd_results_no_exception(self):
-        @set_cmd_results
+    def test_set_recovery_cmd_results_no_exception(self):
+        @set_recovery_cmd_results
         def test_decorator(cmd):
             cmd.name = 'new name'
 
@@ -318,8 +316,8 @@ class SetCmdResultsTestCase(GpTestCase):
         self.assertEqual('new name', test_cmd.name)
         self._assert_cmd_passed(test_cmd)
 
-    def test_set_cmd_results_catch_exception(self):
-        @set_cmd_results
+    def test_set_recovery_cmd_results_catch_exception(self):
+        @set_recovery_cmd_results
         def test_decorator(cmd):
             cmd.name = 'new name'
             cmd.error_type = 10
@@ -334,8 +332,8 @@ class SetCmdResultsTestCase(GpTestCase):
                           '"datadir": "/tmp/datadir2", "port": 7002, "progress_file": "/tmp/progress_file2"}'
         self._assert_cmd_failed(test_cmd, expected_stderr)
 
-    def test_set_cmd_results_catch_exception_none_error_type(self):
-        @set_cmd_results
+    def test_set_recovery_cmd_results_catch_exception_none_error_type(self):
+        @set_recovery_cmd_results
         def test_decorator(cmd):
             cmd.name = 'new name'
             cmd.error_type = None
