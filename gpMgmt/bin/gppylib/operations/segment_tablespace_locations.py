@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from contextlib import closing
 from gppylib.db import dbconn
 
 # get tablespace locations
@@ -20,7 +21,7 @@ def get_tablespace_locations(all_hosts, mirror_data_directory):
                         LATERAL gp_tablespace_location(_q1.oid)
                     ) AS t """
 
-    with dbconn.connect(dbconn.DbURL()) as conn:
+    with closing(dbconn.connect(dbconn.DbURL())) as conn:
         if all_hosts:
             tablespace_location_sql = """
                 SELECT c.hostname, t.tblspc_loc||'/'||c.dbid tblspc_loc
