@@ -1,8 +1,9 @@
 from . import redirect_stderr
 from mock import call, Mock, patch, ANY
 import os
+import shutil
 import sys
-from backports import tempfile
+import tempfile
 
 from .gp_unittest import GpTestCase
 import gpsegsetuprecovery
@@ -57,23 +58,25 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
         self._assert_passed()
 
     def test_no_forceoverwrite_dir_exists(self):
-        with tempfile.TemporaryDirectory() as d:
-            self.seg_recovery_info.target_datadir = d
-            self.validation_recovery_cmd.forceoverwrite = False
+        d = tempfile.mkdtemp()
+        self.seg_recovery_info.target_datadir = d
+        self.validation_recovery_cmd.forceoverwrite = False
 
-            self.validation_recovery_cmd.run()
+        self.validation_recovery_cmd.run()
         self._assert_passed()
+        shutil.rmtree(d)
 
     def test_no_forceoverwrite_only_upper_dir_exists(self):
-        with tempfile.TemporaryDirectory() as d:
-            tmp_dir = os.path.join(d, 'test_data_dir')
-            os.makedirs(tmp_dir)
-            os.rmdir(tmp_dir)
-            self.seg_recovery_info.target_datadir = tmp_dir
-            self.validation_recovery_cmd.forceoverwrite = False
+        d = tempfile.mkdtemp()
+        tmp_dir = os.path.join(d, 'test_data_dir')
+        os.makedirs(tmp_dir)
+        os.rmdir(tmp_dir)
+        self.seg_recovery_info.target_datadir = tmp_dir
+        self.validation_recovery_cmd.forceoverwrite = False
 
-            self.validation_recovery_cmd.run()
+        self.validation_recovery_cmd.run()
         self._assert_passed()
+        shutil.rmtree(d)
 
     def test_no_forceoverwrite_dir_doesnt_exist(self):
         tmp_dir = '/tmp/nonexistent_dir/test_datadir'
@@ -105,25 +108,27 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
             self._remove_dir_and_upper_dir_if_exists(tmp_dir)
 
     def test_validation_only_no_forceoverwrite_dir_exists(self):
-        with tempfile.TemporaryDirectory() as d:
-            self.seg_recovery_info.target_datadir = d
-            self.validation_recovery_cmd.forceoverwrite = False
+        d = tempfile.mkdtemp()
+        self.seg_recovery_info.target_datadir = d
+        self.validation_recovery_cmd.forceoverwrite = False
 
-            self.validation_recovery_cmd.run()
+        self.validation_recovery_cmd.run()
         self._assert_passed()
+        shutil.rmtree(d)
 
     def test_no_forceoverwrite_dir_exists_not_empty(self):
-        with tempfile.TemporaryDirectory() as d:
-            # We pass the upper directory so that the lower directory isn't empty (temp = a/b/c , we pass a/b)
-            self.seg_recovery_info.target_datadir = os.path.dirname(d)
-            self.validation_recovery_cmd.forceoverwrite = False
+        d = tempfile.mkdtemp()
+        # We pass the upper directory so that the lower directory isn't empty (temp = a/b/c , we pass a/b)
+        self.seg_recovery_info.target_datadir = os.path.dirname(d)
+        self.validation_recovery_cmd.forceoverwrite = False
 
-            self.validation_recovery_cmd.run()
+        self.validation_recovery_cmd.run()
 
-            error_str = "for segment with port 50000: Segment directory '{}' exists but is not empty!".format(os.path.dirname(d))
-            expected_error = '{{"error_type": "validation", "error_msg": "{}", "dbid": 2, "datadir": "{}", "port": 50000, ' \
-                             '"progress_file": "/tmp/test_progress_file"}}'.format(error_str, os.path.dirname(d))
-            self._assert_failed(expected_error)
+        error_str = "for segment with port 50000: Segment directory '{}' exists but is not empty!".format(os.path.dirname(d))
+        expected_error = '{{"error_type": "validation", "error_msg": "{}", "dbid": 2, "datadir": "{}", "port": 50000, ' \
+                         '"progress_file": "/tmp/test_progress_file"}}'.format(error_str, os.path.dirname(d))
+        self._assert_failed(expected_error)
+        shutil.rmtree(d)
 
     @patch('gpsegsetuprecovery.os.makedirs' , side_effect=Exception('mkdirs failed'))
     def test_no_forceoverwrite_mkdir_exception(self, mock_os_mkdir):
@@ -189,16 +194,17 @@ class SetupForIncrementalRecoveryTestCase(GpTestCase):
         self._assert_cmd_passed()
 
     def test_setup_pid_exist_passes(self):
-        with tempfile.TemporaryDirectory() as d:
-            self.seg_recovery_info.target_datadir = d
-            f = open("{}/postmaster.pid".format(d), 'w')
-            f.write('1111')
-            f.close()
-            self.assertTrue(os.path.exists("{}/postmaster.pid".format(d)))
-            self.setup_for_incremental_recovery_cmd.run()
-            self.assertFalse(os.path.exists("{}/postmaster.pid".format(d)))
+        d = tempfile.mkdtemp()
+        self.seg_recovery_info.target_datadir = d
+        f = open("{}/postmaster.pid".format(d), 'w')
+        f.write('1111')
+        f.close()
+        self.assertTrue(os.path.exists("{}/postmaster.pid".format(d)))
+        self.setup_for_incremental_recovery_cmd.run()
+        self.assertFalse(os.path.exists("{}/postmaster.pid".format(d)))
         self._assert_checkpoint_query()
         self._assert_cmd_passed()
+        shutil.rmtree(d)
 
     @patch('gpsegsetuprecovery.Command', return_value=Command('rc1_cmd', 'echo 1 | grep 2'))
     def test_remove_pid_failed(self, mock_cmd):

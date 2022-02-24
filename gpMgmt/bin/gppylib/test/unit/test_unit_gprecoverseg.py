@@ -85,10 +85,8 @@ class GpRecoversegTestCase(GpTestCase):
             patch('gppylib.commands.base.WorkerPool', return_value=self.pool),
             patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value={}),
             patch('gppylib.gplog.get_default_logger'),
-            patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.initialize_backout_directory'),
-            patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.remove_backout_directory'),
             patch.object(GpMirrorListToBuild, "__init__", return_value=None),
-            patch.object(GpMirrorListToBuild, "buildMirrors"),
+            patch.object(GpMirrorListToBuild, "recover_mirrors"),
             patch.object(GpMirrorListToBuild, "getAdditionalWarnings"),
             patch.object(GpMirrorListToBuild, "getMirrorsToBuild"),
             patch.object(HeapChecksum, "check_segment_consistency"),
@@ -98,7 +96,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.call_count = 0
         self.return_one = True
 
-        self.mock_build_mirrors = self.get_mock_from_apply_patch("buildMirrors")
+        self.mock_build_mirrors = self.get_mock_from_apply_patch("recover_mirrors")
         self.mock_get_mirrors_to_build = self.get_mock_from_apply_patch('getMirrorsToBuild')
         self.mock_heap_checksum_init = self.get_mock_from_apply_patch("__init__")
         self.mock_check_segment_consistency = self.get_mock_from_apply_patch('check_segment_consistency')
@@ -218,6 +216,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.subject.logger.info.assert_any_call('The rebalance operation has completed with WARNINGS. '
                                                  'Please review the output in the gprecoverseg log.')
 
+    # @patch('gppylib.programs.clsRecoverSegment.GpRecoverSegmentProgram.trigger_fts_probe')
     @patch.object(TableLogger, "info")
     def test_failed_recover(self, _):
         self.gpArrayMock.get_unbalanced_segdbs.return_value = [self.primary0]
@@ -239,6 +238,7 @@ class GpRecoversegTestCase(GpTestCase):
 
         with self.assertRaises(SystemExit) as cm:
             self.subject.run()
+        # self.assertEqual(1, mock_fts_probe.call_count)
 
         self.assertEqual(cm.exception.code, 1)
 

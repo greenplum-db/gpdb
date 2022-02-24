@@ -96,6 +96,9 @@ def before_scenario(context, scenario):
     if 'gpmovemirrors' in context.feature.tags:
         context.mirror_context = MirrorMgmtContext()
 
+    if 'gpaddmirrors' in context.feature.tags:
+        context.mirror_context = MirrorMgmtContext()
+
     if 'gprecoverseg' in context.feature.tags:
         context.mirror_context = MirrorMgmtContext()
 
@@ -144,7 +147,8 @@ def after_scenario(context, scenario):
 
     tags_to_cleanup = ['gpmovemirrors', 'gpssh-exkeys']
     if set(context.feature.tags).intersection(tags_to_cleanup):
-        if 'temp_base_dir' in context:
+        if 'temp_base_dir' in context and os.path.exists(context.temp_base_dir):
+            os.chmod(context.temp_base_dir, 0o700)
             shutil.rmtree(context.temp_base_dir)
 
     tags_to_not_restart_db = ['analyzedb', 'gpssh-exkeys']
