@@ -26,16 +26,12 @@ CREATE FOREIGN TABLE ft3 (
 CREATE FOREIGN TABLE ft4 (
 	c1 int
 ) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'all segments');
--- Test num_segments option
-CREATE SERVER s1 FOREIGN DATA WRAPPER dummy OPTIONS (num_segments '3');
-CREATE FOREIGN TABLE ft5 (
-       c1 int
-) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'all segments', num_segments '5');
-\d+ ft5
-                                       Foreign table "public.ft5"
- Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
---------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
- c1     | integer |           |          |         |             | plain   |              | 
-Server: s1
-FDW options: (delimiter ',', mpp_execute 'all segments', num_segments '5')
+-- CREATE FOREIGN SERVER WITH num_segments
+CREATE SERVER s1 FOREIGN DATA WRAPPER dummy OPTIONS (num_segments '5');
+-- CHECK FOREIGN SERVER's OPTIONS
+SELECT srvoptions FROM pg_foreign_server WHERE srvname = 's1';
+    srvoptions    
+------------------
+ {num_segments=5}
+(1 row)
 

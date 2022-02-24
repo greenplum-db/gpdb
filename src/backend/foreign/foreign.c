@@ -371,18 +371,11 @@ GetForeignTable(Oid relid)
 	else
 		ft->options = untransformRelOptions(datum);
 
-	ForeignServer *server = GetForeignServer(ft->serverid);
-
 	ft->exec_location = SeparateOutMppExecute(&ft->options);
 	if (ft->exec_location == FTEXECLOCATION_NOT_DEFINED)
 	{
+		ForeignServer *server = GetForeignServer(ft->serverid);
 		ft->exec_location = server->exec_location;
-	}
-
-	ft->num_segments = SeparateOutNumSegments(&ft->options);
-	if (ft->num_segments <= 0)
-	{
-		ft->num_segments = server->num_segments;
 	}
 
 	ReleaseSysCache(tp);

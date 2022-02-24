@@ -58,7 +58,6 @@
 
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbrelsize.h"
-#include "cdb/cdbutil.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_inherits.h"
@@ -457,14 +456,12 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		rel->serverid = GetForeignServerIdByRelId(RelationGetRelid(relation));
 		rel->fdwroutine = GetFdwRoutineForRelation(relation, true);
 		rel->exec_location = GetForeignTable(RelationGetRelid(relation))->exec_location;
-		rel->num_segments = GetForeignTable(RelationGetRelid(relation))->num_segments;
 	}
 	else
 	{
 		rel->serverid = InvalidOid;
 		rel->fdwroutine = NULL;
 		rel->exec_location = FTEXECLOCATION_NOT_DEFINED;
-		rel->num_segments = getgpsegmentCount();
 	}
 
 	/* Collect info about relation's foreign keys, if relevant */
