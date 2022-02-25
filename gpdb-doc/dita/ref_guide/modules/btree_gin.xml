@@ -24,6 +24,14 @@
           for more information.</p>
       </body>
     </topic>
+    <topic id="topic_issues">
+      <title>Greenplum Database Limitations</title>
+      <body>
+        <p>The Pivotal Query Optimizer (GPORCA) does not support queries that access an
+          index with <codeph>op_class</codeph>, such queries will fall back to the
+          Postgres Planner</p>
+      </body>
+    </topic>
     <topic id="topic_info">
       <title>Module Documentation</title>
       <body>
