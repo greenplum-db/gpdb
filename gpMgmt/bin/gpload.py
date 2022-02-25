@@ -24,6 +24,12 @@ Options:
 '''
 
 import sys
+
+defaultencoding = 'utf-8'
+if sys.getdefaultencoding() != defaultencoding:
+    reload(sys)
+    sys.setdefaultencoding(defaultencoding)
+
 if sys.hexversion<0x2040400:
     sys.stderr.write("gpload needs python 2.4.4 or higher\n")
     sys.exit(2)
@@ -2589,7 +2595,41 @@ class gpload:
         if self.reuse_tables == False:
             self.cleanupSql.append('drop external table if exists %s'%self.extSchemaTable)
 
-		
+    #
+    # get distribution key for staging table, default is the DK for target table
+    # if it is not setted, we use the match columns for DK
+    #
+    def get_distribution_key(self):
+        dk = []
+        sql = '''select unnest(distkey) from gp_distribution_policy \
+        where localoid='%s.%s'::regclass::oid'''% (self.schema, self.table)
+        try:
+            dk_num = self.db.query(sql.encode('utf-8')).getresult()
+        except Exception as e:
+            self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
+
+        if len(dk_num) > 0:
+            # print("dk att num: ", dk_num)
+            # target table has distribution key, we use it
+            sql = '''select attname from pg_attribute \
+            where attrelid = '%s.%s'::regclass::oid ''' %  (self.schema, self.table)
+            try:
+                target_table_col = self.db.query(sql.encode('utf-8')).getresult()
+            except Exception as e:
+                self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
+            # print("cols: ", target_table_col)
+            for dn in dk_num:
+                col_name = target_table_col[dn[0]-1][0]
+                dk.append(quote_ident(col_name))
+            # print("dk from target table: ", dk)
+        else:
+            # target table doesn't have dk, we use match column
+            dk = self.getconfig('gpload:output:match_columns', list)
+            # print("dk from match col: ", dk)
+
+        return dk
+
+
     #
     # Create a new staging table or find a reusable staging table to use for this operation
     # (only valid for update/merge operations).
@@ -2597,7 +2637,7 @@ class gpload:
     def create_staging_table(self):
 
         # make sure we set the correct distribution policy
-        distcols = self.getconfig('gpload:output:match_columns', list)
+        distcols = self.get_distribution_key()
 
         sql = "SELECT * FROM pg_class WHERE relname LIKE 'temp_gpload_reusable_%%';"
         resultList = self.db.query(sql.encode('utf-8')).getresult()
@@ -2609,6 +2649,7 @@ class gpload:
         # already existing staging table in the catalog which will match
         # the one that we need to use. It must meet the reuse conditions
         is_temp_table = 'TEMP '
+        is_unlogged = ''
         target_columns = []
         for column in self.into_columns:
             if column[2]:
@@ -2616,6 +2657,7 @@ class gpload:
 
         if self.reuse_tables == True:
             is_temp_table = ''
+            is_unlogged = 'UNLOGGED '
             target_table_name = quote_unident(self.table)
 
             # create a string from all reuse conditions for staging tables and ancode it
@@ -2646,14 +2688,17 @@ class gpload:
 		
         # MPP-14667 - self.reuse_tables should change one, and only one, aspect of how we build the following table,
         # and that is, whether it's a temp table or not. In other words, is_temp_table = '' iff self.reuse_tables == True.
-        sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
+        sql = 'CREATE %s%sTABLE %s ' % (is_temp_table, is_unlogged, self.staging_table_name)
         cols = map(lambda a:'"%s" %s' % (a[0], a[1]), target_columns)
         sql += "(%s)" % ','.join(cols)
-        #sql += " DISTRIBUTED BY (%s)" % ', '.join(distcols)
+        sql += " DISTRIBUTED BY (%s)" % ', '.join(distcols)
         self.log(self.LOG, sql)
 
         if not self.options.D:
-            self.db.query(sql.encode('utf-8'))
+            try:
+                self.db.query(sql.encode('utf-8'))
+            except Exception as e:
+                self.log(self.ERROR,  'could not run SQL "%s": %s ' % (sql, unicode(e)))
             if not self.reuse_tables:
                 self.cleanupSql.append('DROP TABLE IF EXISTS %s' % self.staging_table_name)
 
