@@ -304,7 +304,7 @@ BEGIN
 		END IF;
 	END LOOP;
 
-	FOR r IN SELECT colname, oper, typ, value[ordinality], matches[ordinality] FROM brinopers, unnest(op) WITH ORDINALITY AS oper order by colname, typ LOOP
+	FOR r IN SELECT colname, oper, typ, value[ordinality], matches[ordinality] FROM brinopers, unnest(op) WITH ORDINALITY AS oper order by colname, typ, oper LOOP
 
 		-- prepare the condition
 		IF r.value IS NULL THEN
