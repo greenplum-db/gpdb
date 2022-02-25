@@ -34,7 +34,7 @@ Feature: gpstop behave tests
           And the catalog has a standby master entry
          When the standby host is made unreachable
           And the user runs "gpstop -a"
-         Then gpstop should print "Standby is unreachable, continuing to stop other segments" to stdout
+         Then gpstop should print "Standby is unreachable, skipping shutdown on standby" to stdout
           And gpstop should print "invalid_host is unreachable.Skipping cleaning shared memory." to stdout
           And gpstop should return a return code of 0
           And the standby host is made reachable

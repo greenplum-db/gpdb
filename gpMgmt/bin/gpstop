@@ -580,7 +580,7 @@ class GpStop:
             standby = self.gparray.standbyMaster
 
             if get_unreachable_segment_hosts([standby.hostname], 1):
-                logger.warning("Standby is unreachable, continuing to stop other segments...")
+                logger.warning("Standby is unreachable, skipping shutdown on standby")
                 return True
 
             logger.info("Stopping master standby host %s mode=fast" % standby.hostname)
