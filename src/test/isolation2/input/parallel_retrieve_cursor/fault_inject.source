@@ -114,8 +114,8 @@ insert into t1 select generate_series(1,100);
 1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
 1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 3);
 1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 4);
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 2::smallint);
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 4::smallint);
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 5, 5, 0, 2::smallint);
+1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 5, 5, 0, 4::smallint);
 1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', '', '', '', 5, 5, 0, 3::smallint);
 
 1: BEGIN;
@@ -132,7 +132,13 @@ insert into t1 select generate_series(1,100);
 1U: SELECT state FROM gp_segment_endpoints() WHERE cursorname='c1';
 1R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
 
+SELECT gp_wait_until_triggered_fault('fetch_tuples_from_endpoint', 1, 2);
+SELECT gp_wait_until_triggered_fault('fetch_tuples_from_endpoint', 1, 4);
+
 1<:
+
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', 2);
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', 4);
 
 0R<:
 2R<:
@@ -144,9 +150,9 @@ insert into t1 select generate_series(1,100);
 1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 4);
 
 -- Test6: close PARALLEL RETRIEVE CURSOR during retrieve
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 2::smallint);
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 4::smallint);
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 5, 6, 3, 3::smallint);
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 5, 5, 0, 2::smallint);
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 5, 5, 0, 4::smallint);
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 5, 5, 0, 3::smallint);
 
 1: BEGIN;
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
@@ -163,6 +169,10 @@ insert into t1 select generate_series(1,100);
 
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
 1: CLOSE c1;
+
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', 2);
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', 3);
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', 4);
 
 0R<:
 1R<:
@@ -181,22 +191,22 @@ DROP TABLE IF EXISTS t2;
 CREATE TABLE t2 (a INT) DISTRIBUTED by (a);
 insert into t2 select generate_series(1,10000);
 
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid)
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid)
     FROM gp_segment_configuration
     WHERE content=1 AND role='p';
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', '', '', '', 1000, 1000, 0, dbid)
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'interrupt', '', '', '', 1000, 1000, 0, dbid)
     FROM gp_segment_configuration
     WHERE content=1 AND role='p';
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid)
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid)
     FROM gp_segment_configuration
     WHERE content=0 AND role='p';
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 900, 900, 2, dbid)
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 900, 900, 0, dbid)
     FROM gp_segment_configuration
     WHERE content=0 AND role='p';
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid)
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid)
     FROM gp_segment_configuration
     WHERE content=2 AND role='p';
-1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'sleep', '', '', '', 800, 800, 2, dbid)
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 800, 800, 0, dbid)
     FROM gp_segment_configuration
     WHERE content=2 AND role='p';
 
@@ -215,6 +225,13 @@ insert into t2 select generate_series(1,10000);
 1R: @pre_run 'set_endpoint_variable @ENDPOINT6': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT6";
 
 1<:
+
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', dbid)
+    FROM gp_segment_configuration
+    WHERE content=0 AND role='p';
+SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', dbid)
+    FROM gp_segment_configuration
+    WHERE content=2 AND role='p';
 
 0R<:
 2R<:
