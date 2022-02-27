@@ -81,6 +81,7 @@
 #define tuplesort_gettupleslot_pos tuplesort_gettupleslot_pos_pg
 #define tuplesort_flush tuplesort_flush_pg
 #define tuplesort_finalize_stats tuplesort_finalize_stats_pg
+#define tuplesort_get_stats tuplesort_get_stats_pg
 #define tuplesort_rescan_pos tuplesort_rescan_pos_pg
 #define tuplesort_markpos_pos tuplesort_markpos_pos_pg
 #define tuplesort_restorepos_pos tuplesort_restorepos_pos_pg
@@ -225,6 +226,7 @@ extern void tuplesort_restorepos(Tuplesortstate *state);
 #undef tuplesort_gettupleslot_pos
 #undef tuplesort_flush
 #undef tuplesort_finalize_stats
+#undef tuplesort_get_stats
 #undef tuplesort_rescan_pos
 #undef tuplesort_markpos_pos
 #undef tuplesort_restorepos_pos
@@ -586,6 +588,16 @@ switcheroo_tuplesort_finalize_stats(switcheroo_Tuplesortstate *state)
 }
 
 static inline void
+switcheroo_tuplesort_get_stats(switcheroo_Tuplesortstate *state, const char **sortMethod,
+								const char **spaceType, long *spaceUsed)
+{
+	if (state->is_mk_tuplesortstate)
+		tuplesort_get_stats_mk((Tuplesortstate_mk *) state, sortMethod, spaceType, spaceUsed);
+	else
+		tuplesort_get_stats_pg((Tuplesortstate_pg *) state, sortMethod, spaceType, spaceUsed);
+}
+
+static inline void
 switcheroo_tuplesort_rescan_pos(switcheroo_Tuplesortstate *state, TuplesortPos *pos)
 {
 	if (state->is_mk_tuplesortstate)
@@ -666,6 +678,7 @@ switcheroo_tuplesort_set_gpmon(switcheroo_Tuplesortstate *state,
 #define tuplesort_gettupleslot_pos switcheroo_tuplesort_gettupleslot_pos
 #define tuplesort_flush switcheroo_tuplesort_flush
 #define tuplesort_finalize_stats switcheroo_tuplesort_finalize_stats
+#define tuplesort_get_stats switcheroo_tuplesort_get_stats
 #define tuplesort_rescan_pos switcheroo_tuplesort_rescan_pos
 #define tuplesort_markpos_pos switcheroo_tuplesort_markpos_pos
 #define tuplesort_restorepos_pos switcheroo_tuplesort_restorepos_pos

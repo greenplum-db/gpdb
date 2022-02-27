@@ -2795,7 +2795,7 @@ tuplesort_restorepos_pos(Tuplesortstate *state, TuplesortPos *pos)
  * printable summary information about how the sort was performed.
  * spaceUsed is measured in kilobytes.
  */
-static void
+void
 tuplesort_get_stats(Tuplesortstate *state,
 					const char **sortMethod,
 					const char **spaceType,

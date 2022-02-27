@@ -55,9 +55,11 @@ test: gpcopy_encoding gp_create_table gp_create_view window_views create_table_l
 # below test(s) inject faults so each of them need to be in a separate group
 test: gpcopy
 
-test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format misc_jiras direct_dispatch_explain_analyze
+test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format direct_dispatch_explain_analyze
 # below test(s) inject faults so each of them need to be in a separate group
 test: guc_gp
+test: misc_jiras
+test: statement_mem_for_windowagg
 # namespace_gp test will show diff if concurrent tests use temporary tables.
 # So run it separately.
 test: namespace_gp

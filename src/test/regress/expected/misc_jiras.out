@@ -1,4 +1,5 @@
 drop schema if exists misc_jiras;
+NOTICE:  schema "misc_jiras" does not exist, skipping
 create schema misc_jiras;
 --
 -- Test backward scanning of tuplestore spill files.
@@ -11,11 +12,21 @@ create schema misc_jiras;
 --
 create table misc_jiras.t1 (c1 int, c2 text, c3 smallint) distributed by (c1);
 insert into misc_jiras.t1 select i % 13, md5(i::text), i % 3
-  from generate_series(1, 20000) i;
--- tuplestore uses work_mem to control the in-memory data size, set a small
--- value to trigger the spilling.
-set work_mem to '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+  from generate_series(1, 80000) i;
+-- tuplestore in windowagg uses statement_mem to control the in-memory data size,
+-- set a small value to trigger the spilling.
+set statement_mem to '1200kB';
+-- Inject fault at 'winagg_after_spool_tuples' to show that the tuplestore spills
+-- to disk.
+select gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
+  from gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
 select sum(cc) from (
     select c1
          , c2
@@ -27,10 +38,23 @@ select sum(cc) from (
       from misc_jiras.t1
      group by 1, 2
 ) tt;
+NOTICE:  winagg: tuplestore spilled to disk  (seg1 slice1 127.0.0.1:6003 pid=175883)
+NOTICE:  winagg: tuplestore spilled to disk  (seg0 slice1 127.0.0.1:6002 pid=175882)
+NOTICE:  winagg: tuplestore spilled to disk  (seg2 slice1 127.0.0.1:6004 pid=175884)
    sum   
 ---------
- 10006.5
+ 40006.5
 (1 row)
 
-reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+select gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
+  from gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+reset statement_mem;
+drop table misc_jiras.t1;
+drop schema misc_jiras;

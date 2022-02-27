@@ -13,11 +13,17 @@ create schema misc_jiras;
 
 create table misc_jiras.t1 (c1 int, c2 text, c3 smallint) distributed by (c1);
 insert into misc_jiras.t1 select i % 13, md5(i::text), i % 3
-  from generate_series(1, 20000) i;
+  from generate_series(1, 80000) i;
 
--- tuplestore uses work_mem to control the in-memory data size, set a small
--- value to trigger the spilling.
-set work_mem to '64kB';
+-- tuplestore in windowagg uses statement_mem to control the in-memory data size,
+-- set a small value to trigger the spilling.
+
+set statement_mem to '1200kB';
+
+-- Inject fault at 'winagg_after_spool_tuples' to show that the tuplestore spills
+-- to disk.
+select gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
+  from gp_segment_configuration WHERE role='p' AND content>=0;
 
 select sum(cc) from (
     select c1
@@ -31,4 +37,9 @@ select sum(cc) from (
      group by 1, 2
 ) tt;
 
-reset work_mem;
+select gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
+  from gp_segment_configuration WHERE role='p' AND content>=0;
+
+reset statement_mem;
+drop table misc_jiras.t1;
+drop schema misc_jiras;

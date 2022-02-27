@@ -1,0 +1,269 @@
+CREATE TABLE dummy_table(x int, y int) DISTRIBUTED BY (y);
+INSERT INTO dummy_table SELECT generate_series(0, 20000), 0;
+INSERT INTO dummy_table SELECT generate_series(0, 20000), 3;
+INSERT INTO dummy_table SELECT generate_series(0, 20000), 10;
+-- 1. Test that if we set statement_mem to a larger value, the tuplestore
+-- for caching the tuples in partition used in WindowAgg is able to be fitted
+-- in memory.
+SET statement_mem TO '2048kB';
+SELECT gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+NOTICE:  winagg: tuplestore fitted in memory  (seg2 slice1 127.0.0.1:6004 pid=221533)
+NOTICE:  winagg: tuplestore fitted in memory  (seg1 slice1 127.0.0.1:6003 pid=221532)
+NOTICE:  winagg: tuplestore fitted in memory  (seg0 slice1 127.0.0.1:6002 pid=221531)
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1651.86..2001.88 rows=20001 width=8) (actual time=14.724..24.775 rows=60003 loops=1)
+   ->  WindowAgg  (cost=1651.86..2001.88 rows=6667 width=8) (actual time=19.943..23.982 rows=20001 loops=1)
+         Partition By: y
+         ->  Sort  (cost=1651.86..1701.86 rows=6667 width=8) (actual time=10.407..13.232 rows=20001 loops=1)
+               Sort Key: y
+               Sort Method:  external sort  Disk: 960kB
+               ->  Seq Scan on dummy_table  (cost=0.00..223.01 rows=6667 width=8) (actual time=0.015..1.729 rows=20001 loops=1)
+ Planning time: 0.087 ms
+   (slice0)    Executor memory: 119K bytes.
+ * (slice1)    Executor memory: 2920K bytes avg x 3 workers, 2920K bytes max (seg0).  Work_mem: 1698K bytes max, 1589K bytes wanted.
+ Memory used:  2048kB
+ Memory wanted:  3376kB
+ Optimizer: Postgres query optimizer
+ Execution time: 29.057 ms
+(14 rows)
+
+SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+-- 2. Test that if we set statement_mem to a smaller value, the tuplestore
+-- for caching the tuples in partition used in WindowAgg will be spilled to disk.
+SET statement_mem TO '1024kB';
+SELECT gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+NOTICE:  winagg: tuplestore spilled to disk  (seg2 slice1 127.0.0.1:6004 pid=221533)
+NOTICE:  winagg: tuplestore spilled to disk  (seg1 slice1 127.0.0.1:6003 pid=221532)
+NOTICE:  winagg: tuplestore spilled to disk  (seg0 slice1 127.0.0.1:6002 pid=221531)
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1651.86..2001.88 rows=20001 width=8) (actual time=16.669..40.162 rows=60003 loops=1)
+   ->  WindowAgg  (cost=1651.86..2001.88 rows=6667 width=8) (actual time=32.360..37.932 rows=20001 loops=1)
+         Partition By: y
+         ->  Sort  (cost=1651.86..1701.86 rows=6667 width=8) (actual time=12.260..15.535 rows=20001 loops=1)
+               Sort Key: y
+               Sort Method:  external sort  Disk: 960kB
+               ->  Seq Scan on dummy_table  (cost=0.00..223.01 rows=6667 width=8) (actual time=0.022..3.808 rows=20001 loops=1)
+ Planning time: 0.096 ms
+   (slice0)    Executor memory: 119K bytes.
+ * (slice1)    Executor memory: 1595K bytes avg x 3 workers, 1595K bytes max (seg0).  Work_mem: 956K bytes max, 1680K bytes wanted.
+ Memory used:  1024kB
+ Memory wanted:  3558kB
+ Optimizer: Postgres query optimizer
+ Execution time: 44.165 ms
+(14 rows)
+
+SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+-- 3. Test that if we set statement_mem to a smaller value, the tuplesort
+-- operation in DISTINCT-qualified WindowAgg will be spilled to disk.
+SET statement_mem TO '1024kB';
+-- MK-Sort
+SET gp_enable_mk_sort TO 'on';
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+NOTICE:  distinct winagg sortstats: sort operation (mk-sort) spilled to disk  (seg0 slice1 127.0.0.1:6002 pid=221531)
+NOTICE:  distinct winagg sortstats: sort operation (mk-sort) spilled to disk  (seg1 slice1 127.0.0.1:6003 pid=221532)
+NOTICE:  distinct winagg sortstats: sort operation (mk-sort) spilled to disk  (seg2 slice1 127.0.0.1:6004 pid=221533)
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1651.86..2001.88 rows=20001 width=8) (actual time=27.430..102.601 rows=60003 loops=1)
+   ->  WindowAgg  (cost=1651.86..2001.88 rows=6667 width=8) (actual time=27.070..30.054 rows=20001 loops=1)
+         Partition By: y
+         ->  Sort  (cost=1651.86..1701.86 rows=6667 width=8) (actual time=5.796..7.671 rows=20001 loops=1)
+               Sort Key: y
+               Sort Method:  external sort  Disk: 960kB
+               ->  Seq Scan on dummy_table  (cost=0.00..223.01 rows=6667 width=8) (actual time=0.012..1.713 rows=20001 loops=1)
+ Planning time: 0.070 ms
+   (slice0)    Executor memory: 119K bytes.
+ * (slice1)    Executor memory: 2057K bytes avg x 3 workers, 2057K bytes max (seg0).  Work_mem: 956K bytes max, 1680K bytes wanted.
+ Memory used:  1024kB
+ Memory wanted:  3558kB
+ Optimizer: Postgres query optimizer
+ Execution time: 106.632 ms
+(14 rows)
+
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+-- PG-Sort
+SET gp_enable_mk_sort TO 'off';
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+NOTICE:  distinct winagg sortstats: sort operation (pg-sort) spilled to disk  (seg0 slice1 127.0.0.1:6002 pid=221531)
+NOTICE:  distinct winagg sortstats: sort operation (pg-sort) spilled to disk  (seg1 slice1 127.0.0.1:6003 pid=221532)
+NOTICE:  distinct winagg sortstats: sort operation (pg-sort) spilled to disk  (seg2 slice1 127.0.0.1:6004 pid=221533)
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1651.86..2001.88 rows=20001 width=8) (actual time=26.262..40.608 rows=60003 loops=1)
+   ->  WindowAgg  (cost=1651.86..2001.88 rows=6667 width=8) (actual time=25.889..29.773 rows=20001 loops=1)
+         Partition By: y
+         ->  Sort  (cost=1651.86..1701.86 rows=6667 width=8) (actual time=7.518..9.707 rows=20001 loops=1)
+               Sort Key: y
+               Sort Method:  external sort  Disk: 960kB
+               ->  Seq Scan on dummy_table  (cost=0.00..223.01 rows=6667 width=8) (actual time=0.015..2.262 rows=20001 loops=1)
+ Planning time: 0.082 ms
+   (slice0)    Executor memory: 119K bytes.
+ * (slice1)    Executor memory: 2068K bytes avg x 3 workers, 2068K bytes max (seg0).  Work_mem: 959K bytes max, 1394K bytes wanted.
+ Memory used:  1024kB
+ Memory wanted:  2987kB
+ Optimizer: Postgres query optimizer
+ Execution time: 46.829 ms
+(14 rows)
+
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+-- 4. Test that if we set statement_mem to a larger value, the tuplesort
+-- operation in DISTINCT-qualified WindowAgg is able to be fitted in memory.
+SET statement_mem TO '2048kB';
+-- MK-Sort
+SET gp_enable_mk_sort TO 'on';
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+NOTICE:  distinct winagg sortstats: sort operation (mk-sort) fitted in memory  (seg0 slice1 127.0.0.1:6002 pid=221531)
+NOTICE:  distinct winagg sortstats: sort operation (mk-sort) fitted in memory  (seg2 slice1 127.0.0.1:6004 pid=221533)
+NOTICE:  distinct winagg sortstats: sort operation (mk-sort) fitted in memory  (seg1 slice1 127.0.0.1:6003 pid=221532)
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1651.86..2001.88 rows=20001 width=8) (actual time=27.508..55.269 rows=60003 loops=1)
+   ->  WindowAgg  (cost=1651.86..2001.88 rows=6667 width=8) (actual time=27.094..31.712 rows=20001 loops=1)
+         Partition By: y
+         ->  Sort  (cost=1651.86..1701.86 rows=6667 width=8) (actual time=10.711..13.087 rows=20001 loops=1)
+               Sort Key: y
+               Sort Method:  external sort  Disk: 960kB
+               ->  Seq Scan on dummy_table  (cost=0.00..223.01 rows=6667 width=8) (actual time=0.015..2.219 rows=20001 loops=1)
+ Planning time: 0.088 ms
+   (slice0)    Executor memory: 119K bytes.
+ * (slice1)    Executor memory: 3696K bytes avg x 3 workers, 3696K bytes max (seg0).  Work_mem: 1698K bytes max, 1589K bytes wanted.
+ Memory used:  2048kB
+ Memory wanted:  3376kB
+ Optimizer: Postgres query optimizer
+ Execution time: 60.908 ms
+(14 rows)
+
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+-- PG-Sort
+SET gp_enable_mk_sort TO 'off';
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+NOTICE:  distinct winagg sortstats: sort operation (pg-sort) fitted in memory  (seg1 slice1 127.0.0.1:6003 pid=221532)
+NOTICE:  distinct winagg sortstats: sort operation (pg-sort) fitted in memory  (seg0 slice1 127.0.0.1:6002 pid=221531)
+NOTICE:  distinct winagg sortstats: sort operation (pg-sort) fitted in memory  (seg2 slice1 127.0.0.1:6004 pid=221533)
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1651.86..2001.88 rows=20001 width=8) (actual time=16.602..38.618 rows=60003 loops=1)
+   ->  WindowAgg  (cost=1651.86..2001.88 rows=6667 width=8) (actual time=31.054..36.680 rows=20001 loops=1)
+         Partition By: y
+         ->  Sort  (cost=1651.86..1701.86 rows=6667 width=8) (actual time=14.152..18.670 rows=20001 loops=1)
+               Sort Key: y
+               Sort Method:  external sort  Disk: 960kB
+               ->  Seq Scan on dummy_table  (cost=0.00..223.01 rows=6667 width=8) (actual time=0.025..4.390 rows=20001 loops=1)
+ Planning time: 0.078 ms
+   (slice0)    Executor memory: 119K bytes.
+ * (slice1)    Executor memory: 3688K bytes avg x 3 workers, 3688K bytes max (seg0).  Work_mem: 1690K bytes max, 1394K bytes wanted.
+ Memory used:  2048kB
+ Memory wanted:  2987kB
+ Optimizer: Postgres query optimizer
+ Execution time: 42.928 ms
+(14 rows)
+
+SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
+  FROM gp_segment_configuration WHERE role='p' AND content>=0;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+ Success:
+ Success:
+(3 rows)
+
+-- Do some clean-ups.
+DROP TABLE dummy_table;
+RESET statement_mem;
+RESET gp_enable_mk_sort;
