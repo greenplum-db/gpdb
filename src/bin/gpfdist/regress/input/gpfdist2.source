@@ -1171,6 +1171,22 @@ DROP EXTERNAL TABLE ext_lineitem_in;
 DROP EXTERNAL TABLE ext_lineitem_out;
 DROP EXTERNAL TABLE ext_lineitem;
 
+-- test gz file with multiple chunk
+CREATE EXTERNAL TABLE gz_multi_chunk(a text) LOCATION('gpfdist://@hostname@:7070/gpfdist2/gz_multi_chunk.tbl.gz') FORMAT 'csv';
+SELECT count(*) FROM gz_multi_chunk;
+
+-- a small gz file with 2 chunks
+CREATE EXTERNAL TABLE gz_multi_chunk_2(
+   "created_time_millis" bigint,
+   "account" integer,
+   "visit_msb_id" bigint,
+   "visit_lsb_id" bigint,
+   "event_name" varchar(255),
+   "event_value" decimal(12,4)
+)
+LOCATION('gpfdist://@hostname@:7070/gpfdist2/gz_multi_chunk_2.tbl.gz') FORMAT 'csv';
+SELECT count(*) FROM gz_multi_chunk_2;
+
 -- start_ignore
 select * from gpfdist2_stop;
 -- end_ignore
