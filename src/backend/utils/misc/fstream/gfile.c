@@ -330,6 +330,14 @@ gz_file_read(gfile_t* fd, void* ptr, size_t len)
 		if (e == Z_STREAM_END && z->s.avail_in == 0)
 		{
 			/* we're done decompressing all we have */
+                       if (flush == Z_FINISH)
+                               z->eof = 1;
+                       else
+                       {
+                               /* reset the input buffer to read more data */
+                               z->s.next_in = z->in;
+                               z->in_size = 0;
+			}
 			z->eof = 1;
 		}
 		else if(e == Z_STREAM_END && z->s.avail_in > 0)
