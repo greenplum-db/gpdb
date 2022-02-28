@@ -182,23 +182,22 @@ def test_21_gpload_formatOpts_escape():
     copy_data('external_file_01.txt','data_file.txt')
     write_config_file(reuse_tables=True, format='text', file='data_file.txt',table='texttable',escape="E'\\\\'")
 
-# case 22 is flaky on concourse. It may report: Fatal Python error: GC object already tracked during testing.
-# This is seldom issue. we can't reproduce it locally, so we disable it, in order to not blocking others
-#def test_22_gpload_error_count(self):
-#    "22  gpload error count"
-#    f = open(mkpath('query22.sql'),'a')
-#    f.write("\\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
-#    f.close()
-#    f = open(mkpath('data/large_file.csv'),'w')
-#    for i in range(0, 10000):
-#        if i % 2 == 0:
-#            f.write('1997,Ford,E350,"ac, abs, moon",3000.00,a\n')
-#        else:
-#            f.write('1997,Ford,E350,"ac, abs, moon",3000.00\n')
-#    f.close()
-#    copy_data('large_file.csv','data_file.csv')
-#    write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='90000000')
-#   self.doTest(22)
+@pytest.mark.order(22)
+@prepare_before_test(num=22)
+def test_22_gpload_error_count():
+   "22  gpload error count"
+   f = open(mkpath('query22.sql'),'a')
+   f.write("\\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+   f.close()
+   f = open(mkpath('large_file.csv'),'w')
+   for i in range(0, 10000):
+       if i % 2 == 0:
+           f.write('1997,Ford,E350,"ac, abs, moon",3000.00,a\n')
+       else:
+           f.write('1997,Ford,E350,"ac, abs, moon",3000.00\n')
+   f.close()
+   copy_data('../large_file.csv','data_file.csv')
+   write_config_file(reuse_tables=True,format='csv',file='data_file.csv',table='csvtable',delimiter="','",log_errors=True,error_limit='90000000')
 
 @pytest.mark.order(23)
 @prepare_before_test(num=23)
