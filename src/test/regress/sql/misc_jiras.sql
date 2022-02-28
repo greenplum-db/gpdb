@@ -13,7 +13,7 @@ create schema misc_jiras;
 
 create table misc_jiras.t1 (c1 int, c2 text, c3 smallint) distributed by (c1);
 insert into misc_jiras.t1 select i % 13, md5(i::text), i % 3
-  from generate_series(1, 40000) i;
+  from generate_series(1, 60000) i;
 
 -- tuplestore in windowagg uses statement_mem to control the in-memory data size,
 -- set a small value to trigger the spilling.
