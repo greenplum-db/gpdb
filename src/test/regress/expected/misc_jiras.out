@@ -12,10 +12,10 @@ create schema misc_jiras;
 --
 create table misc_jiras.t1 (c1 int, c2 text, c3 smallint) distributed by (c1);
 insert into misc_jiras.t1 select i % 13, md5(i::text), i % 3
-  from generate_series(1, 20000) i;
+  from generate_series(1, 40000) i;
 -- tuplestore in windowagg uses statement_mem to control the in-memory data size,
 -- set a small value to trigger the spilling.
-set statement_mem to '512kB';
+set statement_mem to '1024kB';
 set extra_float_digits=0; -- the last decimal digits are somewhat random
 -- Inject fault at 'winagg_after_spool_tuples' to show that the tuplestore spills
 -- to disk.
@@ -44,7 +44,7 @@ NOTICE:  winagg: tuplestore spilled to disk  (seg1 slice1 127.0.0.1:7003 pid=547
 NOTICE:  winagg: tuplestore spilled to disk  (seg2 slice1 127.0.0.1:7004 pid=54721)
    sum   
 ---------
- 10006.5
+ 20006.5
 (1 row)
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
