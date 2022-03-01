@@ -1672,6 +1672,7 @@ WHERE
             """ % (row[0])
             self.logger.debug(prepare_cmd)
             dbconn.execSQL(table_conn, prepare_cmd)
+            table_conn.commit()
 
         src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
 
