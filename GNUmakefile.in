@@ -19,7 +19,8 @@ all:
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
-	$(MAKE) -C contrib/extprotocol all	
+	$(MAKE) -C contrib/extprotocol all
+	$(MAKE) -C contrib/pg_trgm all
 ifeq ($(OS),Darwin)
 	@echo "dblink and postgres_fdw can't be built on Mac"
 else
@@ -65,6 +66,7 @@ install:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/pg_trgm $@
 ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/postgres_fdw $@
@@ -160,6 +162,7 @@ ICW_TARGETS  = src/test src/pl src/interfaces/gppc
 ICW_TARGETS += contrib/amcheck contrib/auto_explain contrib/citext
 ICW_TARGETS += contrib/formatter_fixedwidth
 ICW_TARGETS += contrib/extprotocol
+ICW_TARGETS += contrib/pg_trgm
 ifneq ($(OS),Darwin)
 	ICW_TARGETS += contrib/dblink contrib/postgres_fdw
 endif

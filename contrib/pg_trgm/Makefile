@@ -7,6 +7,7 @@ EXTENSION = pg_trgm
 DATA = pg_trgm--1.1.sql pg_trgm--1.0--1.1.sql pg_trgm--unpackaged--1.0.sql
 
 REGRESS = pg_trgm
+REGRESS_OPTS += --init-file=$(top_builddir)/src/test/regress/init_file
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

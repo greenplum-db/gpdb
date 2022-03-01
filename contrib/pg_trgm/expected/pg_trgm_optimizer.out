@@ -2336,10 +2336,11 @@ select t <-> 'q0987wertyu0988', t from test_trgm order by t <-> 'q0987wertyu0988
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: ((t <-> 'q0987wertyu0988'::text))
          ->  Limit
-               ->  Index Scan using trgm_idx on test_trgm
-                     Order By: (t <-> 'q0987wertyu0988'::text)
- Optimizer: Postgres query optimizer
-(7 rows)
+               ->  Sort
+                     Sort Key: ((t <-> 'q0987wertyu0988'::text))
+                     ->  Result
+                           ->  Seq Scan on test_trgm
+(9 rows)
 
 select t <-> 'q0987wertyu0988', t from test_trgm order by t <-> 'q0987wertyu0988' limit 2;
  ?column? |      t      
@@ -3712,8 +3713,8 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using test2_idx_gist on test2
          Index Cond: (t ~~ '%BCD%'::text)
- Optimizer: Postgres query optimizer
-(4 rows)
+         Filter: (t ~~ '%BCD%'::text)
+(5 rows)
 
 explain (costs off)
   select * from test2 where t ilike '%BCD%';
@@ -3722,8 +3723,8 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using test2_idx_gist on test2
          Index Cond: (t ~~* '%BCD%'::text)
- Optimizer: Postgres query optimizer
-(4 rows)
+         Filter: (t ~~* '%BCD%'::text)
+(5 rows)
 
 select * from test2 where t like '%BCD%';
  t 
@@ -3773,8 +3774,8 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using test2_idx_gist on test2
          Index Cond: (t ~ '[abc]{3}'::text)
- Optimizer: Postgres query optimizer
-(4 rows)
+         Filter: (t ~ '[abc]{3}'::text)
+(5 rows)
 
 explain (costs off)
   select * from test2 where t ~* 'DEF';
@@ -3783,8 +3784,8 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using test2_idx_gist on test2
          Index Cond: (t ~* 'DEF'::text)
- Optimizer: Postgres query optimizer
-(4 rows)
+         Filter: (t ~* 'DEF'::text)
+(5 rows)
 
 select * from test2 where t ~ '[abc]{3}';
    t    
