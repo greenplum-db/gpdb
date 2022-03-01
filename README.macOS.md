@@ -151,3 +151,9 @@ Note that you may need to disable System Integrity Protection in order to bring
 up the gpdemo cluster. Without doing this, psql commands run in child processes
 spawned by gpinitsystem may have the DYLD_* environment variables removed from
 their environments.
+
+### Workaround `ld: library not found for -lzstd` (M1)
+
+```bash
+export LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix zstd)/lib/
+```
