@@ -539,7 +539,7 @@ def ModifyOutFile(file,old_str,new_str):
     os.remove(file)
     os.rename("%s.bak" % file, file)
 
-Modify_Output_Case = [44,46,51,57,65,219,260,259,76]
+Modify_Output_Case = [44,46,51,57,65,219,260,259]
 
 
 def doTest(num):
@@ -562,10 +562,9 @@ def doTest(num):
         newpat4='ext_gpload_table'
         pat5 = r'[a-zA-Z0-9/\_-]*/gpload.py'  # file location
         newpat5 = 'pathto/gpload.py'
-        pat6 = r'LINE 1: ...[a-z0-9_]*\('
-        newpat6 = 'LINE 1: ...ENCODING_STR('
-        ModifyOutFile(str(num), [pat1,pat2,pat3,pat4,pat5,pat6], [newpat1,newpat2,newpat3,newpat4,newpat5,newpat6])  # some strings in outfile are different each time, such as host and file location
+        # some strings in outfile are different each time, such as host and file location
         # we modify the out file here to make it match the ans file
+        ModifyOutFile(str(num), [pat1,pat2,pat3,pat4,pat5], [newpat1,newpat2,newpat3,newpat4,newpat5])
 
     check_result(file,num=num)
 

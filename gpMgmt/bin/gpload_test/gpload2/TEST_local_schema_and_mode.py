@@ -884,3 +884,38 @@ def test_544_gpload_mode_merge_update_with_update_condition():
     f.write("\\! gpload -f " + TestBase.mkpath('config/config_file2') + "\n")
     f.write("\\! psql -d reuse_gptest -c 'select * from texttable order by s1, s2, n1;'")
     f.close()
+
+
+@pytest.mark.order(545)
+@TestBase.prepare_before_test(num=545, times=1)
+def test_545_gpload_merge_staging_DK():
+    """545 test gpload merge using target table distribution key as
+    staging table DK as default"""
+    file = TestBase.mkpath('setup.sql')
+    TestBase.runfile(file)
+    TestBase.copy_data('external_file_04.txt', 'data_file.txt')
+    TestBase.write_config_file(mode='merge', file='data_file.txt', table='testtruncate', reuse_tables=True)
+    f = open(TestBase.mkpath('query545.sql'), 'a')
+    f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
+    f.close()
+
+
+@pytest.mark.order(546)
+@TestBase.prepare_before_test(num=546, times=1)
+def test_546_gpload_merge_staging_DK():
+    """546 test gpload merge using match column as staging table DK 
+    when target is DISTRIBUTED RANDOMLY"""
+    file = TestBase.mkpath('setup.sql')
+    TestBase.runfile(file)
+    TestBase.copy_data("external_file_47.txt", "data_file.txt")
+    TestBase.write_config_file(mode='insert', file='data_file.txt', table='testheaderreuse', delimiter="','", reuse_tables=False)
+    match_col = ['field1']
+    update_col = ['field2']
+    TestBase.copy_data("external_file_546.txt", "data_file1.txt")
+    TestBase.write_config_file(mode='merge', file='data_file1.txt', update_columns=update_col,delimiter="','",
+        match_columns=match_col, config='config/config_file1', table='testheaderreuse', reuse_tables=True)
+    f = open(TestBase.mkpath('query546.sql'), 'w')
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file') + "\n")
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file1') + "\n")
+    f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
+    f.close()

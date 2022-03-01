@@ -25,11 +25,6 @@ Options:
 
 import sys
 
-defaultencoding = 'utf-8'
-if sys.getdefaultencoding() != defaultencoding:
-    reload(sys)
-    sys.setdefaultencoding(defaultencoding)
-
 if sys.hexversion<0x2040400:
     sys.stderr.write("gpload needs python 2.4.4 or higher\n")
     sys.exit(2)
@@ -2600,34 +2595,23 @@ class gpload:
     # if it is not setted, we use the match columns for DK
     #
     def get_distribution_key(self):
-        dk = []
-        sql = '''select unnest(distkey) from gp_distribution_policy \
-        where localoid='%s.%s'::regclass::oid'''% (self.schema, self.table)
+        
+        sql = '''select * from pg_get_table_distributedby('%s.%s'::regclass::oid)'''% (self.schema, self.table)
         try:
-            dk_num = self.db.query(sql.encode('utf-8')).getresult()
+            dk_text = self.db.query(sql.encode('utf-8')).getresult()
         except Exception as e:
             self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
 
-        if len(dk_num) > 0:
-            # print("dk att num: ", dk_num)
-            # target table has distribution key, we use it
-            sql = '''select attname from pg_attribute \
-            where attrelid = '%s.%s'::regclass::oid ''' %  (self.schema, self.table)
-            try:
-                target_table_col = self.db.query(sql.encode('utf-8')).getresult()
-            except Exception as e:
-                self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
-            # print("cols: ", target_table_col)
-            for dn in dk_num:
-                col_name = target_table_col[dn[0]-1][0]
-                dk.append(quote_ident(col_name))
-            # print("dk from target table: ", dk)
-        else:
+        if dk_text[0][0] == 'DISTRIBUTED RANDOMLY':
             # target table doesn't have dk, we use match column
             dk = self.getconfig('gpload:output:match_columns', list)
-            # print("dk from match col: ", dk)
+            dk_text = " DISTRIBUTED BY (%s)" % ', '.join(dk)
+            return dk_text
+        else:
+            # use dk of target table
+            # result from db is a text, we need to make it unicode
+            return dk_text[0][0].decode("utf-8")
 
-        return dk
 
 
     #
@@ -2649,7 +2633,6 @@ class gpload:
         # already existing staging table in the catalog which will match
         # the one that we need to use. It must meet the reuse conditions
         is_temp_table = 'TEMP '
-        is_unlogged = ''
         target_columns = []
         for column in self.into_columns:
             if column[2]:
@@ -2657,7 +2640,6 @@ class gpload:
 
         if self.reuse_tables == True:
             is_temp_table = ''
-            is_unlogged = 'UNLOGGED '
             target_table_name = quote_unident(self.table)
 
             # create a string from all reuse conditions for staging tables and ancode it
@@ -2688,10 +2670,10 @@ class gpload:
 		
         # MPP-14667 - self.reuse_tables should change one, and only one, aspect of how we build the following table,
         # and that is, whether it's a temp table or not. In other words, is_temp_table = '' iff self.reuse_tables == True.
-        sql = 'CREATE %s%sTABLE %s ' % (is_temp_table, is_unlogged, self.staging_table_name)
+        sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
         cols = map(lambda a:'"%s" %s' % (a[0], a[1]), target_columns)
         sql += "(%s)" % ','.join(cols)
-        sql += " DISTRIBUTED BY (%s)" % ', '.join(distcols)
+        sql += distcols
         self.log(self.LOG, sql)
 
         if not self.options.D:
@@ -2764,7 +2746,6 @@ class gpload:
                 strE = unicode(str(e), errors = 'ignore')
                 strF = unicode(str(sql), errors = 'ignore')
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
-
         #progress.condition.acquire()
         #progress.number = 1
         #progress.condition.wait()
