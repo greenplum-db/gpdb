@@ -454,3 +454,34 @@ alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true) distributed b
 select *, gp_segment_id from reorg_leaf_1_prt_p0;
 alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true);
 select *, gp_segment_id from reorg_leaf_1_prt_p0;
+
+-- When reorganize=false, we won't reorganize and this shouldn't be affected by the existing reloptions.
+CREATE TABLE public.t_reorganize_false (
+a integer,
+b integer
+) with (appendonly=false, autovacuum_enabled=false) DISTRIBUTED BY (a);
+-- Insert values which will all be on one segment
+INSERT INTO t_reorganize_false VALUES (0, generate_series(1,100));
+SELECT gp_segment_id,count(*)￼ from t_reorganize_false GROUP BY 1;
+-- Change the distribution policy but because REORGANIZE=false, it should NOT be re-distributed 
+ALTER TABLE t_reorganize_false SET WITH (REORGANIZE=false) DISTRIBUTED RANDOMLY;
+SELECT gp_segment_id,count(*)￼ from t_reorganize_false GROUP BY 1;
+DROP TABLE t_reorganize_false;
+-- Same rule should apply to partitioned table too
+CREATE TABLE public.t_reorganize_false (
+a integer,
+b integer
+)
+DISTRIBUTED BY (a) PARTITION BY RANGE(b)
+(
+PARTITION "00" START (0) END (1000) WITH (tablename='t_reorganize_false_0', appendonly='false', autovacuum_enabled=false),
+PARTITION "01" START (1000) END (2000) WITH (tablename='t_reorganize_false_1', appendonly='false', autovacuum_enabled=false),
+DEFAULT PARTITION def WITH (tablename='t_reorganize_false_def', appendonly='false', autovacuum_enabled=false)
+);
+-- Insert values which will all be on one segment
+INSERT INTO t_reorganize_false VALUES (0, generate_series(1,100));
+SELECT gp_segment_id,count(*) from t_reorganize_false GROUP BY 1;
+-- Should NOT be re-distributed
+ALTER TABLE t_reorganize_false SET WITH (REORGANIZE=false) DISTRIBUTED RANDOMLY;
+SELECT gp_segment_id,count(*) from t_reorganize_false GROUP BY 1;
+DROP TABLE t_reorganize_false;

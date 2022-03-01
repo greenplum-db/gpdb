@@ -38,7 +38,7 @@
             <xref href="#topic8339717" type="topic" format="dita"/>
           </li>
         </ul></li>
-      <li id="im16806gpcc" otherprops="pivotal">
+      <li id="im16806gpcc">
         <xref href="#topic999" format="dita"/>
       </li>
       <li id="im16806d">
@@ -236,9 +236,9 @@
         <note>For queries managed by resource groups that are configured to use the
             <codeph>vmtracker</codeph> memory auditor, Greenplum Database supports the automatic
           termination of queries based on the amount of memory the queries are using. See the server
-          configuration parameter <codeph><xref
+          configuration parameter <xref
               href="../ref_guide/config_params/guc-list.xml#runaway_detector_activation_percent"
-              type="section"/></codeph>. </note>
+              type="section"/>. </note>
       </p>
     </body>
   </topic>
@@ -258,13 +258,13 @@
           <codeph>CONCURRENCY</codeph> limit. When a running transaction completes, Greenplum
         Database un-queues and runs the earliest queued transaction if sufficient memory
         resources exist.</p>
-      <p>You can set the server configuration parameter <codeph><xref
+      <p>You can set the server configuration parameter <xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_bypass" type="section"
-            scope="peer">gp_resource_group_bypass</xref></codeph> to bypass a resource group
+            scope="peer">gp_resource_group_bypass</xref> to bypass a resource group
         concurrency limit.</p>
-      <p>You can set the server configuration parameter <codeph><xref
+      <p>You can set the server configuration parameter <xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_queuing_timeout" type="section"
-            scope="peer">gp_resource_group_queuing_timeout</xref></codeph> to specify the
+            scope="peer">gp_resource_group_queuing_timeout</xref> to specify the
          amount of time a transaction remains in the queue before Greenplum Database
          cancels the transaction. The default timeout is zero, Greenplum queues
          transactions indefinitely.</p>
@@ -282,9 +282,9 @@
       <p>You may employ both modes of CPU resource allocation simultaneously in your Greenplum
         Database cluster. You may also change the CPU resource allocation mode for a resource group
         at runtime.</p>
-      <p>The <codeph><xref
+      <p>The <xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit" type="topic"
-          /></codeph> server configuration parameter identifies the maximum percentage of system CPU
+          /> server configuration parameter identifies the maximum percentage of system CPU
         resources to allocate to resource groups on each Greenplum Database segment host. This limit
         governs the maximum CPU usage of all resource groups on a segment host regardless of the CPU
         allocation mode configured for the group. The remaining unreserved CPU resources are used
@@ -397,9 +397,9 @@
       <p>When resource groups are enabled, memory usage is managed at the Greenplum Database node,
         segment, and resource group levels. You can also manage memory at the transaction level with
         a resource group for roles.</p>
-      <p>The <codeph><xref
+      <p>The <xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_memory_limit"
-            type="topic"/></codeph> server configuration parameter identifies the maximum percentage
+            type="topic"/> server configuration parameter identifies the maximum percentage
         of system memory resources to allocate to resource groups on each Greenplum Database segment
         host. The default <codeph>gp_resource_group_memory_limit</codeph> value is .7 (70%).</p>
       <p>The memory resource available on a Greenplum Database node is further divided equally among
@@ -487,9 +487,9 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
             Database can hold their data in allocated memory. When memory-intensive query operators
             such as join and sort process more data than can be held in memory, data is spilled to
             disk.</p>
-          <p>The <codeph><xref
+          <p>The <xref
                 href="../ref_guide/config_params/guc-list.xml#gp_resgroup_memory_policy"
-                type="topic"/></codeph> server configuration parameter governs the memory allocation
+                type="topic"/> server configuration parameter governs the memory allocation
             and distribution algorithm for all query operators. Greenplum Database supports
               <codeph>eager-free</codeph> (the default) and <codeph>auto</codeph> memory policies
             for resource groups. When you specify the <codeph>auto</codeph> policy, Greenplum
@@ -514,8 +514,8 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
             <codeph>MEMORY_SPILL_RATIO</codeph> must also be set to 0.</note>
           <p>You can selectively set the <codeph>MEMORY_SPILL_RATIO</codeph> on a per-query basis
             at the session level with the
-            <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
-                type="topic"/></codeph> server configuration parameter.</p>
+            <xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
+                type="topic"/> server configuration parameter.</p>
           <section id="topic833low" xml:lang="en">
             <title>memory_spill_ratio and Low Memory Queries </title>
             <p>A low <codeph>statement_mem</codeph> setting (for example, in the 10MB range)
@@ -565,8 +565,8 @@ SET statement_mem='10 MB';</codeblock></p>
       </body>
     </topic>
   </topic>
-  <topic id="topic999" otherprops="pivotal" xml:lang="en">
-    <title>Using Greenplum Command Center to Manage Resource Groups</title>
+  <topic id="topic999" xml:lang="en">
+    <title>Using VMware Tanzu Greenplum Command Center to Manage Resource Groups</title>
     <body>
       <p>Using Tanzu Greenplum Command Center, an administrator can create and manage resource
         groups, change roles' resource groups, and create workload management rules. </p>
@@ -694,9 +694,9 @@ ls -l &lt;cgroup_mount_point&gt;/memory/gpdb</codeblock>
     <title id="iz153124">Enabling Resource Groups</title>
     <body>
       <p>When you install Greenplum Database, resource queues are enabled by default. To use
-        resource groups instead of resource queues, you must set the <codeph><xref
+        resource groups instead of resource queues, you must set the <xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_manager" type="topic"
-          /></codeph> server configuration parameter.</p>
+          /> server configuration parameter.</p>
       <ol id="ol_ec5_4dy_wq">
         <li>Set the <codeph>gp_resource_manager</codeph> server configuration parameter to the value
             <codeph>"group"</codeph>:
@@ -785,9 +785,9 @@ gpstart
     <body>
       <p><i>When you create a resource group for a role</i>, you provide a name and a CPU resource
         allocation mode. You can optionally provide a concurrent transaction limit and 
-        memory limit, shared quota, and spill ratio values. Use the <codeph><xref
+        memory limit, shared quota, and spill ratio values. Use the <xref
             href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml#topic1" type="topic"
-            format="dita"/></codeph> command to create a new resource group. </p>
+            format="dita"/> command to create a new resource group. </p>
       <p id="iz152723">When you create a resource group for a role, you must provide a
          <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> limit value. These
          limits identify the percentage of Greenplum Database CPU resources to allocate
@@ -799,7 +799,7 @@ gpstart
         a resource group named <i>rgroup1</i> with a CPU limit of 20, a memory limit of 25,
         and a memory spill ratio of 20:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup1</i> WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25, MEMORY_SPILL_RATIO=20);
+        <codeblock>=# CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25, MEMORY_SPILL_RATIO=20);
 </codeblock>
       </p>
       <p>The CPU limit of 20 is shared by every role to which <codeph>rgroup1</codeph> is assigned.
@@ -813,30 +813,30 @@ gpstart
         (0). For example, to create a resource group named <i>rgroup_extcomp</i> for which you
         reserve CPU core 1 and assign a memory limit of 15:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup_extcomp</i> WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+        <codeblock>=# CREATE RESOURCE GROUP rgroup_extcomp WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
      CPUSET='1', MEMORY_LIMIT=15);
 </codeblock>
       </p>
-      <p>The <codeph><xref href="../ref_guide/sql_commands/ALTER_RESOURCE_GROUP.xml#topic1"
-            type="topic" format="dita"/></codeph> command updates the limits of a resource group. To
+      <p>The <xref href="../ref_guide/sql_commands/ALTER_RESOURCE_GROUP.xml#topic1"
+            type="topic" format="dita"/> command updates the limits of a resource group. To
         change the limits of a resource group, specify the new values that you want for the group.
         For example:</p>
       <p>
-        <codeblock>=# ALTER RESOURCE GROUP <i>rg_role_light</i> SET CONCURRENCY 7;
-=# ALTER RESOURCE GROUP <i>exec</i> SET MEMORY_SPILL_RATIO 25;
-=# ALTER RESOURCE GROUP <i>rgroup1</i> SET CPUSET '2,4';
+        <codeblock>=# ALTER RESOURCE GROUP rg_role_light SET CONCURRENCY 7;
+=# ALTER RESOURCE GROUP exec SET MEMORY_SPILL_RATIO 25;
+=# ALTER RESOURCE GROUP rgroup1 SET CPUSET '2,4';
 </codeblock>
       </p>
       <note>You cannot set or alter the <codeph>CONCURRENCY</codeph> value for the
           <codeph>admin_group</codeph> to zero (0).</note>
-      <p>The <codeph><xref href="../ref_guide/sql_commands/DROP_RESOURCE_GROUP.xml#topic1"
-            type="topic" format="dita"/></codeph> command drops a resource group. To drop a resource
+      <p>The <xref href="../ref_guide/sql_commands/DROP_RESOURCE_GROUP.xml#topic1"
+            type="topic" format="dita"/> command drops a resource group. To drop a resource
         group for a role, the group cannot be assigned to any role, nor can there be any
         transactions active or waiting in the resource group. Dropping a resource group for an
         external component in which there are running instances terminates the running instances.</p>
       <p>To drop a resource group:</p>
       <p>
-        <codeblock>=# DROP RESOURCE GROUP <i>exec</i>; </codeblock>
+        <codeblock>=# DROP RESOURCE GROUP exec; </codeblock>
       </p>
     </body>
   </topic>
@@ -844,9 +844,9 @@ gpstart
     <title>Configuring Automatic Query Termination Based on Memory Usage</title>
     <body>
       <p>When resource groups have a global shared memory pool, the server configuration parameter
-            <codeph><xref
+            <xref
             href="../ref_guide/config_params/guc-list.xml#runaway_detector_activation_percent"
-            type="section"/></codeph> sets the percent of utilized global shared memory that
+            type="section"/> sets the percent of utilized global shared memory that
         triggers the termination of queries that are managed by resource groups that are configured
         to use the <codeph>vmtracker</codeph> memory auditor, such as <codeph>admin_group</codeph>
         and <codeph>default_group</codeph>. </p>
@@ -865,18 +865,18 @@ gpstart
           <codeph>MEMORY_AUDITOR</codeph>
         <codeph>vmtracker</codeph>, the group is available for assignment to one or more roles
         (users). You assign a resource group to a database role using the <codeph>RESOURCE
-          GROUP</codeph> clause of the <codeph><xref
+          GROUP</codeph> clause of the <xref
             href="../ref_guide/sql_commands/CREATE_ROLE.xml#topic1" type="topic" format="dita"
-          /></codeph> or <codeph><xref href="../ref_guide/sql_commands/ALTER_ROLE.xml#topic1"
-            type="topic" format="dita"/></codeph> commands. If you do not specify a resource group
+          /> or <xref href="../ref_guide/sql_commands/ALTER_ROLE.xml#topic1"
+            type="topic" format="dita"/> commands. If you do not specify a resource group
         for a role, the role is assigned the default group for the role's capability.
           <codeph>SUPERUSER</codeph> roles are assigned the <codeph>admin_group</codeph>, non-admin
         roles are assigned the group named <codeph>default_group</codeph>.</p>
       <p>Use the <codeph>ALTER ROLE</codeph> or <codeph>CREATE ROLE</codeph> commands to assign a
         resource group to a role. For example:</p>
       <p>
-        <codeblock>=# ALTER ROLE <i>bill</i> RESOURCE GROUP <i>rg_light</i>;
-=# CREATE ROLE <i>mary</i> RESOURCE GROUP <i>exec</i>;
+        <codeblock>=# ALTER ROLE bill RESOURCE GROUP rg_light;
+=# CREATE ROLE mary RESOURCE GROUP exec;
 </codeblock>
       </p>
       <p>You can assign a resource group to one or more roles. If you have defined a role hierarchy,
@@ -888,7 +888,7 @@ gpstart
         default group, change the role's group name assignment to <codeph>NONE</codeph>. For
         example:</p>
       <p>
-        <codeblock>=# ALTER ROLE <i>mary</i> RESOURCE GROUP NONE;
+        <codeblock>=# ALTER ROLE mary RESOURCE GROUP NONE;
 </codeblock>
       </p>
     </body>
@@ -919,8 +919,8 @@ gpstart
     <topic id="topic221" xml:lang="en">
       <title id="iz152239">Viewing Resource Group Limits</title>
       <body>
-        <p>The <codeph><xref href="../ref_guide/system_catalogs/gp_resgroup_config.xml" type="topic"
-              format="dita"/></codeph>
+        <p>The <xref href="../ref_guide/system_catalogs/gp_resgroup_config.xml" type="topic"
+              format="dita"/>
           <codeph>gp_toolkit</codeph> system view displays the current limits for a
           resource group. To view the limits of all resource groups:</p>
         <p>
@@ -932,8 +932,8 @@ gpstart
     <topic id="topic23" xml:lang="en">
       <title id="iz152239">Viewing Resource Group Query Status and CPU/Memory Usage</title>
       <body>
-        <p>The <codeph><xref href="../ref_guide/gp_toolkit.xml#topic31x" type="topic" format="dita"
-            /></codeph>
+        <p>The <xref href="../ref_guide/gp_toolkit.xml#topic31x" type="topic" format="dita"
+            />
           <codeph>gp_toolkit</codeph> system view enables you to view the status and activity of a
           resource group. The view displays the number of running and queued transactions. It also
           displays the real-time CPU and memory usage of the resource group. To view this
@@ -946,8 +946,8 @@ gpstart
       <topic id="topic23a" xml:lang="en">
         <title id="iz152239">Viewing Resource Group CPU/Memory Usage Per Host</title>
         <body>
-          <p>The <codeph><xref href="../ref_guide/gp_toolkit.xml#perhost" type="topic" format="dita"
-            /></codeph>
+          <p>The <xref href="../ref_guide/gp_toolkit.xml#perhost" type="topic" format="dita"
+            />
           <codeph>gp_toolkit</codeph> system view enables you to view the real-time CPU
             and memory usage of a resource group on a per-host basis. To view this
             information:</p>
@@ -960,8 +960,8 @@ gpstart
       <topic id="topic23b" xml:lang="en">
         <title id="iz152239">Viewing Resource Group CPU/Memory Usage Per Segment</title>
         <body>
-          <p>The <codeph><xref href="../ref_guide/gp_toolkit.xml#perseg" type="topic" format="dita"
-            /></codeph>
+          <p>The <xref href="../ref_guide/gp_toolkit.xml#perseg" type="topic" format="dita"
+            />
           <codeph>gp_toolkit</codeph> system view enables you to view the real-time CPU
             and memory usage of a resource group on a per-segment, per-host basis. To
             view this information:</p>
@@ -976,10 +976,10 @@ gpstart
       <title id="iz152239">Viewing the Resource Group Assigned to a Role</title>
       <body>
         <p>To view the resource group-to-role assignments, perform the following query on the
-              <codeph><xref href="../ref_guide/system_catalogs/pg_roles.xml" type="topic"
-              format="dita"/></codeph> and <codeph><xref
+              <xref href="../ref_guide/system_catalogs/pg_roles.xml" type="topic"
+              format="dita"/> and <xref
               href="../ref_guide/system_catalogs/pg_resgroup.xml" type="topic" format="dita"
-            /></codeph> system catalog tables:</p>
+            /> system catalog tables:</p>
         <p>
           <codeblock>=# SELECT rolname, rsgname FROM pg_roles, pg_resgroup
      WHERE pg_roles.rolresgroup=pg_resgroup.oid;
@@ -991,9 +991,9 @@ gpstart
       <title id="iz15223925">Viewing a Resource Group's Running and Pending Queries</title>
       <body>
         <p>To view a resource group's running queries, pending queries, and how long the pending
-          queries have been queued, examine the <codeph><xref
+          queries have been queued, examine the <xref
               href="../ref_guide/system_catalogs/pg_stat_activity.xml" type="topic" format="dita"
-            /></codeph> system catalog table:</p>
+            /> system catalog table:</p>
         <p>
           <codeblock>=# SELECT query, waiting, rsgname, rsgqueueduration 
      FROM pg_stat_activity;
@@ -1021,9 +1021,9 @@ gpstart
           resource group transaction slots that are needed by other users.</p>
         <p>By default, transactions can remain queued in a resource group indefinitely.
           If you want Greenplum Database to cancel a queued transaction after a
-          specific amount of time, set the server configuration parameter <codeph><xref
+          specific amount of time, set the server configuration parameter <xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_queuing_timeout" type="section"
-            scope="peer">gp_resource_group_queuing_timeout</xref></codeph>. When this
+            scope="peer">gp_resource_group_queuing_timeout</xref>. When this
           parameter is set to a value (milliseconds) greater than 0, Greenplum cancels
           any queued transaction when it has waited longer than the configured timeout.</p>
         <p>To manually cancel a running or queued transaction, you must first determine the process id (pid)

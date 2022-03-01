@@ -114,9 +114,8 @@ a.query
                     the current memory utilization and idle time for sessions that are running
                     queries on Greenplum Database. For information about the view, see <xref
                         href="managing/monitor.xml#topic_slt_ddv_1q"/>.</p>
-                <p otherprops="pivotal">The optional Greenplum Command Center web-based user
-                    interface graphically displays query and system utilization metrics.
-                        See the <xref
+                <p>The optional VMware Tanzu Greenplum Command Center web-based user interface
+                    graphically displays query and system utilization metrics. See the <xref
                         href="https://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum
                         Command Center Documentation</xref> web site for procedures to enable
                     Greenplum Command Center.</p>
@@ -150,9 +149,9 @@ a.query
 </codeblock>
             </p>
             <p>Log lines have the format of:</p>
-            <codeblock><i>timestamp</i> | <i>user</i> | <i>database</i> | <i>statement_id</i> | <i>con#</i><i>cmd#</i> 
-|:-<i>LOG_LEVEL</i>: <i>log_message
-</i></codeblock>
+            <codeblock>&lt;timestamp> | &lt;user> | &lt;database> | &lt;statement_id> | &lt;con#>&lt;cmd#> 
+|:-&lt;LOG_LEVEL>: &lt;log_message>
+</codeblock>
             <p>You may want to focus your search for <codeph>WARNING</codeph>,
                     <codeph>ERROR</codeph>, <codeph>FATAL</codeph> or <codeph>PANIC</codeph> log
                 level messages. You can use the Greenplum utility <codeph>gplogfilter</codeph> to
@@ -177,13 +176,13 @@ con6 /gpdata/*/log/gpdb*.csv' &gt; seglog.out
 </codeblock>
             </p>
         </body>
-        <topic id="topic9" xml:lang="en" otherprops="pivotal">
+        <topic id="topic9" xml:lang="en">
             <title id="jc155267">Gathering Information for VMware Customer Support</title>
             <body>
-                <p>The Greenplum Magic Tool (GPMT) can run diagnostics and collect
-                    information from a Greenplum Database system. You can then send the information
-                    to VMware Customer Support to aid in the diagnosis of Greenplum Database errors
-                    or system failures.</p>
+                <p>The Greenplum Magic Tool (GPMT) can run diagnostics and collect information from
+                    a Greenplum Database system. You can then send the information to VMware
+                    Customer Support to aid in the diagnosis of Greenplum Database errors or system
+                    failures.</p>
                 <p>The <codeph>gpmt</codeph> utility command is available in the
                         <codeph>bin</codeph> directory of your Greenplum Database installation. See
                         <xref href="../utility_guide/ref/gpmt.xml"/> for usage information.</p>

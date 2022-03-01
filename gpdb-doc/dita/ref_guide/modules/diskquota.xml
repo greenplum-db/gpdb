@@ -119,7 +119,7 @@ $ gpstop -ar</codeblock></li>
         <codeblock>$ gpconfig -c diskquota.naptime -v 10
 $ gpstop -ar</codeblock></section>
       <section>
-        <title>Configuring diskquota Shared Memory</title>
+        <title>About diskquota Shared Memory Usage</title>
         <p>The <codeph>diskquota</codeph> module uses shared memory to save the denylist and to save
           the active table list.</p>
         <p>The denylist shared memory can hold up to 1MiB of database objects that exceed the quota
@@ -132,19 +132,19 @@ $ gpstop -ar</codeblock></section>
           The hook functions store the identity of the file in shared memory so that its file size
           can be recalculated the next time the table size data is refreshed. </p>
         <p>If the shared memory for active tables fills, <codeph>diskquota</codeph> may fail to
-          detect a change in disk usage. The amount of active table shared memory can be adjusted by
-          setting the <codeph>diskquota.max_active_tables</codeph> server configuration parameter.
-          This example changes the active table shared memory to
-          2MiB:<codeblock>$ gpconfig -c diskquota.max_active_tables -v '2MiB'</codeblock></p>
-        <p>Shared memory is allocated when Greenplum Database starts up, so a server restart is
-          required after you change the value of the <codeph>diskquota.max_active_tables</codeph>
-          parameter.</p>
+          detect a change in disk usage.</p>
       </section>
     </body>
   </topic>
   <topic id="topic_sfb_gb1_b3b">
     <title>Notes</title>
     <body>
+      <p>The <codeph>diskquota.max_active_tables</codeph> server configuration parameter
+        identifies the maximum number of relations (including tables, indexes, etc.) that
+        the <codeph>diskquota</codeph> module can monitor at the same time. The default
+        value is <codeph>1 * 1024 * 1024</codeph>. This value should be sufficient for most
+        Greenplum Database installations. Should you change the value of this
+        configuration parameter, you must restart the Greenplum Database server.</p>
       <p>The <codeph>diskquota</codeph> module can be enabled in up to ten databases. One diskquota
         worker process is created on the Greenplum Database master host for each diskquota-enabled
         database.</p>

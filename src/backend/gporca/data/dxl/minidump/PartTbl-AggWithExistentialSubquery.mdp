@@ -483,7 +483,8 @@
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="23" Alias="x">
-            <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:If TypeMdid="0.1700.1.0">
                 <dxl:SubqueryExists>
                   <dxl:LogicalProject>
@@ -519,6 +520,10 @@
                 <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1700.1.0"/>
                 <dxl:ConstValue TypeMdid="0.1700.1.0" IsNull="false" Value="AAAACAAAAAA=" DoubleValue="0.000000"/>
               </dxl:If>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -549,8 +554,13 @@
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="22" Alias="x">
-            <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final">
+            <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="26" ColName="ColRef_0026" TypeMdid="0.1700.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -573,7 +583,8 @@
             <dxl:GroupingColumns/>
             <dxl:ProjList>
               <dxl:ProjElem ColId="26" Alias="ColRef_0026">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:If TypeMdid="0.1700.1.0">
                     <dxl:If TypeMdid="0.16.1.0">
                       <dxl:Not>
@@ -587,6 +598,10 @@
                     <dxl:Ident ColId="1" ColName="d" TypeMdid="0.1700.1.0"/>
                     <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACAAAAAA=" DoubleValue="0.000000"/>
                   </dxl:If>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>

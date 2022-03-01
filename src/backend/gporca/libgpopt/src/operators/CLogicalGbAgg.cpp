@@ -590,7 +590,10 @@ CLogicalGbAgg::PxfsCandidates(CMemoryPool *mp) const
 	(void) xform_set->ExchangeSet(CXform::ExfPushGbBelowJoin);
 	(void) xform_set->ExchangeSet(CXform::ExfPushGbBelowUnion);
 	(void) xform_set->ExchangeSet(CXform::ExfPushGbBelowUnionAll);
-	(void) xform_set->ExchangeSet(CXform::ExfSplitGbAgg);
+	if (FGlobal())
+	{
+		(void) xform_set->ExchangeSet(CXform::ExfSplitGbAgg);
+	}
 	(void) xform_set->ExchangeSet(CXform::ExfSplitDQA);
 	(void) xform_set->ExchangeSet(CXform::ExfGbAgg2Apply);
 	(void) xform_set->ExchangeSet(CXform::ExfGbAgg2HashAgg);

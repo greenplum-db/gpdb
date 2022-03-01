@@ -162,7 +162,7 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 										attr,
 										RelationGetRelationName(rel),
 										/* title */ titleBuf.data,
-										RelationNeedsWAL(rel));
+										XLogIsNeeded() && RelationNeedsWAL(rel));
 
 	}
 }
@@ -496,13 +496,15 @@ aocs_beginscan(Relation relation,
 	RelationIncrementReferenceCount(relation);
 
 	/*
-	 * the append-only meta data should never be fetched with
+	 * The append-only meta data should never be fetched with
 	 * SnapshotAny as bogus results are returned.
+	 * We use SnapshotSelf for metadata, as regular MVCC snapshot can hide newly
+	 * globally inserted tuples from global index build process.
 	 */
 	if (snapshot != SnapshotAny)
 		aocsMetaDataSnapshot = snapshot;
 	else
-		aocsMetaDataSnapshot = GetTransactionSnapshot();
+		aocsMetaDataSnapshot = SnapshotSelf;
 
 	seginfo = GetAllAOCSFileSegInfo(relation, aocsMetaDataSnapshot, &total_seg);
 	return aocs_beginscan_internal(relation,
@@ -1992,7 +1994,7 @@ aocs_addcol_init(Relation rel,
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, 0, blksz /* safeFSWriteSize */ ,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
-											   RelationNeedsWAL(rel));
+											   XLogIsNeeded() && RelationNeedsWAL(rel));
 	}
 	return desc;
 }

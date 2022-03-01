@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+    EXPLAIN SELECT 1 = ANY(SELECT 3 WHERE false UNION SELECT 2);
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
@@ -198,13 +202,23 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="7" Alias="ColRef_0007">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal">
-                <dxl:Ident ColId="6" ColName="ColRef_0006" TypeMdid="0.16.1.0"/>
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="16">
+                <dxl:ValuesList ParamType="aggargs">
+                  <dxl:Ident ColId="6" ColName="ColRef_0006" TypeMdid="0.16.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="9" Alias="ColRef_0009">
-              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
-                <dxl:Ident ColId="8" ColName="ColRef_0008" TypeMdid="0.23.1.0"/>
+              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="23">
+                <dxl:ValuesList ParamType="aggargs">
+                  <dxl:Ident ColId="8" ColName="ColRef_0008" TypeMdid="0.23.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="0" Alias="">

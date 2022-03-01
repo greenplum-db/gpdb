@@ -240,7 +240,12 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="14" Alias="count">
-            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs"/>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
+            </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalProject>
@@ -301,8 +306,13 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="13" Alias="count">
-            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final">
+            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="14" ColName="ColRef_0014" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -325,7 +335,12 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
             <dxl:GroupingColumns/>
             <dxl:ProjList>
               <dxl:ProjElem ColId="14" Alias="ColRef_0014">
-                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial"/>
+                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs"/>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
+                </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>

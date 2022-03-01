@@ -340,9 +340,10 @@ zlib_decompress(PG_FUNCTION_ARGS)
 
 	Assert(src_sz > 0 && dst_sz > 0);
 
-
 	last_error = state->decompress_fn(dst, &amount_available_used,
 									  (const Bytef *) src, src_sz);
+
+	SIMPLE_FAULT_INJECTOR("zlib_decompress_after_decompress_fn");
 
 	*dst_used = amount_available_used;
 

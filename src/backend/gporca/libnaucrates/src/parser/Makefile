@@ -164,6 +164,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerScalarSwitch.o \
               CParseHandlerScalarSwitchCase.o \
               CParseHandlerScalarValuesList.o \
+              CParseHandlerScalarSortGroupClause.o \
               CParseHandlerScalarWindowFrameEdge.o \
               CParseHandlerScalarWindowRef.o \
               CParseHandlerSearchStage.o \

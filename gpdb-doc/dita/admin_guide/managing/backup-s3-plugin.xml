@@ -4,9 +4,9 @@
   <title>Using the S3 Storage Plugin with gpbackup and gprestore</title>
   <body>
     <p>The S3 storage plugin application lets you use an Amazon Simple Storage Service (Amazon S3)
-      location to store and retrieve backups when you run <codeph><xref
-          href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref></codeph> and <codeph><xref
-          href="../../utility_guide/ref/gprestore.xml">gprestore</xref></codeph>. Amazon S3 provides
+      location to store and retrieve backups when you run <xref
+          href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref> and <xref
+          href="../../utility_guide/ref/gprestore.xml">gprestore</xref>. Amazon S3 provides
       secure, durable, highly-scalable object storage. The S3 plugin streams the backup data from a
       named pipe (FIFO) directly to the S3 bucket without generating local disk I/O.</p>
     <p>The S3 storage plugin can also connect to an Amazon S3 compatible service such as <xref
@@ -34,14 +34,14 @@
     <section>
       <title>Installing the S3 Storage Plugin</title>
     </section>
-    <p><ph otherprops="pivotal">The S3 storage plugin is included with the Tanzu Greenplum Backup
-        and Restore release. Use the latest S3 plugin release with the latest Tanzu Backup and
-        Restore, to avoid any incompatibilities. </ph></p>
-    <p><ph otherprops="oss-only">Open Source Greenplum Backup and Restore customers may get the
-        utility from <xref href="https://github.com/greenplum-db/gpbackup-s3-plugin" format="html"
-          scope="external">gpbackup-s3-plugin</xref>. Build the utility following the steps in <xref
-          href=" https://github.com/greenplum-db/gpbackup-s3-plugin#building-and-installing-binaries"
-          format="html" scope="external">Building and Installing the S3 plugin</xref>.</ph></p>
+    <p>The S3 storage plugin is included with the Tanzu Greenplum Backup and Restore release. Use
+      the latest S3 plugin release with the latest Tanzu Backup and Restore, to avoid any
+      incompatibilities. </p>
+    <p>Open Source Greenplum Backup and Restore customers may get the utility from <xref
+        href="https://github.com/greenplum-db/gpbackup-s3-plugin" format="html" scope="external"
+        >gpbackup-s3-plugin</xref>. Build the utility following the steps in <xref
+        href=" https://github.com/greenplum-db/gpbackup-s3-plugin#building-and-installing-binaries"
+        format="html" scope="external">Building and Installing the S3 plugin</xref>.</p>
     <p>The S3 storage plugin application must be in the same location on every Greenplum Database
       host, for example <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The S3 storage plugin
       requires a configuration file, installed only on the master host.</p>
@@ -57,7 +57,7 @@
         <codeph>--plugin-config</codeph> option when restoring with <codeph>gprestore</codeph>.
         <codeblock>gprestore --timestamp &lt;YYYYMMDDHHMMSS> --plugin-config /&lt;path-to-config-file>/&lt;s3-config-file>.yaml</codeblock><p>The
         S3 plugin stores the backup files in the S3 bucket, in a location similar to:
-        </p><codeblock>&lt;<varname>folder</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock><p>Where
+        </p><codeblock>&lt;folder>/backups/&lt;datestamp>/&lt;timestamp></codeblock><p>Where
           <varname>folder</varname> is the location you specified in the S3 configuration file, and
           <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date and time
         stamps. </p><p>The S3 storage plugin logs are in
@@ -77,7 +77,7 @@ options:
         with absolute path
         <codeph>/home/gpadmin/s3-test</codeph>.<codeblock>gpbackup --dbname demo --plugin-config /home/gpadmin/s3-test/s3-test-config.yaml</codeblock></p><p>The
         S3 storage plugin writes the backup files to this S3 location in the AWS region us-west-2. </p><p>
-        <codeblock>gpdb-backup/test/backup3/backups/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+        <codeblock>gpdb-backup/test/backup3/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeblock>
       </p></section>
     <p>This example restores a specific backup set defined by the <codeph>20201206233124</codeph>
       timestamp, using the S3 plugin configuration file. </p>
@@ -95,25 +95,25 @@ options:
         the relationships of the sections to one another. The use of white space is significant.
         White space should not be used simply for formatting purposes, and tabs should not be used
         at all.</p><p>This is the structure of a S3 storage plugin configuration file.</p>
-      <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_s3_plugin</varname>>
-<xref href="#topic_ur2_fsn_ndb/s3-options" format="dita">options</xref>: 
-  <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;<varname>aws-region</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-endpoint" format="dita">endpoint</xref>: &lt;<varname>S3-endpoint</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;<varname>aws-user-id</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;<varname>aws-user-id-key</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;<varname>s3-bucket</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-encryption" format="dita">encryption</xref>: [on|off]
-  <xref href="#topic_ur2_fsn_ndb/concurrent_requests" format="dita">backup_max_concurrent_requests</xref>: [int]
+      <codeblock>executablepath: &lt;absolute-path-to-gpbackup_s3_plugin>
+options: 
+  region: &lt;aws-region>
+  endpoint: &lt;S3-endpoint>
+  aws_access_key_id: &lt;aws-user-id>
+  aws_secret_access_key: &lt;aws-user-id-key>
+  bucket: &lt;s3-bucket>
+  folder: &lt;s3-location>
+  encryption: [on|off]
+  backup_max_concurrent_requests: [int]
     # default value is 6
-  <xref href="#topic_ur2_fsn_ndb/multipart_chunksize" format="dita">backup_multipart_chunksize</xref>: [string] 
+  backup_multipart_chunksize: [string] 
     # default value is 500MB
-  <xref href="#topic_ur2_fsn_ndb/concurrent_requests" format="dita">restore_max_concurrent_requests</xref>: [int]
+  restore_max_concurrent_requests: [int]
     # default value is 6
-  <xref href="#topic_ur2_fsn_ndb/multipart_chunksize" format="dita">restore_multipart_chunksize</xref>: [string] 
+  restore_multipart_chunksize: [string] 
     # default value is 500MB
-  <xref href="#topic_ur2_fsn_ndb/http-proxy" format="dita">http_proxy</xref>:
-        <varname>http://&lt;your_username>:&lt;your_secure_password>@proxy.example.com:proxy_port</varname></codeblock>
+  http_proxy:
+        http://&lt;your_username>:&lt;your_secure_password>@proxy.example.com:proxy_port</codeblock>
       <note>The S3 storage plugin does not support filtered restore operations and the associated
           <codeph>restore_subset</codeph> plugin configuration property.</note>
       <parml id="s3-exe-path">
@@ -130,7 +130,9 @@ options:
         <plentry id="s3-region">
           <pt>region</pt>
           <pd>Required for AWS S3. If connecting to an S3 compatible service, this option is not
-            required.</pd>
+            required, <b>with one exception</b>: If you are using Minio object storage and have
+            specified a value for the <codeph>Region</codeph> setting on the Minio server side you
+            must set this <codeph>region</codeph> option to the same value.</pd>
         </plentry>
         <plentry id="s3-endpoint">
           <pt>endpoint</pt>
@@ -145,8 +147,8 @@ options:
           <pt>aws_access_key_id</pt>
           <pd>Optional. The S3 ID to access the S3 bucket location that stores backup files. </pd>
           <pd>If this parameter is not specified, S3 authentication uses information from the
-            session environment. See <codeph><xref href="#topic_ur2_fsn_ndb/s3-key" format="dita"
-                >aws_secret_access_key</xref></codeph></pd>
+            session environment. See <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita"
+                >aws_secret_access_key</xref></pd>
         </plentry>
         <plentry id="s3-key">
           <pt>aws_secret_access_key</pt>
@@ -194,9 +196,9 @@ options:
             the total S3 concurrent upload threads during a single backup session would reach 720
             (120 x 6). </pd>
           <pd>
-            <note>If the upload artifact is 10MB (see <codeph><xref
+            <note>If the upload artifact is 10MB (see <xref
                   href="#topic_ur2_fsn_ndb/multipart_chunksize" format="dita"
-                  >backup_multipart_chunksize</xref></codeph>), the
+                  >backup_multipart_chunksize</xref>), the
                 <codeph>backup_max_concurrent_requests</codeph> parameter would not take effect
               since the file is smaller than the chunk size.</note>
           </pd>

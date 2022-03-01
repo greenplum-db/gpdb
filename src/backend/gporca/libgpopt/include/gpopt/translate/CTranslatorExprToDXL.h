@@ -436,6 +436,8 @@ private:
 	// translate a scalar constant
 	CDXLNode *PdxlnScConst(CExpression *pexprScConst);
 
+	CDXLNode *PdxlnScSortGroupClause(CExpression *pexprScSortGroupClause);
+
 	// translate a scalar coalesce
 	CDXLNode *PdxlnScCoalesce(CExpression *pexprScCoalesce);
 
@@ -480,6 +482,8 @@ private:
 
 	// translate a scalar array coerce expr with element coerce function
 	CDXLNode *PdxlnScArrayCoerceExpr(CExpression *pexprScArrayCoerceExpr);
+
+	CDXLNode *PdxlnValuesList(CExpression *pexpr);
 
 	// translate an array
 	CDXLNode *PdxlnArray(CExpression *pexpr);
@@ -621,7 +625,10 @@ private:
 	CDXLNode *PdxlnProjectBoolConst(CDXLNode *dxlnode, BOOL value);
 
 	// helper to build a Result expression with project list restricted to required column
-	CDXLNode *PdxlnRestrictResult(CDXLNode *dxlnode, CColRef *colref);
+	CDXLNode *PdxlnRestrictResult(CDXLNode *dxlnode, const CColRef *colref);
+
+	// helper to build a Result expression with project list restricted to required columns
+	CDXLNode *PdxlnRestrictResult(CDXLNode *dxlnode, const CColRefSet *colrefs);
 
 	//	helper to build subplans from correlated LOJ
 	void BuildSubplansForCorrelatedLOJ(

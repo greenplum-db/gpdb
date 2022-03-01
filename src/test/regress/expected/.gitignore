@@ -56,3 +56,5 @@
 /trigger_sets_oid.out
 /workfile_mgr_test.out
 /external_table_persistent_error_log.out
+/external_table_union_all.out
+/external_table_union_all_optimizer.out

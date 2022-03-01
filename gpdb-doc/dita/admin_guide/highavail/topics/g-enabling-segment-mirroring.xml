@@ -15,13 +15,13 @@
       <ol>
         <li id="ki156981">Allocate the data storage area for mirror data on all segment hosts. The
           data storage area must be different from your primary segments' file system location.</li>
-        <li id="ki156983">Use <codeph><xref
+        <li id="ki156983">Use <xref
               href="../../../utility_guide/ref/gpssh-exkeys.xml" type="topic"
-              format="dita"/></codeph> to ensure that the segment hosts can SSH and SCP to each
+              format="dita"/> to ensure that the segment hosts can SSH and SCP to each
           other without a password prompt.</li>
-        <li id="ki156993">Run the <codeph><xref
+        <li id="ki156993">Run the <xref
               href="../../../utility_guide/ref/gpaddmirrors.xml" type="topic"
-              format="dita"/></codeph> utility to enable mirroring in your Greenplum Database
+              format="dita"/> utility to enable mirroring in your Greenplum Database
           system. For example, to add 10000 to your primary segment port numbers to calculate the
           mirror segment port numbers:<codeblock>$ gpaddmirrors -p 10000</codeblock> Where
             <codeph>-p</codeph> specifies the number to add to your primary segment port numbers.
@@ -40,10 +40,9 @@
           SCP to each other without a password prompt.</li>
         <li id="ki155422">Create a configuration file that lists the host names, ports, and data
           directories on which to create mirrors. To create a sample configuration file to use as a
-          starting point,
-            run:<codeblock>$ gpaddmirrors -o <i>filename</i>          </codeblock><p>The format of
-            the mirror configuration file is:
-            </p><codeblock><b><varname>row_id</varname></b>=<b><varname>contentID</varname></b>|<b><varname>address</varname></b>|<b><varname>port</varname></b>|<b><varname>data_dir</varname></b></codeblock><p>Where
+          starting point, run:<codeblock>$ gpaddmirrors -o &lt;filename>          </codeblock><p>The
+            format of the mirror configuration file is:
+            </p><codeblock>&lt;row_id>=&lt;contentID>|&lt;address>|&lt;port>|&lt;data_dir></codeblock><p>Where
               <codeph>row_id</codeph> is the row in the file, <varname>contentID</varname> is the
             segment instance content ID, <varname>address</varname> is the host name or IP address
             of the segment host, <varname>port</varname> is the communication port, and
@@ -56,7 +55,7 @@
 3=1|sdw2-2|41001|/data/mirror2/gp1</codeblock></li>
         <li id="ki155430">Run the <codeph>gpaddmirrors</codeph> utility to enable mirroring in your
           Greenplum Database
-            system:<codeblock>$ gpaddmirrors -i <i>mirror_config_file</i></codeblock><p>The
+            system:<codeblock>$ gpaddmirrors -i &lt;mirror_config_file></codeblock><p>The
               <codeph>-i</codeph> option specifies the mirror configuration file you created.</p>
         </li>
       </ol>

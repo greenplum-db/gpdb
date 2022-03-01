@@ -24,6 +24,7 @@
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDScalarOpGPDB.h"
@@ -163,7 +164,7 @@ CXformEagerAgg::CanPushAggBelowJoin(CExpression *scalar_agg_func_expr)
 {
 	CScalarAggFunc *scalar_agg_func =
 		CScalarAggFunc::PopConvert(scalar_agg_func_expr->Pop());
-	if (scalar_agg_func_expr->Arity() != 1)
+	if ((*scalar_agg_func_expr)[0]->Arity() != 1)
 	{
 		/* currently only supporting single-input aggregates */
 		return false;
@@ -179,7 +180,7 @@ CXformEagerAgg::CanPushAggBelowJoin(CExpression *scalar_agg_func_expr)
 	CMDAccessor *md_accessor = poctxt->Pmda();
 	IMDId *agg_mdid =
 		scalar_agg_func->MDId();  // oid of the original aggregate function
-	CExpression *agg_child_expr = (*scalar_agg_func_expr)[0];
+	CExpression *agg_child_expr = (*(*scalar_agg_func_expr)[0])[0];
 	IMDId *agg_child_mdid =
 		CScalar::PopConvert(agg_child_expr->Pop())->MdidType();
 	const IMDType *agg_child_type = md_accessor->RetrieveType(agg_child_mdid);
@@ -318,7 +319,8 @@ CXformEagerAgg::PopulateLowerProjectElement(
 
 	agg_mdid->AddRef();
 	CScalarAggFunc *lower_agg_func = CUtils::PopAggFunc(
-		mp, agg_mdid, agg_name, is_distinct, EaggfuncstageLocal, true);
+		mp, agg_mdid, agg_name, is_distinct, EaggfuncstageLocal, true, nullptr,
+		EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp));
 	// add the arguments for the lower aggregate function, which is
 	// going to be the same as the original aggregate function
 	agg_arg_array->AddRef();
@@ -354,13 +356,30 @@ CXformEagerAgg::PopulateUpperProjectElement(
 	// create a new operator
 	agg_mdid->AddRef();
 	CScalarAggFunc *upper_agg_func = CUtils::PopAggFunc(
-		mp, agg_mdid, agg_name, is_distinct, EaggfuncstageGlobal, true);
+		mp, agg_mdid, agg_name, is_distinct, EaggfuncstageGlobal, true, nullptr,
+		EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp));
 
 	// populate the argument list for the upper aggregate function
 	CExpressionArray *upper_agg_arg_array = GPOS_NEW(mp) CExpressionArray(mp);
-	upper_agg_arg_array->Append(CUtils::PexprScalarIdent(mp, lower_colref));
+
+	CExpressionArray *args = GPOS_NEW(mp) CExpressionArray(mp);
+	args->Append(CUtils::PexprScalarIdent(mp, lower_colref));
+
+	upper_agg_arg_array->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp), args));
+	upper_agg_arg_array->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+								 GPOS_NEW(mp) CExpressionArray(mp)));
+	upper_agg_arg_array->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+								 GPOS_NEW(mp) CExpressionArray(mp)));
+	upper_agg_arg_array->Append(
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
+								 GPOS_NEW(mp) CExpressionArray(mp)));
+
 	CExpression *upper_agg_expr =
 		GPOS_NEW(mp) CExpression(mp, upper_agg_func, upper_agg_arg_array);
+
 
 	// determine column reference for the new project element
 	*upper_proj_elem_expr =

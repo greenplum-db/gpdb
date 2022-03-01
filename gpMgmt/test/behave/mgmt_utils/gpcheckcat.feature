@@ -379,6 +379,15 @@ Feature: gpcheckcat tests
         Then gpcheckcat should return a return code of 0
         And the user runs "dropdb gpextension_db"
 
+    Scenario: gpcheckcat orphaned_toast_tables test should pass when there is valid temp toast table exists
+        Given database "temp_toast" is dropped and recreated
+        And the user connects to "temp_toast" with named connection "default"
+        And the user executes "CREATE TEMP TABLE temp_t1 (c1 text)" with named connection "default"
+        Then the user runs "gpcheckcat -R orphaned_toast_tables temp_toast"
+        And gpcheckcat should return a return code of 0
+        And the user drops the named connection "default"
+        And the user runs "dropdb temp_toast"
+
     Scenario: gpcheckcat should repair "bad reference" orphaned toast tables (caused by missing reltoastrelid)
         Given the database "gpcheckcat_orphans" is broken with "bad reference" orphaned toast tables
         When the user runs "gpcheckcat -R orphaned_toast_tables -g repair_dir gpcheckcat_orphans"

@@ -188,11 +188,13 @@ transformGenericOptions(Oid catalogId,
 	result = optionListToArray(resultOptions);
 
 	/*
-	 * Check and separate out the mpp_execute option, fdwvalidator doesn't have
+	 * Check and separate out the extra options, fdwvalidator doesn't have
 	 * to handle it. USER MAPPING doesn't have the mpp_execute option.
 	 */
 	if (catalogId != UserMappingRelationId)
+	{
 		SeparateOutMppExecute(&resultOptions);
+	}
 
 	if (OidIsValid(fdwvalidator))
 	{

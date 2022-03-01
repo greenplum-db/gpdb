@@ -24,6 +24,7 @@
 #include "postmaster/autovacuum.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/syscache.h"
 
@@ -600,6 +601,19 @@ GetNewObjectIdUnderLock(void)
 
 	(ShmemVariableCache->nextOid)++;
 	(ShmemVariableCache->oidCount)--;
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("bump_oid") == FaultInjectorTypeSkip)
+	{
+		/*
+		 * CDB: we encounter high oid issues several times, we should
+		 * have some test-utils to verify logic under larger oid.
+		 */
+		if (result <= PG_INT32_MAX) {
+			result = PG_INT32_MAX + result % (PG_UINT32_MAX - PG_INT32_MAX) + 1;
+		}
+	}
+#endif
 
 	return result;
 }

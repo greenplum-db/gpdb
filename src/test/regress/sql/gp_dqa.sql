@@ -5,6 +5,8 @@
 -- the queries, so a few also use TO_CHAR() to truncate the results further.
 set extra_float_digits=0;
 
+SET optimizer_trace_fallback to on;
+
 drop table if exists dqa_t1;
 drop table if exists dqa_t2;
 

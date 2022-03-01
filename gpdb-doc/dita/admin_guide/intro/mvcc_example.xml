@@ -202,10 +202,10 @@
                Greenplum Database takes these actions.<ul id="ul_ftw_yck_wv">
                   <li>Greenplum Database issues a warning stating that the database is running out
                      of XID
-                     values.<codeblock>WARNING: database "<varname>database_name</varname>" must be vacuumed within <varname>number_of_transactions</varname> transactions</codeblock></li>
+                     values.<codeblock>WARNING: database "&lt;database_name>" must be vacuumed within &lt;number_of_transactions> transactions</codeblock></li>
                   <li>Before the last XID is assigned, Greenplum Database stops accepting
                      transactions to prevent assigning an XID value twice and issues this
-                     message.<codeblock>FATAL: database is not accepting commands to avoid wraparound data loss in database "<varname>database_name</varname>" </codeblock></li>
+                     message.<codeblock>FATAL: database is not accepting commands to avoid wraparound data loss in database "&lt;database_name>" </codeblock></li>
                </ul></p>
             <p>To manage transaction IDs and table data that is stored on disk, Greenplum Database
                provides the <codeph>VACUUM</codeph> command. <ul id="ul_fdf_k5q_wv">

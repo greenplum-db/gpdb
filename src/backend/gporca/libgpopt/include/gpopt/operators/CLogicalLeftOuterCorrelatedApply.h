@@ -30,6 +30,8 @@ namespace gpopt
 class CLogicalLeftOuterCorrelatedApply : public CLogicalLeftOuterApply
 {
 private:
+	BOOL m_allow_predicate_pushdown{true};
+
 public:
 	CLogicalLeftOuterCorrelatedApply(const CLogicalLeftOuterCorrelatedApply &) =
 		delete;
@@ -75,6 +77,12 @@ public:
 	FCorrelated() const override
 	{
 		return true;
+	}
+
+	BOOL
+	IsPredicatePushDownAllowed() const
+	{
+		return m_allow_predicate_pushdown;
 	}
 
 	// conversion function

@@ -7,7 +7,7 @@
     <p>Plugin command to move a backup file from the remote storage system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>restore_file</b> <varname>plugin_config_file</varname> <varname>file_to_restore</varname></codeblock>
+      <codeblock>&lt;plugin_executable> restore_file &lt;plugin_config_file> &lt;file_to_restore></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

@@ -86,6 +86,7 @@
 #include "gpopt/operators/CScalarNullIf.h"
 #include "gpopt/operators/CScalarOp.h"
 #include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/operators/CScalarSortGroupClause.h"
 #include "gpopt/operators/CScalarSwitch.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
 #include "naucrates/base/CDatumBoolGPDB.h"
@@ -163,8 +164,10 @@
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
 #include "naucrates/dxl/operators/CDXLScalarSortColList.h"
+#include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitchCase.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/operators/CDXLScalarWindowFrameEdge.h"
 #include "naucrates/dxl/operators/CDXLWindowFrame.h"
 #include "naucrates/dxl/operators/CDXLWindowKey.h"
@@ -593,6 +596,8 @@ CTranslatorExprToDXL::PdxlnScalar(CExpression *pexpr)
 			return CTranslatorExprToDXL::PdxlnScBoolExpr(pexpr);
 		case COperator::EopScalarConst:
 			return CTranslatorExprToDXL::PdxlnScConst(pexpr);
+		case COperator::EopScalarSortGroupClause:
+			return CTranslatorExprToDXL::PdxlnScSortGroupClause(pexpr);
 		case COperator::EopScalarFunc:
 			return CTranslatorExprToDXL::PdxlnScFuncExpr(pexpr);
 		case COperator::EopScalarWindowFunc:
@@ -627,6 +632,8 @@ CTranslatorExprToDXL::PdxlnScalar(CExpression *pexpr)
 			return CTranslatorExprToDXL::PdxlnScArrayCoerceExpr(pexpr);
 		case COperator::EopScalarArray:
 			return CTranslatorExprToDXL::PdxlnArray(pexpr);
+		case COperator::EopScalarValuesList:
+			return CTranslatorExprToDXL::PdxlnValuesList(pexpr);
 		case COperator::EopScalarArrayCmp:
 			return CTranslatorExprToDXL::PdxlnArrayCmp(pexpr);
 		case COperator::EopScalarArrayRef:
@@ -3310,10 +3317,35 @@ CTranslatorExprToDXL::BuildSubplans(
 //
 //---------------------------------------------------------------------------
 CDXLNode *
-CTranslatorExprToDXL::PdxlnRestrictResult(CDXLNode *dxlnode, CColRef *colref)
+CTranslatorExprToDXL::PdxlnRestrictResult(CDXLNode *dxlnode,
+										  const CColRef *colref)
+{
+	CDXLNode *dxlresult = nullptr;
+	CColRefSet *pcrInner = GPOS_NEW(m_mp) CColRefSet(m_mp);
+
+	pcrInner->Include(colref);
+	dxlresult = PdxlnRestrictResult(dxlnode, pcrInner);
+	pcrInner->Release();
+
+	return dxlresult;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorExprToDXL::PdxlnRestrictResult
+//
+//	@doc:
+//		Helper to build a Result expression with project list
+//		restricted to required columns
+//
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorExprToDXL::PdxlnRestrictResult(CDXLNode *dxlnode,
+										  const CColRefSet *colrefs)
 {
 	GPOS_ASSERT(nullptr != dxlnode);
-	GPOS_ASSERT(nullptr != colref);
+	GPOS_ASSERT(nullptr != colrefs);
 
 	CDXLNode *pdxlnProjListOld = (*dxlnode)[0];
 	const ULONG ulPrjElems = pdxlnProjListOld->Arity();
@@ -3332,12 +3364,17 @@ CTranslatorExprToDXL::PdxlnRestrictResult(CDXLNode *dxlnode, CColRef *colref)
 		CDXLScalarProjList *pdxlopPrL = GPOS_NEW(m_mp) CDXLScalarProjList(m_mp);
 		CDXLNode *pdxlnProjListNew = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopPrL);
 
+		IntToColRefMap *phmicr = colrefs->Phmicr(m_mp);
+
 		for (ULONG ul = 0; ul < ulPrjElems; ul++)
 		{
 			CDXLNode *child_dxlnode = (*pdxlnProjListOld)[ul];
 			CDXLScalarProjElem *pdxlPrjElem =
 				CDXLScalarProjElem::Cast(child_dxlnode->GetOperator());
-			if (pdxlPrjElem->Id() == colref->Id())
+
+			const INT colid = pdxlPrjElem->Id();
+			CColRef *colref = phmicr->Find(&colid);
+			if (colref)
 			{
 				// create a new project element that simply points to required column,
 				// we cannot re-use child_dxlnode here since it may have a deep expression with columns inaccessible
@@ -3347,7 +3384,10 @@ CTranslatorExprToDXL::PdxlnRestrictResult(CDXLNode *dxlnode, CColRef *colref)
 				pdxlnProjListNew->AddChild(pdxlnPrEl);
 			}
 		}
-		GPOS_ASSERT(1 == pdxlnProjListNew->Arity());
+
+		phmicr->Release();
+
+		GPOS_ASSERT(colrefs->Size() == pdxlnProjListNew->Arity());
 
 		pdxlnResult = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalResult(m_mp));
@@ -3402,8 +3442,10 @@ CTranslatorExprToDXL::PdxlnQuantifiedSubplan(
 		pulNonGatherMotions, pfDML, false /*fRemap*/, false /*fRoot*/);
 
 	// find required column from inner child
-	CColRef *pcrInner = (*pdrgpcrInner)[0];
+	CColRefSet *pcrInner = GPOS_NEW(m_mp) CColRefSet(m_mp);
+	pcrInner->Include((*pdrgpcrInner)[0]);
 
+	BOOL outerParam = false;
 	if (fCorrelatedLOJ)
 	{
 		// overwrite required inner column based on scalar expression
@@ -3414,14 +3456,24 @@ CTranslatorExprToDXL::PdxlnQuantifiedSubplan(
 		pcrsUsed->Intersection(pcrsInner);
 		if (0 < pcrsUsed->Size())
 		{
-			GPOS_ASSERT(1 == pcrsUsed->Size());
+			GPOS_ASSERT(1 == pcrsUsed->Size() || 2 == pcrsUsed->Size());
 
-			pcrInner = pcrsUsed->PcrFirst();
+			// Both sides of the SubPlan test expression can come from the
+			// inner side. So we need to pass pcrsUsed instead of pcrInner into
+			// PdxlnRestrictResult()
+			outerParam = pcrsUsed->Size() > 1;
+
+			pcrInner->Release();
+			pcrInner = pcrsUsed;
 		}
-		pcrsUsed->Release();
+		else
+		{
+			pcrsUsed->Release();
+		}
 	}
 
 	CDXLNode *inner_dxlnode = PdxlnRestrictResult(pdxlnInnerChild, pcrInner);
+	pcrInner->Release();
 	if (nullptr == inner_dxlnode)
 	{
 		GPOS_RAISE(
@@ -3438,10 +3490,10 @@ CTranslatorExprToDXL::PdxlnQuantifiedSubplan(
 	mdid->AddRef();
 
 	// construct a subplan node, with the inner child under it
-	CDXLNode *pdxlnSubPlan = GPOS_NEW(m_mp) CDXLNode(
-		m_mp,
-		GPOS_NEW(m_mp) CDXLScalarSubPlan(m_mp, mdid, dxl_colref_array,
-										 dxl_subplan_type, dxlnode_test_expr));
+	CDXLNode *pdxlnSubPlan = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarSubPlan(
+						   m_mp, mdid, dxl_colref_array, dxl_subplan_type,
+						   dxlnode_test_expr, outerParam));
 	pdxlnSubPlan->AddChild(inner_dxlnode);
 
 	// add to hashmap
@@ -5781,12 +5833,46 @@ CTranslatorExprToDXL::PdxlnScAggref(CExpression *pexprAggFunc)
 		edxlaggrefstage = EdxlaggstagePartial;
 	}
 
-	CDXLScalarAggref *pdxlopAggRef = GPOS_NEW(m_mp)
-		CDXLScalarAggref(m_mp, pmdidAggFunc, resolved_rettype,
-						 popScAggFunc->IsDistinct(), edxlaggrefstage);
+	EdxlAggrefKind edxlaggrefkind = EdxlaggkindNormal;
+	switch (popScAggFunc->AggKind())
+	{
+		case EaggfunckindNormal:
+		{
+			edxlaggrefkind = EdxlaggkindNormal;
+			break;
+		}
+		case EaggfunckindOrderedSet:
+		{
+			edxlaggrefkind = EdxlaggkindOrderedSet;
+			break;
+		}
+		case EaggfunckindHypothetical:
+		{
+			edxlaggrefkind = EdxlaggkindHypothetical;
+			break;
+		}
+	}
+
+	ULongPtrArray *argtypes = popScAggFunc->GetArgTypes();
+	argtypes->AddRef();
+
+	CDXLScalarAggref *pdxlopAggRef = GPOS_NEW(m_mp) CDXLScalarAggref(
+		m_mp, pmdidAggFunc, resolved_rettype, popScAggFunc->IsDistinct(),
+		edxlaggrefstage, edxlaggrefkind, argtypes);
 
 	CDXLNode *pdxlnAggref = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopAggRef);
-	TranslateScalarChildren(pexprAggFunc, pdxlnAggref);
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexArgs]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexDirectArgs]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexAggOrder]));
+
+	pdxlnAggref->AddChild(
+		PdxlnValuesList((*pexprAggFunc)[EdxlscalaraggrefIndexAggDistinct]));
 
 	return pdxlnAggref;
 }
@@ -6437,6 +6523,23 @@ CTranslatorExprToDXL::PdxlnArray(CExpression *pexpr)
 
 	return pdxlnArray;
 }
+CDXLNode *
+CTranslatorExprToDXL::PdxlnValuesList(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	CDXLNode *pdxlnValuesList = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp));
+
+	for (ULONG ul = 0; ul < pexpr->Arity(); ul++)
+	{
+		CExpression *pexprChild = (*pexpr)[ul];
+		CDXLNode *child_dxlnode = PdxlnScalar(pexprChild);
+		pdxlnValuesList->AddChild(child_dxlnode);
+	}
+
+	return pdxlnValuesList;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -6644,6 +6747,23 @@ CTranslatorExprToDXL::PdxlnScConst(CExpression *pexprScConst)
 
 	CDXLNode *dxlnode =
 		GPOS_NEW(m_mp) CDXLNode(m_mp, pmdtype->GetDXLOpScConst(m_mp, datum));
+
+	return dxlnode;
+}
+
+CDXLNode *
+CTranslatorExprToDXL::PdxlnScSortGroupClause(
+	CExpression *pexprScSortGroupClause)
+{
+	GPOS_ASSERT(nullptr != pexprScSortGroupClause);
+
+	CScalarSortGroupClause *pop =
+		CScalarSortGroupClause::PopConvert(pexprScSortGroupClause->Pop());
+
+	CDXLNode *dxlnode = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarSortGroupClause(
+						   m_mp, pop->Index(), pop->EqOp(), pop->SortOp(),
+						   pop->NullsFirst(), pop->IsHashable()));
 
 	return dxlnode;
 }

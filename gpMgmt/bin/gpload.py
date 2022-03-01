@@ -2274,9 +2274,9 @@ class gpload:
         return:
             sql(string)
         '''
-        sql = """SELECT oid::regclass
-                 FROM pg_class
-                 WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
+        sql = """SELECT oid::regclass \
+FROM pg_class \
+WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
 
         self.log(self.DEBUG, "query used to identify reusable temporary relations: %s" % sql)
         return sql
@@ -2293,7 +2293,8 @@ class gpload:
                 pass
         return None
 
-    def get_ext_schematable(self, schemaName, tableName):
+
+    def get_schematable(self, schemaName, tableName):
         '''
         return formated table name
         '''
@@ -2468,7 +2469,7 @@ class gpload:
                               AND n.nspname !~ '^pg_toast'"""
                 result = self.db.query(sql).getresult()
                 if len(result) > 0:
-                    self.extSchemaTable = self.get_ext_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                    self.extSchemaTable = self.get_schematable(quote_unident(self.extSchemaName), self.extTableName)
                     self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
                     return
             # staging table is not specified, we need to find it manually
@@ -2488,7 +2489,7 @@ class gpload:
                     self.extTableName = (resultList[0])[0]
                     # fast match result is only table name, so we need add schema info
                     if self.fast_match:
-                        self.extSchemaTable = self.get_ext_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                        self.extSchemaTable = self.get_schematable(quote_unident(self.extSchemaName), self.extTableName)
                     else:
                         self.extSchemaTable = self.extTableName
                     self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
@@ -2499,13 +2500,13 @@ class gpload:
                 # around
 
                 self.extTableName = "ext_gpload_reusable_%s" % self.unique_suffix
-                self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.get_ext_schematable(self.extSchemaName, self.extTableName))
+                self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.get_schematable(self.extSchemaName, self.extTableName))
 
         # process the single quotes in order to successfully create an external table.
         self.formatOpts = self.formatOpts.replace("'\''","E'\\''")
 
         # construct a CREATE EXTERNAL TABLE statement and execute it
-        self.extSchemaTable = self.get_ext_schematable(self.extSchemaName, self.extTableName)
+        self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
         sql = "create external table %s" % self.extSchemaTable
         sql += "(%s)" % ','.join(['%s %s' % (a[0], a[1]) for a in from_cols])
 
@@ -2586,10 +2587,12 @@ class gpload:
             # we no longer need the timestamp, since we will never want to create few
             # tables with same encoding_conditions
             self.staging_table_name = "staging_gpload_reusable_%s" % (encoding_conditions)
+            self.staging_table_name = self.get_schematable(self.extSchemaName, self.staging_table_name)
             self.log(self.INFO, "did not find a staging table to reuse. creating %s" % self.staging_table_name)
 		
         # MPP-14667 - self.reuse_tables should change one, and only one, aspect of how we build the following table,
         # and that is, whether it's a temp table or not. In other words, is_temp_table = '' iff self.reuse_tables == True.
+
         sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
         cols = ['"%s" %s' % (a[0], a[1]) for a in target_columns]
         sql += "(%s)" % ','.join(cols)
@@ -2914,12 +2917,17 @@ class gpload:
         # Is the table to be truncated before the load?
         preload = self.getconfig('gpload:preload', list, default=None)
         method = self.getconfig('gpload:output:mode', str, 'insert').lower()
+        external = self.getconfig('gpload:external', list, default=None)
         self.log_errors = self.getconfig('gpload:input:log_errors', bool, False)
         truncate = False
         self.reuse_tables = False
 
         if not self.options.no_auto_trans and not method=='insert':
             self.db.query("BEGIN")
+
+        self.extSchemaName = self.getconfig('gpload:external:schema', str, None)
+        if self.extSchemaName == '%':
+            self.extSchemaName = self.schema
 
         if preload:
             truncate = self.getconfig('gpload:preload:truncate',bool,False)

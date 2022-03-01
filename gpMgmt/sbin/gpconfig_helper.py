@@ -84,7 +84,7 @@ def comment_parameter(filename, name):
     with open(os.path.abspath(temp_conf_path), 'w') as outfile:
         for line in lines:
             potential_match = line.split("=", 1)[0]
-            if potential_match.lstrip().startswith(name):
+            if potential_match.strip() == name:
                 outfile.write('#')
             outfile.write(line)
             new_lines = new_lines + 1

@@ -6,8 +6,8 @@
   <shortdesc>Use the <codeph>gpexpand</codeph> utility to create and initialize the new segment
     instances and create the expansion schema. </shortdesc>
   <body>
-    <p>The first time you run <codeph><xref href="../../utility_guide/ref/gpexpand.xml"
-          >gpexpand</xref></codeph> with a valid input file it creates and initializes segment
+    <p>The first time you run <xref href="../../utility_guide/ref/gpexpand.xml"
+          >gpexpand</xref> with a valid input file it creates and initializes segment
       instances and creates the expansion schema. After these steps are completed, running
         <codeph>gpexpand</codeph> detects if the expansion schema has been created and, if so,
       performs table redistribution. </p>
@@ -57,7 +57,7 @@
             <li id="no163931">Run <codeph>gpexpand</codeph>. The utility displays messages about how
               to prepare for an expansion operation, and it prompts you to quit or
                 continue.<p>Optionally, specify a hosts file using <codeph>-f</codeph>. For
-                example:</p><codeblock>$ gpexpand -f /home/gpadmin/<i>new_hosts_file</i></codeblock></li>
+                example:</p><codeblock>$ gpexpand -f /home/gpadmin/&lt;new_hosts_file></codeblock></li>
             <li id="no163932">At the prompt, select <codeph>Y</codeph> to continue.</li>
             <li id="no168490">Unless you specified a hosts file using <codeph>-f</codeph>, you are
               prompted to enter hostnames. Enter a comma separated list of the hostnames of the new
@@ -105,12 +105,12 @@
                   <codeph>gpexpand</codeph> must have permissions to create directories in them.
                 </p><p>After you have entered all required information, the utility generates an
                 input file and saves it in the current directory. For
-                example:</p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i></codeblock><p>If
-                the Greenplum cluster is configured with tablespaces, the utility automatically
+                example:</p><codeblock>gpexpand_inputfile_yyyymmdd_145134</codeblock><p>If the
+                Greenplum cluster is configured with tablespaces, the utility automatically
                 generates an additional tablespace mapping file. This file is required for later
                 parsing by the utility so make sure it is present before proceeding with the next
                 step. For example:
-              </p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i>.ts</codeblock></li>
+              </p><codeblock>gpexpand_inputfile_yyyymmdd_145134.ts</codeblock></li>
           </ol>
         </section>
       </body>

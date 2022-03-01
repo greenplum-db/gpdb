@@ -24,7 +24,7 @@ DROP TABLE t_concurrent_update;
 2: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
 3: BEGIN;
 3: SET optimizer=off;
--- transaction 3 will wait transaction 1 on the segment
+-- transaction 3 will wait transaction 2 on the segment
 3&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
 
 -- transaction 2 suspend before commit, but it will wake up transaction 3 on segment
@@ -36,7 +36,7 @@ DROP TABLE t_concurrent_update;
 3&: END;
 -- the query should not get the incorrect distributed snapshot: transaction 1 in-progress
 -- and transaction 2 finished
-1: SELECT count(*) FROM t_concurrent_update;
+1: SELECT * FROM t_concurrent_update;
 1: select gp_inject_fault('before_xact_end_procarray', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 2<:
 3<:

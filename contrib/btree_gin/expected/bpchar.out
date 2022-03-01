@@ -55,55 +55,69 @@ SELECT * FROM test_bpchar WHERE i>'abc' ORDER BY i;
 (3 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i<'abc' ORDER BY i;
-                  QUERY PLAN                   
------------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bpchar
-         Recheck Cond: (i < 'abc'::bpchar)
-         ->  Bitmap Index Scan on idx_bpchar
-               Index Cond: (i < 'abc'::bpchar)
-(6 rows)
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bpchar
+               Recheck Cond: (i < 'abc'::bpchar)
+               ->  Bitmap Index Scan on idx_bpchar
+                     Index Cond: (i < 'abc'::bpchar)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i<='abc' ORDER BY i;
-                   QUERY PLAN                   
-------------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bpchar
-         Recheck Cond: (i <= 'abc'::bpchar)
-         ->  Bitmap Index Scan on idx_bpchar
-               Index Cond: (i <= 'abc'::bpchar)
-(6 rows)
+                      QUERY PLAN                      
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bpchar
+               Recheck Cond: (i <= 'abc'::bpchar)
+               ->  Bitmap Index Scan on idx_bpchar
+                     Index Cond: (i <= 'abc'::bpchar)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i='abc' ORDER BY i;
-               QUERY PLAN                
------------------------------------------
- Bitmap Heap Scan on test_bpchar
-   Recheck Cond: (i = 'abc'::bpchar)
-   ->  Bitmap Index Scan on idx_bpchar
-         Index Cond: (i = 'abc'::bpchar)
-(4 rows)
-
-EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i>='abc' ORDER BY i;
-                   QUERY PLAN                   
-------------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bpchar
-         Recheck Cond: (i >= 'abc'::bpchar)
-         ->  Bitmap Index Scan on idx_bpchar
-               Index Cond: (i >= 'abc'::bpchar)
-(6 rows)
-
-EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i>'abc' ORDER BY i;
                   QUERY PLAN                   
 -----------------------------------------------
- Sort
-   Sort Key: i
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Bitmap Heap Scan on test_bpchar
-         Recheck Cond: (i > 'abc'::bpchar)
+         Recheck Cond: (i = 'abc'::bpchar)
          ->  Bitmap Index Scan on idx_bpchar
-               Index Cond: (i > 'abc'::bpchar)
+               Index Cond: (i = 'abc'::bpchar)
+ Optimizer: Postgres query optimizer
 (6 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i>='abc' ORDER BY i;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bpchar
+               Recheck Cond: (i >= 'abc'::bpchar)
+               ->  Bitmap Index Scan on idx_bpchar
+                     Index Cond: (i >= 'abc'::bpchar)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM test_bpchar WHERE i>'abc' ORDER BY i;
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bpchar
+               Recheck Cond: (i > 'abc'::bpchar)
+               ->  Bitmap Index Scan on idx_bpchar
+                     Index Cond: (i > 'abc'::bpchar)
+ Optimizer: Postgres query optimizer
+(9 rows)
 

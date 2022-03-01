@@ -14,8 +14,8 @@
         Greenplum Database system, including primary segments, mirror segments, master, and standby
         master.</p>
       
-       <p>On the master host, run the <codeph><xref
-              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"/></codeph>
+       <p>On the master host, run the <xref
+              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"/>
           utility with the <codeph>-e</codeph> option to show segment instances with error
             conditions:<codeblock>$ gpstate -e</codeblock>
          If the utility lists <codeph>Segments
@@ -30,8 +30,8 @@
   
     <section id="select_from_table">
       <title>Check for failed segments using the gp_segment_configuration table</title> To get
-      detailed information about failed segments, you can check the <codeph><xref
-          href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"/></codeph> catalog
+      detailed information about failed segments, you can check the <xref
+          href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"/> catalog
       table. For example:<p>
         <codeblock>$ psql postgres -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock>
       </p> For failed segment instances, note the host, port, preferred role, and data directory.
@@ -46,11 +46,11 @@
     <p>Log files can provide information to help determine an error's cause. The master and segment
       instances each have their own log file in <codeph>log</codeph> of the data directory. The
       master log file contains the most information and you should always check it first. </p>
-    <p>Use the <codeph><xref href="../../../utility_guide/ref/gplogfilter.xml" type="topic"
-          format="dita"/></codeph> utility to check the Greenplum Database log files for additional
+    <p>Use the <xref href="../../../utility_guide/ref/gplogfilter.xml" type="topic"
+          format="dita"/> utility to check the Greenplum Database log files for additional
       information. To check the segment log files, run <codeph>gplogfilter</codeph> on the segment
-      hosts using <codeph><xref href="../../../utility_guide/ref/gpssh.xml" type="topic"
-          format="dita"/></codeph>.</p>
+      hosts using <xref href="../../../utility_guide/ref/gpssh.xml" type="topic"
+          format="dita"/>.</p>
     <section id="ki170080">
       <title>To check the log files</title>
       <ol id="ol_ort_blb_yqb">

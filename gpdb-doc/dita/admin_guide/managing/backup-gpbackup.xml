@@ -190,7 +190,7 @@
       <p>To perform a complete backup of a database, as well as Greenplum Database system metadata,
         use the command: <codeblock>$ gpbackup --dbname &lt;database_name></codeblock></p>
       <p>For
-        example:<codeblock>$ <b>gpbackup --dbname demo</b>
+        example:<codeblock>$ gpbackup --dbname demo
 20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Starting backup of database demo
 20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup Timestamp = 20180105112754
 20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup Database = demo
@@ -214,22 +214,22 @@ Tables backed up:  3 / 3 [======================================================
       <p>The above command creates a file that contains global and database-specific metadata on the
         Greenplum Database master host in the default directory,
           <codeph>$COORDINATOR_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>. For
-        example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20180105/20180105112754</b>
+        example:<codeblock>$ ls /gpmaster/gpsne-1/backups/20180105/20180105112754
 gpbackup_20180105112754_config.yaml   gpbackup_20180105112754_report
 gpbackup_20180105112754_metadata.sql  gpbackup_20180105112754_toc.yaml</codeblock></p>
       <p>By default, each segment stores each table's data for the backup in a separate compressed
         CSV file in
-        <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20180105/20180105112754/</b>
+        <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ ls /gpdata1/gpsne0/backups/20180105/20180105112754/
 gpbackup_0_20180105112754_17166.gz  gpbackup_0_20180105112754_26303.gz
 gpbackup_0_20180105112754_21816.gz</codeblock></p>
       <p>To consolidate all backup files into a single directory, include the
           <codeph>--backup-dir</codeph> option. Note that you must specify an absolute path with
         this
-        option:<codeblock>$ <b>gpbackup --dbname demo --backup-dir /home/gpadmin/backups</b>
+        option:<codeblock>$ gpbackup --dbname demo --backup-dir /home/gpadmin/backups
 20171103:15:31:56 gpbackup:gpadmin:0ee2f5fb02c9:017586-[INFO]:-Starting backup of database demo
 ...
 20171103:15:31:58 gpbackup:gpadmin:0ee2f5fb02c9:017586-[INFO]:-Backup completed successfully
-$ <b>find /home/gpadmin/backups/ -type f</b>
+$ find /home/gpadmin/backups/ -type f
 /home/gpadmin/backups/gpseg0/backups/20171103/20171103153156/gpbackup_0_20171103153156_16543.gz
 /home/gpadmin/backups/gpseg0/backups/20171103/20171103153156/gpbackup_0_20171103153156_16524.gz
 /home/gpadmin/backups/gpseg1/backups/20171103/20171103153156/gpbackup_1_20171103153156_16543.gz
@@ -251,8 +251,8 @@ $ <b>find /home/gpadmin/backups/ -type f</b>
             <codeph>--timestamp</codeph> option to specify the exact timestamp value
             (<codeph>YYYYMMDDHHMMSS</codeph>) to restore. Include the <codeph>--create-db</codeph>
           option if the database does not exist in the cluster. For
-          example:<codeblock>$ <b>dropdb demo</b>
-$ <b>gprestore --timestamp 20171103152558 --create-db</b>
+          example:<codeblock>$ dropdb demo
+$ gprestore --timestamp 20171103152558 --create-db
 20171103:15:45:30 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Restore Key = 20171103152558
 20171103:15:45:31 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Creating database
 20171103:15:45:44 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Database creation complete
@@ -265,8 +265,8 @@ $ <b>gprestore --timestamp 20171103152558 --create-db</b>
         <p>If you specified a custom <codeph>--backup-dir</codeph> to consolidate the backup files,
           include the same <codeph>--backup-dir</codeph> option when using
             <codeph>gprestore</codeph> to locate the backup
-          files:<codeblock>$ <b>dropdb demo</b>
-$ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db</b>
+          files:<codeblock>$ dropdb demo
+$ gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db
 20171103:15:51:02 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Restore Key = 20171103153156
 ...
 20171103:15:51:17 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Post-data metadata restore complete</codeblock></p>
@@ -276,7 +276,7 @@ $ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --
         <p>By default, <codeph>gprestore</codeph> uses 1 connection to restore table data and
           metadata. If you have a large backup set, you can improve performance of the restore by
           increasing the number of parallel connections with the <codeph>--jobs</codeph> option. For
-          example:<codeblock>$ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db --jobs 8</b></codeblock></p>
+          example:<codeblock>$ gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db --jobs 8</codeblock></p>
         <p>Test the number of parallel connections with your backup set to determine the ideal
           number for fast data recovery. </p>
         <note>You cannot perform a parallel restore operation with <codeph>gprestore</codeph> if the
@@ -305,7 +305,7 @@ gprestore_&lt;backup_timestamp>_&lt;restore_timesamp>_report</codeblock>For
 gprestore_20180213114446_20180213115426_report</codeblock><p>This
           backup directory on a Greenplum Database master host contains both a
             <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> report
-          file.</p><codeblock>$ <b>ls -l /gpmaster/seg-1/backups/20180213/20180213114446</b>
+          file.</p><codeblock>$ ls -l /gpmaster/seg-1/backups/20180213/20180213114446
 total 36
 -r--r--r--. 1 gpadmin gpadmin  295 Feb 13 11:44 gpbackup_20180213114446_config.yaml
 -r--r--r--. 1 gpadmin gpadmin 1855 Feb 13 11:44 gpbackup_20180213114446_metadata.sql
@@ -366,19 +366,19 @@ Restore Status: Success</codeblock></section>
           <codeph>--exclude-schema-file</codeph> command-line options to <codeph>gpbackup</codeph>.
         For example, if the "demo" database includes only two schemas, "wikipedia" and "twitter,"
         both of the following commands back up only the "wikipedia"
-        schema:<codeblock>$ <b>gpbackup --dbname demo --include-schema wikipedia</b>
-$ <b>gpbackup --dbname demo --exclude-schema twitter</b></codeblock></p>
+        schema:<codeblock>$ gpbackup --dbname demo --include-schema wikipedia
+$ gpbackup --dbname demo --exclude-schema twitter</codeblock></p>
       <p>You can include multiple <codeph>--include-schema</codeph> options in a
           <codeph>gpbackup</codeph>
         <i>or</i> multiple <codeph>--exclude-schema</codeph> options. For
-        example:<codeblock>$ <b>gpbackup --dbname demo --include-schema wikipedia --include-schema twitter</b></codeblock></p>
+        example:<codeblock>$ gpbackup --dbname demo --include-schema wikipedia --include-schema twitter</codeblock></p>
       <p>If you have a large number of schemas, you can list the schemas in a text file and specify
         the file with the <codeph>--include-schema-file</codeph> or
           <codeph>--exclude-schema-file</codeph> options in a <codeph>gpbackup</codeph> command.
         Each line in the file must define a single schema, and the file cannot contain trailing
         lines. For example, this command uses a file in the <codeph>gpadmin</codeph> home directory
         to include a set of
-        schemas.<codeblock><b>gpbackup --dbname demo --include-schema-file /users/home/gpadmin/backup-schemas</b></codeblock></p>
+        schemas.<codeblock>gpbackup --dbname demo --include-schema-file /users/home/gpadmin/backup-schemas</codeblock></p>
       <p>To filter the individual tables that are included in a backup set, or excluded from a
         backup set, specify individual tables with the <codeph>--include-table</codeph> option or
         the <codeph>--exclude-table</codeph> option. The table must be schema qualified,
@@ -399,12 +399,12 @@ water.tonic</codeblock></p>
       <p>After creating the file, you can use it either to include or exclude tables with the
           <codeph>gpbackup</codeph> options <codeph>--include-table-file</codeph> or
           <codeph>--exclude-table-file</codeph>. For
-        example:<codeblock>$ <b>gpbackup --dbname demo --include-table-file /home/gpadmin/table-list.txt</b></codeblock></p>
+        example:<codeblock>$ gpbackup --dbname demo --include-table-file /home/gpadmin/table-list.txt</codeblock></p>
       <p>You can combine <codeph>-include schema</codeph> with <codeph>--exclude-table</codeph> or
           <codeph>--exclude-table-file</codeph> for a backup. This example uses
           <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph> to back up a
         schema except for a single table. </p>
-      <codeblock>$ <b>gpbackup --dbname demo --include-schema mydata --exclude-table mydata.addresses</b></codeblock>
+      <codeblock>$ gpbackup --dbname demo --include-schema mydata --exclude-table mydata.addresses</codeblock>
       <p>You cannot combine <codeph>--include-schema</codeph> with <codeph>--include-table</codeph>
         or <codeph>--include-table-file</codeph>, and you cannot combine
           <codeph>--exclude-schema</codeph> with any table filtering option such as
@@ -421,7 +421,7 @@ water.tonic</codeblock></p>
           partition of a partitioned table, instead of a single file. You can also filter backups to
           specific leaf partitions by listing the leaf partition names in a text file to include.
           For example, consider a table that was created using the
-          statement:<codeblock>demo=# <b>CREATE TABLE sales (id int, date date, amt decimal(10,2))
+          statement:<codeblock>demo=# CREATE TABLE sales (id int, date date, amt decimal(10,2))
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
 ( PARTITION Jan17 START (date '2017-01-01') INCLUSIVE ,
@@ -436,7 +436,7 @@ PARTITION Sep17 START (date '2017-09-01') INCLUSIVE ,
 PARTITION Oct17 START (date '2017-10-01') INCLUSIVE ,
 PARTITION Nov17 START (date '2017-11-01') INCLUSIVE ,
 PARTITION Dec17 START (date '2017-12-01') INCLUSIVE
-END (date '2018-01-01') EXCLUSIVE );</b>
+END (date '2018-01-01') EXCLUSIVE );
 NOTICE:  CREATE TABLE will create partition "sales_1_prt_jan17" for table "sales"
 NOTICE:  CREATE TABLE will create partition "sales_1_prt_feb17" for table "sales"
 NOTICE:  CREATE TABLE will create partition "sales_1_prt_mar17" for table "sales"
@@ -457,11 +457,11 @@ public.sales_1_prt_nov17
 public.sales_1_prt_dec17 </codeblock></p><p>Then
           specify the file with the <codeph>--include-table-file</codeph> option to generate one
           data file per leaf
-          partition:<codeblock>$ <b>gpbackup --dbname demo --include-table-file last-quarter.txt --leaf-partition-data</b></codeblock></p>When
+          partition:<codeblock>$ gpbackup --dbname demo --include-table-file last-quarter.txt --leaf-partition-data</codeblock></p>When
         you specify <codeph>--leaf-partition-data</codeph>, <codeph>gpbackup</codeph> generates one
         data file per leaf partition when backing up a partitioned table. For example, this command
         generates one data file for each leaf
-          partition:<codeblock>$ <b>gpbackup --dbname demo --include-table public.sales --leaf-partition-data</b></codeblock><p>When
+          partition:<codeblock>$ gpbackup --dbname demo --include-table public.sales --leaf-partition-data</codeblock><p>When
           leaf partitions are backed up, the leaf partition data is backed up along with the
           metadata for the entire partitioned table.</p>
         <note>You cannot use the <codeph>--exclude-table-file</codeph> option with
@@ -540,19 +540,19 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
           is configured correctly, run tests with email notifications configured.</note>
         <p>This is the format of the <codeph>gp_email_contacts.yaml</codeph> YAML file for
             <codeph>gpbackup</codeph> email notifications: </p>
-        <codeblock><xref href="#topic_uq5_v5v_scb/contacts_yml" format="dita">contacts</xref>:
-  <xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita">gpbackup</xref>:
-  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
-    <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>:
-         <xref href="#topic_uq5_v5v_scb/success_yml" format="dita">success</xref>: [true | false]
-         <xref href="#topic_uq5_v5v_scb/success1_yml" format="dita">success_with_errors</xref>: [true | false]
-         <xref href="#topic_uq5_v5v_scb/failure_yml" format="dita">failure</xref>: [true | false]
-  <xref href="#topic_uq5_v5v_scb/gprestore_yml" format="dita">gprestore</xref>:
-  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
-    <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>:
-         <xref href="#topic_uq5_v5v_scb/success_yml" format="dita">success</xref>: [true | false]
-         <xref href="#topic_uq5_v5v_scb/success1_yml" format="dita">success_with_errors</xref>: [true | false]
-         <xref href="#topic_uq5_v5v_scb/failure_yml" format="dita">failure</xref>: [true | false]</codeblock>
+        <codeblock>contacts:
+  gpbackup:
+  - address: &lt;user>@&lt;domain>
+    status:
+         success: [true | false]
+         success_with_errors: [true | false]
+         failure: [true | false]
+  gprestore:
+  - address: &lt;use>r@&lt;domain>
+    status:
+         success: [true | false]
+         success_with_errors: [true | false]
+         failure: [true | false]</codeblock>
         <section>
           <title>Email YAML File Sections</title>
           <parml>
@@ -609,12 +609,12 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
             <plentry>
               <pt id="gprestore_yml"><b>gprestore</b></pt>
               <pd>Optional. Begins the <codeph>gprestore</codeph> email section. This section
-                contains the <codeph><xref href="#topic_uq5_v5v_scb/address_yml" format="dita"
-                    >address</xref></codeph> and <codeph><xref href="#topic_uq5_v5v_scb/status_yml"
-                    format="dita">status</xref></codeph> parameters that are used to send an email
+                contains the <xref href="#topic_uq5_v5v_scb/address_yml" format="dita"
+                    >address</xref> and <xref href="#topic_uq5_v5v_scb/status_yml"
+                    format="dita">status</xref> parameters that are used to send an email
                 notification after a <codeph>gprestore</codeph> operation. The syntax is the same as
-                the <codeph><xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita"
-                    >gpbackup</xref></codeph> section.</pd>
+                the <xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita"
+                    >gpbackup</xref> section.</pd>
             </plentry>
           </parml>
         </section>

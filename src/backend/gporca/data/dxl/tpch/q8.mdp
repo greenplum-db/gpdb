@@ -4071,7 +4071,8 @@
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="119" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:If TypeMdid="0.1700.1.0">
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
                       <dxl:Ident ColId="97" ColName="nation" TypeMdid="0.1042.1.0"/>
@@ -4080,11 +4081,20 @@
                     <dxl:Ident ColId="118" ColName="volume" TypeMdid="0.1700.1.0"/>
                     <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACAAAAAA=" DoubleValue="0.000000"/>
                   </dxl:If>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="120" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="118" ColName="volume" TypeMdid="0.1700.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
@@ -4370,7 +4380,8 @@
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="118" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:If TypeMdid="0.1700.1.0">
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
                       <dxl:Ident ColId="96" ColName="n_name" TypeMdid="0.1042.1.0"/>
@@ -4379,11 +4390,20 @@
                     <dxl:Ident ColId="117" ColName="volume" TypeMdid="0.1700.1.0"/>
                     <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACAAAAAA=" DoubleValue="0.000000"/>
                   </dxl:If>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="119" Alias="sum">
-                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal">
+                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                  <dxl:ValuesList ParamType="aggargs">
                   <dxl:Ident ColId="117" ColName="volume" TypeMdid="0.1700.1.0"/>
+                  </dxl:ValuesList>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
                 </dxl:AggFunc>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="116" Alias="o_year">

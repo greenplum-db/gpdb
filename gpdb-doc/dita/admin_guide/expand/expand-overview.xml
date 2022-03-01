@@ -71,8 +71,8 @@
         <li>The last step of the software phase is redistributing table data. Using the expansion
           control tables in the <i>gpexpand</i> schema as a guide, tables are redistributed. For
           each table:<ul id="ul_uxt_png_tt">
-            <li>The <codeph><xref href="../../utility_guide/ref/gpexpand.xml"
-                  >gpexand</xref></codeph> utility redistributes the table data, across all of the
+            <li>The <xref href="../../utility_guide/ref/gpexpand.xml"
+                  >gpexand</xref> utility redistributes the table data, across all of the
               servers, old and new, according to the distribution policy.</li>
             <li>The table's status is updated in the expansion control tables.</li>
             <li>After data redistribution, the query optimizer creates more efficient execution
@@ -90,16 +90,16 @@
       different options during the complete expansion process. </p>
     <ol id="ol_jjf_pmg_tt">
       <li id="no165977">To <xref href="expand-initialize.xml#topic23">create an expansion input
-          file</xref>:<codeblock>gpexpand -f <i>hosts_file</i></codeblock></li>
+          file</xref>:<codeblock>gpexpand -f &lt;hosts_file></codeblock></li>
       <li id="no166063">To <xref href="expand-initialize.xml#expand-initialize">initialize segments
           and create the expansion
-            schema</xref>:<codeblock>gpexpand -i <i>input_file</i></codeblock><p><codeph>gpexpand</codeph>
+            schema</xref>:<codeblock>gpexpand -i &lt;input_file></codeblock><p><codeph>gpexpand</codeph>
           creates a data directory, copies user tables from all existing databases on the new
           segments, and captures metadata for each table in an expansion schema for status tracking.
           After this process completes, the expansion operation is committed and
         irrevocable.</p></li>
       <li id="no176239"><xref href="expand-redistribute.xml#topic28">To redistribute table
-          data</xref>:<codeblock>gpexpand -d <i>duration</i></codeblock><p>During initialization,
+          data</xref>:<codeblock>gpexpand -d &lt;duration></codeblock><p>During initialization,
             <codeph>gpexpand</codeph> adds and initializes new segment instances. To complete system
           expansion, you must run <codeph>gpexpand</codeph> to redistribute data tables across the
           newly added segment instances. Depending on the size and scale of your system,
@@ -117,8 +117,8 @@
           and reporting can continue, though users might experience slower response times.</p></li>
       <li id="no165990">To remove the expansion schema:<codeblock>gpexpand -c</codeblock></li>
     </ol>
-    <p>For information about the <codeph><xref
-          href="../../utility_guide/ref/gpexpand.xml">gpexpand</xref></codeph> utility
+    <p>For information about the <xref
+          href="../../utility_guide/ref/gpexpand.xml">gpexpand</xref> utility
       and the other utilities that are used for system expansion, see the <i>Greenplum Database
         Utility Guide</i>. </p>
   </body>

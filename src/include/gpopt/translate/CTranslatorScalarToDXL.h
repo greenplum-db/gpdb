@@ -225,6 +225,9 @@ private:
 	CDXLNode *TranslateArrayRefToDXL(const Expr *expr,
 									 const CMappingVarColId *var_colid_mapping);
 
+	CDXLNode *TranslateSortGroupClauseToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+
 	// add an indexlist to the given DXL arrayref node
 	void AddArrayIndexList(
 		CDXLNode *dxlnode, List *list,

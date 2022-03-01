@@ -339,11 +339,11 @@ SED_PG_CONF () {
 	KEEP_PREV=$1;shift
 	SED_HOST=$1
 	if [ x"" == x"$SED_HOST" ]; then
-			if [ `$GREP -c "${SEARCH_TXT}[ ]*=" $FILENAME` -gt 1 ]; then
+			if [ `$GREP -c "^[ ]*${SEARCH_TXT}[ ]*=" $FILENAME` -gt 1 ]; then
 				LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME, will append" 1
 				APPEND=1
 			fi
-			if [ `$GREP -c "${SEARCH_TXT}[ ]*=" $FILENAME` -eq 0 ] || [ $APPEND -eq 1 ]; then
+			if [ `$GREP -c "^[ ]*${SEARCH_TXT}[ ]*=" $FILENAME` -eq 0 ] || [ $APPEND -eq 1 ]; then
 				$ECHO $SUB_TXT >> $FILENAME
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
@@ -382,11 +382,11 @@ SED_PG_CONF () {
 		trap RETRY ERR
 		RETVAL=0 # RETVAL gets modified in RETRY function whenever the trap is called
 
-		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT  $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME") -gt 1 ]; then
+		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT  $SED_HOST "$GREP -c \"^[ ]*${SEARCH_TXT}[ ]*=\" $FILENAME") -gt 1 ]; then
 			LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME on $SED_HOST, will append" 1
 			APPEND=1
 		fi
-		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME") -eq 0 ] || [ $APPEND -eq 1 ]; then
+		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $SED_HOST "$GREP -c \"^[ ]*${SEARCH_TXT}[ ]*=\" $FILENAME") -eq 0 ] || [ $APPEND -eq 1 ]; then
 			$TRUSTED_SHELL $SED_HOST "$ECHO \"$SUB_TXT\" >> $FILENAME"
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[FATAL]:-Failed to append line $SUB_TXT to $FILENAME on $SED_HOST"
@@ -757,7 +757,7 @@ BUILD_COORDINATOR_PG_HBA_FILE () {
         if [ $HBA_HOSTNAMES -eq 0 ];then
             local COORDINATOR_IP_ADDRESS_NO_LOOPBACK=($("$GPHOME"/libexec/ifaddrs --no-loopback))
             if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$COORDINATOR_HOSTNAME" ];then
-                local STANDBY_IP_ADDRESS_NO_LOOPBACK=$( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "'$GPHOME'/libexec/ifaddrs --no-loopback" )
+                local STANDBY_IP_ADDRESS_NO_LOOPBACK=($( REMOTE_EXECUTE_AND_GET_OUTPUT $STANDBY_HOSTNAME "'$GPHOME'/libexec/ifaddrs --no-loopback" ))
             fi
             for ADDR in "${COORDINATOR_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}"
             do

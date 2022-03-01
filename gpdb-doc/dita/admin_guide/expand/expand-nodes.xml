@@ -15,15 +15,15 @@
       two network clusters, run tests on each cluster.</p>
     <note>Preparing host systems for use by a Greenplum Database system assumes that the new hosts'
       operating system has been properly configured to match the existing hosts, described in <xref
-        href="../../install_guide/prep_os.xml"/>.</note>
+        href="../../install_guide/prep_os.html" format="html" scope="external"/>.</note>
   </body>
   <topic id="topic18" xml:lang="en">
     <title id="no159311">Adding New Hosts to the Trusted Host Environment</title>
     <body>
       <p>New hosts must exchange SSH keys with the existing hosts to enable Greenplum administrative
         utilities to connect to all segments without a password prompt. Perform the key exchange
-        process twice with the <codeph><xref href="../../utility_guide/ref/gpssh-exkeys.xml"
-            >gpssh-exkeys</xref></codeph> utility.</p>
+        process twice with the <xref href="../../utility_guide/ref/gpssh-exkeys.xml"
+            >gpssh-exkeys</xref> utility.</p>
       <p>First perform the process as <codeph>root</codeph>, for administration convenience, and
         then as the user <codeph>gpadmin</codeph>, for management utilities. Perform the following
         tasks in order:</p>
@@ -74,43 +74,42 @@ sdw3-4</codeblock></li>
 # source /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
           <li id="no160584">Run the <codeph>gpssh-exkeys</codeph> utility referencing the host list
             files. For
-            example:<codeblock># gpssh-exkeys -e /home/gpadmin/<i>existing_hosts_file</i> -x 
-/home/gpadmin/<i>new_hosts_file</i></codeblock></li>
+            example:<codeblock># gpssh-exkeys -e /home/gpadmin/&lt;existing_hosts_file> -x 
+/home/gpadmin/&lt;new_hosts_file></codeblock></li>
           <li id="no160589"><codeph>gpssh-exkeys</codeph> checks the remote hosts and performs the
             key exchange between all hosts. Enter the <codeph>root</codeph> user password when
             prompted. For
-            example:<codeblock>***Enter password for root@<i>hostname</i>: <i>&lt;root_password&gt;</i></codeblock></li>
+            example:<codeblock>***Enter password for root@&lt;hostname>: &lt;root_password&gt;</codeblock></li>
         </ol>
       </section>
       <section id="no160595">
-        <title>To create the <codeph>gpadmin</codeph> user</title>
+        <title>To create the gpadmin user</title>
         <ol id="ol_amb_xjr_g4">
-          <li id="no160603">Use <codeph><xref href="../../utility_guide/ref/gpssh.xml"
-              >gpssh</xref></codeph> to create the <codeph>gpadmin</codeph> user on all the new
-            segment hosts (if it does not exist already). Use the list of new hosts you created for
-            the key exchange. For
-            example:<codeblock># gpssh -f <i>new_hosts_file</i> '/usr/sbin/useradd <i>gpadmin</i> -d 
-/home/<i>gpadmin</i> -s /bin/bash'</codeblock></li>
+          <li id="no160603">Use <xref href="../../utility_guide/ref/gpssh.xml">gpssh</xref> to
+            create the <codeph>gpadmin</codeph> user on all the new segment hosts (if it does not
+            exist already). Use the list of new hosts you created for the key exchange. For
+            example:<codeblock># gpssh -f &lt;new_hosts_file> '/usr/sbin/useradd gpadmin -d 
+/home/gpadmin -s /bin/bash'</codeblock></li>
           <li id="no160614">Set a password for the new <codeph>gpadmin</codeph> user. On Linux, you
             can do this on all segment hosts simultaneously using <codeph>gpssh</codeph>. For
-            example:<codeblock># gpssh -f <i>new_hosts_file</i> 'echo <i>gpadmin_password</i> | passwd 
+            example:<codeblock># gpssh -f &lt;new_hosts_file> 'echo &lt;gpadmin_password> | passwd 
 gpadmin --stdin'</codeblock></li>
           <li id="no160642">Verify the <codeph>gpadmin</codeph> user has been created by looking for
             its home
-            directory:<codeblock># gpssh -f <i>new_hosts_file</i> ls -l /home</codeblock></li>
+            directory:<codeblock># gpssh -f &lt;new_hosts_file> ls -l /home</codeblock></li>
         </ol>
       </section>
       <section id="sshexch_gpadmin">
-        <title>To exchange SSH keys as the <codeph>gpadmin</codeph> user</title>
+        <title>To exchange SSH keys as the gpadmin user</title>
         <ol id="ol_lpb_xjr_g4">
           <li id="no162532">Log in as <codeph>gpadmin</codeph> and run the
               <codeph>gpssh-exkeys</codeph> utility referencing the host list files. For
-            example:<codeblock># gpssh-exkeys -e /home/gpadmin/<i>existing_hosts_file</i> -x 
-/home/gpadmin/<i>new_hosts_file</i></codeblock></li>
+            example:<codeblock># gpssh-exkeys -e /home/gpadmin/&lt;existing_hosts_file> -x 
+/home/gpadmin/&lt;new_hosts_file></codeblock></li>
           <li id="no160664"><codeph>gpssh-exkeys</codeph> will check the remote hosts and perform
             the key exchange between all hosts. Enter the <codeph>gpadmin</codeph> user password
             when prompted. For
-            example:<codeblock>***Enter password for gpadmin@<i>hostname</i>: <i>&lt;gpadmin_password&gt;</i></codeblock></li>
+            example:<codeblock>***Enter password for gpadmin@&lt;hostname>: &lt;gpadmin_password&gt;</codeblock></li>
         </ol>
       </section>
     </body>
@@ -118,15 +117,15 @@ gpadmin --stdin'</codeblock></li>
   <topic id="topic20" xml:lang="en">
     <title id="no159219">Validating Disk I/O and Memory Bandwidth</title>
     <body>
-      <p>Use the <codeph><xref href="../../utility_guide/ref/gpcheckperf.xml"
-          >gpcheckperf</xref></codeph> utility to test disk I/O and memory bandwidth. </p>
+      <p>Use the <xref href="../../utility_guide/ref/gpcheckperf.xml"
+          >gpcheckperf</xref> utility to test disk I/O and memory bandwidth. </p>
       <section id="no159247">
         <title>To run gpcheckperf</title>
         <ol>
           <li id="no159250">Run the <codeph>gpcheckperf</codeph> utility using the host file for new
             hosts. Use the <codeph>-d</codeph> option to specify the file systems you want to test
             on each host. You must have write access to these directories. For
-            example:<codeblock>$ gpcheckperf -f <i>new_hosts_file</i> -d /data1 -d /data2 -v </codeblock></li>
+            example:<codeblock>$ gpcheckperf -f &lt;new_hosts_file> -d /data1 -d /data2 -v </codeblock></li>
           <li id="no159252">The utility may take a long time to perform the tests because it is
             copying very large files between the hosts. When it is finished, you will see the
             summary results for the Disk Write, Disk Read, and Stream tests.</li>

@@ -5299,13 +5299,23 @@
         </dxl:GroupingColumns>
         <dxl:ProjList>
           <dxl:ProjElem ColId="83" Alias="sum">
-            <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="57" ColName="qtr_1_cnt" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="84" Alias="sum">
-            <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal">
+            <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+              <dxl:ValuesList ParamType="aggargs">
               <dxl:Ident ColId="58" ColName="qtr_3_cnt" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -5357,7 +5367,8 @@
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="57" Alias="qtr_1_cnt">
-                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:If TypeMdid="0.23.1.0">
                       <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">
                         <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
@@ -5368,10 +5379,15 @@
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                     </dxl:If>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="58" Alias="qtr_3_cnt">
-                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                  <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
                     <dxl:If TypeMdid="0.23.1.0">
                       <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">
                         <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
@@ -5382,6 +5398,10 @@
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                     </dxl:If>
+                    </dxl:ValuesList>
+                    <dxl:ValuesList ParamType="aggdirectargs"/>
+                    <dxl:ValuesList ParamType="aggorder"/>
+                    <dxl:ValuesList ParamType="aggdistinct"/>
                   </dxl:AggFunc>
                 </dxl:ProjElem>
               </dxl:ProjList>
@@ -5587,13 +5607,23 @@
           </dxl:GroupingColumns>
           <dxl:ProjList>
             <dxl:ProjElem ColId="82" Alias="sum">
-              <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="56" ColName="qtr_1_cnt" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="83" Alias="sum">
-              <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal">
+              <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                <dxl:ValuesList ParamType="aggargs">
                 <dxl:Ident ColId="57" ColName="qtr_3_cnt" TypeMdid="0.20.1.0"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="72" Alias="quarter_desc">
@@ -5867,7 +5897,8 @@
                           </dxl:GroupingColumns>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="56" Alias="qtr_1_cnt">
-                              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                                <dxl:ValuesList ParamType="aggargs">
                                 <dxl:If TypeMdid="0.23.1.0">
                                   <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">
                                     <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
@@ -5878,10 +5909,15 @@
                                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                                 </dxl:If>
+                                </dxl:ValuesList>
+                                <dxl:ValuesList ParamType="aggdirectargs"/>
+                                <dxl:ValuesList ParamType="aggorder"/>
+                                <dxl:ValuesList ParamType="aggdistinct"/>
                               </dxl:AggFunc>
                             </dxl:ProjElem>
                             <dxl:ProjElem ColId="57" Alias="qtr_3_cnt">
-                              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
+                              <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                                <dxl:ValuesList ParamType="aggargs">
                                 <dxl:If TypeMdid="0.23.1.0">
                                   <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">
                                     <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
@@ -5892,6 +5928,10 @@
                                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
                                 </dxl:If>
+                                </dxl:ValuesList>
+                                <dxl:ValuesList ParamType="aggdirectargs"/>
+                                <dxl:ValuesList ParamType="aggorder"/>
+                                <dxl:ValuesList ParamType="aggdistinct"/>
                               </dxl:AggFunc>
                             </dxl:ProjElem>
                             <dxl:ProjElem ColId="24" Alias="id">

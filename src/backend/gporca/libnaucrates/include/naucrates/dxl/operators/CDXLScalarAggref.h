@@ -21,6 +21,14 @@ namespace gpdxl
 {
 using namespace gpmd;
 
+enum Edxlascalarggref
+{
+	EdxlscalaraggrefIndexArgs = 0,
+	EdxlscalaraggrefIndexDirectArgs,
+	EdxlscalaraggrefIndexAggOrder,
+	EdxlscalaraggrefIndexAggDistinct,
+};
+
 enum EdxlAggrefStage
 {
 	EdxlaggstageNormal = 0,
@@ -29,6 +37,13 @@ enum EdxlAggrefStage
 	// level in a (partial) ROLLUP grouping extension query
 	EdxlaggstageFinal,	// Second (upper, later) stage of 2-stage aggregation.
 	EdxlaggstageSentinel
+};
+
+enum EdxlAggrefKind
+{
+	EdxlaggkindNormal = 0,
+	EdxlaggkindOrderedSet,
+	EdxlaggkindHypothetical
 };
 
 //---------------------------------------------------------------------------
@@ -57,12 +72,17 @@ private:
 	// Denotes the MPP Stage
 	EdxlAggrefStage m_agg_stage;
 
+	EdxlAggrefKind m_aggkind;
+
+	ULongPtrArray *m_argtypes;
+
 public:
 	CDXLScalarAggref(const CDXLScalarAggref &) = delete;
 
 	// ctor/dtor
 	CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_mdid, IMDId *resolved_rettype,
-					 BOOL is_distinct, EdxlAggrefStage agg_stage);
+					 BOOL is_distinct, EdxlAggrefStage agg_stage,
+					 EdxlAggrefKind aggkind, ULongPtrArray *argtypes);
 
 	~CDXLScalarAggref() override;
 
@@ -79,11 +99,29 @@ public:
 
 	EdxlAggrefStage GetDXLAggStage() const;
 
+	const CWStringConst *GetDXLStrAggKind() const;
+
 	BOOL IsDistinct() const;
+
+	EdxlAggrefKind
+	GetAggKind() const
+	{
+		return m_aggkind;
+	}
+
+	ULongPtrArray *
+	GetArgTypes() const
+	{
+		return m_argtypes;
+	}
 
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer,
 						const CDXLNode *dxlnode) const override;
+
+	void SerializeValuesListChildToDXL(CXMLSerializer *xml_serializer,
+									   const CDXLNode *dxlnode, ULONG index,
+									   const CHAR *attr_name) const;
 
 	// conversion function
 	static CDXLScalarAggref *

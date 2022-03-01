@@ -29,10 +29,18 @@ STANDBYDIR=$DATADIRS/standby
 COORDINATOR_DEMO_PORT=${DEMO_PORT_BASE}
 STANDBY_DEMO_PORT=`expr ${DEMO_PORT_BASE} + 1`
 DEMO_PORT_BASE=`expr ${DEMO_PORT_BASE} + 2`
-for (( i=0; i<`expr 2 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
-  PORT_NUM=`expr $DEMO_PORT_BASE + $i`
-  DEMO_SEG_PORTS_LIST="$DEMO_SEG_PORTS_LIST $PORT_NUM"
-done
+if [ "${WITH_MIRRORS}" == "true" ]; then
+    for (( i=0; i<`expr 2 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
+        PORT_NUM=`expr $DEMO_PORT_BASE + $i`
+        DEMO_SEG_PORTS_LIST="$DEMO_SEG_PORTS_LIST $PORT_NUM"
+    done
+elif [ "${WITH_MIRRORS}" == "false" ]; then
+    for (( i=0; i<${NUM_PRIMARY_MIRROR_PAIRS}; i++ )); do
+        PORT_NUM=`expr $DEMO_PORT_BASE + $i`
+        DEMO_SEG_PORTS_LIST="$DEMO_SEG_PORTS_LIST $PORT_NUM"
+    done
+fi
+
 DEMO_SEG_PORTS_LIST=${DEMO_SEG_PORTS_LIST#* }
 
 # ======================================================================
@@ -188,9 +196,22 @@ cat <<-EOF
 
 	----------------------------------------------------------------------
 
-	  This is a demo of the Greenplum Database system.  We will create
-	  a cluster installation with coordinator and `expr 2 \* ${NUM_PRIMARY_MIRROR_PAIRS}` segment instances
+EOF
+
+if [ "${WITH_MIRRORS}" == "true" ]; then
+cat <<-EOF
+	  This is a MIRRORED demo of the Greenplum Database system.  We will
+	  create a cluster installation with coordinator and `expr 2 \* ${NUM_PRIMARY_MIRROR_PAIRS}` segment instances
 	  (${NUM_PRIMARY_MIRROR_PAIRS} primary & ${NUM_PRIMARY_MIRROR_PAIRS} mirror).
+EOF
+elif [ "${WITH_MIRRORS}" == "false" ]; then
+cat <<-EOF
+	  This is a MIRRORLESS demo of the Greenplum Database system.  We will create
+	  a cluster installation with coordinator and ${NUM_PRIMARY_MIRROR_PAIRS} segment instances.
+EOF
+fi
+
+cat <<-EOF
 
 	    GPHOME ................... : ${GPHOME}
 	    COORDINATOR_DATA_DIRECTORY : ${QDDIR}/${SEG_PREFIX}-1
@@ -364,39 +385,26 @@ if [ "${BLDWRAP_POSTGRES_CONF_ADDONS}" != "__none__" ]  && \
 
     [ -f ${CLUSTER_CONFIG_POSTGRES_ADDONS} ] && chmod a+w ${CLUSTER_CONFIG_POSTGRES_ADDONS}
 
-    for addon in $( echo ${BLDWRAP_POSTGRES_CONF_ADDONS} | sed -e "s/|/ /g" ); do
-        echo "" >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
-        echo $addon >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
-	if [ "$addon" == "fsync=off" ]; then
-		echo "WARNING: fsync is off, database consistency is not guaranteed."
-	fi
-        echo "" >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
-    done
-
-    echo ""
-    echo "======================================================================"
-    echo "CLUSTER_CONFIG_POSTGRES_ADDONS: ${CLUSTER_CONFIG_POSTGRES_ADDONS}"
-    echo "----------------------------------------------------------------------"
-    cat ${CLUSTER_CONFIG_POSTGRES_ADDONS}
-    echo "======================================================================"
-    echo ""
+    echo ${BLDWRAP_POSTGRES_CONF_ADDONS} | sed -e 's/\[//g' -e 's/\]//g' | tr "," "\n" | sed -e 's/^\"//g' -e 's/\"$//g' >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
 fi
 
-if [ -f "${CLUSTER_CONFIG_POSTGRES_ADDONS}" ]; then
-    echo "=========================================================================================="
-    echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} \"$@\""
-    echo "=========================================================================================="
-    echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} "$@"
-else
-    echo "=========================================================================================="
-    echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} \"$@\""
-    echo "=========================================================================================="
-    echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} "$@"
-fi
+# Add fsync-off for all gpdemo deployments
+grep -q 'fsync=off' ${CLUSTER_CONFIG_POSTGRES_ADDONS} && echo "fsync=off already exists in ${CLUSTER_CONFIG_POSTGRES_ADDONS}." || echo "fsync=off" >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
+
+echo ""
+echo "======================================================================"
+echo "CLUSTER_CONFIG_POSTGRES_ADDONS: ${CLUSTER_CONFIG_POSTGRES_ADDONS}"
+echo "----------------------------------------------------------------------"
+cat ${CLUSTER_CONFIG_POSTGRES_ADDONS}
+echo "======================================================================"
+echo ""
+
+echo "=========================================================================================="
+echo "executing:"
+echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} \"$@\""
+echo "=========================================================================================="
+echo ""
+$GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} "$@"
 RETURN=$?
 
 echo "========================================"

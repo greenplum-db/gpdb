@@ -12,19 +12,46 @@ CREATE FUNCTION gp_inject_fault(
   start_occurrence int4,
   end_occurrence int4,
   extra_arg int4,
-  db_id int4)
+  db_id int4,
+  gp_session_id int4)
 RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C VOLATILE STRICT NO SQL;
+
+-- Simpler version, without specific session id.
+CREATE FUNCTION gp_inject_fault(
+  faultname text,
+  type text,
+  ddl text,
+  database text,
+  tablename text,
+  start_occurrence int4,
+  end_occurrence int4,
+  extra_arg int4,
+  db_id int4)
+RETURNS text
+AS $$ select gp_inject_fault($1, $2, $3, $4, $5, $6, $7, $8, $9, -1) $$
+LANGUAGE SQL;
+
+-- Simpler version, trigger only one time, occurrence start at 1 and
+-- end at 1, no sleep and no ddl/database/tablename/sessionid.
+CREATE FUNCTION gp_inject_fault(
+  faultname text,
+  type text,
+  db_id int4)
+RETURNS text
+AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3, -1) $$
+LANGUAGE SQL;
 
 -- Simpler version, trigger only one time, occurrence start at 1 and
 -- end at 1, no sleep and no ddl/database/tablename.
 CREATE FUNCTION gp_inject_fault(
   faultname text,
   type text,
-  db_id int4)
+  db_id int4,
+  gp_session_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3) $$
+AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3, $4) $$
 LANGUAGE SQL;
 
 -- Simpler version, always trigger until fault is reset.
@@ -33,7 +60,7 @@ CREATE FUNCTION gp_inject_fault_infinite(
   type text,
   db_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, $2, '', '', '', 1, -1, 0, $3) $$
+AS $$ select gp_inject_fault($1, $2, '', '', '', 1, -1, 0, $3, -1) $$
 LANGUAGE SQL;
 
 -- Simpler version to avoid confusion for wait_until_triggered fault.
@@ -44,7 +71,7 @@ CREATE FUNCTION gp_wait_until_triggered_fault(
   numtimestriggered int4,
   db_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', 1, 1, $2, $3) $$
+AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', 1, 1, $2, $3, -1) $$
 LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION insert_noop_xlog_record()

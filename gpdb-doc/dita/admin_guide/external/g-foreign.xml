@@ -13,13 +13,9 @@
       access details.</p>
     <p>The Greenplum Database distribution includes the
       <xref href="../../ref_guide/modules/postgres_fdw.xml" format="dita" scope="peer">postgres_fdw</xref>
-       foreign data wrapper.</p>
-    <note>Most PostgreSQL foreign-data wrappers should work with Greenplum
-      Database. However, PostgreSQL foreign-data wrappers connect only through 
-      the Greenplum Database master and do not access the Greenplum Database 
-      segment instances directly.</note>
-    <p>If none of the existing foreign-data wrappers suit your needs, you can
-      write your own as described in <xref href="g-devel-fdw.xml#topic1"/>.</p>
+       foreign-data wrapper.</p>
+    <p>If none of the existing PostgreSQL or Greenplum Database foreign-data wrappers suit
+      your needs, you can write your own as described in <xref href="g-devel-fdw.xml#topic1"/>.</p>
     <p>To access foreign data, you create a <i>foreign server</i> object,
       which defines how to connect to a particular remote data source
       according to the set of options used by its supporting foreign-data
@@ -29,17 +25,44 @@
       the Greenplum Database server. Whenever a foreign table is accessed,
       Greenplum Database asks the foreign-data wrapper to fetch data from, or
       update data in (if supported by the wrapper), the remote source.</p>
-    <note>GPORCA does not support foreign tables, a query on a foreign table
-      always falls back to the Postgres Planner.</note>
     <p>Accessing remote data may require authenticating to the remote data
       source. This information can be provided by a <i>user mapping</i>,
       which can provide additional data such as a user name and password
       based on the current Greenplum Database role.</p>
     <p>For additional information, refer to the
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/></codeph>,
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_SERVER.xml#topic1"/></codeph>,
-       <codeph><xref href="../../ref_guide/sql_commands/CREATE_USER_MAPPING.xml#topic1"/></codeph>,
-        and <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_TABLE.xml#topic1"/></codeph>
+       <xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/>,
+       <xref href="../../ref_guide/sql_commands/CREATE_SERVER.xml#topic1"/>,
+       <xref href="../../ref_guide/sql_commands/CREATE_USER_MAPPING.xml#topic1"/>,
+        and <xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_TABLE.xml#topic1"/>
         SQL reference pages.</p>
   </body>
+  <topic id="greenplum">
+    <title>Using Foreign-Data Wrappers with Greenplum Database</title>
+    <body>
+      <p>Most PostgreSQL foreign-data wrappers should work with Greenplum
+        Database. However, PostgreSQL foreign-data wrappers connect only through 
+        the Greenplum Database master by default and do not access the Greenplum Database 
+        segment instances directly.</p>
+      <p>Greenplum Database adds an <codeph>mpp_execute</codeph> option to FDW-related
+        SQL commands. If the foreign-data wrapper supports it, you can specify
+        <codeph>mpp_execute '<i>value</i>'</codeph> in the <codeph>OPTIONS</codeph> clause
+        when you create the FDW, server, or foreign table to identify the Greenplum host
+        from which the foreign-data wrapper reads or writes data. Valid
+        <codeph><i>value</i></codeph>s are:</p>
+        <ul>
+          <li><codeph>master</codeph> (the default)—Read or write data from the master host.</li>
+          <li><codeph>any</codeph>—Read data from either the master host or any one segment,
+            depending on which path costs less.</li>
+          <li><codeph>all segments</codeph>—Read or write data from all segments. If a foreign-data
+            wrapper supports this value, for correct results it should have a policy that matches
+            segments to data.</li>
+        </ul>
+      <p>(A PostgreSQL foreign-data wrapper may work with the various <codeph>mpp_execute</codeph>
+        option settings, but the results are not guaranteed to be correct. For example,
+        a segment may not be able to connect to the foriegn server, or segments may receive
+        overlapping results resulting in duplicate rows.)</p>
+      <note>GPORCA does not support foreign tables, a query on a foreign table
+        always falls back to the Postgres Planner.</note>
+    </body>
+  </topic>
 </topic>

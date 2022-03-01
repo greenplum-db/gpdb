@@ -356,9 +356,9 @@
       <p>When the Global Deadlock Detector is enabled, the background worker process is
         automatically started on the master host when you start Greenplum Database. You configure
         the interval at which the Global Deadlock Detector collects and analyzes lock waiting data
-        via the <codeph><xref
+        via the <xref
             href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period"
-            type="section">gp_global_deadlock_detector_period</xref></codeph> server configuration
+            type="section">gp_global_deadlock_detector_period</xref> server configuration
         parameter.</p>
       <p>If the Global Deadlock Detector determines that deadlock exists, it breaks the deadlock by
         cancelling one or more backend processes associated with the youngest transaction(s)
@@ -375,14 +375,14 @@
           <li>Concurrent update transactions on the same row of a hash table that are run by
             the GPORCA optimizer.</li>
         </ul></p>
-      <note>Greenplum Database uses the interval specified in the <codeph><xref
+      <note>Greenplum Database uses the interval specified in the <xref
             href="../ref_guide/config_params/guc-list.xml#deadlock_timeout" type="section"
-            >deadlock_timeout</xref></codeph> server configuration parameter for local deadlock
+            >deadlock_timeout</xref> server configuration parameter for local deadlock
         detection. Because the local and global deadlock detection algorithms differ, the cancelled
         process(es) may differ depending upon which detector (local or global) Greenplum Database
         triggers first.</note>
-       <note>If the <codeph><xref href="../ref_guide/config_params/guc-list.xml#lock_timeout"
-            type="section">lock_timeout</xref></codeph> server configuration parameter is turned on
+       <note>If the <xref href="../ref_guide/config_params/guc-list.xml#lock_timeout"
+            type="section">lock_timeout</xref> server configuration parameter is turned on
         and set to a value smaller than <codeph>deadlock_timeout</codeph> and
           <codeph>gp_global_deadlock_detector_period</codeph>, Greenplum Database will cancel a
         statement before it would ever trigger a deadlock check in that session.</note>

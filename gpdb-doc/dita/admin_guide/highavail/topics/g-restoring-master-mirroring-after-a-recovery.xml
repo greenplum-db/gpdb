@@ -8,9 +8,9 @@
       master. You can continue running that instance as the primary master if it has the same
       capabilities and dependability as the original master host. </p>
     <p>You must initialize a new standby master to continue providing master mirroring unless you
-      have already done so while activating the prior standby master. Run <codeph><xref
+      have already done so while activating the prior standby master. Run <xref
           href="../../../utility_guide/ref/gpinitstandby.xml"
-        >gpinitstandby</xref></codeph> on the active master host to configure a new standby master.
+        >gpinitstandby</xref> on the active master host to configure a new standby master.
       See <xref href="g-enabling-master-mirroring.xml#topic8"/>.</p>
     <p>You can restore the primary and standby master instances on the original hosts. This process
       swaps the roles of the primary and standby master hosts, and it should be performed only if
@@ -36,8 +36,8 @@
           <li>Initialize a standby master on the original master host. For example, run this command
             from the current master host, smdw:<codeblock>$ gpinitstandby -s mdw</codeblock></li>
           <li>After the initialization completes, check the status of standby master, mdw. Run
-                <codeph><xref href="../../../utility_guide/ref/gpstate.xml#topic1" type="topic"
-                format="dita"/></codeph> with the <codeph>-f</codeph> option to check the standby
+                <xref href="../../../utility_guide/ref/gpstate.xml#topic1" type="topic"
+                format="dita"/> with the <codeph>-f</codeph> option to check the standby
             master status:<codeblock>$ gpstate -f</codeblock> The standby master status should be
               <codeph>passive</codeph>, and the WAL sender state should be
               <codeph>streaming</codeph>.</li>
@@ -87,8 +87,8 @@
           display details of the standby master host. <codeblock>$ gpstate -f</codeblock></p>
         <p>The standby master status should be <codeph>passive</codeph>, and the WAL sender state
           should be <codeph>streaming</codeph>.</p>
-        <p>For information about the <codeph><xref href="../../../utility_guide/ref/gpstate.xml"
-              type="topic" format="dita"/></codeph> utility, see the <cite>Greenplum Database
+        <p>For information about the <xref href="../../../utility_guide/ref/gpstate.xml"
+              type="topic" format="dita"/> utility, see the <cite>Greenplum Database
             Utility Guide</cite>.</p>
       </section>
     </body>

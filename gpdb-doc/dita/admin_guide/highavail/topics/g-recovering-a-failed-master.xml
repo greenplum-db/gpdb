@@ -5,9 +5,9 @@
   <title>Recovering a Failed Master</title>
   <body>
     <p>If the primary master fails, the Greenplum Database system is not accessible and WAL
-      replication stops. Use <codeph><xref
+      replication stops. Use <xref
           href="../../../utility_guide/ref/gpactivatestandby.xml"
-          >gpactivatestandby</xref></codeph> to activate the standby master. Upon activation of the
+          >gpactivatestandby</xref> to activate the standby master. Upon activation of the
       standby master, Greenplum Database reconstructs the master host state at the time of the last
       successfully committed transaction. </p>
     <p>These steps assume a standby master host is configured for the system. See <xref

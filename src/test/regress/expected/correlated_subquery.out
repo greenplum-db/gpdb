@@ -1,0 +1,128 @@
+SET optimizer_enforce_subplans = 1;
+SET optimizer_trace_fallback=on;
+SET client_min_messages=log;
+SELECT a = ALL (SELECT generate_series(1, 2)), a FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT a = ALL (SELECT generate_series(1, 2)), a FROM (values (1),(2)) v(a);
+ ?column? | a 
+----------+---
+ f        | 1
+ f        | 2
+(2 rows)
+
+SELECT a = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT a = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
+ ?column? | a 
+----------+---
+ f        | 1
+ t        | 2
+(2 rows)
+
+SELECT 1 = ALL (SELECT generate_series(1, 2)) FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT 1 = ALL (SELECT generate_series(1, 2)) FROM (values (1),(2)) v(a);
+ ?column? 
+----------
+ f
+ f
+(2 rows)
+
+SELECT 2 = ALL (SELECT generate_series(2, 2)) FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT 2 = ALL (SELECT generate_series(2, 2)) FROM (values (1),(2)) v(a);
+ ?column? 
+----------
+ t
+ t
+(2 rows)
+
+SELECT 2 = ALL (SELECT generate_series(2, 3)) FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT 2 = ALL (SELECT generate_series(2, 3)) FROM (values (1),(2)) v(a);
+ ?column? 
+----------
+ f
+ f
+(2 rows)
+
+SELECT 2+1 = ALL (SELECT generate_series(2, 3)) FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT 2+1 = ALL (SELECT generate_series(2, 3)) FROM (values (1),(2)) v(a);
+ ?column? 
+----------
+ f
+ f
+(2 rows)
+
+SELECT 2+1 = ALL (SELECT generate_series(3, 3)) FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT 2+1 = ALL (SELECT generate_series(3, 3)) FROM (values (1),(2)) v(a);
+ ?column? 
+----------
+ t
+ t
+(2 rows)
+
+SELECT (SELECT a) = ALL (SELECT generate_series(1, 2)), a FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT (SELECT a) = ALL (SELECT generate_series(1, 2)), a FROM (values (1),(2)) v(a);
+ ?column? | a 
+----------+---
+ f        | 1
+ f        | 2
+(2 rows)
+
+SELECT (SELECT a) = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT (SELECT a) = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
+ ?column? | a 
+----------+---
+ f        | 1
+ t        | 2
+(2 rows)
+
+SELECT (SELECT a+1) = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT (SELECT a+1) = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
+ ?column? | a 
+----------+---
+ t        | 1
+ f        | 2
+(2 rows)
+
+SELECT (SELECT 1) = ALL (SELECT generate_series(1, 1)) FROM (values (1),(2)) v(a);
+LOG:  statement: SELECT (SELECT 1) = ALL (SELECT generate_series(1, 1)) FROM (values (1),(2)) v(a);
+ ?column? 
+----------
+ t
+ t
+(2 rows)
+
+SELECT (SELECT 1) = ALL (SELECT generate_series(1, 2)) FROM  (values (1),(2)) v(a);
+LOG:  statement: SELECT (SELECT 1) = ALL (SELECT generate_series(1, 2)) FROM  (values (1),(2)) v(a);
+ ?column? 
+----------
+ f
+ f
+(2 rows)
+
+SELECT (SELECT 3) = ALL (SELECT generate_series(3, 3)) FROM  (values (1),(2)) v(a);
+LOG:  statement: SELECT (SELECT 3) = ALL (SELECT generate_series(3, 3)) FROM  (values (1),(2)) v(a);
+ ?column? 
+----------
+ t
+ t
+(2 rows)
+
+SELECT (SELECT 1) = ALL (SELECT generate_series(1, 1));
+LOG:  statement: SELECT (SELECT 1) = ALL (SELECT generate_series(1, 1));
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT (SELECT 1) = ALL (SELECT generate_series(1, 2));
+LOG:  statement: SELECT (SELECT 1) = ALL (SELECT generate_series(1, 2));
+ ?column? 
+----------
+ f
+(1 row)
+
+SELECT (SELECT 3) = ALL (SELECT generate_series(3, 3));
+LOG:  statement: SELECT (SELECT 3) = ALL (SELECT generate_series(3, 3));
+ ?column? 
+----------
+ t
+(1 row)
+

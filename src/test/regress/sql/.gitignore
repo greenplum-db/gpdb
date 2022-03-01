@@ -55,3 +55,4 @@
 /upgrade.sql
 /workfile_mgr_test.sql
 /external_table_persistent_error_log.sql
+/external_table_union_all.sql

@@ -18,6 +18,7 @@
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_foreign_table.h"
 #include "catalog/pg_user_mapping.h"
+#include "cdb/cdbutil.h"
 #include "commands/defrem.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
@@ -72,6 +73,41 @@ SeparateOutMppExecute(List **options)
 	}
 
 	return exec_location;
+}
+
+/* Get and separate out the num_segments option */
+int32
+SeparateOutNumSegments(List **options)
+{
+	ListCell *lc = NULL;
+	ListCell *prev = NULL;
+	char *num_segments_str = NULL;
+	int32 num_segments = 0;
+
+	foreach(lc, *options)
+	{
+		DefElem    *def = (DefElem *) lfirst(lc);
+
+		if (strcmp(def->defname, "num_segments") == 0)
+		{
+			num_segments_str = defGetString(def);
+			num_segments = pg_atoi(num_segments_str, sizeof(int32), 0);
+
+			if (num_segments <= 0)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("\"%d\" is not a valid num_segments value",
+								num_segments)));
+			}
+
+			*options = list_delete_cell(*options, lc, prev);
+			break;
+		}
+
+		prev = lc;
+	}
+	return num_segments;
 }
 
 /*
@@ -222,6 +258,12 @@ GetForeignServerExtended(Oid serverid, bits16 flags)
 	{
 		ForeignDataWrapper *fdw = GetForeignDataWrapper(server->fdwid);
 		server->exec_location = fdw->exec_location;
+	}
+
+	server->num_segments = SeparateOutNumSegments(&server->options);
+	if (server->num_segments <= 0)
+	{
+		server->num_segments = getgpsegmentCount();
 	}
 
 	ReleaseSysCache(tp);

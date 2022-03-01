@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!-- install_guide/refs/gpactivatestandby.xml has a conref to this topic. -->
     <title id="jq20941">gpcheckperf</title>
     <body>
         <p>Verifies the baseline hardware performance of the specified hosts.</p>

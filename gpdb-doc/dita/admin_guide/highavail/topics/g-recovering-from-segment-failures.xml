@@ -124,7 +124,7 @@ failedAddress3|failedPort3|failedDataDirectory3</codeblock></li>
                   <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
                     your choice, where each segment to recover has its own line with following
                     format:
-                    <codeblock>failedAddress1|failedPort1|failedDataDirectory1<b>&lt;SPACE></b>failedAddress2|failedPort2|failedDataDirectory2</codeblock>
+                    <codeblock>failedAddress1|failedPort1|failedDataDirectory1&lt;SPACE>failedAddress2|failedPort2|failedDataDirectory2</codeblock>
                     Note the literal <b>SPACE</b> separating the lines. </li>
                   <li>Alternatively, generate a sample recovery file using the following command and
                     edit the resulting file to match your desired recovery configuration:
@@ -149,7 +149,7 @@ failedAddress3|failedPort3|failedDataDirectory3</codeblock></li>
               a different host in the cluster:<ol id="ol_oph_f31_yqb">
                 <li>Manually create a <codeph>recover_config_file</codeph> file in a location of
               your choice, where each segment to recover has its own line with following format:
-              <codeblock>failedAddress|failedPort|failedDataDirectory<b>&lt;SPACE></b>newAddress|newPort|newDataDirectory</codeblock>
+              <codeblock>failedAddress|failedPort|failedDataDirectory&lt;SPACE>newAddress|newPort|newDataDirectory</codeblock>
               Note the literal <b>SPACE</b> separating the details of the down segment from the
               details of where the segment will be recovered to.<p>Alternatively, generate a sample
                 recovery file using the following command and edit the resulting file to match your

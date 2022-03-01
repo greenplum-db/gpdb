@@ -219,65 +219,6 @@ CLogicalDynamicGetBase::DerivePartitionInfo(CMemoryPool *mp,
 	return ppartinfo;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CLogicalDynamicGetBase::PstatsDeriveFilter
-//
-//	@doc:
-//		Derive stats from base table using filters on partition and/or index columns
-//
-//---------------------------------------------------------------------------
-IStatistics *
-CLogicalDynamicGetBase::PstatsDeriveFilter(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CExpression *pexprFilter) const
-{
-	CExpression *pexprFilterNew = nullptr;
-
-	if (nullptr != pexprFilter)
-	{
-		pexprFilterNew = pexprFilter;
-		pexprFilterNew->AddRef();
-	}
-
-	CColRefSet *pcrsStat = GPOS_NEW(mp) CColRefSet(mp);
-
-	if (nullptr != pexprFilterNew)
-	{
-		pcrsStat->Include(pexprFilterNew->DeriveUsedColumns());
-	}
-
-	// requesting statistics on distribution columns to estimate data skew
-	if (nullptr != m_pcrsDist)
-	{
-		pcrsStat->Include(m_pcrsDist);
-	}
-
-
-	CStatistics *pstatsFullTable = dynamic_cast<CStatistics *>(
-		PstatsBaseTable(mp, exprhdl, m_ptabdesc, pcrsStat));
-
-	pcrsStat->Release();
-
-	if (nullptr == pexprFilterNew || pexprFilterNew->DeriveHasSubquery())
-	{
-		return pstatsFullTable;
-	}
-
-	CStatsPred *pred_stats = CStatsPredUtils::ExtractPredStats(
-		mp, pexprFilterNew, nullptr /*outer_refs*/
-	);
-	pexprFilterNew->Release();
-
-	IStatistics *result_stats = CFilterStatsProcessor::MakeStatsFilter(
-		mp, pstatsFullTable, pred_stats, true /* do_cap_NDVs */);
-	pred_stats->Release();
-	pstatsFullTable->Release();
-
-	return result_stats;
-}
-
 // Construct a mapping from each column in root table to an index in each child
 // partition's table descr by matching column names
 ColRefToUlongMapArray *

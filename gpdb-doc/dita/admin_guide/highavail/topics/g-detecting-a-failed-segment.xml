@@ -8,11 +8,11 @@
       segment instance when a primary segment instance goes down. Provided one segment instance is
       online per portion of data, users may not realize a segment is down. If a transaction is in
       progress when a fault occurs, the in-progress transaction rolls back and restarts
-      automatically on the reconfigured set of segments. The <codeph><xref
+      automatically on the reconfigured set of segments. The <xref
           href="../../../utility_guide/ref/gpstate.xml#topic1" type="topic"
-          format="dita"/></codeph> utility can be used to identify failed segments. The utility
-      displays information from the catalog tables including <codeph><xref
-          href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"/></codeph>. </p>
+          format="dita"/> utility can be used to identify failed segments. The utility
+      displays information from the catalog tables including <xref
+          href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"/>. </p>
     <p>If the entire Greenplum Database system becomes nonoperational due to a segment failure (for
       example, if mirroring is not enabled or not enough segments are online to access all user
       data), users will see errors when trying to connect to a database. The errors returned to the
@@ -37,8 +37,8 @@
         of probe attempts fail, the FTS probes the segment's mirror to ensure that it is up, and
         then updates the <codeph>gp_segment_configuration</codeph> table, marking the primary
         segment "down" and setting the mirror to act as the primary. The FTS updates the
-            <codeph><xref href="../../../ref_guide/system_catalogs/gp_configuration_history.xml"
-          /></codeph> table with the operations performed.</p>
+            <xref href="../../../ref_guide/system_catalogs/gp_configuration_history.xml"
+          /> table with the operations performed.</p>
       <p dir="ltr">When there is only an active primary segment and the corresponding mirror is
         down, the primary goes into the <i>Not In Sync</i> state and continues logging database
         changes, so the mirror can be synchronized without performing a full copy of data from the

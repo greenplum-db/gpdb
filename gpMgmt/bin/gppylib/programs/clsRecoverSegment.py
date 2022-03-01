@@ -28,7 +28,7 @@ from gppylib.commands import gp, pg, unix
 from gppylib.commands.base import Command, WorkerPool
 from gppylib.db import dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
-from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
+from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts, update_unreachable_flag_for_segments
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
@@ -274,14 +274,7 @@ class GpRecoverSegmentProgram:
         num_workers = min(len(gpArray.get_hostlist()), self.__options.parallelDegree)
         hosts = set(gpArray.get_hostlist(includeCoordinator=False))
         unreachable_hosts = get_unreachable_segment_hosts(hosts, num_workers)
-        for i, segmentPair in enumerate(gpArray.segmentPairs):
-            if segmentPair.primaryDB.getSegmentHostName() in unreachable_hosts:
-                logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.primaryDB.dbid, segmentPair.primaryDB.getSegmentHostName()))
-                gpArray.segmentPairs[i].primaryDB.unreachable = True
-
-            if segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
-                logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.mirrorDB.dbid, segmentPair.mirrorDB.getSegmentHostName()))
-                gpArray.segmentPairs[i].mirrorDB.unreachable = True
+        update_unreachable_flag_for_segments(gpArray, unreachable_hosts)
 
         # We have phys-rep/filerep mirrors.
 

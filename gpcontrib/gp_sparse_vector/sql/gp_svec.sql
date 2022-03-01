@@ -1,4 +1,5 @@
 CREATE EXTENSION gp_sparse_vector;
+SET search_path TO sparse_vector;
 
 DROP TABLE if exists test;
 CREATE TABLE test (a int, b svec) DISTRIBUTED BY (a);
@@ -80,4 +81,10 @@ SELECT array_agg(a) FROM (SELECT trunc(7) a,generate_series(1,100000) ORDER BY a
 SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9,8,7,6,5,4,3,2,0}'::svec);
 SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9,8,7,6,5,4,3,2,0}'::svec::float8[]);
 
+-- Test operator == as a joining condition when this column could be null. (See issue #12986)
+SELECT DISTINCT a.table_name, a.character_maximum_length
+FROM information_schema.columns a INNER JOIN information_schema.columns b ON a.table_name=b.table_name AND a.column_name=b.column_name 
+WHERE a.character_maximum_length == b.character_maximum_length ORDER BY a.table_name;
+
 DROP EXTENSION gp_sparse_vector;
+RESET search_path;

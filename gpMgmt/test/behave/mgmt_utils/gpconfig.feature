@@ -216,6 +216,30 @@ Feature: gpconfig integration tests
         | asks for confirmation and aborts when user selects no     | 1           | should         | User Aborted. Exiting. | should not                | should not            | gpconfig -c application_name -v "easy" < test/behave/mgmt_utils/steps/data/no.txt |
         | does not ask for confirmation for coordinator only change | 0           | should not     | completed successfully | should                    | should not            | gpconfig -c application_name -v "easy" --coordinatoronly                          |
 
+    @concourse_cluster
+    @demo_cluster
+    Scenario: gpconfig check for GUC's with same prefix
+      Given the user runs "gpstop -u"
+        And gpstop should return a return code of 0
+        And the gpconfig context is setup
+
+        When the user runs "gpconfig -c gp_resqueue_priority -v 'off'"
+        Then gpconfig should return a return code of 0
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "gp_resqueue_priority"
+        And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "gp_resqueue_priority"
+
+        When the user runs "gpconfig -c gp_resqueue_priority_cpucores_per_segment -v '4'"
+        Then gpconfig should return a return code of 0
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
+        And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
+
+        When the user runs "gpconfig -c gp_resqueue_priority -v 'on'"
+        Then gpconfig should return a return code of 0
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "gp_resqueue_priority"
+        And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "gp_resqueue_priority"
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
+        And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
+
     @demo_cluster
     Scenario: gpconfig checks liveness of correct number of hosts
       Given the database is running

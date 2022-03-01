@@ -241,6 +241,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+    @backup_restore_bashrc
     Scenario: gprecoverseg should not return error when banner configured on host
         Given the database is running
         And all the segments are running
@@ -274,7 +275,8 @@ Feature: gprecoverseg tests
       And the user runs psql with "-c 'INSERT INTO foo SELECT generate_series(1, 10000)'" against database "postgres"
 
       When the user runs "gprecoverseg <args>"
-      Then gprecoverseg should print "Not recovering segment \d because invalid_host is unreachable" to stdout
+      Then gprecoverseg should print "One or more hosts are not reachable via SSH." to stdout
+      And gprecoverseg should print "Host invalid_host is unreachable" to stdout
       And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
       And the status of the primary on content 0 should be "u"
       And the status of the primary on content 1 should be "d"

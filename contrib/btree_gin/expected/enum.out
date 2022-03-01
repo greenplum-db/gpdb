@@ -46,15 +46,18 @@ SELECT * FROM test_enum WHERE i>'g'::rainbow ORDER BY i;
 (3 rows)
 
 explain (costs off) SELECT * FROM test_enum WHERE i>='g'::rainbow ORDER BY i;
-                  QUERY PLAN                   
------------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_enum
-         Recheck Cond: (i >= 'g'::rainbow)
-         ->  Bitmap Index Scan on idx_enum
-               Index Cond: (i >= 'g'::rainbow)
-(6 rows)
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_enum
+               Recheck Cond: (i >= 'g'::rainbow)
+               ->  Bitmap Index Scan on idx_enum
+                     Index Cond: (i >= 'g'::rainbow)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 -- make sure we handle the non-evenly-numbered oid case for enums
 create type e as enum ('0', '2', '3');

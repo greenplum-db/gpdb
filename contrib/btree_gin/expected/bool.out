@@ -65,55 +65,70 @@ SELECT * FROM test_bool WHERE i>false ORDER BY i;
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i<true ORDER BY i;
-                QUERY PLAN                 
--------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bool
-         Recheck Cond: (i < true)
-         ->  Bitmap Index Scan on idx_bool
-               Index Cond: (i < true)
-(6 rows)
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bool
+               Recheck Cond: (i < true)
+               ->  Bitmap Index Scan on idx_bool
+                     Index Cond: (i < true)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i<=true ORDER BY i;
-                QUERY PLAN                 
--------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bool
-         Recheck Cond: (i <= true)
-         ->  Bitmap Index Scan on idx_bool
-               Index Cond: (i <= true)
-(6 rows)
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bool
+               Recheck Cond: (i <= true)
+               ->  Bitmap Index Scan on idx_bool
+                     Index Cond: (i <= true)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i=true ORDER BY i;
-         QUERY PLAN          
------------------------------
- Sort
-   Sort Key: i
-   ->  Seq Scan on test_bool
-         Filter: i
-(4 rows)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Seq Scan on test_bool
+               Filter: i
+ Optimizer: Postgres query optimizer
+(7 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i>=true ORDER BY i;
-                QUERY PLAN                 
--------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bool
-         Recheck Cond: (i >= true)
-         ->  Bitmap Index Scan on idx_bool
-               Index Cond: (i >= true)
-(6 rows)
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bool
+               Recheck Cond: (i >= true)
+               ->  Bitmap Index Scan on idx_bool
+                     Index Cond: (i >= true)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM test_bool WHERE i>true ORDER BY i;
-                QUERY PLAN                 
--------------------------------------------
- Sort
-   Sort Key: i
-   ->  Bitmap Heap Scan on test_bool
-         Recheck Cond: (i > true)
-         ->  Bitmap Index Scan on idx_bool
-               Index Cond: (i > true)
-(6 rows)
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  Bitmap Heap Scan on test_bool
+               Recheck Cond: (i > true)
+               ->  Bitmap Index Scan on idx_bool
+                     Index Cond: (i > true)
+ Optimizer: Postgres query optimizer
+(9 rows)
 

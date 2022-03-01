@@ -1,0 +1,68 @@
+-- This tests the bitmap index pageinspect functions. The tests reside here, as opposed to
+-- contrib/pageinspect because we want to leverage isolation2's utility mode syntax (since the
+-- inspect functions run against a single node, as opposed to the entire GP cluster)
+
+-- Setup
+1U: CREATE EXTENSION pageinspect;
+CREATE
+1U: CREATE TABLE bmtest_t1(i int, bmfield int);
+CREATE
+1U: CREATE INDEX bmtest_i1 ON bmtest_t1 USING bitmap(bmfield);
+CREATE
+1U: INSERT INTO bmtest_t1 SELECT i,1 FROM generate_series(1, 1000) i;
+INSERT 1000
+1U: INSERT INTO bmtest_t1 SELECT i,2 FROM generate_series(1, 1000) i;
+INSERT 1000
+
+-- start_matchsubs
+-- m/bmfuncs.c:\d+/
+-- s/bmfuncs.c:\d+/bmfuncs.c:XXX/g
+-- end_matchsubs
+
+-- Test metapage
+1U: SELECT magic, version, regexp_replace(auxrelid::regclass::text,'[[:digit:]]+', 'auxrelid') AS auxrelname, regexp_replace(auxindexrelid::regclass::text,'[[:digit:]]+', 'auxindrelid') AS auxindexrelname FROM bm_metap('bmtest_i1');
+ magic      | version | auxrelname                    | auxindexrelname                        
+------------+---------+-------------------------------+----------------------------------------
+ 1112101965 | 2       | pg_bitmapindex.pg_bm_auxrelid | pg_bitmapindex.pg_bm_auxindrelid_index 
+(1 row)
+
+-- Test LOV item pages
+-- Negative cases (not a LOV page)
+1U: SELECT * FROM bm_lov_page_items('bmtest_i1', 0);
+ERROR:  block 0 is a meta page (bmfuncs.c:246)
+1U: SELECT * FROM bm_lov_page_items('bmtest_i1', 2);
+ERROR:  block 2 is not an LOV page, it is a bitmap page (bmfuncs.c:273)
+-- Positive test
+1U: SELECT * FROM bm_lov_page_items('bmtest_i1', 1) order by itemoffset;
+ itemoffset | lov_head_blkno | lov_tail_blkno | last_complete_word      | last_word               | last_tid | last_setbit_tid | is_last_complete_word_fill | is_last_word_fill 
+------------+----------------+----------------+-------------------------+-------------------------+----------+-----------------+----------------------------+-------------------
+ 1          | 4294967295     | 4294967295     | ff ff ff ff ff ff ff ff | 00 00 00 00 00 00 00 00 | 0        | 0               | f                          | f                 
+ 2          | 2              | 2              | 80 00 00 00 00 00 00 01 | 00 00 00 00 07 ff ff ff | 65600    | 65627           | t                          | f                 
+ 3          | 3              | 3              | 80 00 00 00 00 00 00 02 | 00 3f ff ff ff ff ff ff | 131200   | 131254          | t                          | f                 
+(3 rows)
+
+-- Test bitmap pages
+-- Negative cases (not a bitmap page)
+1U: SELECT * FROM bm_bitmap_page_items('bmtest_i1', 0);
+ERROR:  block 0 is a meta page (bmfuncs.c:480)
+1U: SELECT * FROM bm_bitmap_page_items('bmtest_i1', 1);
+ERROR:  block 1 is not a bitmap page, it is a LOV item page (bmfuncs.c:507)
+-- Positive test
+1U: SELECT * FROM bm_bitmap_page_header('bmtest_i1', 2);
+ num_words | next_blkno | last_tid 
+-----------+------------+----------
+ 3         | 4294967295 | 65536    
+(1 row)
+1U: SELECT * FROM bm_bitmap_page_items('bmtest_i1', 2) order by word_num;
+ word_num | compressed | content_word            
+----------+------------+-------------------------
+ 0        | t          | 80 00 00 00 00 00 00 0e 
+ 1        | f          | 00 00 00 00 00 00 1f ff 
+ 2        | t          | 00 00 00 00 00 00 03 f1 
+(3 rows)
+
+-- cleanup
+1U: DROP TABLE bmtest_t1;
+DROP
+1U: DROP EXTENSION pageinspect;
+DROP

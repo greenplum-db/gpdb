@@ -180,11 +180,11 @@ appendonly_redo(XLogReaderState *record)
 	uint8         info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
 	/*
-	 * Perform redo of AO XLOG records only for standby mode. We do
-	 * not need to replay AO XLOG records in normal mode because fsync
+	 * Do not perform redo of AO XLOG records for crash recovery mode. We do
+	 * not need to replay AO XLOG records in this case because fsync
 	 * is performed on file close.
 	 */
-	if (!IsStandbyMode())
+	if (IsCrashRecoveryOnly())
 		return;
 
 	switch (info)

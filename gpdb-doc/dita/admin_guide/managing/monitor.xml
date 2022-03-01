@@ -12,14 +12,14 @@
     <p>Also, be sure to review <xref href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for
       monitoring activities you can script to quickly detect problems in the system. </p>
   </body>
-  <topic id="topic2" xml:lang="en" otherprops="pivotal">
+  <topic id="topic2" xml:lang="en">
     <title id="kj157177">Monitoring Database Activity and Performance</title>
     <body>
-      <p>Tanzu Greenplum Command Center, an optional web-based interface,
-        provides cluster status information, graphical administrative tools, real-time query
-        monitoring, and historical cluster and query data. Download the Greenplum Command Center
-        package from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-          format="html">VMware Tanzu Network</xref> and view the documentation at the <xref
+      <p>Tanzu Greenplum Command Center, an optional web-based interface, provides cluster status
+        information, graphical administrative tools, real-time query monitoring, and historical
+        cluster and query data. Download the Greenplum Command Center package from <xref
+          href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
+          >VMware Tanzu Network</xref> and view the documentation at the <xref
           href="http://gpcc.docs.pivotal.io" scope="external" format="html">Greenplum Command Center
           Documentation</xref> web site. </p>
     </body>
@@ -235,7 +235,7 @@ Distributed by: (sale_id)
             you can run a query such as:</p>
           <p>
             <codeblock>=# SELECT gp_segment_id, count(*) 
-   FROM <i>table_name</i> GROUP BY gp_segment_id;
+   FROM &lt;table_name> GROUP BY gp_segment_id;
 </codeblock>
           </p>
           <p>A table is considered to have a balanced distribution if all segments have roughly the
@@ -260,8 +260,8 @@ Distributed by: (sale_id)
             query predicates are not well matched. To check for processing skew, you can run a query
             such as:</p>
           <p>
-            <codeblock>=# SELECT gp_segment_id, count(*) FROM <i>table_name</i>
-   WHERE <i>column</i>='<i>value</i>' GROUP BY gp_segment_id;
+            <codeblock>=# SELECT gp_segment_id, count(*) FROM &lt;table_name>
+   WHERE &lt;column>='&lt;value>' GROUP BY gp_segment_id;
 </codeblock>
           </p>
           <p>This will show the number of rows returned by segment for the given
@@ -339,7 +339,7 @@ Distributed by: (sale_id)
               <codeph>\d+</codeph> meta-command when working in <codeph>psql</codeph>. For example,
             to see the definition of a table:</p>
           <p>
-            <codeblock>=&gt; \d+ <i>mytable</i>
+            <codeblock>=&gt; \d+ &lt;mytable>
 </codeblock>
           </p>
         </body>

@@ -26,23 +26,29 @@
             <tbody>
                <row>
                   <entry colname="col1">ODBC</entry>
-                  <entry colname="col2"><ph otherprops="pivotal">Greenplum DataDirect ODBC
-                        Driver</ph><ph otherprops="oss-only">psqlODBC</ph></entry>
+                  <entry colname="col2">Greenplum DataDirect ODBC Driver</entry>
                   <entry colname="col3"><xref
                         href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-                        format="html" otherprops="pivotal"/><xref
-                        href="https://odbc.postgresql.org/" scope="external" format="html"
-                        otherprops="oss-only"/>.</entry>
+                        format="html"/>.</entry>
+               </row>
+               <row>
+                  <entry>ODBC</entry>
+                  <entry>psqlODBC</entry>
+                  <entry><xref href="https://odbc.postgresql.org/" scope="external" format="html"
+                        /></entry>
                </row>
                <row>
                   <entry colname="col1">JDBC</entry>
-                  <entry colname="col2"><ph otherprops="pivotal">Greenplum DataDirect JDBC
-                        Driver</ph><ph otherprops="oss-only">pgjdbc</ph></entry>
+                  <entry colname="col2">Greenplum DataDirect JDBC Driver</entry>
                   <entry colname="col3"><xref
                         href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-                        format="html" otherprops="pivotal"/><xref
-                        href="https://jdbc.postgresql.org/" format="html" scope="external"
-                        otherprops="oss-only"/></entry>
+                        format="html"/></entry>
+               </row>
+               <row>
+                  <entry>JDBC</entry>
+                  <entry>pgjdbc</entry>
+                  <entry><xref href="https://jdbc.postgresql.org/" format="html" scope="external"
+                     /></entry>
                </row>
                <row>
                   <entry colname="col1">Perl DBI</entry>
@@ -76,8 +82,7 @@
             from Oracle.</li>
          <li id="io140288">Write your client application according to the API specifications. When
             programming your application, be aware of the SQL support in Greenplum Database so you
-            do not include any unsupported SQL syntax. <p otherprops="gpdb">See the <i>Greenplum
-                  Database Reference Guide</i> for more information.</p></li>
+            do not include any unsupported SQL syntax. </li>
       </ol>
       <p>Download the appropriate driver and configure connectivity to your Greenplum Database
          master instance. </p>

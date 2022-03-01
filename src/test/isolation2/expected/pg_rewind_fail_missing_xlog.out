@@ -181,6 +181,22 @@ INSERT 3
 ---------------------------
  t                         
 (1 row)
+-- Wait for the end of recovery CHECKPOINT completed after the mirror was promoted
+3: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'skip', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: SELECT gp_wait_until_triggered_fault('checkpoint_after_redo_calculated', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
 3: SELECT role, preferred_role from gp_segment_configuration where content = 1;
  role | preferred_role 
 ------+----------------

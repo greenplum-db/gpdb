@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_ddb-plugin" otherprops="pivotal">
+<topic id="topic_ddb-plugin">
   <title>Using the DD Boost Storage Plugin with gpbackup, gprestore, and gpbackup_manager</title>
   <body>
-    <note>The DD Boost storage plugin is available in the commercial release of Tanzu Greenplum
+    <note>The DD Boost storage plugin is available only with the commercial release of Tanzu Greenplum
       Backup and Restore.</note>
     <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
-          <codeph><xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref></codeph> and
-          <codeph><xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref></codeph>
+          <xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref> and
+          <xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref>
       utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can
       also replicate a backup on a separate, remote Data Domain system for disaster recovery with
       gpbackup or <xref href="../../utility_guide/ref/gpbackup_manager.xml">gpbackup_manager</xref>.
@@ -35,22 +35,22 @@
         sections to one another. The use of white space is significant. White space should not be
         used simply for formatting purposes, and tabs should not be used at all.</p>
       <p>This is the structure of a DD Boost storage plugin configuration file.</p>
-      <codeblock><xref href="#topic_ddb-plugin/plugin-exe" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_ddboost_plugin</varname>>
-<xref href="#topic_ddb-plugin/ddb-options" format="dita">options</xref>: 
-  <xref href="#topic_ddb-plugin/ddb-host" format="dita">hostname</xref>: "&lt;<varname>data-domain-host</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-user" format="dita">username</xref>: "&lt;<varname>ddboost-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-pwd-encrypt" format="dita">password_encryption</xref>: "on" | "off"       
-  <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: "&lt;<varname>ddboost-pwd</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: "&lt;<varname>data-domain-id</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: "&lt;<varname>data-domain-dir</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-replication" format="dita">replication</xref>: "on" | "off"
-  <xref href="#topic_ddb-plugin/ddb-replication_streams" format="dita">replication_streams</xref>: <varname>integer</varname>
-  <xref href="#topic_ddb-plugin/ddb-remote-host" format="dita">remote_hostname</xref>: "&lt;<varname>remote-dd-host</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-user" format="dita">remote_username</xref>: "&lt;<varname>remote-ddboost-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-pwd-encrypt" format="dita">remote_password_encryption</xref> "on" | "off"
-  <xref href="#topic_ddb-plugin/ddb-remote-pwd" format="dita">remote_password</xref>: "&lt;<varname>remote-dd-pwd</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-s-unit" format="dita">remote_storage_unit</xref>: "&lt;<varname>remote-dd-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-dir" format="dita">remote_directory</xref>: "&lt;<varname>remote-dd-dir</varname>>"</codeblock>
+      <codeblock>executablepath: &lt;absolute-path-to-gpbackup_ddboost_plugin>
+options: 
+  hostname: "&lt;data-domain-host>"
+  username: "&lt;ddboost-ID>"
+  password_encryption: "on" | "off"       
+  password: "&lt;ddboost-pwd>"
+  storage_unit: "&lt;data-domain-id>"
+  directory: "&lt;data-domain-dir>"
+  replication: "on" | "off"
+  replication_streams: integer
+  remote_hostname: "&lt;remote-dd-host>"
+  remote_username: "&lt;remote-ddboost-ID>"
+  remote_password_encryption "on" | "off"
+  remote_password: "&lt;remote-dd-pwd>"
+  remote_storage_unit: "&lt;remote-dd-ID>"
+  remote_directory: "&lt;remote-dd-dir>"</codeblock>
       <parml id="ddb-exe-path">
         <plentry id="plugin-exe">
           <pt>executablepath</pt>
@@ -73,8 +73,8 @@
               <plentry id="ddb-pwd-encrypt">
                 <pt>password_encryption</pt>
                 <pd>Optional. Specifies whether the <codeph>password</codeph> option value is
-                  encrypted. Default value is <codeph>off</codeph>. Use the <codeph><xref
-                      href="../../utility_guide/ref/gpbackup_manager.xml#topic1"/></codeph>
+                  encrypted. Default value is <codeph>off</codeph>. Use the <xref
+                      href="../../utility_guide/ref/gpbackup_manager.xml#topic1"/>
                   <codeph>encrypt-password</codeph> command to encrypt the plain-text password for
                   the DD Boost user. If the <codeph>replication</codeph> option is
                     <codeph>on</codeph>, <codeph>gpbackup_manager</codeph> also encrypts the remote
@@ -145,9 +145,9 @@
                 <pt>remote_password_encryption</pt>
                 <pd>Optional when performing replication. Specifies whether the
                     <codeph>remote_password</codeph> option value is encrypted. The default value is
-                    <codeph>off</codeph>. To set up password encryption use the <codeph><xref
+                    <codeph>off</codeph>. To set up password encryption use the <xref
                       href="../../utility_guide/ref/gpbackup_manager.xml#topic1"
-                      >gpbackup_manager</xref></codeph>
+                      >gpbackup_manager</xref>
                   <codeph>encrypt-password</codeph> command to encrypt the plain-text passwords for
                   the DD Boost user. If the <codeph>replication</codeph> parameter is
                     <codeph>on</codeph>, <codeph>gpbackup_manager</codeph> also encrypts the remote
@@ -202,7 +202,7 @@ options:
       <p>The DD Boost storage plugin writes the backup files to this directory of the Data Domain
         storage unit <codeph>gpdb-backup</codeph>. </p>
       <p>
-        <codeblock>/test/backup/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+        <codeblock>/test/backup/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeblock>
       </p>
       <p>This is an example DD Boost storage plugin configuration file that enables
         replication.<codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
@@ -237,7 +237,7 @@ options:
         hosts.</p>
       <p>When you perform a backup with the DD Boost storage plugin, the plugin stores the backup
         files in this location in the Data Domain storage unit. </p>
-      <codeblock>&lt;<varname>directory</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
+      <codeblock>&lt;directory>/backups/&lt;datestamp>/&lt;timestamp></codeblock>
       <p>Where &lt;<varname>directory</varname>> is the location you specified in the DD Boost
         configuration file, and &lt;<varname>datestamp</varname>> and
           &lt;<varname>timestamp</varname>> are the backup date and time stamps. </p>

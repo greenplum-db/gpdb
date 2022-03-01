@@ -32,6 +32,13 @@ class CColRefSet;
 //---------------------------------------------------------------------------
 class CLogicalDynamicGet : public CLogicalDynamicGetBase
 {
+protected:
+	// Disjunction of selected child partition's constraints after static pruning
+	CConstraint *m_partition_cnstrs_disj{nullptr};
+
+	// Has done static pruning
+	BOOL m_static_pruned{false};
+
 public:
 	CLogicalDynamicGet(const CLogicalDynamicGet &) = delete;
 
@@ -42,7 +49,8 @@ public:
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
 					   CColRefArray *pdrgpcrOutput,
 					   CColRef2dArray *pdrgpdrgpcrPart,
-					   IMdIdArray *partition_mdids);
+					   IMdIdArray *partition_mdids,
+					   CConstraint *partition_cnstrs_disj, BOOL static_pruned);
 
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
@@ -63,6 +71,20 @@ public:
 	SzId() const override
 	{
 		return "CLogicalDynamicGet";
+	}
+
+	// return disjunctive constraint of selected partitions
+	CConstraint *
+	GetPartitionConstraintsDisj() const
+	{
+		return m_partition_cnstrs_disj;
+	}
+
+	// return whether static pruning is performed
+	BOOL
+	FStaticPruned() const
+	{
+		return m_static_pruned;
 	}
 
 	// operator specific hash function
@@ -137,6 +159,10 @@ public:
 	// derive statistics
 	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							  IStatisticsArray *stats_ctxt) const override;
+
+	// derive stats from base table using filters on partition and/or index columns
+	IStatistics *PstatsDeriveFilter(CMemoryPool *mp, CExpressionHandle &exprhdl,
+									CExpression *pexprFilter) const;
 
 	// stat promise
 	EStatPromise

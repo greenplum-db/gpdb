@@ -34,9 +34,9 @@
         comment character. A record consists of a number of fields that are separated by spaces or
         tabs. Fields can contain white space if the field value is quoted. Records cannot be
         continued across lines. Each remote client access record has the following format:</p>
-      <codeblock><i>host</i>   <i>database</i>   <i>role</i>   <i>address</i>   <i>authentication-method</i></codeblock>
+      <codeblock>host   database   role   address   authentication-method</codeblock>
       <p>Each UNIX-domain socket access record is in this format:</p>
-      <codeblock><i>local</i>   <i>database</i>   <i>role</i>   <i>authentication-method</i></codeblock>
+      <codeblock>local   database   role   authentication-method</codeblock>
       <p>The following table describes meaning of each field. </p>
       <table id="ip141709">
         <title>pg_hba.conf Fields</title>
@@ -193,7 +193,7 @@ host    all   gpadmin   ::1/128       ident
 # allow the 'dba' role access to any database from any
 # host with IP address 192.168.x.x and use md5 encrypted
 # passwords to authenticate the user
-# Note that to use SHA-256 encryption, replace <i>md5</i> with
+# Note that to use SHA-256 encryption, replace md5 with
 # password in the line below
 host    all   dba   192.168.0.0/32  md5
 # allow all roles access to any database from any
@@ -241,7 +241,7 @@ max_prepared_transactions=100
           </p>
         </li>
         <li>
-          <p>In <codeph><i>SEGMENT_DATA_DIRECTORY</i>/postgresql.conf</codeph> for all segment
+          <p>In <codeph>SEGMENT_DATA_DIRECTORY/postgresql.conf</codeph> for all segment
             instances:</p>
           <p>
             <codeblock>max_connections=500

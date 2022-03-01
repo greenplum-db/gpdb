@@ -408,10 +408,11 @@ def impl(context, content):
 
 
 def backup_bashrc():
-    file = '~/.bashrc'
-    backup_fle = '~/.bashrc.backup'
+    home_dir = os.environ.get('HOME')
+    file = home_dir + '/.bashrc'
+    backup_fle = home_dir + '/.bashrc.backup'
     if (os.path.isfile(file)):
-        command = "cp -f %s %s.backup" % (file, backup_fle)
+        command = "cp -f %s %s" % (file, backup_fle)
         result = run_cmd(command)
         if (result[0] != 0):
             raise Exception("Error while backing up bashrc file. STDERR:%s" % (result[2]))
@@ -420,15 +421,16 @@ def backup_bashrc():
 
 
 def restore_bashrc():
-    file = '~/.bashrc'
-    backup_fle = '~/.bashrc.backup'
+    home_dir = os.environ.get('HOME')
+    file = home_dir + '/.bashrc'
+    backup_fle = home_dir + '/.bashrc.backup'
     if (os.path.isfile(backup_fle)):
-        command = "mv -f %s.backup %s" % (backup_fle, file)
+        command = "mv -f %s %s" % (backup_fle, file)
     else:
         command = "rm -f %s" % (file)
     result = run_cmd(command)
     if (result[0] != 0):
-        raise Exception('Error while restoring up bashrc file. ')
+        raise Exception("Error while restoring up bashrc file. STDERR:%s" % (result[2]))
 
 
 @given('the user runs "{command}"')
@@ -1187,6 +1189,18 @@ def stop_all_primary_or_mirror_segments(context, segment_type):
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
     stop_segments(context, lambda seg: seg.getSegmentRole() == role and seg.content != -1)
 
+@given('user stops all {segment_type} processes on "{hosts}"')
+@given('user stops all {segment_type} processes on "{hosts}"')
+@given('user stops all {segment_type} processes on "{hosts}"')
+def stop_all_primary_or_mirror_segments_on_hosts(context, segment_type, hosts):
+    hosts = hosts.split(',')
+    if segment_type not in ("primary", "mirror"):
+        raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)
+
+    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
+    stop_segments(context, lambda seg: seg.getSegmentRole() == role and seg.content != -1 and seg.getSegmentHostName() in hosts)
+
+
 
 @given('the {role} on content {contentID} is stopped')
 def stop_segments_on_contentID(context, role, contentID):
@@ -1206,7 +1220,7 @@ def stop_segments(context, where_clause):
         # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
         # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
         subprocess.check_call(['ssh', seg.getSegmentHostName(),
-                               'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s -w' % (
+                               'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s -w -t 120' % (
                                    pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg.getSegmentDataDirectory()))
                                ])
 
@@ -1788,6 +1802,50 @@ def impl(context, filename, some, output):
         err_str = "xx Expected stdout string '%s' and found: '%s'" % (regexStr, contents)
         raise Exception(err_str)
 
+@given('verify that pg_hba.conf file has "{type}" entries in each segment data directories')
+@then('verify that pg_hba.conf file has "{type}" entries in each segment data directories')
+def impl(context, type):
+    conn = dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)
+    try:
+        curs = dbconn.query(conn,
+                            "SELECT hostname, datadir FROM gp_segment_configuration WHERE role='p' AND content > -1;")
+        result = curs.fetchall()
+        segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+    finally:
+        conn.close()
+
+    if (type == 'standby'):
+        checkForStandby = True
+    elif (type == 'replication'):
+        checkForStandby = False
+    else:
+        raise Exception("only 'standby' and 'replication' are valid inputs")
+
+    for info in segment_info:
+        host, datadir = info
+        filename = 'pg_hba.conf'
+        if checkForStandby:
+            standby_host = get_standby_host()
+            standby_host_address = gp.IfAddrs.list_addrs(standby_host)[0]
+            output = "host.*all.*" + standby_host_address + ".*trust"
+        else:
+            output = "host.*replication.*.*trust"
+
+        filepath = os.path.join(datadir, filename)
+        regex = "%s%s" % ("^[%s]*", output)
+        cmd_str = 'ssh %s "grep -c %s %s"' % (host, regex, filepath)
+        cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+        cmd.run(validateAfter=False)
+        try:
+            val = int(cmd.get_stdout().strip())
+            if not val:
+                raise Exception(
+                    'File %s on host %s does not have %s entry with "%s"(val error: %s)' % (filepath, host, type, output, val))
+        except:
+            raise Exception('File %s on host %s does not have %s entry start with "%s"(parse error)' % (filepath, host, type, output))
+
 @given('verify that the file "{filename}" in each segment data directory has "{some}" line starting with "{output}"')
 @then('verify that the file "{filename}" in each segment data directory has "{some}" line starting with "{output}"')
 def impl(context, filename, some, output):
@@ -1931,11 +1989,11 @@ def imp(context):
     logs_for_a_util = glob.glob(pattern)
     if not logs_for_a_util:
         raise Exception('Logs matching "%s" were not created' % pattern)
-    rc, error, output = run_cmd("grep 'Default skipping test:acl' %s" % pattern)
+    rc, error, output = run_cmd("grep 'Default skipping test: acl' %s" % pattern)
     if rc:
         raise Exception("Error executing grep on gpcheckcat logs while finding ACL: %s" % error)
 
-    rc, error, output = run_cmd("grep 'Default skipping test:owner' %s" % pattern)
+    rc, error, output = run_cmd("grep 'Default skipping test: owner' %s" % pattern)
     if rc:
         raise Exception("Error executing grep on gpcheckcat logs while finding Owner: %s" % error)
 

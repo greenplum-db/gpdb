@@ -462,12 +462,11 @@ create table vc4table (f1 vc4[]);
 insert into vc4table values(array['too long']);  -- fail
 ERROR:  value too long for type character varying(4)
 insert into vc4table values(array['too long']::vc4[]);  -- cast truncates
-ERROR:  could not determine which collation to use for string comparison
-HINT:  Use the COLLATE clause to set the collation explicitly.
 select * from vc4table;
- f1 
-----
-(0 rows)
+    f1    
+----------
+ {"too "}
+(1 row)
 
 drop table vc4table;
 drop type vc4;

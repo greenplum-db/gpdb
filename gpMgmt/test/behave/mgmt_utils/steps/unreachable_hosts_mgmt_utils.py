@@ -1,4 +1,5 @@
 import subprocess
+import tempfile
 
 from behave import given, when, then
 
@@ -10,13 +11,19 @@ from gppylib.db import dbconn
 # tied to any particular hardware implementation, and that's mostly the case.
 
 @given('segment hosts "{disconnected}" are disconnected from the cluster and from the spare segment hosts "{spare}"')
+@when('segment hosts "{disconnected}" are disconnected from the cluster and from the spare segment hosts "{spare}"')
+@then('segment hosts "{disconnected}" are disconnected from the cluster and from the spare segment hosts "{spare}"')
 def impl(context, disconnected, spare):
     disconnected_hosts = disconnected.split(',')
-    spare_hosts = spare.split(',')
+    spare_hosts = []
+    if spare != "none":
+        spare_hosts = spare.split(',')
 
     add_or_remove_blackhole_route(disconnected_hosts, spare_hosts, disconnect=True)
 
 
+@given('segment hosts "{reconnected}" are reconnected to the cluster and to the spare segment hosts "{spare}"')
+@when('segment hosts "{reconnected}" are reconnected to the cluster and to the spare segment hosts "{spare}"')
 @then('segment hosts "{reconnected}" are reconnected to the cluster and to the spare segment hosts "{spare}"')
 def impl(context, reconnected, spare):
     reconnected_hosts = reconnected.split(',')
@@ -80,18 +87,9 @@ def _blackhole_route_helper(disconnect_host, hosts, disconnect=False):
         cmd = "sudo ip route {} {}".format(subcmd, disconnect_addr)
         subprocess.check_output(["ssh", host, cmd])
 
-
-# This step is very specific to the CCP CI cluster.
-@then('the original cluster state is recreated after cleaning up "{disconnected}" hosts')
+@given('all postgres processes are killed on "{disconnected}" hosts')
 def impl(context, disconnected):
     disconnected_hosts = disconnected.split(',')
-
-    # delete the current cluster
-    cmd = '''
-source /usr/local/greenplum-db-devel/greenplum_path.sh
-yes | gpdeletesystem -fD -d /data/gpdata/master/gpseg-1
-'''
-    subprocess.check_output(["bash", "-c", cmd])
 
     # clean up disconnected
     cmds = ["pkill -9 postgres",
@@ -102,14 +100,52 @@ yes | gpdeletesystem -fD -d /data/gpdata/master/gpseg-1
         for cmd in cmds:
             subprocess.check_output(["ssh", host, cmd])
 
-    # reinitialize the cluster...see concourse-cluster-provisioner/scripts/gpinitsystem.sh
-    cmd = '''
-source /usr/local/greenplum-db-devel/greenplum_path.sh
-if grep --quiet photon /etc/os-release
-then
-    gpinitsystem -a -n en_US.UTF-8 -c ~gpadmin/gpinitsystem_config -h ~gpadmin/segment_host_list || :
-else
-    gpinitsystem -a -c ~gpadmin/gpinitsystem_config -h ~gpadmin/segment_host_list || :
-fi
-'''
-    subprocess.check_output(["bash", "-c", cmd])
+# This step is very specific to the CCP CI cluster.
+@given('the original cluster state is recreated for "{test_case}"')
+@when('the original cluster state is recreated for "{test_case}"')
+@then('the original cluster state is recreated for "{test_case}"')
+def impl(context, test_case):
+    # We will bring the cluster back to it's original state by
+    # reconnecting the down host(s) and then making the segments on the spare host(s)
+    # fall back to their original(read down) hosts. Note that because of -p, the port numbers on the
+    # spare segment hosts are not the same as the original hosts.
+    # For one_host_down: down host is sdw1 and spare host is sdw5
+    # For two_hosts_down: down hosts are sdw1,sdw3 and spare hosts are sdw5,sdw6
+    if test_case == "one_host_down":
+        down = 'sdw1'
+        spare = 'sdw5'
+        hostname_filter = "hostname in ('sdw5')"
+        expected_config = '''sdw5|20000|/data/gpdata/primary/gpseg0 sdw1|20000|/data/gpdata/primary/gpseg0
+sdw5|20001|/data/gpdata/primary/gpseg1 sdw1|20001|/data/gpdata/primary/gpseg1
+sdw5|20002|/data/gpdata/mirror/gpseg6 sdw1|21000|/data/gpdata/mirror/gpseg6
+sdw5|20003|/data/gpdata/mirror/gpseg7 sdw1|21001|/data/gpdata/mirror/gpseg7'''
+    elif test_case == "two_hosts_down":
+        down = 'sdw1,sdw3'
+        spare = 'sdw5,sdw6'
+        hostname_filter = "hostname in ('sdw5', 'sdw6')"
+        expected_config = '''sdw5|20000|/data/gpdata/primary/gpseg0 sdw1|20000|/data/gpdata/primary/gpseg0
+sdw5|20001|/data/gpdata/primary/gpseg1 sdw1|20001|/data/gpdata/primary/gpseg1
+sdw5|20002|/data/gpdata/mirror/gpseg6 sdw1|21000|/data/gpdata/mirror/gpseg6
+sdw5|20003|/data/gpdata/mirror/gpseg7 sdw1|21001|/data/gpdata/mirror/gpseg7
+sdw6|20002|/data/gpdata/primary/gpseg4 sdw3|20000|/data/gpdata/primary/gpseg4
+sdw6|20003|/data/gpdata/primary/gpseg5 sdw3|20001|/data/gpdata/primary/gpseg5
+sdw6|20000|/data/gpdata/mirror/gpseg2 sdw3|21000|/data/gpdata/mirror/gpseg2
+sdw6|20001|/data/gpdata/mirror/gpseg3 sdw3|21001|/data/gpdata/mirror/gpseg3'''
+    else:
+        raise Exception('Invalid test case')
+
+    with tempfile.NamedTemporaryFile() as config_file:
+        config_file.write(expected_config.encode('utf-8'))
+        config_file.flush()
+
+        context.execute_steps("""
+            Given segment hosts "{down}" are reconnected to the cluster and to the spare segment hosts "none"
+            And all postgres processes are killed on "{down}" hosts
+            And user stops all mirror processes on "{spare}"
+            And user stops all primary processes on "{spare}"
+            And the cluster configuration has no segments where "{hostname_filter} and status='u'"
+            And the user runs "gprecoverseg -a -i {config_file_path}"
+            Then gprecoverseg should return a return code of 0
+            And all the segments are running
+            And the cluster is rebalanced""".format(down=down, spare=spare, hostname_filter=hostname_filter,
+                                                    config_file_path=config_file.name))

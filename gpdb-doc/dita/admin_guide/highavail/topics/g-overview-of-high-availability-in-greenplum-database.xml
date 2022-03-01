@@ -53,22 +53,22 @@
             initialized with the <codeph>gpinitsystem</codeph> management utility. Although it is
             strongly discouraged, a cluster can be initialized without heap checksum support by
             setting the <codeph>HEAP_CHECKSUM</codeph> parameter to off in the
-               <codeph>gpinitsystem</codeph> cluster configuration file. See <codeph><xref
-                  href="../../../utility_guide/ref/gpinitsystem.xml#topic1"/></codeph>. </p>
+               <codeph>gpinitsystem</codeph> cluster configuration file. See <xref
+                  href="../../../utility_guide/ref/gpinitsystem.xml#topic1"/>. </p>
          <p>Once initialized, it is not possible to change heap checksum support for a cluster
             without reinitializing the system and reloading databases.</p>
-         <p>You can check the read-only server configuration parameter <codeph><xref
-                  href="../../../ref_guide/config_params/guc-list.xml#data_checksums"/></codeph> to
+         <p>You can check the read-only server configuration parameter <xref
+                  href="../../../ref_guide/config_params/guc-list.xml#data_checksums"/> to
             see if heap checksums are enabled in a cluster:</p>
          <codeblock>$ gpconfig -s data_checksums</codeblock>
          <p>When a Greenplum Database cluster starts up, the <codeph>gpstart</codeph> utility checks
             that heap checksums are consistently enabled or disabled on the master and all segments.
-            If there are any differences, the cluster fails to start. See <codeph><xref
-                  href="../../../utility_guide/ref/gpstart.xml#topic1"/></codeph>.</p>
+            If there are any differences, the cluster fails to start. See <xref
+                  href="../../../utility_guide/ref/gpstart.xml#topic1"/>.</p>
          <p>In cases where it is necessary to ignore heap checksum verification errors so that data
-            can be recovered, setting the <codeph><xref
+            can be recovered, setting the <xref
                   href="../../../ref_guide/config_params/guc-list.xml#ignore_checksum_failure"
-               /></codeph> system configuration parameter to on causes Greenplum Database to issue a
+               /> system configuration parameter to on causes Greenplum Database to issue a
             warning when a heap checksum verification fails, but the page is then permitted to load
             into managed memory. If the page is updated and saved to disk, the corrupted data could
             be replicated to the mirror segment. Because this can lead to data loss, setting
@@ -90,10 +90,10 @@
          </ul>
          <p>Note that the <codeph>CREATE TABLE</codeph> statement allows you to set storage options,
             including checksums, for individual partition files.</p>
-         <p>See the <codeph><xref href="../../../ref_guide/sql_commands/CREATE_TABLE.xml#topic1"
-               /></codeph> command reference and the <codeph><xref
+         <p>See the <xref href="../../../ref_guide/sql_commands/CREATE_TABLE.xml#topic1"
+               /> command reference and the <xref
                   href="../../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
-               /></codeph> configuration parameter reference for syntax and examples.</p>
+               /> configuration parameter reference for syntax and examples.</p>
       </section>
       <section id="segment_mirroring">
          <title>Segment Mirroring</title>
@@ -152,8 +152,8 @@
          <p>Making regular backups of the databases is recommended except in cases where the
             database can be easily regenerated from the source data. Backups should be taken to
             protect from operational, software, and hardware errors. </p>
-         <p>Use the <codeph><xref href="../../../utility_guide/ref/gpbackup.xml"
-               /></codeph> utility to backup Greenplum databases. <codeph>gpbackup</codeph> performs
+         <p>Use the <xref href="../../../utility_guide/ref/gpbackup.xml"
+               /> utility to backup Greenplum databases. <codeph>gpbackup</codeph> performs
             the backup in parallel across segments, so backup performance scales up as hardware is
             added to the cluster. </p>
          <p>When designing a backup strategy, a primary concern is where to store the backup data.

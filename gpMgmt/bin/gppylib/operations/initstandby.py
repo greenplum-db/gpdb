@@ -18,19 +18,18 @@ logger = gplog.get_default_logger()
 
 DEFAULT_BATCH_SIZE = 16
 
-def get_standby_pg_hba_info(standby_host, is_hba_hostnames=False):
+def create_standby_pg_hba_entries(standby_host, is_hba_hostnames=False):
     standby_ips = gp.IfAddrs.list_addrs(standby_host)
     current_user = unix.UserId.local('get userid')
-    new_section = ['# standby coordinator host ip addresses\n']
+    standby_pg_hba_info = ['# standby coordinator host ip addresses\n']
     for ip in standby_ips:
         if not is_hba_hostnames:
             cidr_suffix = '/128' if ':' in ip else '/32' # MPP-15889
             address = ip + cidr_suffix
         else:
             address = standby_host
-        new_section.append('host\tall\t%s\t%s\ttrust\n' % (current_user, address))
-    standby_pg_hba_info = ''.join(new_section)
-    return standby_pg_hba_info 
+        standby_pg_hba_info.append('host\tall\t%s\t%s\ttrust\n' % (current_user, address))
+    return standby_pg_hba_info
 
 def cleanup_pg_hba_backup(data_dirs_list):
     """
@@ -150,45 +149,6 @@ def update_pg_hba(standby_pg_hba_info, data_dirs_list):
 
         pg_hba_content_list.append(pg_hba_contents)
     return pg_hba_content_list
-
-def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False, unreachable_hosts=[]):
-    """
-    Updates the pg_hba.conf on all of the segments 
-    present in the array
-    """
-    logger.debug('Updating pg_hba.conf file on segments...')
-    standby_pg_hba_info = get_standby_pg_hba_info(standby_host, is_hba_hostnames)
-    json_standby_pg_hba_info = json.dumps(standby_pg_hba_info)
-
-    host_to_seg_map = defaultdict(list) 
-    for seg in gparr.getDbList():
-        if not seg.isSegmentCoordinator() and not seg.isSegmentStandby():
-            host_to_seg_map[seg.getSegmentHostName()].append(seg.getSegmentDataDirectory())
-
-    pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
-
-    try:
-        for host, data_dirs_list in list(host_to_seg_map.items()):
-            if host in unreachable_hosts:
-                logger.warning("Manual update of the pg_hba_conf files for all segments on unreachable host %s will be required." % host)
-                continue
-            json_data_dirs_list = json.dumps(data_dirs_list)
-            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -p '%s' -d '%s'" % (json_standby_pg_hba_info, json_data_dirs_list)
-            cmd = Command('Update the pg_hba.conf on remote hosts', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
-            pool.addCommand(cmd)
-
-        pool.join()
-
-        for item in pool.getCompletedItems():
-            result = item.get_results()
-            if result.rc != 0:
-                logger.error('Unable to update pg_hba.conf %s' % str(result.stderr))
-                logger.error('Please check the segment log file for more details')
-
-    finally:
-        pool.haltWork()
-        pool.joinWorkers()
-        pool = None
 
 def create_parser():
     parser = OptParser(option_class=OptChecker,

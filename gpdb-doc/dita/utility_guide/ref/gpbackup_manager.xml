@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic1" otherprops="pivotal">
+<topic id="topic1">
   <title>gpbackup_manager</title>
   <body>
     <p>Display information about existing backups, delete existing backups, or encrypt passwords for
-      secure storage in plugin configuration files. </p>
+      secure storage in plugin configuration files. <note><codeph>gpbackup_manager</codeph> is
+        available only with the commercial release of Tanzu Greenplum Backup and Restore.</note></p>
     <section>
       <title>Synopsis</title>
-<codeblock><b>gpbackup_manager</b> [<b><varname>command</varname></b>]</codeblock>
+      <codeblock><b>gpbackup_manager</b> [<b><varname>command</varname></b>]</codeblock>
       <p>where <i>command</i> is: </p>
       <codeblock><b>delete-backup</b> <b><varname>timestamp</varname></b> [--plugin-config <b><varname>config-file</varname></b>]
 | <b>display-report</b> <b><varname>timestamp</varname></b>  
@@ -37,7 +38,6 @@
             exist, the command exits with an error message. See <xref
               href="#topic1/table_yls_rgw_g3b" format="dita"/> for a description of the columns in
             this list.</pd>
- 
         </plentry>
         <plentry>
           <pt><codeph>help <varname>command</varname></codeph></pt>
@@ -72,10 +72,11 @@
       <p>Greenplum Database must be running to use the <codeph>gpbackup_manager</codeph>
         utility.</p>
       <p>Backup history is saved on the Greenplum Database coordinator host in the file
-          <codeph>$COORDINATOR_DATA_DIRECTORY/gpbackup_history.yaml</codeph>. If no backups have been
-        created yet, or if the backup history has been deleted, <codeph>gpbackup_manager</codeph>
-        commands that depend on the file will display an error message and exit. If the backup
-        history contains invalid YAML syntax, a yaml error message is displayed.</p>
+          <codeph>$COORDINATOR_DATA_DIRECTORY/gpbackup_history.yaml</codeph>. If no backups have
+        been created yet, or if the backup history has been deleted,
+          <codeph>gpbackup_manager</codeph> commands that depend on the file will display an error
+        message and exit. If the backup history contains invalid YAML syntax, a yaml error message
+        is displayed.</p>
       <p>Versions of <codeph>gpbackup</codeph> earlier than v1.13.0 did not save the backup duration
         in the backup history file. The <codeph>list-backups</codeph> command duration column is
         empty for these backups.</p>
@@ -121,7 +122,7 @@
           <row>
             <entry>type</entry>
             <entry>Which classes of data are included in the backup. Can be one of the following: <sl>
-                <sli><b>full</b> -  contains all global and local metadata, and user data for the
+                <sli><b>full</b> - contains all global and local metadata, and user data for the
                   database. This kind of backup can be the base for an incremental backup. Depending
                   on the <codeph>gpbackup</codeph> options specified, some objects could have been
                   filtered from the backup.</sli>

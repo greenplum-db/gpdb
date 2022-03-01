@@ -147,6 +147,7 @@ OBJS        = CExpression.o \
               CScalarArrayCoerceExpr.o \
               CScalarArrayRef.o \
               CScalarArrayRefIndexList.o \
+              CScalarValuesList.o \
               CScalarAssertConstraint.o \
               CScalarAssertConstraintList.o \
               CScalarBitmapBoolOp.o \
@@ -173,6 +174,7 @@ OBJS        = CExpression.o \
               CScalarOp.o \
               CScalarProjectElement.o \
               CScalarProjectList.o \
+              CScalarSortGroupClause.o \
               CScalarSubquery.o \
               CScalarSubqueryAll.o \
               CScalarSubqueryAny.o \

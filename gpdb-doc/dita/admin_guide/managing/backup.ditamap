@@ -21,8 +21,8 @@
       </topicref>
       <topicref href="backup-plugins.xml">
         <topicref href="backup-s3-plugin.xml"/>
-        <topicref href="backup-ddboost-plugin.xml" otherprops="pivotal" linking="none">
-          <topicref href="replication-ddb.xml" otherprops="pivotal"/>
+        <topicref href="backup-ddboost-plugin.xml" linking="none">
+          <topicref href="replication-ddb.xml" />
         </topicref>
       </topicref>
       <topicref href="backup-plugin-api.xml">

@@ -135,7 +135,7 @@ Type "help" for help.</codeblock>
         <codeph>-e</codeph>
         <codeph>-t</codeph> options).</p>
       <codeblock>C:\Users\dev1>"\Program Files\Java\jre1.8.0_77\bin"\ktab -a dev1
-Password for dev1@EXAMPLE.LOCAL:<varname>your_password</varname>
+Password for dev1@EXAMPLE.LOCAL:&lt;your_password>
 Done!
 Service key for dev1 is saved in C:\Users\dev1\krb5.keytab
 

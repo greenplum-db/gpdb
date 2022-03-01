@@ -4,6 +4,7 @@
 -- differences by setting 'extra_float_digits'. This isn't enough for all of
 -- the queries, so a few also use TO_CHAR() to truncate the results further.
 set extra_float_digits=0;
+SET optimizer_trace_fallback to on;
 drop table if exists dqa_t1;
 NOTICE:  table "dqa_t1" does not exist, skipping
 drop table if exists dqa_t2;

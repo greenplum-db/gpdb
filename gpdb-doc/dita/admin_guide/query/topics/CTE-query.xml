@@ -25,8 +25,8 @@
       </ul></note>
     <p>By default, the <codeph>RECURSIVE</codeph> keyword for the <codeph>WITH</codeph> clause is
       enabled. <codeph>RECURSIVE</codeph> can be disabled by setting the server configuration
-      parameter <codeph><xref
-          href="../../../ref_guide/config_params/guc-list.xml#gp_recursive_cte"/></codeph>
+      parameter <xref
+          href="../../../ref_guide/config_params/guc-list.xml#gp_recursive_cte"/>
       to <codeph>false</codeph>.</p>
   </body>
   <topic id="topic_xyn_dgh_5gb">
@@ -89,7 +89,7 @@ SELECT sum(n) FROM t;
         followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a
           <i>recursive term</i>, where only the <i>recursive term</i> can contain a reference to the
         query output.
-        <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
+        <codeblock>&lt;non_recursive_term> UNION [ ALL ] &lt;recursive_term></codeblock></p>
       <p>A recursive <codeph>WITH</codeph> query that contains a <codeph> UNION [ ALL ]</codeph> is
         run as follows:</p>
       <ol id="ol_a3s_r1s_w1b">

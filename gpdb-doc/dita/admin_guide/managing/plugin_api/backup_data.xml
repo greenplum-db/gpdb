@@ -7,7 +7,7 @@
     <p>Plugin command to move streaming data from <codeph>stdin</codeph> to the remote storage system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>backup_data</b> <varname>plugin_config_file</varname> <varname>data_filenamekey</varname></codeblock>
+      <codeblock>&lt;plugin_executable> backup_data &lt;plugin_config_file> &lt;data_filenamekey></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

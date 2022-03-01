@@ -39,6 +39,7 @@ make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 	sisc->producer_slice_id = -1;
 	sisc->this_slice_id = -1;
 	sisc->nconsumers = 0;
+	sisc->discard_output = false;
 
 	sisc->scan.plan.qual = NIL;
 	sisc->scan.plan.righttree = NULL;

@@ -243,3 +243,29 @@ SHOW search_path;
 SET search_path = '\path';
 SHOW search_path;
 RESET search_path;
+
+-- when the original string guc is empty, we change the guc to new value during executing a command.
+-- this guc will be added to gp_guc_restore_list, and they will be restored
+-- to original value to qe when the next command is executed.
+-- however, the dispatch command is "set xxx to ;" that is wrong.
+create extension if not exists gp_inject_fault;
+create table public.restore_guc_test(tc1 int);
+
+-- inject fault to change the value of search_path during creating materialized view
+SELECT gp_inject_fault('change_string_guc', 'skip', 1);
+-- inject fault when dispatch guc restore command occur errors, we throw an error.
+SELECT gp_inject_fault('restore_string_guc', 'error', 1);
+
+-- set search_path to '';
+SELECT pg_catalog.set_config('search_path', '', false);
+-- trigger inject fault of change_string_guc, and add this guc to gp_guc_restore_list
+create MATERIALIZED VIEW public.view_restore_guc_test as select * from public.restore_guc_test;
+
+--we should restore gucs in gp_guc_restore_list to qe, no error occurs.
+drop MATERIALIZED VIEW public.view_restore_guc_test;
+drop table public.restore_guc_test;
+
+--cleanup
+reset search_path;
+SELECT gp_inject_fault('change_string_guc', 'reset', 1);
+SELECT gp_inject_fault('restore_string_guc', 'reset', 1);
