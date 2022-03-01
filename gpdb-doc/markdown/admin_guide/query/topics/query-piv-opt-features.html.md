@@ -90,7 +90,11 @@ SELECT * FROM part
   WHERE price > (SELECT avg(price) FROM part);
 ```
 
-GPORCA also handles queries that contain a correlated subquery \(CSQ\) more efficiently. A correlated subquery is a subquery that uses values from the outer query. In the following query, the `price` column is used in both the outer query and the subquery. SELECT \* FROM part p1 WHERE price \> \(SELECT avg\(price**\) FROM part p2 WHERE p2.brand = p1.brand**\);
+GPORCA also handles queries that contain a correlated subquery \(CSQ\) more efficiently. A correlated subquery is a subquery that uses values from the outer query. In the following query, the `price` column is used in both the outer query and the subquery. 
+
+```
+SELECT * FROM part p1 WHERE price > (SELECT avg(price) FROM part p2 WHERE p2.brand = p1.brand);
+```
 
 GPORCA generates more efficient plans for the following types of subqueries:
 

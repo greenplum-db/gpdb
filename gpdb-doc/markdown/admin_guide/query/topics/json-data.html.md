@@ -353,13 +353,75 @@ This table describes the operators that are available for use with the `json` an
 
 Operators that require the `jsonb` data type as the left operand are described in the following table. Many of these operators can be indexed by `jsonb` operator classes. For a full description of `jsonb` containment and existence semantics, see [jsonb Containment and Existence](#topic_isx_2tw_mq). For information about how these operators can be used to effectively index `jsonb` data, see [jsonb Indexing](#topic_aqt_1tw_mq).
 
-|Operator|Right Operand Type|Description|Example|
-|--------|------------------|-----------|-------|
-|`@>`|`jsonb`|Does the left JSON value contain within it the right value?|`'{"a":1, "b":2}'::jsonb @> '{"b":2}'::jsonb`|
-|`<@`|`jsonb`|Is the left JSON value contained within the right value?|`'{"b":2}'::jsonb <@ '{"a":1, "b":2}'::jsonb`|
-|`?`|`text`|Does the key/element string exist within the JSON value?|`'{"a":1, "b":2}'::jsonb ? 'b'`|
-|`?|`|`text[]`|Do any of these key/element strings exist?|`'{"a":1, "b":2, "c":3}'::jsonb ?| array['b', 'c']`|
-|`?&`|`text[]`|Do all of these key/element strings exist?|`'["a", "b"]'::jsonb ?& array['a', 'b']`|
+<table class="table" id="topic_o5y_14w_2z__table_dcb_y3w_mq"><caption><span class="table--title-label">Table 3. </span><span class="title">jsonb Operators</span></caption><colgroup><col style="width:9.970089730807578%"><col style="width:19.3419740777667%"><col style="width:45.76271186440678%"><col style="width:24.925224327018945%"></colgroup><thead class="thead">
+              <tr class="row">
+                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">Operator</th>
+                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">Right Operand Type</th>
+                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Description</th>
+                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">Example</th>
+              </tr>
+            </thead><tbody class="tbody">
+              <tr class="row">
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
+                  <code class="ph codeph">@&gt;</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
+                  <code class="ph codeph">jsonb</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Does the left JSON value contain within it the right value?</td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
+                  <code class="ph codeph">'{"a":1, "b":2}'::jsonb @&gt; '{"b":2}'::jsonb</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
+                  <code class="ph codeph">&lt;@</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
+                  <code class="ph codeph">jsonb</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Is the left JSON value contained within the right value?</td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
+                  <code class="ph codeph">'{"b":2}'::jsonb &lt;@ '{"a":1, "b":2}'::jsonb</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
+                  <code class="ph codeph">?</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
+                  <code class="ph codeph">text</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Does the key/element string exist within the JSON value?</td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
+                  <code class="ph codeph">'{"a":1, "b":2}'::jsonb ? 'b'</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
+                  <code class="ph codeph">?|</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
+                  <code class="ph codeph">text[]</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Do any of these key/element strings exist?</td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
+                  <code class="ph codeph">'{"a":1, "b":2, "c":3}'::jsonb ?| array['b', 'c']</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
+                  <code class="ph codeph">?&amp;</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
+                  <code class="ph codeph">text[]</code>
+                </td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Do all of these key/element strings exist?</td>
+                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
+                  <code class="ph codeph">'["a", "b"]'::jsonb ?&amp; array['a', 'b']</code>
+                </td>
+              </tr>
+            </tbody></table>
 
 The standard comparison operators in the following table are available only for the `jsonb` data type, not for the `json` data type. They follow the ordering rules for B-tree operations described in [jsonb Indexing](#topic_aqt_1tw_mq).
 
@@ -378,27 +440,118 @@ The standard comparison operators in the following table are available only for 
 
 This table describes the functions that create `json` data type values. \(Currently, there are no equivalent functions for `jsonb`, but you can cast the result of one of these functions to `jsonb`.\)
 
-|Function|Description|Example|Example Result|
-|--------|-----------|-------|--------------|
-|`to_json(anyelement)`|Returns the value as a JSON object. Arrays and composites are processed recursively and are converted to arrays and objects. If the input contains a cast from the type to `json`, the cast function is used to perform the conversion; otherwise, a JSON scalar value is produced. For any scalar type other than a number, a Boolean, or a null value, the text representation will be used, properly quoted and escaped so that it is a valid JSON string.|`to_json('Fred said "Hi."'::text)`|`"Fred said \"Hi.\""`|
-|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A multidimensional array becomes a JSON array of arrays. Line feeds will be added between dimension-1 elements if `pretty_bool` is true.
-
-|`array_to_json('{{1,5},{99,100}}'::int[])`|`[[1,5],[99,100]]`|
-|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds will be added between level-1 elements if `pretty_bool` is true.
-
-|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
-|`json_build_array(VARIADIC "any"`\)|Builds a possibly-heterogeneously-typed JSON array out of a `VARIADIC` argument list.|`json_build_array(1,2,'3',4,5)`|`[1, 2, "3", 4, 5]`|
-|`json_build_object(VARIADIC "any")`|Builds a JSON object out of a `VARIADIC` argument list. The argument list is taken in order and converted to a set of key/value pairs.|`json_build_object('foo',1,'bar',2)`|`{"foo": 1, "bar": 2}`|
-|`json_object(text[])`|Builds a JSON object out of a text array. The array must be either a one or a two dimensional array.The one dimensional array must have an even number of elements. The elements are taken as key/value pairs.
-
-For a two dimensional array, each inner array must have exactly two elements, which are taken as a key/value pair.
-
-|`json_object('{a, 1, b, "def", c, 3.5}')`
-
- `json_object('{{a, 1},{b, "def"},{c, 3.5}}')`
-
-|`{"a": "1", "b": "def", "c": "3.5"}`|
-|`json_object(keys text[], values text[])`|Builds a JSON object out of a text array. This form of `json_object` takes keys and values pairwise from two separate arrays. In all other respects it is identical to the one-argument form.|`json_object('{a, b}', '{1,2}')`|`{"a": "1", "b": "2"}`|
+<table class="table" id="topic_u4s_wnw_2z__table_sqb_y3w_mb"><caption><span class="table--title-label">Table 5. </span><span class="title">JSON Creation Functions </span></caption><colgroup><col><col><col><col></colgroup><thead class="thead">
+              <tr class="row">
+                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">Function</th>
+                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Description</th>
+                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">Example</th>
+                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">Example Result</th>
+              </tr>
+            </thead><tbody class="tbody">
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
+                  <code class="ph codeph">to_json(anyelement)</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Returns the value as a JSON object. Arrays and composites are processed
+                  recursively and are converted to arrays and objects. If the input contains a cast
+                  from the type to <code class="ph codeph">json</code>, the cast function is used to perform the
+                  conversion; otherwise, a JSON scalar value is produced. For any scalar type other
+                  than a number, a Boolean, or a null value, the text representation will be used,
+                  properly quoted and escaped so that it is a valid JSON string.</td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <code class="ph codeph">to_json('Fred said "Hi."'::text)</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">"Fred said \"Hi.\""</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
+                  <code class="ph codeph">array_to_json(anyarray [, pretty_bool])</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Returns the array as a JSON array. A multidimensional array becomes a JSON
+                  array of arrays. <p class="p">Line feeds will be added between dimension-1 elements if
+                      <code class="ph codeph">pretty_bool</code> is true.</p></td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <code class="ph codeph">array_to_json('{{1,5},{99,100}}'::int[])</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">[[1,5],[99,100]]</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
+                  <code class="ph codeph">row_to_json(record [, pretty_bool])</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Returns the row as a JSON object. <p class="p">Line feeds will be added between level-1
+                    elements if <code class="ph codeph">pretty_bool</code> is true.</p></td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <code class="ph codeph">row_to_json(row(1,'foo'))</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">{"f1":1,"f2":"foo"}</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1"><code class="ph codeph">json_build_array(VARIADIC "any"</code>)</td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a possibly-heterogeneously-typed JSON array out of a
+                    <code class="ph codeph">VARIADIC</code> argument list.</td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <code class="ph codeph">json_build_array(1,2,'3',4,5)</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">[1, 2, "3", 4, 5]</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
+                  <code class="ph codeph">json_build_object(VARIADIC "any")</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a JSON object out of a <code class="ph codeph">VARIADIC</code> argument list. The
+                  argument list is taken in order and converted to a set of key/value pairs.</td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <code class="ph codeph">json_build_object('foo',1,'bar',2)</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">{"foo": 1, "bar": 2}</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
+                  <code class="ph codeph">json_object(text[])</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a JSON object out of a text array. The array must be either a one or a
+                  two dimensional array.<p class="p">The one dimensional array must have an even number of
+                    elements. The elements are taken as key/value pairs. </p><p class="p">For a two
+                    dimensional array, each inner array must have exactly two elements, which are
+                    taken as a key/value pair.</p></td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <p class="p">
+                    <code class="ph codeph">json_object('{a, 1, b, "def", c, 3.5}')</code>
+                  </p>
+                  <p class="p">
+                    <code class="ph codeph">json_object('{{a, 1},{b, "def"},{c, 3.5}}')</code>
+                  </p>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">{"a": "1", "b": "def", "c": "3.5"}</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
+                  <code class="ph codeph">json_object(keys text[], values text[])</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a JSON object out of a text array. This form of
+                    <code class="ph codeph">json_object</code> takes keys and values pairwise from two separate
+                  arrays. In all other respects it is identical to the one-argument form.</td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
+                  <code class="ph codeph">json_object('{a, b}', '{1,2}')</code>
+                </td>
+                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
+                  <code class="ph codeph">{"a": "1", "b": "2"}</code>
+                </td>
+              </tr>
+            </tbody></table>
 
 **Note:** `array_to_json` and `row_to_json` have the same behavior as `to_json` except for offering a pretty-printing option. The behavior described for `to_json` likewise applies to each individual value converted by the other JSON creation functions.
 
@@ -419,132 +572,254 @@ This table shows the functions that are available for processing `json` and `jso
 
 Many of these processing functions and operators convert Unicode escapes in JSON strings to the appropriate single character. This is a not an issue if the input data type is `jsonb`, because the conversion was already done. However, for `json` data type input, this might result in an error being thrown. See [About JSON Data](#topic_upc_tcs_fz).
 
-|Function|Return Type|Description|Example|Example Result|
-|--------|-----------|-----------|-------|--------------|
-|`json_array_length(json)` `jsonb_array_length(jsonb)`
-
-|`int`|Returns the number of elements in the outermost JSON array.|`json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')`|`5`|
-|`json_each(json)` `jsonb_each(jsonb)`
-
-|`setof key text, value json` `setof key text, value jsonb`
-
-|Expands the outermost JSON object into a set of key/value pairs.|`select * from json_each('{"a":"foo", "b":"bar"}')`|```
- key | value
+<table class="table" id="topic_z5d_snw_2z__table_wfc_y3w_mb"><caption><span class="table--title-label">Table 7. </span><span class="title">JSON Processing Functions</span></caption><colgroup><col style="width:20.224719101123597%"><col style="width:18.726591760299627%"><col style="width:18.913857677902623%"><col style="width:23.220973782771537%"><col style="width:18.913857677902623%"></colgroup><thead class="thead">
+              <tr class="row">
+                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1">Function</th>
+                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2">Return Type</th>
+                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Description</th>
+                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4">Example</th>
+                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">Example Result</th>
+              </tr>
+            </thead><tbody class="tbody">
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1">
+                  <code class="ph codeph">json_array_length(json)</code>
+                  <p class="p">
+                    <code class="ph codeph">jsonb_array_length(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">int</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the number of elements in the outermost JSON array.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <code class="ph codeph">5</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_each(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_each(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof key text, value json</code>
+                  <p class="p"><code class="ph codeph">setof key text, value jsonb</code>
+                  </p>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the outermost JSON object into a set of key/value pairs.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_each('{"a":"foo", "b":"bar"}')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> key | value
 -----+-------
  a   | "foo"
  b   | "bar"
-
-```
-
-|
-|`json_each_text(json)` `jsonb_each_text(jsonb)`
-
-|`setof key text, value text`|Expands the outermost JSON object into a set of key/value pairs. The returned values will be of type `text`.|`select * from json_each_text('{"a":"foo", "b":"bar"}')`|```
- key | value
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_each_text(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_each_text(jsonb)</code>
+                  </p>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof key text, value text</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the outermost JSON object into a set of key/value pairs. The returned
+                  values will be of type <code class="ph codeph">text</code>.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_each_text('{"a":"foo", "b":"bar"}')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> key | value
 -----+-------
  a   | foo
  b   | bar
-
-```
-
-|
-|`json_extract_path(from_json json, VARIADIC path_elems text[])` `jsonb_extract_path(from_json jsonb, VARIADIC path_elems text[])`
-
-|`json`
-
- `jsonb`
-
-|Returns the JSON value pointed to by `path_elems` \(equivalent to `#>` operator\).|`json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')`|`{"f5":99,"f6":"foo"}`|
-|`json_extract_path_text(from_json json, VARIADIC path_elems text[])` `jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems text[])`
-
-|`text`|Returns the JSON value pointed to by `path_elems` as text. Equivalent to `#>>` operator.|`json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4', 'f6')`|`foo`|
-|`json_object_keys(json)` `jsonb_object_keys(jsonb)`
-
-|`setof text`|Returns set of keys in the outermost JSON object.|`json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')`|```
- json_object_keys
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_extract_path(from_json json, VARIADIC path_elems
+                    text[])</code>
+                  <p class="p"><code class="ph codeph">jsonb_extract_path(from_json jsonb, VARIADIC path_elems
+                      text[])</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2">
+                  <p class="p"><code class="ph codeph">json</code>
+                  </p>
+                  <p class="p"><code class="ph codeph">jsonb</code>
+                  </p>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> (equivalent
+                  to <code class="ph codeph">#&gt;</code> operator).</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <code class="ph codeph">{"f5":99,"f6":"foo"}</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_extract_path_text(from_json json, VARIADIC path_elems
+                    text[])</code>
+                  <p class="p"><code class="ph codeph">jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems
+                      text[])</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">text</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> as text.
+                  Equivalent to <code class="ph codeph">#&gt;&gt;</code> operator.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
+                    'f6')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <code class="ph codeph">foo</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_object_keys(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_object_keys(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof text</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns set of keys in the outermost JSON object.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> json_object_keys
 ------------------
  f1
  f2
-
-```
-
-|
-|`json_populate_record(base anyelement, from_json json)``jsonb_populate_record(base anyelement, from_json jsonb)`
-
-|`anyelement`|Expands the object in `from_json` to a row whose columns match the record type defined by base. See [Note 1](#json_proc_1).|`select * from json_populate_record(null::myrowtype, '{"a":1,"b":2}')`|```
- a | b
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_populate_record(base anyelement, from_json
+                      json)</code><p class="p"><code class="ph codeph">jsonb_populate_record(base anyelement, from_json
+                      jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">anyelement</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the object in <code class="ph codeph">from_json</code> to a row whose columns match
+                  the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_populate_record(null::myrowtype,
+                    '{"a":1,"b":2}')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> a | b
 ---+---
  1 | 2
-
-```
-
-|
-|`json_populate_recordset(base anyelement, from_json json)` `jsonb_populate_recordset(base anyelement, from_json jsonb)`
-
-|`setof anyelement`|Expands the outermost array of objects in `from_json` to a set of rows whose columns match the record type defined by base. See [Note 1](#json_proc_1).|`select * from json_populate_recordset(null::myrowtype, '[{"a":1,"b":2},{"a":3,"b":4}]')`|```
- a | b
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_populate_recordset(base anyelement, from_json json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_populate_recordset(base anyelement, from_json jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof anyelement</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the outermost array of objects in <code class="ph codeph">from_json</code> to a set
+                  of rows whose columns match the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_populate_recordset(null::myrowtype,
+                    '[{"a":1,"b":2},{"a":3,"b":4}]')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> a | b
 ---+---
  1 | 2
  3 | 4
-
-```
-
-|
-|`json_array_elements(json)` `jsonb_array_elements(jsonb`\)
-
-|`setof json`
-
- `setof jsonb`
-
-|Expands a JSON array to a set of JSON values.|`select * from json_array_elements('[1,true, [2,false]]')`|```
-   value
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_array_elements(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_array_elements(jsonb</code>)</p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2">
+                  <p class="p"><code class="ph codeph">setof json</code>
+                  </p>
+                  <p class="p"><code class="ph codeph">setof jsonb</code>
+                  </p>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands a JSON array to a set of JSON values.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_array_elements('[1,true, [2,false]]')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre">   value
 -----------
  1
  true
  [2,false]
-
-```
-
-|
-|`json_array_elements_text(json)` `jsonb_array_elements_text(jsonb)`
-
-|`setof text`|Expands a JSON array to a set of `text` values.|`select * from json_array_elements_text('["foo", "bar"]')`|```
-   value
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_array_elements_text(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_array_elements_text(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof text</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands a JSON array to a set of <code class="ph codeph">text</code> values.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_array_elements_text('["foo", "bar"]')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre">   value
 -----------
  foo
  bar
-
-```
-
-|
-|`json_typeof(json)``jsonb_typeof(jsonb)`
-
-|`text`|Returns the type of the outermost JSON value as a text string. Possible types are `object`, `array`, `string`, `number`, `boolean`, and `null`. See [Note 2](#json_proc_2).|`json_typeof('-123.4')`|`number`|
-|`json_to_record(json)``jsonb_to_record(jsonb)`
-
-|`record`|Builds an arbitrary record from a JSON object. See [Note 1](#json_proc_1). As with all functions returning record, the caller must explicitly define the structure of the record with an `AS` clause.
-
-|`select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a int, b text, d text)`|```
- a |    b    | d
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_typeof(json)</code><p class="p"><code class="ph codeph">jsonb_typeof(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">text</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the type of the outermost JSON value as a text string. Possible types
+                  are <code class="ph codeph">object</code>, <code class="ph codeph">array</code>, <code class="ph codeph">string</code>,
+                    <code class="ph codeph">number</code>, <code class="ph codeph">boolean</code>, and <code class="ph codeph">null</code>.
+                  See <a class="xref" href="#topic_z5d_snw_2z__json_proc_2">Note
+                  2</a>.</td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_typeof('-123.4')</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <code class="ph codeph">number</code>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_to_record(json)</code><p class="p"><code class="ph codeph">jsonb_to_record(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">record</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Builds an arbitrary record from a JSON object. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
+                    functions returning record, the caller must explicitly define the structure of
+                    the record with an <code class="ph codeph">AS</code> clause.</p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a
+                    int, b text, d text)</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> a |    b    | d
 ---+---------+---
  1 | [1,2,3] |
-
-```
-
-|
-|`json_to_recordset(json)` `jsonb_to_recordset(jsonb)`
-
-|`setof record`|Builds an arbitrary set of records from a JSON array of objects See [Note 1](#json_proc_1). As with all functions returning record, the caller must explicitly define the structure of the record with an `AS` clause.
-
-|`select * from json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b text);`|```
- a |  b
+</pre>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_to_recordset(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_to_recordset(jsonb)</code>
+                  </p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof record</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Builds an arbitrary set of records from a JSON array of objects See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
+                    functions returning record, the caller must explicitly define the structure of
+                    the record with an <code class="ph codeph">AS</code> clause.</p></td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from
+                    json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
+                    text);</code>
+                </td>
+                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
+                  <pre class="pre"> a |  b
 ---+-----
  1 | foo
  2 |
-
-```
-
-|
+</pre>
+                </td>
+              </tr>
+            </tbody></table>
 
 **Note:**
 

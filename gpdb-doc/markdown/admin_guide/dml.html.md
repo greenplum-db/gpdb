@@ -28,20 +28,20 @@ Greenplum Database provides multiple lock modes to control concurrent access to 
 |Lock Mode|Associated SQL Commands|Conflicts With|
 |---------|-----------------------|--------------|
 |ACCESS SHARE|`SELECT`|ACCESS EXCLUSIVE|
-|ROW SHARE|`SELECT...FOR lock\_strength`|EXCLUSIVE, ACCESS EXCLUSIVE|
+|ROW SHARE|`SELECT...FOR lock_strength`|EXCLUSIVE, ACCESS EXCLUSIVE|
 |ROW EXCLUSIVE|`INSERT`, `COPY`|SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 |SHARE UPDATE EXCLUSIVE|`VACUUM` \(without `FULL`\), `ANALYZE`|SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 |SHARE|`CREATE INDEX`|ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 |SHARE ROW EXCLUSIVE| |ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
-|EXCLUSIVE|`DELETE`, `UPDATE`, `SELECT...FOR lock\_strength`, `REFRESH MATERIALIZED VIEW CONCURRENTLY`|ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
+|EXCLUSIVE|`DELETE`, `UPDATE`, `SELECT...FOR lock_strength`, `REFRESH MATERIALIZED VIEW CONCURRENTLY`|ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 |ACCESS EXCLUSIVE|`ALTER TABLE`, `DROP TABLE`, `TRUNCATE`, `REINDEX`, `CLUSTER`, `REFRESH MATERIALIZED VIEW` \(without `CONCURRENTLY`\), `VACUUM FULL`|ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 
-**Note:** By default, the Global Deadlock Detector is disabled, and Greenplum Database acquires the more restrictive `EXCLUSIVE` lock \(rather than `ROW EXCLUSIVE` in PostgreSQL\) for `UPDATE`, `DELETE`, and `SELECT` queries with a locking clause \(`FOR lock\_strength`\).
+**Note:** By default, the Global Deadlock Detector is disabled, and Greenplum Database acquires the more restrictive `EXCLUSIVE` lock \(rather than `ROW EXCLUSIVE` in PostgreSQL\) for `UPDATE`, `DELETE`, and `SELECT` queries with a locking clause \(`FOR lock_strength`\).
 
 When the Global Deadlock Detector is enabled:
 
 -   The lock mode for some `DELETE` and `UPDATE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](#topic_gdd).
--   The lock mode for some queries with a locking clause \(`SELECT...FOR lock\_strength`\) is `ROW SHARE`. See "The Locking Clause" in [SELECT](../ref_guide/sql_commands/SELECT.html).
+-   The lock mode for some queries with a locking clause \(`SELECT...FOR lock_strength`\) is `ROW SHARE`. See "The Locking Clause" in [SELECT](../ref_guide/sql_commands/SELECT.html).
 
 ## <a id="topic3"></a>Inserting Rows 
 
@@ -193,7 +193,7 @@ The default transaction isolation level in Greenplum Database is `READ COMMITTED
 
 ## <a id="topic_gdd"></a>Global Deadlock Detector 
 
-The Greenplum Database Global Deadlock Detector background worker process collects lock information on all segments and uses a directed algorithm to detect the existence of local and global deadlocks. This algorithm allows Greenplum Database to relax concurrent update and delete restrictions on heap tables. \(Greenplum Database still employs table-level locking on AO/CO tables, restricting concurrent `UPDATE`, `DELETE`, and `SELECT...FOR lock\_strength` operations.\)
+The Greenplum Database Global Deadlock Detector background worker process collects lock information on all segments and uses a directed algorithm to detect the existence of local and global deadlocks. This algorithm allows Greenplum Database to relax concurrent update and delete restrictions on heap tables. \(Greenplum Database still employs table-level locking on AO/CO tables, restricting concurrent `UPDATE`, `DELETE`, and `SELECT...FOR lock_strength` operations.\)
 
 By default, the Global Deadlock Detector is disabled and Greenplum Database runs the concurrent `UPDATE` and `DELETE` operations on a heap table serially. You can enable these concurrent updates and have the Global Deadlock Detector determine when a deadlock exists by setting the server configuration parameter [`gp_enable_global_deadlock_detector`](../ref_guide/config_params/guc-list.html).
 
@@ -295,7 +295,8 @@ The Global Deadlock Detector can manage concurrent updates for these types of `U
 
 The following table shows the concurrent `UPDATE` or `DELETE` commands that are managed by the Global Deadlock Detector. For example, concurrent simple `UPDATE` commands on the same table row are managed by the Global Deadlock Detector. For a concurrent complex `UPDATE` and a simple `UPDATE`, only one `UPDATE` is performed, and an error is returned for the other `UPDATE`.
 
-| |Simple `UPDATE`|Simple `DELETE`|Split `UPDATE`|Complex `UPDATE`|Complex `DELETE`|
+|Command|Simple `UPDATE`|Simple `DELETE`|Split `UPDATE`|Complex `UPDATE`|Complex `DELETE`|
+|-------|---------------|---------------|--------------|----------------|----------------|
 |Simple `UPDATE`|YES|YES|NO|NO|NO|
 |Simple `DELETE`|YES|YES|NO|YES|YES|
 |Split `UPDATE`|NO|NO|NO|NO|NO|

@@ -84,167 +84,478 @@ The following table lists the categories of built-in functions and operators sup
 
 Greenplum Database includes JSON processing functions that manipulate values the `json` data type. For information about JSON data, see [Working with JSON Data](json-data.html).
 
-|Operator/Function Category|VOLATILE Functions|STABLE Functions|Restrictions|
-|--------------------------|------------------|----------------|------------|
-|[Logical Operators](https://www.postgresql.org/docs/9.4/functions-logical.html)| | | |
-|[Comparison Operators](https://www.postgresql.org/docs/9.4/functions-comparison.html)| | | |
-|[Mathematical Functions and Operators](https://www.postgresql.org/docs/9.4/functions-math.html)|randomsetseed
-
-| | |
-|[String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-string.html)|*All built-in conversion functions*|convertpg\_client\_encoding
-
-| |
-|[Binary String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-binarystring.html)| | | |
-|[Bit String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-bitstring.html)| | | |
-|[Pattern Matching](https://www.postgresql.org/docs/9.4/functions-matching.html)| | | |
-|[Data Type Formatting Functions](https://www.postgresql.org/docs/9.4/functions-formatting.html)| |to\_charto\_timestamp
-
-| |
-|[Date/Time Functions and Operators](https://www.postgresql.org/docs/9.4/functions-datetime.html)|timeofday|agecurrent\_date
-
-current\_time
-
-current\_timestamp
-
-localtime
-
-localtimestamp
-
-now
-
-| |
-|[Enum Support Functions](https://www.postgresql.org/docs/9.4/functions-enum.html)| | | |
-|[Geometric Functions and Operators](https://www.postgresql.org/docs/9.4/functions-geometry.html)| | | |
-|[Network Address Functions and Operators](https://www.postgresql.org/docs/9.4/functions-net.html)| | | |
-|[Sequence Manipulation Functions](https://www.postgresql.org/docs/9.4/functions-sequence.html)|nextval\(\)setval\(\)
-
-| | |
-|[Conditional Expressions](https://www.postgresql.org/docs/9.4/functions-conditional.html)| | | |
-|[Array Functions and Operators](https://www.postgresql.org/docs/9.4/functions-array.html)| |*All array functions*| |
-|[Aggregate Functions](https://www.postgresql.org/docs/9.4/functions-aggregate.html)| | | |
-|[Subquery Expressions](https://www.postgresql.org/docs/9.4/functions-subquery.html)| | | |
-|[Row and Array Comparisons](https://www.postgresql.org/docs/9.4/functions-comparisons.html)| | | |
-|[Set Returning Functions](https://www.postgresql.org/docs/9.4/functions-srf.html)|generate\_series| | |
-|[System Information Functions](https://www.postgresql.org/docs/9.4/functions-info.html)| |*All session information functions* *All access privilege inquiry functions*
-
-*All schema visibility inquiry functions*
-
-*All system catalog information functions*
-
-*All comment information functions*
-
-*All transaction ids and snapshots*
-
-| |
-|[System Administration Functions](https://www.postgresql.org/docs/9.4/functions-admin.html)|set\_configpg\_cancel\_backend
-
-pg\_terminate\_backend
-
-pg\_reload\_conf
-
-pg\_rotate\_logfile
-
-pg\_start\_backup
-
-pg\_stop\_backup
-
-pg\_size\_pretty
-
-pg\_ls\_dir
-
-pg\_read\_file
-
-pg\_stat\_file
-
-|current\_setting*All database object size functions*
-
-|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
-|[XML Functions](https://www.postgresql.org/docs/9.4/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)
-
- cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\_and\_xmlschema\( nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\_and\_xmlschema\( query text, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xmlschema\( schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\_and\_xmlschema\( schema name, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xmlschema\( tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\_and\_xmlschema\( tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- xmlagg\(xml\)
-
- xmlconcat\(xml\[, ...\]\)
-
- xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)
-
- xmlexists\(text, xml\)
-
- xmlforest\(content \[AS name\] \[, ...\]\)
-
- xml\_is\_well\_formed\(text\)
-
- xml\_is\_well\_formed\_document\(text\)
-
- xml\_is\_well\_formed\_content\(text\)
-
- xmlparse \( \{ DOCUMENT \| CONTENT \} value\)
-
- xpath\(text, xml\)
-
- xpath\(text, xml, text\[\]\)
-
- xpath\_exists\(text, xml\)
-
- xpath\_exists\(text, xml, text\[\]\)
-
- xmlpi\(name target \[, content\]\)
-
- xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)
-
- xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)
-
- xml\(text\)
-
- text\(xml\)
-
- xmlcomment\(xml\)
-
- xmlconcat2\(xml, xml\)
-
-| |
+<table class="table" id="topic29__in204913"><caption><span class="table--title-label">Table 3. </span><span class="title">Built-in functions and operators</span></caption><colgroup><col style="width:27.67527675276753%"><col style="width:18.45018450184502%"><col style="width:22.14022140221402%"><col style="width:31.73431734317343%"></colgroup><thead class="thead">
+                        <tr class="row">
+                            <th class="entry" id="topic29__in204913__entry__1">Operator/Function Category</th>
+                            <th class="entry" id="topic29__in204913__entry__2">VOLATILE Functions</th>
+                            <th class="entry" id="topic29__in204913__entry__3">STABLE Functions</th>
+                            <th class="entry" id="topic29__in204913__entry__4">Restrictions</th>
+                        </tr>
+                    </thead><tbody class="tbody">
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-logical.html" target="_blank" rel="external noopener">Logical Operators</a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-comparison.html" target="_blank" rel="external noopener">Comparison Operators</a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-math.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Mathematical Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2">random<p class="p">setseed</p></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-string.html" target="_blank" rel="external noopener">
+                                    <span class="ph">String Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2">
+                                <em class="ph i">All built-in conversion functions</em>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__3">convert<p class="p">pg_client_encoding</p></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-binarystring.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Binary String Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-bitstring.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Bit String Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-matching.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Pattern Matching</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-formatting.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Data Type Formatting Functions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3">to_char<p class="p">to_timestamp</p></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-datetime.html" target="_blank" rel="external noopener"> Date/Time Functions and Operators</a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2">timeofday</td>
+                            <td class="entry" headers="topic29__in204913__entry__3">age<p class="p">current_date</p><p class="p">current_time</p><p class="p">current_timestamp</p><p class="p">localtime</p><p class="p">localtimestamp</p><p class="p">now</p></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-enum.html" target="_blank" rel="external noopener"> Enum Support Functions </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-geometry.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Geometric Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-net.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Network Address Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-sequence.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Sequence Manipulation Functions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2">nextval()<p class="p">setval()</p></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-conditional.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Conditional Expressions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-array.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Array Functions and Operators</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3">
+                                <em class="ph i">All array functions</em>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-aggregate.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Aggregate Functions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-subquery.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Subquery Expressions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-comparisons.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Row and Array Comparisons</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-srf.html" target="_blank" rel="external noopener">
+                                    <span class="ph">Set Returning Functions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2">generate_series</td>
+                            <td class="entry" headers="topic29__in204913__entry__3"></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-info.html" target="_blank" rel="external noopener">
+                                    <span class="ph">System Information Functions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3">
+                                <em class="ph i">All session information functions</em>
+                                <p class="p">
+                                    <em class="ph i">All access privilege inquiry functions</em>
+                                </p><p class="p">
+                                    <em class="ph i">All schema visibility inquiry functions</em>
+                                </p><p class="p">
+                                    <em class="ph i">All system catalog information functions</em>
+                                </p><p class="p">
+                                    <em class="ph i">All comment information functions</em>
+                                </p><p class="p">
+                                    <em class="ph i">All transaction ids and snapshots</em>
+                                </p></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-admin.html" target="_blank" rel="external noopener">
+                                    <span class="ph">System Administration Functions</span>
+                                </a>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__2">set_config<p class="p">pg_cancel_backend</p><p class="p">pg_terminate_backend</p><p class="p">pg_reload_conf</p><p class="p">pg_rotate_logfile</p><p class="p">pg_start_backup</p><p class="p">pg_stop_backup</p><p class="p">pg_size_pretty</p><p class="p">pg_ls_dir</p><p class="p">pg_read_file</p><p class="p">pg_stat_file</p></td>
+                            <td class="entry" headers="topic29__in204913__entry__3">current_setting<p class="p"><em class="ph i">All database object size
+                                        functions</em></p></td>
+                            <td class="entry" headers="topic29__in204913__entry__4"><strong class="ph b">Note:</strong> The function
+                                    <code class="ph codeph">pg_column_size</code> displays bytes required to store
+                                the value, possibly with TOAST compression.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic29__in204913__entry__1">
+                                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-xml.html" target="_blank" rel="external noopener">XML Functions</a> and function-like
+                                expressions </td>
+                            <td class="entry" headers="topic29__in204913__entry__2"></td>
+                            <td class="entry" headers="topic29__in204913__entry__3">
+                                <p class="p">cursor_to_xml(cursor refcursor, count int, nulls boolean,
+                                    tableforest boolean, targetns text)</p>
+                                <p class="p">cursor_to_xmlschema(cursor refcursor, nulls boolean, tableforest
+                                    boolean, targetns text)</p>
+                                <p class="p">database_to_xml(nulls boolean, tableforest boolean, targetns
+                                    text)</p>
+                                <p class="p">database_to_xmlschema(nulls boolean, tableforest boolean,
+                                    targetns text)</p>
+                                <p class="p">database_to_xml_and_xmlschema( nulls boolean, tableforest
+                                    boolean, targetns text)</p>
+                                <p class="p">query_to_xml(query text, nulls boolean, tableforest boolean,
+                                    targetns text)</p>
+                                <p class="p">query_to_xmlschema(query text, nulls boolean, tableforest
+                                    boolean, targetns text)</p>
+                                <p class="p">query_to_xml_and_xmlschema( query text, nulls boolean,
+                                    tableforest boolean, targetns text)</p>
+                                <p class="p">schema_to_xml(schema name, nulls boolean, tableforest boolean,
+                                    targetns text)</p>
+                                <p class="p">schema_to_xmlschema( schema name, nulls boolean, tableforest
+                                    boolean, targetns text)</p>
+                                <p class="p">schema_to_xml_and_xmlschema( schema name, nulls boolean,
+                                    tableforest boolean, targetns text)</p>
+                                <p class="p">table_to_xml(tbl regclass, nulls boolean, tableforest boolean,
+                                    targetns text)</p>
+                                <p class="p">table_to_xmlschema( tbl regclass, nulls boolean, tableforest
+                                    boolean, targetns text)</p>
+                                <p class="p">table_to_xml_and_xmlschema( tbl regclass, nulls boolean,
+                                    tableforest boolean, targetns text)</p>
+                                <p class="p">xmlagg(xml)</p>
+                                <p class="p">xmlconcat(xml[, ...])</p>
+                                <p class="p">xmlelement(name name [, xmlattributes(value [AS attname] [, ...
+                                    ])] [, content, ...])</p>
+                                <p class="p">xmlexists(text, xml)</p>
+                                <p class="p">xmlforest(content [AS name] [, ...])</p>
+                                <p class="p">xml_is_well_formed(text)</p>
+                                <p class="p">xml_is_well_formed_document(text)</p>
+                                <p class="p">xml_is_well_formed_content(text)</p>
+                                <p class="p">xmlparse ( { DOCUMENT | CONTENT } value)</p>
+                                <p class="p">xpath(text, xml)</p>
+                                <p class="p">xpath(text, xml, text[])</p>
+                                <p class="p">xpath_exists(text, xml)</p>
+                                <p class="p">xpath_exists(text, xml, text[])</p>
+                                <p class="p">xmlpi(name target [, content])</p>
+                                <p class="p">xmlroot(xml, version text | no value [, standalone yes|no|no
+                                    value])</p>
+                                <p class="p">xmlserialize ( { DOCUMENT | CONTENT } value AS type )</p>
+                                <p class="p">xml(text)</p>
+                                <p class="p">text(xml)</p>
+                                <p class="p">xmlcomment(xml)</p>
+                                <p class="p">xmlconcat2(xml, xml)</p>
+                            </td>
+                            <td class="entry" headers="topic29__in204913__entry__4"></td>
+                        </tr>
+                    </tbody></table>
 
 ## <a id="topic30"></a>Window Functions 
 
 The following built-in window functions are Greenplum extensions to the PostgreSQL database. All window functions are *immutable*. For more information about window functions, see [Window Expressions](defining-queries.html).
 
-|Function|Return Type|Full Syntax|Description|
-|--------|-----------|-----------|-----------|
-|`cume_dist()`|`double precision`|`CUME_DIST() OVER ( [PARTITION BY` expr `] ORDER BY` expr `)`|Calculates the cumulative distribution of a value in a group of values. Rows with equal values always evaluate to the same cumulative distribution value.|
-|`dense_rank()`|`bigint`|`DENSE_RANK () OVER ( [PARTITION BY` expr `] ORDER BY` expr `)`|Computes the rank of a row in an ordered group of rows without skipping rank values. Rows with equal values are given the same rank value.|
-|`first_value(*expr*)`|same as input expr type|`FIRST_VALUE(` expr `) OVER ( [PARTITION BY` expr `] ORDER BY` expr `[ROWS|RANGE` frame\_expr `] )`|Returns the first value in an ordered set of values.|
-|`lag(*expr* [,*offset*] [,*default*])`|same as input *expr* type|`LAG(` *expr* `[,` *offset* `] [,` *default* `]) OVER ( [PARTITION BY` *expr* `] ORDER BY` *expr* `)`|Provides access to more than one row of the same table without doing a self join. Given a series of rows returned from a query and a position of the cursor, `LAG` provides access to a row at a given physical offset prior to that position. The default `offset` is 1. *default* sets the value that is returned if the offset goes beyond the scope of the window. If *default* is not specified, the default value is null.|
-|`last_value(*expr*`\)|same as input *expr* type|`LAST_VALUE(*expr*) OVER ( [PARTITION BY *expr*] ORDER BY *expr* [ROWS|RANGE *frame\_expr*] )`|Returns the last value in an ordered set of values.|
-|``lead(*expr* [,*offset*] [,*default*])``|same as input *expr* type|`LEAD(*expr*[,*offset*] [,*expr**default*]) OVER ( [PARTITION BY *expr*] ORDER BY *expr* )`|Provides access to more than one row of the same table without doing a self join. Given a series of rows returned from a query and a position of the cursor, `lead` provides access to a row at a given physical offset after that position. If *offset* is not specified, the default offset is 1. *default* sets the value that is returned if the offset goes beyond the scope of the window. If *default* is not specified, the default value is null.|
-|`ntile(*expr*)`|`bigint`|`NTILE(*expr*) OVER ( [PARTITION BY *expr*] ORDER BY *expr* )`|Divides an ordered data set into a number of buckets \(as defined by *expr*\) and assigns a bucket number to each row.|
-|`percent_rank()`|`double precision`|`PERCENT_RANK () OVER ( [PARTITION BY *expr*] ORDER BY *expr*)`|Calculates the rank of a hypothetical row `R` minus 1, divided by 1 less than the number of rows being evaluated \(within a window partition\).|
-|`rank()`|`bigint`|`RANK () OVER ( [PARTITION BY *expr*] ORDER BY *expr*)`|Calculates the rank of a row in an ordered group of values. Rows with equal values for the ranking criteria receive the same rank. The number of tied rows are added to the rank number to calculate the next rank value. Ranks may not be consecutive numbers in this case.|
-|`row_number()`|`bigint`|`ROW_NUMBER () OVER ( [PARTITION BY *expr*] ORDER BY *expr*)`|Assigns a unique number to each row to which it is applied \(either each row in a window partition or each row of the query\).|
+<table class="table" id="topic30__in164369"><caption><span class="table--title-label">Table 4. </span><span class="title">Window functions</span></caption><colgroup><col style="width:22.86775087590859%"><col style="width:15.426449824818283%"><col style="width:39.21978769021597%"><col style="width:22.486011609057158%"></colgroup><thead class="thead">
+                        <tr class="row">
+                            <th class="entry" id="topic30__in164369__entry__1">Function</th>
+                            <th class="entry" id="topic30__in164369__entry__2">Return Type</th>
+                            <th class="entry" id="topic30__in164369__entry__3">Full Syntax</th>
+                            <th class="entry" id="topic30__in164369__entry__4">Description</th>
+                        </tr>
+                    </thead><tbody class="tbody">
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">cume_dist()</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2">
+                                <code class="ph codeph">double precision</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">CUME_DIST() OVER ( [PARTITION BY </code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph">] ORDER BY </code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph"> )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Calculates the cumulative distribution of a value
+                                in a group of values. Rows with equal values always evaluate to the
+                                same cumulative distribution value.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">dense_rank()</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2">
+                                <code class="ph codeph">bigint</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">DENSE_RANK () OVER ( [PARTITION BY </code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph">] ORDER BY </code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph">)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Computes the rank of a row in an ordered group of
+                                rows without skipping rank values. Rows with equal values are given
+                                the same rank value.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">first_value(<em class="ph i">expr</em>)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2">same as input <span class="ph">expr</span> type</td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">FIRST_VALUE(</code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph">) OVER ( [PARTITION BY </code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph">] ORDER BY </code>
+                                <span class="ph">expr</span>
+                                <code class="ph codeph"> [ROWS|RANGE </code>
+                                <span class="ph">frame_expr</span>
+                                <code class="ph codeph">] )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Returns the first value in an ordered set of
+                                values.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">lag(<em class="ph i">expr</em> [,<em class="ph i">offset</em>] [,<em class="ph i">default</em>])</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2">same as input <em class="ph i">expr</em> type</td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">LAG(</code>
+                                <em class="ph i">expr</em>
+                                <code class="ph codeph"> [,</code>
+                                <em class="ph i">offset</em>
+                                <code class="ph codeph">] [,</code>
+                                <em class="ph i">default</em>
+                                <code class="ph codeph">]) OVER ( [PARTITION BY </code>
+                                <em class="ph i">expr</em>
+                                <code class="ph codeph">] ORDER BY </code>
+                                <em class="ph i">expr</em>
+                                <code class="ph codeph"> )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Provides access to more than one row of the same
+                                table without doing a self join. Given a series of rows returned
+                                from a query and a position of the cursor, <code class="ph codeph">LAG</code>
+                                provides access to a row at a given physical offset prior to that
+                                position. The default <code class="ph codeph">offset</code> is 1. <em class="ph i">default</em>
+                                sets the value that is returned if the offset goes beyond the scope
+                                of the window. If <em class="ph i">default</em> is not specified, the default value
+                                is null.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">last_value(<em class="ph i">expr</em></code>)</td>
+                            <td class="entry" headers="topic30__in164369__entry__2">same as input <em class="ph i">expr</em> type</td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">LAST_VALUE(<em class="ph i">expr</em>) OVER ( [PARTITION BY <em class="ph i">expr</em>]
+                                    ORDER BY <em class="ph i">expr</em> [ROWS|RANGE <em class="ph i">frame_expr</em>] )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Returns the last value in an ordered set of
+                                values.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">
+                                    <code class="ph codeph">lead(<em class="ph i">expr</em> [,<em class="ph i">offset</em>]
+                                        [,<em class="ph i">default</em>])</code>
+                                </code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2">same as input <em class="ph i">expr</em> type</td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">LEAD(<em class="ph i">expr </em>[,<em class="ph i">offset</em>]
+                                        [,<em class="ph i">expr</em><em class="ph i">default</em>]) OVER ( [PARTITION BY
+                                        <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr</em> )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Provides access to more than one row of the same
+                                table without doing a self join. Given a series of rows returned
+                                from a query and a position of the cursor, <code class="ph codeph">lead</code>
+                                provides access to a row at a given physical offset after that
+                                position. If <em class="ph i">offset</em> is not specified, the default offset is
+                                1. <em class="ph i">default</em> sets the value that is returned if the offset goes
+                                beyond the scope of the window. If <em class="ph i">default</em> is not specified,
+                                the default value is null.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">ntile(<em class="ph i">expr</em>)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2"><code class="ph codeph">bigint</code></td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">NTILE(<em class="ph i">expr</em>) OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER
+                                    BY <em class="ph i">expr</em> )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Divides an ordered data set into a number of
+                                buckets (as defined by <em class="ph i">expr</em>) and assigns a bucket number to
+                                each row.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1"><code class="ph codeph">percent_rank()</code></td>
+                            <td class="entry" headers="topic30__in164369__entry__2">
+                                <code class="ph codeph">double precision</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">PERCENT_RANK () OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY
+                                        <em class="ph i">expr </em>)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Calculates the rank of a hypothetical row
+                                    <code class="ph codeph">R</code> minus 1, divided by 1 less than the number of
+                                rows being evaluated (within a window partition).</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1">
+                                <code class="ph codeph">rank()</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2"><code class="ph codeph">bigint</code></td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">RANK () OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr
+                                    </em>)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Calculates the rank of a row in an ordered group
+                                of values. Rows with equal values for the ranking criteria receive
+                                the same rank. The number of tied rows are added to the rank number
+                                to calculate the next rank value. Ranks may not be consecutive
+                                numbers in this case.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1"><code class="ph codeph">row_number()</code></td>
+                            <td class="entry" headers="topic30__in164369__entry__2">
+                                <code class="ph codeph">bigint</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">ROW_NUMBER () OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY
+                                        <em class="ph i">expr </em>)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Assigns a unique number to each row to which it is
+                                applied (either each row in a window partition or each row of the
+                                query).</td>
+                        </tr>
+                    </tbody></table>
 
 ## <a id="topic31"></a>Advanced Aggregate Functions 
 
@@ -252,21 +563,44 @@ The following built-in advanced aggregate functions are Greenplum extensions of 
 
 **Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [Greenplum MADlib Extension for Analytics](../../../analytics/madlib.html) in the *Greenplum Database Reference Guide*.
 
-|Function|Return Type|Full Syntax|Description|
-|--------|-----------|-----------|-----------|
-|`MEDIAN (*expr*)`|`timestamp, timestamptz, interval, float`|`MEDIAN (*expression*)` *Example:*
-
-```
-SELECT departmzent_id, MEDIAN(salary) 
+<table class="table" id="topic31__in2073121"><caption><span class="table--title-label">Table 5. </span><span class="title">Advanced Aggregate Functions</span></caption><colgroup><col style="width:23.00684070063499%"><col style="width:18.098714684499523%"><col style="width:31.2862357741035%"><col style="width:27.60820884076199%"></colgroup><thead class="thead">
+                        <tr class="row">
+                            <th class="entry" id="topic31__in2073121__entry__1">Function</th>
+                            <th class="entry" id="topic31__in2073121__entry__2">Return Type</th>
+                            <th class="entry" id="topic31__in2073121__entry__3">Full Syntax</th>
+                            <th class="entry" id="topic31__in2073121__entry__4">Description</th>
+                        </tr>
+                    </thead><tbody class="tbody">
+                        <tr class="row">
+                            <td class="entry" headers="topic31__in2073121__entry__1">
+                                <code class="ph codeph">MEDIAN (<em class="ph i">expr</em>)</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__2">
+                                <code class="ph codeph">timestamp, timestamptz, interval, float</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__3">
+                                <code class="ph codeph">MEDIAN (<em class="ph i">expression</em>)</code>
+                                <p class="p">
+                                    <em class="ph i">Example:</em>
+                                </p><pre class="pre codeblock"><code>SELECT departmzent_id, MEDIAN(salary) 
   FROM employees 
-GROUP BY department_id; 
-```
-
-|Can take a two-dimensional array as input. Treats such arrays as matrices.|
-|`sum(array[])`|`smallint[], int[], bigint[], float[]`|`sum(array[[1,2],[3,4]])` *Example:*
-
-```
-CREATE TABLE mymatrix (myvalue int[]);
+GROUP BY department_id; </code></pre>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__4">Can take a two-dimensional array as input. Treats
+                                such arrays as matrices.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic31__in2073121__entry__1">
+                                <code class="ph codeph">sum(array[])</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__2">
+                                <code class="ph codeph">smallint[], int[], bigint[], float[]</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__3">
+                                <code class="ph codeph">sum(array[[1,2],[3,4]])</code>
+                                <p class="p">
+                                    <em class="ph i">Example:</em>
+                                </p><pre class="pre codeblock"><code>CREATE TABLE mymatrix (myvalue int[]);
 INSERT INTO mymatrix 
    VALUES (array[[1,2],[3,4]]);
 INSERT INTO mymatrix 
@@ -274,10 +608,35 @@ INSERT INTO mymatrix
 SELECT sum(myvalue) FROM mymatrix;
  sum 
 ---------------
- {{1,3},{4,4}}
-```
-
-|Performs matrix summation. Can take as input a two-dimensional array that is treated as a matrix.|
-|`pivot_sum (label[], label, expr)`|`int[], bigint[], float[]`|`pivot_sum( array['A1','A2'], attr, value)`|A pivot aggregation using sum to resolve duplicate entries.|
-|`unnest (array[])`|set of `anyelement`|`unnest( array['one', 'row', 'per', 'item'])`|Transforms a one dimensional array into rows. Returns a set of `anyelement`, a polymorphic [pseudo-type](https://www.postgresql.org/docs/9.4/datatype-pseudo.html) in PostgreSQL.|
+ {{1,3},{4,4}}</code></pre>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__4">Performs matrix summation. Can take as input a
+                                two-dimensional array that is treated as a matrix.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic31__in2073121__entry__1">
+                                <code class="ph codeph">pivot_sum (label[], label, expr)</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__2">
+                                <code class="ph codeph">int[], bigint[], float[]</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__3">
+                                <code class="ph codeph">pivot_sum( array['A1','A2'], attr, value)</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__4">A pivot aggregation using sum to resolve duplicate
+                                entries.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic31__in2073121__entry__1">
+                                <code class="ph codeph">unnest (array[])</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__2">set of <code class="ph codeph">anyelement</code></td>
+                            <td class="entry" headers="topic31__in2073121__entry__3">
+                                <code class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</code>
+                            </td>
+                            <td class="entry" headers="topic31__in2073121__entry__4">Transforms a one dimensional array into rows.
+                                Returns a set of <code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html" target="_blank" rel="external noopener"><span class="ph">pseudo-type</span></a> in
+                                PostgreSQL.</td>
+                        </tr>
+                    </tbody></table>
 

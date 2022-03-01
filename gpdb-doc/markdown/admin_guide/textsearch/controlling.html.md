@@ -127,21 +127,21 @@ Ranking attempts to measure how relevant documents are to a particular query, so
 
 The two ranking functions currently available are:
 
-`ts_rank([ *weights* float4[], ] *vector* tsvector, *query* tsquery [, *normalization* integer ]) returns float4`
+`ts_rank([ <weights> float4[], ] <vector> tsvector, <query> tsquery [, <normalization> integer ]) returns float4`
 :   Ranks vectors based on the frequency of their matching lexemes.
 
-`ts_rank_cd([ *weights* float4[], ] *vector* tsvector, *query* tsquery [, *normalization* integer ]) returns float4`
+`ts_rank_cd([ <weights> float4[], ] <vector> tsvector, <query> tsquery [, <normalization> integer ]) returns float4`
 :   This function computes the *cover density* ranking for the given document vector and query, as described in Clarke, Cormack, and Tudhope's "Relevance Ranking for One to Three Term Queries" in the journal "Information Processing and Management", 1999. Cover density is similar to `ts_rank` ranking except that the proximity of matching lexemes to each other is taken into consideration.
 
-    This function requires lexeme positional information to perform its calculation. Therefore, it ignores any "stripped" lexemes in the `tsvector`. If there are no unstripped lexemes in the input, the result will be zero. \(See [Manipulating Documents](features.html#manipulating-documents) for more information about the `strip` function and positional information in `tsvector`s.\)
+This function requires lexeme positional information to perform its calculation. Therefore, it ignores any "stripped" lexemes in the `tsvector`. If there are no unstripped lexemes in the input, the result will be zero. \(See [Manipulating Documents](features.html#manipulating-documents) for more information about the `strip` function and positional information in `tsvector`s.\)
 
-For both these functions, the optional `*weights*` argument offers the ability to weigh word instances more or less heavily depending on how they are labeled. The weight arrays specify how heavily to weigh each category of word, in the order:
+For both these functions, the optional `<weights>` argument offers the ability to weigh word instances more or less heavily depending on how they are labeled. The weight arrays specify how heavily to weigh each category of word, in the order:
 
 ```
 {D-weight, C-weight, B-weight, A-weight}
 ```
 
-If no `*weights*` are provided, then these defaults are used:
+If no `<weights>` are provided, then these defaults are used:
 
 ```
 {0.1, 0.2, 0.4, 1.0}
@@ -149,7 +149,7 @@ If no `*weights*` are provided, then these defaults are used:
 
 Typically weights are used to mark words from special areas of the document, like the title or an initial abstract, so they can be treated with more or less importance than words in the document body.
 
-Since a longer document has a greater chance of containing a query term it is reasonable to take into account document size, e.g., a hundred-word document with five instances of a search word is probably more relevant than a thousand-word document with five instances. Both ranking functions take an integer `*normalization*` option that specifies whether and how a document's length should impact its rank. The integer option controls several behaviors, so it is a bit mask: you can specify one or more behaviors using `|` \(for example, `2|4`\).
+Since a longer document has a greater chance of containing a query term it is reasonable to take into account document size, e.g., a hundred-word document with five instances of a search word is probably more relevant than a thousand-word document with five instances. Both ranking functions take an integer `<normalization>` option that specifies whether and how a document's length should impact its rank. The integer option controls several behaviors, so it is a bit mask: you can specify one or more behaviors using `|` \(for example, `2|4`\).
 
 -   0 \(the default\) ignores the document length
 -   1 divides the rank by 1 + the logarithm of the document length

@@ -637,7 +637,7 @@ The `BY REF` clauses have no effect in Greenplum Database, but are allowed for S
 
 **Expression:**
 
-`xml\_is\_well\_formed`
+`xml_is_well_formed`
 
 **Synopsis:**
 

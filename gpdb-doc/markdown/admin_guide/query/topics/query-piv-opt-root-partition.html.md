@@ -16,11 +16,11 @@ Keep in mind that `ANALYZE` always scans the entire table before updating the ro
 
 Follow these best practices for running `ANALYZE` or `ANALYZE ROOTPARTITION` on partitioned tables in your system:
 
--   Run `ANALYZE <root\_partition\_table\_name>` on a new partitioned table after adding initial data. Run `ANALYZE <leaf\_partition\_table\_name>` on a new leaf partition or a leaf partition where data has changed. By default, running the command on a leaf partition updates the root partition statistics if the other leaf partitions have statistics.
+-   Run `ANALYZE <root_partition_table_name>` on a new partitioned table after adding initial data. Run `ANALYZE <leaf_partition_table_name>` on a new leaf partition or a leaf partition where data has changed. By default, running the command on a leaf partition updates the root partition statistics if the other leaf partitions have statistics.
 -   Update root partition statistics when you observe query performance regression in `EXPLAIN` plans against the table, or after significant changes to leaf partition data. For example, if you add a new leaf partition at some point after generating root partition statistics, consider running `ANALYZE` or `ANALYZE ROOTPARTITION` to update root partition statistics with the new tuples inserted from the new leaf partition.
 -   For very large tables, run `ANALYZE` or `ANALYZE ROOTPARTITION` only weekly, or at some interval longer than daily.
 -   Avoid running `ANALYZE` with no arguments, because doing so runs the command on all database tables including partitioned tables. With large databases, these global `ANALYZE` operations are difficult to monitor, and it can be difficult to predict the time needed for completion.
--   Consider running multiple `ANALYZE <table\_name>` or `ANALYZE ROOTPARTITION <table\_name>` operations in parallel to speed the operation of statistics collection, if your I/O throughput can support the load.
+-   Consider running multiple `ANALYZE <table_name>` or `ANALYZE ROOTPARTITION <table_name>` operations in parallel to speed the operation of statistics collection, if your I/O throughput can support the load.
 -   You can also use the Greenplum Database utility `analyzedb` to update table statistics. Using `analyzedb` ensures that tables that were previously analzyed are not re-analyzed if no modifications were made to the leaf partition.
 
 ## <a id="topic_h2x_hks_wbb"></a>GPORCA and Leaf Partition Statistics 

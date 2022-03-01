@@ -180,10 +180,10 @@ See [Summary of Built-in Functions](../../../ref_guide/function-summary.html) fo
 
 An aggregate expression applies an aggregate function across the rows that a query selects. An aggregate function performs a calculation on a set of values and returns a single value, such as the sum or average of the set of values. The syntax of an aggregate expression is one of the following:
 
--   `*aggregate\_name*(*expression* [ , ... ] ) [ FILTER ( WHERE filter\_clause ) ]` — operates across all input rows for which the expected result value is non-null. `ALL` is the default.
--   `*aggregate\_name*(ALL *expression* [ , ... ] ) [ FILTER ( WHERE filter\_clause ) ]` — operates identically to the first form because `ALL` is the default.
--   `*aggregate\_name*(DISTINCT *expression* [ , ... ] ) [ FILTER ( WHERE filter\_clause ) ]` — operates across all distinct non-null values of input rows.
--   `*aggregate\_name*(*) [ FILTER ( WHERE filter\_clause ) ]` — operates on all rows with values both null and non-null. Generally, this form is most useful for the `count(*)` aggregate function.
+-   `aggregate_name(expression [ , ... ] ) [ FILTER ( WHERE filter_clause ) ]` — operates across all input rows for which the expected result value is non-null. `ALL` is the default.
+-   `aggregate_name(ALL expression [ , ... ] ) [ FILTER ( WHERE filter_clause ) ]` — operates identically to the first form because `ALL` is the default.
+-   `aggregate_name(DISTINCT expression [ , ... ] ) [ FILTER ( WHERE filter_clause ) ]` — operates across all distinct non-null values of input rows.
+-   `aggregate_name(*) [ FILTER ( WHERE filter_clause ) ]` — operates on all rows with values both null and non-null. Generally, this form is most useful for the `count(*)` aggregate function.
 
 Where *aggregate\_name* is a previously defined aggregate \(possibly schema-qualified\) and *expression* is any value expression that does not contain an aggregate expression.
 
