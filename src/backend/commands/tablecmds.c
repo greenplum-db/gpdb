@@ -4904,11 +4904,14 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			{
 				if (Gp_role == GP_ROLE_DISPATCH &&
 					rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
-					ereport(ERROR,
-							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							 errmsg("cannot expand partition table prepare \"%s\"",
-									RelationGetRelationName(rel)),
-							 errdetail("table has already been expanded partiton prepare")));
+				{
+					ereport(NOTICE,
+							(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+							 errmsg("skipped, table \"%s\" has already been expanded partiton prepare",
+									RelationGetRelationName(rel))));
+					pass = AT_PASS_MISC;	/* We do nothing here */
+					break;
+				}
 				if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE || rel->rd_rel->relispartition)
 				{
 					ereport(ERROR,
