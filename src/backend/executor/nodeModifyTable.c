@@ -2310,20 +2310,19 @@ ExecModifyTable(PlanState *pstate)
 
 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
 	{
-		/* GPDB_12_MERGE_FIXME: This error message isn't very user-friendly. We can
-		 * get here e.g. with this query (from the 'insert' regression test):
+		/*
+		 * Current Greenplum MPP architecture only support one writer gang, and
+		 * only writer gang can execute DML nodes. There is no code path to reach
+		 * here. For writable CTE case as below:
 		 *
-		 * create table mlparted (a int4, b int4);
-		 * with ins (a, b, c) as
-		 *   (insert into mlparted (b, a) select s.a, 1 from generate_series(2, 39) s(a) returning tableoid::regclass, *)
-		 *   select a, b, min(c), max(c) from ins group by a, b order by 1;
+		 *   create table t(a int);
+		 *   with wcte as (delete from t returning a)
+		 *     insert into t select * from wcte;
 		 *
-		 * That test query is new with the merge, but it produced the same error
-		 * on master before the merge, too.
+		 * The above query will error out during parse-analyze so not reach here.
+		 * If reaching here, some bugs must happen.
 		 */
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("INSERT/UPDATE/DELETE must be executed by a writer segworker group")));
+		elog(ERROR, "Reader Gang execute ModifyTable node, some bugs must happen");
 	}
 
 	/*
