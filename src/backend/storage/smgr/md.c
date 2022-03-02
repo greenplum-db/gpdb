@@ -201,7 +201,7 @@ static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
 			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
-			 BlockNumber blkno, bool skipFsync, ExtensionBehavior behavior, bool *is_seg0);
+			 BlockNumber blkno, bool skipFsync, ExtensionBehavior behavior, bool *seg0_missing);
 static BlockNumber _mdnblocks(SMgrRelation reln, ForkNumber forknum,
 		   MdfdVec *seg);
 
@@ -1120,7 +1120,6 @@ mdsync(void)
 	uint64		elapsed;
 	uint64		longest = 0;
 	uint64		total_elapsed = 0;
-	bool		is_seg0 = false;
 
 	/*
 	 * This is only called during checkpoints, and checkpoints should only
@@ -1291,6 +1290,7 @@ mdsync(void)
 					bool		closeSeg = false;
 					char	   *path;
 					int			save_errno;
+					bool		seg0_missing = false;
 
 					/*
 					 * Find or create an smgr hash entry for this relation.
@@ -1323,7 +1323,7 @@ mdsync(void)
 					{
 						seg = _mdfd_getseg(reln, forknum,
 								(BlockNumber) segno * (BlockNumber) RELSEG_SIZE,
-										false, EXTENSION_RETURN_NULL, &is_seg0);
+										false, EXTENSION_RETURN_NULL, &seg0_missing);
 					}
 
 					INSTR_TIME_SET_CURRENT(sync_start);
@@ -1364,8 +1364,10 @@ mdsync(void)
 
 					/* Compute file name for use in message */
 					save_errno = errno;
-					segno = (is_seg0 ? 0 : segno);
-					path = _mdfd_segpath(reln, forknum, (BlockNumber) segno);
+					if (seg0_missing)
+						path = _mdfd_segpath(reln, forknum, 0);
+					else
+						path = _mdfd_segpath(reln, forknum, (BlockNumber) segno);
 					errno = save_errno;
 
 					/*
@@ -1995,7 +1997,7 @@ _mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
  */
 static MdfdVec *
 _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
-			 bool skipFsync, ExtensionBehavior behavior, bool *is_seg0)
+			 bool skipFsync, ExtensionBehavior behavior, bool *seg0_missing)
 {
 	MdfdVec    *v = mdopen(reln, forknum, behavior);
 	BlockNumber targetseg;
@@ -2003,11 +2005,13 @@ _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
 
 	if (!v)
 	{
-		if (is_seg0 != NULL)
-			*is_seg0 = true;
+		if (seg0_missing != NULL)
+			*seg0_missing = true;
 
 		return NULL;			/* only possible if EXTENSION_RETURN_NULL */
 	}
+	else if (seg0_missing != NULL)
+		*seg0_missing = false;
 
 	targetseg = blkno / ((BlockNumber) RELSEG_SIZE);
 
