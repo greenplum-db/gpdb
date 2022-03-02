@@ -2534,6 +2534,28 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
         if self.reuse_tables == False:
             self.cleanupSql.append('drop external table if exists %s'%self.extSchemaTable)
 
+
+    def get_distribution_key(self):
+        '''
+        get distribution key for staging table, default is the DK for target table
+        if it is not setted, we use the match columns for DK
+        '''
+
+        sql = '''select * from pg_get_table_distributedby('%s.%s'::regclass::oid)'''% (self.schema, self.table)
+        try:
+            dk_text = self.db.query(sql.encode('utf-8')).getresult()
+        except Exception as e:
+            self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, str(e)))
+
+        if dk_text[0][0] == 'DISTRIBUTED RANDOMLY':
+            # target table doesn't have dk, we use match column
+            dk = self.getconfig('gpload:output:match_columns', list)
+            dk_text = " DISTRIBUTED BY (%s)" % ', '.join(dk)
+            return dk_text
+        else:
+            # use dk of target table
+            return dk_text[0][0]
+
 		
     def create_staging_table(self):
         '''
@@ -2542,7 +2564,7 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
         '''
 
         # make sure we set the correct distribution policy
-        distcols = self.getconfig('gpload:output:match_columns', list)
+        distcols = self.get_distribution_key()
 
         sql = "SELECT * FROM pg_class WHERE relname LIKE 'temp_gpload_reusable_%%';"
         resultList = self.db.query(sql).getresult()
@@ -2596,7 +2618,7 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
         sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
         cols = ['"%s" %s' % (a[0], a[1]) for a in target_columns]
         sql += "(%s)" % ','.join(cols)
-        #sql += " DISTRIBUTED BY (%s)" % ', '.join(distcols)
+        sql += distcols
         self.log(self.LOG, sql)
 
         if not self.options.D:

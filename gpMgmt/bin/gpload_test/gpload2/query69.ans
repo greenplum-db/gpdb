@@ -6,7 +6,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-08 16:28:20|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
 2021-01-08 16:28:20|INFO|did not find an external table to reuse. creating ext_gpload_reusable_770f4452_518b_11eb_98a2_00505698707d
 2021-01-08 16:28:20|ERROR|ERROR:  column "Field1" is of type bigint but expression is of type text
-LINE 1: ...07ea34f55e778f329e548 ("Field1","Field#2") SELECT "Field1","...
+LINE 1: ...bb31496d7e9a13bd29b90 ("Field1","Field#2") SELECT "Field1","...
                                                              ^
 HINT:  You will need to rewrite or cast the expression.
  encountered while running INSERT INTO staging_gpload_reusable_a1101b5024707ea34f55e778f329e548 ("Field1","Field#2") SELECT "Field1","Field#2" FROM ext_gpload_reusable_770f4452_518b_11eb_98a2_00505698707d

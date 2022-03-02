@@ -8,6 +8,8 @@ INSERT 0 1
 2021-01-07 18:26:18|INFO|gpload session started 2021-01-07 18:26:18
 2021-01-07 18:26:18|INFO|setting schema 'public' for table 'merge_test'
 2021-01-07 18:26:18|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_mapping_01.txt" -t 30
+2021-01-07 18:26:18|INFO|did not find a staging table to reuse. creating STAGING_GPLOAD_REUSABLE
+2021-01-07 18:26:18|INFO|did not find an external table to reuse. creating EXT_GPLOAD_REUSABLE
 2021-01-07 18:26:18|ERROR|A gpload control file processing error occurred. The configuration must contain gpload:output:match_columns
 2021-01-07 18:26:18|INFO|rows Inserted          = 0
 2021-01-07 18:26:18|INFO|rows Updated           = 0
