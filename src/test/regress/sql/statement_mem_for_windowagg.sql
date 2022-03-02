@@ -6,12 +6,13 @@ INSERT INTO dummy_table SELECT generate_series(0, 20000), 10;
 -- 1. Test that if we set statement_mem to a larger value, the tuplestore
 -- for caching the tuples in partition used in WindowAgg is able to be fitted
 -- in memory.
-SET statement_mem TO '2048kB';
+SET statement_mem TO '4096kB';
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
-EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+SELECT COUNT(*)
+  FROM (SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table) tt;
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -23,7 +24,8 @@ SET statement_mem TO '1024kB';
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
-EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+SELECT COUNT(*)
+  FROM (SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table) tt;
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -36,7 +38,8 @@ SET gp_enable_mk_sort TO 'on';
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
-EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+SELECT COUNT(*)
+  FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -46,20 +49,22 @@ SET gp_enable_mk_sort TO 'off';
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
-EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+SELECT COUNT(*)
+  FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
 -- 4. Test that if we set statement_mem to a larger value, the tuplesort
 -- operation in DISTINCT-qualified WindowAgg is able to be fitted in memory.
-SET statement_mem TO '2048kB';
+SET statement_mem TO '4096kB';
 -- MK-Sort
 SET gp_enable_mk_sort TO 'on';
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
-EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+SELECT COUNT(*)
+  FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -69,7 +74,8 @@ SET gp_enable_mk_sort TO 'off';
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
-EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+SELECT COUNT(*)
+  FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
