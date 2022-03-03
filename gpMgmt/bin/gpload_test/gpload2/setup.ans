@@ -3,6 +3,8 @@ DROP DATABASE
 CREATE DATABASE reuse_gptest;
 CREATE DATABASE
 You are now connected to database "reuse_gptest" as user "gpadmin".
+CREATE SCHEMA "Test";
+CREATE SCHEMA
 CREATE SCHEMA test;
 CREATE SCHEMA
 DROP EXTERNAL TABLE IF EXISTS temp_gpload_staging_table;

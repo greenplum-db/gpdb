@@ -2467,7 +2467,14 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
             if self.staging_table:
                 if '.' in self.staging_table:
                     self.log(self.ERROR, "Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table")
-                self.extTableName = quote_unident(self.staging_table) 
+                self.extTableName = self.staging_table
+                # we need a name without double quotes and in right upper or lower case
+                if isDelimited(self.extTableName):
+                    # if the name is double quoted, we keep the capital letters
+                    sql_table_name = quote_unident(self.extTableName)
+                else:
+                    # if not, table name should be lower letters
+                    sql_table_name = self.extTableName.lower()
                 if self.extSchemaName is None:
                     sql = """SELECT n.nspname as Schema,
                             c.relname as Name
@@ -2480,12 +2487,12 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
                             AND n.nspname !~ '^pg_toast'
                             AND c.relname = '%s'
                             AND pg_catalog.pg_table_is_visible(c.oid)
-                        ORDER BY 1,2;""" % self.extTableName
+                        ORDER BY 1,2;""" % sql_table_name
                 else:
-                    sql = "select * from pg_catalog.pg_tables where schemaname = '%s' and tablename = '%s'" % (quote_unident(self.extSchemaName),  self.extTableName)
+                    sql = "select * from pg_catalog.pg_tables where schemaname = '%s' and tablename = '%s'" % (quote_unident(self.extSchemaName),  sql_table_name)
                 result = self.db.query(sql.encode('utf-8')).getresult()
                 if len(result) > 0:
-                    self.extSchemaTable = self.get_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                    self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
                     self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
                     return
             else:
@@ -2504,7 +2511,7 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
                     self.extTableName = (resultList[0])[0]
                     # fast match result is only table name, so we need add schema info
                     if self.fast_match:
-                        self.extSchemaTable = self.get_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                        self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
                     else:
                         self.extSchemaTable = self.extTableName
                     self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)

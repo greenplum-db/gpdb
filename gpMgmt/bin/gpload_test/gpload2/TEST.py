@@ -679,10 +679,11 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         file = mkpath('setup.sql')
         runfile(file)
         f = open(mkpath('query25.sql'),'a')
-        f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'\n")
+        f.write("\\! psql -d reuse_gptest -c \"SELECT count(*) from pg_class WHERE relname = 'Staging_table';\"")
         f.close()
         copy_data('external_file_13.csv','data_file.csv')
-        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='\'"Staging_table"\'')
         self.doTest(25)
     def test_26_gpload_ext_staging_table_with_externalschema(self):
         "26  gpload reuse ext_staging_table if it is configured with externalschema"
@@ -692,17 +693,18 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
         f.close()
         copy_data('external_file_13.csv','data_file.csv')
-        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table',externalSchema='test')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table',externalSchema='\'"Test"\'')
         self.doTest(26)
     def test_27_gpload_ext_staging_table_with_externalschema(self):
         "27  gpload reuse ext_staging_table if it is configured with externalschema"
         file = mkpath('setup.sql')
         runfile(file)
         f = open(mkpath('query27.sql'),'a')
-        f.write("\! psql -d reuse_gptest -c 'select count(*) from test.csvtable;'")
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from test.csvtable;'\n")
+        f.write('\! psql -d reuse_gptest -c "select * from pg_tables where schemaname = \'test\' and tablename = \'staging_table\';"\n')
         f.close()
         copy_data('external_file_13.csv','data_file.csv')
-        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='test.csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table',externalSchema="'%'")
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='test.csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='"Staging_table"',externalSchema="'%'")
         self.doTest(27)
     def test_28_gpload_ext_staging_table_with_dot(self):
         "28  gpload reuse ext_staging_table if it is configured with dot"

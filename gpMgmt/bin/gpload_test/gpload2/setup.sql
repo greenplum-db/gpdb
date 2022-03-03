@@ -4,6 +4,7 @@ CREATE DATABASE reuse_gptest;
 
 \c reuse_gptest
 
+CREATE SCHEMA "Test";
 CREATE SCHEMA test;
 
 DROP EXTERNAL TABLE IF EXISTS temp_gpload_staging_table;
