@@ -1783,12 +1783,11 @@ exec_simple_query(const char *query_string)
 		}
 
 		/*
-		 * If are connected in utility mode, disallow PREPARE TRANSACTION
-		 * statements.
+		 * GPDB: If we are connected in utility mode, disallow PREPARE
+		 * TRANSACTION statements.
 		 */
-		TransactionStmt *transStmt = (TransactionStmt *) parsetree;
-		if (Gp_role == GP_ROLE_UTILITY && IsA(parsetree, TransactionStmt) &&
-			transStmt->kind == TRANS_STMT_PREPARE)
+		if (Gp_role == GP_ROLE_UTILITY && IsA(parsetree->stmt, TransactionStmt) &&
+			((TransactionStmt *) parsetree->stmt)->kind == TRANS_STMT_PREPARE)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
