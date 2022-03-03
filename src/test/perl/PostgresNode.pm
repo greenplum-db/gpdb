@@ -426,10 +426,11 @@ sub init
 
 	if ($params{allows_streaming})
 	{
-		print $conf "wal_level = replica\n";
+		print $conf "wal_level = hot_standby\n";
 		print $conf "max_wal_senders = 5\n";
 		print $conf "wal_keep_segments = 20\n";
-		print $conf "max_wal_size = 128MB\n";
+		# GPDB: this GUC is not yet supported
+		# print $conf "max_wal_size = 128MB\n";
 		print $conf "shared_buffers = 1MB\n";
 		print $conf "wal_log_hints = on\n";
 		print $conf "hot_standby = on\n";
