@@ -984,6 +984,191 @@ explain (costs off) select * from t_hashdist cross join (select * from t_replica
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
+-- ORCA
+-- verify that JOIN derives the inner child distribution if the outer is tainted replicated (in this
+-- case, the inner child is the hash distributed table, but the distribution is random because the
+-- hash distribution key is not the JOIN key. we want to return the inner distribution because the
+-- JOIN key determines the distribution of the JOIN output).
+create table dist_tab (a integer, b integer) distributed by (a);
+create table rep_tab (c integer) distributed replicated;
+create index idx on dist_tab (b);
+insert into dist_tab values (1, 2), (2, 2), (2, 1), (1, 1);
+insert into rep_tab values (1), (2);
+analyze dist_tab;
+analyze rep_tab;
+set optimizer_enable_hashjoin=off;
+set enable_hashjoin=off;
+set enable_nestloop=on;
+explain select b from dist_tab where b in (select distinct c from rep_tab);
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..443.00 rows=4 width=4)
+   ->  Nested Loop  (cost=0.00..443.00 rows=2 width=4)
+         Join Filter: true
+         ->  GroupAggregate  (cost=0.00..431.00 rows=2 width=4)
+               Group Key: rep_tab.c
+               ->  Sort  (cost=0.00..431.00 rows=2 width=4)
+                     Sort Key: rep_tab.c
+                     ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Index Scan using idx on dist_tab  (cost=0.00..12.00 rows=1 width=4)
+               Index Cond: (b = rep_tab.c)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select b from dist_tab where b in (select distinct c from rep_tab);
+ b 
+---
+ 1
+ 2
+ 1
+ 2
+(4 rows)
+
+reset optimizer_enable_hashjoin;
+reset enable_hashjoin;
+reset enable_nestloop;
+create table rand_tab (d integer) distributed randomly;
+insert into rand_tab values (1), (2);
+analyze rand_tab;
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rep_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct c from rep_tab);
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (rep_tab.c = rep_tab_1.c)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..431.00 rows=1 width=4)
+                     Hash Key: rep_tab_1.c
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=6 width=4)
+                           Group Key: rep_tab_1.c
+                           ->  Sort  (cost=0.00..431.00 rows=6 width=4)
+                                 Sort Key: rep_tab_1.c
+                                 ->  Seq Scan on rep_tab rep_tab_1  (cost=0.00..431.00 rows=6 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
+
+select c from rep_tab where c in (select distinct c from rep_tab);
+ c 
+---
+ 2
+ 1
+(2 rows)
+
+-- Table	Side		Derives
+-- dist_tab	pdsOuter	EdtHashed
+-- rep_tab	pdsInner	EdtTaintedReplicated 
+--
+-- join derives EdtHashed
+explain select a from dist_tab where a in (select distinct c from rep_tab);
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
+         Hash Cond: (dist_tab.a = rep_tab.c)
+         ->  Seq Scan on dist_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select a from dist_tab where a in (select distinct c from rep_tab);
+ a 
+---
+ 1
+ 1
+ 2
+ 2
+(4 rows)
+
+-- Table	Side		Derives
+-- rand_tab	pdsOuter	EdtRandom
+-- rep_tab	pdsInner	EdtTaintedReplicated
+--
+-- join derives EdtRandom
+explain select d from rand_tab where d in (select distinct c from rep_tab);
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (rand_tab.d = rep_tab.c)
+         ->  Seq Scan on rand_tab  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select d from rand_tab where d in (select distinct c from rep_tab);
+ d 
+---
+ 1
+ 2
+(2 rows)
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- dist_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct a from dist_tab);
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (dist_tab.a = rep_tab.c)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+               Group Key: dist_tab.a
+               ->  Sort  (cost=0.00..431.00 rows=2 width=4)
+                     Sort Key: dist_tab.a
+                     ->  Seq Scan on dist_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select c from rep_tab where c in (select distinct a from dist_tab);
+ c 
+---
+ 1
+ 2
+(2 rows)
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rand_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct d from rand_tab);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (rand_tab.d = rep_tab.c)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+               Group Key: rand_tab.d
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: rand_tab.d
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           Hash Key: rand_tab.d
+                           ->  Seq Scan on rand_tab  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select c from rep_tab where c in (select distinct d from rand_tab);
+ c 
+---
+ 2
+ 1
+(2 rows)
+
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 7 other objects
