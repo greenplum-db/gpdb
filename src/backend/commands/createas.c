@@ -714,6 +714,9 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 	DR_intorel *myState = (DR_intorel *) self;
 	Relation    into_rel = myState->rel;
 
+	if (into_rel == NULL)
+		return;
+
 	if (RelationIsAoRows(into_rel))
 	{
 		AOTupleId	aoTupleId;

@@ -362,8 +362,6 @@ DROP TABLE foopart;
 
 -- FIXME: ORCA does not consider this, we need to fix the cases when ORCA
 -- consider this.
-set optimizer = off;
-set enable_bitmapscan = off;
 create table t_hashdist(a int, b int, c int) distributed by (a);
 create table t_replicate_volatile(a int, b int, c int) distributed replicated;
 
@@ -408,6 +406,9 @@ create table rtbl (a int, b int, c int, t text) distributed replicated;
 insert into t_hashdist values (1, 1, 1);
 insert into rtbl values (1, 1, 1, 'rtbl');
 
+analyze t_hashdist;
+analyze rtbl;
+
 -- The below tests used to do replicated table scan on entry db which contains empty data.
 -- So a motion node is needed to gather replicated table on entry db.
 -- See issue: https://github.com/greenplum-db/gpdb/issues/11945
@@ -417,6 +418,7 @@ explain (costs off) create temp table tmp as select * from pg_class c join rtbl 
 create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
 select count(*) from tmp; -- should contain 1 row
 
+set enable_bitmapscan=off;
 -- 2. Join hashed table with (replicated table join catalog) should return 1 row
 explain (costs off) select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
 select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
@@ -424,16 +426,72 @@ select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname
 -- 3. Join hashed table with (set operation on catalog and replicated table)
 explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
 
-reset optimizer;
 reset enable_bitmapscan;
 
--- Github Issue 13532
-create table t1_13532(a int, b int) distributed replicated;
-create table t2_13532(a int, b int) distributed replicated;
-create index idx_t2_13532 on t2_13532(b);
-explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
-set enable_bitmapscan = off;
-explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+-- ORCA
+-- verify that JOIN derives the inner child distribution if the outer is tainted replicated (in this
+-- case, the inner child is the hash distributed table, but the distribution is random because the
+-- hash distribution key is not the JOIN key. we want to return the inner distribution because the
+-- JOIN key determines the distribution of the JOIN output).
+create table dist_tab (a integer, b integer) distributed by (a);
+create table rep_tab (c integer) distributed replicated;
+create index idx on dist_tab (b);
+insert into dist_tab values (1, 2), (2, 2), (2, 1), (1, 1);
+insert into rep_tab values (1), (2);
+analyze dist_tab;
+analyze rep_tab;
+set optimizer_enable_hashjoin=off;
+set enable_hashjoin=off;
+set enable_nestloop=on;
+explain select b from dist_tab where b in (select distinct c from rep_tab);
+select b from dist_tab where b in (select distinct c from rep_tab);
+reset optimizer_enable_hashjoin;
+reset enable_hashjoin;
+reset enable_nestloop;
+
+create table rand_tab (d integer) distributed randomly;
+insert into rand_tab values (1), (2);
+analyze rand_tab;
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rep_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct c from rep_tab);
+select c from rep_tab where c in (select distinct c from rep_tab);
+
+-- Table	Side		Derives
+-- dist_tab	pdsOuter	EdtHashed
+-- rep_tab	pdsInner	EdtTaintedReplicated 
+--
+-- join derives EdtHashed
+explain select a from dist_tab where a in (select distinct c from rep_tab);
+select a from dist_tab where a in (select distinct c from rep_tab);
+
+-- Table	Side		Derives
+-- rand_tab	pdsOuter	EdtRandom
+-- rep_tab	pdsInner	EdtTaintedReplicated
+--
+-- join derives EdtRandom
+explain select d from rand_tab where d in (select distinct c from rep_tab);
+select d from rand_tab where d in (select distinct c from rep_tab);
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- dist_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct a from dist_tab);
+select c from rep_tab where c in (select distinct a from dist_tab);
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rand_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct d from rand_tab);
+select c from rep_tab where c in (select distinct d from rand_tab);
 
 -- start_ignore
 drop schema rpt cascade;
