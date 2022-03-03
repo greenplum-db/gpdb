@@ -505,6 +505,15 @@ class AnsFile():
     def __eq__(self, other):
         return isFileEqual(self.path, other.path, '-U3', outputPath="")
 
+
+def do_assert(f1, f2, num, ifile):
+    # this will help print the diff message in the screen if case fail
+    assert f1 == f2 , read_diff(ifile, "")
+    if num==54:
+        assert f1==AnsFile(mkpath('54tmp.log'))
+    return True
+
+
 def check_result(ifile,  optionalFlags = "-U3", outputPath = "", num=None):
     """
     PURPOSE: compare the actual and expected output files and report an
@@ -523,10 +532,7 @@ def check_result(ifile,  optionalFlags = "-U3", outputPath = "", num=None):
     f1 = AnsFile(f1)
     f2 = outFile(ifile, outputPath=outputPath)
     f2 = AnsFile(f2)
-    assert f1 == f2 #, read_diff(ifile, "")
-    if num==54:
-        assert f1==AnsFile(mkpath('54tmp.log'))
-    return True
+    do_assert(f1, f2, num, ifile)
 
 
 def ModifyOutFile(file,old_str,new_str):

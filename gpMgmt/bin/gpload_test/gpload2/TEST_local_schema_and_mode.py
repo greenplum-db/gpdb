@@ -28,10 +28,11 @@ def append_gpload_cmd(test_num, config_path):
 def test_401_gpload_yaml_existing_external_schema():
     """401 test gpload works with an existing external schema"""
     TestBase.drop_tables()
-    schema = "ext_schema_test"
-    TestBase.psql_run(cmd='CREATE SCHEMA IF NOT EXISTS %s;' % schema,
-                      dbname='reuse_gptest')
-    TestBase.write_config_file(externalSchema=schema)
+    schema = "'\"EXT_schema_test\"'"
+    f = open(TestBase.mkpath('query401.sql'), 'a')
+    f.write("\\! psql -d reuse_gptest -c \"select count(*) from pg_tables where schemaname = 'EXT_schema_test';\"")
+    f.close()
+    TestBase.write_config_file(externalSchema=schema, reuse_tables=True)
 
 
 @pytest.mark.order(402)
