@@ -260,9 +260,7 @@ BackgroundWriterMain(void)
 		bool		can_hibernate;
 		int			rc;
 
-#ifdef USE_ASSERT_CHECKING
 		SIMPLE_FAULT_INJECTOR("fault_in_background_writer_main");
-#endif
 
 		/* Clear any already-pending wakeups */
 		ResetLatch(&MyProc->procLatch);
