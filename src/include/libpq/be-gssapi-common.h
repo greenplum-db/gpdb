@@ -14,6 +14,7 @@
 #ifndef BE_GSSAPI_COMMON_H
 #define BE_GSSAPI_COMMON_H
 
+#ifdef ENABLE_GSS
 #if defined(HAVE_GSSAPI_H)
 #include <gssapi.h>
 #else
@@ -23,7 +24,10 @@
 #endif
 #endif
 
+
 void		pg_GSS_error_be(int severity, const char *errmsg,
 						 OM_uint32 maj_stat, OM_uint32 min_stat);
 void		pg_store_proxy_credential(gss_cred_id_t cred);
+#endif
+
 #endif							/* BE_GSSAPI_COMMON_H */
