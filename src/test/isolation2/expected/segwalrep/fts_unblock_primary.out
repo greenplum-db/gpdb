@@ -99,7 +99,8 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
  2       | m    | m              | s    | u      
 (2 rows)
 
--- set mirror down grace period to zero to instantly mark mirror down
+-- set mirror down grace period to zero to instantly mark mirror down.
+-- the 2Uq and 2U pair will force a wait on the config reload.
 !\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
 -- start_ignore
 -- end_ignore
@@ -108,7 +109,7 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 -- start_ignore
 -- end_ignore
 (exited with code 1)
-
+2Uq: ... <quitting>
 2U: show gp_fts_mark_mirror_down_grace_period;
  gp_fts_mark_mirror_down_grace_period 
 --------------------------------------
@@ -207,6 +208,8 @@ INSERT 10
  *                         
 (1 row)
 
+-- reset the mirror down grace period back to its default value.
+-- the 2Uq and 2U pair will force a wait on the config reload.
 !\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
 -- start_ignore
 -- end_ignore
@@ -215,6 +218,7 @@ INSERT 10
 -- start_ignore
 -- end_ignore
 (exited with code 0)
+2Uq: ... <quitting>
 2U: show gp_fts_mark_mirror_down_grace_period;
  gp_fts_mark_mirror_down_grace_period 
 --------------------------------------

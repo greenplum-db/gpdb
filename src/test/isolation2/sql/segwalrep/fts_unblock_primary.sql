@@ -42,10 +42,11 @@ select gp_inject_fault('fts_probe', 'reset', 1);
 select gp_request_fts_probe_scan();
 select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
 
--- set mirror down grace period to zero to instantly mark mirror down
+-- set mirror down grace period to zero to instantly mark mirror down.
+-- the 2Uq and 2U pair will force a wait on the config reload.
 !\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
 !\retcode gpstop -u;
-
+2Uq:
 2U: show gp_fts_mark_mirror_down_grace_period;
 
 -- trigger fts probe and check to see primary marked n/u and mirror n/d
@@ -84,6 +85,9 @@ insert into fts_unblock_primary select i from generate_series(1,10)i;
 -- synchronous_standby_names should be back to its original value on the primary
 2U: show synchronous_standby_names;
 
+-- reset the mirror down grace period back to its default value.
+-- the 2Uq and 2U pair will force a wait on the config reload.
 !\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
 !\retcode gpstop -u;
+2Uq:
 2U: show gp_fts_mark_mirror_down_grace_period;
