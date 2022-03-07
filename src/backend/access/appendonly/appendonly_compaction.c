@@ -491,12 +491,13 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 }
 
 /*
- * Recycle AWAITING_DROP segments.
+ * Recycle AWAITING_DROP segments and return the segment numbers dropped.
  *
  * This tries to acquire an AccessExclusiveLock on the table, if it's
  * available. If it's not, no segments are dropped.
+ *
  */
-void
+Bitmapset *
 AppendOnlyRecycleDeadSegments(Relation aorel)
 {
 	Relation	pg_aoseg_rel;
@@ -507,6 +508,7 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
 	bool		got_accessexclusive_lock = false;
 	TransactionId cutoff_xid = InvalidTransactionId;
 	Oid			segrelid;
+	Bitmapset	*dropped_segs = NULL;
 
 	Assert(RelationIsAppendOptimized(aorel));
 
@@ -613,6 +615,8 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
 			AOCSCompaction_DropSegmentFile(aorel, segno);
 			ClearAOCSFileSegInfo(aorel, segno);
 		}
+
+		dropped_segs = bms_add_member(dropped_segs, segno);
 	}
 	systable_endscan(aoscan);
 
@@ -621,6 +625,8 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
 	heap_close(pg_aoseg_rel, AccessShareLock);
 
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
+
+	return dropped_segs;
 }
 
 /*

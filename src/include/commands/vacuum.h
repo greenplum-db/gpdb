@@ -322,12 +322,12 @@ extern void scan_index(Relation indrel, double num_tuples, int elevel, BufferAcc
 
 /* in commands/vacuum_ao.c */
 
-extern void ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
-									  BufferAccessStrategy bstrategy);
+extern Bitmapset *ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
+											BufferAccessStrategy bstrategy);
 extern void ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 								  BufferAccessStrategy bstrategy);
 extern void ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
-									   BufferAccessStrategy bstrategy);
+									   BufferAccessStrategy bstrategy, Bitmapset *pre_dropped_segs);
 
 extern bool std_typanalyze(VacAttrStats *stats);
 

@@ -1976,6 +1976,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	int			save_nestlevel;
 	bool		is_appendoptimized;
 	bool		is_toast;
+	Bitmapset	*dropped_segs = NULL;
 
 	Assert(params != NULL);
 
@@ -2328,7 +2329,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	 */
 	if (ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE)
 	{
-		ao_vacuum_rel_pre_cleanup(onerel, params->options, params, vac_strategy);
+		dropped_segs = ao_vacuum_rel_pre_cleanup(onerel, params->options, params, vac_strategy);
 	}
 	else if (ao_vacuum_phase == VACOPT_AO_COMPACT_PHASE)
 	{
@@ -2336,7 +2337,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	}
 	else if (ao_vacuum_phase == VACOPT_AO_POST_CLEANUP_PHASE)
 	{
-		ao_vacuum_rel_post_cleanup(onerel, params->options, params, vac_strategy);
+		ao_vacuum_rel_post_cleanup(onerel, params->options, params, vac_strategy, dropped_segs);
 	}
 	else if (is_appendoptimized)
 	{
