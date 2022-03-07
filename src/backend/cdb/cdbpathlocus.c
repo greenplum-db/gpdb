@@ -432,27 +432,12 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 		 */
 		if (rel->reloptkind == RELOPT_OTHER_MEMBER_REL)
 		{
-			Index		parent_relid = 0;
+			if (root->append_rel_array == NULL || root->append_rel_array[rel->relid] == NULL) 
+				elog(ERROR, "child rel %u not found in append_rel_array", rel->relid);
 
-			/* GPDB_12_MERGE_FIXME: we could use root->append_rel_array here? */
-			foreach (lc, root->append_rel_list)
-			{
-				AppendRelInfo *appendrel = lfirst(lc);
-
-				if (appendrel->child_relid == rel->relid)
-				{
-					parent_relid = appendrel->parent_relid;
-					break;
-				}
-			}
-
-			if (parent_relid <= 0)
-			{
-				/* shouldn't happen, but let's try to do something sane */
-				Assert(false);
-				CdbPathLocus_MakeStrewn(&locus, numsegments);
-				return locus;
-			}
+			/* Direct looking for AppendRelInfos by relid in the append_rel_array */
+			AppendRelInfo *appendrel = root->append_rel_array[rel->relid];
+			Index parent_relid = appendrel->parent_relid;
 			parentrel = root->simple_rel_array[parent_relid];
 			Assert(list_length(parentrel->reltarget->exprs) == list_length(rel->reltarget->exprs));
 		}
