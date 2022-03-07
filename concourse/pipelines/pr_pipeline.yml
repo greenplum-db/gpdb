@@ -49,6 +49,13 @@ resources:
       secret_access_key: {{bucket-secret-access-key}}
       versioned_file: {{binary_swap_gpdb_centos_versioned_file}}
 
+  - name: gpdb_artifacts_centos6
+    source:
+      bucket: pivotal-gpdb-concourse-resources-prod
+      json_key: ((concourse-gcs-resources-service-account-key))
+      regexp: gp-internal-artifacts/centos6/gpdb5-artifacts-centos6-(1\.0\.0).tar.gz
+    type: gcs
+
 jobs:
   - name: compile-and-test-pull-request
     plan:
@@ -61,23 +68,16 @@ jobs:
           - get: centos-gpdb-dev-6
           - get: gpaddon_src
           - get: gpdb_5x_upstream
+          - get: gpdb_artifacts_centos6
       # We use the 5X_STABLE source for running make sync_tools instead for security.
       # For example, this would prevent a user to submit a PR that maliciously
       # modifies the sync_tools task to expose the ivy credentials.
       - task: sync_tools
         input_mapping:
           gpdb_src: gpdb_5x_upstream
+          gpdb_artifacts: gpdb_artifacts_centos6
         file: gpdb_5x_upstream/concourse/tasks/sync_tools.yml
         image: centos-gpdb-dev-6
-        params:
-          IVYREPO_HOST: {{ivyrepo_host}}
-          IVYREPO_REALM: {{ivyrepo_realm}}
-          IVYREPO_USER: {{ivyrepo_user}}
-          IVYREPO_PASSWD: {{ivyrepo_passwd}}
-          TARGET_OS: centos
-          TARGET_OS_VERSION: 6
-          TASK_OS: centos
-          TASK_OS_VERSION: 6
 
       - put: gpdb_pr
         params:

@@ -7,6 +7,7 @@ image_resource:
 inputs:
 - name: gpdb_src
 - name: gpaddon_src
+- name: gpdb_artifacts
 
 outputs:
 - name: gpAux_ext
@@ -15,13 +16,3 @@ outputs:
 
 run:
   path: gpdb_src/concourse/scripts/sync_tools.bash
-
-params:
-  TARGET_OS:
-  TARGET_OS_VERSION:
-  TASK_OS:
-  TASK_OS_VERSION:
-  IVYREPO_HOST:
-  IVYREPO_REALM:
-  IVYREPO_USER:
-  IVYREPO_PASSWD:

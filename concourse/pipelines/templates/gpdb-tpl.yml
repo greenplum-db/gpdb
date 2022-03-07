@@ -477,6 +477,31 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
+- name: gpdb_artifacts_centos6
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/gpdb5-artifacts-centos6-(1\.0\.0).tar.gz
+  type: gcs
+- name: gpdb_artifacts_centos7
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/gpdb5-artifacts-centos7-(1\.0\.0).tar.gz
+  type: gcs
+- name: gpdb_artifacts_sles11
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/sles11/gpdb5-artifacts-sles11-(1\.0\.0).tar.gz
+  type: gcs
+- name: gpdb_artifacts_windows
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/win32/gpdb5-artifacts-win32-(1\.0\.0).tar.gz
+  type: gcs
+
 {% if pipeline_type == "prod" %}
 - name: bin_gpdb_centos6_icw_green
   type: s3
@@ -1054,18 +1079,12 @@ jobs:
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
+    - get: gpdb_artifacts_centos6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-6
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-      TASK_OS: centos
-      TASK_OS_VERSION: 6
+    input_mapping:
+      gpdb_artifacts: gpdb_artifacts_centos6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -1097,18 +1116,12 @@ jobs:
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
+    - get: gpdb_artifacts_centos7
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-7
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 7
-      TASK_OS: centos
-      TASK_OS_VERSION: 7
+    input_mapping:
+      gpdb_artifacts: gpdb_artifacts_centos7
   - task: compile_gpdb
     image: centos-gpdb-dev-7
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -1141,18 +1154,12 @@ jobs:
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
     - get: gpdb5-sles11-build-test
+    - get: gpdb_artifacts_sles11
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-7
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: sles
-      TARGET_OS_VERSION:
-      TASK_OS: centos
-      TASK_OS_VERSION: 7
+    input_mapping:
+      gpdb_artifacts: gpdb_artifacts_sles11
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
     image: gpdb5-sles11-build-test
@@ -1224,18 +1231,13 @@ jobs:
     - get: centos-gpdb-dev-7
       tags: ["wix"]
       passed: [gate_compile_start]
+    - get: gpdb_artifacts_windows
+      tags: ["wix"]
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-7
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: win32
-      TARGET_OS_VERSION:
-      TASK_OS: centos
-      TASK_OS_VERSION: 7
+    input_mapping:
+      gpdb_artifacts: gpdb_artifacts_windows
   - task: compile_gpdb
     tags: ["wix"]
     image: centos-mingw
