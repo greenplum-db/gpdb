@@ -1,4 +1,4 @@
--- @Description Tests the state for pg_endpoints AND gp_segment_endpoints(), focus in wait mode
+-- @Description Tests the state for pg_endpoints AND gp_get_segment_endpoints(), focus in wait mode
 --
 DROP TABLE IF EXISTS t1;
 DROP
@@ -12,14 +12,14 @@ INSERT 100
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
 (3 rows)
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
 
-*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
  state 
 -------
 (0 rows)
@@ -162,26 +162,26 @@ DECLARE
 1: CLOSE c1;
 CLOSE
 -- check no endpoint info
-1: SELECT auth_token,state FROM gp_endpoints() WHERE cursorname='c1';
+1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c1';
  auth_token | state 
 ------------+-------
 (0 rows)
 -- check no token info on QE after close PARALLEL RETRIEVE CURSOR
-*U: SELECT * FROM gp_segment_endpoints() WHERE cursorname='c1';
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c1';
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
 -- error out for closed cursor
@@ -195,7 +195,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c2';
+1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -218,14 +218,14 @@ DECLARE
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);  <waiting ...>
 
 -- check initial state after "CHECK PARALLEL RETRIEVE CURSOR"
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
  state    
 ----------
  ATTACHED 
  READY    
  READY    
 (3 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c2';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c2';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -300,14 +300,14 @@ DECLARE
  95 
  98 
 (37 rows)
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
  state    
 ----------
  ATTACHED 
  FINISHED 
  READY    
 (3 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c2';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c2';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -390,14 +390,14 @@ DECLARE
  96  
  100 
 (25 rows)
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
  state    
 ----------
  FINISHED 
  FINISHED 
  FINISHED 
 (3 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c2';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c2';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -426,26 +426,26 @@ DECLARE
 COMMIT
 -- check the cursor auto closed when transaction closed
 -- check no endpoint info
-1: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
+1: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
  state 
 -------
 (0 rows)
 -- check no token info on QE after close PARALLEL RETRIEVE CURSOR
-*U: SELECT * FROM gp_segment_endpoints() WHERE cursorname='c2';
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c2';
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
- auth_token | databaseid | senderpid | receiverpid | state | dbid | sessionid | userid | endpointname | cursorname 
-------------+------------+-----------+-------------+-------+------+-----------+--------+--------------+------------
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)
 
 -- error out for closed cursor
@@ -459,7 +459,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c3';
+1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
@@ -528,7 +528,7 @@ DETAIL:  An endpoint can only be attached by one retrieving session.
  98 
 (37 rows)
 -- get senderpid which is endpoint execution backend
-0U: @post_run 'get_tuple_cell PID31 1 1 ; create_sub "$PID31[ \t]*" senderpid31': SELECT senderpid, receiverpid<>-1, state FROM gp_segment_endpoints();
+0U: @post_run 'get_tuple_cell PID31 1 1 ; create_sub "$PID31[ \t]*" senderpid31': SELECT senderpid, receiverpid<>-1, state FROM gp_get_segment_endpoints();
  senderpid | ?column? | state
 -----------+----------+----------
  senderpid31| t        | ATTACHED
@@ -543,11 +543,11 @@ DETAIL:  An endpoint can only be attached by one retrieving session.
 1<:  <... completed>
 ERROR:  canceling MPP operation
 -- check no endpoint info left
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c3';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c3';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c3';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c3';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -569,11 +569,11 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 1: ROLLBACK;
 ROLLBACK
 -- check no endpoint info
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c3';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c3';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c3';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c3';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -595,7 +595,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c4';
+1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
  endpoint_id4 | token_id | host_id | port_id | READY
  endpoint_id4 | token_id | host_id | port_id | READY
  endpoint_id4 | token_id | host_id | port_id | READY
@@ -658,7 +658,7 @@ DECLARE
  98 
 (37 rows)
 -- get senderpid which is endpoint execution backend
-0U: @post_run 'get_tuple_cell PID41 1 1 ; create_sub "${PID41}[ \t]*" senderpid41': SELECT senderpid, receiverpid<>-1, state FROM gp_segment_endpoints();
+0U: @post_run 'get_tuple_cell PID41 1 1 ; create_sub "${PID41}[ \t]*" senderpid41': SELECT senderpid, receiverpid<>-1, state FROM gp_get_segment_endpoints();
  senderpid | ?column? | state
 -----------+----------+----------
  senderpid41| t        | ATTACHED
@@ -679,11 +679,11 @@ ERROR:  Error on receive from seg0 10.34.50.67:25432 pid=12603: server closed th
 	before or while processing the request.
 -- check no endpoint info left
 2q: ... <quitting>
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c4';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c4';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c4';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c4';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -705,11 +705,11 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 1: ROLLBACK;
 ROLLBACK
 -- check no endpoint info
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c4';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c4';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c4';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c4';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -732,7 +732,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c5';
+1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c5';
  endpoint_id5 | token_id | host_id | port_id | READY
  endpoint_id5 | token_id | host_id | port_id | READY
  endpoint_id5 | token_id | host_id | port_id | READY
@@ -755,7 +755,7 @@ DECLARE
 (10 rows)
 -- 1R still bind to Test4 session, so can not retrieve from current endpoint.
 1R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
-ERROR:  the endpoint endpoint_id5 does not exist in the session
+ERROR:  the endpoint endpoint_id5 does not exist for session id xxx
 -- Since seg1 retrieve session is bind to Test4 session. And Test4 session get killed. We need to restart it.
 1Rq: ... <quitting>
 1R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
@@ -800,7 +800,7 @@ ERROR:  the endpoint endpoint_id5 does not exist in the session
  98 
 (37 rows)
 -- get senderpid which is endpoint execution backend
-0U: @post_run 'get_tuple_cell PID51 1 1 ; create_sub "${PID51}[ \t]*" senderpid51': SELECT senderpid, receiverpid<>-1, state FROM gp_segment_endpoints();
+0U: @post_run 'get_tuple_cell PID51 1 1 ; create_sub "${PID51}[ \t]*" senderpid51': SELECT senderpid, receiverpid<>-1, state FROM gp_get_segment_endpoints();
  senderpid | ?column? | state
 -----------+----------+----------
  senderpid51| t        | ATTACHED
@@ -815,11 +815,11 @@ ERROR:  the endpoint endpoint_id5 does not exist in the session
 1<:  <... completed>
 ERROR:  terminating connection due to administrator command  (seg0 10.34.50.67:25432 pid=12905)
 -- check no endpoint info left
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c5';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c5';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c5';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c5';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -841,11 +841,11 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 1: ROLLBACK;
 ROLLBACK
 -- check no endpoint info
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c5';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c5';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c5';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c5';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -867,7 +867,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c6';
+1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c6';
  endpoint_id6 | token_id | host_id | port_id | READY
  endpoint_id6 | token_id | host_id | port_id | READY
  endpoint_id6 | token_id | host_id | port_id | READY
@@ -945,11 +945,11 @@ DECLARE
 1<:  <... completed>
 ERROR:  canceling statement due to user request
 -- check no endpoint info left
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c6';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c6';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c6';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c6';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -971,11 +971,11 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 1: ROLLBACK;
 ROLLBACK
 -- check no endpoint info
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c6';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c6';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c6';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c6';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -997,7 +997,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c61 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 61 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c61';
+1: @post_run 'parse_endpoint_info 61 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c61';
  endpoint_id61 | token_id | host_id | port_id | READY
  endpoint_id61 | token_id | host_id | port_id | READY
  endpoint_id61 | token_id | host_id | port_id | READY
@@ -1075,11 +1075,11 @@ DECLARE
 1<:  <... completed>
 ERROR:  canceling statement due to user request
 -- check no endpoint info left
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c61';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c61';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c61';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c61';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -1098,11 +1098,11 @@ ERROR:  canceling statement due to user request
 -- quit the session of 'CHECK PARALLEL RETRIEVE CURSOR' and keep other session connected
 1q: ... <quitting>
 -- check no endpoint info
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c61';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c61';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c61';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c61';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -1126,7 +1126,7 @@ ERROR:  canceling statement due to user request
 BEGIN
 1: DECLARE c7 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c7';
+1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c7';
  endpoint_id7 | token_id | host_id | port_id | READY
  endpoint_id7 | token_id | host_id | port_id | READY
  endpoint_id7 | token_id | host_id | port_id | READY
@@ -1194,7 +1194,7 @@ DECLARE
  95 
  98 
 (37 rows)
-2U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c7';
+2U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c7';
  ?column? | ?column? | state 
 ----------+----------+-------
  t        | f        | READY 
@@ -1216,11 +1216,11 @@ server closed the connection unexpectedly
 2q: ... <quitting>
 -1Uq: ... <quitting>
 -- check no endpoint info left
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c7';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c7';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c7';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c7';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -1242,11 +1242,11 @@ ERROR:  cursor "c7" does not exist
 1: ROLLBACK;
 ROLLBACK
 -- check no endpoint info
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c7';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c7';
  state 
 -------
 (0 rows)
-*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_segment_endpoints() WHERE cursorname='c7';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c7';
  ?column? | ?column? | state 
 ----------+----------+-------
 (0 rows)
@@ -1268,7 +1268,7 @@ ROLLBACK
 BEGIN
 1: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'get_tuple_cell SESSION81 1 1 ; create_match_sub_with_spaces $SESSION81 session81': SELECT sessionid,state FROM gp_session_endpoints() WHERE cursorname='c8';
+1: @post_run 'get_tuple_cell SESSION81 1 1 ; create_match_sub_with_spaces $SESSION81 session81': SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
  sessionid | state
 -----------+-------
  session81 | READY
@@ -1280,15 +1280,15 @@ DECLARE
 BEGIN
 2: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-2: @post_run 'get_tuple_cell SESSION82 1 1 ; create_match_sub_with_spaces $SESSION82 session82': SELECT sessionid,state FROM gp_session_endpoints() WHERE cursorname='c8';
+2: @post_run 'get_tuple_cell SESSION82 1 1 ; create_match_sub_with_spaces $SESSION82 session82': SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
  sessionid | state
 -----------+-------
  session82 | READY
  session82 | READY
  session82 | READY
 (3 rows)
--- Session 2 can see all cursors with gp_endpoints().
-2: SELECT sessionid,state FROM gp_endpoints() WHERE cursorname='c8' order by sessionid;
+-- Session 2 can see all cursors with gp_get_endpoints().
+2: SELECT sessionid,state FROM gp_get_endpoints() WHERE cursorname='c8' order by sessionid;
  sessionid | state 
 -----------+-------
  session82 | READY 
@@ -1308,3 +1308,146 @@ CLOSE
 2: END;
 END
 
+---------- Test9: Cancel (using pg_cancel_backend(pid)) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
+1: BEGIN;
+BEGIN
+1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 9 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
+ endpoint_id9 | token_id | host_id | port_id | READY
+ endpoint_id9 | token_id | host_id | port_id | READY
+ endpoint_id9 | token_id | host_id | port_id | READY
+(3 rows)
+
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c9', -1);  <waiting ...>
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT9': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT9";
+ERROR:  the endpoint endpoint_id9 does not exist for session id xxx
+1R: @pre_run 'set_endpoint_variable @ENDPOINT9': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT9";
+ERROR:  the endpoint endpoint_id9 does not exist for session id xxx
+-- run pg_cancel_backend(pid) to cancel the endpoint execution backend, retrieve session still can work
+2: select pg_cancel_backend(pid) from pg_stat_activity where query like 'SELECT * FROM gp_wait_parallel_retrieve_cursor(''c9'', -1);';
+ pg_cancel_backend 
+-------------------
+ t                 
+(1 row)
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:  <... completed>
+ERROR:  canceling statement due to user request
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c9';
+ state 
+-------
+(0 rows)
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c9';
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c9', -1);
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+1: ROLLBACK;
+ROLLBACK
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c9';
+ state 
+-------
+(0 rows)
+
+---------- Test10: terminate (using pg_terminate_backend(pid)) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
+1: BEGIN;
+BEGIN
+1: DECLARE c10 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: @post_run 'parse_endpoint_info 10 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c10';
+ endpoint_id10 | token_id | host_id | port_id | READY
+ endpoint_id10 | token_id | host_id | port_id | READY
+ endpoint_id10 | token_id | host_id | port_id | READY
+(3 rows)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c10', -1);  <waiting ...>
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT10': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT10";
+ERROR:  the endpoint endpoint_id10 does not exist for session id xxx
+1R: @pre_run 'set_endpoint_variable @ENDPOINT10': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT10";
+ERROR:  the endpoint endpoint_id10 does not exist for session id xxx
+2U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';
+ ?column? | ?column? | state 
+----------+----------+-------
+ t        | f        | READY 
+(1 row)
+-- run ' pg_terminate_backend(pid)' to cancel the endpoint execution backend, retrieve session still can work
+-- here need to sleep sometime to wait for endpoint QE backend to detect QD connection lost.
+2: select pg_terminate_backend(pid) from pg_stat_activity where query like 'SELECT * FROM gp_wait_parallel_retrieve_cursor(''c10'', -1);';
+ pg_terminate_backend 
+----------------------
+ t                    
+(1 row)
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:  <... completed>
+FATAL:  terminating connection due to administrator command
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+-- quit all sessions on the master, because connect lost
+1q: ... <quitting>
+2q: ... <quitting>
+-1Uq: ... <quitting>
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c10';
+ state 
+-------
+(0 rows)
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c10', -1);
+ERROR:  cursor "c10" does not exist
+1: ROLLBACK;
+ROLLBACK
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c10';
+ state 
+-------
+(0 rows)
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)
+
+ ?column? | ?column? | state 
+----------+----------+-------
+(0 rows)

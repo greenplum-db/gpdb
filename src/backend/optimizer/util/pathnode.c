@@ -3312,9 +3312,12 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
 
-	ForeignServer *server = NULL;
-	switch (rel->exec_location)
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
+		ForeignServer *server = NULL;
+
+		switch (rel->exec_location)
+		{
 		case FTEXECLOCATION_ANY:
 			CdbPathLocus_MakeGeneral(&(pathnode->path.locus));
 			break;
@@ -3330,6 +3333,12 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 			break;
 		default:
 			elog(ERROR, "unrecognized exec_location '%c'", rel->exec_location);
+		}
+	}
+	else
+	{
+		/* make entry locus for utility role */
+		CdbPathLocus_MakeEntry(&(pathnode->path.locus));
 	}
 
 	pathnode->fdw_outerpath = fdw_outerpath;

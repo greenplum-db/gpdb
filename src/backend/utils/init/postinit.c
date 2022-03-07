@@ -1201,6 +1201,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 			ereport(FATAL,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("retrieve connection was not authenticated for unknown reason")));
+		InitRetrieveCtl();
 	}
 
 	/*

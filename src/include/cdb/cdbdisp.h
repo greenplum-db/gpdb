@@ -132,7 +132,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
  *       0 means checking immediately, and -1 means waiting until all ack
  *       messages are received.
  *
- * QEs should call cdbdisp_sendAckMessageToQD to send acknowledge messages to QD.
+ * QEs should call EndpointNotifyQD to send acknowledge messages to QD.
  */
 bool
 cdbdisp_checkDispatchAckMessage(struct CdbDispatcherState *ds, const char *message,
@@ -195,13 +195,6 @@ CdbDispatcherState * cdbdisp_makeDispatcherState(bool isExtendedQuery);
  * Free dispatcher memory context.
  */
 void cdbdisp_destroyDispatcherState(CdbDispatcherState *ds);
-
-/*
- * cdbdisp_sendAckMessageToQD - send acknowledge message to QD (runs on QE).
- *
- * QD uses cdbdisp_checkDispatchAckMessage() to wait QE acknowledge message.
- */
-void cdbdisp_sendAckMessageToQD(const char *message);
 
 void
 cdbdisp_makeDispatchParams(CdbDispatcherState *ds,

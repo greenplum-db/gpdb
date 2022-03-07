@@ -33,6 +33,7 @@
 #include "catalog/objectaccess.h"
 #include "catalog/pg_sequence.h"
 #include "catalog/pg_type.h"
+#include "commands/async.h"
 #include "commands/defrem.h"
 #include "commands/sequence.h"
 #include "commands/tablecmds.h"
@@ -2122,7 +2123,7 @@ seq_mask(char *page, BlockNumber blkno)
 /*
  * CDB: forward a nextval request from qExec to the QD
  */
-void
+static void
 cdb_sequence_nextval_qe(Relation	seqrel,
 						int64   *plast,
 						int64   *pcached,
@@ -2151,11 +2152,7 @@ cdb_sequence_nextval_qe(Relation	seqrel,
 	 */
 	char payload[128];
 	snprintf(payload, sizeof(payload), "%d:%d", dbid, seq_oid);
-	pq_beginmessage(&buf, 'A');
-	pq_sendint(&buf, gp_session_id, sizeof(int32));
-	pq_sendstring(&buf, "nextval"); /* channel */
-	pq_sendstring(&buf, payload);
-	pq_endmessage(&buf);
+	NotifyMyFrontEnd("nextval", payload, gp_session_id);
 	pq_flush();
 
 	/*

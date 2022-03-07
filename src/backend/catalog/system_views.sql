@@ -1782,15 +1782,24 @@ CREATE OR REPLACE VIEW gp_stat_archiver AS
     UNION
     SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
 
-CREATE FUNCTION gp_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
-									  OUT cursorname text, OUT sessionid int, OUT hostname text,
-									  OUT port int, OUT userid oid, OUT state text,
+CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
+									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
+									  OUT port int, OUT username text, OUT state text,
 									  OUT endpointname text)
 RETURNS SETOF RECORD AS
 $$
-   SELECT * FROM gp_endpoints()
+   SELECT * FROM pg_catalog.gp_get_endpoints()
 	WHERE sessionid = (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int4
 $$
 LANGUAGE SQL EXECUTE ON COORDINATOR;
 
-COMMENT ON FUNCTION pg_catalog.gp_session_endpoints() IS 'All endpoints in this session that are visible to the current user.';
+COMMENT ON FUNCTION pg_catalog.gp_get_session_endpoints() IS 'All endpoints in this session that are visible to the current user.';
+
+CREATE VIEW pg_catalog.gp_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_endpoints();
+
+CREATE VIEW pg_catalog.gp_segment_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_segment_endpoints();
+
+CREATE VIEW pg_catalog.gp_session_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_session_endpoints();

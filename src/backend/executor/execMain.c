@@ -108,6 +108,9 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbendpoint.h"
 
+#define IS_PARALLEL_RETRIEVE_CURSOR(queryDesc)	(queryDesc->ddesc &&	\
+										queryDesc->ddesc->parallelCursorName &&	\
+										strlen(queryDesc->ddesc->parallelCursorName) > 0)
 
 /* Hooks for plugins to get control in ExecutorStart/Run/Finish/End */
 ExecutorStart_hook_type ExecutorStart_hook = NULL;
@@ -791,7 +794,7 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	DestReceiver *dest;
 	bool		sendTuples;
 	MemoryContext oldcontext;
-	EndpointExecState *endpointExecState = NULL;
+	bool		endpointCreated = false;
 
 	/*
 	 * NOTE: Any local vars that are set in the PG_TRY block and examined in the
@@ -912,12 +915,7 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 		}
 		else if (exec_identity == GP_ROOT_SLICE)
 		{
-			bool isParallelRetrieveCursor = false;
-			DestReceiver *endpointDest = NULL;
-
-			isParallelRetrieveCursor = (queryDesc->ddesc &&
-										queryDesc->ddesc->parallelCursorName &&
-										queryDesc->ddesc->parallelCursorName[0]);
+			DestReceiver *endpointDest;
 
 			/*
 			 * When run a root slice, and it is a PARALLEL RETRIEVE CURSOR, it means
@@ -928,32 +926,49 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 			 * For the scenario: endpoint on QE, the query plan is changed,
 			 * the root slice also exists on QE.
 			 */
-			if (isParallelRetrieveCursor)
+			if (IS_PARALLEL_RETRIEVE_CURSOR(queryDesc))
 			{
-				endpointExecState = allocEndpointExecState();
 				SetupEndpointExecState(queryDesc->tupDesc,
 									   queryDesc->ddesc->parallelCursorName,
-									   endpointExecState);
-				endpointDest = endpointExecState->dest;
-				(endpointDest->rStartup)(endpointDest, operation, queryDesc->tupDesc);
-			}
+									   operation,
+									   &endpointDest);
+				endpointCreated = true;
 
-			/*
-			 * Run a root slice
-			 * It corresponds to the "normal" path through the executor
-			 * in that we enter the plan at the top and count on the
-			 * motion nodes at the fringe of the top slice to return
-			 * without ever calling nodes below them.
-			 */
-			ExecutePlan(estate,
-						queryDesc->planstate,
-						queryDesc->plannedstmt->parallelModeNeeded,
-						operation,
-						isParallelRetrieveCursor ? true : sendTuples,
-						count,
-						direction,
-						isParallelRetrieveCursor? endpointDest : dest,
-						execute_once);
+				/*
+				 * Once the endpoint has been created in shared memory, send acknowledge
+				 * message to QD so DECLARE PARALLEL RETRIEVE CURSOR statement can finish.
+				 */
+				EndpointNotifyQD(ENDPOINT_READY_ACK_MSG);
+
+				ExecutePlan(estate,
+							queryDesc->planstate,
+							queryDesc->plannedstmt->parallelModeNeeded,
+							operation,
+							true,
+							count,
+							direction,
+							endpointDest,
+							execute_once);
+			}
+			else
+			{
+				/*
+				 * Run a root slice
+				 * It corresponds to the "normal" path through the executor
+				 * in that we enter the plan at the top and count on the
+				 * motion nodes at the fringe of the top slice to return
+				 * without ever calling nodes below them.
+				 */
+				ExecutePlan(estate,
+							queryDesc->planstate,
+							queryDesc->plannedstmt->parallelModeNeeded,
+							operation,
+							sendTuples,
+							count,
+							direction,
+							dest,
+							execute_once);
+			}
 		}
 		else
 		{
@@ -999,8 +1014,8 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	/*
 	 * shutdown tuple receiver, if we started it
 	 */
-	if (endpointExecState != NULL)
-		DestroyEndpointExecState(endpointExecState);
+	if (endpointCreated)
+		DestroyEndpointExecState();
 
 	if (sendTuples)
 		dest->rShutdown(dest);

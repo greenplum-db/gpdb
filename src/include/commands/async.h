@@ -53,5 +53,6 @@ extern void HandleNotifyInterrupt(void);
 
 /* process interrupts */
 extern void ProcessNotifyInterrupt(void);
+extern void NotifyMyFrontEnd(const char *channel, const char *payload, int32 srcPid);
 
 #endif							/* ASYNC_H */

@@ -25,16 +25,16 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
-/* The two struct are used by gp_endpoints(). */
+/* These two structures are containers for the columns returned by the UDFs. */
 
 typedef struct
 {
 	char		name[NAMEDATALEN];
 	char		cursorName[NAMEDATALEN];
-	int8		token[ENDPOINT_TOKEN_HEX_LEN];
-	int			dbid;
+	int8		token[ENDPOINT_TOKEN_ARR_LEN];
+	int			segmentIndex;
 	EndpointState state;
-	Oid			userId;
+	char			userName[NAMEDATALEN];
 	int			sessionId;
 }			EndpointInfo;
 
@@ -49,26 +49,27 @@ typedef struct
 static EndpointState state_string_to_enum(const char *state);
 
 /*
- * Convert the string-format token to int (e.g. "123456789" to 0x123456789).
+ * Convert the string-format token to array
+ * (e.g. "123456789ABCDEF0" to [1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,0]).
  */
 void
-endpoint_token_str2hex(int8 *token, const char *tokenStr)
+endpoint_token_str2arr(const char *tokenStr, int8 *token)
 {
 	if (strlen(tokenStr) == ENDPOINT_TOKEN_STR_LEN)
 		hex_decode(tokenStr, ENDPOINT_TOKEN_STR_LEN, (char *) token);
 	else
-		ereport(FATAL,
-				(errcode(ERRCODE_INVALID_PASSWORD),
+		ereport(FATAL, (errcode(ERRCODE_INVALID_PASSWORD),
 				 errmsg("retrieve auth token is invalid")));
 }
 
 /*
- * Convert the hex-format token to string (e.g. 0x123456789 to "123456789").
+ * Convert the array-format token to string
+ * (e.g. [1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,0] to "123456789ABCDEF0").
  */
 void
-endpoint_token_hex2str(const int8 *token, char *tokenStr)
+endpoint_token_arr2str(const int8 *token, char *tokenStr)
 {
-	hex_encode((const char *) token, ENDPOINT_TOKEN_HEX_LEN, tokenStr);
+	hex_encode((const char *) token, ENDPOINT_TOKEN_ARR_LEN, tokenStr);
 	tokenStr[ENDPOINT_TOKEN_STR_LEN] = 0;
 }
 
@@ -82,7 +83,7 @@ endpoint_token_hex_equals(const int8 *token1, const int8 *token2)
 	 * memcmp should be good enough. Timing attack would not be a concern
 	 * here.
 	 */
-	return memcmp(token1, token2, ENDPOINT_TOKEN_HEX_LEN) == 0;
+	return memcmp(token1, token2, ENDPOINT_TOKEN_ARR_LEN) == 0;
 }
 
 bool
@@ -162,7 +163,7 @@ check_parallel_retrieve_cursor_errors(EState *estate)
 }
 
 /*
- * On QD, display all the endpoints information in shared memory.
+ * On QD, display all the endpoints information is in shared memory.
  *
  * Note:
  * As a superuser, it can list all endpoints info of all users', but for
@@ -170,11 +171,11 @@ check_parallel_retrieve_cursor_errors(EState *estate)
  * security reason.
  */
 Datum
-gp_endpoints(PG_FUNCTION_ARGS)
+gp_get_endpoints(PG_FUNCTION_ARGS)
 {
 	if (Gp_role != GP_ROLE_DISPATCH)
 		ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
-						errmsg("gp_endpoints() can be called on query dispatcher only")));
+						errmsg("gp_get_endpoints() could only be called on QD")));
 
 	FuncCallContext *funcctx;
 	AllEndpointsInfo *all_info;
@@ -197,13 +198,13 @@ gp_endpoints(PG_FUNCTION_ARGS)
 		TupleDesc	tupdesc =
 		CreateTemplateTupleDesc(9);
 
-		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "dbid", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "gp_segment_id", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "auth_token", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "cursorname", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "sessionid", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "hostname", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "port", INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "userid", OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "username", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "state", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "endpointname", TEXTOID, -1, 0);
 
@@ -216,27 +217,28 @@ gp_endpoints(PG_FUNCTION_ARGS)
 
 		CdbPgResults cdb_pgresults = {NULL, 0};
 
-		CdbDispatchCommand("SELECT endpointname,cursorname,auth_token,dbid,"
-						   "state,userid, sessionid"
-						   " FROM pg_catalog.gp_segment_endpoints()",
+		CdbDispatchCommand("SELECT endpointname,cursorname,auth_token,gp_segment_id,"
+						   "state,username,sessionid"
+						   " FROM pg_catalog.gp_get_segment_endpoints()",
 						   DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR, &cdb_pgresults);
 
 		if (cdb_pgresults.numResults == 0)
 		{
 			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("gp_segment_endpoints didn't get back any data "
-								   "from the segDBs")));
+					errmsg("gp_get_segment_endpoints() failed to fetch data from segDBs")));
 		}
 
 		res_number = 0;
 		for (int i = 0; i < cdb_pgresults.numResults; i++)
 		{
-			if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
+			ExecStatusType result_status = PQresultStatus(cdb_pgresults.pg_results[i]);
+			if (result_status != PGRES_TUPLES_OK)
 			{
 				cdbdisp_clearCdbPgResults(&cdb_pgresults);
 				ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("gp_segment_endpoints(): resultStatus is not TUPLES_OK")));
+					 errmsg("gp_get_segment_endpoints(): resultStatus is %s",
+						PQresStatus(result_status))));
 			}
 			res_number += PQntuples(cdb_pgresults.pg_results[i]);
 		}
@@ -255,10 +257,10 @@ gp_endpoints(PG_FUNCTION_ARGS)
 				{
 					StrNCpy(all_info->infos[idx].name, PQgetvalue(result, j, 0), NAMEDATALEN);
 					StrNCpy(all_info->infos[idx].cursorName, PQgetvalue(result, j, 1), NAMEDATALEN);
-					endpoint_token_str2hex(all_info->infos[idx].token, PQgetvalue(result, j, 2));
-					all_info->infos[idx].dbid = atoi(PQgetvalue(result, j, 3));
+					endpoint_token_str2arr(PQgetvalue(result, j, 2), all_info->infos[idx].token);
+					all_info->infos[idx].segmentIndex = atoi(PQgetvalue(result, j, 3));
 					all_info->infos[idx].state = state_string_to_enum(PQgetvalue(result, j, 4));
-					all_info->infos[idx].userId = (Oid) strtoul(PQgetvalue(result, j, 5), NULL, 10);
+					StrNCpy(all_info->infos[idx].userName, PQgetvalue(result, j, 5), NAMEDATALEN);
 					all_info->infos[idx].sessionId = atoi(PQgetvalue(result, j, 6));
 					idx++;
 				}
@@ -271,9 +273,9 @@ gp_endpoints(PG_FUNCTION_ARGS)
 
 		for (int i = 0; i < MAX_ENDPOINT_SIZE; i++)
 		{
-			const		Endpoint entry = get_endpointdesc_by_index(i);
+			const		Endpoint *entry = get_endpointdesc_by_index(i);
 
-			if (!entry->empty && (superuser() || entry->userID == GetUserId()))
+			if (!entry->empty && entry->databaseID == MyDatabaseId && (superuser() || entry->userID == GetUserId()))
 				cnt++;
 		}
 		if (cnt != 0)
@@ -295,7 +297,7 @@ gp_endpoints(PG_FUNCTION_ARGS)
 
 			for (int i = 0; i < MAX_ENDPOINT_SIZE; i++)
 			{
-				const		Endpoint entry = get_endpointdesc_by_index(i);
+				const		Endpoint *entry = get_endpointdesc_by_index(i);
 
 				/*
 				 * Only allow current user to get own endpoints. Or let
@@ -305,17 +307,14 @@ gp_endpoints(PG_FUNCTION_ARGS)
 				{
 					EndpointInfo *info = &all_info->infos[idx];
 
-					info->dbid =
-						contentid_get_dbid(MASTER_CONTENT_ID,
-										   GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
-										   false);
+					info->segmentIndex = MASTER_CONTENT_ID;
 					get_token_from_session_hashtable(entry->sessionID, entry->userID,
 													 info->token);
 					StrNCpy(info->name, entry->name, NAMEDATALEN);
 					StrNCpy(info->cursorName, entry->cursorName, NAMEDATALEN);
 					info->state = entry->state;
 					info->sessionId = entry->sessionID;
-					info->userId = entry->userID;
+					StrNCpy(info->userName, GetUserNameFromId(entry->userID, false), NAMEDATALEN);
 					idx++;
 				}
 			}
@@ -334,19 +333,20 @@ gp_endpoints(PG_FUNCTION_ARGS)
 		Datum		result;
 		char		tokenStr[ENDPOINT_TOKEN_STR_LEN + 1];
 		EndpointInfo *info = &all_info->infos[all_info->cur_idx++];
-		GpSegConfigEntry *segCnfInfo = dbid_get_dbinfo(info->dbid);
+		int16 dbid = contentid_get_dbid(info->segmentIndex, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, false);
+		GpSegConfigEntry *segCnfInfo = dbid_get_dbinfo(dbid);
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
 
-		values[0] = Int32GetDatum(info->dbid);
-		endpoint_token_hex2str(info->token, tokenStr);
+		values[0] = Int32GetDatum(info->segmentIndex);
+		endpoint_token_arr2str(info->token, tokenStr);
 		values[1] = CStringGetTextDatum(tokenStr);
 		values[2] = CStringGetTextDatum(info->cursorName);
 		values[3] = Int32GetDatum(info->sessionId);
 		values[4] = CStringGetTextDatum(segCnfInfo->hostname);
 		values[5] = Int32GetDatum(segCnfInfo->port);
-		values[6] = ObjectIdGetDatum(info->userId);
+		values[6] = CStringGetTextDatum(info->userName);
 		values[7] = CStringGetTextDatum(state_enum_to_string(info->state));
 		values[8] = CStringGetTextDatum(info->name);
 
@@ -365,8 +365,12 @@ gp_endpoints(PG_FUNCTION_ARGS)
  * Or only show current user's endpoints on this segment.
  */
 Datum
-gp_segment_endpoints(PG_FUNCTION_ARGS)
+gp_get_segment_endpoints(PG_FUNCTION_ARGS)
 {
+	if (Gp_role != GP_ROLE_EXECUTE && Gp_role != GP_ROLE_UTILITY)
+		ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
+				errmsg("gp_get_segment_endpoints() could only be called on QE")));
+
 	FuncCallContext *funcctx;
 	MemoryContext oldcontext;
 	Datum		values[10];
@@ -386,13 +390,13 @@ gp_segment_endpoints(PG_FUNCTION_ARGS)
 		TupleDesc	tupdesc = CreateTemplateTupleDesc(10);
 
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "auth_token", TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "databaseid", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "databaseid", OIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "senderpid", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "receiverpid", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "state", TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "dbid", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "gp_segment_id", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "sessionid", INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "userid", OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "username", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "endpointname", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "cursorname", TEXTOID, -1, 0);
 
@@ -412,7 +416,7 @@ gp_segment_endpoints(PG_FUNCTION_ARGS)
 	while (*endpoint_idx < MAX_ENDPOINT_SIZE)
 	{
 		Datum		result;
-		const		Endpoint entry = get_endpointdesc_by_index(*endpoint_idx);
+		const		Endpoint *entry = get_endpointdesc_by_index(*endpoint_idx);
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
@@ -421,23 +425,23 @@ gp_segment_endpoints(PG_FUNCTION_ARGS)
 		 * Only allow current user to list his/her own endpoints, or let
 		 * superuser list all endpoints.
 		 */
-		if (!entry->empty && (superuser() || entry->userID == GetUserId()))
+		if (!entry->empty && entry->databaseID == MyDatabaseId && (superuser() || entry->userID == GetUserId()))
 		{
 			char	   *state = NULL;
-			int8		token[ENDPOINT_TOKEN_HEX_LEN];
+			int8		token[ENDPOINT_TOKEN_ARR_LEN];
 			char		tokenStr[ENDPOINT_TOKEN_STR_LEN + 1];
 
 			get_token_from_session_hashtable(entry->sessionID, entry->userID, token);
-			endpoint_token_hex2str(token, tokenStr);
+			endpoint_token_arr2str(token, tokenStr);
 			values[0] = CStringGetTextDatum(tokenStr);
-			values[1] = Int32GetDatum(entry->databaseID);
+			values[1] = ObjectIdGetDatum(entry->databaseID);
 			values[2] = Int32GetDatum(entry->senderPid);
 			values[3] = Int32GetDatum(entry->receiverPid);
 			state = state_enum_to_string(entry->state);
 			values[4] = CStringGetTextDatum(state);
-			values[5] = Int32GetDatum(GpIdentity.dbid);
+			values[5] = Int32GetDatum(GpIdentity.segindex);
 			values[6] = Int32GetDatum(entry->sessionID);
-			values[7] = ObjectIdGetDatum(entry->userID);
+			values[7] = CStringGetTextDatum(GetUserNameFromId(entry->userID, false));
 			values[8] = CStringGetTextDatum(entry->name);
 			values[9] = CStringGetTextDatum(entry->cursorName);
 
@@ -509,6 +513,42 @@ state_string_to_enum(const char *state)
 	else
 	{
 		ereport(ERROR, (errmsg("unknown endpoint state %s", state)));
-		return ENDPOINTSTATE_INVALID;
+		return ENDPOINTSTATE_INVALID; /* make the compiler happy */
 	}
+}
+
+/*
+ * Generate the endpoint name.
+ */
+void
+generate_endpoint_name(char *name, const char *cursorName)
+{
+	int                     len,
+							cursorLen;
+
+	len = 0;
+
+	/* part1: cursor name */
+	cursorLen = strlen(cursorName);
+	if (cursorLen > ENDPOINT_NAME_CURSOR_LEN)
+		cursorLen = ENDPOINT_NAME_CURSOR_LEN;
+	memcpy(name, cursorName, cursorLen);
+	len += cursorLen;
+
+	/* part2: gp_session_id */
+	snprintf(name + len, ENDPOINT_NAME_SESSIONID_LEN + 1, "%08x", gp_session_id);
+	len += ENDPOINT_NAME_SESSIONID_LEN;
+
+	/*
+	 * part3: gp_command_count In theory cursor name + gp_session_id is
+	 * enough, but we'd keep this part to avoid confusion or potential issues
+	 * for the scenario that in the same session (thus same gp_session_id),
+	 * two endpoints with same cursor names (happens the cursor is
+	 * dropped/rollbacked and then recreated) and retrieve the endpoints would
+	 * be confusing for users that in the same retrieve connection.
+	 */
+	snprintf(name + len, ENDPOINT_NAME_COMMANDID_LEN + 1, "%08x", gp_command_count);
+	len += ENDPOINT_NAME_COMMANDID_LEN;
+
+	name[len] = '\0';
 }

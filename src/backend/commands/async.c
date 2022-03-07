@@ -2098,6 +2098,10 @@ ProcessIncomingNotify(void)
 
 /*
  * Send NOTIFY message to my front end.
+ *
+ * GPDB: We have exposed this function globally for our dispatch-notify
+ * mechanism. We overload the srcPid field to pass in the gp_session_id
+ * from GPDB specific callsites.
  */
 void
 NotifyMyFrontEnd(const char *channel, const char *payload, int32 srcPid)
