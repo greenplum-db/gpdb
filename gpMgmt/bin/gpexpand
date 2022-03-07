@@ -1565,6 +1565,8 @@ class gpexpand:
             self._populate_partitioned_tables(dbname)
             inject_fault('gpexpand MPP-14620 fault injection')
 
+        self._fill_status_detail_source_bytes()
+
         nowStr = datetime.datetime.now()
         statusSQL = "INSERT INTO gpexpand.status VALUES ( 'SETUP DONE', '%s' ) " % (nowStr)
         dbconn.execSQL(self.conn, statusSQL)
@@ -1580,12 +1582,40 @@ class gpexpand:
         # including new segments has been started once before so finalize
         self.finalize_prepare()
 
+    def _fill_status_detail_source_bytes(self):
+        """Combine gp_random_dist and replicated table to improve the performance of pg_relation_size"""
+
+        if self.options.simple_progress:
+            return
+
+        # 1. create a table, and insert all table_oid from status_detail into it.
+        create_oid_table_sql = "create table gpexpand.all_table_oids(table_oid oid) distributed replicated;"
+        dbconn.execSQL(self.conn, create_oid_table_sql)
+        insert_oid_table_sql = "insert into gpexpand.all_table_oids select table_oid from gpexpand.status_detail;"
+        dbconn.execSQL(self.conn, insert_oid_table_sql)
+
+        # 2. use gp_random_dist to get all relation size in one single SQL, and update status_detail.source_bytes.
+        update_status_detail_sql = """
+        update gpexpand.status_detail set source_bytes = total_bytes 
+        from (
+            select table_oid, sum(pg_relation_size(table_oid)) total_bytes 
+            from gp_dist_random('gpexpand.all_table_oids') 
+            group by table_oid
+        ) x
+        where x.table_oid = gpexpand.status_detail.table_oid;
+        """
+        dbconn.execSQL(self.conn, update_status_detail_sql)
+
+        # 3. drop table
+        drop_oid_table_sql = "drop table gpexpand.all_table_oids;"
+        dbconn.execSQL(self.conn, drop_oid_table_sql)
+
+        self.conn.commit()
+
     def _populate_regular_tables(self, dbname):
         """ we don't do 3.2+ style partitioned tables here, but we do
             all other table types.
         """
-
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
         sql = """SELECT
     current_database(),
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
@@ -1596,7 +1626,7 @@ class gpexpand:
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
-    %s as source_bytes,
+    0 as source_bytes,
     c.relstorage as rel_storage
 FROM
     pg_class c
@@ -1611,7 +1641,7 @@ WHERE
     AND n.nspname != 'gpexpand'
     AND n.nspname != 'pg_bitmapindex'
     AND c.relpersistence != 't'
-                  """ % (undone_status, src_bytes_str)
+        """ % undone_status
         self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
 
@@ -1673,8 +1703,6 @@ WHERE
             self.logger.debug(prepare_cmd)
             dbconn.execSQL(table_conn, prepare_cmd)
 
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
-
         # We need populate all leaf table to gpexpand.status_detail
         get_status_detail_cmd = """
              SELECT
@@ -1687,7 +1715,7 @@ WHERE
                 '%s' as undone_status,
                 NULL as expansion_started,
                 NULL as expansion_finished,
-                %s as source_bytes,
+                0 as source_bytes,
                 c.relstorage as rel_storage
             FROM
                 pg_class c
@@ -1698,7 +1726,7 @@ WHERE
                 LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
             where
                 c.relhassubclass = false
-        """ % (undone_status, src_bytes_str)
+        """ % undone_status
         self.logger.debug(get_status_detail_cmd)
 
         try:
