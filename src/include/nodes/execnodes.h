@@ -2337,7 +2337,7 @@ typedef struct SortState
 	int64		bound_Done;		/* value of bound we did the sort with */
 	void	   *tuplesortstate; /* private state of tuplesort.c */
 	bool		am_worker;		/* are we a worker? */
-	SharedSortInfo *shared_info;	/* one entry per worker */
+	SharedSortInfo *shared_info;	/* one entry per worker * Greenplum: per QE */
 
 	bool		noduplicates;	/* true if discard duplicate rows */
 
@@ -2685,7 +2685,7 @@ typedef struct HashState
 	bool		hs_hashkeys_null;	/* found an instance wherein hashkeys are all null */
 	/* hashkeys is same as parent's hj_InnerHashKeys */
 
-	SharedHashInfo *shared_info;	/* one entry per worker */
+	SharedHashInfo *shared_info;	/* one entry per worker * Greenplum: per QE */
 	HashInstrumentation *hinstrument;	/* this worker's entry */
 
 	/* Parallel hash state. */

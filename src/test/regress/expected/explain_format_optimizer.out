@@ -326,6 +326,7 @@ QUERY PLAN
     random_page_cost: "1"
 (1 row)
 --- Check Explain Analyze YAML output that include the slices information
+--- Check explain sort infomation in verbose mode BTW
 -- explain_processing_off
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
 QUERY PLAN

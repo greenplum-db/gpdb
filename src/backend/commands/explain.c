@@ -2521,7 +2521,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		show_buffer_usage(es, &planstate->instrument->bufusage);
 
 	/* Show worker detail */
-	if (es->analyze && es->verbose && planstate->worker_instrument)
+	/* GPDB_12_MERGE_FIXME Greenplum hasn't enabled it yet */
+	if (false && es->analyze && es->verbose && planstate->worker_instrument)
 	{
 		WorkerInstrumentation *w = planstate->worker_instrument;
 		bool		opened_group = false;
@@ -3302,6 +3303,31 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 	if (!ns)
 		return;
 
+	/*
+	 * Gather QEs' sort statistics
+	 *
+	 * shared_info stores workers' info, but Greenplum stores QEs
+	 */
+	int64 peakSpaceUsed = 0;
+	int64 totalSpaceUsed = 0;
+	int64 avgSpaceUsed = 0;
+	if (sortstate->shared_info != NULL)
+	{
+		int n;
+		TuplesortInstrumentation *sinstrument;
+		for (n = 0; n < sortstate->shared_info->num_workers; n++)
+		{
+			sinstrument = &sortstate->shared_info->sinstrument[n];
+			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
+				continue;		/* ignore any unfilled slots */
+			peakSpaceUsed = Max(peakSpaceUsed, sinstrument->spaceUsed);
+			totalSpaceUsed += sinstrument->spaceUsed;
+		}
+
+		avgSpaceUsed = sortstate->shared_info->num_workers > 0 ?
+			totalSpaceUsed / sortstate->shared_info->num_workers : 0;
+	}
+
 	for (i = 0; i < NUM_SORT_METHOD; i++)
 	{
 		CdbExplain_Agg	*agg;
@@ -3337,10 +3363,17 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 				sortMethod, spaceType, (long) agg->vsum);
 			if (es->verbose)
 			{
-				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-								 (long) agg->vmax,
-								 (long) (agg->vsum / agg->vcnt),
-								 agg->vcnt);
+				if (peakSpaceUsed)
+					appendStringInfo(es->str, "  Max Memory: %ldkB  Peak Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
+									 peakSpaceUsed,
+									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
+									 agg->vcnt);
+				else
+					appendStringInfo(es->str, "  Max Memory: %ldkB  Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
+									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
+									 agg->vcnt);
 			}
 			appendStringInfo(es->str, "\n");
 		}
@@ -3351,56 +3384,13 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			ExplainPropertyText("Sort Space Type", spaceType, es);
 			if (es->verbose)
 			{
-				ExplainPropertyInteger("Sort Max Segment Memory", "kB", agg->vmax, es);
-				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", (agg->vsum / agg->vcnt), es);
+				ExplainPropertyInteger("Sort Max Segment Memory", "kB", totalSpaceUsed ? totalSpaceUsed : agg->vmax, es);
+				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed ? avgSpaceUsed : (agg->vsum / agg->vcnt), es);
+				if (peakSpaceUsed)
+					ExplainPropertyInteger("Sort Peak Segment Memory", "kB", peakSpaceUsed, es);
 				ExplainPropertyInteger("Sort Segments", NULL, agg->vcnt, es);
 			}
 		}
-	}
-
-	if (sortstate->shared_info != NULL)
-	{
-		int			n;
-		bool		opened_group = false;
-
-		for (n = 0; n < sortstate->shared_info->num_workers; n++)
-		{
-			TuplesortInstrumentation *sinstrument;
-			const char *sortMethod;
-			const char *spaceType;
-			long		spaceUsed;
-
-			sinstrument = &sortstate->shared_info->sinstrument[n];
-			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
-				continue;		/* ignore any unfilled slots */
-			sortMethod = tuplesort_method_name(sinstrument->sortMethod);
-			spaceType = tuplesort_space_type_name(sinstrument->spaceType);
-			spaceUsed = sinstrument->spaceUsed;
-
-			if (es->format == EXPLAIN_FORMAT_TEXT)
-			{
-				appendStringInfoSpaces(es->str, es->indent * 2);
-				appendStringInfo(es->str,
-								 "Worker %d:  Sort Method: %s  %s: %ldkB\n",
-								 n, sortMethod, spaceType, spaceUsed);
-			}
-			else
-			{
-				if (!opened_group)
-				{
-					ExplainOpenGroup("Workers", "Workers", false, es);
-					opened_group = true;
-				}
-				ExplainOpenGroup("Worker", NULL, true, es);
-				ExplainPropertyInteger("Worker Number", NULL, n, es);
-				ExplainPropertyText("Sort Method", sortMethod, es);
-				ExplainPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
-				ExplainPropertyText("Sort Space Type", spaceType, es);
-				ExplainCloseGroup("Worker", NULL, true, es);
-			}
-		}
-		if (opened_group)
-			ExplainCloseGroup("Workers", "Workers", false, es);
 	}
 }
 
