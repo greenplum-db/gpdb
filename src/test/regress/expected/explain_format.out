@@ -350,6 +350,7 @@ QUERY PLAN
     optimizer: "off"
 (1 row)
 --- Check Explain Analyze YAML output that include the slices information
+--- Check explain sort infomation in verbose mode BTW
 -- explain_processing_off
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
 QUERY PLAN
@@ -569,29 +570,128 @@ QUERY PLAN
 -- s/^Settings:[,\s]*/Settings: /
 -- end_matchsubs
 --- Check explain analyze sort infomation in verbose mode
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 EXPLAIN (ANALYZE, VERBOSE) SELECT * from boxes ORDER BY apple_id;
 QUERY PLAN
-Gather Motion 3:1  (slice1; segments: 3)  (cost=2197.59..3301.17 rows=77900 width=12) (actual time=0.380..0.380 rows=0 loops=1)
+Gather Motion 3:1  (slice1; segments: 3)  (cost=2197.59..3301.17 rows=77900 width=12) (actual time=2.832..2.832 rows=0 loops=1)
   Output: id, apple_id, location_id
   Merge Key: apple_id
   ->  Sort  (cost=2197.59..2262.51 rows=25967 width=12) (actual time=0.000..0.069 rows=0 loops=1)
         Output: id, apple_id, location_id
         Sort Key: boxes.apple_id
-        Sort Method:  quicksort  Memory: 75kB  Max Memory: 25kB  Avg Memory: 25kB (3 segments)
+        Sort Method:  quicksort  Memory: 75kB  Max Memory: 75kB  Peak Memory: 25kB  Avg Memory: 25kB (3 segments)
         Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
         ->  Seq Scan on public.boxes  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.000..0.010 rows=0 loops=1)
               Output: id, apple_id, location_id
 Optimizer: Postgres query optimizer
-Settings: cpu_index_tuple_cost = '0.1', optimizer = 'off', random_page_cost = '1'
-Planning Time: 0.397 ms
+Planning Time: 0.439 ms
   (slice0)    Executor memory: 40K bytes.
   (slice1)    Executor memory: 59K bytes avg x 3 workers, 59K bytes max (seg0).  Work_mem: 59K bytes max.
 Memory used:  128000kB
-Execution Time: 0.782 ms
-(18 rows)
-RESET random_page_cost;
-RESET cpu_index_tuple_cost;
+Execution Time: 4.032 ms
+(17 rows)
+EXPLAIN (ANALYZE, VERBOSE, FORMAT YAML) SELECT * from boxes ORDER BY apple_id;
+QUERY PLAN
+- Plan: 
+    Node Type: "Gather Motion"
+    Senders: 3
+    Receivers: 1
+    Slice: 1
+    Segments: 3
+    Gang Type: "primary reader"
+    Parallel Aware: false
+    Startup Cost: 2197.59
+    Total Cost: 3301.17
+    Plan Rows: 77900
+    Plan Width: 12
+    Actual Startup Time: 1.250
+    Actual Total Time: 1.250
+    Actual Rows: 0
+    Actual Loops: 1
+    Output: 
+      - "id"
+      - "apple_id"
+      - "location_id"
+    Merge Key: 
+      - "apple_id"
+    Plans: 
+      - Node Type: "Sort"
+        Parent Relationship: "Outer"
+        Slice: 1
+        Segments: 3
+        Gang Type: "primary reader"
+        Parallel Aware: false
+        Startup Cost: 2197.59
+        Total Cost: 2262.51
+        Plan Rows: 25967
+        Plan Width: 12
+        Actual Startup Time: 0.000
+        Actual Total Time: 0.000
+        Actual Rows: 0
+        Actual Loops: 0
+        Output: 
+          - "id"
+          - "apple_id"
+          - "location_id"
+        Sort Key: 
+          - "boxes.apple_id"
+        Sort Method: "quicksort"
+        Sort Space Used: 75
+        Sort Space Type: "Memory"
+        Sort Max Segment Memory: 75
+        Sort Avg Segment Memory: 25
+        Sort Peak Segment Memory: 25
+        Sort Segments: 3
+        Executor Memory: 76
+        Executor Memory Segments: 3
+        Executor Max Memory: 26
+        Executor Max Memory Segment: 0
+        work_mem: 
+          Used: 76
+          Segments: 3
+          Max Memory: 26
+          Max Memory Segment: 0
+          Workfile Spilling: 0
+        Plans: 
+          - Node Type: "Seq Scan"
+            Parent Relationship: "Outer"
+            Slice: 1
+            Segments: 3
+            Gang Type: "primary reader"
+            Parallel Aware: false
+            Relation Name: "boxes"
+            Schema: "public"
+            Alias: "boxes"
+            Startup Cost: 0.00
+            Total Cost: 293.67
+            Plan Rows: 25967
+            Plan Width: 12
+            Actual Startup Time: 0.000
+            Actual Total Time: 0.000
+            Actual Rows: 0
+            Actual Loops: 0
+            Output: 
+              - "id"
+              - "apple_id"
+              - "location_id"
+  Optimizer: "Postgres query optimizer"
+  Planning Time: 0.612
+  Triggers: 
+  Slice statistics: 
+    - Slice: 0
+      Executor Memory: 40504
+    - Slice: 1
+      Executor Memory: 
+        Average: 40120
+        Workers: 3
+        Maximum Memory Used: 40120
+      Work Maximum Memory: 25664
+  Statement statistics: 
+    Memory used: 128000
+  Execution Time: 1.798
+(1 row)
 -- explain_processing_on
 --
 -- Test a simple case with JSON and XML output, too.
