@@ -9,6 +9,7 @@
     <topicref href="dblink.xml"/>
     <topicref href="diskquota.xml"/>
     <topicref href="fuzzystrmatch.xml"/>
+    <topicref href="gp_array_agg.xml"/>
     <topicref href="gp_legacy_string_agg.xml"/>
     <topicref href="gp_sparse_vector.xml"/>
     <topicref href="hstore.xml"/>

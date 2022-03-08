@@ -30,6 +30,9 @@
        <li><codeph><xref href="fuzzystrmatch.xml"
              format="dita">fuzzystrmatch</xref></codeph> - Determines similarities and differences
          between strings.</li>
+       <li><codeph><xref href="gp_array_agg.xml" scope="peer"
+             format="dita">gp_array_agg</xref></codeph> - Implements a parallel
+         <codeph>array_agg()</codeph> aggregate function for Greenplum Database.</li>
        <li><codeph><xref href="gp_legacy_string_agg.xml" scope="peer"
              format="dita">gp_legacy_string_agg</xref></codeph> - Implements a
          legacy, single-argument <codeph>string_agg()</codeph> aggregate function that was
