@@ -355,6 +355,8 @@
                 >optimizer_enable_master_only_queries</xref></p>
             <p><xref href="guc-list.xml#optimizer_enable_multiple_distinct_aggs" type="section"
               >optimizer_enable_multiple_distinct_aggs</xref></p>
+            <p><xref href="guc-list.xml#optimizer_enable_orderedagg" type="section"
+                >optimizer_enable_orderedagg</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_agg_skew_avoidance" type="section"
                 >optimizer_force_agg_skew_avoidance</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_comprehensive_join_implementation" type="section"

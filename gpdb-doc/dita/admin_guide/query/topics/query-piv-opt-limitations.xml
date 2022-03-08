@@ -32,7 +32,17 @@
                 partition.</li>
             </ul></li>
           <li>SortMergeJoin (SMJ).</li>
-          <li>Ordered aggregations.</li>
+          <li>Ordered aggregates are not supported by default. You can enable GPORCA
+            support for ordered aggregates with the <codeph><xref
+              href="../../../ref_guide/config_params/guc-list.xml#optimizer_enable_orderedagg"
+              ></xref> server configuration parameter.</li>
+          <li>Grouping sets with ordered aggregates.</li>
+          <li>Multi-argument <codeph>DISTINCT</codeph> qualified aggregates, for example
+              <codeph>SELECT corr(DISTINCT a, b) FROM tbl1;</codeph>, are not supported
+              by default. You can enable GPORCA support for multi-argument distinct
+              aggregates with the <codeph><xref
+              href="../../../ref_guide/config_params/guc-list.xml#optimizer_enable_orderedagg"
+              ></xref> server configuration parameter.</li>
           <li>These analytics extensions:<ul id="ul_iwr_3yl_vp">
               <li>CUBE</li>
               <li>Multiple grouping sets</li>
