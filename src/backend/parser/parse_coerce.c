@@ -455,7 +455,7 @@ coerce_type(ParseState *pstate, Node *node,
 			 * type we're casting to
 			 */
 			args = list_make3(fe,
-							  makeConst(OIDOID, -1, InvalidOid, sizeof(Oid),
+							  makeConst(VOIDOID, -1, InvalidOid, sizeof(Oid),
 										ObjectIdGetDatum(intypioparam),
 										false, true),
 							  makeConst(INT4OID, -1, InvalidOid, sizeof(int32),
