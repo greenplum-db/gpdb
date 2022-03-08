@@ -698,25 +698,41 @@ def impl(context, command, out_msg, num):
         raise Exception("Expected %s to occur %s times. Found %d. stdout: %s" % (out_msg, num, count, msg_list))
 
 
+@given('the user records the current timestamp in log_timestamp table')
+@when('the user records the current timestamp in log_timestamp table')
+@then('the user records the current timestamp in log_timestamp table')
+def impl(context):
+    sql = "CREATE TABLE log_timestamp AS SELECT CURRENT_TIMESTAMP;"
+    rc, output, error = run_cmd("psql -d template1 -c \'%s\'" %sql)
+    if rc:
+        raise Exception(error)
+
+
+@then('the user drops log_timestamp table')
+def impl(context):
+    rc, output, error = run_cmd("psql -d template1 -c \"DROP TABLE log_timestamp;\"")
+    if rc:
+        raise Exception(error)
+
+
 @then('the pg_log files on primary segments should not contain "{msg}"')
 def impl(context, msg):
 
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segments = gparray.getDbList()
+    conn = dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)
 
     for seg in segments:
         if seg.isSegmentPrimary():
-            pg_log_dir = seg.getSegmentDataDirectory() + "/log/"
-            if not os.path.exists(pg_log_dir):
-                raise Exception('Path does not exist! "%s"' % pg_log_dir)
-
-            rc, output, error = run_cmd("ls -t %s | grep gpdb.*csv | head -1" % pg_log_dir)
-
-            if output == "":
-                raise Exception("No log file exists under %s" % pg_log_dir)
-
-            check_string_not_present_in_file(pg_log_dir + output[:-1], msg)
-
+            segname = "seg"+str(seg.content)
+            sql = "select * from gp_toolkit.__gp_log_segment_ext where logsegment='%s' and logtime > (select * from log_timestamp) and logmessage like '%s'" %(segname, msg)
+            try:
+                cursor = dbconn.query(conn, sql)
+                if cursor.fetchone():
+                    raise Exception("Fatal message exists in pg_log file on primary segment %s" %segname)
+            finally:
+                pass
+    conn.close()
 
 def lines_matching_both(in_str, str_1, str_2):
     lines = [x.strip() for x in in_str.split('\n')]
