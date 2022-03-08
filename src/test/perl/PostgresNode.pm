@@ -1225,6 +1225,8 @@ sub poll_query_until
 	my $attempts     = 0;
 	my ($stdout, $stderr);
 
+	local $ENV{PGOPTIONS} = '-c gp_session_role=utility';
+
 	while ($attempts < $max_attempts)
 	{
 		my $cmd =
