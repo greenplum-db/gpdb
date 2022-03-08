@@ -74,25 +74,6 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
         return array
 
-
-    def sendPgElogFromMaster( self, msg, sendAlerts):
-        """
-        Send a message from the master database using select pg_elog ...
-        """
-        # ensure initializeProvider() was called
-        checkNotNone("masterDbUrl", self.__masterDbUrl)
-
-        conn = None
-        try:
-            conn = dbconn.connect(self.__masterDbUrl, utility=True)
-            dbconn.execSQL(conn, "SELECT GP_ELOG(" +
-                        self.__toSqlCharValue(msg) + "," +
-                        ("true" if sendAlerts else "false") + ")")
-        finally:
-            if conn:
-                conn.close()
-
-
     def updateSystemConfig( self, gpArray, textForConfigTable, dbIdToForceMirrorRemoveAdd, useUtilityMode, allowPrimary) :
         """
         Update the configuration for the given segments in the underlying

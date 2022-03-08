@@ -359,11 +359,6 @@ class GpRecoverSegmentProgram:
                 self.logger.error("gprecoverseg failed. Please check the output for more details.")
                 sys.exit(1)
 
-            #TODO do this have to be done before fts trigger probe ?
-            confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
-                                              len(mirrorBuilder.getMirrorsToBuild()), True)
-
-
             self.logger.info("********************************")
             self.logger.info("Segments successfully recovered.")
             self.logger.info("********************************")
