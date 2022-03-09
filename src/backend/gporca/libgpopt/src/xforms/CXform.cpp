@@ -128,6 +128,33 @@ CXform::FEqualIds(const CHAR *szIdOne, const CHAR *szIdTwo)
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CXform::PbsNLJoinXforms
+//
+//	@doc:
+//		Returns a set containing all xforms related to nestloop join.
+//		Caller takes ownership of the returned set
+//
+//---------------------------------------------------------------------------
+CBitSet *
+CXform::PbsNLJoinXforms(CMemoryPool *mp)
+{
+	CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
+	(void) pbs->ExchangeSet(
+		GPOPT_DISABLE_XFORM_TF(CXform::ExfInnerJoin2NLJoin));
+	(void) pbs->ExchangeSet(
+		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftOuterJoin2NLJoin));
+	(void) pbs->ExchangeSet(
+		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftSemiJoin2NLJoin));
+	(void) pbs->ExchangeSet(
+		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftAntiSemiJoin2NLJoin));
+	(void) pbs->ExchangeSet(
+		GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftAntiSemiJoinNotIn2NLJoinNotIn));
+
+	return pbs;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CXform::PbsIndexJoinXforms
 //
 //	@doc:

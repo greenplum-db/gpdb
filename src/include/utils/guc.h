@@ -469,6 +469,7 @@ extern bool optimizer_xforms[OPTIMIZER_XFORMS_COUNT];
 extern char *optimizer_search_strategy_path;
 
 /* GUCs to tell Optimizer to enable a physical operator */
+extern bool optimizer_enable_nljoin;
 extern bool optimizer_enable_indexjoin;
 extern bool optimizer_enable_motions_masteronly_queries;
 extern bool optimizer_enable_motions;

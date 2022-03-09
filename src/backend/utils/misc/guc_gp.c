@@ -294,6 +294,7 @@ bool		optimizer_xforms[OPTIMIZER_XFORMS_COUNT] = {[0 ... OPTIMIZER_XFORMS_COUNT 
 char	   *optimizer_search_strategy_path = NULL;
 
 /* GUCs to tell Optimizer to enable a physical operator */
+bool		optimizer_enable_nljoin;
 bool		optimizer_enable_indexjoin;
 bool		optimizer_enable_motions_masteronly_queries;
 bool		optimizer_enable_motions;
@@ -1999,6 +2000,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_dpe_stats,
+		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_nljoin", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable nested loops join plans in the optimizer."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_nljoin,
 		true,
 		NULL, NULL, NULL
 	},

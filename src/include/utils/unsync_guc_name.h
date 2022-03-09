@@ -378,6 +378,7 @@
 		"optimizer_enable_hashagg",
 		"optimizer_enable_hashjoin",
 		"optimizer_enable_hashjoin_redistribute_broadcast_children",
+		"optimizer_enable_nljoin",
 		"optimizer_enable_indexjoin",
 		"optimizer_enable_indexscan",
 		"optimizer_enable_indexonlyscan",
