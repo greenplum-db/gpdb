@@ -10,6 +10,7 @@ import copy
 import datetime
 import os
 import random
+import glob
 import sys
 import json
 import shutil
@@ -1544,14 +1545,45 @@ class gpexpand:
 
         db_list = catalog.getDatabaseList(self.conn)
 
+        self.clear_status_detail_files()
+
         for db in db_list:
             dbname = db[0]
             if dbname == 'template0':
                 continue
             self.logger.info('Populating gpexpand.status_detail with data from database %s' % (
                 dbname))
+            # For each db we want dump the tables info to guide next stage of rebalance data to
+            # new-added segments. The tables info is saved in a table called gpexpand.status_detail
+            # in database postgres, so to pass data across databases, we have to dump the info do
+            # disk, and then copy back to gpexpand.status_detail.
+            #
+            # If not a simple process, we will record table size info in status_detail. Previously,
+            # we put pg_relation_size() in target list and evaluate it on QD. This is horrible for
+            # performance because each evaluation will lead to a dispatch to all segments and it is
+            # very common that huge number of tables and man segments in a Greenplum cluster. Here
+            # we take an efficient method here to compute all tables size info using one SQL. The
+            # algorithm works as below:
+            #   1. _populate_regular_tables stores regular table's status_detail in a file
+            #   2. _populate_partitioned_tables stores leaf partitions' status_detail in another file
+            #   3. then based on if is a simple progress:
+            #     3.1 yes, just combine the two files generated during 1 and 2 and use copy statement
+            #         to load to postgres db
+            #     3.2 no, we need record table size
+            #         a. create temp table that has the same schema with status_detail
+            #         b. copy 1 and 2's dat file into the temp table
+            #         c. create a view with security_barrier: select oid, pg_relation_size(oid) from pg_class
+            #         d. update the temp table set source_bytes info using a join on the above step c
+            #         e. copy the temp table content to a file, and copy that file to status_detail in postgres
+            #            db
             self._populate_regular_tables(dbname)
             self._populate_partitioned_tables(dbname)
+            if self.options.simple_progress:
+                self._simple_combine_dat_file(dbname)
+            else:
+                self._advanced_gen_dat_file(dbname)
+            self._copy_status_detail(dbname)
+            self.clear_status_detail_files()
 
         nowStr = datetime.datetime.now()
         statusSQL = "INSERT INTO gpexpand.status VALUES ( 'SETUP DONE', '%s' ) " % (nowStr)
@@ -1567,18 +1599,17 @@ class gpexpand:
         self.finalize_prepare()
 
     def _populate_regular_tables(self, dbname):
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
         sql = """SELECT
     current_database(),
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-    c.oid as tableoid,
+    c.oid as table_oid,
     NULL as root_partition_oid,
     2 as rank,
     pe.writable is not null as external_writable,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
-    %s as source_bytes
+    0 as source_bytes
 FROM
     pg_class c
     JOIN pg_namespace n ON (c.relnamespace=n.oid)
@@ -1591,13 +1622,13 @@ WHERE
     AND n.nspname != 'gpexpand'
     AND n.nspname != 'pg_bitmapindex'
     AND c.relpersistence != 't'
-                  """ % (undone_status, src_bytes_str)
+                  """ % (undone_status)
         self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
 
         try:
-            data_file = os.path.abspath('./status_detail.dat')
-            self.logger.debug('status_detail data file: %s' % data_file)
+            data_file = self.get_data_file("regular")
+            self.logger.debug('status_detail data file for regular: %s' % data_file)
             copySQL = """COPY (%s) TO '%s'""" % (sql, data_file)
 
             self.logger.debug(copySQL)
@@ -1605,16 +1636,6 @@ WHERE
             table_conn.close()
         except Exception as e:
             raise ExpansionError(e)
-
-        try:
-            copySQL = """COPY gpexpand.status_detail FROM '%s'""" % (data_file)
-
-            self.logger.debug(copySQL)
-            dbconn.execSQL(self.conn, copySQL)
-        except Exception as e:
-            raise ExpansionError(e)
-        finally:
-            os.unlink(data_file)
 
     def _populate_partitioned_tables(self, dbname):
         """
@@ -1654,19 +1675,18 @@ WHERE
             self.logger.debug(prepare_cmd)
             dbconn.execSQL(table_conn, prepare_cmd, autocommit=True)
 
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(c.oid)"
         get_status_detail_cmd = """
              SELECT
                 current_database(),
                 quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-                c.oid as tableoid,
+                c.oid as table_oid,
                 d.oid as root_partition_oid,
                 2 as rank,
                 false as external_writable,
                 '%s' as undone_status,
                 NULL as expansion_started,
                 NULL as expansion_finished,
-                %s as source_bytes
+                0 as source_bytes
             FROM
                 pg_inherits a,
                 pg_partitioned_table b,
@@ -1680,12 +1700,12 @@ WHERE
                 c.relnamespace = n.oid and
                 c.relkind != 'p' and
                 c.relkind != 'f'
-        """ % (undone_status, src_bytes_str)
+        """ % (undone_status)
         self.logger.debug(get_status_detail_cmd)
 
         try:
-            data_file = os.path.abspath('./status_detail.dat')
-            self.logger.debug('status_detail data file: %s' % data_file)
+            data_file = self.get_data_file("leaf")
+            self.logger.debug('status_detail data file for leafs: %s' % data_file)
             copySQL = """COPY (%s) TO '%s'""" % (get_status_detail_cmd, data_file)
 
             self.logger.debug(copySQL)
@@ -1695,15 +1715,108 @@ WHERE
         except Exception as e:
             raise ExpansionError(e)
 
-        try:
-            copySQL = """COPY gpexpand.status_detail FROM '%s'""" % (data_file)
+    def _simple_combine_dat_file(self, dbname):
+        regular_dat_file = self.get_data_file("regular")
+        leaf_dat_file = self.get_data_file("leaf")
+        data_file = self.get_data_file("final")
+        with open(regular_dat_file) as f1, \
+             open(leaf_dat_file) as f2, \
+             open(data_file, "w") as f:
+            f.write(f1.read())
+            f.write(f2.read())
 
+    def _advanced_gen_dat_file(self, dbname):
+        try:
+            table_conn = self.connect_database(dbname)
+            tmp_name = self.get_temp_status_detail_name()
+            # create a temp table has same structure with status_detail
+            sql = status_detail_table_sql.replace("CREATE TABLE gpexpand.status_detail",
+                                                  "CREATE TEMP TABLE %s" % tmp_name)
+            self.logger.debug(sql)
+            dbconn.execSQL(table_conn, sql)
+            # copy regular and leaf files in to the above table
+            regular_dat_file = self.get_data_file("regular")
+            copy_sql = "copy %s from '%s'" % (tmp_name, regular_dat_file)
+            self.logger.debug(copy_sql)
+            dbconn.execSQL(table_conn, copy_sql)
+            leaf_dat_file = self.get_data_file("leaf")
+            copy_sql = "copy %s from '%s'" % (tmp_name, leaf_dat_file)
+            self.logger.debug(copy_sql)
+            dbconn.execSQL(table_conn, copy_sql)
+            # create a temp replicated table holds all oids
+            tmp_rep_name = self.get_temp_status_detail_name()
+            sql = "create temp table %s (id oid) distributed replicated" % tmp_rep_name
+            self.logger.debug(sql)
+            dbconn.execSQL(table_conn, sql)
+            sql = "insert into %s select table_oid from %s" % (tmp_rep_name, tmp_name)
+            self.logger.debug(sql)
+            dbconn.execSQL(table_conn, sql)
+            # create a view with security barrier
+            # a view with security barrier here can force the pg_relation_size to
+            # eval before motion to give the correct result. For this topic, please
+            # refer to https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/DkTx4O-kuH0
+            view_name = self.get_temp_view_name()
+            view_sql = ("create temp view %s with (security_barrier) as "
+                        "select id, pg_relation_size(id) as size "
+                        "from gp_dist_random('%s')") % (view_name, tmp_rep_name)
+            self.logger.debug(view_sql)
+            dbconn.execSQL(table_conn, view_sql)
+            # update source bytes column
+            update_sql = ("update {target} set source_bytes = x.size "
+                          "from (select id, sum(size) as size "
+                          "  from {view} group by id) x "
+                          "where x.id = {target}.table_oid").format(target=tmp_name,
+                                                                    view=view_name)
+            self.logger.debug(update_sql)
+            dbconn.execSQL(table_conn, update_sql)
+            # copy out to file
+            data_file = self.get_data_file("final")
+            copy_sql = "copy %s to '%s'" % (tmp_name, data_file)
+            self.logger.debug(copy_sql)
+            dbconn.execSQL(table_conn, copy_sql)
+            table_conn.close()
+        except Exception as e:
+            raise ExpansionError(e)
+
+    def _copy_status_detail(self, dbname):
+        try:
+            data_file = self.get_data_file("final")
+            self.logger.debug('status_detail data file: %s' % data_file)
+            copySQL = """COPY gpexpand.status_detail FROM '%s'""" % (data_file)
             self.logger.debug(copySQL)
             dbconn.execSQL(self.conn, copySQL)
         except Exception as e:
             raise ExpansionError(e)
-        finally:
-            os.unlink(data_file)
+
+    def get_temp_status_detail_name(self):
+        return self.get_temp_name("temp_status_detail")
+
+    def get_temp_view_name(self):
+        return self.get_temp_name("temp_view_dist_random")
+
+    def get_temp_name(self, prefix):
+        pattern = "{prefix}_{time}_{pid}_{rid}"
+        pid = os.getpid()
+        rid = random.randint(0, 1000)
+        time = datetime.datetime.now().microsecond
+        return pattern.format(prefix=prefix, time=time,
+                              pid=pid, rid=rid)
+
+    def clear_status_detail_files(self):
+        cwd = os.getcwd()
+        fns = glob.glob(os.path.join(cwd, "status_detail*.dat"))
+        for fn in fns:
+            os.unlink(fn)
+
+    def get_data_file(self, step):
+        file_map = dict([("final", "./status_detail.dat"),
+                         ("regular", "./status_detail_r.dat"),
+                         ("leaf", "./status_detail_l.dat")])
+        fn = file_map.get(step)
+        if fn is None:
+            raise Exception("unknown arg for step: %s" % step)
+        else:
+            return os.path.abspath(fn)
 
     def perform_expansion(self):
         """Performs the actual table re-organizations"""
