@@ -12,7 +12,7 @@ Creates a readable external table, *ext\_expenses,* from all files with the *txt
        date date,  amount float4, category text, desc1 text ) 
        LOCATION ('gpfdists://etlhost-1:8081/*.txt', 
                  'gpfdists://etlhost-2:8082/*.txt')
-       FORMAT 'TEXT' \( DELIMITER '\|' NULL ' '\) ;
+       FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
     
     ```
 

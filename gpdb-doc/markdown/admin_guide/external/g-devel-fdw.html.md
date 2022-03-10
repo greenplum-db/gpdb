@@ -136,62 +136,66 @@ You must implement the scan-related functions in your foreign-data wrapper; impl
 
 Scan-related callback functions include:
 
-|Callback Signature|Description|
-|------------------|-----------|
-|```
-void
+<table class="table" id="topic3__in201681"><caption></caption><colgroup><col style="width:35.573122529644266%"><col style="width:64.42687747035573%"></colgroup><thead class="thead">
+            <tr class="row">
+              <th class="entry" id="topic3__in201681__entry__1">Callback Signature</th>
+              <th class="entry" id="topic3__in201681__entry__2">Description</th>
+            </tr>
+          </thead><tbody class="tbody">
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>void
 GetForeignRelSize (PlannerInfo *root,
                    RelOptInfo *baserel,
-                   Oid foreigntableid)
-```
-
-|Obtain relation size estimates for a foreign table. Called at the beginning of planning for a query on a foreign table.|
-|```
-void
+                   Oid foreigntableid)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">Obtain relation size estimates for a foreign table.
+                Called at the beginning of planning for a query on a foreign table.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>void
 GetForeignPaths (PlannerInfo *root,
                  RelOptInfo *baserel,
-                 Oid foreigntableid)
-```
-
-|Create possible access paths for a scan on a foreign table. Called during query planning. **Note:** A Greenplum Database-compatible FDW must call `create_foreignscan_path()` in its `GetForeignPaths()` callback function.
-
-|
-|```
-ForeignScan *
+                 Oid foreigntableid)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">Create possible access paths for a scan on a
+                foreign table. Called during query planning. <div class="note note note_note"><span class="note__title">Note:</span> A Greenplum
+                Database-compatible FDW must call
+                <code class="ph codeph">create_foreignscan_path()</code> in its
+                <code class="ph codeph">GetForeignPaths()</code> callback function.</div></td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>ForeignScan *
 GetForeignPlan (PlannerInfo *root,
                 RelOptInfo *baserel,
                 Oid foreigntableid,
                 ForeignPath *best_path,
                 List *tlist,
-                List *scan_clauses)
-```
-
-|Create a `ForeignScan` plan node from the selected foreign access path. Called at the end of query planning.|
-|```
-void
+                List *scan_clauses)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">Create a <code class="ph codeph">ForeignScan</code> plan node from
+                the selected foreign access path. Called at the end of query planning.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>void
 BeginForeignScan (ForeignScanState *node,
-                  int eflags)
-```
-
-|Begin running a foreign scan. Called during executor startup.|
-|```
-TupleTableSlot *
-IterateForeignScan (ForeignScanState *node)
-```
-
-|Fetch one row from the foreign source, returning it in a tuple table slot; return NULL if no more rows are available.|
-|```
-void
-ReScanForeignScan (ForeignScanState *node)
-```
-
-|Restart the scan from the beginning.|
-|```
-void
-EndForeignScan (ForeignScanState *node)
-```
-
-|End the scan and release resources.|
+                  int eflags)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">Begin running a foreign scan. Called during
+               executor startup.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>TupleTableSlot *
+IterateForeignScan (ForeignScanState *node)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">Fetch one row from the foreign source, returning it
+                in a tuple table slot; return NULL if no more rows are available.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>void
+ReScanForeignScan (ForeignScanState *node)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">Restart the scan from the beginning.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="topic3__in201681__entry__1"><pre class="pre codeblock"><code>void
+EndForeignScan (ForeignScanState *node)</code></pre></td>
+              <td class="entry" headers="topic3__in201681__entry__2">End the scan and release resources.</td>
+            </tr>
+          </tbody></table>
 
 Refer to [Foreign Data Wrapper Callback Routines](https://www.postgresql.org/docs/9.4/fdw-callbacks.html) in the PostgreSQL documentation for detailed information about the inputs and outputs of the FDW callback functions.
 
@@ -205,50 +209,56 @@ The FDW API exports several helper functions from the Greenplum Database core se
 
 The FDW API includes the helper functions listed in the table below. Refer to [Foreign Data Wrapper Helper Functions](https://www.postgresql.org/docs/9.4/fdw-helpers.html) in the PostgreSQL documentation for more information about these functions.
 
-|Helper Signature|Description|
-|----------------|-----------|
-|```
-ForeignDataWrapper *
-GetForeignDataWrapper(Oid fdwid);
-```
-
-|Returns the `ForeignDataWrapper` object for the foreign-data wrapper with the given OID.|
-|```
-ForeignDataWrapper *
-GetForeignDataWrapperByName(const char *name, bool missing_ok);
-```
-
-|Returns the `ForeignDataWrapper` object for the foreign-data wrapper with the given name.|
-|```
-ForeignServer *
-GetForeignServer(Oid serverid);
-```
-
-|Returns the `ForeignServer` object for the foreign server with the given OID.|
-|```
-ForeignServer *
-GetForeignServerByName(const char *name, bool missing_ok);
-```
-
-|Returns the `ForeignServer` object for the foreign server with the given name.|
-|```
-UserMapping *
-GetUserMapping(Oid userid, Oid serverid);
-```
-
-|Returns the `UserMapping` object for the user mapping of the given role on the given server.|
-|```
-ForeignTable *
-GetForeignTable(Oid relid);
-```
-
-|Returns the `ForeignTable` object for the foreign table with the given OID.|
-|```
-List *
-GetForeignColumnOptions(Oid relid, AttrNumber attnum);
-```
-
-|Returns the per-column FDW options for the column with the given foreign table OID and attribute number.|
+<table class="table" id="helper__fdw_helper"><caption></caption><colgroup><col style="width:35.573122529644266%"><col style="width:64.42687747035573%"></colgroup><thead class="thead">
+            <tr class="row">
+              <th class="entry" id="helper__fdw_helper__entry__1">Helper Signature</th>
+              <th class="entry" id="helper__fdw_helper__entry__2">Description</th>
+            </tr>
+          </thead><tbody class="tbody">
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>ForeignDataWrapper *
+GetForeignDataWrapper(Oid fdwid);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the <code class="ph codeph">ForeignDataWrapper</code>
+                object for the foreign-data wrapper with the given OID.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>ForeignDataWrapper *
+GetForeignDataWrapperByName(const char *name, bool missing_ok);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the <code class="ph codeph">ForeignDataWrapper</code>
+                object for the foreign-data wrapper with the given name.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>ForeignServer *
+GetForeignServer(Oid serverid);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the <code class="ph codeph">ForeignServer</code>
+                object for the foreign server with the given OID.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>ForeignServer *
+GetForeignServerByName(const char *name, bool missing_ok);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the <code class="ph codeph">ForeignServer</code>
+                object for the foreign server with the given name.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>UserMapping *
+GetUserMapping(Oid userid, Oid serverid);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the <code class="ph codeph">UserMapping</code>
+                object for the user mapping of the given role on the given
+                server.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>ForeignTable *
+GetForeignTable(Oid relid);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the <code class="ph codeph">ForeignTable</code>
+                object for the foreign table with the given OID.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" headers="helper__fdw_helper__entry__1"><pre class="pre codeblock"><code>List *
+GetForeignColumnOptions(Oid relid, AttrNumber attnum);</code></pre></td>
+              <td class="entry" headers="helper__fdw_helper__entry__2">Returns the per-column FDW options for the
+                column with the given foreign table OID and attribute number.</td>
+            </tr>
+          </tbody></table>
 
 ## <a id="topic5"></a>Greenplum Database Considerations 
 

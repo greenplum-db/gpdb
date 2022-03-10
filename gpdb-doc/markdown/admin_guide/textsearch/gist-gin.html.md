@@ -6,11 +6,11 @@ This topic describes and compares the Greenplum Database index types that are us
 
 There are two kinds of indexes that can be used to speed up full text searches. Indexes are not mandatory for full text searching, but in cases where a column is searched on a regular basis, an index is usually desirable.
 
-`CREATE INDEX *name* ON *table* USING gist(*column*);`
-:   Creates a GiST \(Generalized Search Tree\)-based index. The `*column*` can be of `tsvector` or `tsquery` type.
+`CREATE INDEX <name> ON <table> USING gist(<column>);`
+:   Creates a GiST \(Generalized Search Tree\)-based index. The `<column>` can be of `tsvector` or `tsquery` type.
 
-`CREATE INDEX *name* ON *table* USING gin(*column*);`
-:   Creates a GIN \(Generalized Inverted Index\)-based index. The `*column*` must be of `tsvector` type.
+`CREATE INDEX <name> ON <table> USING gin(<column>);`
+:   Creates a GIN \(Generalized Inverted Index\)-based index. The `<column>` must be of `tsvector` type.
 
 There are substantial performance differences between the two index types, so it is important to understand their characteristics.
 

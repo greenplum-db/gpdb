@@ -9,7 +9,7 @@ Creates a readable external table, *ext\_expenses,* using the gpfdist protocol f
    date date,  amount float4, category text, desc1 text ) 
    LOCATION ('gpfdist://etlhost-1:8081/*.txt', 
              'gpfdist://etlhost-2:8081/*.txt')
-   FORMAT 'TEXT' \( DELIMITER '\|' NULL ' '\) ;
+   FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
 
 ```
 

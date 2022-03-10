@@ -30,8 +30,8 @@ The built-in parser is named `pg_catalog.default`. It recognizes 23 token types,
 |int|Signed integer|-1234|
 |uint|Unsigned integer|1234|
 |version|Version number|8.3.0|
-|tag|XML tag|<a href="dictionaries.html"\>|
-|entity|XML entity|&amp;|
+|tag|XML tag|\<a href="dictionaries.html"\>|
+|entity|XML entity|\&amp;|
 |blank|Space symbols|\(any whitespace or punctuation not otherwise recognized\)|
 
 **Note:**

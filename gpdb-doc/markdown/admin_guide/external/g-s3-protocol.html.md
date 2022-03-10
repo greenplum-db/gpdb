@@ -230,87 +230,87 @@ You can use the Greenplum Database `gpcheckcloud` utility to test the s3 protoco
 
 **s3 Configuration File Parameters**
 
-accessid
+`accessid`
 :   Required. AWS S3 ID to access the S3 bucket.
 
-secret
+`secret`
 :   Required. AWS S3 passcode for the S3 ID to access the S3 bucket.
 
-autocompress
+`autocompress`
 :   For writable s3 external tables, this parameter specifies whether to compress files \(using gzip\) before uploading to S3. Files are compressed by default if you do not specify this parameter.
 
-chunksize
+`chunksize`
 :   The buffer size that each segment thread uses for reading from or writing to the S3 server. The default is 64 MB. The minimum is 8MB and the maximum is 128MB.
 
-    When inserting data to a writable s3 table, each Greenplum Database segment writes the data into its buffer \(using multiple threads up to the `threadnum` value\) until it is full, after which it writes the buffer to a file in the S3 bucket. This process is then repeated as necessary on each segment until the insert operation completes.
+When inserting data to a writable s3 table, each Greenplum Database segment writes the data into its buffer \(using multiple threads up to the `threadnum` value\) until it is full, after which it writes the buffer to a file in the S3 bucket. This process is then repeated as necessary on each segment until the insert operation completes.
 
-    Because Amazon S3 allows a maximum of 10,000 parts for multipart uploads, the minimum `chunksize` value of 8MB supports a maximum insert size of 80GB per Greenplum database segment. The maximum `chunksize` value of 128MB supports a maximum insert size 1.28TB per segment. For writable s3 tables, you must ensure that the `chunksize` setting can support the anticipated table size of your table. See [Multipart Upload Overview](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html) in the S3 documentation for more information about uploads to S3.
+Because Amazon S3 allows a maximum of 10,000 parts for multipart uploads, the minimum `chunksize` value of 8MB supports a maximum insert size of 80GB per Greenplum database segment. The maximum `chunksize` value of 128MB supports a maximum insert size 1.28TB per segment. For writable s3 tables, you must ensure that the `chunksize` setting can support the anticipated table size of your table. See [Multipart Upload Overview](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html) in the S3 documentation for more information about uploads to S3.
 
-encryption
+`encryption`
 :   Use connections that are secured with Secure Sockets Layer \(SSL\). Default value is `true`. The values `true`, `t`, `on`, `yes`, and `y` \(case insensitive\) are treated as `true`. Any other value is treated as `false`.
 
-    If the port is not specified in the URL in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command, the configuration file `encryption` parameter affects the port used by the `s3` protocol \(port 80 for HTTP or port 443 for HTTPS\). If the port is specified, that port is used regardless of the encryption setting.
+If the port is not specified in the URL in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command, the configuration file `encryption` parameter affects the port used by the `s3` protocol \(port 80 for HTTP or port 443 for HTTPS\). If the port is specified, that port is used regardless of the encryption setting.
 
-gpcheckcloud\_newline
+`gpcheckcloud_newline`
 :   When downloading files from an S3 location, the `gpcheckcloud` utility appends a new line character to last line of a file if the last line of a file does not have an EOL \(end of line\) character. The default character is `\n` \(newline\). The value can be `\n`, `\r` \(carriage return\), or `\n\r` \(newline/carriage return\).
 
-    Adding an EOL character prevents the last line of one file from being concatenated with the first line of next file.
+Adding an EOL character prevents the last line of one file from being concatenated with the first line of next file.
 
-low\_speed\_limit
+`low_speed_limit`
 :   The upload/download speed lower limit, in bytes per second. The default speed is 10240 \(10K\). If the upload or download speed is slower than the limit for longer than the time specified by `low_speed_time`, then the connection is stopped and retried. After 3 retries, the `s3` protocol returns an error. A value of 0 specifies no lower limit.
 
-low\_speed\_time
+`low_speed_time`
 :   When the connection speed is less than `low_speed_limit`, this parameter specified the amount of time, in seconds, to wait before cancelling an upload to or a download from the S3 bucket. The default is 60 seconds. A value of 0 specifies no time limit.
 
-proxy
+`proxy`
 :   Specify a URL that is the proxy that S3 uses to connect to a data source. S3 supports these protocols: HTTP and HTTPS. This is the format for the parameter.
 
-    ```
-    proxy = <protocol>://[<user>:<password>@]<proxyhost>[:<port>]
-    ```
+```
+proxy = <protocol>://[<user>:<password>@]<proxyhost>[:<port>]
+```
 
-:   If this parameter is not set or is an empty string \(`proxy = ""`\), S3 uses the proxy specified by the environment variable `http_proxy` or `https_proxy` \(and the environment variables `all_proxy` and `no_proxy`\). The environment variable that S3 uses depends on the protocol. For information about the environment variables, see [s3 Protocol Proxy Support](g-s3-protocol.html#s3_proxy).
+If this parameter is not set or is an empty string \(`proxy = ""`\), S3 uses the proxy specified by the environment variable `http_proxy` or `https_proxy` \(and the environment variables `all_proxy` and `no_proxy`\). The environment variable that S3 uses depends on the protocol. For information about the environment variables, see [s3 Protocol Proxy Support](g-s3-protocol.html#s3_proxy).
 
-:   There can be at most one `proxy` parameter in the configuration file. The URL specified by the parameter is the proxy for all supported protocols.
+There can be at most one `proxy` parameter in the configuration file. The URL specified by the parameter is the proxy for all supported protocols.
 
-server\_side\_encryption
+`server_side_encryption`
 :   The S3 server-side encryption method that has been configured for the bucket. Greenplum Database supports only server-side encryption with Amazon S3-managed keys, identified by the configuration parameter value `sse-s3`. Server-side encryption is disabled \(`none`\) by default.
 
-threadnum
+`threadnum`
 :   The maximum number of concurrent threads a segment can create when uploading data to or downloading data from the S3 bucket. The default is 4. The minimum is 1 and the maximum is 8.
 
-verifycert
+`verifycert`
 :   Controls how the `s3` protocol handles authentication when establishing encrypted communication between a client and an S3 data source over HTTPS. The value is either `true` or `false`. The default value is `true`.
 
-    -   `verifycert=false` - Ignores authentication errors and allows encrypted communication over HTTPS.
-    -   `verifycert=true` - Requires valid authentication \(a proper certificate\) for encrypted communication over HTTPS.
+-   `verifycert=false` - Ignores authentication errors and allows encrypted communication over HTTPS.
+-   `verifycert=true` - Requires valid authentication \(a proper certificate\) for encrypted communication over HTTPS.
 
-:   Setting the value to `false` can be useful in testing and development environments to allow communication without changing certificates.
+Setting the value to `false` can be useful in testing and development environments to allow communication without changing certificates.
 
-    **Warning:** Setting the value to `false` exposes a security risk by ignoring invalid credentials when establishing communication between a client and a S3 data store.
+**Warning:** Setting the value to `false` exposes a security risk by ignoring invalid credentials when establishing communication between a client and a S3 data store.
 
-version
+`version`
 :   Specifies the version of the information specified in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command. The value is either `1` or `2`. The default value is `1`.
 
-:   If the value is `1`, the `LOCATION` clause supports an Amazon S3 URL, and does not contain the `region` parameter. If the value is `2`, the `LOCATION` clause supports S3 compatible services and must include the `region` parameter. The `region` parameter specifies the S3 data source region. For this S3 URL `s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/`, the AWS S3 region is `us-west-2`.
+If the value is `1`, the `LOCATION` clause supports an Amazon S3 URL, and does not contain the `region` parameter. If the value is `2`, the `LOCATION` clause supports S3 compatible services and must include the `region` parameter. The `region` parameter specifies the S3 data source region. For this S3 URL `s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/`, the AWS S3 region is `us-west-2`.
 
-:   If `version` is 1 or is not specified, this is an example of the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command that specifies an Amazon S3 endpoint.
+If `version` is 1 or is not specified, this is an example of the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command that specifies an Amazon S3 endpoint.
 
-    ```
-    LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')
-    ```
+```
+LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')
+```
 
-:   If `version` is 2, this is an example `LOCATION` clause with the `region` parameter for an AWS S3 compatible service.
+If `version` is 2, this is an example `LOCATION` clause with the `region` parameter for an AWS S3 compatible service.
 
-    ```
-    LOCATION ('s3://test.company.com/s3test.company/test1/normal/ region=local-test config=/home/gpadmin/aws_s3/s3.conf') 
-    ```
+```
+LOCATION ('s3://test.company.com/s3test.company/test1/normal/ region=local-test config=/home/gpadmin/aws_s3/s3.conf') 
+```
 
-:   If `version` is 2, the `LOCATION` clause can also specify an Amazon S3 endpoint. This example specifies an Amazon S3 endpoint that uses the `region` parameter.
+If `version` is 2, the `LOCATION` clause can also specify an Amazon S3 endpoint. This example specifies an Amazon S3 endpoint that uses the `region` parameter.
 
-    ```
-    LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ region=us-west-2 config=/home/gpadmin/aws_s3/s3.conf') 
-    ```
+```
+LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ region=us-west-2 config=/home/gpadmin/aws_s3/s3.conf') 
+```
 
 **Note:** Greenplum Database can require up to `threadnum * chunksize` memory on each segment host when uploading or downloading S3 files. Consider this `s3` protocol memory requirement when you configure overall Greenplum Database memory.
 
@@ -383,23 +383,23 @@ gpcheckcloud -h
 
 **Options**
 
--c
+`-c`
 :   Connect to the specified S3 location with the configuration specified in the `s3` protocol URL and return information about the files in the S3 location.
 
-:   If the connection fails, the utility displays information about failures such as invalid credentials, prefix, or server address \(DNS error\), or server not available.
+If the connection fails, the utility displays information about failures such as invalid credentials, prefix, or server address \(DNS error\), or server not available.
 
--d
+`-d`
 :   Download data from the specified S3 location with the configuration specified in the `s3` protocol URL and send the output to `STDOUT`.
 
-:   If files are gzip compressed or have a `.deflate` suffix to indicate deflate compression, the uncompressed data is sent to `STDOUT`.
+If files are gzip compressed or have a `.deflate` suffix to indicate deflate compression, the uncompressed data is sent to `STDOUT`.
 
--u
+`-u`
 :   Upload a file to the S3 bucket specified in the `s3` protocol URL using the specified configuration file if available. Use this option to test compression and `chunksize` and `autocompress` settings for your configuration.
 
--t
+`-t`
 :   Sends a template configuration file to `STDOUT`. You can capture the output and create an `s3` configuration file to connect to Amazon S3.
 
--h
+`-h`
 :   Display `gpcheckcloud` help.
 
 **Examples**

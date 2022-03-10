@@ -14,7 +14,7 @@ The following example logs errors internally in Greenplum Database and sets an e
      ROWS;
 ```
 
-Use the built-in SQL function `gp_read_error_log('external\_table')` to read the error log data. This example command displays the log errors for *ext\_expenses*:
+Use the built-in SQL function `gp_read_error_log('external_table')` to read the error log data. This example command displays the log errors for *ext\_expenses*:
 
 ```
 SELECT gp_read_error_log('ext_expenses');
@@ -22,7 +22,7 @@ SELECT gp_read_error_log('ext_expenses');
 
 For information about the format of the error log, see [Viewing Bad Rows in the Error Log](g-viewing-bad-rows-in-the-error-table-or-error-log.html).
 
-The built-in SQL function `gp_truncate_error_log('external\_table')` deletes the error data. This example deletes the error log data created from the previous external table example :
+The built-in SQL function `gp_truncate_error_log('external_table')` deletes the error data. This example deletes the error log data created from the previous external table example :
 
 ```
 SELECT gp_truncate_error_log('ext_expenses'); 
