@@ -16,12 +16,12 @@ LOCK
 -- The following query should not be blocked by session 1 because no
 -- locks should be held by pg_partitions view.
 select tablename, partitiontablename, partitionboundary from pg_partitions where tablename like 'pg_partitions_ddl%';
- tablename             | partitiontablename            | partitionboundary                               
------------------------+-------------------------------+-------------------------------------------------
- pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_1 | START (1) END (6) EVERY (5::double precision)   
- pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_2 | START (6) END (11) EVERY (5::double precision)  
- pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_3 | START (11) END (16) EVERY (5::double precision) 
- pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_4 | START (16) END (20) EVERY (5::double precision) 
+ tablename             | partitiontablename            | partitionboundary                                 
+-----------------------+-------------------------------+---------------------------------------------------
+ pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_1 | START (1) END (6) EVERY ('5'::double precision)   
+ pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_2 | START (6) END (11) EVERY ('5'::double precision)  
+ pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_3 | START (11) END (16) EVERY ('5'::double precision) 
+ pg_partitions_ddl_tab | pg_partitions_ddl_tab_1_prt_4 | START (16) END (20) EVERY ('5'::double precision) 
 (4 rows)
 
 1: end;
