@@ -12387,8 +12387,8 @@ SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
 WHERE L1.lid = META.LOAD_ID;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..0.00 rows=0 width=0)
    Output: c, lid
    ->  Result  (cost=0.00..431.10 rows=1 width=8)
@@ -12403,7 +12403,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
                            Sort Key: t55.c, t55.lid
                            ->  Hash Join  (cost=0.00..431.08 rows=1 width=8)
                                  Output: c, lid
-                                 Hash Cond: (t55.lid = pg_catalog.int4in(unknownout("outer".load_id), ''::void, (-1)))
+                                 Hash Cond: (t55.lid = pg_catalog.int4in(unknownout("outer".load_id), ''::void, '-1'::integer))
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=334 width=8)
                                        Output: c, lid
                                        Hash Key: lid
@@ -12414,7 +12414,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
                                        ->  Result  (cost=0.00..0.00 rows=1 width=8)
                                              Output: load_id
                                              ->  Result  (cost=0.00..0.00 rows=1 width=8)
-                                                   Output: load_id, pg_catalog.int4in(unknownout(load_id), ''::void, (-1))
+                                                   Output: load_id, pg_catalog.int4in(unknownout(load_id), ''::void, '-1'::integer)
                                                    ->  Result  (cost=0.00..0.00 rows=1 width=8)
                                                          Output: load_id
                                                          ->  Result  (cost=0.00..0.00 rows=1 width=8)

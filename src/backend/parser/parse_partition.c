@@ -2459,24 +2459,21 @@ preprocess_range_spec(partValidationState *vstate)
 						newrtypeId = ((Form_pg_operator) GETSTRUCT(optup))->oprright;
 						ReleaseSysCache(optup);
 
-						if (rtypeId != newrtypeId)
-						{
-							Type		newetyp = typeidType(newrtypeId);
-							int32		typmod =
-							((Form_pg_type) GETSTRUCT(newetyp))->typtypmod;
+						Type		newetyp = typeidType(newrtypeId);
+						int32		typmod =
+						((Form_pg_type) GETSTRUCT(newetyp))->typtypmod;
 
-							ReleaseSysCache(newetyp);
+						ReleaseSysCache(newetyp);
 
-							/* we need to coerce */
-							e = coerce_partition_value(pstate,
-													   e,
-													   newrtypeId,
-													   typmod,
-													   PARTTYP_RANGE);
+						/* we need to coerce */
+						e = coerce_partition_value(pstate,
+													e,
+													newrtypeId,
+													typmod,
+													PARTTYP_RANGE);
 
-							lfirst(lcevery) = e;
-							rtypeId = newrtypeId;
-						}
+						lfirst(lcevery) = e;
+						rtypeId = newrtypeId;
 
 						assign_expr_collations(pstate, e);
 

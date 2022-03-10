@@ -72,13 +72,13 @@ SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT
                      Hash Cond: ((r.rc)::text = (with_test2.isc)::text)
                      ->  Subquery Scan on r  (cost=0.00..0.08 rows=4 width=516)
                            ->  Seq Scan on with_test3  (cost=0.00..1.05 rows=4 width=19)
-                                 Filter: (ri = 101991::numeric)
+                                 Filter: (ri = '101991'::numeric)
                      ->  Hash  (cost=0.02..0.02 rows=1 width=104)
                            ->  Seq Scan on with_test2  (cost=0.00..1.01 rows=1 width=32)
                ->  Hash  (cost=0.08..0.08 rows=2 width=516)
                      ->  Subquery Scan on r1  (cost=0.00..0.08 rows=4 width=516)
                            ->  Seq Scan on with_test3 with_test3_1  (cost=0.00..1.05 rows=4 width=19)
-                                 Filter: (ri = 101991::numeric)
+                                 Filter: (ri = '101991'::numeric)
  Optimizer: Postgres query optimizer
 (16 rows)
 
