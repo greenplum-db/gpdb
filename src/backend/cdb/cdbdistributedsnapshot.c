@@ -21,6 +21,13 @@
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
 #include "utils/snapmgr.h"
+#include "storage/procarray.h"
+
+int
+GetMaxSnapshotDistributedXidCount()
+{
+	return GetMaxSnapshotXidCount();
+}
 
 /*
  * DistributedSnapshotWithLocalMapping_CommittedTest
