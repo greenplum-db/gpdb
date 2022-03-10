@@ -101,3 +101,8 @@ explain select count(*) from foo group by a;
 set optimizer_enable_hashagg = off;
 set optimizer_enable_groupagg = off;
 explain select count(*) from foo group by a;
+
+-- Orca should fallback for functions returning composite types
+create type compType as (a int, b int);
+create function myfunc5() returns compType IMMUTABLE as $$ select 2,3 $$ language sql;
+select a from myfunc5();
