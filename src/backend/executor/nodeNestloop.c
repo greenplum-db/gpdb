@@ -765,6 +765,36 @@ extractFuncExprArgs(Expr *clause, List **lclauses, List **rclauses)
 		*lclauses = lappend(*lclauses, linitial(fexpr->args));
 		*rclauses = lappend(*rclauses, lsecond(fexpr->args));
 	}
+	else if (IsA(clause, Const) && ((Const *) clause)->constisnull)
+	{
+		/*
+		 * Greenplum will pull up not-in sublink to a specific join LASJ,
+		 * this kind of join's joinqual might contain a NULL const here,
+		 * for such case we do not need to split it. A case that can
+		 * reach here is:
+		 *
+		 *   create table t1(a int not null, b int not null);
+		 *   create table t2(a int not null, b int not null);
+		 *   explain  select 1 from t1 where (NULL, b) not in (select a, b from t2);
+		 *
+		 * The above SQL in Greenplum will be turned in a join whose qual contains
+		 * a bool expr (NULL = t2.a) and (t1.b = t2.b), this piece of expr will be
+		 * evaluated to (t1.b = t2.b) and NULL by the following code path:
+		 *   subquery_planner
+		 *     -> preprocess_qual_conditions(root, (Node *) parse->jointree)
+		 *     -> preprocess_expression
+		 *     -> eval_const_expressions
+		 *     -> eval_const_expressions_mutator
+		 *
+		 * That is why here we have to consider const case, and only null const
+		 * (other const cases, true or false will be simplified during the above
+		 * code path).
+		 *
+		 * We do nothing here for NULL const.
+		 *
+		 * See Issue: https://github.com/greenplum-db/gpdb/issues/13212 for details.
+		 */
+	}
 	else
 		elog(ERROR, "unexpected join qual in JOIN_LASJ_NOTIN join");
 }

@@ -475,5 +475,16 @@ select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
 explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
 select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
 
+-- test for issue https://github.com/greenplum-db/gpdb/issues/13212
+create table t1_13212(a int not null, b int not null);
+create table t2_13212(a int not null, b int not null);
+explain (costs off)  select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+insert into t1_13212 values (1, 1);
+insert into t2_13212 values (1, 1);
+select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+update t2_13212 set b = 2;
+select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+
 reset search_path;
 drop schema notin cascade;
