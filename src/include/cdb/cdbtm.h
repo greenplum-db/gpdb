@@ -285,6 +285,8 @@ extern DistributedTransactionTimeStamp getDistributedTransactionTimestamp(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
 extern void resetGxact(void);
+extern void setDistributedTransactionContext(DtxContext context);
+
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);
 extern bool notifyCommittedDtxTransactionIsNeeded(void);
