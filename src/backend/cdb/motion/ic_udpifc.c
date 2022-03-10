@@ -775,7 +775,7 @@ static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
 
 static inline bool pollAcks(ChunkTransportState *transportStates, int fd, int timeout);
 
-static void sendtoWithRetry(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len, int retry, const char *errDetail);
+static ssize_t sendtoWithRetry(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len, int retry, const char *errDetail);
 
 /* #define TRANSFER_PROTOCOL_STATS */
 
@@ -1808,7 +1808,9 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	char errDetail[100];
 	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %d", pkt->seq);
 	/* Retry for infinite times since we have no retransmit mechanism for control message */
-	sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, 0, errDetail);
+	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, 0, errDetail);
+	if (n < pkt->len)
+		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
 }
 
 /*
@@ -4540,7 +4542,11 @@ prepareXmit(MotionConn *conn)
 	}
 }
 
-static void sendtoWithRetry(int socket, const void *message, size_t length,
+/*
+ * sendtoWithRetry
+ * 		Retry sendto logic and send the packets.
+ */
+static ssize_t sendtoWithRetry(int socket, const void *message, size_t length,
            int flags, const struct sockaddr *dest_addr,
            socklen_t dest_len, int retry, const char *errDetail) {
 	int32		n;
@@ -4548,7 +4554,7 @@ static void sendtoWithRetry(int socket, const void *message, size_t length,
 
 xmit_retry:
 	if (retry > 0 && ++count > retry)
-		return;
+		return n;
 	n = sendto(socket, message, length, flags, dest_addr, dest_len);
 	if (n < 0)
 	{
@@ -4558,7 +4564,7 @@ xmit_retry:
 			goto xmit_retry;
 
 		if (errno == EAGAIN)	/* no space ? not an error. */
-			return;
+			return n;
 
 		/*
 		 * If Linux iptables (nf_conntrack?) drops an outgoing packet, it may
@@ -4571,7 +4577,7 @@ xmit_retry:
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("Interconnect error writing an outgoing packet: %m"),
 					 errdetail("error during sendto() %s", errDetail)));
-			return;
+			return n;
 		}
 
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -4581,15 +4587,7 @@ xmit_retry:
 		/* not reached */
 	}
 
-	if (n != dest_len)
-	{
-		if (DEBUG1 >= log_min_messages)
-			write_log("Interconnect error writing an outgoing packet [seq %d]: short transmit (given %d sent %d) during sendto() call."
-					  "%s", ((icpkthdr *) message)->seq, dest_len, n, errDetail);
-#ifdef AMS_VERBOSE_LOGGING
-		logPkt("PKT DETAILS ", buf->pkt);
-#endif
-	}
+	return n;
 }
 
 /*
@@ -4599,6 +4597,7 @@ xmit_retry:
 static void
 sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
 {
+	int32 n;
 
 #ifdef USE_ASSERT_CHECKING
 	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
@@ -4614,8 +4613,19 @@ sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry,
 	snprintf(errDetail, sizeof(errDetail), "For Remote Connection: contentId=%d at %s",
 					  conn->remoteContentId,
 					  conn->remoteHostAndPort);
-	sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
+	n = sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
                           (struct sockaddr *) &conn->peer, conn->peer_len, 0, errDetail);
+	if (n != buf->pkt->len)
+	{
+		if (DEBUG1 >= log_min_messages)
+			write_log("Interconnect error writing an outgoing packet [seq %d]: short transmit (given %d sent %d) during sendto() call."
+					  "For Remote Connection: contentId=%d at %s", buf->pkt->seq, buf->pkt->len, n,
+					  conn->remoteContentId,
+					  conn->remoteHostAndPort);
+#ifdef AMS_VERBOSE_LOGGING
+		logPkt("PKT DETAILS ", buf->pkt);
+#endif
+	}
 	return;
 }
 
@@ -6936,9 +6946,30 @@ SendDummyPacket(void)
 	/*
 	 * Send a dummy package to the interconnect listener, try 10 times
 	 */
-	char errDetail[100];
-	snprintf(errDetail, sizeof(errDetail), "Send dummy packet failed");
-	sendtoWithRetry(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen, 10, errDetail);
+
+	counter = 0;
+	while (counter < 10)
+	{
+		counter++;
+		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
+		if (ret < 0)
+		{
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+				continue;
+			else
+			{
+				elog(LOG, "send dummy packet failed, sendto failed: %m");
+				goto send_error;
+			}
+		}
+		break;
+	}
+
+	if (counter >= 10)
+	{
+		elog(LOG, "send dummy packet failed, sendto failed with 10 times: %m");
+		goto send_error;
+	}
 
 	pg_freeaddrinfo_all(hint.ai_family, addrs);
 	closesocket(sockfd);
