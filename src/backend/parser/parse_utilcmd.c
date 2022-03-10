@@ -75,6 +75,7 @@
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
 #include "utils/tqual.h"
+#include "utils/uri.h"
 
 /* State shared by transformCreateSchemaStmt and its subroutines */
 typedef struct
@@ -1735,6 +1736,36 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("External web table with ON MASTER clause "
 									"cannot use LOG ERRORS feature.")));
+			}
+		}
+	}
+	if (stmt->exttypedesc->exttabletype == EXTTBL_TYPE_LOCATION && iswritable)
+	{
+		ListCell   *exec_location_opt;
+
+		foreach(exec_location_opt, stmt->exttypedesc->on_clause)
+		{
+			DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
+
+			if (strcmp(defel->defname, "master") == 0)
+			{
+				ListCell   *cell;
+				Assert(stmt->exttypedesc->location_list != NIL);
+
+				foreach(cell, stmt->exttypedesc->location_list)
+				{
+					Uri	*uri;
+					Value	*v = lfirst(cell);
+
+					uri = ParseExternalTableUri(v->val.str);
+					if (uri->protocol == URI_CUSTOM && 0 == pg_strncasecmp(uri->customprotocol, "s3", 2))
+					{
+						ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("External s3 table with ON MASTER clause "
+								"cannot be writable.")));
+					}
+				}
 			}
 		}
 	}
