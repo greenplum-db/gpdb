@@ -193,6 +193,7 @@
 				<topicref href="system_catalogs/gp_distributed_xacts.xml"/>
 				<topicref href="system_catalogs/gp_distribution_policy.xml"/>
 				<topicref href="system_catalogs/gpexpand_expansion_progress.xml"/>
+				<topicref href="system_catalogs/gp_endpoints.xml"/>
 				<topicref href="system_catalogs/gp_expansion_status.xml"/>
 				<topicref href="system_catalogs/gp_expansion_tables.xml"/>
 				<topicref href="system_catalogs/gp_fastsequence.xml"/>
@@ -203,8 +204,10 @@
 				<topicref href="system_catalogs/gp_resgroup_status_per_host.xml"/>
 				<topicref href="system_catalogs/gp_resgroup_status_per_segment.xml"/>
 				<topicref href="system_catalogs/gp_resqueue_status.xml"/>
-				<topicref href="system_catalogs/gp_stat_replication.xml"/>
 				<topicref href="system_catalogs/gp_segment_configuration.xml"/>
+				<topicref href="system_catalogs/gp_segment_endpoints.xml"/>
+				<topicref href="system_catalogs/gp_session_endpoints.xml"/>
+				<topicref href="system_catalogs/gp_stat_replication.xml"/>
 				<topicref href="system_catalogs/gp_transaction_log.xml"/>
 				<topicref href="system_catalogs/gp_version_at_initdb.xml"/>
 				<topicref href="system_catalogs/pg_aggregate.xml"/>
