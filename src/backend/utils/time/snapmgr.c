@@ -635,13 +635,16 @@ SetTransactionSnapshot(Snapshot sourcesnap, VirtualTransactionId *sourcevxid,
 	 * snapshot importers compute reasonably up-to-date values for them.)
 	 */
 
-	/*
-	 * Pass in DTX_CONTEXT_LOCAL_ONLY to prevent a distributed snapshot from
-	 * getting created here, as we will be using the one we parsed in
-	 * ImportSnapshot.
+	 /*
+	 * GPDB: If the source snapshot already has a distributed snapshot, pass in
+	 * DTX_CONTEXT_LOCAL_ONLY to GetSnapshotData(). This prevents a new
+	 * distributed snapshot from being created in GetSnapshotData() and ensures
+	 * that we can use the distributed snapshot from the source snapshot below.
 	 */
-	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DTX_CONTEXT_LOCAL_ONLY);
-
+	if (sourcesnap->haveDistribSnapshot)
+		CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DTX_CONTEXT_LOCAL_ONLY);
+	else
+		CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 	/*
 	 * Now copy appropriate fields from the source snapshot.
 	 */
