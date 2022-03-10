@@ -2004,130 +2004,130 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_nljoin", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_nljoin", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable nested loops join plans in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_nljoin,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_indexjoin", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_indexjoin", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable index nested loops join plans in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_indexjoin,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_motions_masteronly_queries", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_motions_masteronly_queries", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Motion operators in the optimizer for queries with no distributed tables."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_motions_masteronly_queries,
 		false,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_motions", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_motions", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Motion operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_motions,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_motion_broadcast", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_motion_broadcast", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Motion Broadcast operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_motion_broadcast,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_motion_gather", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_motion_gather", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Motion Gather operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_motion_gather,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_motion_redistribute", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_motion_redistribute", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Motion Redistribute operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_motion_redistribute,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_sort", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_sort", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Sort operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_sort,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_materialize", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_materialize", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Materialize operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_materialize,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_partition_propagation", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_partition_propagation", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Partition Propagation operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_partition_propagation,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_partition_selection", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_partition_selection", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with Partition Selection operators in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_partition_selection,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_outerjoin_rewrite", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_outerjoin_rewrite", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable outer join to inner join rewrite in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_outerjoin_rewrite,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_direct_dispatch", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_direct_dispatch", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable direct dispatch in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_direct_dispatch,
 		true,
@@ -2146,7 +2146,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_enable_space_pruning", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable space pruning in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_space_pruning,
 		true,
@@ -2154,10 +2154,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_master_only_queries", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_master_only_queries", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Process master only queries via the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_master_only_queries,
 		false,
@@ -2165,10 +2165,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_hashjoin", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_hashjoin", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's use of hash join plans."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_hashjoin,
 		true,
@@ -2176,10 +2176,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_dynamictablescan", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_dynamictablescan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's use of plans with dynamic table scan."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_dynamictablescan,
 		true,
@@ -2187,10 +2187,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_indexscan", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_indexscan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's use of plans with index scan."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_indexscan,
 		true,
@@ -2198,10 +2198,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_indexonlyscan", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_indexonlyscan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's use of plans with index only scan."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_indexonlyscan,
 		true,
@@ -2209,10 +2209,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_tablescan", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_tablescan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's use of plans with table scan."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_tablescan,
 		true,
@@ -2220,10 +2220,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_hashagg", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_hashagg", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables Pivotal Optimizer (GPORCA) to use hash aggregates."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_hashagg,
 		true,
@@ -2231,10 +2231,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_groupagg", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_groupagg", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables Pivotal Optimizer (GPORCA) to use group aggregates."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_groupagg,
 		true,
@@ -2245,7 +2245,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_force_agg_skew_avoidance", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Always pick a plan for aggregate distinct that minimizes skew."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_force_agg_skew_avoidance,
 		true,
@@ -2256,7 +2256,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_penalize_skew", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Penalize operators with skewed hash redistribute below it."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_penalize_skew,
 		true,
@@ -2267,7 +2267,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_multilevel_partitioning", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable optimization of queries on multilevel partitioned tables."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_multilevel_partitioning,
 		true,
@@ -2289,7 +2289,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_force_multistage_agg", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Force optimizer to always pick multistage aggregates when such a plan alternative is generated."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_force_multistage_agg,
 		false,
@@ -2297,10 +2297,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_multiple_distinct_aggs", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_multiple_distinct_aggs", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with multiple distinct aggregates in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_multiple_distinct_aggs,
 		false,
@@ -2311,7 +2311,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_force_expanded_distinct_aggs", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Always pick plans that expand multiple distinct aggregates into join of single distinct aggregate in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_force_expanded_distinct_aggs,
 		true,
@@ -2322,7 +2322,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_prune_computed_columns", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prune unused computed columns when pre-processing query"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_prune_computed_columns,
 		true,
@@ -2333,7 +2333,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_push_requirements_from_consumer_to_producer", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Optimize CTE producer plan on requirements enforced on top of CTE consumer in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_push_requirements_from_consumer_to_producer,
 		true,
@@ -2341,60 +2341,60 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_hashjoin_redistribute_broadcast_children", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_hashjoin_redistribute_broadcast_children", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable hash join plans with, Redistribute outer child and Broadcast inner child, in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_hashjoin_redistribute_broadcast_children,
 		false,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_broadcast_nestloop_outer_child", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_broadcast_nestloop_outer_child", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable nested loops join plans with replicated outer child in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_broadcast_nestloop_outer_child,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_expand_fulljoin", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_expand_fulljoin", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's support of expanding full outer joins using union all."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_expand_fulljoin,
 		false,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_mergejoin", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_mergejoin", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the optimizer's support of merge joins."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_mergejoin,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_streaming_material", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_streaming_material", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable plans with a streaming material node in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_streaming_material,
 		true,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_gather_on_segment_for_dml", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_gather_on_segment_for_dml", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable DML optimization by enforcing a non-master gather in the optimizer."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_gather_on_segment_for_dml,
 		true,
@@ -2404,17 +2404,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_enforce_subplans", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enforce correlated execution in the optimizer"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enforce_subplans,
 		false,
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_assert_maxonerow", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_assert_maxonerow", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable Assert MaxOneRow plans to check number of rows at runtime."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_assert_maxonerow,
 		true,
@@ -2446,7 +2446,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_cte_inlining", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable CTE inlining"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cte_inlining,
 		false,
@@ -2467,7 +2467,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_analyze_midlevel_partition", PGC_USERSET, STATS_ANALYZE,
 			gettext_noop("Enable statistics collection on intermediate partitions during ANALYZE"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_analyze_midlevel_partition,
 		false,
@@ -2475,10 +2475,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_constant_expression_evaluation", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_constant_expression_evaluation", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable constant expression evaluation in the optimizer"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_constant_expression_evaluation,
 		true,
@@ -2489,7 +2489,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_use_external_constant_expression_evaluation_for_ints", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Use external constant expression evaluation in the optimizer for all integer types"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_use_external_constant_expression_evaluation_for_ints,
 		false,
@@ -2497,10 +2497,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_bitmapscan", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_bitmapscan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable bitmap plans in the optimizer"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_bitmapscan,
 		true,
@@ -2508,10 +2508,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_outerjoin_to_unionall_rewrite", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_outerjoin_to_unionall_rewrite", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable rewriting Left Outer Join to UnionAll"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_outerjoin_to_unionall_rewrite,
 		false,
@@ -2522,7 +2522,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_apply_left_outer_to_union_all_disregarding_stats", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Always apply Left Outer Join to Inner Join UnionAll Left Anti Semi Join without looking at stats."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_apply_left_outer_to_union_all_disregarding_stats,
 		false,
@@ -2530,10 +2530,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_ctas", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_ctas", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable CTAS plans in the optimizer"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_ctas,
 		true,
@@ -2544,7 +2544,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_remove_order_below_dml", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Remove OrderBy below a DML operation"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_remove_order_below_dml,
 		false,
@@ -2552,10 +2552,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_partial_index", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_partial_index", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable heterogeneous index plans."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_partial_index,
 		true,
@@ -2563,10 +2563,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_dml", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_dml", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable DML plans in Pivotal Optimizer (GPORCA)."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_dml,
 		true,
@@ -2574,10 +2574,10 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_dml_constraints", PGC_USERSET, DEVELOPER_OPTIONS,
+		{"optimizer_enable_dml_constraints", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Support DML with CHECK constraints and NOT NULL constraints."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_dml_constraints,
 		true,
@@ -2794,7 +2794,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_enable_eageragg", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable Eager Agg transform for pushing aggregate below an innerjoin."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_eageragg,
 		false,
@@ -2805,7 +2805,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_prune_unused_columns", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prune unused table columns during query optimization."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_prune_unused_columns,
 		true,
@@ -2816,7 +2816,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_enable_range_predicate_dpe", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable range predicates for dynamic partition elimination."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_range_predicate_dpe,
 		false,
@@ -2845,23 +2845,23 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_enable_redistribute_nestloop_loj_inner_child", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Enable nested loops left join plans with redistributed inner child in the optimizer."),
-		 NULL,
-		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		 },
-		 &optimizer_enable_redistribute_nestloop_loj_inner_child,
-		 true,
-		 NULL, NULL, NULL
+			gettext_noop("Enable nested loops left join plans with redistributed inner child in the optimizer."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_redistribute_nestloop_loj_inner_child,
+		true,
+		NULL, NULL, NULL
 	},
 	{
 		{"optimizer_force_comprehensive_join_implementation", PGC_USERSET, QUERY_TUNING_METHOD,
-		 gettext_noop("Explore a nested loop join even if a hash join is possible"),
-		 NULL,
-		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		 },
-		 &optimizer_force_comprehensive_join_implementation,
-		 false,
-		 NULL, NULL, NULL
+			gettext_noop("Explore a nested loop join even if a hash join is possible"),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_force_comprehensive_join_implementation,
+		false,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
