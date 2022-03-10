@@ -123,33 +123,6 @@ CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
 }
 
 
-void
-CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
-				  ULONG severity_level...)
-{
-	// manufacture actual exception object
-	CException exc(major, minor, filename, line, severity_level);
-
-	// during bootstrap there's no context object otherwise, record
-	// all details in the context object
-	if (nullptr != ITask::Self())
-	{
-		CErrorContext *err_ctxt = CTask::Self()->ConvertErrCtxt();
-
-		VA_LIST va_list;
-		VA_START(va_list, severity_level);
-
-		err_ctxt->Record(exc, va_list);
-
-		VA_END(va_list);
-
-		err_ctxt->Serialize();
-	}
-
-	Raise(exc);
-}
-
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CException::Reraise
