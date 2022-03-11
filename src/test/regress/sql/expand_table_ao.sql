@@ -337,6 +337,56 @@ Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
 
 drop table part_t1;
 
+
+-- Test expanding an AO table with index, and current gp_default_storage_options is different
+-- from the table created.
+select gp_debug_set_create_table_default_numsegments(2);
+set gp_default_storage_options = '';
+
+-- Create an AO table with default row-oriented storage and build index for it
+create table t_9527 (a int, b text) WITH (appendoptimized=true) distributed by (a);
+create index idx_9527 on t_9527(b);
+
+-- Set default storage method to column-oriented, and change the default value of blocksize, compresstype, etc.
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zstd, compresslevel=12, checksum=true, appendoptimized=true, orientation=column';
+
+-- Should successful and the table is still row-oriented
+alter table t_9527 expand table;
+select localoid::regclass::name, policytype, numsegments, distkey, distclass
+    from gp_distribution_policy where localoid = 't_9527'::regclass::oid;
+select relname, relstorage from pg_class where relname = 't_9527';
+-- storage paramter should be same with before
+select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9527'::regclass::oid;
+
+-- set back
+set gp_default_storage_options = '';
+drop table t_9527;
+
+
+-- Test change the distribution policy of an AO table with index, and current gp_default_storage_options is different
+-- from the table created.
+set gp_default_storage_options = ''; 
+
+-- Create an AO table with default row-oriented storage and build index for it
+create table t_9528 (a int, b text) WITH (appendoptimized=true) distributed by (a);
+create index idx_9528 on t_9528(b);
+
+-- Set default storage method to column-oriented, and change the default value of blocksize, compresstype, etc.
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zstd, compresslevel=12, checksum=true, appendoptimized=true, orientation=column';
+
+-- Should successful and the table is still row-oriented
+alter table t_9528 set distributed by (b);
+select localoid::regclass::name, policytype, numsegments, distkey, distclass
+    from gp_distribution_policy where localoid = 't_9528'::regclass::oid;
+select relname, relstorage from pg_class where relname = 't_9528';
+-- storage paramter should be same with before
+select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9528'::regclass::oid;
+
+-- set back
+set gp_default_storage_options = ''; 
+drop table t_9528;
+
+
 -- start_ignore
 -- We need to do a cluster expansion which will check if there are partial
 -- tables, we need to drop the partial tables to keep the cluster expansion
