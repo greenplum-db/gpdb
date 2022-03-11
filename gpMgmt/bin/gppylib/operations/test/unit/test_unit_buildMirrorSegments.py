@@ -46,11 +46,11 @@ class BuildMirrorsTestCase(GpTestCase):
             }
         ]
 
-        gplog.get_unittest_logger()
         self.mock_gp_era = Mock(return_value='dummy_era')
         self.apply_patches([
             patch('gppylib.operations.buildMirrorSegments.GpArray.getSegmentsByHostName'),
             patch('gppylib.operations.buildMirrorSegments.gplog.get_logger_dir', return_value='/tmp/logdir'),
+            patch('gppylib.operations.buildMirrorSegments.gplog.logging_is_verbose', return_value=False),
             patch('gppylib.operations.buildMirrorSegments.read_era', self.mock_gp_era),
             patch('gppylib.recoveryinfo.RecoveryResult.print_bb_rewind_and_start_errors'),
             patch('gppylib.recoveryinfo.RecoveryResult.print_setup_recovery_errors'),
@@ -523,6 +523,7 @@ class BuildMirrorsTestCase(GpTestCase):
         recovery_info = OrderedDict()  # We use ordered dict to deterministically assert the side effects of _run_recovery
         recovery_info['host1'] = [self.recovery_info1]
         recovery_info['host2'] = [self.recovery_info2, self.recovery_info3]
+
         self.default_build_mirrors_obj._run_recovery(self.default_action_name, recovery_info, self.gpEnv)
 
         self.assertEqual([call(ANY, progressCmds=ANY, suppressErrorCheck=True), call(ANY, suppressErrorCheck=False)],
