@@ -244,7 +244,7 @@ SELECT * FROM gp_endpoints;</codeblock>
                scope="peer">gp_endpoints</xref> view reference page for more information
             about the endpoint attributes returned by these commands.</p>
           <p>You can similarly invoke the <codeph>gp_get_session_endpoints()</codeph>
-            function or examine the <codeph>gp_session_endpoints()</codeph> view
+            function or examine the <codeph>gp_session_endpoints</codeph> view
             to list the endpoints created for the parallel retrieve cursors
             declared in the current session and by the current user.</p>
         </section>
@@ -402,8 +402,8 @@ SELECT * FROM gp_segment_endpoints;</codeblock>
               </row>
               <row>
                 <entry colname="col1">receiverpid</entry>
-                <entry colname="col2">The identifier of the process receiving the query
-                  results.</entry>
+                <entry colname="col2">The process identifier of the retrieve session that is
+                  receiving the query results.</entry>
               </row>
               <row>
                 <entry colname="col1">state</entry>
