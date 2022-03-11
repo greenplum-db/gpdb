@@ -745,7 +745,7 @@ def impl(context, msg):
             segname = "seg"+str(seg.content)
             sql = "select * from gp_toolkit.__gp_log_segment_ext where logsegment='%s' and logtime > (select * from log_timestamp) and logmessage like '%s'" %(segname, msg)
             try:
-                cursor = dbconn.query(conn, sql)
+                cursor = dbconn.execSQL(conn, sql)
                 if cursor.fetchone():
                     raise Exception("Fatal message exists in pg_log file on primary segment %s" %segname)
             finally:
