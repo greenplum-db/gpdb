@@ -1,0 +1,35 @@
+2022-03-11 16:21:24|INFO|gpload session started 2022-03-11 16:21:24
+2022-03-11 16:21:24|INFO|setting schema 'public' for table 'texttable'
+2022-03-11 16:21:24|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2022-03-11 16:21:24|INFO|did not find a staging table to reuse. creating "EXT_schema_test".staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2022-03-11 16:21:24|INFO|did not find an external table to reuse. creating "EXT_schema_test".ext_gpload_reusable_3da64592_a114_11ec_9f3d_0050569ea4ff
+2022-03-11 16:21:24|INFO|running time: 0.06 seconds
+2022-03-11 16:21:24|INFO|rows Inserted          = 0
+2022-03-11 16:21:24|INFO|rows Updated           = 74
+2022-03-11 16:21:24|INFO|data formatting errors = 0
+2022-03-11 16:21:24|INFO|gpload succeeded
+2022-03-11 16:21:24|INFO|gpload session started 2022-03-11 16:21:24
+2022-03-11 16:21:24|INFO|setting schema 'public' for table 'texttable'
+2022-03-11 16:21:24|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2022-03-11 16:21:24|INFO|reusing staging table "EXT_schema_test".staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2022-03-11 16:21:24|INFO|reusing external table "EXT_schema_test".ext_gpload_reusable_3da64592_a114_11ec_9f3d_0050569ea4ff
+2022-03-11 16:21:24|INFO|running time: 0.06 seconds
+2022-03-11 16:21:24|INFO|rows Inserted          = 0
+2022-03-11 16:21:24|INFO|rows Updated           = 74
+2022-03-11 16:21:24|INFO|data formatting errors = 0
+2022-03-11 16:21:24|INFO|gpload succeeded
+2022-03-11 16:21:25|INFO|gpload session started 2022-03-11 16:21:25
+2022-03-11 16:21:25|INFO|setting schema 'public' for table 'texttable'
+2022-03-11 16:21:25|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2022-03-11 16:21:25|INFO|reusing staging table "EXT_schema_test".staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2022-03-11 16:21:25|INFO|reusing external table "EXT_schema_test".ext_gpload_reusable_3da64592_a114_11ec_9f3d_0050569ea4ff
+2022-03-11 16:21:25|INFO|running time: 0.06 seconds
+2022-03-11 16:21:25|INFO|rows Inserted          = 0
+2022-03-11 16:21:25|INFO|rows Updated           = 74
+2022-03-11 16:21:25|INFO|data formatting errors = 0
+2022-03-11 16:21:25|INFO|gpload succeeded
+ count 
+-------
+     2
+(1 row)
+

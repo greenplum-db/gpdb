@@ -1,0 +1,35 @@
+2022-03-11 16:30:00|INFO|gpload session started 2022-03-11 16:30:00
+2022-03-11 16:30:00|INFO|setting schema 'public' for table 'texttable'
+2022-03-11 16:30:00|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2022-03-11 16:30:00|INFO|did not find a staging table to reuse. creating Test.staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2022-03-11 16:30:00|INFO|did not find an external table to reuse. creating Test.ext_gpload_reusable_70d8905e_a115_11ec_b207_0050569ea4ff
+2022-03-11 16:30:00|INFO|running time: 0.06 seconds
+2022-03-11 16:30:00|INFO|rows Inserted          = 0
+2022-03-11 16:30:00|INFO|rows Updated           = 74
+2022-03-11 16:30:00|INFO|data formatting errors = 0
+2022-03-11 16:30:00|INFO|gpload succeeded
+2022-03-11 16:30:00|INFO|gpload session started 2022-03-11 16:30:00
+2022-03-11 16:30:00|INFO|setting schema 'public' for table 'texttable'
+2022-03-11 16:30:00|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2022-03-11 16:30:00|INFO|reusing staging table Test.staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2022-03-11 16:30:00|INFO|reusing external table test.ext_gpload_reusable_70d8905e_a115_11ec_b207_0050569ea4ff
+2022-03-11 16:30:00|INFO|running time: 0.06 seconds
+2022-03-11 16:30:00|INFO|rows Inserted          = 0
+2022-03-11 16:30:00|INFO|rows Updated           = 74
+2022-03-11 16:30:00|INFO|data formatting errors = 0
+2022-03-11 16:30:00|INFO|gpload succeeded
+2022-03-11 16:30:00|INFO|gpload session started 2022-03-11 16:30:00
+2022-03-11 16:30:00|INFO|setting schema 'public' for table 'texttable'
+2022-03-11 16:30:00|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2022-03-11 16:30:00|INFO|reusing staging table Test.staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2022-03-11 16:30:00|INFO|reusing external table test.ext_gpload_reusable_70d8905e_a115_11ec_b207_0050569ea4ff
+2022-03-11 16:30:00|INFO|running time: 0.06 seconds
+2022-03-11 16:30:00|INFO|rows Inserted          = 0
+2022-03-11 16:30:00|INFO|rows Updated           = 74
+2022-03-11 16:30:00|INFO|data formatting errors = 0
+2022-03-11 16:30:00|INFO|gpload succeeded
+ count 
+-------
+     3
+(1 row)
+
