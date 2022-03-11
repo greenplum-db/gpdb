@@ -13,7 +13,7 @@ For example, suppose you have a table with three columns and you want to load th
 Your designated delimiter character is `|` \(pipe character\), and your designated escape character is `\` \(backslash\). The formatted row in your data file looks like this:
 
 ```
-backslash = `\\` | vertical bar = `\|` | exclamation point = !
+backslash = \\ | vertical bar = \| | exclamation point = !
 
 ```
 

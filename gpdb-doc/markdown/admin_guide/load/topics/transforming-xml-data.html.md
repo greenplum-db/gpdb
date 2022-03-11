@@ -287,27 +287,27 @@ TRANSFORMATIONS
 TYPE
 :   Required. Specifies the direction of transformation. Values are `input` or `output`.
 
-    -   `input`: gpfdist treats the standard output of the transformation process as a stream of records to load into Greenplum Database.
-    -   `output` : gpfdist treats the standard input of the transformation process as a stream of records from Greenplum Database to transform and write to the appropriate output.
+-   `input`: gpfdist treats the standard output of the transformation process as a stream of records to load into Greenplum Database.
+-   `output` : gpfdist treats the standard input of the transformation process as a stream of records from Greenplum Database to transform and write to the appropriate output.
 
 COMMAND
 :   Required. Specifies the command gpfdist will run to perform the transformation.
 
-    For input transformations, gpfdist invokes the command specified in the `CONTENT` setting. The command is expected to open the underlying file\(s\) as appropriate and produce one line of `TEXT` for each row to load into Greenplum Database. The input transform determines whether the entire content should be converted to one row or to multiple rows.
+For input transformations, gpfdist invokes the command specified in the `CONTENT` setting. The command is expected to open the underlying file\(s\) as appropriate and produce one line of `TEXT` for each row to load into Greenplum Database. The input transform determines whether the entire content should be converted to one row or to multiple rows.
 
-    For output transformations, gpfdist invokes this command as specified in the `CONTENT` setting. The output command is expected to open and write to the underlying file\(s\) as appropriate. The output transformation determines the final placement of the converted output.
+For output transformations, gpfdist invokes this command as specified in the `CONTENT` setting. The output command is expected to open and write to the underlying file\(s\) as appropriate. The output transformation determines the final placement of the converted output.
 
 CONTENT
 :   Optional. The values are `data` and `paths`. The default value is `data`.
 
-    -   When `CONTENT` specifies `data`, the text `%filename%` in the `COMMAND` section is replaced by the path to the file to read or write.
-    -   When `CONTENT` specifies `paths`, the text `%filename%` in the `COMMAND` section is replaced by the path to the temporary file that contains the list of files to read or write.
+-   When `CONTENT` specifies `data`, the text `%filename%` in the `COMMAND` section is replaced by the path to the file to read or write.
+-   When `CONTENT` specifies `paths`, the text `%filename%` in the `COMMAND` section is replaced by the path to the temporary file that contains the list of files to read or write.
 
-    The following is an example of a `COMMAND` section showing the text `%filename%` that is replaced.
+The following is an example of a `COMMAND` section showing the text `%filename%` that is replaced.
 
-    ```
-    COMMAND: /bin/bash input_transform.sh %filename%
-    ```
+```
+COMMAND: /bin/bash input_transform.sh %filename%
+```
 
 SAFE
 :   Optional. A `POSIX` regular expression that the paths must match to be passed to the transformation. Specify `SAFE` when there is a concern about injection or improper interpretation of paths passed to the command. The default is no restriction on paths.
@@ -315,7 +315,7 @@ SAFE
 STDERR
 :   Optional. The values are `server` and `console`.
 
-    This setting specifies how to handle standard error output from the transformation. The default, `server`, specifies that gpfdist will capture the standard error output from the transformation in a temporary file and send the first 8k of that file to Greenplum Database as an error message. The error message will appear as an SQL error. `Console` specifies that gpfdist does not redirect or transmit the standard error output from the transformation.
+This setting specifies how to handle standard error output from the transformation. The default, `server`, specifies that gpfdist will capture the standard error output from the transformation in a temporary file and send the first 8k of that file to Greenplum Database as an error message. The error message will appear as an SQL error. `Console` specifies that gpfdist does not redirect or transmit the standard error output from the transformation.
 
 ## <a id="topic91"></a>XML Transformation Examples 
 
