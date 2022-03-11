@@ -293,8 +293,8 @@ SELECT count(nspname) FROM gp_dist_random('pg_namespace') WHERE nspname LIKE 'pg
 DROP TABLE just_a_temp_table;
 
 -- Test single query lc_numeric GUC rollback
--- Set lc_numeric to value that has to be quoted due to dot
-SET lc_numeric TO 'en_US.utf8';
+-- Set lc_numeric to OS-friendly value
+SET lc_numeric TO 'C';
 -- Function just to save lc_numeric GUC to gp_guc_restore_list
 CREATE OR REPLACE FUNCTION set_conf_param() RETURNS VOID
 AS $$
@@ -302,7 +302,7 @@ BEGIN
     EXECUTE 'SELECT 1;';
 END;
 $$ LANGUAGE plpgsql
-SET lc_numeric TO 'en_US.utf8';
+SET lc_numeric TO 'C';
 -- Create temp table to create temp schema
 CREATE TEMP TABLE just_a_temp_table (a int);
 -- Temp schema should be created for each segment
