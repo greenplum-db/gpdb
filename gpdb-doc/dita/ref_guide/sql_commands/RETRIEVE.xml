@@ -12,8 +12,12 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>RETRIEVE</codeph> retrieves rows using a previously-created parallel
-        retrieve cursor. You retrieve the rows in a retrieve session, a separate direct
-        connection to each endpoint that has collected the query results.</p>
+        retrieve cursor. You retrieve the rows in individual retrieve sessions, separate direct
+        connections to individual segment endpoints that will serve the results for each individual segment.
+         When you initiate a retrieve session, You must specify
+           <codeph><xref href="../config_params/guc-list.html#gp_retrieve_conn"
+             format="html" scope="peer">gp_retrieve_conn=true</xref></codeph>
+         on the connection request.</p>
       <p>A parallel retrieve cursor has an associated position, which is used by
         <codeph>RETRIEVE</codeph>. The cursor position can be before the first row of the
         query result, on any particular row of the result, or after the last row of the
@@ -66,9 +70,9 @@
       <p>-- Create a parallel retrieve cursor:</p>
       <codeblock>DECLARE mycursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM films;</codeblock>
       <p>-- List the cursor endpoints:</p>
-      <codeblock>SELECT * FROM gp_endpoints() WHERE cursorname='mycursor';</codeblock>
-      <p>-- In another terminal window, initiate a retrieve session using a hostname, port, and <codeph>auth_token</codeph> returned from the previous query:</p>
-      <codeblock>PGOPTIONS='-c gp_retrieve_conn=true' psql -d testdb -h sdw3 -p 6001;</codeblock>
+      <codeblock>SELECT * FROM gp_endpoints WHERE cursorname='mycursor';</codeblock>
+      <p>-- In another terminal window, initiate a retrieve session using a hostname, port, and <codeph>auth_token</codeph> returned from the previous query. For example:</p>
+      <codeblock>PGPASSWORD=d3825fc07e56bee5fcd2b1d0b600c85e PGOPTIONS='-c gp_retrieve_conn=true' psql -d testdb -h sdw3 -p 6001;</codeblock>
       <p>-- Fetch all rows from the endpoint <codeph>prc10000001100000005</codeph>:</p>
       <codeblock>RETRIEVE ALL FROM ENDPOINT prc10000001100000005;</codeblock>
       <p>-- Exit the retrieve session</p>
