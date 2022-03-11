@@ -10,7 +10,7 @@
       list of all endpoints created for all parallel retrieve cursors declared by all users
       in the current database.</p>
     <p>Endpoints exist only for the duration of the transaction that defines the
-      parallel retrieve cursor.</p>
+      parallel retrieve cursor, or until the cursor is closed.</p>
     <table id="gq143898">
       <title>gp_endpoints</title>
       <tgroup cols="4">
