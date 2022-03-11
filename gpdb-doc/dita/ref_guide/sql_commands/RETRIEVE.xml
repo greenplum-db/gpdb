@@ -73,9 +73,10 @@
       <codeblock>DECLARE mycursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM films;</codeblock>
       <p>-- List the cursor endpoints:</p>
       <codeblock>SELECT * FROM gp_endpoints WHERE cursorname='mycursor';</codeblock>
-      <p>-- In another terminal window, initiate a retrieve session using a hostname, port, and <codeph>auth_token</codeph> returned from the previous query. For example:</p>
+      <p>-- Note the hostname, port, auth_token, and name associated with each endpoint.</p>
+      <p>-- In another terminal window, initiate a retrieve session using a hostname, port, and auth_token returned from the previous query. For example:</p>
       <codeblock>PGPASSWORD=d3825fc07e56bee5fcd2b1d0b600c85e PGOPTIONS='-c gp_retrieve_conn=true' psql -d testdb -h sdw3 -p 6001;</codeblock>
-      <p>-- Fetch all rows from the endpoint <codeph>prc10000001100000005</codeph>:</p>
+      <p>-- Fetch all rows from an endpoint (for example, the endpoint named <codeph>prc10000001100000005</codeph>):</p>
       <codeblock>RETRIEVE ALL FROM ENDPOINT prc10000001100000005;</codeblock>
       <p>-- Exit the retrieve session</p>
       <p>-- Back in the original session, close the cursor and end the transaction:</p>
