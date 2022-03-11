@@ -63,7 +63,7 @@
         <title>Greenplum-Added Functions</title>
         <p>In addition to the functions specified in the PostgreSQL documentation, 
           Greenplum Database provides these additional <codeph>pageinspect</codeph>
-          functions for inspecting bitmap pages:</p>
+          functions for inspecting bitmap index pages:</p>
         <table id="gpfuncs">
         <tgroup cols="2">
           <colspec colname="col1" colnum="1" colwidth="177*"/>
@@ -119,9 +119,9 @@
 -----------+------------+----------
  3         | 4294967295 | 65536    
 (1 row)</codeblock>
-        <p>Display the LOV items located in the first block of the LOV page of the bitmap
-          index named <codeph>bmtest_i1</codeph>:</p>
-        <codeblock>testdb=# SELECT * FROM bm_lov_page_items('bmtest_i1', 1) ORDER BY itemoffset;
+        <p>Display the LOV items located in the first block of the bitmap
+          index named <codeph>i1</codeph>:</p>
+        <codeblock>testdb=# SELECT * FROM bm_lov_page_items('i1', 1) ORDER BY itemoffset;
  itemoffset | lov_head_blkno | lov_tail_blkno | last_complete_word      | last_word               | last_tid | last_setbit_tid | is_last_complete_word_fill | is_last_word_fill 
 ------------+----------------+----------------+-------------------------+-------------------------+----------+-----------------+----------------------------+-------------------
  1          | 4294967295     | 4294967295     | ff ff ff ff ff ff ff ff | 00 00 00 00 00 00 00 00 | 0        | 0               | f                          | f                 
