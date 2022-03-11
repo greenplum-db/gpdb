@@ -36,7 +36,7 @@ POSTMASTER_MIRROR_VERSION_DETAIL_MSG = "- VERSION:"
 
 def _get_segment_status(segment):
     cmd = base.Command('pg_isready for segment',
-                       "pg_isready -q -h %s -p %d -d %s" % (segment.hostname, segment.port, gp.PGDATABASE_FOR_COMMON_USE))
+                       "PGOPTIONS=\"-c gp_session_role=utility\" pg_isready -q -h %s -p %d -d %s" % (segment.hostname, segment.port, gp.PGDATABASE_FOR_COMMON_USE))
     cmd.run()
 
     rc = cmd.get_return_code()

@@ -553,6 +553,14 @@ Feature: gpstate tests
         Then command should print "pg_isready -q -h .* -p .* -d postgres" to stdout
         And command should print "All segments are running normally" to stdout
 
+    Scenario: gpstate -e -v logs no fatal message in pg_log files on primary segments
+        Given a standard local demo cluster is running
+        And the user records the current timestamp in log_timestamp table
+        And the user runs command "gpstate -e -v"
+        Then command should print "PGOPTIONS=\"-c gp_session_role=utility\" pg_isready -q -h .* -p .* -d postgres" to stdout
+        And the pg_log files on primary segments should not contain "connections to primary segments are not allowed"
+        And the user drops log_timestamp table
+
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
