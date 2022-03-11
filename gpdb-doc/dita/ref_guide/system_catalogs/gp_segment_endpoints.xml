@@ -50,8 +50,8 @@
             <entry colname="col1">receiverpid</entry>
             <entry colname="col2">integer</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The identifier of the process receiving the query
-              results.</entry>
+            <entry colname="col4">The process identifier of the retrieve session that is
+              receiving the query results.</entry>
           </row>
           <row>
             <entry colname="col1">state</entry>
