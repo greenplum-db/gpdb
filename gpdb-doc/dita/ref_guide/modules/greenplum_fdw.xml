@@ -51,7 +51,7 @@
       <p><codeph>greenplum_fdw</codeph> is an MPP version of the
         <xref href="https://www.postgresql.org/docs/9.4/postgres-fdw.html"
           scope="external">postgres_fdw</xref> foreign-data wrapper. While it behaves
-        similarly to <codeph>postgres_fdw</codeph> in many respects,,,,
+        similarly to <codeph>postgres_fdw</codeph> in many respects,
         <codeph>greenplum_fdw</codeph> uses a Greenplum Database parallel retrieve cursor
         to pull data directly from the segments of a remote Greenplum cluster to the
         segments in the source Greenplum cluster, in parallel.</p>
