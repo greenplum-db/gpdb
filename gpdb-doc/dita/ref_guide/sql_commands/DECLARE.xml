@@ -50,7 +50,7 @@
       <p><b>Parallel Retrieve Cursors</b></p>
       <p>Greenplum Database supports a special type of cursor, a parallel retrieve cursor.
         You can use a parallel retrieve cursor to retrieve query results, in parallel,
-        directly from the Greenplum Database segments.</p>
+        directly from the Greenplum Database segments, bypassing the Greenplum coordinator.</p>
       <p>Parallel retrieve cursors do not support the <codeph>WITH HOLD</codeph> clause.
         Greenplum Database ignores the <codeph>BINARY</codeph> clause when you declare a
         parallel retrieve cursor.</p>
