@@ -360,20 +360,31 @@ END;</codeblock>
         <section id="utility_endpoints">
           <title>Listing Segment-Specific Retrieve Session Information</title>
           <p></p>
-          <p>You can list all retrieve sessions for a specific QE endpoint by invoking the
+          <p>You can obtain information about all retrieve sessions to a specific QE
+            endpoint by invoking the
             <codeph>gp_get_segment_endpoints()</codeph> function or examining the
             <codeph>gp_segment_endpoints</codeph> view:</p>
           <codeblock>SELECT * FROM gp_get_segment_endpoints();
 SELECT * FROM gp_segment_endpoints;</codeblock>
-          <p>These commands list the endpoints
-            created in the QE for all active parallel retrieve cursors declared by the
+          <p>These commands provide information about the retrieve sessions associated with 
+            a QE endpoint for all active parallel retrieve cursors declared by the
             current session user. When the Greenplum Database superuser invokes the
-            command, it returns a list of all endpoints on the QE created for all parallel
-            retrieve cursors declared by all users.</p>
-          <note>You must initiate a utility-mode connection to the endpoint before you run
-            the command. An example utility mode connection command follows:
-          <codeblock>PGOPTIONS='-c gp_session_role=utility' psql -h sdw3 -U localuser -p 6001 -d testdb</codeblock></note>
-          <p>These commands return the endpoint information in a table with the following columns:</p>
+            command, it returns the retrieve session information for all endpoints on the
+            QE created for all parallel retrieve cursors declared by all users.</p>
+          <p>You can obtain segment-specific retrieve session information in two ways:
+            from the QD, or via a utility-mode connection to the endpoint:</p>
+          <ul>
+            <li>QD example:
+              <codeblock>SELECT * from gp_dist_random('gp_segment_endpoints');</codeblock>
+              <p>Display the information filtered to a specific segment:</p>
+              <codeblock>SELECT * from gp_dist_random('gp_segment_endpoints') WHERE gp_segment_id = 0;</codeblock></li>
+            <li>Example utilizing a utility-mode connection to the endpoint:
+              <codeblock>$ PGOPTIONS='-c gp_session_role=utility' psql -h sdw3 -U localuser -p 6001 -d testdb
+
+testdb=> SELECT * from gp_segment_endpoints;</codeblock></li>
+          </ul>
+          <p>The commands return endpoint and retrieve session information in a table with
+            the following columns:</p>
           <table id="gp_get_segment_endpoints_table">
             <tgroup cols="3">
               <colspec colname="col1" colnum="1" colwidth="100"/>
