@@ -69,8 +69,6 @@ extern "C" {
 #include "utils/typcache.h"
 #include "utils/uri.h"
 
-extern Query *preprocess_query_optimizer(Query *query,
-										 ParamListInfo boundParams);
 
 extern List *pg_parse_and_rewrite(const char *query_string, Oid *paramTypes,
 								  int iNumParams);
