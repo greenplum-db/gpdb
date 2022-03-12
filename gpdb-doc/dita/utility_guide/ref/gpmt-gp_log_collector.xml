@@ -98,8 +98,9 @@
               <ul id="ul_kmg_vyx_bpb">
                 <li><codeph>version</codeph></li>
                 <li><codeph>uptime</codeph></li>
-                <li><codeph>pg_settings</codeph></li>
+                <li><codeph>pg_db_role_setting</codeph></li>
                 <li><codeph>pg_resqueue</codeph></li>
+                <li><codeph>pg_resgroup_config</codeph></li>
                 <li><codeph>pg_database</codeph></li>
                 <li><codeph>gp_segment_configuration</codeph></li>
                 <li><codeph>gp_configuration_history</codeph></li>

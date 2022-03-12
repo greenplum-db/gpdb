@@ -157,6 +157,7 @@
             <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
             <topicref href="guc-list.xml#gp_resource_group_queuing_timeout"/>
             <topicref href="guc-list.xml#gp_resource_manager"/>
+            <topicref href="guc-list.xml#gp_retrieve_conn"/>
             <topicref href="guc-list.xml#gp_role"/>
             <topicref href="guc-list.xml#gp_safefswritesize"/>
             <topicref href="guc-list.xml#gp_segment_connect_timeout"/>
@@ -240,6 +241,7 @@
             <topicref href="guc-list.xml#optimizer_enable_indexonlyscan"/>
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_enable_multiple_distinct_aggs"/>
+            <topicref href="guc-list.xml#optimizer_enable_orderedagg"/>
             <topicref href="guc-list.xml#optimizer_force_agg_skew_avoidance"/>
             <topicref href="guc-list.xml#optimizer_force_comprehensive_join_implementation"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>

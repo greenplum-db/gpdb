@@ -43,7 +43,7 @@ PG_HBA_BACKUP = 'pg_hba.conf.gpinitstandby.bak'
 
 _description = """The gpinitstandby utility adds a backup master host to your
 Greenplum Database system. If your system has an existing backup
-master host configured, use the -r option to remove it before adding 
+master host configured, use the -r option to remove it before adding
 the new standby master host.
 
 Before running this utility, make sure 
@@ -61,15 +61,15 @@ The utility will perform the following steps:
 * Setup the backup master instance on the alternate master host
 * Start the synchronization process
 
-A backup master host serves as a 'warm standby' in the event of the 
-primary master host becoming nonoperational. The backup master is kept 
+A backup master host serves as a 'warm standby' in the event of the
+primary master host becoming nonoperational. The backup master is kept
 up to date by a transaction log replication process,
-which runs on the backup master host and keeps the data between the 
-primary and backup master hosts synchronized. If the primary master 
-fails, the log replication process is shutdown, and the backup master 
+which runs on the backup master host and keeps the data between the
+primary and backup master hosts synchronized. If the primary master
+fails, the log replication process is shutdown, and the backup master
 can be activated in its place by using the gpactivatestandby utility. 
-Upon activation of the backup master, the replicated logs are used to 
-reconstruct the state of the master host at the time of the last 
+Upon activation of the backup master, the replicated logs are used to
+reconstruct the state of the master host at the time of the last
 successfully committed transaction.
 """
 
@@ -264,7 +264,7 @@ def delete_standby(options):
     
     # make sure we have a standby to delete
     if not array.standbyMaster:
-        logger.error('Request made to remove warm master standby, '  
+        logger.error('Request made to remove warm master standby, '
                      'but no standby located.')
         raise GpInitStandbyException('no standby configured')
     
@@ -691,9 +691,9 @@ def copy_master_datadir_to_standby(options, array, standby_datadir):
     # here in the data directory here already, and teach pg_basebackup to
     # map the per-dbid directories to the new dbid.
     
-    cmd = PgBaseBackup(pgdata=standby_datadir,
-                       host=array.master.getSegmentHostName(),
-                       port=str(array.master.getSegmentPort()),
+    cmd = PgBaseBackup(target_datadir=standby_datadir,
+                       source_host=array.master.getSegmentHostName(),
+                       source_port=str(array.master.getSegmentPort()),
                        ctxt=base.REMOTE,
                        remoteHost=options.standby_host,
                        forceoverwrite=True,
