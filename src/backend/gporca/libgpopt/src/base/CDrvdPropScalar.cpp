@@ -407,12 +407,12 @@ CDrvdPropScalar::DeriveHasScalarArrayCmp(CExpressionHandle &exprhdl)
 IOstream &
 CDrvdPropScalar::OsPrint(IOstream &os) const
 {
-	os << "Defined Columns: [" << GetDefinedColumns() << "], "
-	   << "Used Columns: [" << GetUsedColumns() << "], "
+	os << "Defined Columns: [" << *GetDefinedColumns() << "], "
+	   << "Used Columns: [" << *GetUsedColumns() << "], "
 	   << "Set Returning Function Columns: ["
-	   << GetSetReturningFunctionColumns() << "], "
+	   << *GetSetReturningFunctionColumns() << "], "
 	   << "Has Subqs: [" << HasSubquery() << "], "
-	   << "Function Properties: [" << GetFunctionProperties() << "], "
+	   << "Function Properties: [" << *GetFunctionProperties() << "], "
 	   << "Has Non-scalar Funcs: [" << HasNonScalarFunction() << "], ";
 
 	if (0 < m_ulDistinctAggs)
