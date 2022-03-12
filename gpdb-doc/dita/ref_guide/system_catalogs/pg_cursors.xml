@@ -77,13 +77,6 @@
             <entry colname="col3"/>
             <entry colname="col4">The time at which the cursor was declared.</entry>
           </row>
-          <row>
-            <entry colname="col1"><codeph>is_parallel</codeph></entry>
-            <entry colname="col2">boolean</entry>
-            <entry colname="col3"/>
-            <entry colname="col4"><codeph>true</codeph> if the cursor was declared
-              <codeph>PARALLEL RETRIEVE</codeph>; <codeph>false</codeph> otherwise.</entry>
-          </row>
         </tbody>
       </tgroup>
     </table>
