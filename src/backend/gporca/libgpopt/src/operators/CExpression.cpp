@@ -1009,12 +1009,12 @@ CExpression::PrintProperties(IOstream &os, CPrintPrefix &pfx) const
 {
 	GPOS_CHECK_ABORT;
 
-	if (nullptr != m_pdprel)
+	if (nullptr != m_pdprel && m_pdprel->IsComplete())
 	{
 		os << pfx << "DrvdRelProps:{" << *m_pdprel << "}" << std::endl;
 	}
 
-	if (nullptr != m_pdpscalar)
+	if (nullptr != m_pdpscalar && m_pdpscalar->IsComplete())
 	{
 		os << pfx << "DrvdScalarProps:{" << *m_pdpscalar << "}" << std::endl;
 	}
