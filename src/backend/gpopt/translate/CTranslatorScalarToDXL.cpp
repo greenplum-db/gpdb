@@ -186,7 +186,7 @@ CTranslatorScalarToDXL::TranslateVarToDXL(
 	if (var->varattno == 0)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("Whole-row variable"));
+				   GPOS_WSZ_LIT("Row-type variable"));
 	}
 
 	// column name

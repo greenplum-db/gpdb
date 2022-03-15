@@ -3623,7 +3623,7 @@ CTranslatorQueryToDXL::TranslateTVFToDXL(const RangeTblEntry *rte,
 		if (gpdb::IsCompositeType(funcTypeOid))
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("Whole-row variable"));
+					   GPOS_WSZ_LIT("Row-type variable"));
 		}
 
 		CDXLNode *const_tbl_get_dxlnode = DXLDummyConstTableGet();
