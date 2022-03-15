@@ -137,10 +137,6 @@ END
 ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 -- session 3: in transaction and has a cursor, cann't update
 --            cdb_component_dbs, following query should fail
-3:FETCH ALL FROM c1;
- c1 | c2 
-----+----
-(0 rows)
 3:END;
 ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 -- session 4: not in transaction but has temp table, cann't update
