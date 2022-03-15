@@ -15886,7 +15886,7 @@ reloptions_has_opt(List *opts, const char *name)
  * GPDB: Convenience function to build storage reloptions for a given relation, just for AO table.
  */
 static List*
-build_rel_opts(List *opts, Relation rel)
+build_ao_rel_storage_opts(List *opts, Relation rel)
 {
 	bool		checksum = true;
 	int32		blocksize = -1;
@@ -15903,18 +15903,18 @@ build_rel_opts(List *opts, Relation rel)
 	compresstype = NameStr(compresstype_nd);
 
 	if (!reloptions_has_opt(opts, "blocksize"))
-		opts = lappend(opts, makeDefElem("blocksize", (Node *)makeInteger(blocksize), -1));
+		opts = lappend(opts, makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1));
 
 	if (!reloptions_has_opt(opts, "compresslevel"))
-		opts = lappend(opts, makeDefElem("compresslevel", (Node *)makeInteger(compresslevel), -1));
+		opts = lappend(opts, makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1));
 
 	if (!reloptions_has_opt(opts, "checksum"))
-		opts = lappend(opts, makeDefElem("checksum", (Node *)makeInteger(checksum), -1));
+		opts = lappend(opts, makeDefElem("checksum", (Node *) makeInteger(checksum), -1));
 
 	if (!reloptions_has_opt(opts, "compresstype"))
 	{
-		compresstype = compresstype && compresstype[0] ? compresstype : "none";
-		opts = lappend(opts, makeDefElem("compresstype", (Node *)makeString(compresstype), -1));
+		compresstype = compresstype[0] ? compresstype : "none";
+		opts = lappend(opts, makeDefElem("compresstype", (Node *) makeString(compresstype), -1));
 	}
 
 	return opts;
@@ -16048,7 +16048,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 				 * gp_default_storage_options is modified, the newly created table will be
 				 * inconsistent with the original table.
 				 */
-				cs->options = build_rel_opts(cs->options, rel);
+				cs->options = build_ao_rel_storage_opts(cs->options, rel);
 			}
 
 		}
