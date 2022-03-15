@@ -30,6 +30,7 @@
 #include "executor/executor.h"
 #include "executor/tstoreReceiver.h"
 #include "miscadmin.h"
+#include "parser/parse_func.h"
 #include "tcop/pquery.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
@@ -100,6 +101,25 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	cstmt->options |= CURSOR_OPT_NO_SCROLL;
 	
 	Assert(!(cstmt->options & CURSOR_OPT_SCROLL && cstmt->options & CURSOR_OPT_NO_SCROLL));
+
+	if (cstmt->options & CURSOR_OPT_PARALLEL_RETRIEVE)
+	{
+		List *funcname = NIL;
+		funcname = lappend(funcname, makeString("gp_get_endpoints"));
+
+		if (!OidIsValid(LookupFuncName(funcname, 0, NULL, true)))
+		{
+			/*
+			 * We don't have gp_get_endpoints(), so we can't use parallel
+			 * retrieve.
+			 */
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("the gp_parallel_retrieve_cursor extension is not installed"),
+					 errdetail("gp_get_endpoints() is not available")));
+		}
+
+	}
 
 	/*
 	 * Create a portal and copy the plan and queryString into its memory.

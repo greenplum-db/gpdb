@@ -6,5 +6,12 @@
 (exited with code 0)
 !\retcode gpstop -u;
 (exited with code 0)
+BEGIN;
+BEGIN
+DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT 1;
+ERROR:  the gp_parallel_retrieve_cursor extension is not installed
+DETAIL:  gp_get_endpoints() is not available
+END;
+END
 CREATE EXTENSION IF NOT EXISTS gp_parallel_retrieve_cursor;
 CREATE

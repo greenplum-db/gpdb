@@ -4,4 +4,7 @@
 
 !\retcode gpconfig -c statement_timeout -v 60000;
 !\retcode gpstop -u;
+BEGIN;
+DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT 1;
+END;
 CREATE EXTENSION IF NOT EXISTS gp_parallel_retrieve_cursor;
