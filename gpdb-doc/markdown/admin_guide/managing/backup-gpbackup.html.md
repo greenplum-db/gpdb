@@ -167,7 +167,7 @@ Tables backed up:  3 / 3 [======================================================
 20180105:11:27:55 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup completed successfully
 ```
 
-The above command creates a file that contains global and database-specific metadata on the Greenplum Database master host in the default directory, `$COORDINATOR_DATA_DIRECTORY/backups/<YYYYMMDD>/<YYYYMMDDHHMMSS>/`. For example:
+The above command creates a file that contains global and database-specific metadata on the Greenplum Database master host in the default directory, `$MASTER_DATA_DIRECTORY/backups/<YYYYMMDD>/<YYYYMMDDHHMMSS>/`. For example:
 
 ```
 $ ls /gpmaster/gpsne-1/backups/20180105/20180105112754
@@ -545,7 +545,7 @@ contacts:
 
 A complete backup set for `gpbackup` includes multiple metadata files, supporting files, and CSV data files, each designated with the timestamp at which the backup was created.
 
-By default, metadata and supporting files are stored on the Greenplum Database master host in the directory $COORDINATOR\_DATA\_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/. If you specify a custom backup directory, this same file path is created as a subdirectory of the backup directory. The following table describes the names and contents of the metadata and supporting files.
+By default, metadata and supporting files are stored on the Greenplum Database master host in the directory $MASTER\_DATA\_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/. If you specify a custom backup directory, this same file path is created as a subdirectory of the backup directory. The following table describes the names and contents of the metadata and supporting files.
 
 <table class="table frame-all" id="topic_xnj_b4c_tbb__table_nrz_4gj_tbb"><caption><span class="table--title-label">Table 2. </span><span class="title">gpbackup Metadata Files (master)</span></caption><colgroup><col style="width:50%"><col style="width:50%"></colgroup><thead class="thead">
               <tr class="row">

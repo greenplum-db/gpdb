@@ -53,7 +53,7 @@ For information about the Greenplum Database utilities, see the *Greenplum Datab
 2.  Run the `gpactivatestandby` utility from the original master host, mdw, that is currently a standby master. For example:
 
     ```
-    $ gpactivatestandby -d $COORDINATOR_DATA_DIRECTORY
+    $ gpactivatestandby -d $MASTER_DATA_DIRECTORY
     ```
 
     Where the `-d` option specifies the data directory of the host you are activating.

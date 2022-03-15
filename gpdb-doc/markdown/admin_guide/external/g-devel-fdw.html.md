@@ -278,7 +278,7 @@ else if (table->exec_location == FTEXECLOCATION_ANY)
 {
     ...
 }
-else if (table->exec_location == FTEXECLOCATION_COORDINATOR)
+else if (table->exec_location == FTEXECLOCATION_MASTER)
 {
     ...
 } 

@@ -4,7 +4,7 @@ title: Setting Parameters at the System Level
 
 Master parameter settings in the master `postgresql.conf`file are the system-wide default. To set a master parameter:
 
-1.  Edit the `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` file.
+1.  Edit the `$MASTER_DATA_DIRECTORY/postgresql.conf` file.
 2.  Find the parameter to set, uncomment it \(remove the preceding `#` character\), and type the desired value.
 3.  Save and close the file.
 4.  For *session* parameters that do not require a server restart, upload the `postgresql.conf` changes as follows:

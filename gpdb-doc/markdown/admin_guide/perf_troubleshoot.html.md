@@ -80,7 +80,7 @@ When an out of memory event occurs during query execution, the Greenplum Databas
 Greenplum Database log messages are written to files in the `log` directory within the master's or segment's data directory. Because the master log file contains the most information, you should always check it first. Log files roll over daily and use the naming convention: `gpdb-`*`YYYY`*`-`*`MM`*`-`*`DD_hhmmss.csv`*. To locate the log files on the master host:
 
 ```
-$ cd $COORDINATOR_DATA_DIRECTORY/log
+$ cd $MASTER_DATA_DIRECTORY/log
 
 ```
 

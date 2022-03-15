@@ -149,7 +149,7 @@ This example shows how to edit the pg\_hba.conf file of the master to allow remo
 
 #### <a id="ip144328"></a>Editing pg\_hba.conf 
 
-1.  Open the file $COORDINATOR\_DATA\_DIRECTORY/pg\_hba.conf in a text editor.
+1.  Open the file $MASTER\_DATA\_DIRECTORY/pg\_hba.conf in a text editor.
 2.  Add a line to the file for each type of connection you want to allow. Records are read sequentially, so the order of the records is significant. Typically, earlier records will have tight connection match parameters and weaker authentication methods, while later records will have looser match parameters and stronger authentication methods. For example:
 
     ```
@@ -190,7 +190,7 @@ When you set `max_connections`, you must also set the dependent parameter `max_p
 
 For example:
 
--   In `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` \(including standby master\):
+-   In `$MASTER_DATA_DIRECTORY/postgresql.conf` \(including standby master\):
 
     ```
     max_connections=100
@@ -264,9 +264,9 @@ Enabling Greenplum Database in SSL mode requires the following items.
     -   On a production system, there should be a key and certificate pair for the master host and a pair for the standby master host with a subject CN \(Common Name\) for the master host and standby master host.
     A self-signed certificate can be used for testing, but a certificate signed by a certificate authority \(CA\) should be used in production, so the client can verify the identity of the server. Either a global or local CA can be used. If all the clients are local to the organization, a local CA is recommended.
 
--   Ensure that Greenplum Database can access server.key and server.crt, and any additional authentication files such as `root.crt` \(for trusted certificate authorities\). When starting in SSL mode, the Greenplum Database master looks for server.key and server.crt. As the default, Greenplum Database does not start if the files are not in the master data directory \(`$COORDINATOR_DATA_DIRECTORY`\). Also, if you use other SSL authentication files such as `root.crt` \(trusted certificate authorities\), the files must be on the master host.
+-   Ensure that Greenplum Database can access server.key and server.crt, and any additional authentication files such as `root.crt` \(for trusted certificate authorities\). When starting in SSL mode, the Greenplum Database master looks for server.key and server.crt. As the default, Greenplum Database does not start if the files are not in the master data directory \(`$MASTER_DATA_DIRECTORY`\). Also, if you use other SSL authentication files such as `root.crt` \(trusted certificate authorities\), the files must be on the master host.
 
-    If Greenplum Database master mirroring is enabled with SSL client authentication, SSL authentication files must be on both the master host and standby master host and *should not be placed* in the default directory `$COORDINATOR_DATA_DIRECTORY`. When master mirroring is enabled, an `initstandby` operation copies the contents of the `$COORDINATOR_DATA_DIRECTORY` from the master to the standby master and the incorrect SSL key, and cert files \(the master files, and not the standby master files\) will prevent standby master start up.
+    If Greenplum Database master mirroring is enabled with SSL client authentication, SSL authentication files must be on both the master host and standby master host and *should not be placed* in the default directory `$MASTER_DATA_DIRECTORY`. When master mirroring is enabled, an `initstandby` operation copies the contents of the `$MASTER_DATA_DIRECTORY` from the master to the standby master and the incorrect SSL key, and cert files \(the master files, and not the standby master files\) will prevent standby master start up.
 
     You can specify a different directory for the location of the SSL server files with the `postgresql.conf` parameters `sslcert`, `sslkey`, `sslrootcert`, and `sslcrl`. For more information about the parameters, see [SSL Client Authentication](../security-guide/topics/Authenticate.html) in the *Security Configuration Guide*.
 
