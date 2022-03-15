@@ -721,7 +721,7 @@ select gp_debug_set_create_table_default_numsegments(2);
  2
 (1 row)
 
-set gp_default_storage_options = ''; 
+set gp_default_storage_options = '';
 -- Create a AO table with default row-oriented storage and build index for it
 create table t_9527 (a int, b text) WITH (appendoptimized=true) distributed by (a);
 create index idx_9527 on t_9527(b);
@@ -751,7 +751,7 @@ select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendo
 (1 row)
 
 -- set back
-set gp_default_storage_options = ''; 
+set gp_default_storage_options = '';
 drop table t_9527;
 -- start_ignore
 -- We need to do a cluster expansion which will check if there are partial

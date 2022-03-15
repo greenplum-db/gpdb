@@ -339,7 +339,7 @@ drop table part_t1;
 -- Test expanding a AO table with index, and current gp_default_storage_options is different
 -- from the table created.
 select gp_debug_set_create_table_default_numsegments(2);
-set gp_default_storage_options = ''; 
+set gp_default_storage_options = '';
 
 -- Create a AO table with default row-oriented storage and build index for it
 create table t_9527 (a int, b text) WITH (appendoptimized=true) distributed by (a);
@@ -359,7 +359,7 @@ select localoid::regclass::name, policytype, numsegments, distkey, distclass
 select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9527'::regclass::oid;
 
 -- set back
-set gp_default_storage_options = ''; 
+set gp_default_storage_options = '';
 drop table t_9527;
 
 
