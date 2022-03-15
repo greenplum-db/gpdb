@@ -310,7 +310,6 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
         sudo yum install libcgroup-tools
         sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf 
         ```
-
     -   Redhat/CentOS 6.x systems:
 
         ```
@@ -338,7 +337,6 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database CPU resource management.
 
 6.  To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/CentOS 7.x\) or `cgconfig` \(Redhat/CentOS 6.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
-
     -   Redhat/CentOS 7.x systems:
 
         ```
@@ -350,7 +348,6 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
         ```
         sudo systemctl start cgconfig.service
         ```
-
     -   Redhat/CentOS 6.x systems:
 
         ```
@@ -644,7 +641,7 @@ After Greenplum moves the query, there is no way to guarantee that a query curre
 
     -   Spilling to disk requires extra memory to work.
     -   Other operators may continue to request memory.
-    Memory usage grows in spill situations; when global shared memory is available, the resource group may eventually use up to 200-300% of its configured group memory limit.
+    <br/>Memory usage grows in spill situations; when global shared memory is available, the resource group may eventually use up to 200-300% of its configured group memory limit.
 
 
 ### <a id="topic797"></a>Concurrency 

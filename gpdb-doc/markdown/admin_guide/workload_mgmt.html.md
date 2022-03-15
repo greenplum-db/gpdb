@@ -20,23 +20,23 @@ Resource queues define classes of queries with similar resource requirements. Ad
 
 A resource queue has the following characteristics:
 
-MEMORY\_LIMIT
+`MEMORY_LIMIT`
 :   The amount of memory used by all the queries in the queue \(per segment\). For example, setting MEMORY\_LIMIT to 2GB on the ETL queue allows ETL queries to use up to 2GB of memory in each segment.
 
-ACTIVE\_STATEMENTS
+`ACTIVE_STATEMENTS`
 :   The number of *slots* for a queue; the maximum concurrency level for a queue. When all slots are used, new queries must wait. Each query uses an equal amount of memory by default.
 
-:   For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
+For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
 
-PRIORITY
+`PRIORITY`
 :   The relative CPU usage for queries. This may be one of the following levels: `LOW`, `MEDIUM`, `HIGH`, `MAX`. The default level is `MEDIUM`. The query prioritization mechanism monitors the CPU usage of all the queries running in the system, and adjusts the CPU usage for each to conform to its priority level. For example, you could set `MAX` priority to the `executive` resource queue and `MEDIUM` to other queues to ensure that executive queries receive a greater share of CPU.
 
-MAX\_COST
+`MAX_COST`
 :   Query plan cost limit.
 
-:   The Greenplum Database optimizer assigns a numeric cost to each query. If the cost exceeds the `MAX_COST` value set for the resource queue, the query is rejected as too expensive.
+The Greenplum Database optimizer assigns a numeric cost to each query. If the cost exceeds the `MAX_COST` value set for the resource queue, the query is rejected as too expensive.
 
-:   **Note:** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
+**Note:** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
 
 When resource queue-based resource management is active, use the `MEMORY_LIMIT` and `ACTIVE_STATEMENTS` limits for resource queues rather than configuring cost-based limits. Even when using GPORCA, Greenplum Database may fall back to using the Postgres Planner for certain queries, so using cost-based limits can lead to unexpected results.
 
@@ -160,8 +160,7 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
 
         In Greenplum Database4.2 and later, the distribution algorithm `eager_free` takes advantage of the fact that not all operators run at the same time. The query plan is divided into stages and Greenplum Database eagerly frees memory allocated to a previous stage at the end of that stage's execution, then allocates the eagerly freed memory to the new stage.
 
-        When set to `none`, memory management is the same as in Greenplum Database releases prior to 4.1.When set to `auto`, query memory usage is controlled by `statement_mem` and resource queue memory limits.
-
+        When set to `none`, memory management is the same as in Greenplum Database releases prior to 4.1. When set to `auto`, query memory usage is controlled by `statement_mem` and resource queue memory limits.
     -   `statement_mem` and `max_statement_mem` - Used to allocate memory to a particular query at runtime \(override the default allocation assigned by the resource queue\). `max_statement_mem` is set by database superusers to prevent regular database users from over-allocation.
     -   `gp_vmem_protect_limit` - Sets the upper boundary that all query processes can consume and should not exceed the amount of physical memory of a segment host. When a segment host reaches this limit during query execution, the queries that cause the limit to be exceeded will be cancelled.
     -   `gp_vmem_idle_resource_timeout` and `gp_vmem_protect_segworker_cache_limit` - used to free memory on segment hosts held by idle database processes. Administrators may want to adjust these settings on systems with lots of concurrency.
@@ -175,11 +174,11 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
 
         -   10 on the master and standby master hosts. Typically, only a single master segment instance runs on the master host.
         -   2.5 on each segment host \(10 cores divided by 4 primary segments\).
-        If the parameter value is not set correctly, either the CPU might not be fully utilized, or query prioritization might not work as expected. For example, if the Greenplum Database cluster has fewer than one segment instance per CPU core on your segment hosts, make sure that you adjust this value accordingly.
+        <br/>If the parameter value is not set correctly, either the CPU might not be fully utilized, or query prioritization might not work as expected. For example, if the Greenplum Database cluster has fewer than one segment instance per CPU core on your segment hosts, make sure that you adjust this value accordingly.
 
         Actual CPU core utilization is based on the ability of Greenplum Database to parallelize a query and the resources required to run the query.
 
-        Note: Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
+        **Note:** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
 
 4.  If you wish to view or change any of the resource management parameter values, you can use the `gpconfig` utility.
 5.  For example, to see the setting of a particular parameter:
