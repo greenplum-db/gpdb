@@ -3144,65 +3144,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys, CdbLocusType_SingleQE);
 		}
 	}
-
-	/*
-	 * If there is a FOR [KEY] UPDATE/SHARE clause, add the LockRows node.
-	 * (Note: we intentionally test parse->rowMarks not root->rowMarks here.
-	 * If there are only non-locking rowmarks, they should be handled by the
-	 * ModifyTable node instead.)
-	 */
-	if (parse->rowMarks)
-	{
-		ListCell   *lc;
-		List	   *newmarks = NIL;
-
-		/*
-		 * select for update will lock the whole table, we do it at addRangeTableEntry.
-		 * The reason is that gpdb is an MPP database, the result tuples may not be on
-		 * the same segment. And for cursor statement, reader gang cannot get Xid to lock
-		 * the tuples. (More details: https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/p-6_dNjnRMQ)
-		 * Upgrading the lock mode (see below) for distributed table is probably
-		 * not needed for all the cases and we may want to enhance this later.
-		 */
-		foreach(lc, root->rowMarks)
-		{
-			PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-			if (rc->markType == ROW_MARK_EXCLUSIVE || rc->markType == ROW_MARK_SHARE)
-			{
-				RelOptInfo *brel = root->simple_rel_array[rc->rti];
-
-				if (GpPolicyIsPartitioned(brel->cdbpolicy) ||
-					GpPolicyIsReplicated(brel->cdbpolicy))
-				{
-					if (rc->markType == ROW_MARK_EXCLUSIVE)
-						rc->markType = ROW_MARK_TABLE_EXCLUSIVE;
-					else
-						rc->markType = ROW_MARK_TABLE_SHARE;
-				}
-			}
-
-			/* We only need LockRows for the tuple-level locks */
-			if (rc->markType != ROW_MARK_TABLE_EXCLUSIVE &&
-				rc->markType != ROW_MARK_TABLE_SHARE)
-				newmarks = lappend(newmarks, rc);
-		}
-
-		if (newmarks)
-		{
-			result_plan = (Plan *) make_lockrows(result_plan,
-												 newmarks,
-												 SS_assign_special_param(root));
-			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
-
-			/*
-			 * The result can no longer be assumed sorted, since locking might
-			 * cause the sort key columns to be replaced with new values.
-			 */
-			current_pathkeys = NIL;
-		}
-	}
-
+	
 	/*
 	 * Finally, if there is a LIMIT/OFFSET clause, add the LIMIT node.
 	 */
