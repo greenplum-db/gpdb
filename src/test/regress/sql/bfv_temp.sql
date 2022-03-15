@@ -44,9 +44,43 @@ where nsp.nspname = temp_nspnames.nspname OR nsp.nspname = temp_nspnames.toastns
 -- gone if the whole namespace is gone, but doesn't hurt to check.)
 select * from pg_tables where tablename = 'wmt_toast_issue_temp';
 
-
 -- Clean up
 reset role;
 drop table temp_nspnames;
 drop function public.sec_definer_create_test();
 drop role sec_definer_role;
+
+-- Check if myTempNamespace is correct in N-Gang query.
+create table tn_a(id int) distributed by (id);
+create temp table tn_a_tmp(a int) distributed replicated;
+
+insert into tn_a values (1), (2);
+insert into tn_a_tmp values(1);
+
+create or replace function fun(sql text, a oid) returns bigint AS 'return plpy.execute(sql).nrows() + a' language plpython3u stable;
+
+create table tn_a_new as with c as (select fun('select * from tn_a_tmp', s.id) from tn_a s) select 1 from c;
+
+drop table tn_a;
+drop table tn_a_tmp;
+drop table tn_a_new;
+
+-- Check if old gang can accept new temp schema, after temp schema changed on coordinator
+\c
+create table tn_b_a(id int) distributed by (id);
+create table tn_b_b(id int, a_id int) distributed by (id);
+
+insert into tn_b_a values (1), (2);
+insert into tn_b_b values (3, 1), (4, 2);
+select a.id, b.id from tn_b_a a, tn_b_b b where a.id = b.a_id order by 1, 2;
+
+create temp table tn_b_temp(a int) distributed replicated;
+insert into tn_b_temp values(1);
+
+create table tn_b_new as with c as (select fun('select * from tn_b_temp', s.id) from tn_b_b s) select 1 from c;
+
+drop table tn_b_a;
+drop table tn_b_b;
+drop table tn_b_temp;
+drop table tn_b_new;
+drop function fun(sql text, a oid);
