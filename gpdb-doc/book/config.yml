@@ -33,6 +33,12 @@ sections:
   directory: 6-19/best_practices
   subnav_template: bp-subnav
 
+- repository:
+    name: markdown
+    at_path: admin_guide
+  directory: 6-19/admin_guide
+  subnav_template: admin-subnav
+
 dita_sections:
 
 - repository:
@@ -40,14 +46,6 @@ dita_sections:
     at_path: analytics
   directory: 6-19/analytics
   ditamap_location: analytics.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
-
-
-- repository:
-    name: dita
-    at_path: admin_guide
-  directory: 6-19/admin_guide
-  ditamap_location: admin_guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
 - repository:
