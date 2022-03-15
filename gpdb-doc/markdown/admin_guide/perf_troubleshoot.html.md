@@ -67,6 +67,8 @@ You can use system monitoring utilities such as `ps`, `top`, `iostat`, `vmstat`,
 
 You can create and use the Greenplum Database *session\_level\_memory\_consumption* view that provides information about the current memory utilization and idle time for sessions that are running queries on Greenplum Database. For information about the view, see [Viewing Session Memory Usage Information](managing/monitor.html).
 
+You can enable a dedicated database, `gpperfmon`, in which data collection agents running on each segment host save query and system utilization metrics. Refer to the `gpperfmon_install` management utility reference in the _Greenplum Database Management Utility Reference Guide_ for help creating the `gpperfmon` database and managing the agents. See documentation for the tables and views in the `gpperfmon` database in the _Greenplum Database Reference Guide_.
+
 The optional VMware Tanzu Greenplum Command Center web-based user interface graphically displays query and system utilization metrics. See the [Greenplum Command Center Documentation](https://gpcc.docs.pivotal.io) web site for procedures to enable Greenplum Command Center.
 
 ## <a id="topic7"></a>Troubleshooting Problem Queries 
