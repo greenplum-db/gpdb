@@ -99,7 +99,9 @@
             <codeblock>num_segments '<varname>num</varname>'</codeblock>
           <p>in the <codeph>OPTIONS</codeph> clause when you create the server. Set
             <varname>num</varname> to the number of segments in the the remote Greenplum
-            Database cluster.</p>
+            Database cluster. If you do not provide the <codeblock>num_segments</codeblock>
+            option, the default value is the number of segments on the local/source
+            Greenplum Database cluster.</p>
           <p>The following example command creates a server named
             <codeph>gpc1_testdb</codeph> that will be used to access tables residing in
             the database named <codeph>testdb</codeph> on the remote
@@ -217,9 +219,8 @@
           <title>Constructing and Running Queries</title>
           <p>You <codeph>SELECT</codeph> from a foreign table to access the data
             stored in the underlying remote Greenplum Database table. By default, you can
-            also modify the remote table using <codeph>INSERT</codeph>,
-            <codeph>UPDATE</codeph>, or 
-            <codeph>DELETE</codeph> commands, provided that the remote user specified the
+            also modify the remote table using the <codeph>INSERT</codeph> command,
+            provided that the remote user specified the
             user mapping has the privileges to perform these operations. (Refer to
             <xref href="#topic_update" type="topic" format="dita"/> for information about
             changing the updatability of foreign tables.)</p>
@@ -254,8 +255,7 @@
         <dlentry>
         <dt><codeph>updatable</codeph></dt>
         <dd>Controls whether <codeph>greenplum_fdw</codeph> allows foreign tables
-          to be modified using <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, and
-          <codeph>DELETE</codeph> commands. The default is true.</dd>
+          to be modified using the <codeph>INSERT</codeph> command. The default is true.</dd>
         </dlentry>
         </dl>
         <p>Setting this option at the foreign table-level overrides a foreign server-level
@@ -302,6 +302,8 @@
           <li>The Pivotal Query Optimizer (GPORCA) does not support queries on foreign
             tables that you create with the <codeph>greenplum_fdw</codeph> foreign-data
             wrapper.</li>
+          <li><codeph>greenplum_fdw</codeph> does not support <codeph>UPDATE</codeph>
+            and <codeph>DELETE</codeph> operations on foreign tables.</li>
         </ul>
     </body>
   </topic>
