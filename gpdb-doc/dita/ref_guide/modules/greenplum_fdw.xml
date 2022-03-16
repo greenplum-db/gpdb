@@ -248,7 +248,7 @@
     <topic id="topic_update">
       <title>About the Updatability Option</title>
       <body>
-        <p>By default, all foreign tables created with <codeph>greenplum__fdw</codeph> are
+        <p>By default, all foreign tables created with <codeph>greenplum_fdw</codeph> are
           assumed to be updatable. You can override this for a foreign server or a foreign
           table using the following option:</p>
         <dl>
