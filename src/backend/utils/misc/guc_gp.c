@@ -421,6 +421,8 @@ bool		gp_external_enable_filter_pushdown = true;
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
 
+bool		gp_log_endpoints = false;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -2778,6 +2780,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_enable_global_deadlock_detector,
 		false, NULL, NULL
     },
+
+	{
+		{"gp_log_endpoints", PGC_SUSET, LOGGING_WHAT,
+			gettext_noop("Prints endpoints information to server log."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_endpoints,
+		false,
+		NULL, NULL, NULL
+	},
 
 	{
 		{"optimizer_enable_eageragg", PGC_USERSET, DEVELOPER_OPTIONS,
