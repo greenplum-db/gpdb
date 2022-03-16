@@ -40,7 +40,7 @@
     <p>Open Source Greenplum Backup and Restore customers may get the utility from <xref
         href="https://github.com/greenplum-db/gpbackup-s3-plugin" format="html" scope="external"
         >gpbackup-s3-plugin</xref>. Build the utility following the steps in <xref
-        href=" https://github.com/greenplum-db/gpbackup-s3-plugin#building-and-installing-binaries"
+        href="https://github.com/greenplum-db/gpbackup-s3-plugin#building-and-installing-binaries"
         format="html" scope="external">Building and Installing the S3 plugin</xref>.</p>
     <p>The S3 storage plugin application must be in the same location on every Greenplum Database
       host, for example <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The S3 storage plugin
