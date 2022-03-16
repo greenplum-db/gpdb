@@ -585,6 +585,8 @@ extern bool gp_external_enable_filter_pushdown;
 /* Enable the Global Deadlock Detector */
 extern bool gp_enable_global_deadlock_detector;
 
+extern bool gp_log_endpoints;
+
 typedef enum
 {
 	INDEX_CHECK_NONE,

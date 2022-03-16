@@ -37,6 +37,7 @@
 #include "utils/dynahash.h"
 #include "utils/elog.h"
 #include "utils/faultinjector.h"
+#include "utils/guc.h"
 #include "cdbendpoint_private.h"
 #include "cdb/cdbendpoint.h"
 #include "cdb/cdbsrlz.h"
@@ -428,7 +429,7 @@ attach_receiver_mq(dsm_handle dsmHandle)
 	 */
 	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
 
-	elog(DEBUG3, "CDB_ENDPOINTS: init message queue conn for receiver");
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: init message queue conn for receiver");
 
 	entry->mqSeg = dsm_attach(dsmHandle);
 	if (entry->mqSeg == NULL)
@@ -538,8 +539,8 @@ retrieve_next_tuple()
 		 * at the first time to retrieve data, tell sender not to wait at
 		 * wait_receiver()
 		 */
-		elog(DEBUG3, "CDB_ENDPOINT: receiver notifies sender in "
-			 "retrieve_next_tuple() when retrieving data for the first time");
+		elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: receiver notifies sender in "
+			   "retrieve_next_tuple() when retrieving data for the first time");
 		notify_sender(false);
 	}
 
@@ -617,8 +618,8 @@ finish_retrieve(bool resetPID)
 		 * however, can not get endpoint through get_endpoint_from_retrieve_exec_entry.
 		 */
 		LWLockRelease(ParallelCursorEndpointLock);
-		elog(DEBUG3, "the Endpoint entry %s has already been cleaned, \
-			  remove from RetrieveCtl.RetrieveExecEntryHTB hash table.", entry->endpointName);
+		elogif(gp_log_endpoints, LOG, "the Endpoint entry %s has already been cleaned, \
+			   remove from RetrieveCtl.RetrieveExecEntryHTB hash table", entry->endpointName);
 		hash_search(RetrieveCtl.RetrieveExecEntryHTB, entry->endpointName, HASH_REMOVE, NULL);
 		RetrieveCtl.current_entry = NULL;
 		return;
@@ -677,7 +678,7 @@ retrieve_cancel_action(RetrieveExecEntry * entry, char *msg)
 		endpoint->state = ENDPOINTSTATE_RELEASED;
 		if (endpoint->senderPid != InvalidPid)
 		{
-			elog(DEBUG3, "CDB_ENDPOINT: signal sender to abort");
+			elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: signal sender to abort");
 			SetBackendCancelMessage(endpoint->senderPid, msg);
 			kill(endpoint->senderPid, SIGINT);
 		}
@@ -726,7 +727,7 @@ retrieve_exit_callback(int code, Datum arg)
 	RetrieveExecEntry *entry;
 	HTAB	   *entryHTB = RetrieveCtl.RetrieveExecEntryHTB;
 
-	elog(DEBUG3, "CDB_ENDPOINTS: retrieve exit callback");
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: retrieve exit callback");
 
 	/* Nothing to do if the hashtable is not ready. */
 	if (entryHTB == NULL)
@@ -763,7 +764,7 @@ retrieve_xact_callback(XactEvent ev, void *arg pg_attribute_unused())
 {
 	if (ev == XACT_EVENT_ABORT)
 	{
-		elog(DEBUG3, "CDB_ENDPOINT: retrieve xact abort callback");
+		elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: retrieve xact abort callback");
 		if (RetrieveCtl.sessionID != InvalidEndpointSessionId &&
 			RetrieveCtl.current_entry)
 		{
