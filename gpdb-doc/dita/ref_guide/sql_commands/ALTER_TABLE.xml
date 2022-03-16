@@ -40,7 +40,7 @@ where <varname>action</varname> is one of:
   ADD [COLUMN] <varname>column_name data_type</varname> [ DEFAULT <varname>default_expr</varname> ]
       [<varname>column_constraint</varname> [ ... ]]
       [ COLLATE <varname>collation</varname> ]
-      [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
+      [ ENCODING ( <varname>storage_parameter</varname> [,...] ) ]
   DROP [COLUMN] [IF EXISTS] <varname>column_name</varname> [RESTRICT | CASCADE]
   ALTER [COLUMN] <varname>column_name</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
   ALTER [COLUMN] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
