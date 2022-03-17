@@ -23,6 +23,7 @@ This topic describes the Greenplum Database 6 platform and operating system soft
 
 Greenplum Database 6 runs on the following operating system platforms:
 
+-   Red Hat Enterprise Linux 64-bit 8.x (as of Greenplum Database version 6.20)
 -   Red Hat Enterprise Linux 64-bit 7.x \(See the following [Note](#7x-issue).\)
 -   Red Hat Enterprise Linux 64-bit 6.x
 -   CentOS 64-bit 7.x
@@ -30,7 +31,7 @@ Greenplum Database 6 runs on the following operating system platforms:
 -   Ubuntu 18.04 LTS
 -   Oracle Linux 64-bit 7, using the Red Hat Compatible Kernel \(RHCK\)
 
-**Important:** Significant Greenplum Database performance degradation has been observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in CentOS 7.x and Red Hat 7.x systems.
+**Important:** Significant Greenplum Database performance degradation has been observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in CentOS 7.x and Red Hat 7.x/8.x systems.
 
 If you use RedHat 6 and the performance with resource groups is acceptable for your use case, upgrade your kernel to version 2.6.32-696 or higher to benefit from other fixes to the cgroups implementation.
 
