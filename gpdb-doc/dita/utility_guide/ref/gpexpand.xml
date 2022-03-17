@@ -54,9 +54,9 @@
         must update the <codeph>gp_interconnect_proxy_addresses</codeph> parameter with the
         newly-added segment instances before you re-enable interconnect proxies. For information
         about Greenplum interconnect proxies, see <xref
-          href="../../admin_guide/managing/proxy-ic.xml"/>.</note>
+          href="../../admin_guide/managing/proxy-ic.html" format="html" scope="external">Configuring Proxies for the Greenplum Interconnect</xref>.</note>
       <p>For information about preparing a system for expansion, see <xref
-          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
+          href="../../admin_guide/expand/expand-main.html" format="html" scope="external">Expanding a Greenplum
           System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
             Guide</cite></ph>.</p>
     </section>
@@ -261,7 +261,7 @@ gp6s1-s2|gp6s1-s2|50001|/data/mirror1/gpseg3|8|3|m</codeblock>
       <title>See Also</title>
       <p>
         <codeph><xref href="gpssh-exkeys.xml#topic1"/></codeph>, <xref
-          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
+          href="../../admin_guide/expand/expand-main.html" format="html" scope="external">Expanding a Greenplum
           System</xref>
         <ph otherprops="op-print">in the <cite>Greenplum Database Administrator
         Guide</cite></ph></p>

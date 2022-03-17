@@ -467,7 +467,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
             <codeph>ext_expenses</codeph> with a <codeph>COPY</codeph>
             command:<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>For
             information about the error log format, see <xref
-              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
+              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.html#topic58" format="html" scope="external"
               >Viewing Bad Rows in the Error Log</xref> in the <cite>Greenplum Database
               Administrator Guide</cite>.</p><p>The function returns <codeph>FALSE</codeph> if
               <varname>table_name</varname> does not exist.</p></li>

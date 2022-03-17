@@ -22,7 +22,7 @@
     <p>In data files, the characters that delimit fields (columns) and rows have a special meaning.
       If they appear within the data you must escape them so that Greenplum Database treats them as
       data and not as delimiters. The backslash character (<codeph>\</codeph>) is the default escape
-      character. See <xref href="../admin_guide/load/topics/g-escaping.xml#topic99"/> for
+      character. See <xref href="../admin_guide/load/topics/g-escaping.html#topic99" format="html" scope="external">Escaping</xref> for
       details.</p>
     <p>See <xref href="https://www.postgresql.org/docs/9.4/sql-syntax.html" format="html"
         scope="external">SQL Syntax</xref> in the PostgreSQL documentation for more information

@@ -309,8 +309,8 @@
                                                   <codeph>gpfdist</codeph> parallel file server and
                                                   single and multiple <codeph>gpfdist</codeph>
                                                   instances, see <xref
-                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.xml"
-                                                  />.</p><parml>
+                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.html" format="html" scope="external"
+                                                  >Loading and Unloading Data</xref>.</p><parml>
                                                   <plentry>
                                                   <pt id="cfsourcelocalname">LOCAL_HOSTNAME</pt>
                                                   <pd>Optional. Specifies the host name or IP
@@ -472,8 +472,8 @@
                                                 format. Defaults to <codeph>TEXT</codeph> if not
                                                 specified. For more information about the format of
                                                 the source data, see <xref
-                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.xml"
-                                                />.</pd>
+                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.html" format="html" scope="external"
+                                                >Loading and Unloading Data</xref>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfdelimiter">DELIMITER</pt>
@@ -624,8 +624,8 @@
                                                 cause the load operation to be cancelled if
                                                 encountered. For information about handling load
                                                 errors, see <xref
-                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.xml"
-                                                />.</pd>
+                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.html" format="html" scope="external"
+                                                >Loading and Unloading Data</xref>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cferrorlog">LOG_ERRORS</pt>
