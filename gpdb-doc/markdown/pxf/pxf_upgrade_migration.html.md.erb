@@ -3,8 +3,11 @@ title: PXF Upgrade and Migration
 ---
 When you upgrade your Greenplum Database system, you must perform some additional steps in order to bring your PXF configuration up to date.
 
-There are three possible scenarios:
+Note that if you are upgrading or migrating from Greenplum Database 5 to Greenplum Database 6 and were previously using the `gphdfs` external table protocol to access data stored in Hadoop, you must first [migrate your gphdfs external tables](gphdfs-pxf-migrate.html) to use PXF instead, since Greenplum Database version 6 removes support for the `gphdfs` protocol.
 
-1. Upgrading PXF after [migrating from Greenplum Database 5.x](migrate_5to6.html). If you were previously using the `gphdfs` external table protocol to access data stored in Hadoop, you must also [migrate your gphdfs external tables](gphdfs-pxf-migrate.html) to use PXF instead, since Greenplum Database version 6 removes support for the `gphdfs` protocol.
-1. Upgrading PXF after [upgrading Greenplum Database from a previous 6.x version](upgrade_pxf_6x.html). Note that different steps are outlined based on your PXF installation source: a manually installed `rpm` or `deb` package downloaded from Tanzu Network, or the PXF version included with Greenplum Database Server installer in versions 6.18.x and older. 
-1. If you are upgrading a PXF `rpm` or `deb` installation independent of a Greenplum Database upgrade, refer to the [PXF upgrade documentation](../../pxf/latest/upgrade_landing.html).
+There are four possible scenarios:
+
+1. Upgrading PXF [during a Greenplum 5 to 6 Upgrade Using gpupgrade](../../pxf/latest/using/upgrade_gpupgrade.html).
+1. Upgrading PXF after [migrating from Greenplum Database 5.x](migrate_5to6.html).
+1. Upgrading PXF after [upgrading Greenplum Database from a previous 6.x version](upgrade_pxf_6x.html). Note that different steps are outlined based on your PXF installation source: a manually installed `rpm` or `deb` package downloaded from Tanzu Network, or the PXF version included with the Greenplum Database Server installer in versions 6.18.x and older. 
+1. If you are upgrading a PXF `rpm` or `deb` installation independent of a Greenplum Database upgrade, refer to the [PXF upgrade documentation](../../pxf/latest/using/upgrade_landing.html).
