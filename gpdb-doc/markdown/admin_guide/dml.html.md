@@ -36,12 +36,7 @@ Greenplum Database provides multiple lock modes to control concurrent access to 
 |EXCLUSIVE|`DELETE`, `UPDATE`, `SELECT...FOR lock_strength`, `REFRESH MATERIALIZED VIEW CONCURRENTLY`|ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 |ACCESS EXCLUSIVE|`ALTER TABLE`, `DROP TABLE`, `TRUNCATE`, `REINDEX`, `CLUSTER`, `REFRESH MATERIALIZED VIEW` \(without `CONCURRENTLY`\), `VACUUM FULL`|ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE|
 
-**Note:** By default, the Global Deadlock Detector is disabled, and Greenplum Database acquires the more restrictive `EXCLUSIVE` lock \(rather than `ROW EXCLUSIVE` in PostgreSQL\) for `UPDATE`, `DELETE`, and `SELECT` queries with a locking clause \(`FOR lock_strength`\).
-
-When the Global Deadlock Detector is enabled:
-
--   The lock mode for some `DELETE` and `UPDATE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](#topic_gdd).
--   The lock mode for some queries with a locking clause \(`SELECT...FOR lock_strength`\) is `ROW SHARE`. See "The Locking Clause" in [SELECT](../ref_guide/sql_commands/SELECT.html).
+**Note:** By default Greenplum Database acquires the more restrictive `EXCLUSIVE` lock (rather than `ROW EXCLUSIVE` in PostgreSQL) for `UPDATE`, `DELETE`, and `SELECT...FOR UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled the lock mode for `UPDATE` and `DELETE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](#topic_gdd). Greenplum always holds a table-level lock with `SELECT...FOR UPDATE` statements.
 
 ## <a id="topic3"></a>Inserting Rows 
 
