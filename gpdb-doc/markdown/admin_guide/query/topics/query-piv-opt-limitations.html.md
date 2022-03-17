@@ -29,8 +29,9 @@ These features are unsupported when GPORCA is enabled \(the default\):
     -   Non-uniform partitioned tables.
     -   Partitioned tables that have been altered to use an external table as a leaf child partition.
 -   SortMergeJoin \(SMJ\).
--   Ordered aggregations.
--   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`
+-   Ordered aggregates are not supported by default. You can enable GPORCA support for ordered aggregates with the [optimizer_enable_orderedagg](../../../ref_guide/config_params/guc-list.xml#optimizer_enable_orderedagg) server configuration parameter.
+-   Grouping sets with ordered aggregates.
+-   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`, are not supported by default. You can enable GPORCA support for multi-argument distinct aggregates with the [optimizer_enable_orderedagg](../../../ref_guide/config_params/guc-list.xml#optimizer_enable_orderedagg) server configuration parameter.
 -   These analytics extensions:
     -   CUBE
     -   Multiple grouping sets
