@@ -739,6 +739,8 @@ select rnum, c1, sum( (select 1 from tversion) ) from tjoin1 group by rnum, c1
 group by
 f1,f2,f3
 ) Q ) P;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: Assert not supported
      test_name_part     | pass_ind 
 ------------------------+----------
  SubqueryInAggregate_p1 |        1
@@ -11781,6 +11783,8 @@ f1,f2,f3
 (1 row)
 
 -- JoinCoreNonJoinNonEquiJoin_p1
+-- FIXME: ORCA CXformUtils.cpp:163: Failed assertion: !FJoinPredOnSingleChild(amp.Pmp(), exprhdl) && "join predicates are not pushed down"
+SET optimizer_trace_fallback = off;
 select 'JoinCoreNonJoinNonEquiJoin_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
 select f1,f2,f3, count(*) c  from (
@@ -11800,6 +11804,7 @@ f1,f2,f3
  JoinCoreNonJoinNonEquiJoin_p1 |        1
 (1 row)
 
+SET optimizer_trace_fallback = on;
 -- JoinCoreNotPredicate_p1
 select 'JoinCoreNotPredicate_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -11864,6 +11869,8 @@ select tjoin1.c1,tjoin2.c2 from tjoin1 left outer join tjoin2 on tjoin1.c1=tjoin
 group by
 f1,f2
 ) Q ) P;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
           test_name_part           | pass_ind 
 -----------------------------------+----------
  JoinCoreOnConditionSetFunction_p1 |        1
@@ -12859,6 +12866,8 @@ select sum( distinct c1 ), count( distinct c2 ) from tset1
 group by
 f1,f2
 ) Q ) P;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
      test_name_part     | pass_ind 
 ------------------------+----------
  MultipleSumDistinct_p1 |        1
@@ -14789,6 +14798,8 @@ select rnum, c1, c2 from tjoin1 where (c1,'BB') in (select c1, c2 from tjoin2 wh
 group by
 f1,f2,f3
 ) Q ) P;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  test_name_part | pass_ind 
 ----------------+----------
  RowSubquery_p1 |        1
@@ -14807,6 +14818,8 @@ select * from tset1 where (c1,c2) in (select c1,c2 from tset2)
 group by
 f1,f2,f3
 ) Q ) P;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
      test_name_part     | pass_ind 
 ------------------------+----------
  RowValueConstructor_p1 |        1
@@ -20491,6 +20504,8 @@ WITH cte_coll AS
 SELECT *
 FROM   cte_coll
 WHERE  tkn_arr <> '{nullout}' ;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
  tkn_arr 
 ---------
 (0 rows)
