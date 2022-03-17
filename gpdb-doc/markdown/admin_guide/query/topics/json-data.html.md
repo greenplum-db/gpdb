@@ -137,7 +137,7 @@ SELECT '[1, 2, 3]'::jsonb @> '[1, 2, 2]'::jsonb;
 
 -- The object with a single pair on the right side is contained
 -- within the object on the left side:
-SELECT '{"product": "Greenplum", "version": "7.0.0", "jsonb":true}'::jsonb @> '{"version":"7.0.0"}'::jsonb;
+SELECT '{"product": "Greenplum", "version": "6.0.0", "jsonb":true}'::jsonb @> '{"version":"6.0.0"}'::jsonb;
 
 -- The array on the right side is not considered contained within the
 -- array on the left, even though a similar array is nested within it:
