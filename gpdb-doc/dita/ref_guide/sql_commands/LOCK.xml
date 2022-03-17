@@ -152,8 +152,8 @@
                                 FOR UPDATE</codeph> operations on heap tables. When the Global
                             Deadlock Detector is enabled, the lock mode for the operations on heap
                             tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
-                                href="../../admin_guide/dml.xml#topic_gdd" format="dita"
-                        />.</note></pd>
+                                href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external"
+                        >Global Deadlock Detector</xref>.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>NOWAIT</pt>

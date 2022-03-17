@@ -40,7 +40,7 @@
                     to manage and limit the total CPU and memory resources of containers in
                     PL/Container runtimes. For more information about enabling, configuring, and
                     using Greenplum Database resource groups, refer to <xref
-                        href="../admin_guide/workload_mgmt_resgroups.xml" format="dita" scope="peer"
+                        href="../admin_guide/workload_mgmt_resgroups.html"  format="html" scope="external"
                         >Using Resource Groups</xref> in the <cite>Greenplum Database Administrator
                         Guide</cite>.</p>
                 <note>If you do not explicitly configure resource groups for a PL/Container runtime,
@@ -108,8 +108,8 @@
                 <li>If you have not already configured and enabled resource groups in your Greenplum
                     Database deployment, configure cgroups and enable Greenplum Database resource
                     groups as described in <xref
-                        href="../admin_guide/workload_mgmt_resgroups.xml#topic71717999"
-                        format="dita" scope="peer">Using Resource Groups</xref> in the
+                        href="../admin_guide/workload_mgmt_resgroups.html#topic71717999"
+                         format="html" scope="external">Using Resource Groups</xref> in the
                         <cite>Greenplum Database Administrator Guide</cite>. <note>If you have
                         previously configured and enabled resource groups in your deployment, ensure
                         that the Greenplum Database resource group <codeph>gpdb.conf</codeph>

@@ -460,8 +460,7 @@ where <varname>action</varname> is one of:
                         <note>If you add a partition to a table that has subpartition encodings, the
                                 new partition inherits the storage directives for the subpartitions.
                                 For more information about the precedence of compression settings,
-                                see <xref href="../../admin_guide/ddl/ddl-storage.xml#topic40">Using
-                                        Compression</xref>.</note>
+                                see <xref href="../../admin_guide/ddl/ddl-storage.html#topic40" format="html" scope="external">Using Compression</xref>.</note>
                         <p>All the forms of <codeph>ALTER TABLE</codeph> that act on a single table,
                                 except <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
                                 be combined into a list of multiple alterations to apply together.

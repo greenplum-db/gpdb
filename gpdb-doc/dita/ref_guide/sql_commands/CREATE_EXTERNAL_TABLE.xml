@@ -148,7 +148,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         sources. Regular readable external tables access static flat files, whereas external web
         tables access dynamic data sources – either on a web server or by running OS commands or
         scripts. </p>
-      <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.xml"/> for
+      <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.html">Working with External Data</xref> for
         detailed information about working with external tables.</p>
     </section>
     <section id="section4">
@@ -212,10 +212,10 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         <plentry>
           <pt>LOCATION <varname>('protocol://[host[:port]]/path/file' [, ...])</varname></pt>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to <xref href="../../admin_guide/external/g-pxf-protocol.xml"></xref> for
+          refer to <xref href="../../admin_guide/external/g-pxf-protocol.html" format="html" scope="external">pxf:// Protocol</xref> for
           information about the <codeph>pxf</codeph> protocol.</pd>
           <pd>If you use the <codeph>s3</codeph> protocol to read or write to S3, refer to <xref
-              href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
+              href="../../admin_guide/external/g-s3-protocol.html#amazon-emr/section_stk_c2r_kx" format="html" scope="external">s3:// Protocol</xref>
             for additional information about the <codeph>s3</codeph> protocol
               <codeph>LOCATION</codeph> clause syntax.</pd>
           <pd>For readable external tables, specifies the URI of the external data source(s) to be
@@ -321,7 +321,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         using a custom format, see "Loading and Unloading Data" in the <cite>Greenplum Database
           Administrator Guide</cite>.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to <xref href="../../admin_guide/external/pxf-overview.xml"></xref>
+          refer to <xref href="../../admin_guide/external/pxf-overview.html" format="html" scope="external">Accessing External Data with PXF</xref>
           for information about using PXF.</pd>
         </plentry>
         <plentry>
@@ -331,7 +331,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
             to the formatter function. The length of the formatter specification, the string
             including <codeph>Formatter=</codeph>, can be up to approximately 50K bytes.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to <xref href="../../admin_guide/external/pxf-overview.xml"></xref>
+          refer to <xref href="../../admin_guide/external/pxf-overview.html" format="html" scope="external">Accessing External Data with PXF</xref>
           for information about using PXF.</pd>
           <pd>For general information about using a custom format, see "Loading and Unloading Data" in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
@@ -557,7 +557,7 @@ customer_id=123;</codeblock>
       <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
         that occur while reading the external table data. For information about the error log
         format, see <xref
-              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
+              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.html#topic58" format="html" scope="external"
           >Viewing Bad Rows in the Error Log</xref>.</p>
       <p>You can view and manage the captured error log data. The functions to manage log data
         depend on whether the data is persistent (the <codeph>PERSISTENTLY</codeph> keyword is used

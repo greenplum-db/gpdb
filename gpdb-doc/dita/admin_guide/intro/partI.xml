@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en">
-  <title id="nm173529">Greenplum Database Concepts</title>
-  <shortdesc>This section provides an overview of Greenplum Database components and features such as
-    high availability, parallel data loading features, and management utilities.</shortdesc>
-  <body/>
-</topic>

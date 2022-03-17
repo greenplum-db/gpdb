@@ -170,10 +170,10 @@
             loading or extracting data. The <codeph>gpfdist</codeph> configuration file is a YAML
             1.1 document. </pd>
           <pd>For information about the file format, see <xref
-              href="../../admin_guide/load/topics/transforming-xml-data.xml#topic83"/> in the
+              href="../../admin_guide/load/topics/transforming-xml-data.html#topic83" format="html" scope="external">Configuration File Format</xref> in the
               <cite>Greenplum Database Administrator Guide</cite>. For information about configuring
             data transformation with <codeph>gpfdist</codeph>, see <xref
-              href="../../admin_guide/load/topics/transforming-xml-data.xml#topic75"/> in the
+              href="../../admin_guide/load/topics/transforming-xml-data.html#topic75" format="html" scope="external">Transforming External Data with gpfdist and gpload</xref> in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
           <pd>This option is not available on Windows platforms.</pd>
         </plentry>

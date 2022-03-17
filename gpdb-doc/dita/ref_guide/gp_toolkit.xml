@@ -1624,7 +1624,7 @@
           that are as part of a nested set of cgroups, resource group limits are relative to the
           parent cgroup allotment. For information about nested cgroups and Greenplum Database
           resource group limits, see <xref
-            href="../admin_guide/workload_mgmt_resgroups.xml#topic8339intro"/>.</note>
+            href="../admin_guide/workload_mgmt_resgroups.html#topic8339intro" scope="external" format="html">Using Resource Groups</xref>.</note>
         <p>This view is accessible to all users.</p>
         <table id="ie196287x" class="- topic/table ">
           <title class="- topic/title ">gp_resgroup_status view</title>
