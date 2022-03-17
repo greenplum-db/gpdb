@@ -37,7 +37,6 @@ When you develop with the Greenplum Database foreign-data wrapper API:
 
 The Greenplum Database 6 foreign-data wrapper implementation has the following known issues and limitations:
 
--   The Greenplum Database 6 distribution does not install any foreign data wrappers.
 -   Greenplum Database supports all values of the `mpp_execute` option value for foreign table scans only. Greenplum supports parallel write operations only when `mpp_execute` is set to `'all segments'`; Greenplum initiates write operations through the master for all other `mpp_execute` settings. See [Greenplum Database Considerations](#topic5).
 
 ## <a id="includes"></a>Header Files 
