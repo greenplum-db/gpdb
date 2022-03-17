@@ -6,6 +6,12 @@ use TestLib;
 use Test::More tests => 1;
 use File::Compare;
 
+# GPDB: Effectively disable this TAP test. We cannot run PREPARE
+# TRANSACTION in utility-mode. We need at least 1 test so create a
+# dummy one.
+is(-1, -1, "Disable this TAP test");
+exit;
+
 # Initialize and start primary node with WAL archiving
 my $node_primary = get_new_node('primary');
 $node_primary->init(has_archiving => 1, allows_streaming => 1);
