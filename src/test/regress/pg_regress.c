@@ -2739,7 +2739,7 @@ help(void)
 	printf(_("      --use-existing            use an existing installation\n"));
 	/* Please put GPDB specific options here, at the end */
 	printf(_("      --prehook=NAME            pre-hook name (default \"\")\n"));
-	printf(_("      --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
+	printf(_("      --exclude-tests=TEST      comma or space delimited tests to exclude from running\n"));
 	printf(_("      --exclude-file=FILE       file with tests to exclude from running, one test name per line\n"));
     printf(_("      --init-file=GPD_INIT_FILE  init file to be used for gpdiff (could be used multiple times)\n"));
 	printf(_("      --ignore-plans            ignore any explain plan diffs\n"));
