@@ -192,6 +192,38 @@ select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C where not 
 explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
 select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
 
+-- -- -- --
+-- Test ALL clause with subqueries
+-- -- -- --
+create table qp_csq_all_t1(a int) distributed by (a);
+create table qp_csq_all_t2(b int) distributed by (b);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (null);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t2 values (null);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t2 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+insert into qp_csq_all_t2 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+insert into qp_csq_all_t2 values (2);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
 
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ using EXISTS clause (Heap)
