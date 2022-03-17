@@ -37,7 +37,7 @@ gp\_log\_fts
 :   Logging level for FTS. The value may be "off", "terse", "verbose", or "debug". The "verbose" setting can be used in production to provide useful data for troubleshooting. The "debug" setting should not be used in production. Default: "terse"
 
 gp\_segment\_connect\_timeout
-:   The maximum time \(in seconds\) allowed for a mirror to respond. Default: 180 \(3 minutes\)
+:   The maximum time \(in seconds\) allowed for a mirror to respond. Default: 600 \(10 minutes\)
 
 In addition to the fault checking performed by the FTS, a primary segment that is unable to send data to its mirror can change the status of the mirror to down. The primary queues up the data and after `gp_segment_connect_timeout` seconds pass, indicates a mirror failure, causing the mirror to be marked down and the primary to go into `Not In Sync` mode.
 
