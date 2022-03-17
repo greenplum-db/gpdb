@@ -390,6 +390,25 @@ To set `password_encryption` in a session, use the SQL `SET` command:
 =# SET password_encryption = 'on';
 ```
 
+Passwords may be hashed using the SHA-256 hash algorithm instead of the default MD5 hash algorithm. The algorithm produces a 64-byte hexadecimal string prefixed with the characters `sha256`.
+
+**Note:**
+
+Although SHA-256 uses a stronger cryptographic algorithm and produces a longer hash string, it cannot be used with the MD5 authentication method. To use SHA-256 password hashing the authentication method must be set to `password` in the `pg_hba.conf` configuration file so that clear text passwords are sent to Greenplum Database. Because clear text passwords are sent over the network, it is very important to use SSL for client connections when you use SHA-256. The default `md5` authentication method, on the other hand, hashes the password twice before sending it to Greenplum Database, once on the password and role name and then again with a salt value shared between the client and server, so the clear text password is never sent on the network.
+
+To enable SHA-256 hashing, change the `password_hash_algorithm` configuration parameter from its default value, `md5`, to `sha-256`. The parameter can be set either globally or at the session level. To set `password_hash_algorithm` globally, execute these commands in a shell as the `gpadmin` user:
+
+```
+$ gpconfig -c password_hash_algorithm -v 'sha-256'
+$ gpstop -u
+```
+
+To set `password_hash_algorithm` in a session, use the SQL `SET` command:
+
+```
+=# SET password_hash_algorithm = 'sha-256';
+```
+
 ## <a id="topic13"></a>Time-based Authentication 
 
 Greenplum Database enables the administrator to restrict access to certain times by role. Use the `CREATE ROLE` or `ALTER ROLE` commands to specify time-based constraints.
