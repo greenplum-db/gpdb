@@ -171,6 +171,28 @@ resources:
     json_key: ((concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload4))_results.tar.gz
 
+## resources for workload 6
+- name: explain_output_((workload6))_branch
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-orca))
+    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload6))_branch.tar.gz
+
+- name: explain_output_((workload6))_baseline
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-orca))
+    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload6))_baseline.tar.gz
+
+- name: explain_((workload6))_results
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-orca))
+    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    versioned_file: ((pipeline-name))/explain_results/explain_((workload6))_results.tar.gz
+
 ## ======================================================================
 ## jobs
 ## ======================================================================
@@ -629,5 +651,96 @@ jobs:
     file: gpdb_src/concourse/tasks/diff_explain_results_with_baseline.yml
     ensure:
       put: explain_((workload4))_results
+      params:
+        file: diffs/explain_test_results.tar.gz
+
+## ======================================================================
+## workload6
+## ======================================================================
+
+- name: run_explain_suite_((workload6))
+  max_in_flight: 1
+  plan:
+  - in_parallel:
+    - get: gporca-commits-to-test
+      passed:
+      - compile_branch
+    - get: bin_gpdb
+      passed:
+      - compile_branch
+      resource: bin_gpdb_centos7_branch
+      trigger: true
+    - get: gpdb_src
+      resource: gpdb_main_src
+    - get: gp_workloads
+      params:
+        disable_git_lfs: true
+        depth: 1
+  - task: run_explain_suite
+    file: gpdb_src/concourse/tasks/run_explain_suite.yml
+    params:
+      MODE: orca
+      WORKLOAD: ((workload6))
+    on_success:
+      try:
+        put: explain_output_((workload6))_branch
+        params:
+          file: output/explain_ouput.tar.gz
+
+- name: run_explain_suite_((workload6))_baseline
+  max_in_flight: 1
+  plan:
+  - in_parallel:
+    - get: gporca-commits-to-test
+      passed:
+      - compile_baseline
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7_baseline
+      passed:
+      - compile_baseline
+      trigger: true
+    - get: gpdb_src
+      resource: gpdb_main_src
+      params:
+        submodules: none
+    - get: gp_workloads
+      params:
+        disable_git_lfs: true
+        depth: 1
+  - task: run_explain_suite_baseline
+    file: gpdb_src/concourse/tasks/run_explain_suite.yml
+    params:
+      MODE: orca
+      WORKLOAD: ((workload6))
+    on_success:
+      try:
+        put: explain_output_((workload6))_baseline
+        params:
+          file: output/explain_ouput.tar.gz
+
+- name: diff_explain_results_((workload6))
+  plan:
+  - in_parallel:
+    - get: gporca-commits-to-test
+      passed:
+      - run_explain_suite_((workload6))
+      - run_explain_suite_((workload6))_baseline
+      trigger: true
+    - get: gpdb_src
+      resource: gpdb_main_src
+      params:
+        submodules: none
+    - get: explain_output
+      resource: explain_output_((workload6))_branch
+      passed:
+      - run_explain_suite_((workload6))
+    - get: explain_output_baseline
+      resource: explain_output_((workload6))_baseline
+      passed:
+      - run_explain_suite_((workload6))_baseline
+  - task: diff_explain_results_((workload6))
+    file: gpdb_src/concourse/tasks/diff_explain_results_with_baseline.yml
+    ensure:
+      put: explain_((workload6))_results
       params:
         file: diffs/explain_test_results.tar.gz

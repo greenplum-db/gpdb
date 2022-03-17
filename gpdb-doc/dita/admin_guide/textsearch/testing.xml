@@ -18,13 +18,13 @@
       <title>Configuration Testing</title>
       <p>The function <codeph>ts_debug</codeph> allows easy testing of a text
         search configuration.</p>
-      <codeblock>ts_debug([<i>config</i> regconfig, ] <i>document</i> text,
-         OUT <i>alias</i> text,
-         OUT <i>description</i> text,
-         OUT <i>token</i> text,
-         OUT <i>dictionaries</i> regdictionary[],
-         OUT <i>dictionary</i> regdictionary,
-         OUT <i>lexemes</i> text[])
+      <codeblock>ts_debug([&lt;config> regconfig, ] &lt;document> text,
+         OUT &lt;alias> text,
+         OUT &lt;description> text,
+         OUT &lt;token> text,
+         OUT &lt;dictionaries> regdictionary[],
+         OUT &lt;dictionary> regdictionary,
+         OUT &lt;lexemes> text[])
          returns setof record</codeblock>
       <p><codeph>ts_debug</codeph> displays information about every token of
             <codeph><i>document</i></codeph> as produced by the parser and
@@ -131,10 +131,10 @@ ALTER TEXT SEARCH CONFIGURATION public.english
       <title>Parser Testing</title>
       <p>The following functions allow direct testing of a text search
         parser.</p>
-      <codeblock>ts_parse(<i>parser_name</i> text, <i>document</i> text,
-         OUT <i>tokid</i> integer, OUT <i>token</i> text) returns setof record
-ts_parse(<i>parser_oid</i> oid, <i>document</i> text,
-         OUT <i>tokid</i> integer, OUT <i>token</i> text) returns setof record</codeblock>
+      <codeblock>ts_parse(&lt;parser_name> text, &lt;document> text,
+         OUT &lt;tokid> integer, OUT &lt;token> text) returns setof record
+ts_parse(&lt;parser_oid> oid, &lt;document> text,
+         OUT &lt;tokid> integer, OUT &lt;token> text) returns setof record</codeblock>
       <p><codeph>ts_parse</codeph> parses the given document and returns a
         series of records, one for each token produced by parsing. Each record
         includes a <codeph>tokid</codeph> showing the assigned token type and a
@@ -149,10 +149,10 @@ ts_parse(<i>parser_oid</i> oid, <i>document</i> text,
      1 | a
     12 |
      1 | number</codeblock>
-      <pre>ts_token_type(<i>parser_name</i> text, OUT <i>tokid</i> integer,
-              OUT <i>alias</i> text, OUT <i>description</i> text) returns setof record
-ts_token_type(<i>parser_oid</i> oid, OUT <i>tokid</i> integer,
-              OUT <i>alias</i> text, OUT <i>description</i> text) returns setof record</pre>
+      <pre>ts_token_type(&lt;parser_name> text, OUT &lt;tokid> integer,
+              OUT &lt;alias> text, OUT &lt;description> text) returns setof record
+ts_token_type(&lt;parser_oid> oid, OUT &lt;tokid> integer,
+              OUT &lt;alias> text, OUT &lt;description> text) returns setof record</pre>
       <p><codeph>ts_token_type</codeph> returns a table which describes each
         type of token the specified parser can recognize. For each token type,
         the table gives the integer <codeph>tokid</codeph> that the parser uses

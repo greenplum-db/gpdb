@@ -120,6 +120,9 @@ public:
 	// convert to array
 	CColRefArray *Pdrgpcr(CMemoryPool *mp) const;
 
+	// convert to id colref map
+	IntToColRefMap *Phmicr(CMemoryPool *mp) const;
+
 	// hash function
 	ULONG HashValue();
 

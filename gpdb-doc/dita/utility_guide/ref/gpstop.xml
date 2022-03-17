@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gpstop.xml has a conref to this topic. -->
     <title id="jz143120">gpstop</title>
     <body>
         <p>Stops or restarts a Greenplum Database system.</p>

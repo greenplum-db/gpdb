@@ -259,7 +259,8 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 select cleanupAllGangs();
 
 -- segment 0 report an error when get a request 
-select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
+-- the fault may be triggered by other backend process, such as dtx recovery process, specify a session id.
+select gp_inject_fault('send_qe_details_init_backend', 'error', 2, current_setting('gp_session_id')::int);
 select cleanupAllGangs();
 
 -- expect failure
@@ -277,7 +278,8 @@ select cleanupAllGangs();
 
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 -- segment 0 report an error when get the second request (reader gang creation request)
-select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 3, 0, 2::smallint);
+-- the fault may be triggered by other backend process, such as dtx recovery process, specify a session id.
+select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 3, 0, 2::smallint, current_setting('gp_session_id')::int);
 select cleanupAllGangs();
 
 -- expect failure

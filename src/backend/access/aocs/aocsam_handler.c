@@ -1685,10 +1685,15 @@ aoco_estimate_rel_size(Relation rel, int32 *attr_widths,
 					(uint64)fileSegTotals->totalbytesuncompressed);
 
 	UnregisterSnapshot(snapshot);
+	
 	/*
-	 * GPDB_12_MERGE_FIXME: Do not bother scanning the visimap aux table.
-	 * Investigate if really needed
+	 * Do not bother scanning the visimap aux table.
+	 * Investigate if really needed.
+	 * 
+	 * Refer to the comments at the end of function
+	 * appendonly_estimate_rel_size().
 	 */
+
 	return;
 }
 

@@ -223,6 +223,13 @@ NLJ-Broadcast-DPE-Outer-Child PartTbl-MultiWayJoinWithDPE PartTbl-MultiWayJoinWi
 PartTbl-LeftOuterHashJoin-DPE-IsNull PartTbl-LeftOuterNLJoin-DPE-IsNull
 PartTbl-List-DPE-Int-Predicates JoinOrderDPE;
 
+CPartTblSPETest:
+PartTbl-SPE-DynamicTableScan-Range-Cost1 PartTbl-SPE-DynamicTableScan-Range-Cost2
+PartTbl-SPE-DynamicTableScan-Range-Cost3 PartTbl-SPE-DynamicTableScan-Range-Cost4
+PartTbl-SPE-DynamicTableScan-Range-Cost5 PartTbl-SPE-DynamicTableScan-List-Cost1
+PartTbl-SPE-DynamicTableScan-List-Cost2 PartTbl-SPE-DynamicTableScan-List-Cost3
+PartTbl-SPE-DynamicTableScan-List-Cost4 PartTbl-SPE-DynamicTableScan-List-Cost5;
+
 CSetop1Test:
 ValueScanWithDuplicateAndSelfComparison PushGbBelowNaryUnionAll
 PushGbBelowNaryUnion-1 PushGbBelowNaryUnion-2 MS-UnionAll-1
@@ -491,6 +498,7 @@ add_orca_test(CColRefSetIterTest)
 add_orca_test(CColRefSetTest)
 add_orca_test(CConstraintTest)
 add_orca_test(CContradictionTest)
+add_orca_test(CLogicalGbAggTest)
 add_orca_test(CCorrelatedExecutionTest)
 add_orca_test(CDecorrelatorTest)
 add_orca_test(CDistributionSpecTest)
@@ -499,6 +507,7 @@ add_orca_test(CConstTblGetTest)
 add_orca_test(CScalarIsDistinctFromTest)
 
 add_orca_test(CSubqueryHandlerTest)
+add_orca_test(CXformRightOuterJoin2HashJoinTest)
 
 add_orca_test(CBindingTest)
 add_orca_test(CEngineTest)

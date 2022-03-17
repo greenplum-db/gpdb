@@ -2556,6 +2556,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		// GPDB_12_MERGE_FIXME: skip all this if pred_cnstr = NULL
 
 		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
+		CConstraintArray *selected_partition_cnstrs =
+			GPOS_NEW(mp) CConstraintArray(mp);
 
 		IMdIdArray *all_partition_mdids = dyn_get->GetPartitionMdids();
 		for (ULONG ul = 0; ul < all_partition_mdids->Size(); ++ul)
@@ -2583,11 +2585,18 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			}
 
 			// Include the partition if it's not a contradiction, or if it's
-			// undefined (e.g default partition)
+			// undefined (e.g only has default partition)
 			if (nullptr == pcnstr || !pcnstr->FContradiction())
 			{
 				part_mdid->AddRef();
 				selected_partition_mdids->Append(part_mdid);
+				rel_cnstr = PcnstrFromChildPartition(
+					partrel, dyn_get->PdrgpcrOutput(),
+					(*dyn_get->GetRootColMappingPerPart())[ul]);
+				if (rel_cnstr)
+				{
+					selected_partition_cnstrs->Append(rel_cnstr);
+				}
 			}
 			CRefCount::SafeRelease(pcnstr);
 		}
@@ -2597,6 +2606,7 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		{
 			// Return const false if there are no partitions left to scan
 			selected_partition_mdids->Release();
+			selected_partition_cnstrs->Release();
 			CColRefArray *colref_array =
 				expr->DeriveOutputColumns()->Pdrgpcr(mp);
 
@@ -2610,10 +2620,14 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		dyn_get->Ptabdesc()->AddRef();
 		dyn_get->PdrgpcrOutput()->AddRef();
 		dyn_get->PdrgpdrgpcrPart()->AddRef();
+
+		CConstraint *selected_part_cnstr_disj =
+			CConstraint::PcnstrDisjunction(mp, selected_partition_cnstrs);
+
 		CLogicalDynamicGet *new_dyn_get = GPOS_NEW(mp) CLogicalDynamicGet(
 			mp, new_alias, dyn_get->Ptabdesc(), dyn_get->ScanId(),
 			dyn_get->PdrgpcrOutput(), dyn_get->PdrgpdrgpcrPart(),
-			selected_partition_mdids);
+			selected_partition_mdids, selected_part_cnstr_disj, true);
 
 		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
 		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));

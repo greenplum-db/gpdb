@@ -1,0 +1,89 @@
+<!--
+doc/src/sgml/ref/retrieve.sgml
+PostgreSQL documentation
+-->
+
+<refentry id="sql-retrieve">
+ <indexterm zone="sql-retrieve">
+  <primary>RETRIEVE</primary>
+ </indexterm>
+
+ <refmeta>
+  <refentrytitle>RETRIEVE</refentrytitle>
+  <manvolnum>7</manvolnum>
+  <refmiscinfo>SQL - Language Statements</refmiscinfo>
+ </refmeta>
+
+ <refnamediv>
+  <refname>RETRIEVE</refname>
+  <refpurpose>retrieve from endpoint</refpurpose>
+ </refnamediv>
+
+ <refsynopsisdiv>
+<synopsis>
+RETRIEVE { ALL | <replaceable class="parameter">count</replaceable> } FROM ENDPOINT <replaceable class="parameter">endpoint_name</replaceable>;
+
+</synopsis>
+ </refsynopsisdiv>
+
+ <refsect1>
+  <title>Description</title>
+
+  <para>
+   <command>RETRIEVE</command> retrieves data from endpoint.
+  </para>
+
+  <para>
+    In each retrieve session, the query result on that segment can be
+    retrieved by using statement "RETRIEVE" and its corresponding endpoint
+    name.
+  </para>
+
+  <para>
+    An empty set will be returned if no more
+    tuples for the endpoint.
+  </para>
+ </refsect1>
+
+ <refsect1>
+  <title>Parameters</title>
+
+  <variablelist>
+   <varlistentry>
+    <term><replaceable class="parameter">count</replaceable></term>
+    <listitem>
+     <para>
+      a positive integer value needs to be provided as the "count" to
+        specify how many rows to retrieve.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>ALL</literal></term>
+    <listitem>
+     <para>
+      Parameter "ALL" means to retrieve all the results from the endpoint.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="PARAMETER">endpoint_name</replaceable></term>
+    <listitem>
+     <para>
+      The endpoint to retrieve data from, endpoint names can be listed from function gp_get_endpoints().
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
+ <refsect1>
+  <title>See Also</title>
+
+  <simplelist type="inline">
+   <member><xref linkend="sql-declare"></member>
+  </simplelist>
+ </refsect1>
+</refentry>

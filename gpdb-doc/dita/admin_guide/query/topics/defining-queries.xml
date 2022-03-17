@@ -25,8 +25,7 @@
                     (<codeph>;</codeph>). </p>
             <p>For more information about SQL commands, see <xref
                     href="../../../ref_guide/sql_commands/sql_ref.xml">SQL Command
-                    Reference</xref><ph otherprops="op-print"> in the <cite>Greenplum Database
-                        Reference Guide</cite></ph>.</p>
+                Reference</xref>.</p>
             <p>Greenplum Database uses PostgreSQL's structure and syntax, with some exceptions. For
                 more information about SQL rules and concepts in PostgreSQL, see "SQL Syntax" in the
                 PostgreSQL documentation.</p>
@@ -71,7 +70,7 @@
             <body>
                 <p>A column reference has the form:</p>
                 <p>
-                    <codeblock><i>correlation</i>.<i>columnname</i></codeblock>
+                    <codeblock>&lt;correlation>.&lt;columnname></codeblock>
                 </p>
                 <p>Here, <codeph>correlation</codeph> is the name of a table (possibly qualified
                     with a schema name) or an alias for a table defined with a <codeph>FROM</codeph>
@@ -93,15 +92,11 @@
                     invoked. Some client libraries support specifying data values separately from
                     the SQL command, in which case parameters refer to the out-of-line data values.
                     A parameter reference has the form:</p>
-                <p>
-                    <codeblock>$number</codeblock>
-                </p>
+                <codeblock>$number</codeblock>
                 <p>For example:</p>
-                <p>
-                    <codeblock>CREATE FUNCTION dept(text) RETURNS dept
+                <codeblock>CREATE FUNCTION dept(text) RETURNS dept
     AS $$ SELECT * FROM dept WHERE name = $1 $$
     LANGUAGE SQL;</codeblock>
-                </p>
                 <p>Here, the <codeph>$1</codeph> references the value of the first function argument
                     whenever the function is invoked.</p>
             </body>
@@ -112,13 +107,13 @@
                 <p>If an expression yields a value of an array type, you can extract a specific
                     element of the array value as follows:</p>
                 <p>
-                    <codeblock><i>expression</i>[<i>subscript</i>]
+                    <codeblock>&lt;expression>[&lt;subscript>]
 </codeblock>
                 </p>
                 <p>You can extract multiple adjacent elements, called an array slice, as follows
                     (including the brackets):</p>
                 <p>
-                    <codeblock><i>expression</i>[<i>lower_subscript</i>:<i>upper_subscript</i>]
+                    <codeblock>&lt;expression>[&lt;lower_subscript>:&lt;upper_subscript>]
 </codeblock>
                 </p>
                 <p>Each subscript is an expression and yields an integer value.</p>
@@ -126,12 +121,10 @@
                     parentheses when the expression to be subscripted is a column reference or
                     positional parameter. You can concatenate multiple subscripts when the original
                     array is multidimensional. For example (including the parentheses):</p>
-                <p>
-                    <codeblock>mytable.arraycolumn[4]</codeblock>
-                    <codeblock>mytable.two_d_column[17][34]</codeblock>
-                    <codeblock>$1[10:42]</codeblock>
-                    <codeblock>(arrayfunction(a,b))[42]</codeblock>
-                </p>
+                <codeblock>mytable.arraycolumn[4]</codeblock>
+                <codeblock>mytable.two_d_column[17][34]</codeblock>
+                <codeblock>$1[10:42]</codeblock>
+                <codeblock>(arrayfunction(a,b))[42]</codeblock>
             </body>
         </topic>
         <topic id="topic8" xml:lang="en">
@@ -140,19 +133,17 @@
                 <p>If an expression yields a value of a composite type (row type), you can extract a
                     specific field of the row as follows:</p>
                 <p>
-                    <codeblock><i>expression</i>.<i>fieldname</i></codeblock>
+                    <codeblock>&lt;expression>.&lt;fieldname></codeblock>
                 </p>
                 <p>The row expression usually must be in parentheses, but you can omit these
                     parentheses when the expression to be selected from is a table reference or
                     positional parameter. For example:</p>
-                <p>
-                    <codeblock>mytable.mycolumn
+                <codeblock>mytable.mycolumn
 </codeblock>
-                    <codeblock>$1.somecolumn
+                <codeblock>$1.somecolumn
 </codeblock>
-                    <codeblock>(rowfunction(a,b)).col3
+                <codeblock>(rowfunction(a,b)).col3
 </codeblock>
-                </p>
                 <p>A qualified column reference is a special case of field selection syntax.</p>
             </body>
         </topic>
@@ -161,15 +152,15 @@
             <body>
                 <p>Operator invocations have the following possible syntaxes:</p>
                 <p>
-                    <codeblock><i>expression operator expression</i>(binary infix operator)</codeblock>
-                    <codeblock><i>operator expression</i>(unary prefix operator)</codeblock>
-                    <codeblock><i>expression operator</i>(unary postfix operator)</codeblock>
+                    <codeblock>&lt;expression operator expression>(binary infix operator)</codeblock>
+                    <codeblock>&lt;operator expression>(unary prefix operator)</codeblock>
+                    <codeblock>&lt;expression operator>(unary postfix operator)</codeblock>
                 </p>
                 <p>Where <i>operator</i> is an operator token, one of the key words
                         <codeph>AND</codeph>, <codeph>OR</codeph>, or <codeph>NOT</codeph>, or
                     qualified operator name in the form:</p>
                 <p>
-                    <codeblock>OPERATOR(<i>schema</i>.<i>operatorname</i>)</codeblock>
+                    <codeblock>OPERATOR(&lt;schema>.&lt;operatorname>)</codeblock>
                 </p>
                 <p>Available operators and whether they are unary or binary depends on the operators
                     that the system or user defines. For more information about built-in operators,
@@ -182,16 +173,15 @@
                 <p>The syntax for a function call is the name of a function (possibly qualified with
                     a schema name), followed by its argument list enclosed in parentheses:</p>
                 <p>
-                    <codeblock><i>function</i> ([<i>expression</i> [, <i>expression</i> ... ]])</codeblock>
+                    <codeblock>function ([expression [, expression ... ]])</codeblock>
                 </p>
                 <p>For example, the following function call computes the square root of 2:</p>
                 <p>
                     <codeblock>sqrt(2)</codeblock>
                 </p>
                 <p>See <xref href="../../../ref_guide/function-summary.xml#topic1">Summary of
-                        Built-in Functions</xref><ph otherprops="op-print"> in the <cite>Greenplum
-                            Database Reference Guide</cite></ph> for lists of the built-in functions
-                    by category. You can add custom functions, too.</p>
+                        Built-in Functions</xref> for lists of the built-in functions by category.
+                    You can add custom functions, too.</p>
             </body>
         </topic>
         <topic id="topic11" xml:lang="en">
@@ -313,26 +303,26 @@ FROM generate_series(1,10) AS s(i);
                     to another window function.</p>
                 <p>The syntax of a window expression is:</p>
                 <p>
-                    <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) [ FILTER ( WHERE <varname>filter_clause</varname> ) ] OVER ( <i>window_specification</i> )</codeblock>
+                    <codeblock>window_function ( [expression [, ...]] ) [ FILTER ( WHERE filter_clause ) ] OVER ( window_specification )</codeblock>
                 </p>
                 <p>Where <i><codeph>window_function</codeph></i> is one of the functions listed in
                         <xref href="../topics/functions-operators.xml#topic30/in164369"/> or a
                     user-defined window function, <i><codeph>expression</codeph></i> is any value
                     expression that does not contain a window expression, and
                             <i><codeph>window_specification</codeph></i> is:</p>
-                <p><codeblock>[<i>window_name</i>]
-[PARTITION BY <i>expression </i>[, ...]]
-[[ORDER BY <i>expression</i> [ASC | DESC | USING <i>operator</i>] [NULLS {FIRST | LAST}] [, ...]
+                <p><codeblock>[window_name]
+[PARTITION BY expression [, ...]]
+[[ORDER BY expression [ASC | DESC | USING operator] [NULLS {FIRST | LAST}] [, ...]
     [{RANGE | ROWS} 
        { UNBOUNDED PRECEDING
-       | <i>expression</i> PRECEDING
+       | expression PRECEDING
        | CURRENT ROW
-       | BETWEEN <i>window_frame_bound</i> AND <i>window_frame_bound</i> }]]</codeblock>    and
-                    where <codeph><i>window_frame_bound</i></codeph> can be one
+       | BETWEEN window_frame_bound AND window_frame_bound }]]</codeblock>    and
+                    where <codeph>window_frame_bound</codeph> can be one
                     of:<codeblock>    UNBOUNDED PRECEDING
-    <i>expression</i> PRECEDING
+    expression PRECEDING
     CURRENT ROW
-    <i>expression</i> FOLLOWING
+    expression FOLLOWING
     UNBOUNDED FOLLOWING</codeblock></p>
                 <p>A window expression can appear only in the select list of a
                         <codeph>SELECT</codeph> command. For example:</p>
@@ -535,9 +525,9 @@ expression::type</codeblock>
                                     <codeph>::</codeph> is historical PostgreSQL usage.</p></li>
                         <li><i>Assignment cast</i> - Greenplum Database implicitly invokes a cast in
                             assignment contexts, when assigning a value to a column of the target
-                            data type. For example, a <codeph><xref
+                            data type. For example, a <xref
                                     href="../../../ref_guide/sql_commands/CREATE_CAST.xml">CREATE
-                                    CAST</xref></codeph> command with the <codeph>AS
+                                    CAST</xref> command with the <codeph>AS
                                 ASSIGNMENT</codeph> clause creates a cast that is applied implicitly
                             in the assignment context. This example assignment cast assumes that
                                 <codeph>tbl1.f1</codeph> is a column of type <codeph>text</codeph>.

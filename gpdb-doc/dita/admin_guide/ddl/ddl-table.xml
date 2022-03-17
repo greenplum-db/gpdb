@@ -88,7 +88,7 @@
             <codeblock>=&gt; CREATE TABLE products 
             ( product_no integer, 
               name text, 
-              price numeric <b>CHECK (price &gt; 0)</b> );</codeblock>
+              price numeric CHECK (price &gt; 0) );</codeblock>
           </p>
         </body>
       </topic>
@@ -99,8 +99,8 @@
             constraint is always written as a column constraint. For example:</p>
           <p>
             <codeblock>=&gt; CREATE TABLE products 
-       ( product_no integer <b>NOT NULL</b>,
-         name text <b>NOT NULL</b>,
+       ( product_no integer NOT NULL,
+         name text NOT NULL,
          price numeric );
 </codeblock>
           </p>

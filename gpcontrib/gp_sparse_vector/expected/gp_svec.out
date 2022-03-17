@@ -1,5 +1,7 @@
 CREATE EXTENSION gp_sparse_vector;
+SET search_path TO sparse_vector;
 DROP TABLE if exists test;
+NOTICE:  table "test" does not exist, skipping
 CREATE TABLE test (a int, b svec) DISTRIBUTED BY (a);
 INSERT INTO test (SELECT 1,gp_extract_feature_histogram('{"one","two","three","four","five","six"}','{"twe","four","five","six","one","three","two","one"}'));
 INSERT INTO test (SELECT 2,gp_extract_feature_histogram('{"one","two","three","four","five","six"}','{"the","brown","cat","ran","across","three","dogs"}'));
@@ -14,35 +16,36 @@ SELECT a,b::float8[] cross_product_equals FROM (SELECT a,b FROM test) foo WHERE 
 (3 rows)
 
 DROP TABLE IF EXISTS test2;
+NOTICE:  table "test2" does not exist, skipping
 CREATE TABLE test2 AS SELECT * FROM test DISTRIBUTED BY (a);
 -- Test the plus operator (should be 9 rows)
 SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2;
  cross_product_sum 
 -------------------
- {4,2,2,2,2,2}
  {2,1,2,1,1,1}
  {4,3,2,2,2,2}
- {2,2,2,1,1,1}
- {2,1,2,1,1,1}
+ {4,2,2,2,2,2}
  {0,0,2,0,0,0}
  {2,2,2,1,1,1}
- {4,3,2,2,2,2}
+ {2,1,2,1,1,1}
+ {2,2,2,1,1,1}
  {4,4,2,2,2,2}
+ {4,3,2,2,2,2}
 (9 rows)
 
 -- Test ORDER BY
 SELECT (t1.b+t2.b)::float8[] cross_product_sum, l2norm(t1.b+t2.b) l2norm, (t1.b+t2.b) sparse_vector FROM test t1, test2 t2 ORDER BY 3;
- cross_product_sum |      l2norm      |    sparse_vector    
--------------------+------------------+---------------------
- {0,0,2,0,0,0}     |                2 | {2,1,3}:{0,2,0}
- {2,1,2,1,1,1}     | 3.46410161513775 | {1,1,1,3}:{2,1,2,1}
- {2,1,2,1,1,1}     | 3.46410161513775 | {1,1,1,3}:{2,1,2,1}
- {2,2,2,1,1,1}     | 3.87298334620742 | {3,3}:{2,1}
- {2,2,2,1,1,1}     | 3.87298334620742 | {3,3}:{2,1}
- {4,2,2,2,2,2}     |                6 | {1,5}:{4,2}
- {4,3,2,2,2,2}     | 6.40312423743285 | {1,1,4}:{4,3,2}
- {4,3,2,2,2,2}     | 6.40312423743285 | {1,1,4}:{4,3,2}
- {4,4,2,2,2,2}     | 6.92820323027551 | {2,4}:{4,2}
+ cross_product_sum |       l2norm       |    sparse_vector    
+-------------------+--------------------+---------------------
+ {0,0,2,0,0,0}     |                  2 | {2,1,3}:{0,2,0}
+ {2,1,2,1,1,1}     | 3.4641016151377544 | {1,1,1,3}:{2,1,2,1}
+ {2,1,2,1,1,1}     | 3.4641016151377544 | {1,1,1,3}:{2,1,2,1}
+ {2,2,2,1,1,1}     |  3.872983346207417 | {3,3}:{2,1}
+ {2,2,2,1,1,1}     |  3.872983346207417 | {3,3}:{2,1}
+ {4,2,2,2,2,2}     |                  6 | {1,5}:{4,2}
+ {4,3,2,2,2,2}     | 6.4031242374328485 | {1,1,4}:{4,3,2}
+ {4,3,2,2,2,2}     | 6.4031242374328485 | {1,1,4}:{4,3,2}
+ {4,4,2,2,2,2}     |  6.928203230275509 | {2,4}:{4,2}
 (9 rows)
 
 SELECT (sum(t1.b))::float8[] AS features_sum FROM test t1;
@@ -53,29 +56,29 @@ SELECT (sum(t1.b))::float8[] AS features_sum FROM test t1;
 
 -- Test the div operator
 SELECT (t1.b/(SELECT sum(b) FROM test))::float8[] AS weights FROM test t1 ORDER BY a;
-                        weights                        
--------------------------------------------------------
- {0.5,0.333333333333333,0.333333333333333,0.5,0.5,0.5}
- {0,0,0.333333333333333,0,0,0}
- {0.5,0.666666666666667,0.333333333333333,0.5,0.5,0.5}
+                         weights                         
+---------------------------------------------------------
+ {0.5,0.3333333333333333,0.3333333333333333,0.5,0.5,0.5}
+ {0,0,0.3333333333333333,0,0,0}
+ {0.5,0.6666666666666666,0.3333333333333333,0.5,0.5,0.5}
 (3 rows)
 
 -- Test the * operator
 SELECT t1.b %*% (t1.b/(SELECT sum(b) FROM test)) AS raw_score FROM test t1 ORDER BY a;
-     raw_score     
--------------------
-  3.16666666666667
- 0.333333333333333
-  4.16666666666667
+     raw_score      
+--------------------
+ 3.1666666666666665
+ 0.3333333333333333
+  4.166666666666666
 (3 rows)
 
 -- Test the * and l2norm operators
 SELECT (t1.b %*% (t1.b/(SELECT sum(b) FROM test))) / (l2norm(t1.b) * l2norm((SELECT sum(b) FROM test))) AS norm_score FROM test t1 ORDER BY a;
-    norm_score     
--------------------
-  0.15563317594128
- 0.049147318718299
- 0.177345110574739
+     norm_score      
+---------------------
+ 0.15563317594128032
+ 0.04914731871829904
+ 0.17734511057473928
 (3 rows)
 
 -- Test the ^ and l1norm operators
@@ -86,16 +89,18 @@ SELECT ('{1,2}:{20.,10.}'::svec)^('{1}:{3.}'::svec);
 (1 row)
 
 SELECT (t1.b %*% (t1.b/(SELECT sum(b) FROM test))) / (l1norm(t1.b) * l1norm((SELECT sum(b) FROM test))) AS norm_score FROM test t1 ORDER BY a;
-     norm_score     
---------------------
- 0.0282738095238095
- 0.0208333333333333
- 0.0325520833333333
+      norm_score      
+----------------------
+ 0.028273809523809524
+ 0.020833333333333332
+  0.03255208333333333
 (3 rows)
 
 -- Test the multi-concatenation and show sizes compared with a normal array
 DROP TABLE IF EXISTS corpus_proj;
+NOTICE:  table "corpus_proj" does not exist, skipping
 DROP TABLE IF EXISTS corpus_proj_array;
+NOTICE:  table "corpus_proj_array" does not exist, skipping
 CREATE TABLE corpus_proj AS (SELECT 10000 *|| ('{45,2,35,4,15,1}:{0,1,0,1,0,2}'::svec) result ) distributed randomly;
 CREATE TABLE corpus_proj_array AS (SELECT result::float8[] FROM corpus_proj) distributed randomly;
 -- Calculate on-disk size of sparse vector
@@ -128,16 +133,16 @@ SELECT l1norm(result) FROM corpus_proj_array;
 
 -- Calculate L2 norm from sparse vector
 SELECT l2norm(result) FROM corpus_proj;
-      l2norm      
-------------------
- 316.227766016838
+       l2norm       
+--------------------
+ 316.22776601683796
 (1 row)
 
 -- Calculate L2 norm from float8[]
 SELECT l2norm(result) FROM corpus_proj_array;
-      l2norm      
-------------------
- 316.227766016838
+       l2norm       
+--------------------
+ 316.22776601683796
 (1 row)
 
 DROP TABLE corpus_proj;
@@ -207,6 +212,7 @@ SELECT ('{1,2,3,4}:{3,4,5,6}'::svec)::float8[]  -  ('{1,2,3,4}:{3,4,5,6}'::svec)
 
 -- Test the pivot operator in the presence of NULL values
 DROP TABLE IF EXISTS pivot_test;
+NOTICE:  table "pivot_test" does not exist, skipping
 CREATE TABLE pivot_test(a float8) distributed randomly;
 INSERT INTO pivot_test VALUES (0),(1),(NULL),(2),(3);
 SELECT l1norm(array_agg(a)) FROM pivot_test;
@@ -243,4 +249,38 @@ SELECT vec_median('{9960,9926,10053,9993,10080,10050,9938,9941,10030,10029}:{1,9
           5
 (1 row)
 
+-- Test operator == as a joining condition when this column could be null. (See issue #12986)
+SELECT DISTINCT a.table_name, a.character_maximum_length
+FROM information_schema.columns a INNER JOIN information_schema.columns b ON a.table_name=b.table_name AND a.column_name=b.column_name 
+WHERE a.character_maximum_length == b.character_maximum_length ORDER BY a.table_name;
+            table_name             | character_maximum_length 
+-----------------------------------+--------------------------
+ administrable_role_authorizations |                        3
+ applicable_roles                  |                        3
+ attributes                        |                        3
+ column_privileges                 |                        3
+ columns                           |                        3
+ domain_constraints                |                        3
+ parameters                        |                        3
+ role_column_grants                |                        3
+ role_routine_grants               |                        3
+ role_table_grants                 |                        3
+ role_udt_grants                   |                        3
+ role_usage_grants                 |                        3
+ routine_privileges                |                        3
+ routines                          |                        3
+ sequences                         |                        3
+ sql_features                      |                        3
+ sql_packages                      |                        3
+ sql_parts                         |                        3
+ table_constraints                 |                        3
+ table_privileges                  |                        3
+ tables                            |                        3
+ udt_privileges                    |                        3
+ usage_privileges                  |                        3
+ user_defined_types                |                        3
+ views                             |                        3
+(25 rows)
+
 DROP EXTENSION gp_sparse_vector;
+RESET search_path;

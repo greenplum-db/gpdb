@@ -1085,7 +1085,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 	SubLinkType subLinkType = subplan->subLinkType;
 	EState	   *estate = planstate->state;
 	ScanDirection dir = estate->es_direction;
-	MemoryContext oldcontext;
+	MemoryContext oldcontext = NULL;
 	TupleTableSlot *slot;
 	ListCell   *pvar;
 	ListCell   *l;
@@ -1412,27 +1412,14 @@ PG_TRY();
 }
 PG_CATCH();
 {
-	/* If EXPLAIN ANALYZE, collect local and distributed execution stats. */
-	if (planstate->instrument && planstate->instrument->need_cdb)
-	{
-		if(Gp_role == GP_ROLE_DISPATCH)
-			cdbexplain_localExecStats(planstate, econtext->ecxt_estate->showstatctx);
-		if (!explainRecvStats &&
-			shouldDispatch &&
-			queryDesc->estate->dispatcherState)
-		{
-			/* Wait for all gangs to finish.  Cancel slowpokes. */
-			cdbdisp_cancelDispatch(queryDesc->estate->dispatcherState);
-
-			cdbexplain_recvExecStats(planstate,
-									 queryDesc->estate->dispatcherState->primaryResults,
-									 LocallyExecutingSliceIndex(queryDesc->estate),
-									 econtext->ecxt_estate->showstatctx);
-		}
-	}
-
 	/* Restore memory high-water mark for root slice of main query. */
 	MemoryContextSetPeakSpace(planstate->state->es_query_cxt, savepeakspace);
+
+	if (oldcontext)
+		MemoryContextSwitchTo(oldcontext);
+
+	/* restore scan direction */
+	estate->es_direction = dir;
 
 	/*
 	 * Clean up the interconnect.

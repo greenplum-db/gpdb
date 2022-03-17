@@ -1666,10 +1666,12 @@ appendonly_beginscan(Relation relation,
 	if (appendOnlyMetaDataSnapshot == SnapshotAny)
 	{
 		/*
-		 * the append-only meta data should never be fetched with
+		 * The append-only meta data should never be fetched with
 		 * SnapshotAny as bogus results are returned.
+		 * We use SnapshotSelf for metadata, as regular MVCC snapshot can hide
+		 * newly globally inserted tuples from global index build process.
 		 */
-		appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		appendOnlyMetaDataSnapshot = SnapshotSelf;
 	}
 
 	/*
@@ -2602,10 +2604,11 @@ appendonly_insert_init(Relation rel, int segno)
 	 * This GUC must have the same value on write and read.
 	 */
 /* 	aoInsertDesc->useNoToast = aoentry->notoast; */
+
 	/*
-	 * GPDB_12_MERGE_FIXME: we should simply never use toast for AO, variable
-	 * length blocks of AO should be able to accommodate variable length
-	 * datums.
+	 * Although variable length blocks of AO should be able to accommodate variable length
+	 * datums, we still need to keep TOAST for AO_ROW to benefit to performance when query
+	 * in-line data.
 	 */
 	aoInsertDesc->useNoToast = !(rel->rd_tableam->relation_needs_toast_table(rel));
 

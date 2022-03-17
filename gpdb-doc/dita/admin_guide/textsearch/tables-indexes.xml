@@ -86,11 +86,6 @@ UPDATE pgweb SET textsearchable_index_col =
       <p>Now we are ready to perform a fast full text search:</p>
       <codeblock>SELECT title FROM pgweb WHERE textsearchable_index_col @@ to_tsquery('create &amp; table') 
 ORDER BY last_mod_date DESC LIMIT 10;</codeblock>
-      <p otherprops="op-hidden">When using a separate column to store the <codeph>tsvector</codeph>
-        representation, it is necessary to create a trigger to keep the <codeph>tsvector</codeph>
-        column current anytime title or body changes. <xref
-          href="features.xml#triggers-for-automatic-updates" format="dita"/> explains how to do
-        that.</p>
       <p>One advantage of the separate-column approach over an expression index is that it is not
         necessary to explicitly specify the text search configuration in queries in order to make
         use of the index. As shown in the example above, the query can depend on

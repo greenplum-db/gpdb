@@ -2,7 +2,7 @@
 create table exclusion_constraints_t1(a int, b int, EXCLUDE (a WITH =));
 ERROR:  GPDB does not support exclusion constraints.
 -- Then we errored out
--- Given a create partiton table table specifying a constraint
+-- Given a create partition table table specifying a constraint
 create table exclusion_constraints_pt1(a int, b int, EXCLUDE (b WITH =)) partition by range(a) (start(1) end(4) every(1));
 ERROR:  GPDB does not support exclusion constraints.
 -- Then we errored out

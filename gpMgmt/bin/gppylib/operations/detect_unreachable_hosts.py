@@ -39,6 +39,16 @@ def get_unreachable_segment_hosts(hosts, num_workers):
 
     return unreachable_hosts
 
+
+def update_unreachable_flag_for_segments(gparray, unreachable_hosts):
+    for i, segmentPair in enumerate(gparray.segmentPairs):
+        if segmentPair.primaryDB and segmentPair.primaryDB.getSegmentHostName() in unreachable_hosts:
+            gparray.segmentPairs[i].primaryDB.unreachable = True
+
+        if segmentPair.mirrorDB and segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
+            gparray.segmentPairs[i].mirrorDB.unreachable = True
+
+
 def mark_segments_down_for_unreachable_hosts(segmentPairs, unreachable_hosts):
     # We only mark the segment down in gparray for use by later checks, as
     # setting the actual segment down in gp_segment_configuration leads to

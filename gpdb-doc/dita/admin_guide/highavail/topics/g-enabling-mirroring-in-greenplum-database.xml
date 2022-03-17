@@ -8,15 +8,5 @@
          using <codeph>gpinitsystem</codeph> or enable mirroring later using
             <codeph>gpaddmirrors</codeph> and <codeph>gpinitstandby</codeph>. This topic assumes you
          are adding mirrors to an existing system that was initialized without mirrors.</p>
-      <!-- hack for HTML/PDF -->
-      <p otherprops="op-print">You can enable the following types of mirroring:<ul
-            id="ul_wgd_dpx_dq">
-            <li id="ki155350">
-               <xref href="g-enabling-segment-mirroring.xml#topic7"/>
-            </li>
-            <li id="ki155354">
-               <xref href="g-enabling-master-mirroring.xml#topic8"/>
-            </li>
-         </ul></p>
    </body>
 </topic>

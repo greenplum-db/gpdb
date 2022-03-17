@@ -1159,7 +1159,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		{
 			if (ds->primaryResults->errcode)
 				break;
-			if (InterruptPending)
+			if (CancelRequested())
 				break;
 		}
 		SIMPLE_FAULT_INJECTOR("before_one_slice_dispatched");

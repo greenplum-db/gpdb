@@ -15,8 +15,9 @@ try:
     from gppylib import gparray
     from gppylib.db import dbconn
     from gppylib.userinput import *
-    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
-    from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts, update_unreachable_flag_for_segments
+    from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, restore_pg_hba_on_segment
+    from gppylib.operations.update_pg_hba_on_segments import update_pg_hba_on_segments_for_standby
     from gppylib.operations.package import SyncPackages
     from gppylib.commands.pg import PgBaseBackup
 except ImportError as e:
@@ -353,15 +354,6 @@ def check_and_start_standby():
                            standby.port)
     logger.info("Successfully started standby coordinator")
 
-#-------------------------------------------------------------------------
-def get_standby_pg_hba_info(standby_host):
-    standby_ips = gp.IfAddrs.list_addrs(standby_host)
-    current_user = unix.UserId.local('get userid')
-    new_section = ['# standby coordinator host ip addresses\n']
-    for ip in standby_ips:
-        cidr_suffix = '/128' if ':' in ip else '/32' # MPP-15889
-        new_section.append('host\tall\t%s\t%s%s\ttrust\n' % (current_user, ip, cidr_suffix))
-    return new_section
 
 #-------------------------------------------------------------------------
 def create_standby(options):
@@ -407,13 +399,17 @@ def create_standby(options):
         # Disable Ctrl-C
         signal.signal(signal.SIGINT,signal.SIG_IGN)
 
+        batch_size = 1
         # update the catalog if needed
         array = add_standby_to_catalog(options, standby_datadir)
+
+        # update unreachable flag for primary and mirror segments
+        update_unreachable_flag_for_segments(array, unreachable_hosts)
 
         logger.info('Updating pg_hba.conf file...')
         update_pg_hba_conf(options, array)
         logger.debug('Updating pg_hba.conf file on segments...')
-        update_pg_hba_conf_on_segments(array, options.standby_host, options.hba_hostnames, unreachable_hosts)
+        update_pg_hba_on_segments_for_standby(array, options.standby_host, options.hba_hostnames, batch_size)
         logger.info('pg_hba.conf files updated successfully.')
 
         copy_coordinator_datadir_to_standby(options, array, standby_datadir)

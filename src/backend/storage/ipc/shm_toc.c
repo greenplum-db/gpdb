@@ -252,6 +252,7 @@ shm_toc_lookup(shm_toc *toc, uint64 key, bool noError)
 	if (!noError)
 		elog(ERROR, "could not find key " UINT64_FORMAT " in shm TOC at %p",
 			 key, toc);
+
 	return NULL;
 }
 

@@ -135,9 +135,9 @@ class ConfExpSegCmd(Command):
                                                                                 datetime.datetime.today().strftime('%Y%m%d_%H%M%S'),
                                                                                 self.dbid)
                     # Create a mirror based on the primary
-                    cmd = PgBaseBackup(pgdata=self.datadir,
-                                       host=self.syncWithSegmentHostname,
-                                       port=str(self.syncWithSegmentPort),
+                    cmd = PgBaseBackup(target_datadir=self.datadir,
+                                       source_host=self.syncWithSegmentHostname,
+                                       source_port=str(self.syncWithSegmentPort),
                                        create_slot = False,
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
@@ -156,9 +156,9 @@ class ConfExpSegCmd(Command):
                         #  Re-run with `create_slot`.
                         #  GPDB_12_MERGE_FIXME could we check it before? or let
                         #  pg_basebackup create slot if not exists.
-                        cmd = PgBaseBackup(pgdata=self.datadir,
-                                           host=self.syncWithSegmentHostname,
-                                           port=str(self.syncWithSegmentPort),
+                        cmd = PgBaseBackup(target_datadir=self.datadir,
+                                           source_host=self.syncWithSegmentHostname,
+                                           source_port=str(self.syncWithSegmentPort),
                                            create_slot = True,
                                            replication_slot_name=self.replicationSlotName,
                                            forceoverwrite=True,

@@ -241,6 +241,13 @@ script:
         if [ -z "$tests" ] || [ "$tests" = "installcheck" ]; then
             make -C gpAux/gpdemo cluster
             source gpAux/gpdemo/gpdemo-env.sh
+            trap look4diffs ERR
+            function look4diffs() {
+                echo ========regression.diffs========
+                cat src/test/regress/regression.diffs
+                echo ========regression.diffs========
+                exit 1
+            }
             make -C src/test/regress installcheck-small
         fi
       fi
@@ -266,6 +273,13 @@ script:
         make -s unittest-check
         make -C gpAux/gpdemo cluster
         source gpAux/gpdemo/gpdemo-env.sh
+        trap look4diffs ERR
+        function look4diffs() {
+            echo ========regression.diffs========
+            cat src/test/regress/regression.diffs
+            echo ========regression.diffs========
+            exit 1
+        }
         make -C src/test/regress installcheck-small
       fi
   - |

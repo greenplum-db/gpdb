@@ -49,6 +49,11 @@ CREATE TABLE tenk_ao13 (like tenk_heap) with (appendoptimized=true);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendonly=true, appendoptimized=false);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
+CREATE TABLE tenk_ao14 (like tenk_heap) with (orientation=row);
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=false, orientation=row);
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, orientation=foo);
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, orientation);
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, orientation=row, orientation=row);
 CREATE TABLE tenk_ao15 (like tenk_heap) with (appendoptimized=true) 
 PARTITION BY RANGE(unique2)
 (

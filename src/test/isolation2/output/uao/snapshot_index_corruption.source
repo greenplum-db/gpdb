@@ -1,0 +1,83 @@
+-- @Description Test index corruption when invalid snapshot used.
+--
+-- Create AO table, insert few rows on it.
+drop table if exists test_ao;
+DROP
+create table test_ao(i bigint) using @amname@ distributed by (i);
+CREATE
+insert into test_ao select generate_series(1,100);
+INSERT 100
+-- Test 1
+-- Begin single-insert transaction.
+1: begin;
+BEGIN
+1: insert into test_ao values(101);
+INSERT 1
+-- Try to create index, it should hold on lock before commit below.
+2&: create index test_ao_idx on test_ao(i);  <waiting ...>
+-- Commit single-insert transaction, so index continues creation.
+1: commit;
+COMMIT
+-- Force index usage and check row is here (false before fix).
+2<:  <... completed>
+CREATE
+2: set optimizer=off;
+SET
+2: set enable_seqscan=off;
+SET
+2: explain (costs off) select i from test_ao where i = 101;
+ QUERY PLAN                                   
+----------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)     
+   ->  Bitmap Heap Scan on test_ao            
+         Recheck Cond: (i = 101)              
+         ->  Bitmap Index Scan on test_ao_idx 
+               Index Cond: (i = 101)          
+ Optimizer: Postgres query optimizer          
+(6 rows)
+2: select i from test_ao where i = 101;
+ i   
+-----
+ 101 
+(1 row)
+
+-- Test 2
+-- Drop incomplete index
+1: drop index test_ao_idx;
+DROP
+-- Check row is here and start repeatable read transaction.
+2: select i from test_ao where i = 100;
+ i   
+-----
+ 100 
+(1 row)
+2: begin;
+BEGIN
+2: set transaction isolation level repeatable read;
+SET
+2: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+-- Update row selected above and create new index
+1: update test_ao set i = 200 where i = 100;
+UPDATE 1
+1: create index test_ao_idx on test_ao(i);
+CREATE
+-- For the repeatable read isolation level row still there.
+2: explain (costs off) select i from test_ao where i = 100;
+ QUERY PLAN                                   
+----------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)     
+   ->  Bitmap Heap Scan on test_ao            
+         Recheck Cond: (i = 100)              
+         ->  Bitmap Index Scan on test_ao_idx 
+               Index Cond: (i = 100)          
+ Optimizer: Postgres query optimizer          
+(6 rows)
+2: select i from test_ao where i = 100;
+ i   
+-----
+ 100 
+(1 row)

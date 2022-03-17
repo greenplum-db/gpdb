@@ -1,9 +1,11 @@
 from mock import call, Mock, patch
 
-from .gp_unittest import GpTestCase
+from .gp_unittest import Contains, GpTestCase
+from gppylib.commands.base import CommandResult
+from gppylib.commands import gp
 from gppylib.gparray import Segment
 from gppylib.operations.buildMirrorSegments import GpMirrorToBuild
-from gppylib.recoveryinfo import  build_recovery_info, RecoveryInfo
+from gppylib.recoveryinfo import  build_recovery_info, RecoveryInfo, RecoveryResult
 
 
 class BuildRecoveryInfoTestCase(GpTestCase):
@@ -130,3 +132,304 @@ class BuildRecoveryInfoTestCase(GpTestCase):
                 actual_ri_by_host = build_recovery_info(test['mirrors_to_build'])
                 self.assertEqual(test['expected'], actual_ri_by_host)
                 self.mock_datetime.today.return_value.strftime.assert_called_once()
+
+
+class RecoveryResultTestCase(GpTestCase):
+    def setUp(self):
+        self.maxDiff = None
+        self.all_dbids = set([2, 3, 4])
+
+    def tearDown(self):
+        super(RecoveryResultTestCase, self).tearDown()
+
+    #FIXME better name ?
+    def _msg(self, host, port, logfile=None, datadir=None, error=None, type=None):
+        if logfile:
+            return Contains('hostname: {}; port: {}; logfile: {}; recoverytype: {}'.format(host, port, logfile, type))
+        elif datadir:
+            return Contains('hostname: {}; port: {}; datadir: {}'.format(host, port, datadir))
+        elif error:
+            return Contains('hostname: {}; port: {}; error: {}'.format(host, port, error))
+
+    def test_run_setup_recovery(self):
+        tests = [
+            {
+                "name": "run_setup_recovery_no_errors",
+                "host1_error": None,
+                "host2_error": None,
+                "expected_info_msgs": [],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": True,
+                "recovery_successful": True,
+            },
+            {
+                "name": "setup_recovery_errors",
+                "host1_error": '[{"error_type": "validation", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                              '{"error_type": "validation", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "validation", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to setup recovery for the following segments'))],
+                "expected_error_msgs": [call(self._msg('host1', 7001, error='some error for dbid 2')),
+                                        call(self._msg('host1', 7003, error='some error for dbid 3')),
+                                        call(self._msg('host2', 7005, error='some error for dbid 4'))],
+                "setup_successful": False,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+            },
+            {
+                "name": "setup_recovery_invalid_errors",
+                "host1_error": 'invalid value before error1 [{"error_type": "validation", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                              'invalid value before error2 {"error_type": "validation", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "validation", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call('Failed to setup recovery for the following segments')],
+                "expected_error_msgs": [call(self._msg('host2', 7005, error='some error for dbid 4')),
+                                        call(Contains('Unable to parse recovery error. hostname: host1, error: invalid value before error1'))],
+                "setup_successful": False,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+            },
+            {
+                "name": "run_setup_recovery_empty_errors",
+                "host1_error": '',
+                "host2_error": '',
+                "expected_info_msgs": [],
+                "expected_error_msgs": [call(Contains('Unable to parse recovery error. hostname: host1, error: ')),
+                                        call(Contains('Unable to parse recovery error. hostname: host2, error: '))],
+                "setup_successful": False,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+            },
+            {
+                "name": "run_setup_recovery_errors_on_one_host",
+                "host1_error": '[{"error_type": "validation", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                               '{"error_type": "validation", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": None,
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call('Failed to setup recovery for the following segments')],
+                "expected_error_msgs": [call(self._msg('host1', 7001, error='some error for dbid 2')),
+                                        call(self._msg('host1', 7003, error='some error for dbid 3'))],
+                "setup_successful": False,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+            },
+            {
+                "name": "run_setup_recovery_does_not_print_other_errors",
+                "host1_error": '[{"error_type": "full", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}]',
+                "host2_error": '[{"error_type": "start", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2]
+            },
+        ]
+        self.run_tests(tests)
+
+    def test_run_recovery(self):
+        tests = [
+            {
+                "name": "run__recovery_no_errors",
+                "host1_error": None,
+                "host2_error": None,
+                "expected_info_msgs": [],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": True,
+                "recovery_successful": True,
+                "dbids_that_failed_bb_rewind": []
+            },
+            {
+                "name": "run_recovery_invalid_errors",
+                "host1_error": 'invalid error1',
+                "host2_error": '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call('Failed to action_recover the following segments'),
+                                       call(self._msg('host2', 7005, logfile='/tmp/progress4', type='full'))],
+                "expected_error_msgs": [call(Contains('Unable to parse recovery error. hostname: host1, error: invalid error1'))],
+                "setup_successful": False,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [4]
+            },
+            {
+                "name": "run_recovery_empty_errors",
+                "host1_error": '',
+                "host2_error": '',
+                "expected_info_msgs": [],
+                "expected_error_msgs": [call(Contains('Unable to parse recovery error. hostname: host1, error: ')),
+                                        call(Contains('Unable to parse recovery error. hostname: host2, error: '))],
+                "setup_successful": False,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": []
+            },
+            {
+                "name": "run_recovery_all_dbids_fail_only_bb_errors",
+                "host1_error": '[{"error_type": "full", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                               '{"error_type": "full", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call('Failed to action_recover the following segments'),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='full')),
+                                       call(self._msg('host1', 7003, logfile='/tmp/progress3', type='full')),
+                                       call(self._msg('host2', 7005, logfile='/tmp/progress4', type='full'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2, 3, 4]
+            },
+            {
+                "name": "run_recovery_all_dbids_fail_only_rewind_errors",
+                "host1_error": '[{"error_type": "incremental", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                               '{"error_type": "incremental", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "incremental", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call('Failed to action_recover the following segments. You must run gprecoverseg -F for all incremental failures'),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='incremental')),
+                                       call(self._msg('host1', 7003, logfile='/tmp/progress3', type='incremental')),
+                                       call(self._msg('host2', 7005, logfile='/tmp/progress4', type='incremental'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": True,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2, 3, 4]
+            },
+            {
+                "name": "run_recovery_all_dbids_fail_only_bb_rewind_errors",
+                "host1_error": '[{"error_type": "full", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                              '{"error_type": "incremental", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to action_recover the following segments. You must run gprecoverseg -F for all incremental failures')),
+                                       call(self._msg('host1', 7003, logfile='/tmp/progress3', type='incremental')),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='full')),
+                                       call(self._msg('host2', 7005, logfile='/tmp/progress4', type='full'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2, 3, 4]
+            },
+            {
+                "name": "run_recovery_some_dbids_fail_only_bb_rewind_errors",
+                "host1_error": '[{"error_type": "incremental", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}]',
+                "host2_error": '[{"error_type": "full", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to action_recover the following segments. You must run gprecoverseg -F for all incremental failures')),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='incremental')),
+                                       call(self._msg('host2', 7005, logfile='/tmp/progress4', type='full'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2, 4]
+            },
+            {
+                "name": "run_recovery_all_dbids_fail_only_start_errors",
+                "host1_error": '[{"error_type": "start", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                              '{"error_type": "start", "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "start", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to start the following segments')),
+                                       call(self._msg('host1', 7001, datadir='/datadir2')),
+                                       call(self._msg('host1', 7003, datadir='/datadir3')),
+                                       call(self._msg('host2', 7005, datadir='/datadir4'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": True,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": []
+            },
+            {
+                "name": "run_recovery_some_dbids_fail_only_start_errors",
+                "host1_error": '[{"error_type": "start", "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}]',
+                "host2_error": '[{"error_type": "start", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to start the following segments')),
+                                       call(self._msg('host1', 7001, datadir='/datadir2')),
+                                       call(self._msg('host2', 7005, datadir='/datadir4'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": True,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": []
+            },
+            {
+                "name": "run_recovery_all_dbids_fail_both_recovery_and_start_errors",
+                "host1_error": '[{"error_type": "full",  "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                              '{"error_type": "start",  "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "full",  "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to action_recover the following segments')),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='full')),
+                                       call(self._msg('host2', 7005, logfile='/tmp/progress4', type='full')),
+                                       call(Contains('-----')),
+                                       call(Contains('Failed to start the following segments. Please check the latest logs')),
+                                       call(self._msg('host1', 7003, datadir='/datadir3'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2, 4]
+            },
+            {
+                "name": "run_recovery_all_dbids_fail_both_recovery_and_default_errors",
+                "host1_error": '[{"error_type": "full",  "error_msg":"some error for dbid 2", "dbid": 2, "datadir": "/datadir2", "port": 7001, "progress_file": "/tmp/progress2"}, ' \
+                              '{"error_type": "default",  "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
+                "host2_error": '[{"error_type": "start",  "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
+                "expected_info_msgs": [call(Contains('-----')),
+                                       call(Contains('Failed to action_recover the following segments')),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='full')),
+                                       call(Contains('-----')),
+                                       call(Contains('Failed to start the following segments. Please check the latest logs')),
+                                       call(self._msg('host2', 7005, datadir='/datadir4'))],
+                "expected_error_msgs": [],
+                "setup_successful": True,
+                "full_recovery_successful": False,
+                "recovery_successful": False,
+                "dbids_that_failed_bb_rewind": [2]
+            },
+        ]
+        self.run_tests(tests, run_recovery=True)
+
+    def run_tests(self, tests, run_recovery=False):
+        for test in tests:
+            with self.subTest(msg=test["name"]):
+                if test["host1_error"] is None:
+                    host1_result = CommandResult(0, b"", b"", True, False)
+                else:
+                    host1_result = CommandResult(1, 'failed 1'.encode(), test["host1_error"].encode(), True, False)
+                if test["host2_error"] is None:
+                    host2_result = CommandResult(0, b"", b"", True, False)
+                else:
+                    host2_result = CommandResult(1, 'failed 2'.encode(), test["host2_error"].encode(), True, False)
+
+                host1_recovery_output = gp.GpSegRecovery(None, None, None, False, 1, 'host1', None, True)
+                host2_recovery_output = gp.GpSegRecovery(None, None, None, False, 1, 'host2', None, True)
+                host1_recovery_output.get_results = Mock(return_value=host1_result)
+                host2_recovery_output.get_results = Mock(return_value=host2_result)
+
+                mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
+                r = RecoveryResult('action_recover', [host1_recovery_output, host2_recovery_output], mock_logger)
+                self.assertEqual(r.setup_successful(), test["setup_successful"])
+                self.assertEqual(r.full_recovery_successful(), test["full_recovery_successful"])
+                self.assertEqual(r.recovery_successful(), test["recovery_successful"])
+
+                if run_recovery:
+                    r.print_bb_rewind_and_start_errors()
+                else:
+                    r.print_setup_recovery_errors()
+
+                self.assertEqual(test['expected_info_msgs'], mock_logger.info.call_args_list)
+                self.assertEqual(test['expected_error_msgs'], mock_logger.error.call_args_list)
+
+                dbids_that_failed_bb_rewind = test.get("dbids_that_failed_bb_rewind", [])
+                for failed_dbid in dbids_that_failed_bb_rewind:
+                    self.assertFalse(r.was_bb_rewind_successful(failed_dbid))
+                dbids_that_passed_bb_rewind = self.all_dbids - set(dbids_that_failed_bb_rewind)
+                for pass_dbid in dbids_that_passed_bb_rewind:
+                    self.assertTrue(r.was_bb_rewind_successful(pass_dbid))

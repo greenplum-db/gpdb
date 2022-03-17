@@ -34,6 +34,7 @@ try:
     from gppylib.gp_era import GpEraFile
     from gppylib.operations.utils import ParallelOperation, RemoteOperation
     from gppylib.operations.rebalanceSegments import ReconfigDetectionSQLQueryCommand
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -464,6 +465,10 @@ class GpStop:
 
         if self.gparray.standbyCoordinator:
             standby = self.gparray.standbyCoordinator
+
+            if get_unreachable_segment_hosts([standby.hostname], 1):
+                logger.warning("Standby is unreachable, skipping shutdown on standby")
+                return True
 
             logger.info("Stopping coordinator standby host %s mode=%s" % (standby.hostname, self.mode))
             try:

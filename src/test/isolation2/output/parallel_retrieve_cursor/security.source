@@ -26,7 +26,7 @@ CREATE
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 DECLARE
-1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -82,15 +82,15 @@ ERROR:  This is a retrieve connection, but the query is not a RETRIEVE.
 -- Test: Different illegal endpoints always lead to an error
 ---- invalid endpoints
 1R: RETRIEVE ALL FROM ENDPOINT abc;
-ERROR:  the endpoint abc does not exist in the session
+ERROR:  the endpoint abc does not exist for session id xxx
 1R: RETRIEVE ALL FROM ENDPOINT 123;
 ERROR:  syntax error at or near "123"
 LINE 1: RETRIEVE ALL FROM ENDPOINT 123;
                                    ^
 1R: RETRIEVE ALL FROM ENDPOINT tk1122;
-ERROR:  the endpoint tk1122 does not exist in the session
+ERROR:  the endpoint tk1122 does not exist for session id xxx
 1R: RETRIEVE ALL FROM ENDPOINT tktt223344556677889900112233445566;
-ERROR:  the endpoint tktt223344556677889900112233445566 does not exist in the session
+ERROR:  the endpoint tktt223344556677889900112233445566 does not exist for session id xxx
 
 -- Retrieve data.
 *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";

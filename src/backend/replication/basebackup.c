@@ -176,6 +176,9 @@ static const char *excludeDirContents[] =
 	/* Contents unique to each segment instance. */
 	"log",
 
+	/* GPDB: Default gpbackup directory (backup contents) */
+	"backups",
+
 	/* end of list */
 	NULL
 };
@@ -205,6 +208,9 @@ static const char *excludeFiles[] =
 
 	"postmaster.pid",
 	"postmaster.opts",
+
+	/* GPDB: Default gpbackup directory (top-level directory) */
+	"backups",
 
 	/* end of list */
 	NULL
@@ -1478,7 +1484,7 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces,
 
 			if (!sizeonly)
 				sent = sendFile(pathbuf, pathbuf + basepathlen + 1, &statbuf,
-								true, isDbDir ? pg_atoi(lastDir + 1, sizeof(Oid), 0) : InvalidOid);
+								true, isDbDir ? atooid(lastDir + 1) : InvalidOid);
 
 			if (sent || sizeonly)
 			{

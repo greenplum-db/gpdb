@@ -17,6 +17,9 @@
         password quality checking and policy definition for Greenplum Database.</li>
       <li><codeph><xref href="auto-explain.xml#topic_fstrm"/></codeph> Provides a means for logging
         execution plans of slow statements automatically.</li>
+       <li><codeph><xref href="btree_gin.xml" format="dita"
+             >btree_gin</xref></codeph> - Provides sample generalized inverted index (GIN)
+          operator classes that implement B-tree equivalent behavior for certain data types.</li>
        <li><codeph><xref href="citext.xml" format="dita"
               >citext</xref></codeph> - Provides a case-insensitive, multibyte-aware text
           data type.</li>
@@ -44,6 +47,10 @@
        <li><codeph><xref href="pageinspect.xml" format="dita"
              >pageinspect</xref></codeph> - Provides functions for low level inspection
          of the contents of database pages; available to superusers only.</li>
+       <li><codeph><xref href="pg_trgm.xml" format="dita"
+             >pg_trgm</xref></codeph> - Provides functions and operators for determining the
+          similarity of alphanumeric text based on trigram matching. The module also
+          provides index operator classes that support fast searching for similar strings.</li>
        <li><codeph><xref href="pgcrypto.xml" format="dita"
              >pgcrypto</xref></codeph> - Provides cryptographic functions for Greenplum
          Database.</li>

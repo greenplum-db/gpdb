@@ -521,7 +521,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 
 		while (PQisBusy(q->conn) && PQstatus(q->conn) == CONNECTION_OK)
 		{
-			if ((Gp_role == GP_ROLE_DISPATCH) && InterruptPending)
+			if ((Gp_role == GP_ROLE_DISPATCH) && CancelRequested())
 			{
 				PQrequestCancel(q->conn);
 			}

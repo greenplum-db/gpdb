@@ -95,9 +95,9 @@ jobs:
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 
-
     - in_parallel:
       - task: icw_planner_centos7
+        tags: [icw-centos7]
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
         image: gpdb7-centos7-test
         input_mapping:
@@ -110,6 +110,7 @@ jobs:
         timeout: 3h
 
       - task: icw_gporca_centos7
+        tags: [icw-centos7]
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
         image: gpdb7-centos7-test
         input_mapping:

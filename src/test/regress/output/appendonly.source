@@ -63,6 +63,18 @@ CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
 ERROR:  appendoptimized requires a Boolean value
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
 ERROR:  parameter "appendonly" specified more than once
+CREATE TABLE tenk_ao14 (like tenk_heap) with (orientation=row);
+ERROR:  invalid option "orientation" for base relation
+HINT:  Table orientation only valid for Append Optimized relations, create an AO relation to use table orientation.
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=false, orientation=row);
+ERROR:  invalid option "orientation" for base relation
+HINT:  Table orientation only valid for Append Optimized relations, create an AO relation to use table orientation.
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, orientation=foo);
+ERROR:  invalid parameter value for "orientation": "foo"
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, orientation);
+ERROR:  orientation requires a parameter
+CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, orientation=row, orientation=row);
+ERROR:  parameter "orientation" specified more than once
 CREATE TABLE tenk_ao15 (like tenk_heap) with (appendoptimized=true) 
 PARTITION BY RANGE(unique2)
 (

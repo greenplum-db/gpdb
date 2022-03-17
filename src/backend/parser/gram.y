@@ -19668,24 +19668,6 @@ greenplumLegacyAOoptions(const char *accessMethod, List **options)
 	}
 	*options = amendedOptions;
 
-	/* GPDB_12_MERGE_FIXME: during the development of the ao_row/column tableam we
-	 * need to have this layer turned off. When removing this fixme, make
-	 * certain that any sanity checks on the options are also introduced if
-	 * needed. Such examples can be:
-	 *
-	 *  if (strcmp(elem->defname, "appendoptimized") == 0 ||
-	 *      strcmp(elem->defname, "appendonly") == 0)
-	 *  {
-	 *      if ((strVal(elem->arg), "true") == 0)
-	 *   	{ options for true }
-	 *   	else if ((strVal(elem->arg), "false") == 0)
-	 *   	{ options for false }
-	 *   	else
-	 *   	{ ereport(....
-	 *  }
-	 *
-	 */
-
 	if (!appendoptimized && is_column_oriented_found)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

@@ -1662,6 +1662,12 @@ select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select 
  4.0000000000000000
 (4 rows)
 
+-- Planner should fail due to skip-level correlation not supported. Query should not cause segfault like in issue #12054.
+select A.j, (select array_agg(a_B) from (select B.j, (select array_agg(a_C) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- Planner should fail due to skip-level correlation not supported. Query should not return wrong results like in issue #12054.
+select A.j, (select array_agg(a_B) from (select B.j, (select sum(a_C.j) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
+ERROR:  correlated subquery with skip-level correlations is not supported
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multiple columns (Heap)
 -- ----------------------------------------------------------------------

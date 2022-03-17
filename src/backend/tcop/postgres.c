@@ -1779,12 +1779,11 @@ exec_simple_query(const char *query_string)
 		}
 
 		/*
-		 * If are connected in utility mode, disallow PREPARE TRANSACTION
-		 * statements.
+		 * GPDB: If we are connected in utility mode, disallow PREPARE
+		 * TRANSACTION statements.
 		 */
-		TransactionStmt *transStmt = (TransactionStmt *) parsetree;
-		if (Gp_role == GP_ROLE_UTILITY && IsA(parsetree, TransactionStmt) &&
-			transStmt->kind == TRANS_STMT_PREPARE)
+		if (Gp_role == GP_ROLE_UTILITY && IsA(parsetree->stmt, TransactionStmt) &&
+			((TransactionStmt *) parsetree->stmt)->kind == TRANS_STMT_PREPARE)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -5130,9 +5129,19 @@ PostgresMain(int argc, char *argv[],
 		 */
 		if (send_ready_for_query)
 		{
+			char activity[50];
+			memset(activity, 0, sizeof(activity));
+			int remain = sizeof(activity);
+
+			if (am_cursor_retrieve_handler)
+			{
+				strncpy(activity, "[retrieve] ", sizeof(activity));
+				remain -= strlen(activity);
+			}
 			if (IsAbortedTransactionBlockState())
 			{
-				set_ps_display("idle in transaction (aborted)", false);
+				strncat(activity, "idle in transaction (aborted)", remain);
+				set_ps_display(activity, false);
 				pgstat_report_activity(STATE_IDLEINTRANSACTION_ABORTED, NULL);
 
 				/* Start the idle-in-transaction timer */
@@ -5145,7 +5154,8 @@ PostgresMain(int argc, char *argv[],
 			}
 			else if (IsTransactionOrTransactionBlock())
 			{
-				set_ps_display("idle in transaction", false);
+				strncat(activity, "idle in transaction", remain);
+				set_ps_display(activity, false);
 				pgstat_report_activity(STATE_IDLEINTRANSACTION, NULL);
 
 				/* Start the idle-in-transaction timer */
@@ -5162,7 +5172,8 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_stat(false);
 				pgstat_report_queuestat();
 
-				set_ps_display("idle", false);
+				strncat(activity, "idle", remain);
+				set_ps_display(activity, false);
 				pgstat_report_activity(STATE_IDLE, NULL);
 			}
 
@@ -6016,4 +6027,12 @@ disable_client_wait_timeout_interrupt(void)
 {
 	if (DoingCommandRead)
 		DisableClientWaitTimeoutInterrupt();
+}
+
+/*
+ * Whether request on cancel or termination have arrived?
+ */
+inline bool
+CancelRequested() {
+	return InterruptPending && (ProcDiePending || QueryCancelPending);
 }

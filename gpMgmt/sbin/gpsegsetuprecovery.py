@@ -3,10 +3,12 @@ import os
 import sys
 import abc
 
-from gppylib.commands.base import Command, set_cmd_results, WorkerPool, CommandResult, ExecutionError
+from gppylib import recoveryinfo
+from gppylib.commands.base import Command, WorkerPool, CommandResult, ExecutionError
 from gppylib.db import dbconn
-from recovery_base import RecoveryBase
+from recovery_base import RecoveryBase, set_recovery_cmd_results
 
+#FIXME remove this class
 class ValidationException(Exception):
 
     def __init__(self, msg):
@@ -21,13 +23,10 @@ class SetupForIncrementalRecovery(Command):
     def __init__(self, name, recovery_info, logger):
         self.name = name
         self.recovery_info = recovery_info
-        # TODO test for this cmdstr. also what should this cmdstr be ?
         cmdStr = ''
-
-        #cmdstr = 'TODO? : {} {}'.format(str(recovery_info), self.verbose)
         Command.__init__(self, self.name, cmdStr)
-        #TODO this logger has to come after the init and is duplicated in all the 4 classes
         self.logger = logger
+        self.error_type = recoveryinfo.RecoveryErrorType.VALIDATION_ERROR
 
     def remove_postmaster_pid(self):
         cmd = Command(name='remove the postmaster.pid file',
@@ -37,7 +36,7 @@ class SetupForIncrementalRecovery(Command):
         if return_code != 0:
             raise ExecutionError("Failed while trying to remove postmaster.pid.", cmd)
 
-    @set_cmd_results
+    @set_recovery_cmd_results
     def run(self):
 
         # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
@@ -63,15 +62,12 @@ class ValidationForFullRecovery(Command):
         self.name = name
         self.recovery_info = recovery_info
         self.forceoverwrite = forceoverwrite
-        # TODO test for this cmdstr. also what should this cmdstr be ?
         cmdStr = ''
-
-        #cmdstr = 'TODO? : {} {}'.format(str(recovery_info), self.verbose)
         Command.__init__(self, self.name, cmdStr)
-        #TODO this logger has to come after the init and is duplicated in all the 4 classes
         self.logger = logger
+        self.error_type = recoveryinfo.RecoveryErrorType.VALIDATION_ERROR
 
-    @set_cmd_results
+    @set_recovery_cmd_results
     def run(self):
         self.logger.info("Validate data directories for segment with dbid {}".
                          format(self.recovery_info.target_segment_dbid))
@@ -104,26 +100,26 @@ class ValidationForFullRecovery(Command):
 
 
 
-#TODO we may not need this class
+#FIXME we may not need this class
 class SegSetupRecovery(object):
     def __init__(self):
         pass
 
     def main(self):
-        RecoveryBase().main(__file__, self.get_setup_cmds)
+        recovery_base = RecoveryBase(__file__)
+        recovery_base.main(self.get_setup_cmds(recovery_base.seg_recovery_info_list, recovery_base.options.forceoverwrite,
+                                               recovery_base.logger))
 
     def get_setup_cmds(self, seg_recovery_info_list, forceoverwrite, logger):
         cmd_list = []
         for seg_recovery_info in seg_recovery_info_list:
             if seg_recovery_info.is_full_recovery:
-                cmd = ValidationForFullRecovery(name='Validate target segment'
-                                                     'dir for pg_basebackup',
+                cmd = ValidationForFullRecovery(name='Validate target segment dir for pg_basebackup',
                                                 recovery_info=seg_recovery_info,
                                                 forceoverwrite=forceoverwrite,
                                                 logger=logger)
             else:
-                cmd = SetupForIncrementalRecovery(name='Setup for pg_rewind',
-                                                  recovery_info=seg_recovery_info,
+                cmd = SetupForIncrementalRecovery(name='Setup for pg_rewind', recovery_info=seg_recovery_info,
                                                   logger=logger)
             cmd_list.append(cmd)
 

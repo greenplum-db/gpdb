@@ -118,7 +118,7 @@
             and optional configuration file location and region parameters in the
             <codeph>LOCATION</codeph> clause
             of the <codeph>CREATE EXTERNAL TABLE</codeph> command. The syntax follows:</p>
-         <codeblock>'s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3_region</varname>] [config=<varname>config_file_location</varname> | config_server=<varname>url</varname>]'</codeblock>
+         <codeblock>'s3://&lt;S3_endpoint>[:&lt;port>]/&lt;bucket_name>/[&lt;S3_prefix>] [region=&lt;S3_region>] [config=&lt;config_file_location> | config_server=&lt;url>]'</codeblock>
          <p>The <codeph>s3</codeph> protocol requires that you specify the S3 endpoint and S3 bucket
             name. Each Greenplum Database segment host must have access to the S3 location. The
             optional <varname>S3_prefix</varname> value is used to select files for read-only S3
@@ -135,9 +135,9 @@
                format="dita"/>.</p>
          <note id="s3-prefix-note">Although the <varname>S3_prefix</varname> is an optional part of
             the syntax, you should always include an S3 prefix for both writable and read-only s3
-            tables to separate datasets as part of the <codeph><xref
+            tables to separate datasets as part of the <xref
                   href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1">CREATE
-                  EXTERNAL TABLE</xref></codeph> syntax.</note>
+                  EXTERNAL TABLE</xref> syntax.</note>
          <p>For writable s3 tables, the <codeph>s3</codeph> protocol URL specifies the endpoint and
             bucket name where Greenplum Database uploads data files for the table.
             The S3 file prefix is used for each new file uploaded to the S3 location as a
@@ -412,7 +412,7 @@ chunksize = 67108864</codeblock></p>
                   <pt>proxy</pt>
                   <pd>Specify a URL that is the proxy that S3 uses to connect to a data source. S3
                      supports these protocols: HTTP and HTTPS. This is the format for the
-                     parameter.<codeblock>proxy = <varname>protocol</varname>://[<varname>user</varname>:<varname>password</varname>@]<varname>proxyhost</varname>[:<varname>port</varname>]</codeblock></pd>
+                     parameter.<codeblock>proxy = &lt;protocol>://[&lt;user>:&lt;password>@]&lt;proxyhost>[:&lt;port>]</codeblock></pd>
                   <pd>If this parameter is not set or is an empty string (<codeph>proxy =
                         ""</codeph>), S3 uses the proxy specified by the environment variable
                         <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph> (and the
@@ -420,8 +420,7 @@ chunksize = 67108864</codeblock></p>
                      <codeph>no_proxy</codeph>). The environment variable that S3 uses depends on
                      the protocol. For information about the environment variables, see <xref
                         href="g-s3-protocol.xml#amazon-emr/s3_proxy" format="dita" scope="peer">s3
-                        Protocol Proxy Support</xref><ph otherprops="op-print"> in the
-                           <cite>Greenplum Database Administrator Guide</cite></ph>.</pd>
+                        Protocol Proxy Support</xref>.</pd>
                   <pd>There can be at most one <codeph>proxy</codeph> parameter in the configuration
                      file. The URL specified by the parameter is the proxy for all supported
                      protocols. </pd>
@@ -494,11 +493,11 @@ chunksize = 67108864</codeblock></p>
       </section>
       <section id="s3_config_param">
          <title>About Specifying the Configuration File Location</title>
-         <p>The default location of the <codeph>s3</codeph> protocol configuration file is
-           a file named <codeph>s3.conf</codeph> that resides in the data directory of each
-           Greenplum Database segment instance:
-           <codeblock><varname>gpseg_data_dir</varname>/<varname>gpseg_prefix</varname><varname>N</varname>/s3/s3.conf</codeblock>
-           The <varname>gpseg_data_dir</varname> is the path to the Greenplum Database segment data
+         <p>The default location of the <codeph>s3</codeph> protocol configuration file is a file
+            named <codeph>s3.conf</codeph> that resides in the data directory of each Greenplum
+            Database segment instance:
+            <codeblock>&lt;gpseg_data_dir>/&lt;gpseg_prefix>&lt;N>/s3/s3.conf</codeblock> The
+               <varname>gpseg_data_dir</varname> is the path to the Greenplum Database segment data
             directory, the <varname>gpseg_prefix</varname> is the segment prefix, and
                <varname>N</varname> is the segment ID. The segment data directory, prefix, and ID
             are set when you initialize a Greenplum Database system.</p>
@@ -530,7 +529,7 @@ chunksize = 67108864</codeblock></p>
          <title>s3 Protocol Limitations</title>
          <p>These are <codeph>s3</codeph> protocol limitations: <ul id="ul_qqg_qcz_55">
                <li>Only the S3 path-style URL is
-                  supported.<codeblock>s3://<varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>]</codeblock></li>
+                  supported.<codeblock>s3://&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>]</codeblock></li>
                <li>Only the S3 endpoint is supported. The protocol does not support virtual hosting
                   of S3 buckets (binding a domain name to an S3 bucket).</li>
                <li>AWS signature version 4 signing process is supported. <p>For information about
@@ -576,12 +575,12 @@ chunksize = 67108864</codeblock></p>
             capture the output and create an <codeph>s3</codeph> configuration file to connect to
             Amazon S3. </p><p>The utility is installed in the Greenplum Database
                <codeph>$GPHOME/bin</codeph> directory.</p><b>Syntax</b>
-         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
+         <codeblock>gpcheckcloud {-c | -d} "s3://&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>] [config=&lt;path_to_config_file>]"
 
-gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
-gpcheckcloud <b>-t</b>
+gpcheckcloud -u &lt;file_to_upload> "s3://&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>] [config=&lt;path_to_config_file>]"
+gpcheckcloud -t
 
-gpcheckcloud <b>-h</b></codeblock>
+gpcheckcloud -h</codeblock>
          <b>Options</b>
          <parml>
             <plentry>
@@ -629,14 +628,15 @@ gpcheckcloud <b>-h</b></codeblock>
             successful upload results in one or more files placed in the S3 bucket using the
             filename format <codeph> abc&lt;segment_id>&lt;random>.data[.gz]</codeph>. See <xref
                href="#amazon-emr/section_c2f_zvs_3x" format="dita"/>.</p><p>This example attempts to
-            connect to an S3 bucket location with the <codeph>s3</codeph> protocol configuration file
-               <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p>
-         <p>This example attempts to connect to an S3 bucket location using the default
-           location for the <codeph>s3</codeph> protocol configuration file 
-           (<codeph>s3/s3.conf</codeph> in segment data directories):
-           <codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc"</codeblock></p>
-         <p>Download
-            all files from the S3 bucket location and send the output to <codeph>STDOUT</codeph>.
+            connect to an S3 bucket location with the <codeph>s3</codeph> protocol configuration
+            file
+            <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p>
+         <p>This example attempts to connect to an S3 bucket location using the default location for
+            the <codeph>s3</codeph> protocol configuration file (<codeph>s3/s3.conf</codeph> in
+            segment data directories):
+            <codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc"</codeblock></p>
+         <p>Download all files from the S3 bucket location and send the output to
+               <codeph>STDOUT</codeph>.
             <codeblock>gpcheckcloud -d "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p></section>
    </body>
 </topic>

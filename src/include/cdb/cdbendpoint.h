@@ -48,17 +48,36 @@ enum EndPointExecPosition
 #define STR_ENDPOINT_STATE_FINISHED		"FINISHED"
 #define STR_ENDPOINT_STATE_RELEASED		"RELEASED"
 
+/* ACK NOTICE MESSAGE FROM ENDPOINT QE/Entry DB to QD */
+#define ENDPOINT_READY_ACK_MSG			"ENDPOINT_READY"
+#define ENDPOINT_FINISHED_ACK_MSG		"ENDPOINT_FINISHED"
+
 /*
  * Endpoint attach status, used by parallel retrieve cursor.
  */
 typedef enum EndpointState
 {
-	ENDPOINTSTATE_INVALID,
-	ENDPOINTSTATE_READY,
-	ENDPOINTSTATE_RETRIEVING,
-	ENDPOINTSTATE_ATTACHED,
-	ENDPOINTSTATE_FINISHED,
-	ENDPOINTSTATE_RELEASED,
+	ENDPOINTSTATE_INVALID,   /* The initial state of an endpoint. */
+	ENDPOINTSTATE_READY,	 /* After retrieve cursor is declared and endpoint
+							  * is allocated. */
+	ENDPOINTSTATE_RETRIEVING,/* When a retrieve statement begin to retrieve
+							  * tuples from an endpoint, this state may be
+							  * transformed from READY or ATTACHED.
+							  *
+							  * READY->RETRIEVING: if this is the first retrieve statement.
+							  * ATTACHED->RETRIEVING: if this is not the first retrieve statement.
+							  */
+	ENDPOINTSTATE_ATTACHED,  /* After a retrieve statement is executed and not
+							  * all tuples are retrieved.
+							  *
+							  * RETRIEVING-->ATTACHED
+							  */
+	ENDPOINTSTATE_FINISHED,  /* After a retrieve statement is executed and all
+							  * tuples are retrieved.
+							  *
+							  * RETRIEVING-->ATTACHED
+							  */
+	ENDPOINTSTATE_RELEASED,  /* Retrieve role exits with error. */
 } EndpointState;
 
 /*
@@ -88,14 +107,14 @@ struct EndpointData
 									 * DSM (see session.c). */
 };
 
-typedef struct EndpointData *Endpoint;
+typedef struct EndpointData Endpoint;
 
 /*
  * The state information for parallel retrieve cursor
  */
 typedef struct EndpointExecState
 {
-	Endpoint			 endpoint;      /* endpoint entry */
+	Endpoint			*endpoint;      /* endpoint entry */
 	DestReceiver		*dest;
 	dsm_segment			*dsmSeg;        /* dsm_segment pointer */
 } EndpointExecState;
@@ -110,27 +129,29 @@ extern Size EndpointShmemSize(void);
 extern void EndpointShmemInit(void);
 
 /*
- * Below functions should run on dispatcher.
+ * Below functions should run on the QD.
  */
 extern enum EndPointExecPosition GetParallelCursorEndpointPosition(PlannedStmt *plan);
 extern void WaitEndpointsReady(EState *estate);
 extern void AtAbort_EndpointExecState(void);
-extern EndpointExecState *allocEndpointExecState(void);
+extern void allocEndpointExecState(void);
 
 /*
  * Below functions should run on Endpoints(QE/Entry DB).
  */
-extern void SetupEndpointExecState(TupleDesc tupleDesc,
-		const char *cursorName, EndpointExecState *state);
-extern void DestroyEndpointExecState(EndpointExecState *state);
+extern void SetupEndpointExecState(TupleDesc tupleDesc, const char *cursorName, CmdType operation, DestReceiver **endpointDest);
+extern void DestroyEndpointExecState(void);
+extern void EndpointNotifyQD(const char *message);
 
 /* cdbendpointretrieve.c */
 
 /*
  * Below functions should run on the retrieve backend.
  */
+extern void InitRetrieveCtl(void);
 extern bool AuthEndpoint(Oid userID, const char *tokenStr);
 extern TupleDesc GetRetrieveStmtTupleDesc(const RetrieveStmt *stmt);
 extern void ExecRetrieveStmt(const RetrieveStmt *stmt, DestReceiver *dest);
+extern void generate_endpoint_name(char *name, const char *cursorName);
 
 #endif   /* CDBENDPOINT_H */

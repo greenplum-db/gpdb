@@ -22,6 +22,7 @@
 #include "catalog/gp_partition_template.h"
 #include "catalog/partition.h"
 #include "catalog/pg_attribute.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_partitioned_table.h"

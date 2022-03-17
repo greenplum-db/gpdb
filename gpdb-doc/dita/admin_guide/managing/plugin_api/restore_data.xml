@@ -7,7 +7,7 @@
     <p>Plugin command to stream data from the remote storage system to <codeph>stdout</codeph>.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>restore_data</b> <varname>plugin_config_file</varname> <varname>data_filenamekey</varname></codeblock>
+      <codeblock>&lt;plugin_executable> restore_data &lt;plugin_config_file> &lt;data_filenamekey></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

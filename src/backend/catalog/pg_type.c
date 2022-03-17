@@ -14,7 +14,10 @@
  */
 #include "postgres.h"
 
+#include "access/genam.h"
+#include "access/heapam.h"
 #include "access/htup_details.h"
+#include "access/reloptions.h"
 #include "access/table.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
@@ -30,6 +33,7 @@
 #include "commands/typecmds.h"
 #include "miscadmin.h"
 #include "parser/scansup.h"
+#include "parser/parse_type.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -69,6 +73,134 @@ add_type_encoding(Oid typid, Datum typoptions)
 	CatalogTupleInsert(pg_type_encoding_desc, tuple);
 
 	table_close(pg_type_encoding_desc, RowExclusiveLock);
+}
+
+/*
+ * Given the type name, get its typoptions in pg_type_encoding
+ * as a list of DefElem.
+ */
+List *
+get_type_encoding(TypeName *typname)
+{
+	Relation	rel;
+	ScanKeyData 	scankey;
+	SysScanDesc 	sscan;
+	HeapTuple	tuple;
+	Oid		typid;
+	List 		*out = NIL;
+
+	typid = typenameTypeId(NULL, typname);
+
+	rel = heap_open(TypeEncodingRelationId, AccessShareLock);
+
+	/* SELECT typoptions FROM pg_type_encoding where typid = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_type_encoding_typid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(typid));
+	sscan = systable_beginscan(rel, TypeEncodingTypidIndexId,
+							   true, NULL, 1, &scankey);
+	tuple = systable_getnext(sscan);
+	if (HeapTupleIsValid(tuple))
+	{
+		Datum options;
+		bool isnull;
+
+		options = heap_getattr(tuple,
+							   Anum_pg_type_encoding_typoptions,
+							   RelationGetDescr(rel),
+							   &isnull);
+
+		if (isnull)
+			elog(ERROR, "null typoptions attribute encountered for pg_type_encoding for typid %d",
+				 typid);
+
+		out = untransformRelOptions(options);
+	}
+
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
+
+	return out;
+}
+
+/*
+ * Remove the default type encoding for typid.
+ */
+void
+remove_type_encoding(Oid typid)
+{
+	Relation 	rel;
+	ScanKeyData 	scankey;
+	SysScanDesc 	sscan;
+	HeapTuple 	tuple;
+
+	rel = heap_open(TypeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&scankey,
+				Anum_pg_type_encoding_typid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(typid));
+
+	sscan = systable_beginscan(rel, TypeEncodingTypidIndexId, true,
+							   NULL, 1, &scankey);
+	while((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+	}
+	systable_endscan(sscan);
+
+	heap_close(rel, RowExclusiveLock);
+}
+
+/*
+ * Update the type encoding for typid.
+ * If no entry for typid, create one.
+ */
+void
+update_type_encoding(Oid typid, Datum typoptions)
+{
+	Relation 	pgtypeenc;
+	ScanKeyData 	scankey;
+	SysScanDesc 	scan;
+	HeapTuple	tup;
+
+	/* SELECT * FROM pg_type_encoding WHERE typid = :1 FOR UPDATE */
+	pgtypeenc = heap_open(TypeEncodingRelationId, RowExclusiveLock);
+	ScanKeyInit(&scankey, Anum_pg_type_encoding_typid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(typid));
+	scan = systable_beginscan(pgtypeenc, TypeEncodingTypidIndexId, true,
+							  NULL, 1, &scankey);
+
+	tup = systable_getnext(scan);
+	if (HeapTupleIsValid(tup))
+	{
+		/* update case */
+		Datum values[Natts_pg_type_encoding];
+		bool nulls[Natts_pg_type_encoding];
+		bool replaces[Natts_pg_type_encoding];
+		HeapTuple newtuple;
+
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+		MemSet(replaces, false, sizeof(replaces));
+
+		replaces[Anum_pg_type_encoding_typoptions - 1] = true;
+		values[Anum_pg_type_encoding_typoptions - 1] = typoptions;
+
+		newtuple = heap_modify_tuple(tup, RelationGetDescr(pgtypeenc),
+									 values, nulls, replaces);
+
+		CatalogTupleUpdate(pgtypeenc, &tup->t_self, newtuple);
+	}
+	else
+	{
+		add_type_encoding(typid, typoptions);
+	}	
+	systable_endscan(scan);
+	heap_close(pgtypeenc, NoLock);
+
 }
 
 /* ----------------------------------------------------------------
@@ -892,3 +1024,4 @@ moveArrayTypeName(Oid typeOid, const char *typeName, Oid typeNamespace)
 
 	return true;
 }
+

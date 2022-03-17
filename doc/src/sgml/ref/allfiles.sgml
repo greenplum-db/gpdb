@@ -170,6 +170,7 @@ Complete list of usable sgml source files in this directory.
 <!ENTITY reindex            SYSTEM "reindex.sgml">
 <!ENTITY releaseSavepoint   SYSTEM "release_savepoint.sgml">
 <!ENTITY reset              SYSTEM "reset.sgml">
+<!ENTITY retrieve           SYSTEM "retrieve.sgml">
 <!ENTITY revoke             SYSTEM "revoke.sgml">
 <!ENTITY rollback           SYSTEM "rollback.sgml">
 <!ENTITY rollbackPrepared   SYSTEM "rollback_prepared.sgml">

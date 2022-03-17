@@ -39,13 +39,13 @@
             <xref href="g-detecting-a-failed-segment.xml#topic9"/> and <xref href="g-recovering-from-segment-failures.xml"/>. </p>
         <p>These Greenplum Database system catalog tables contain mirroring and replication
             information. <ul id="ul_nn3_yjm_rdb">
-                <li>The catalog table <codeph><xref
+                <li>The catalog table <xref
                             href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml#topic1"
-                        /></codeph> contains the current configuration and state of primary and
+                        /> contains the current configuration and state of primary and
                     mirror segment instances and the master and standby master instance. </li>
-                <li>The catalog view <codeph><xref
+                <li>The catalog view <xref
                             href="../../../ref_guide/system_catalogs/gp_stat_replication.xml#topic1"
-                        /></codeph> contains replication statistics of the
+                        /> contains replication statistics of the
                         <codeph>walsender</codeph> processes that are used for Greenplum Database
                     master and segment mirroring.</li>
             </ul></p>
@@ -55,9 +55,9 @@
                 configurations. As a best practice, a primary segment and the corresponding mirror
                 are placed on different hosts. Each host must have the same number of primary and
                 mirror segments. When you create segment mirrors with the Greenplum Database
-                utilities <codeph><xref href="../../../utility_guide/ref/gpinitsystem.xml"
-                    /></codeph> or <codeph><xref href="../../../utility_guide/ref/gpaddmirrors.xml"
-                    /></codeph> you can specify the segment mirror configuration, group mirroring
+                utilities <xref href="../../../utility_guide/ref/gpinitsystem.xml"
+                    /> or <xref href="../../../utility_guide/ref/gpaddmirrors.xml"
+                    /> you can specify the segment mirror configuration, group mirroring
                 (the default) or spread mirroring. With <codeph>gpaddmirrors</codeph>, you can
                 create custom mirroring configurations with a <codeph>gpaddmirrors</codeph>
                 configuration file and specify the file on the command line.</p>
@@ -87,7 +87,7 @@
                 segment instances per host, and a system that is configured with group mirroring
                 requires at least two new hosts when expanding the system. For information about
                 segment mirroring configurations, see <xref
-                    href="../../../best_practices/ha.xml#topic_ngz_qf4_tt"/>. For information about
+                    href="../../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/>. For information about
                 expanding systems with segment mirroring enabled, see <xref
                     href="../../expand/expand-planning.xml#topic7"/>. </note>
         </section>

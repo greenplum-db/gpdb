@@ -101,6 +101,9 @@ test: external_table
 
 test: fsync_ao
 
+# Disable auto-vacuum for below tests
+test: disable_autovacuum
+
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
@@ -139,6 +142,7 @@ test: uao/select_while_vacuum_serializable2_row
 test: uao/selectinsert_while_vacuum_row
 test: uao/selectinsertupdate_while_vacuum_row
 test: uao/selectupdate_while_vacuum_row
+test: uao/snapshot_index_corruption_row
 test: uao/update_while_vacuum_row
 test: uao/vacuum_self_serializable_row
 test: uao/vacuum_self_serializable2_row
@@ -189,6 +193,7 @@ test: uao/select_while_vacuum_serializable2_column
 test: uao/selectinsert_while_vacuum_column
 test: uao/selectinsertupdate_while_vacuum_column
 test: uao/selectupdate_while_vacuum_column
+test: uao/snapshot_index_corruption_column
 test: uao/update_while_vacuum_column
 test: uao/vacuum_self_serializable_column
 test: uao/vacuum_self_serializable2_column
@@ -199,8 +204,6 @@ test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
 test: uao/bitmapindex_rescan_column
 
-# Disable auto-ANALYZE for below tests
-test: disable_autovacuum
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
 test: prepare_limit
@@ -210,7 +213,9 @@ test: vacuum_after_vacuum_skip_drop_column
 test: workfile_mgr_test
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
+test: pg_basebackup_large_database_oid
 test: enable_autovacuum
+test: idle_gang_cleaner
 
 test: segwalrep/die_commit_pending_replication
 

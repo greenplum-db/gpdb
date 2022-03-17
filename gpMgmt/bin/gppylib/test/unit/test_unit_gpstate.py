@@ -1,6 +1,7 @@
 import unittest
 import mock
 import pgdb
+import tempfile
 
 from gppylib import gparray
 from .gp_unittest import GpTestCase
@@ -38,6 +39,90 @@ def create_mirror(**kwargs):
     """Like create_segment() but with the role overridden to ROLE_MIRROR."""
     kwargs['role'] = gparray.ROLE_MIRROR
     return create_segment(**kwargs)
+
+class RecoveryProgressTestCase(unittest.TestCase):
+    """
+        A test case for GpSystemStateProgram.parseRecoveryProgressData().
+    """
+
+    def setUp(self):
+
+        self.primary1 = create_primary(dbid=1)
+        self.primary2 = create_primary(dbid=2)
+        self.primary3 = create_primary(dbid=3)
+
+        self.data = GpStateData()
+        self.data.beginSegment(self.primary1)
+        self.data.beginSegment(self.primary2)
+        self.data.beginSegment(self.primary3)
+
+        self.gpArrayMock = mock.MagicMock(spec=gparray.GpArray)
+        self.gpArrayMock.getSegDbList.return_value = [self.primary1, self.primary2, self.primary3]
+
+    def check_recovery_fields(self, segment, type, completed, total, percentage):
+        self.assertEqual(type, self.data.getStrValue(segment, VALUE_RECOVERY_TYPE))
+        self.assertEqual(completed, self.data.getStrValue(segment, VALUE_RECOVERY_COMPLETED_BYTES))
+        self.assertEqual(total, self.data.getStrValue(segment, VALUE_RECOVERY_TOTAL_BYTES))
+        self.assertEqual(percentage, self.data.getStrValue(segment, VALUE_RECOVERY_PERCENTAGE))
+
+    def test_parse_recovery_progress_data_returns_empty_when_file_does_not_exist(self):
+        self.assertEqual([], GpSystemStateProgram._parse_recovery_progress_data(self.data, '/file/does/not/exist', self.gpArrayMock))
+
+        self.check_recovery_fields(self.primary1, '', '', '', '')
+        self.check_recovery_fields(self.primary2, '', '', '', '')
+        self.check_recovery_fields(self.primary3, '', '', '', '')
+
+    def test_parse_recovery_progress_data_adds_recovery_progress_data_during_recovery(self):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("full:1: 1164848/1371715 kB (84%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)".encode("utf-8"))
+            f.flush()
+            self.assertEqual([self.primary1], GpSystemStateProgram._parse_recovery_progress_data(self.data, f.name, self.gpArrayMock))
+
+            self.check_recovery_fields(self.primary1, 'full', '1164848', '1371715', '84%')
+            self.check_recovery_fields(self.primary2, '', '', '', '')
+            self.check_recovery_fields(self.primary3, '', '', '', '')
+
+    def test_parse_recovery_progress_data_adds_recovery_progress_data_during_multiple_recoveries(self):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("full:1: 1164848/1371715 kB (0%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("incremental:2: 1171384/1371875 kB (85%)anything can appear here".encode('utf-8'))
+            f.flush()
+            self.assertEqual([self.primary1, self.primary2], GpSystemStateProgram._parse_recovery_progress_data(self.data, f.name, self.gpArrayMock))
+
+            self.check_recovery_fields(self.primary1,'full', '1164848', '1371715', '0%')
+            self.check_recovery_fields(self.primary2, 'incremental', '1171384', '1371875', '85%')
+            self.check_recovery_fields(self.primary3, '', '', '', '')
+
+    def test_parse_recovery_progress_data_doesnt_adds_recovery_progress_data_only_for_completed_recoveries(self):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("full:1: 1164848/1371715 kB (84%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:2: 1164848/1371715 kB (100%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB (100#), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB 84%, 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB (100), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: /1371715 kB (100%, 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1/1371715 KB (100%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1/1371715 kB 100%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1/1371715 kB (100%, 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1/1371715 MB (100%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1/1371715 B (100%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB (84%%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB (84%a), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB (a84%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("full:3: 1164848/1371715 kB ((84%), 0/1 tablespace (...t1/demoDataDir0/base/16384/40962)\n".encode("utf-8"))
+            f.write("incremental:2: pg_rewind: done.\n".encode('utf-8'))
+            f.write("incremental:3: pg_rewind: Error \n".encode('utf-8'))
+            f.write("incremental:3: 1171384/1371875 kB (a8ab5%)\n".encode('utf-8'))
+            f.write("incremental:3: 1171384/1371875 kB ((85%)\n".encode('utf-8'))
+            f.write("incremental:3: 1171384/1371875 kB (85%%1))\n".encode('utf-8'))
+            f.write("incremental:3: 1171384/1371875 kB (foo%))\n".encode('utf-8'))
+            f.flush()
+            self.assertEqual([self.primary1, self.primary2], GpSystemStateProgram._parse_recovery_progress_data(self.data, f.name, self.gpArrayMock))
+
+            self.check_recovery_fields(self.primary1,'full', '1164848', '1371715', '84%')
+            self.check_recovery_fields(self.primary2,'full', '1164848', '1371715', '100%')
+            self.check_recovery_fields(self.primary3, '', '', '', '')
+
 
 class ReplicationInfoTestCase(unittest.TestCase):
     """

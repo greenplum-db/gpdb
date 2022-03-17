@@ -435,13 +435,13 @@ create table ccddl (i int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table ccddl add column j int encoding (compresstype=zlib);
-ERROR:  ENCODING clause not supported on non column orientated table
+ERROR:  ENCODING clause only supported with column oriented tables
 drop table ccddl;
 create table ccddl (i int) with (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table ccddl add column j int encoding (compresstype=zlib);
-ERROR:  ENCODING clause not supported on non column orientated table
+ERROR:  ENCODING clause only supported with column oriented tables
 drop table ccddl;
 -- check that we validate the encoding clause for add column
 create table ccddl (i int) with (appendonly=true, orientation=column);

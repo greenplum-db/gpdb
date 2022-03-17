@@ -115,7 +115,6 @@ static char *domainAddConstraint(Oid domainOid, Oid domainNamespace,
 								 const char *domainName, ObjectAddress *constrAddr);
 static Node *replace_domain_constraint_value(ParseState *pstate,
 											 ColumnRef *cref);
-static void remove_type_encoding(Oid typid);
 
 
 /*
@@ -314,17 +313,14 @@ DefineType(ParseState *pstate, List *names, List *parameters)
 			defelp = &collatableEl;
 		else if (is_storage_encoding_directive(defel->defname))
 		{
-			/*
-			 * GPDB_12_MERGE_FIXME:
-			 *		There might be discrepancies between the comment and the
-			 *		command using the type. Validate that the comment is correct
-			 *		for both CREATE and ALTER statements.
-			 */
 			/* 
 			 * This is to define default block size, compress type, and
 			 * compress level. When this type is used in an append only column
 			 * oriented table, the column's encoding will be defaulted to these
 			 * values.
+			 * We have to do this instead of having a list of encoding clauses as 
+			 * in ALTER TYPE because the way the encoding clauses are consumed 
+			 * in the parser for CREATE TYPE.
 			 */
 			encoding = lappend(encoding, defel);
 			continue;
@@ -463,13 +459,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
 	if (collatableEl)
 		collation = defGetBoolean(collatableEl) ? DEFAULT_COLLATION_OID : InvalidOid;
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 *		Try to use a common function that does the transformation and
-	 *		setting like bellow. This pattern seems to be scattered in various
-	 *		places withing tablecmds, tablecmds_gp, reloptions_gp and possibly
-	 *		others.
-	 */
+	/* transform the encoding clause and then get the typoptions */
 	if (encoding)
 	{
 		encoding = transformStorageEncodingClause(encoding, true);
@@ -3844,12 +3834,8 @@ AlterType(AlterTypeStmt *stmt)
 {
 	TypeName   *typname;
 	Oid			typid;
-	HeapTuple	tup;
 	Datum		typoptions;
 	List	   *encoding;
-	Relation 	pgtypeenc;
-	ScanKeyData	scankey;
-	SysScanDesc scan;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
 	typname = makeTypeNameFromNameList(stmt->typeName);
@@ -3868,53 +3854,13 @@ AlterType(AlterTypeStmt *stmt)
 		aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TYPE,
 					   format_type_be(typid));
 
+	/* transform the encoding clause and then get the typoptions from it */
 	encoding = transformStorageEncodingClause(stmt->encoding, true);
-
 	typoptions = transformRelOptions(PointerGetDatum(NULL),
 									 encoding, NULL, NULL,
 									 false,
 									 false);
-
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 *		Consider moving this under pg_type that is the owner of that catalog
-	 *		table.
-	 */
-	/* SELECT * FROM pg_type_encoding WHERE typid = :1 FOR UPDATE */
-	pgtypeenc = heap_open(TypeEncodingRelationId, RowExclusiveLock);
-	ScanKeyInit(&scankey, Anum_pg_type_encoding_typid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(typid));
-	scan = systable_beginscan(pgtypeenc, TypeEncodingTypidIndexId, true,
-							  NULL, 1, &scankey);
-
-	tup = systable_getnext(scan);
-	if (HeapTupleIsValid(tup))
-	{
-		/* update case */
-		Datum values[Natts_pg_type_encoding];
-		bool nulls[Natts_pg_type_encoding];
-		bool replaces[Natts_pg_type_encoding];
-		HeapTuple newtuple;
-
-		MemSet(values, 0, sizeof(values));
-		MemSet(nulls, false, sizeof(nulls));
-		MemSet(replaces, false, sizeof(replaces));
-
-		replaces[Anum_pg_type_encoding_typoptions - 1] = true;
-		values[Anum_pg_type_encoding_typoptions - 1] = typoptions;
-
-		newtuple = heap_modify_tuple(tup, RelationGetDescr(pgtypeenc),
-									 values, nulls, replaces);
-
-		CatalogTupleUpdate(pgtypeenc, &tup->t_self, newtuple);
-	}
-	else
-	{
-		add_type_encoding(typid, typoptions);
-	}	
-	systable_endscan(scan);
-	heap_close(pgtypeenc, NoLock);
+	update_type_encoding(typid, typoptions);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		CdbDispatchUtilityStatement((Node *) stmt,
@@ -3923,37 +3869,4 @@ AlterType(AlterTypeStmt *stmt)
 									DF_NEED_TWO_PHASE,
 									NIL,
 									NULL);
-}
-
-/*
- * GPDB_12_MERGE_FIXME:
- *		Move this function together with add_type_encoding under pg_type.
- */
-/*
- * Remove the default type encoding for typid.
- */
-static void
-remove_type_encoding(Oid typid)
-{
-	Relation rel;
-	ScanKeyData scankey;
-	SysScanDesc sscan;
-	HeapTuple tuple;
-
-	rel = heap_open(TypeEncodingRelationId, RowExclusiveLock);
-
-	ScanKeyInit(&scankey,
-				Anum_pg_type_encoding_typid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(typid));
-
-	sscan = systable_beginscan(rel, TypeEncodingTypidIndexId, true,
-							   NULL, 1, &scankey);
-	while((tuple = systable_getnext(sscan)) != NULL)
-	{
-		simple_heap_delete(rel, &tuple->t_self);
-	}
-	systable_endscan(sscan);
-
-	heap_close(rel, RowExclusiveLock);
 }

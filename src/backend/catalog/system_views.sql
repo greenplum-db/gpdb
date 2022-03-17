@@ -1617,37 +1617,6 @@ LANGUAGE INTERNAL
 STRICT IMMUTABLE PARALLEL SAFE
 AS 'jsonb_set';
 
--- pg_tablespace_location wrapper functions to see Greenplum cluster-wide tablespace locations
-CREATE FUNCTION gp_tablespace_segment_location (IN tblspc_oid oid, OUT gp_segment_id int, OUT tblspc_loc text)
-AS 'SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
-LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
-
-CREATE FUNCTION gp_tablespace_location (IN tblspc_oid oid, OUT gp_segment_id int, OUT tblspc_loc text)
-RETURNS SETOF RECORD
-AS
-  'SELECT * FROM pg_catalog.gp_tablespace_segment_location($1)
-   UNION ALL
-   SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
-LANGUAGE SQL EXECUTE ON COORDINATOR;
-
--- pg_switch_wal wrapper functions to switch WAL segment files on Greenplum cluster-wide
-CREATE FUNCTION gp_switch_wal_on_all_segments (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
-AS 'SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
-LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
-
-CREATE FUNCTION gp_switch_wal (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
-RETURNS SETOF RECORD
-AS
-  'SELECT * FROM pg_catalog.gp_switch_wal_on_all_segments()
-   UNION ALL
-   SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
-LANGUAGE SQL EXECUTE ON COORDINATOR;
-
-COMMENT ON FUNCTION pg_catalog.gp_switch_wal_on_all_segments() IS 'Switch WAL segment files on all primary segments';
-COMMENT ON FUNCTION pg_catalog.gp_switch_wal() IS 'Switch WAL segment files on all segments';
-
-REVOKE EXECUTE ON FUNCTION gp_switch_wal_on_all_segments() FROM public;
-REVOKE EXECUTE ON FUNCTION gp_switch_wal() FROM public;
 
 CREATE OR REPLACE FUNCTION
   parse_ident(str text, strict boolean DEFAULT true)
@@ -1782,15 +1751,24 @@ CREATE OR REPLACE VIEW gp_stat_archiver AS
     UNION
     SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
 
-CREATE FUNCTION gp_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
-									  OUT cursorname text, OUT sessionid int, OUT hostname text,
-									  OUT port int, OUT userid oid, OUT state text,
+CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
+									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
+									  OUT port int, OUT username text, OUT state text,
 									  OUT endpointname text)
 RETURNS SETOF RECORD AS
 $$
-   SELECT * FROM gp_endpoints()
+   SELECT * FROM pg_catalog.gp_get_endpoints()
 	WHERE sessionid = (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int4
 $$
 LANGUAGE SQL EXECUTE ON COORDINATOR;
 
-COMMENT ON FUNCTION pg_catalog.gp_session_endpoints() IS 'All endpoints in this session that are visible to the current user.';
+COMMENT ON FUNCTION pg_catalog.gp_get_session_endpoints() IS 'All endpoints in this session that are visible to the current user.';
+
+CREATE VIEW pg_catalog.gp_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_endpoints();
+
+CREATE VIEW pg_catalog.gp_segment_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_segment_endpoints();
+
+CREATE VIEW pg_catalog.gp_session_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_session_endpoints();

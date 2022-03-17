@@ -304,7 +304,7 @@ BEGIN
 		END IF;
 	END LOOP;
 
-	FOR r IN SELECT colname, oper, typ, value[ordinality], matches[ordinality] FROM brinopers, unnest(op) WITH ORDINALITY AS oper order by colname, typ LOOP
+	FOR r IN SELECT colname, oper, typ, value[ordinality], matches[ordinality] FROM brinopers, unnest(op) WITH ORDINALITY AS oper order by colname, typ, oper LOOP
 
 		-- prepare the condition
 		IF r.value IS NULL THEN
@@ -396,21 +396,21 @@ WARNING:  ORCA did not produce a bitmap indexscan plan for (cidrcol,<,inet,255.2
 WARNING:  ORCA did not produce a bitmap indexscan plan for (cidrcol,<=,inet,255.255.255.255,100)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (cidrcol,>,inet,0.0.0.0,125)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (cidrcol,>=,inet,0.0.0.0,125)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>=,cidr,0.0.0.0,125)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>,cidr,0.0.0.0,125)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,<=,cidr,255.255.255.255,100)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,<,cidr,255.255.255.255,100)
+WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,<=,cidr,255.255.255.255,100)
+WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>,cidr,0.0.0.0,125)
+WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>=,cidr,0.0.0.0,125)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,<,inet,255.255.255.255,100)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,<=,inet,255.255.255.255,100)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>,inet,0.0.0.0,125)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>=,inet,0.0.0.0,125)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (lsncol,IS,pg_lsn,,25)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (lsncol,"IS NOT",pg_lsn,,100)
+WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,<,name,ZZAAAA,100)
+WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,<=,name,ZZAAAA,100)
+WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,=,name,MAAAAA,2)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,>,name,AAAAAA,100)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,>=,name,AAAAAA,100)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,=,name,MAAAAA,2)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,<=,name,ZZAAAA,100)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,<,name,ZZAAAA,100)
 -- Note: ORCA does not support all of the above operators:
 --       - standard comparison operators on inet and cidr columns
 --         because ORCA does not look at the second occurrence of a column in an index,

@@ -105,7 +105,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 		initStringInfo(&buffer);
 		appendStringInfo(&buffer,
 						 "SELECT groupid, cpu_usage, memory_usage "
-						 "FROM pg_resgroup_get_status(%d)",
+						 "FROM pg_resgroup_get_status(%u)",
 						 inGroupId);
 
 		CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
@@ -133,8 +133,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 			{
 				const char *result;
 				ResGroupStat *row = &ctx->groups[j];
-				Oid groupId = pg_atoi(PQgetvalue(pg_result, j, 0),
-									  sizeof(Oid), 0);
+				Oid groupId = atooid(PQgetvalue(pg_result, j, 0));
 
 				Assert(groupId == row->groupId);
 

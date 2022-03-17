@@ -7,19 +7,19 @@
     <p id="sql_command_desc">Defines a cursor.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DECLARE <varname>name</varname> [BINARY] [INSENSITIVE] [NO SCROLL] CURSOR 
+      <codeblock id="sql_command_synopsis">DECLARE <varname>name</varname> [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
      [{WITH | WITHOUT} HOLD] 
      FOR <varname>query</varname> [FOR READ ONLY]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>DECLARE</codeph> allows a user to create cursors, which can be used to retrieve a
-        small number of rows at a time out of a larger query. Cursors can return data either in text
-        or in binary format using <codeph><xref href="./FETCH.xml#topic1" type="topic" format="dita"
-          /></codeph>. </p>
+      <p><codeph>DECLARE</codeph> allows a user to create a cursor, which can be used to retrieve a
+        small number of rows at a time out of a larger query.
+        Cursors can return data either in text or in binary format using
+        <codeph><xref href="./FETCH.xml#topic1" type="topic" format="dita" /></codeph>.</p>
       <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different, see <xref
-          href="../../analytics/pl_sql.xml" scope="peer">PL/Sql</xref>.</note>
+          href="../../analytics/pl_sql.xml" scope="peer">PL/pgSQL</xref>.</note>
       <p>Normal cursors return data in text format, the same as a <codeph>SELECT</codeph> would
         produce. Since data is stored natively in binary format, the system must do a conversion to
         produce the text format. Once the information comes back in text form, the client
@@ -34,11 +34,11 @@
       <p>Binary cursors should be used carefully. Many applications, including psql, are not
         prepared to handle binary cursors and expect data to come back in the text format. </p>
       <note type="note">
-        <p>When the client application uses the 'extended query' protocol to issue a
+        When the client application uses the 'extended query' protocol to issue a
             <codeph>FETCH</codeph> command, the Bind protocol message specifies whether data is to
           be retrieved in text or binary format. This choice overrides the way that the cursor is
           defined. The concept of a binary cursor as such is thus obsolete when using extended query
-          protocol — any cursor can be treated as either text or binary.</p>
+          protocol — any cursor can be treated as either text or binary.
       </note>
       <p>A cursor can be specified in the <codeph>WHERE CURRENT OF</codeph> clause of the
             <codeph><xref href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or
@@ -47,6 +47,17 @@
         statement can only be run on the server, for example in an interactive psql session or
         a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
       </p>
+      <p><b>Parallel Retrieve Cursors</b></p>
+      <p>Greenplum Database supports a special type of cursor, a parallel retrieve cursor.
+        You can use a parallel retrieve cursor to retrieve query results, in parallel,
+        directly from the Greenplum Database segments, bypassing the Greenplum coordinator.</p>
+      <p>Parallel retrieve cursors do not support the <codeph>WITH HOLD</codeph> clause.
+        Greenplum Database ignores the <codeph>BINARY</codeph> clause when you declare a
+        parallel retrieve cursor.</p>
+      <p>You open a special retrieve session to each parallel retrieve cursor endpoint, and
+        use the <codeph><xref href="./RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>
+        command to retrieve the query results from a parallel retrieve cursor.</p>
+      <p></p>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -59,7 +70,9 @@
         </plentry>
         <plentry>
           <pt>BINARY</pt>
-          <pd>Causes the cursor to return data in binary rather than in text format. </pd>
+          <pd>Causes the cursor to return data in binary rather than in text format.
+            <note>Greenplum Database ignores the <codeph>BINARY</codeph> clause when you
+            declare a <codeph>PARALLEL RETRIEVE</codeph> cursor.</note></pd>
         </plentry>
         <plentry>
           <pt>INSENSITIVE</pt>
@@ -75,14 +88,23 @@
               (<codeph>SCROLL</codeph>) are not supported.</pd>
         </plentry>
         <plentry>
+          <pt>PARALLEL RETRIEVE</pt>
+          <pd>Declare a parallel retrieve cursor. A parallel retrieve cursor is a special
+            type of cursor that you can use to retrieve results directly from Greenplum
+            Database segments, in parallel.</pd>
+        </plentry>
+        <plentry>
           <pt>WITH HOLD</pt>
           <pt>WITHOUT HOLD</pt>
           <pd><codeph>WITH HOLD</codeph> specifies that the cursor may continue to be used after the
             transaction that created it successfully commits. <codeph>WITHOUT HOLD</codeph>
             specifies that the cursor cannot be used outside of the transaction that created it.
-              <codeph>WITHOUT HOLD</codeph> is the default. </pd>
-          <pd><codeph>WITH HOLD</codeph> cannot not be specified when the <codeph>query</codeph>
-            includes a <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> clause. </pd>
+              <codeph>WITHOUT HOLD</codeph> is the default.
+          <note>Greenplum Database does not support declaring a
+            <codeph>PARALLEL RETRIEVE</codeph> cursor with the <codeph>WITH HOLD</codeph>
+            clause. <codeph>WITH HOLD</codeph> also
+            cannot not be specified when the <codeph>query</codeph>
+            includes a <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> clause.</note> </pd>
         </plentry>
         <plentry>
           <pt>
@@ -146,15 +168,18 @@
         cannot use the <codeph>SET</codeph> command in the transaction until you close the cursor
         with the <codeph>CLOSE</codeph> command.</p>
       <p>Scrollable cursors are not currently supported in Greenplum Database. You can only use
-          <codeph>FETCH</codeph> to move the cursor position forward, not backwards.</p>
+          <codeph>FETCH</codeph> or <codeph>RETRIEVE</codeph> to move the cursor position forward, not backwards.</p>
       <p><codeph>DECLARE...FOR UPDATE</codeph> is not supported with append-optimized tables.</p>
-      <p>You can see all available cursors by querying the <codeph>pg_cursors</codeph> system view.
-      </p>
+      <p>You can see all available cursors by querying the
+        <codeph><xref href="../system_catalogs/pg_cursors.xml">pg_cursors</xref></codeph>
+        system view.</p>
     </section>
     <section id="section6">
       <title>Examples</title>
       <p>Declare a cursor: </p>
       <codeblock>DECLARE mycursor CURSOR FOR SELECT * FROM mytable;</codeblock>
+      <p>Declare a parallel retrieve cursor for the same query: </p>
+      <codeblock>DECLARE myprcursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM mytable;</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>
@@ -165,6 +190,7 @@
       <p>The SQL standard allows cursors to move both forward and backward. All Greenplum Database
         cursors are forward moving only (not scrollable).</p>
       <p>Binary cursors are a Greenplum Database extension. </p>
+      <p>The SQL standard makes no provisions for parallel retrieve cursors.</p>
     </section>
     <section id="section8">
       <title>See Also</title>
@@ -172,6 +198,7 @@
             href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="./FETCH.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="./RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph></p>
     </section>

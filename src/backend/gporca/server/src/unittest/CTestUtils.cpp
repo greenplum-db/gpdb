@@ -54,6 +54,7 @@
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalProject.h"
+#include "gpopt/operators/CLogicalRightOuterJoin.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequence.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
@@ -1367,6 +1368,26 @@ CTestUtils::PexprLeftOuterJoinOnNAryJoin(CMemoryPool *mp)
 	return GPOS_NEW(mp)
 		CExpression(mp, GPOS_NEW(mp) CLogicalLeftOuterJoin(mp), pexprNAryJoin,
 					pexprLOJInnerChild, pexprPred);
+}
+
+
+CExpression *
+CTestUtils::PexprRightOuterJoin(CMemoryPool *mp)
+{
+	CExpression *pexprInnerChild = PexprLogicalGet(mp);
+	CExpression *pexprOuterChild = PexprLogicalGet(mp);
+
+	// get a random column from inner child output
+	CColRef *pcrLeft = pexprInnerChild->DeriveOutputColumns()->PcrAny();
+
+	// get a random column from outer child output
+	CColRef *pcrRight = pexprOuterChild->DeriveOutputColumns()->PcrAny();
+
+	CExpression *pexprPred = CUtils::PexprScalarEqCmp(mp, pcrLeft, pcrRight);
+
+	return GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CLogicalRightOuterJoin(mp),
+					pexprOuterChild, pexprInnerChild, pexprPred);
 }
 
 

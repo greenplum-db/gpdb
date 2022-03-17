@@ -55,6 +55,11 @@ sub run_test
 	  "$test_master_datadir/tst_master_dir/master_subdir/master_file3",
 	  "in master3";
 
+	# GPDB: gpbackup default directory should be ignored
+	mkdir "$test_master_datadir/backups";
+	append_to_file "$test_master_datadir/backups/master_backup_file",
+	  "backup data in master1";
+
 	RewindTest::promote_standby();
 	RewindTest::run_pg_rewind($test_mode);
 
@@ -63,13 +68,15 @@ sub run_test
 	find(
 		sub {
 			push @paths, $File::Find::name
-			  if $File::Find::name =~ m/.*tst_.*/;
+			  if $File::Find::name =~ m/.*(tst_|backups).*/;
 		},
 		$test_master_datadir);
 	@paths = sort @paths;
 	is_deeply(
 		\@paths,
 		[
+			"$test_master_datadir/backups",
+			"$test_master_datadir/backups/master_backup_file",
 			"$test_master_datadir/tst_both_dir",
 			"$test_master_datadir/tst_both_dir/both_file1",
 			"$test_master_datadir/tst_both_dir/both_file2",

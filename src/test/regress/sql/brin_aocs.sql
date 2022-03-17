@@ -309,7 +309,7 @@ BEGIN
 		END IF;
 	END LOOP;
 
-	FOR r IN SELECT colname, oper, typ, value[ordinality], matches[ordinality] FROM brinopers_aocs, unnest(op) WITH ORDINALITY AS oper order by colname, typ LOOP
+	FOR r IN SELECT colname, oper, typ, value[ordinality], matches[ordinality] FROM brinopers_aocs, unnest(op) WITH ORDINALITY AS oper order by colname, typ, oper LOOP
 		mismatch := false;
 
 		-- prepare the condition

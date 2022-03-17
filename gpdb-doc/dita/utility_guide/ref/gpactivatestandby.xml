@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!-- install_guide/refs/gpactivatestandby.xml has a conref to this topic. -->
     <title id="jo20941">gpactivatestandby</title>
     <body>
         <p>Activates a standby coordinator host and makes it the active coordinator for the Greenplum Database

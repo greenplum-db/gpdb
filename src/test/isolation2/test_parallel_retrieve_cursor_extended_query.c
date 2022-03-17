@@ -223,7 +223,7 @@ exec_check_parallel_cursor(PGconn *master_conn, int isCheckFinish)
 {
 	int			result = 0;
 	PGresult   *res1;
-	const char *check_sql = "SELECT * FROM gp_wait_parallel_retrieve_cursor('myportal', 0);";
+	const char *check_sql = "SELECT * FROM pg_catalog.gp_wait_parallel_retrieve_cursor('myportal', 0);";
 
 
 	printf("\n------ Begin checking parallel retrieve cursor status ------\n");
@@ -337,7 +337,7 @@ main(int argc, char **argv)
 	/*
 	 * get the endpoints info of this PARALLEL RETRIEVE CURSOR
 	 */
-	const char *sql1 = "select hostname,port,auth_token,endpointname from pg_catalog.gp_endpoints() where cursorname='myportal';";
+	const char *sql1 = "select hostname,port,auth_token,endpointname from pg_catalog.gp_get_endpoints() where cursorname='myportal';";
 
 	printf("\nExec SQL on the coordinator:\n\t> %s\n", sql1);
 	res1 = PQexec(master_conn, sql1);

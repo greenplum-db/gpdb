@@ -653,10 +653,14 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 				continue;		/* ignore locales for client-only encodings */
 			if (enc == PG_SQL_ASCII)
 				continue;		/* C/POSIX are already in the catalog */
-
-			/* GPDB_12_MERGE_FIXME: Why do we have this extra condition in GPDB? */
+            /*
+             * Greenplum specific behavior: this function in Greenplum can only be called after a full cluster is
+             * built, this is different from Postgres which might call this function during initdb. When reaching
+             * here, it must be in a database session, we can just ignore the collations not match current database's
+             * encoding because they cannot be used in this database.
+             */
 			if (enc != GetDatabaseEncoding())
-				continue;
+				continue;       /* Ignore collations incompatible with database encoding */ 
 
 			/* count valid locales found in operating system */
 			nvalid++;

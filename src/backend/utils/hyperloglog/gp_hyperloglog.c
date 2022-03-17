@@ -571,6 +571,7 @@ gp_hll_compress_dense(GpHLLCounter hloglog)
                  errmsg("out of memory"),
                  errdetail("Failed on request of size %zu.", data_rawsize)));
     }
+    memset(data, 0, data_rawsize);
 
     /* put all registers in a normal array  i.e. remove dense packing so
      * lz compression can work optimally */

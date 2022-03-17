@@ -377,6 +377,9 @@
       <li id="ad139979">
         <xref href="./RESET.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="retrieve">
+        <xref href="./RETRIEVE.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140844">
         <xref href="./REVOKE.xml#topic1" type="topic" format="dita"/>
       </li>

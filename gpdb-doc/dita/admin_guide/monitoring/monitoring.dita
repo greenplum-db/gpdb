@@ -111,7 +111,7 @@ GROUP BY 1;</codeblock></p>
                                         minutes</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>
                                     <p>Run the following <codeph>psql</codeph>
-                                        command:<codeblock>psql <i>dbname</i> -c 'SELECT pid, state FROM pg_stat_replication;'</codeblock></p>
+                                        command:<codeblock>psql &lt;dbname> -c 'SELECT pid, state FROM pg_stat_replication;'</codeblock></p>
                                 </entry>
                                 <entry>
                                     <p>Check the <filepath>log</filepath> file from the master
@@ -361,7 +361,7 @@ GROUP BY 1;</codeblock></p>
                                             reused.<p>Recommended frequency: daily</p><p>Severity:
                                             CRITICAL</p></entry>
                                     <entry>Vacuum user
-                                        tables:<codeblock>VACUUM <i>&lt;table></i>;</codeblock></entry>
+                                        tables:<codeblock>VACUUM &lt;table>;</codeblock></entry>
                                     <entry>Vacuum updated tables regularly to prevent bloating.
                                     </entry>
                                 </row>
@@ -371,7 +371,7 @@ GROUP BY 1;</codeblock></p>
                                             queries</p><p>Severity: CRITICAL</p></entry>
                                     <entry>Analyze user tables. You can use the
                                             <codeph>analyzedb</codeph> management
-                                        utility:<codeblock>analyzedb -d <varname>&lt;database></varname> -a</codeblock></entry>
+                                        utility:<codeblock>analyzedb -d &lt;database> -a</codeblock></entry>
                                     <entry>Analyze updated tables regularly so that the optimizer
                                         can produce efficient query execution plans.</entry>
                                 </row>
@@ -400,9 +400,9 @@ GROUP BY 1;</codeblock></p>
                                                 database, or use the <codeph>reindexdb</codeph>
                                                 command-line utility with the <codeph>-s</codeph>
                                                 option:
-                                                <codeblock>reindexdb -s <varname>&lt;database></varname></codeblock></li>
+                                                <codeblock>reindexdb -s &lt;database></codeblock></li>
                                             <li><codeph>ANALYZE</codeph> each of the system
-                                                tables:<codeblock>analyzedb -s pg_catalog -d <varname>&lt;database></varname></codeblock></li>
+                                                tables:<codeblock>analyzedb -s pg_catalog -d &lt;database></codeblock></li>
                                         </ol>
                                     </entry>
                                     <entry>The optimizer retrieves information from the system

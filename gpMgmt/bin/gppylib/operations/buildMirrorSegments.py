@@ -1,11 +1,12 @@
-import datetime
+from contextlib import closing
 import os
 import pipes
 import signal
 import time
+import re
 
+from gppylib.recoveryinfo import RecoveryResult
 from gppylib.mainUtils import *
-
 from gppylib.utils import checkNotNone
 from gppylib.db import dbconn
 from gppylib import gparray, gplog, recoveryinfo
@@ -20,7 +21,6 @@ from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
 from gppylib.programs.clsRecoverSegment_triples import RecoveryTriplet
-
 
 logger = gplog.get_default_logger()
 
@@ -54,6 +54,14 @@ gDatabaseFiles = [
     "postmaster.pid",
 ]
 
+
+def get_recovery_progress_file(gplog):
+    # recovery progress file on the coordinator, used by gpstate to read and show progress
+    return "{}/recovery_progress.file".format(gplog.get_logger_dir())
+
+
+def get_recovery_progress_pattern():
+    return r"\d+\/\d+ (kB|mB) \(\d+\%\)"
 
 #
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
@@ -123,20 +131,21 @@ class GpMirrorListToBuild:
         INPLACE = 1
         SEQUENTIAL = 2
 
+    class Action:
+        ADDMIRRORS='add'
+        RECOVERMIRRORS='recover'
+
     def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
         self.__progressMode = progressMode
         self.__parallelDegree = parallelDegree
-        # true for gprecoverseg and false for gpexpand and gpaddmirrors
+        # true for gprecoverseg and gpmovemirrors; false for gpexpand and gpaddmirrors
         self.__forceoverwrite = forceoverwrite
         self.__parallelPerHost = parallelPerHost
         self.__additionalWarnings = additionalWarnings or []
         self.segments_to_mark_down = []
-        self.mirrorsToStart = []
-        self.full_recovery_dbids = {}
-
         if not logger:
             raise Exception('logger argument cannot be None')
 
@@ -165,30 +174,13 @@ class GpMirrorListToBuild:
         """
         return self.__additionalWarnings
 
-    class RewindSegmentInfo:
-        """
-        Which segments to run pg_rewind during incremental recovery.  The
-        targetSegment is of type gparray.Segment.  All progressFiles should have
-        the same timeStamp.
-        """
-        def __init__(self, targetSegment, sourceHostname, sourcePort, timeStamp):
-            self.targetSegment = targetSegment
-            self.sourceHostname = sourceHostname
-            self.sourcePort = sourcePort
-            self.progressFile = '%s/pg_rewind.%s.dbid%s.out' % (gplog.get_logger_dir(),
-                                                                timeStamp,
-                                                                targetSegment.getSegmentDbId())
-
-    def _cleanup_before_recovery(self, gpEnv):
+    def _cleanup_before_recovery(self, gpArray, gpEnv):
+        self.checkForPortAndDirectoryConflicts(gpArray)
         self._stop_failed_segments(gpEnv)
-
         self._wait_fts_to_mark_down_segments(gpEnv, self._get_segments_to_mark_down())
-
-
         if not self.__forceoverwrite:
             self._clean_up_failed_segments()
         self._set_seg_status_in_gparray()
-
 
     def _get_segments_to_mark_down(self):
         segments_to_mark_down = []
@@ -219,8 +211,13 @@ class GpMirrorListToBuild:
             live_seg = toRecover.getLiveSegment()
             live_seg.setSegmentMode(gparray.MODE_NOT_SYNC)
 
+    def add_mirrors(self, gpEnv, gpArray):
+        return self.__build_mirrors(GpMirrorListToBuild.Action.ADDMIRRORS, gpEnv, gpArray)
 
-    def buildMirrors(self, actionName, gpEnv, gpArray):
+    def recover_mirrors(self, gpEnv, gpArray):
+        return self.__build_mirrors(GpMirrorListToBuild.Action.RECOVERMIRRORS, gpEnv, gpArray)
+
+    def __build_mirrors(self, actionName, gpEnv, gpArray):
         """
         Build the mirrors.
 
@@ -231,47 +228,116 @@ class GpMirrorListToBuild:
         if len(self.__mirrorsToBuild) == 0:
             self.__logger.info("No segments to {}".format(actionName))
             return True
+
+        if actionName not in [GpMirrorListToBuild.Action.ADDMIRRORS, GpMirrorListToBuild.Action.RECOVERMIRRORS]:
+            raise Exception('Invalid action. Valid values are {} and {}'.format(GpMirrorListToBuild.Action.RECOVERMIRRORS,
+                                                                                GpMirrorListToBuild.Action.ADDMIRRORS))
+
         self.__logger.info("%s segment(s) to %s" % (len(self.__mirrorsToBuild), actionName))
 
-        self.checkForPortAndDirectoryConflicts(gpArray)
-
-        for toRecover in self.__mirrorsToBuild:
-            # TODO: remove this after adding pg_ctl start inside wrapper
-            target_seg = toRecover.getFailoverSegment() or toRecover.getFailedSegment()
-            self.mirrorsToStart.append(target_seg)
-
-            if toRecover.isFullSynchronization():
-                if target_seg.getSegmentDbId() > 0:
-                    self.full_recovery_dbids[target_seg.getSegmentDbId()] = True
-
-        self._cleanup_before_recovery(gpEnv)
-
+        self._cleanup_before_recovery(gpArray, gpEnv)
         self._validate_gparray(gpArray)
 
-        self._run_recovery()
+        recovery_info_by_host = recoveryinfo.build_recovery_info(self.__mirrorsToBuild)
 
+        self._run_setup_recovery(actionName, recovery_info_by_host)
+
+        backout_map = self._update_config(recovery_info_by_host, gpArray)
+
+        recovery_results = self._run_recovery(actionName, recovery_info_by_host, gpEnv)
+        if actionName == GpMirrorListToBuild.Action.RECOVERMIRRORS:
+            self._revert_config_update(recovery_results, backout_map)
+
+        self._trigger_fts_probe(port=gpEnv.getCoordinatorPort())
+
+        return recovery_results.recovery_successful()
+
+    def _trigger_fts_probe(self, port=0):
+        self.__logger.info('Triggering FTS probe')
+        conn = dbconn.connect(dbconn.DbURL(port=port))
+
+        # XXX Perform two probe scans in a row, to work around a known
+        # race where gp_request_fts_probe_scan() can return early during the
+        # first call. Remove this duplication once that race is fixed.
+        for _ in range(2):
+            dbconn.execSQL(conn,"SELECT gp_request_fts_probe_scan()")
+        conn.close()
+
+    def _update_config(self, recovery_info_by_host, gpArray):
         # should use mainUtils.getProgramName but I can't make it work!
         programName = os.path.split(sys.argv[0])[-1]
 
+        full_recovery_dbids = {}
+        for host_name, recovery_info_list in recovery_info_by_host.items():
+            for ri in recovery_info_list:
+                if ri.is_full_recovery:
+                    full_recovery_dbids[ri.target_segment_dbid] = True
+
         # Disable Ctrl-C, going to save metadata in database and transition segments
         signal.signal(signal.SIGINT, signal.SIG_IGN)
+        backout_map = None
         try:
-            self.__logger.info("Updating configuration with new mirrors")
-            configInterface.getConfigurationProvider().updateSystemConfig(
+            self.__logger.info("Updating configuration for mirrors")
+            backout_map = configInterface.getConfigurationProvider().updateSystemConfig(
                 gpArray,
                 "%s: segment config for resync" % programName,
-                dbIdToForceMirrorRemoveAdd=self.full_recovery_dbids,
+                dbIdToForceMirrorRemoveAdd=full_recovery_dbids,
                 useUtilityMode=False,
                 allowPrimary=False
             )
 
-            self.__logger.info("Starting mirrors")
-            start_all_successful = self.__startAll(gpEnv, gpArray, self.mirrorsToStart)
+            self.__logger.debug("Generating configuration backout scripts")
         finally:
             # Re-enable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+            return backout_map
 
-        return start_all_successful
+    def _remove_progress_files(self, recovery_info_by_host, recovery_results):
+        remove_progress_file_cmds = []
+        for hostName, recovery_info_list in recovery_info_by_host.items():
+            for ri in recovery_info_list:
+                if recovery_results.was_bb_rewind_successful(ri.target_segment_dbid):
+                    remove_progress_file_cmds.append(self._get_remove_cmd(ri.progress_file, hostName))
+        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(remove_progress_file_cmds, suppressErrorCheck=False)
+
+    def _revert_config_update(self, recovery_results, backout_map):
+        if len(backout_map) == 0:
+            return
+        if recovery_results.full_recovery_successful():
+            return
+
+        final_sql = "SET allow_system_table_mods=true;\n"
+        for dbid in backout_map:
+            #TODO 1. we don't need to check for both bb and rewind
+            #TODO 2. we can ignore incremental dbids. Ideally incremental dbids won't have a backout script
+            # but being explicit in the code will make the intent clear
+            if recovery_results.was_bb_rewind_successful(dbid):
+                continue
+            for statement in backout_map[dbid]:
+                final_sql += "{};\n".format(statement)
+
+        self.__logger.debug("Some mirrors failed during basebackup. Reverting the gp_segment_configuration updates for"
+                            " these mirrors")
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False, utility=True)) as conn:
+                dbconn.execSQL(conn, "BEGIN")
+                dbconn.executeUpdateOrInsert(conn, final_sql, 1)
+                dbconn.execSQL(conn, "COMMIT")
+        finally:
+            signal.signal(signal.SIGINT, signal.default_int_handler)
+        self.__logger.debug("Successfully reverted the gp_segment_configuration updates for the failed mirrors")
+
+
+    def remove_postmaster_pid_from_remotehost(self, host, datadir):
+        cmd = base.Command(name = 'remove the postmaster.pid file',
+                           cmdStr = 'rm -f %s/postmaster.pid' % datadir,
+                           ctxt=gp.REMOTE, remoteHost = host)
+        cmd.run()
+
+        return_code = cmd.get_return_code()
+        if return_code != 0:
+            raise ExecutionError("Failed while trying to remove postmaster.pid.", cmd)
 
     def checkForPortAndDirectoryConflicts(self, gpArray):
         """
@@ -304,13 +370,13 @@ class GpMirrorListToBuild:
                         (dbid, usedDataDirectories.get(path), hostName, path))
                 usedDataDirectories[path] = dbid
 
-    def _join_and_show_segment_progress(self, cmds, inplace=False,
-                                        outfile=sys.stdout, interval=1):
-        written = False
+    def _join_and_show_segment_progress(self, cmds, inplace=False, outfile=sys.stdout, interval=1):
 
         def print_progress():
             if written and inplace:
                 outfile.write("\x1B[%dA" % len(cmds))
+
+            complete_progress_output = []
 
             output = []
             for cmd in cmds:
@@ -335,36 +401,47 @@ class GpMirrorListToBuild:
                     output.append("\x1B[K")
                 output.append("\n")
 
+                if re.search(pattern, results):
+                    recovery_type = 'full' if os.path.basename(cmd.filePath).split('.')[0] == 'pg_basebackup' else 'incremental'
+                    complete_progress_output.extend("%s:%d:%s\n" % (recovery_type, cmd.dbid, results))
+
+            combined_progress_file.write("".join(complete_progress_output))
+            combined_progress_file.flush()
+
             outfile.write("".join(output))
             outfile.flush()
 
-        while not self.__pool.join(interval):
-            print_progress()
-            written = True
+        written = False
+        combined_progress_filepath = get_recovery_progress_file(gplog)
+        pattern = re.compile(get_recovery_progress_pattern())
+        try:
+            with open(combined_progress_filepath, 'w') as combined_progress_file:
+                while not self.__pool.join(interval):
+                    print_progress()
+                    written = True
+                # Make sure every line is updated with the final status.
+                print_progress()
+        finally:
+            if os.path.exists(combined_progress_filepath):
+                os.remove(combined_progress_filepath)
 
-        # Make sure every line is updated with the final status.
-        print_progress()
 
-    # There is race between when the recovery process creates the progressFile
-    # when this progressCmd is run. Thus, the progress command touches
-    # the file to ensure its presence before tailing.
-    def __getProgressAndRemoveCmds(self, progressFile, targetSegmentDbId, targetHostname):
-        progressCmd = None
+    def _get_progress_cmd(self, progressFile, targetSegmentDbId, targetHostname):
+        """
+        # There is race between when the recovery process creates the progressFile
+        # when this progress cmd is run. Thus, the progress command touches
+        # the file to ensure its presence before tailing.
+        """
         if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
-            progressCmd = GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
-                                                              "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' | tail -1".format(
-                                                                  pipes.quote(progressFile)),
-                                                              targetSegmentDbId,
-                                                              progressFile,
-                                                              ctxt=base.REMOTE,
-                                                              remoteHost=targetHostname)
+            return GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
+                                                       "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' |"
+                                                       " tail -1".format(pipes.quote(progressFile)),
+                                                       targetSegmentDbId, progressFile, ctxt=base.REMOTE,
+                                                       remoteHost=targetHostname)
+        return None
 
-        removeCmd = base.Command("remove file",
-                                 "rm -f %s" % pipes.quote(progressFile),
-                                 ctxt=base.REMOTE,
-                                 remoteHost=targetHostname)
-
-        return progressCmd, removeCmd
+    def _get_remove_cmd(self, cmd, target_host):
+        return base.Command("remove file", "rm -f {}".format(pipes.quote(cmd)), ctxt=base.REMOTE, remoteHost=target_host)
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, suppressErrorCheck=False, progressCmds=[]):
         for cmd in cmds:
@@ -381,108 +458,84 @@ class GpMirrorListToBuild:
         if not suppressErrorCheck:
             self.__pool.check_results()
 
-        completedRecoveryCmds = list(set(self.__pool.getCompletedItems()) & set(cmds))
+        completed_cmds = list(set(self.__pool.getCompletedItems()) & set(cmds))
 
         self.__pool.empty_completed_items()
 
-        return completedRecoveryCmds
+        return completed_cmds
 
-    def __copyFiles(self, srcDir, destDir, fileNames):
-        for name in fileNames:
-            cmd = gp.LocalCopy("copy file for segment", srcDir + "/" + name, destDir + "/" + name)
-            cmd.run(validateAfter=True)
+    def _run_setup_recovery(self, action_name, recovery_info_by_host):
+        completed_setup_results = self._do_setup_for_recovery(recovery_info_by_host)
+        setup_recovery_results = RecoveryResult(action_name, completed_setup_results, self.__logger)
+        setup_recovery_results.print_setup_recovery_errors()
+        #FIXME we should raise this exception outside the function
+        if not setup_recovery_results.setup_successful():
+            raise ExceptionNoStackTraceNeeded()
 
-    def __createEmptyDirectories(self, dir, newDirectoryNames):
-        for name in newDirectoryNames:
-            subDir = os.path.join(dir, name)
-            unix.MakeDirectory("create blank directory for segment", subDir).run(validateAfter=True)
-            unix.Chmod.local('set permissions on blank dir', subDir, '0700')
+        return setup_recovery_results
 
-    def _run_recovery(self): #TODO add tests ?
-        recovery_info_by_host = recoveryinfo.build_recovery_info(self.__mirrorsToBuild)
+    def _run_recovery(self, action_name, recovery_info_by_host, gpEnv):
+        completed_recovery_results = self._do_recovery(recovery_info_by_host, gpEnv)
+        recovery_results = RecoveryResult(action_name, completed_recovery_results, self.__logger)
+        recovery_results.print_bb_rewind_and_start_errors()
 
-        def createSegRecoveryCommand(host_name, cmd_label, validate_only):
-            recovery_info_list = recovery_info_by_host[host_name]
-            checkNotNone("segmentInfo for %s" % host_name, recovery_info_list)
-            if validate_only:
+        self._remove_progress_files(recovery_info_by_host, recovery_results)
+        return recovery_results
 
-                return gp.GpSegSetupRecovery(cmd_label,
-                                       recoveryinfo.serialize_recovery_info_list(recovery_info_list),
-                                       gplog.get_logger_dir(),
-                                       verbose=gplog.logging_is_verbose(),
-                                       batchSize=self.__parallelPerHost,
-                                       remoteHost=host_name,
-                                       forceoverwrite=self.__forceoverwrite)
-            else:
-                return gp.GpSegRecovery(cmd_label,
-                                       recoveryinfo.serialize_recovery_info_list(recovery_info_list),
-                                       gplog.get_logger_dir(),
-                                       verbose=gplog.logging_is_verbose(),
-                                       batchSize=self.__parallelPerHost,
-                                       remoteHost=host_name,
-                                       forceoverwrite=self.__forceoverwrite)
-        #
-        # validate directories for target segments
-
-        self.__logger.info('Setting up the required segments for recovery')
-        cmds = []
-        for hostName in list(recovery_info_by_host.keys()):
-            cmds.append(createSegRecoveryCommand(hostName,
-                                                 'Validate data directories for '
-                                                 'full recovery', True))
-        for cmd in cmds:
-            self.__pool.addCommand(cmd)
-
-        if self.__quiet:
-            self.__pool.join()
-        else:
-            base.join_and_indicate_progress(self.__pool)
-
-        validationErrors = []
-        for item in self.__pool.getCompletedItems():
-            results = item.get_results()
-            if not results.wasSuccessful():
-                if results.rc == 1:
-                    # stdoutFromFailure = results.stdout.replace("\n", " ").strip()
-                    lines = results.stderr.split("\n")
-                    for line in lines:
-                        if len(line.strip()) > 0:
-                            #TODO add a behave test for this error
-                            validationErrors.append("Validation failure on host %s %s" % (item.remoteHost, line))
-                else:
-                    validationErrors.append(str(item))
-        self.__pool.empty_completed_items()
-        if validationErrors:
-            raise ExceptionNoStackTraceNeeded("\n" + ("\n".join(validationErrors)))
-
-        # Configure a new segment
-        #
-        # Recover segments using gpsegrecovery, which will internally call either
+    def _do_recovery(self, recovery_info_by_host, gpEnv):
+        """
+        # Recover and start segments using gpsegrecovery, which will internally call either
         # pg_basebackup or pg_rewind. gprecoverseg generates a log filename which is
         # passed to gpsegrecovery using the confinfo parameter. gprecoverseg
         # tails this file to show recovery progress to the user, and removes the
         # file when done. A new file is generated for each run of gprecoverseg
         # based on a timestamp.
-
-        self.__logger.info('Running recovery for the required segments')
+        :param gpEnv:
+        :param recovery_info_by_host:
+        :return:
+        """
+        self.__logger.info('Initiating segment recovery. Upon completion, will start the successfully recovered segments')
         cmds = []
-        progressCmds = []
-        removeCmds= []
-        for hostName in list(recovery_info_by_host.keys()):
-            for ri in recovery_info_by_host[hostName]:
-                progressCmd, removeCmd = self.__getProgressAndRemoveCmds(ri.progress_file,
-                                                                         ri.target_segment_dbid,
-                                                                         hostName)
-                removeCmds.append(removeCmd)
+        progress_cmds = []
+        era = read_era(gpEnv.getCoordinatorDataDir(), logger=self.__logger)
+        for hostName, recovery_info_list in recovery_info_by_host.items():
+            for ri in recovery_info_list:
+                progressCmd = self._get_progress_cmd(ri.progress_file, ri.target_segment_dbid, hostName)
                 if progressCmd:
-                    progressCmds.append(progressCmd)
+                    progress_cmds.append(progressCmd)
 
-            cmds.append(
-                createSegRecoveryCommand(hostName, 'Recover segments', False))
+            cmds.append(gp.GpSegRecovery('Recover segments',
+                                         recoveryinfo.serialize_list(recovery_info_list),
+                                         gplog.get_logger_dir(),
+                                         verbose=gplog.logging_is_verbose(),
+                                         batchSize=self.__parallelPerHost,
+                                         remoteHost=hostName,
+                                         era=era,
+                                         forceoverwrite=self.__forceoverwrite))
+        completed_recovery_results = self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, suppressErrorCheck=True,
+                                                                                       progressCmds=progress_cmds)
+        return completed_recovery_results
 
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, suppressErrorCheck=False, progressCmds=progressCmds)
-
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, suppressErrorCheck=False)
+    def _do_setup_for_recovery(self, recovery_info_by_host):
+        self.__logger.info('Setting up the required segments for recovery')
+        cmds = []
+        for host_name, recovery_info_list in recovery_info_by_host.items():
+            cmds.append(gp.GpSegSetupRecovery('Run validation checks and setup data directories for recovery',
+                                              recoveryinfo.serialize_list(recovery_info_list),
+                                              gplog.get_logger_dir(),
+                                              verbose=gplog.logging_is_verbose(),
+                                              batchSize=self.__parallelPerHost,
+                                              remoteHost=host_name,
+                                              forceoverwrite=self.__forceoverwrite))
+        for cmd in cmds:
+            self.__pool.addCommand(cmd)
+        if self.__quiet:
+            self.__pool.join()
+        else:
+            base.join_and_indicate_progress(self.__pool)
+        completed_results = self.__pool.getCompletedItems()
+        self.__pool.empty_completed_items()
+        return completed_results
 
     def _get_running_postgres_segments(self, segments):
         running_segments = []
@@ -495,13 +548,13 @@ class GpMirrorListToBuild:
                         running_segments.append(seg)
                     else:
                         self.__logger.info("Skipping to stop segment %s on host %s since it is not a postgres process" % (
-                        seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
+                            seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
                 else:
                     self.__logger.debug("Skipping to stop segment %s on host %s since process with pid %s is not running" % (
-                    seg.getSegmentDataDirectory(), seg.getSegmentHostName(), pid))
+                        seg.getSegmentDataDirectory(), seg.getSegmentHostName(), pid))
             else:
                 self.__logger.debug("Skipping to stop segment %s on host %s since pid could not be found" % (
-                seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
+                    seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
 
         return running_segments
 
@@ -515,18 +568,26 @@ class GpMirrorListToBuild:
             return datadir
         return results.stdout.strip()
 
-    def _get_failed_segments(self):
+    def _get_failed_reachable_segments(self):
         # will stop the failed segment.  Note that we do this even if we are recovering to a different location!
-        return [ toRecover.getFailedSegment() for toRecover in self.__mirrorsToBuild if toRecover.getFailedSegment() is not None ]
+        failed_reachable_segments = []
+        for toRecover in self.__mirrorsToBuild:
+            failed = toRecover.getFailedSegment()
+            if failed is not None:
+                if failed.unreachable:
+                    self.__logger.info('Skipping gpsegstop on unreachable host: %s segment: %s'
+                                       % (failed.getSegmentHostName(), failed.getSegmentContentId()))
+                else:
+                    failed_reachable_segments.append(failed)
+        return failed_reachable_segments
 
-    #TODO add tests for this function ??
     def _stop_failed_segments(self, gpEnv):
-        failed_segments = self._get_failed_segments()
-        if len(failed_segments) == 0:
+        failed_reachable_segments = self._get_failed_reachable_segments()
+        if len(failed_reachable_segments) == 0:
             return
 
-        self.__logger.info("Ensuring %d failed segment(s) are stopped" % (len(failed_segments)))
-        segments = self._get_running_postgres_segments(failed_segments)
+        self.__logger.info("Ensuring %d failed segment(s) are stopped" % (len(failed_reachable_segments)))
+        segments = self._get_running_postgres_segments(failed_reachable_segments)
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
 
@@ -587,9 +648,9 @@ class GpMirrorListToBuild:
             else:
                 if last_seg_up_count != seg_up_count:
                     print("\n", end=' ')
-                    #TODO fix - this message prints negative values
+                    #FIXME - this message prints negative values
                     self.__logger.info("%d of %d segments have been marked down." %
-                                (initial_seg_up_count - seg_up_count, initial_seg_up_count))
+                                       (initial_seg_up_count - seg_up_count, initial_seg_up_count))
                     last_seg_up_count = seg_up_count
 
                 for _i in range(1, 5):
@@ -602,7 +663,7 @@ class GpMirrorListToBuild:
         if seg_up_count == 0:
             print("\n", end=' ')
             self.__logger.info("%d of %d segments have been marked down." %
-                        (initial_seg_up_count, initial_seg_up_count))
+                               (initial_seg_up_count, initial_seg_up_count))
         else:
             raise Exception("%d segments were not marked down by FTS" % seg_up_count)
 
@@ -633,45 +694,28 @@ class GpMirrorListToBuild:
                                                     parallel=self.__parallelPerHost)
 
     # FIXME: This function seems to be unused. Remove if not required.
-    def __updateGpIdFile(self, gpEnv, gpArray, segments):
-        segmentByHost = GpArray.getSegmentsByHostName(segments)
-        newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(segments)
+    # def __updateGpIdFile(self, gpEnv, gpArray, segments):
+    #     segmentByHost = GpArray.getSegmentsByHostName(segments)
+    #     newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(segments)
+    #
+    #     cmds = []
+    #     for hostName in list(segmentByHost.keys()):
+    #         segmentInfo = newSegmentInfo[hostName]
+    #         checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
+    #         cmd = gp.ConfigureNewSegment("update gpid file",
+    #                                      segmentInfo,
+    #                                      gplog.get_logger_dir(),
+    #                                      newSegments=False,
+    #                                      verbose=gplog.logging_is_verbose(),
+    #                                      batchSize=self.__parallelPerHost,
+    #                                      ctxt=gp.REMOTE,
+    #                                      remoteHost=hostName,
+    #                                      validationOnly=False,
+    #                                      writeGpIdFileOnly=True)
+    #
+    #         cmds.append(cmd)
+    #     self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds)
 
-        cmds = []
-        for hostName in list(segmentByHost.keys()):
-            segmentInfo = newSegmentInfo[hostName]
-            checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
-            cmd = gp.ConfigureNewSegment("update gpid file",
-                                         segmentInfo,
-                                         gplog.get_logger_dir(),
-                                         newSegments=False,
-                                         verbose=gplog.logging_is_verbose(),
-                                         batchSize=self.__parallelPerHost,
-                                         ctxt=gp.REMOTE,
-                                         remoteHost=hostName,
-                                         validationOnly=False,
-                                         writeGpIdFileOnly=True)
-
-            cmds.append(cmd)
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds)
-
-    def __startAll(self, gpEnv, gpArray, segments):
-
-        # the newly started segments should belong to the current era
-        era = read_era(gpEnv.getCoordinatorDataDir(), logger=self.__logger)
-
-        segmentStartResult = self.__createStartSegmentsOp(gpEnv).startSegments(gpArray, segments,
-                                                                               startSegments.START_AS_MIRRORLESS,
-                                                                               era)
-        start_all_successfull = len(segmentStartResult.getFailedSegmentObjs()) == 0
-        for failure in segmentStartResult.getFailedSegmentObjs():
-            failedSeg = failure.getSegment()
-            failureReason = failure.getReason()
-            self.__logger.warn(
-                "Failed to start segment.  The fault prober will shortly mark it as down. Segment: %s: REASON: %s" % (
-                failedSeg, failureReason))
-
-        return start_all_successfull
 
 class GpCleanupSegmentDirectoryDirective:
     def __init__(self, segment):

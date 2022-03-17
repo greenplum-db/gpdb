@@ -26,6 +26,7 @@
 #include "access/xact.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbutil.h"
+#include "cdb/cdbvars.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "postmaster/autovacuum.h"
@@ -309,6 +310,10 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 	{
 		if (entryShared == NULL)
 			/* fault injection is not set */
+			break;
+
+		if (entryShared->gpSessionid != InvalidGpSessionId && entryShared->gpSessionid != gp_session_id)
+			/* fault injection is not set for the specified session */
 			break;
 
 		if (entryShared->ddlStatement != ddlStatement)
@@ -684,6 +689,8 @@ FaultInjector_NewHashEntry(
 	entryLocal->startOccurrence = entry->startOccurrence;
 	entryLocal->endOccurrence = entry->endOccurrence;
 
+	entryLocal->gpSessionid = entry->gpSessionid;
+
 	entryLocal->numTimesTriggered = 0;
 	strcpy(entryLocal->databaseName, entry->databaseName);
 	strcpy(entryLocal->tableName, entry->tableName);
@@ -925,12 +932,13 @@ HandleFaultMessage(const char* msg)
 	int start;
 	int end;
 	int extra;
+	int sid;
 	char *result;
 	int len;
 
 	if (sscanf(msg, "faultname=%s type=%s ddl=%s db=%s table=%s "
-			   "start=%d end=%d extra=%d",
-			   name, type, ddl, db, table, &start, &end, &extra) != 8)
+			   "start=%d end=%d extra=%d sid=%d",
+			   name, type, ddl, db, table, &start, &end, &extra, &sid) != 9)
 		elog(ERROR, "invalid fault message: %s", msg);
 	/* The value '#' means not specified. */
 	if (ddl[0] == '#')
@@ -940,7 +948,7 @@ HandleFaultMessage(const char* msg)
 	if (table[0] == '#')
 		table[0] = '\0';
 
-	result = InjectFault(name, type, ddl, db, table, start, end, extra);
+	result = InjectFault(name, type, ddl, db, table, start, end, extra, sid);
 	len = strlen(result);
 
 	StringInfoData buf;
@@ -969,20 +977,21 @@ HandleFaultMessage(const char* msg)
 
 char *
 InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
-			char *tableName, int startOccurrence, int endOccurrence, int extraArg)
+			char *tableName, int startOccurrence, int endOccurrence, int extraArg, int gpSessionid)
 {
 	StringInfo buf = makeStringInfo();
 	FaultInjectorEntry_s faultEntry;
 
-	elog(DEBUG1, "injecting fault: name %s, type %s, DDL %s, db %s, table %s, startOccurrence %d, endOccurrence %d, extraArg %d",
+	elog(DEBUG1, "injecting fault: name %s, type %s, DDL %s, db %s, table %s, startOccurrence %d, endOccurrence %d, extraArg %d, sid %d",
 		 faultName, type, ddlStatement, databaseName, tableName,
-		 startOccurrence, endOccurrence, extraArg );
+		 startOccurrence, endOccurrence, extraArg, gpSessionid );
 
 	faultEntry.faultInjectorType = FaultInjectorTypeStringToEnum(type);
 	faultEntry.ddlStatement = FaultInjectorDDLStringToEnum(ddlStatement);
 	faultEntry.extraArg = extraArg;
 	faultEntry.startOccurrence = startOccurrence;
 	faultEntry.endOccurrence = endOccurrence;
+	faultEntry.gpSessionid = gpSessionid;
 	faultEntry.numTimesTriggered = 0;
 
 	/*

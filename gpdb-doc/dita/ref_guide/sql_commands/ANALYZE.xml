@@ -9,9 +9,9 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">ANALYZE [VERBOSE] [<varname>table</varname> [ (<varname>column</varname> [, ...] ) ]]
 
-ANALYZE [VERBOSE] {<varname>root_partition</varname>|<varname>leaf_partition</varname>} [ (<varname>column</varname> [, ...] )] 
+ANALYZE [VERBOSE] {<varname>root_partition_table_name</varname>|<varname>leaf_partition_table_name</varname>} [ (<varname>column</varname> [, ...] )] 
 
-ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<varname>column</varname> [, ...] )]}</codeblock>
+ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition_table_name</varname> [ (<varname>column</varname> [, ...] )]}</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -55,13 +55,13 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
       <title>Parameters</title>
       <parml>
         <plentry>
-          <pt>{ <varname>root_partition</varname> | <varname>leaf_partition</varname> } [
+          <pt>{ <varname>root_partition_table_name</varname> | <varname>leaf_partition_table_name</varname> } [
               (<varname>column</varname> [, ...] ) ]</pt>
           <pd>Collect statistics for partitioned tables including HLL statistics. HLL statistics are
             collected only on leaf child partitions. </pd>
-          <pd><codeph>ANALYZE <varname>root_partition</varname></codeph>, collects statistics on all
+          <pd><codeph>ANALYZE <varname>root_partition_table_name</varname></codeph>, collects statistics on all
             leaf child partitions and the root partition. </pd>
-          <pd><codeph>ANALYZE <varname>leaf_partition</varname></codeph>, collects statistics on the
+          <pd><codeph>ANALYZE <varname>leaf_partition_table_name</varname></codeph>, collects statistics on the
             leaf child partition. </pd>
           <pd>By default, if you specify a leaf child partition, and all other leaf child partitions
             have statistics, <codeph>ANALYZE</codeph> updates the root partition statistics. If not

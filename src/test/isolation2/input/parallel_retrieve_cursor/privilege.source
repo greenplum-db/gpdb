@@ -25,7 +25,7 @@ RESET SESSION AUTHORIZATION;
 1: SELECT SESSION_USER, CURRENT_USER;
 1: BEGIN;
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
 1: SET SESSION AUTHORIZATION u1;
 1: SELECT SESSION_USER, CURRENT_USER;
 --- c2 is declared by u1
@@ -33,22 +33,22 @@ RESET SESSION AUTHORIZATION;
 --- c12 is declared by u1 on entry db
 1: DECLARE c12 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10);
 --- u1 is able to see all endpoints created by himself.
-1: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
 
 --- adminuser should be able to see all the endpoints declared by u1 with state READY
 2: SET SESSION AUTHORIZATION adminuser;
 2: SELECT SESSION_USER, CURRENT_USER;
-2: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c2';
-2: @post_run 'parse_endpoint_info 12 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c12';
-2: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+2: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
+2: @post_run 'parse_endpoint_info 12 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c12';
+2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
 
 --- adminuser should be able to see the cursor state change to READY
-2: SELECT auth_token, usename, state FROM gp_endpoints() endpoints, pg_user WHERE endpoints.userid = pg_user.usesysid order by usename;
+2: SELECT auth_token, username, state FROM gp_get_endpoints() endpoints order by username;
 
 --- adminuser should be able to see all endpoints declared by u1 in utility mode
 3: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=1 ; export RETRIEVE_USER="adminuser"; echo $RAW_STR ' : SELECT 1;
 0R: SELECT SESSION_USER, CURRENT_USER;
-0U: SELECT auth_token, usename FROM gp_segment_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+0U: SELECT auth_token, username FROM gp_get_segment_endpoints();
 0R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
 0Rq:
 3: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=2 ; export RETRIEVE_USER="u1"; echo $RAW_STR ' : SELECT 1;
@@ -59,10 +59,10 @@ RESET SESSION AUTHORIZATION;
 1: SET ROLE uu1;
 1: SELECT SESSION_USER, CURRENT_USER;
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-2: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c3';
+2: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
 --- uu1 can not see u1's endpoints.
-1: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
-2: SELECT DISTINCT(cursorname), usename FROM gp_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
 
 3: @pre_run 'export RETRIEVE_USER="uu1"; echo $RAW_STR ' : SELECT 1;
 --- Login as uu1 and retrieve, only u1 can retrieve
@@ -91,9 +91,9 @@ RESET SESSION AUTHORIZATION;
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
 
-2: @post_run 'parse_endpoint_info 40 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c0';
+2: @post_run 'parse_endpoint_info 40 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c0';
 
-2: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+2: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
 
 --- adminuser should NOT be able to retrieve from other's PARALLEL RETRIEVE CURSOR
 3: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=40 ; export RETRIEVE_USER="adminuser"; echo $RAW_STR ' : SELECT 1;
@@ -130,15 +130,15 @@ RESET SESSION AUTHORIZATION;
 1: BEGIN;
 -- Used to let super login to retrieve session so then it can change user in session.
 1: DECLARE c0 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-1: @post_run 'parse_endpoint_info 50 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c0';
+1: @post_run 'parse_endpoint_info 50 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c0';
 1: SET SESSION AUTHORIZATION u1;
 --- c4 is declared and executed by u1
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c4';
+1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
 
 --- u2 is not able to see u1's endpoints on master
 1: SET SESSION AUTHORIZATION u2;
-1: SELECT * from gp_endpoints();
+1: SELECT * from gp_get_endpoints();
 
 --- execute the cursor by u1
 1: SET SESSION AUTHORIZATION u1;
@@ -146,7 +146,7 @@ RESET SESSION AUTHORIZATION;
 
 --- u2 is not able to see u1's endpoints in RETRIEVE mode
 *R: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=50 ; export RETRIEVE_USER="adminuser" ; echo $RAW_STR' : SET SESSION AUTHORIZATION u2;
-*U: SELECT auth_token, usename FROM gp_segment_endpoints() AS e, pg_user AS u where e.userid = u.usesysid;
+*U: SELECT auth_token, username FROM gp_get_segment_endpoints();
 
 --- u2 is not able to retrieve from u1's endpoints in RETRIEVE mode
 *R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";

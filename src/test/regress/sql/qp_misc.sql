@@ -15594,3 +15594,12 @@ INSERT INTO test_nullifexpr VALUES (null,'A');
 INSERT INTO test_nullifexpr VALUES ('','y');
 ANALYZE test_nullifexpr;
 SELECT NULLIF( f1,'') AS f3, CASE WHEN f2 = 'A' THEN 'X' ELSE 'Z' END AS f4 FROM test_nullifexpr ORDER BY f3, f4;
+-- Test Relabel get correct collation OID
+CREATE TABLE relabel_coll_test ( tkn_json JSON); 
+WITH cte_coll AS
+(
+       SELECT string_to_array( unnest( array[ coalesce(tkn_json ->> 'base', 'nullout'),      coalesce(        tkn_json ->> 'double_metaphone', 'nullout'      )      ] ), ',' ) AS tkn_arr
+       FROM   relabel_coll_test l )
+SELECT *
+FROM   cte_coll
+WHERE  tkn_arr <> '{nullout}' ;

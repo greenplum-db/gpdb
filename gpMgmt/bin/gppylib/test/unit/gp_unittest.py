@@ -2,6 +2,12 @@ import unittest
 
 from mock import MagicMock, Mock
 
+class Contains(str):
+    """
+    This class is used as a way to assert for partial match in unittests
+    """
+    def __eq__(self, other):
+        return self in other
 
 class GpTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):

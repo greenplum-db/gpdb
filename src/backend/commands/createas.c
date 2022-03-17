@@ -324,7 +324,6 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 			return InvalidObjectAddress;
 		}
 	}
-
 	/*
 	 * Create the tuple receiver object and insert info it will need
 	 */

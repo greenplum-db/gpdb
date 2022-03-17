@@ -459,3 +459,18 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand to redistribute
         Then the numsegments of table "partition_test" is 4
         Then distribution information from table "partition_test" with data in "gptest" is verified against saved data
+
+    @gpexpand_segment
+    Scenario: expand a cluster and check pg_hba entries on segment
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
+        And the new host "sdw2,sdw3" is ready to go
+        When the user runs gpexpand interview to add 0 new segment and 2 new host "sdw2,sdw3"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that pg_hba.conf file has "replication" entries in each segment data directories

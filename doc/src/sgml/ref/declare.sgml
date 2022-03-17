@@ -21,13 +21,13 @@ PostgreSQL documentation
 
  <refnamediv>
   <refname>DECLARE</refname>
-  <refpurpose>define a cursor</refpurpose>
+  <refpurpose>define a cursor or a parallel retrieve cursor</refpurpose>
  </refnamediv>
 
  <refsynopsisdiv>
 <synopsis>
 DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITIVE ] [ [ NO ] SCROLL ]
-    CURSOR [ { WITH | WITHOUT } HOLD ] FOR <replaceable class="parameter">query</replaceable>
+  [ PARALLEL RETRIEVE ] CURSOR [ { WITH | WITHOUT } HOLD ] FOR <replaceable class="parameter">query</replaceable>
 </synopsis>
  </refsynopsisdiv>
 
@@ -40,6 +40,22 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
    a small number of rows at a time out of a larger query.
    After the cursor is created, rows are fetched from it using
    <xref linkend="sql-fetch"/>.
+  </para>
+
+  <para>
+    Like a normal cursor, user can declare a parallel retrieve cursor on
+    coordinator, then retrieve the query results on each segment directly.
+  </para>
+
+  <para>
+    Parallel retrieve cursor has similar declaration and syntax as normal cursor
+    does. However, some cursor operations are not supported in parallel retrieve
+    cursor(e.g. MOVE).
+  </para>
+
+  <para>
+    NOTE: Orca doesn't support PARALLEL RETRIEVE CURSOR for now. It would fall
+    back to postgres optimizer automatically.
   </para>
 
   <note>
@@ -102,6 +118,10 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
       <literal>SCROLL</literal>. See <xref linkend="sql-declare-notes"
       endterm="sql-declare-notes-title"/> for details.
      </para>
+
+     <para>
+      PARALLEL RETRIEVE CURSOR with <literal>WITH SCROLL</literal> is not supported.
+     </para>
     </listitem>
    </varlistentry>
 
@@ -116,6 +136,10 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
       created it. If neither <literal>WITHOUT HOLD</literal> nor
       <literal>WITH HOLD</literal> is specified, <literal>WITHOUT
       HOLD</literal> is the default.
+     </para>
+
+     <para>
+      PARALLEL RETRIEVE CURSOR with <literal>WITH HOLD</literal> is not supported.
      </para>
     </listitem>
    </varlistentry>

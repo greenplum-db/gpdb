@@ -44,7 +44,7 @@
 #include "commands/sequence.h"
 #include "access/xact.h"
 #include "utils/timestamp.h"
-#define DISPATCH_WAIT_TIMEOUT_MSEC 1000
+#define DISPATCH_WAIT_TIMEOUT_MSEC 2000
 
 /*
  * Ideally, we should set timeout to zero to cancel QEs as soon as possible,
@@ -52,6 +52,13 @@
  * as many finishing QEs as possible before cancelling
  */
 #define DISPATCH_WAIT_CANCEL_TIMEOUT_MSEC 100
+
+/*
+ * DISPATCH_NO_WAIT means return immediate when there's no more data,
+ * DISPATCH_WAIT_UNTIL_FINISH means wait until all dispatch works are completed.
+ */
+#define DISPATCH_NO_WAIT 0
+#define DISPATCH_WAIT_UNTIL_FINISH -1
 
 typedef struct CdbDispatchCmdAsync
 {
@@ -74,9 +81,9 @@ typedef struct CdbDispatchCmdAsync
 	volatile DispatchWaitMode waitMode;
 
 	/*
-	 * When waitMode is set to DISPATCH_WAIT_ACK_ROOT/DISPATCH_WAIT_ACK_ALL,
-	 * the expected acknowledge message from QE should be specified. This field
-	 * stores the expected acknowledge message.
+	 * When waitMode is set to DISPATCH_WAIT_ACK_ROOT,
+	 * the expected acknowledge message from QE should be specified.
+	 * This field stores the expected acknowledge message.
 	 */
 	const char	*ackMessage;
 
@@ -155,7 +162,7 @@ cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds)
 {
 	Assert(ds);
 
-	checkDispatchResult(ds, 0);
+	checkDispatchResult(ds, DISPATCH_NO_WAIT);
 	return cdbdisp_checkResultsErrcode(ds->primaryResults);
 }
 
@@ -399,16 +406,7 @@ cdbdisp_checkDispatchResult_async(struct CdbDispatcherState *ds,
 	if (waitMode != DISPATCH_WAIT_NONE)
 		pParms->waitMode = waitMode;
 
-	checkDispatchResult(ds, -1);
-
-	/*
-	 * It looks like everything went fine, make sure we don't miss a user
-	 * cancellation?
-	 *
-	 * The waitMode argument is NONE when we are doing "normal work".
-	 */
-	if (waitMode == DISPATCH_WAIT_NONE || waitMode == DISPATCH_WAIT_FINISH)
-		CHECK_FOR_INTERRUPTS();
+	checkDispatchResult(ds, DISPATCH_WAIT_UNTIL_FINISH);
 }
 
 /*
@@ -438,6 +436,9 @@ cdbdisp_makeDispatchParams_async(int maxSlices, int largestGangSize, char *query
 
 /*
  * Receive and process results from all running QEs.
+ * timeout_sec: the second that the dispatcher waits for the ack messages at most.
+ *              DISPATCH_NO_WAIT(0): return immediate when there's no more data.
+ *              DISPATCH_WAIT_UNTIL_FINISH(-1): wait until all dispatch works are completed.
  *
  * Don't throw out error, instead, append the error message to
  * CdbDispatchResult.error_message.
@@ -457,6 +458,7 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 	uint8 ftsVersion = 0;
 	struct timeval start_ts, now;
 	int64		diff_us;
+	bool        cancelRequested = false;
 
 	db_count = pParms->dispatchCount;
 	fds = (struct pollfd *) palloc(db_count * sizeof(struct pollfd));
@@ -482,11 +484,27 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 			break;
 
 		/*
-		 * escalate waitMode to cancel if: - user interrupt has occurred, - or
-		 * an error has been reported by any QE, - in case the caller wants
-		 * cancelOnError
+		 * Current loop might last for the long time so check on interrupts.
+		 * If error will be thrown then ordinarily cancel all activities on
+		 * segments and re-throw this error at the end of current function.
 		 */
-		if ((InterruptPending || meleeResults->errcode) && meleeResults->cancelOnError)
+		PG_TRY();
+		{
+			CHECK_FOR_INTERRUPTS();
+		}
+		PG_CATCH();
+		{
+			cancelRequested = true;
+		}
+		PG_END_TRY();
+
+		/*
+		 * escalate waitMode to cancel if:
+		 * - user cancel request has occurred,
+		 * - or an error has been reported by any QE,
+		 * - in case the caller wants cancelOnError
+		 */
+		if ((cancelRequested || meleeResults->errcode) && meleeResults->cancelOnError)
 			pParms->waitMode = DISPATCH_WAIT_CANCEL;
 
 		/*
@@ -636,6 +654,9 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 	}
 
 	pfree(fds);
+
+	if (cancelRequested)
+		PG_RE_THROW();
 }
 
 /*

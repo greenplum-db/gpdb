@@ -2371,7 +2371,7 @@ waitOnOutbound(ChunkTransportStateEntry *pEntry)
 		if (conn_count == 0)
 			return;
 
-		if (InterruptPending || QueryFinishPending)
+		if (CancelRequested() || QueryFinishPending)
 		{
 #ifdef AMS_VERBOSE_LOGGING
 			elog(DEBUG3, "waitOnOutbound(): interrupt pending fast-track");
@@ -2393,7 +2393,7 @@ waitOnOutbound(ChunkTransportStateEntry *pEntry)
 		{
 			saved_err = errno;
 
-			if (InterruptPending || QueryFinishPending)
+			if (CancelRequested() || QueryFinishPending)
 				return;
 
 			/*

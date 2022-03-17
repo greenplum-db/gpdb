@@ -560,7 +560,7 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1463.285198" Rows="799200.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1463.290572" Rows="799200.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -580,7 +580,7 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1405.870670" Rows="799200.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1405.876044" Rows="799200.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -605,7 +605,7 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.194797" Rows="1598.400000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.200172" Rows="1598.400000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -619,7 +619,7 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
             <dxl:SortingColumnList/>
             <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.027445" Rows="799.200000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.032819" Rows="799.200000" Width="8"/>
               </dxl:Properties>
               <dxl:TableDescriptor Mdid="0.37336903.1.1" TableName="bmao_part">
                 <dxl:Columns>
@@ -645,7 +645,7 @@ select * from bmao_part as t1 join bmao_part as t2 on t1.a < t2.a where t1.a < 5
               <dxl:Filter/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.027445" Rows="799.200000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.032819" Rows="799.200000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="18" Alias="a">

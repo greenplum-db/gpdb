@@ -24,7 +24,7 @@
          specified using an absolute path on the master host, or a relative path to the master
          data directory.</p>
       <p>
-          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i>;</codeblock>
+          <codeblock>COPY &lt;table_name> FROM &lt;/path/to/filename>;</codeblock>
       </p>
    </body>
   </topic>
@@ -37,7 +37,7 @@
          command started, the backend will accept lines of data until a single line only contains
          a backslash-period (\.).</p>
       <p>
-          <codeblock>COPY <i>table_name</i> FROM <i>STDIN</i>;</codeblock>
+          <codeblock>COPY &lt;table_name> FROM &lt;STDIN>;</codeblock>
       </p>
    </body>
   </topic>
@@ -56,7 +56,7 @@
          a backslash-period (\.). psql is wrapping all of this into the handy
          <codeph>\copy</codeph> command.</p>
       <p>
-          <codeblock>\copy <i>table_name</i> FROM <i>filename</i>;</codeblock>
+          <codeblock>\copy &lt;table_name> FROM &lt;filename>;</codeblock>
       </p>
    </body>
   </topic>
@@ -67,19 +67,19 @@
          the format of the input data. The possible values are <codeph>TEXT</codeph>,
          <codeph>CSV</codeph> (Comma Separated Values), and <codeph>BINARY</codeph>.</p>
       <p>
-          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (FORMAT csv);</codeblock>
+          <codeblock>COPY &lt;table_name> FROM &lt;/path/to/filename> WITH (FORMAT csv);</codeblock>
       </p>
       <p>The <codeph>FORMAT csv</codeph> will read comma-separated values. The
          <codeph>FORMAT text</codeph> by default uses tabulators to separate the values, the
          <codeph>DELIMITER</codeph> option specifies a different character as value delimiter.</p>
       <p>
-          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (FORMAT text, DELIMITER '|');</codeblock>
+          <codeblock>COPY &lt;table_name> FROM &lt;/path/to/filename> WITH (FORMAT text, DELIMITER '|');</codeblock>
       </p>
       <p>By default, the default client encoding is used, this can be changed with the
          <codeph>ENCODING</codeph> option. This is useful if data is coming from another operating
          system.</p>
       <p>
-          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (ENCODING 'latin1');</codeblock>
+          <codeblock>COPY &lt;table_name> FROM &lt;/path/to/filename> WITH (ENCODING 'latin1');</codeblock>
       </p>
    </body>
   </topic>

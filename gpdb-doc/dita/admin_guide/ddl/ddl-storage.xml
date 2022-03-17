@@ -418,7 +418,7 @@
       </table>
       <p>The following is the format for adding storage directives.</p>
       <p>
-        <codeblock>[ ENCODING ( <i>storage_directive</i> [,…] ) ] </codeblock>
+        <codeblock>[ ENCODING ( &lt;storage_directive> [,…] ) ] </codeblock>
       </p>
       <p>where the word ENCODING is required and the storage directive has three parts:</p>
       <ul id="ul_hzg_1wy_sp">
@@ -432,11 +432,11 @@
       <p>
         <i>General Usage:</i>
       </p>
-      <codeblock><i>column_name</i> <i>data_type</i> ENCODING ( <i>storage_directive </i>[, … ] ), …  
+      <codeblock>&lt;column_name> &lt;data_type> ENCODING ( &lt;storage_directive> [, … ] ), …  
 </codeblock>
-      <codeblock>COLUMN <i>column_name</i> ENCODING ( <i>storage_directive</i> [, … ] ), … 
+      <codeblock>COLUMN &lt;column_name> ENCODING ( &lt;storage_directive> [, … ] ), … 
 </codeblock>
-      <codeblock>DEFAULT COLUMN ENCODING ( <i>storage_directive</i> [, … ] )
+      <codeblock>DEFAULT COLUMN ENCODING ( &lt;storage_directive> [, … ] )
 </codeblock>
       <p>
         <i>Example:</i>
@@ -450,7 +450,7 @@
     </body>
     <topic id="topic44" xml:lang="en">
       <title>
-        <b>Default Compression Values</b>
+        Default Compression Values
       </title>
       <body>
         <p>If the compression type, compression level and block size are not defined, the default is
@@ -460,7 +460,7 @@
     </topic>
     <topic id="topic45" xml:lang="en">
       <title id="im196311">
-        <b>Precedence of Compression Settings</b>
+        Precedence of Compression Settings
       </title>
       <body>
         <p>Column compression settings are inherited from the type level to the table level to the partition level to
@@ -486,7 +486,7 @@
     </topic>
     <topic id="topic46" xml:lang="en">
       <title>
-        <b>Optimal Location for Column Compression Settings</b>
+        Optimal Location for Column Compression Settings
       </title>
       <body>
         <p>The best practice is to set the column compression settings at the level where the data
@@ -497,7 +497,7 @@
     </topic>
     <topic id="topic47" xml:lang="en">
       <title>
-        <b>Storage Directives Examples</b>
+        Storage Directives Examples
       </title>
       <body>
         <p>The following examples show the use of storage directives in <codeph>CREATE
@@ -615,7 +615,7 @@
     </topic>
     <topic id="topic53" xml:lang="en">
       <title>
-        <b>Adding Compression in a TYPE Command</b>
+        Adding Compression in a TYPE Command
       </title>
       <body>
         <p>When you create a new type, you can define default compression attributes for the type.
@@ -753,7 +753,7 @@ GRANT SELECT ON sales TO guest;
       </body>
       <topic id="topic60" xml:lang="en">
         <title id="im196377">
-          <b>Adding a Compressed Column to Table</b>
+          Adding a Compressed Column to Table
         </title>
         <body>
           <p>Use <codeph>ALTER TABLE</codeph> command to add a compressed column to a table. All of
@@ -772,7 +772,7 @@ GRANT SELECT ON sales TO guest;
       </topic>
       <topic id="topic61" xml:lang="en">
         <title>
-          <b>Inheritance of Compression Settings</b>
+          Inheritance of Compression Settings
         </title>
         <body>
           <p>A partition added to a table that has subpartitions defined with compression settings

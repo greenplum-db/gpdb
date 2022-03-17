@@ -145,9 +145,9 @@
                     scope="external" format="html">Function Volatility Categories</xref>
                 documentation for additional information about the Greenplum Database function
                 volatility classifications.</p>
-            <p>For more information about <codeph>EXECUTE ON</codeph> attributes, see <codeph><xref
+            <p>For more information about <codeph>EXECUTE ON</codeph> attributes, see <xref
                         href="../../../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1"
-                        format="dita" scope="peer">CREATE FUNCTION</xref></codeph>.</p>
+                        format="dita" scope="peer">CREATE FUNCTION</xref>.</p>
             <p>In Greenplum Database, data is divided up across segments — each segment is a
                 distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not
                 run functions classified as <codeph>VOLATILE</codeph> at the segment level if

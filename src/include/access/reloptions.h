@@ -328,10 +328,11 @@ extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *opti
 										int num_options, relopt_kind kind, bool validate);
 
 /* attribute enconding specific functions */
-extern List *transformAttributeEncoding(List *aocoColumnEnconding,
-										List *tableElts, List *withOptions,
-										bool rootpartition, bool *found_enc);
+extern List *transformColumnEncoding(Relation rel, List *colDefs,
+										List *stenc, List *withOptions,
+										bool rootpartition, bool allowEncodingClause);
 extern List *transformStorageEncodingClause(List *options, bool validate);
 extern List *form_default_storage_directive(List *enc);
+extern bool is_storage_encoding_directive(char *name);
 
 #endif							/* RELOPTIONS_H */

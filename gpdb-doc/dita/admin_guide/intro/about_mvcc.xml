@@ -60,7 +60,7 @@
         one segment, it is rolled back on all segments. </p>
       <p>You can see the <codeph>xmin</codeph>, <codeph>xmax</codeph>, <codeph>cmin</codeph>, and
           <codeph>cmax</codeph> columns for any row with a <codeph>SELECT</codeph>
-        statement:<codeblock>SELECT xmin, xmax, cmin, cmax, * FROM <varname>tablename</varname>;</codeblock></p>
+        statement:<codeblock>SELECT xmin, xmax, cmin, cmax, * FROM &lt;tablename>;</codeblock></p>
       <p>Because you run the <codeph>SELECT</codeph> command on the master, the XIDs are the
         distributed transactions IDs. If you could run the command in an individual segment
         database, the <codeph>xmin</codeph> and <codeph>xmax</codeph> values would be the segment's
@@ -92,12 +92,12 @@
         operation is required. </p>
       <p>A warning is issued when a significant portion of the transaction IDs are no longer
         available and before transaction ID wraparound
-        occurs:<codeblock>WARNING: database "<varname>database_name</varname>" must be vacuumed within <varname>number_of_transactions</varname> transactions</codeblock></p>
+        occurs:<codeblock>WARNING: database "&lt;database_name>" must be vacuumed within &lt;number_of_transactions> transactions</codeblock></p>
       <p>When the warning is issued, a <codeph>VACUUM</codeph> operation is required. If a
           <codeph>VACUUM</codeph> operation is not performed, Greenplum Database stops creating
         transactions to avoid possible data loss when it reaches a limit prior to when transaction
         ID wraparound occurs and issues this error:</p>
-      <codeblock>FATAL: database is not accepting commands to avoid wraparound data loss in database "<varname>database_name</varname>"</codeblock>
+      <codeblock>FATAL: database is not accepting commands to avoid wraparound data loss in database "&lt;database_name>"</codeblock>
       <p>See <xref href="../managing/maintain.xml#topic3/np160654"/> for the procedure to recover
         from this error.</p>
       <p>The server configuration parameters <codeph>xid_warn_limit</codeph> and
@@ -258,7 +258,7 @@ COMMIT;
       <p>Query the <codeph>pg_class</codeph> system table to find out how many pages a table is
         using across all segments. Be sure to <codeph>ANALYZE</codeph> the table first to get
         accurate data.
-        <codeblock>SELECT relname, relpages, reltuples FROM pg_class WHERE relname='<varname>tablename</varname>';</codeblock></p>
+        <codeblock>SELECT relname, relpages, reltuples FROM pg_class WHERE relname='&lt;tablename>';</codeblock></p>
       <p>Another useful tool is the <codeph>gp_bloat_diag</codeph> view in the
           <codeph>gp_toolkit</codeph> schema, which identifies bloat in tables by comparing the
         actual number of pages used by a table to the expected number. See "The gp_toolkit

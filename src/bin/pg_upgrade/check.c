@@ -28,7 +28,7 @@ static void check_for_reg_data_type_usage(ClusterInfo *cluster);
 static void check_for_jsonb_9_4_usage(ClusterInfo *cluster);
 static void check_for_pg_role_prefix(ClusterInfo *cluster);
 static char *get_canonical_locale_name(int category, const char *locale);
-
+static void check_for_appendonly_materialized_view_with_relfrozenxid(ClusterInfo *cluster);
 
 /*
  * fix_path_separator
@@ -193,6 +193,12 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		old_GPDB4_check_for_money_data_type_usage();
 		old_GPDB4_check_no_free_aoseg();
 		check_hash_partition_usage();
+	}
+
+	/* For now, the issue exists only for Greenplum 6.x/PostgreSQL 9.4 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904)
+	{
+		check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
 	}
 
 	/*
@@ -1361,4 +1367,117 @@ get_canonical_locale_name(int category, const char *locale)
 	pg_free(save);
 
 	return res;
+}
+
+/* Check for any materialized view of append only mode with relfrozenxid != 0
+ *
+ * A materialized view of append only mode must have invalid relfrozenxid (0).
+ * However, some views might have valid relfrozenxid due to a known code issue.
+ * We need to check the problematical view before upgrading.
+ * The problem can be fixed by issuing "REFRESH MATERIALIZED VIEW <viewname>"
+ * with latest code.
+ * See the PR for details:
+ *
+ * https://github.com/greenplum-db/gpdb/pull/11662/
+ */
+static void
+check_for_appendonly_materialized_view_with_relfrozenxid(ClusterInfo *cluster)
+{
+	FILE		*script = NULL;
+	char		output_path[MAXPGPATH];
+	bool		found = false;
+
+	prep_status("Checking for appendonly materialized view with relfrozenxid\n");
+
+	snprintf(output_path,
+				sizeof(output_path),
+				"appendonly_materialized_view_with_relfrozenxid.txt");
+	if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+	{
+		pg_fatal("could not open file \"%s\": %s\n",
+					output_path,
+					strerror(errno));
+	}
+
+	for (int dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+		PGresult   *res;
+		int			ntups = 0, i_relname = 0, i_relfxid = 0, i_nspname = 0;
+
+		fprintf(script, "Checking database: %s\n", active_db->db_name);
+		if (conn == NULL)
+		{
+			pg_fatal("Failed to connect to database %s\n", active_db->db_name);
+		}
+
+		// Detect any materialized view of append only mode (relstorage is
+		// RELSTORAGE_AOROWS or RELSTORAGE_AOCOLS) with relfrozenxid != 0
+		res = executeQueryOrDie(conn,
+								"select tb.relname, tb.relfrozenxid, tbsp.nspname "
+								" from pg_catalog.pg_class tb "
+								" left join pg_catalog.pg_namespace tbsp "
+								" on tb.relnamespace = tbsp.oid "
+								" where tb.relkind = 'm' "
+								" and (tb.relstorage = 'a' or tb.relstorage = 'c') "
+								" and tb.relfrozenxid::text <> '0';");
+		if (res == 0)
+		{
+			pg_fatal("Failed to query pg_catalog.pg_class on database \"%s\"\n",
+					 active_db->db_name);
+		}
+
+		ntups = PQntuples(res);
+		if (ntups == 0)
+		{
+			fprintf(script, "No problematical view detected.\n\n");
+		}
+		else
+		{
+			found = true;
+			i_relname = PQfnumber(res, "relname");
+			i_relfxid = PQfnumber(res, "relfrozenxid");
+			i_nspname = PQfnumber(res, "nspname");
+			for (int rowno = 0; rowno < ntups; rowno++)
+			{
+				fprintf(script,
+						"Detected view: %s, relfrozenxid: %s\n"
+						"Try to fix it by issuing \"REFRESH MATERIALIZED VIEW %s.%s\"\n",
+						PQgetvalue(res, rowno, i_relname),
+						PQgetvalue(res, rowno, i_relfxid),
+						PQgetvalue(res, rowno, i_nspname),
+						PQgetvalue(res, rowno, i_relname));
+			}
+			fprintf(script, "%d problematical view(s) detected.\n\n", ntups);
+		}
+		PQclear(res);
+
+		PQfinish(conn);
+	}
+
+	if(found)
+	{
+		fprintf(script,
+				"Note: A materialized view of append only mode must have invalid\n"
+				"relfrozenxid (0). However, view(s) with valid relfrozenxid was\n"
+				"detected.\n"
+				"Try to fix it by issuing \"REFRESH MATERIALIZED VIEW "
+				"<schemaname>.<viewname>\"\n"
+				"with latest GPDB 6 release and run the upgrading again.\n");
+	}
+
+	if (script)
+		fclose(script);
+
+	if(found)
+	{
+		pg_fatal("Detected appendonly materialized view with incorrect relfrozenxid.\n"
+					"See %s for details.\n",
+					output_path);
+	}
+	else
+	{
+		check_ok();
+	}
 }

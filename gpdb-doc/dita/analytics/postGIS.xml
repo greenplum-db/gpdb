@@ -70,7 +70,7 @@
           <li>Expat 2.1.0</li>
         </ul></p>
       <p otherprops="pivotal">For the information about supported Greenplum extension packages and
-        software versions, see <xref href="../install_guide/platform-requirements.xml"/>. </p>
+        software versions, see <xref href="../install_guide/platform-requirements.html" scope="external" type="html"/>. </p>
       <p>There have been significant changes in PostGIS 2.5.4 compared with the previously supported
         version of 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS
         documentation <xref

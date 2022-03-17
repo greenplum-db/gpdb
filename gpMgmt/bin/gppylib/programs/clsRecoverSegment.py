@@ -19,7 +19,7 @@
 from gppylib.mainUtils import *
 
 from optparse import OptionGroup
-import os, sys, signal, time
+import glob, os, sys, signal, shutil, time
 from contextlib import closing
 
 from gppylib import gparray, gplog, userinput, utils
@@ -28,7 +28,7 @@ from gppylib.commands import gp, pg, unix
 from gppylib.commands.base import Command, WorkerPool
 from gppylib.db import dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
-from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
+from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts, update_unreachable_flag_for_segments
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
@@ -274,14 +274,7 @@ class GpRecoverSegmentProgram:
         num_workers = min(len(gpArray.get_hostlist()), self.__options.parallelDegree)
         hosts = set(gpArray.get_hostlist(includeCoordinator=False))
         unreachable_hosts = get_unreachable_segment_hosts(hosts, num_workers)
-        for i, segmentPair in enumerate(gpArray.segmentPairs):
-            if segmentPair.primaryDB.getSegmentHostName() in unreachable_hosts:
-                logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.primaryDB.dbid, segmentPair.primaryDB.getSegmentHostName()))
-                gpArray.segmentPairs[i].primaryDB.unreachable = True
-
-            if segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
-                logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.mirrorDB.dbid, segmentPair.mirrorDB.getSegmentHostName()))
-                gpArray.segmentPairs[i].mirrorDB.unreachable = True
+        update_unreachable_flag_for_segments(gpArray, unreachable_hosts)
 
         # We have phys-rep/filerep mirrors.
 
@@ -354,10 +347,9 @@ class GpRecoverSegmentProgram:
 
             contentsToUpdate = [seg.getLiveSegment().getSegmentContentId() for seg in mirrorBuilder.getMirrorsToBuild()]
             update_pg_hba_on_segments(gpArray, self.__options.hba_hostnames, self.__options.parallelDegree, contentsToUpdate)
-            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+            if not mirrorBuilder.recover_mirrors(gpEnv, gpArray):
+                self.logger.error("gprecoverseg failed. Please check the output for more details.")
                 sys.exit(1)
-
-            self.trigger_fts_probe(port=gpEnv.getCoordinatorPort())
 
             self.logger.info("********************************")
             self.logger.info("Segments successfully recovered.")
@@ -367,17 +359,6 @@ class GpRecoverSegmentProgram:
             self.logger.info("Use 'gpstate -e' to check progress of WAL sync remaining bytes")
 
         sys.exit(0)
-
-    def trigger_fts_probe(self, port=0):
-        self.logger.info('Triggering FTS probe')
-        conn = dbconn.connect(dbconn.DbURL(port=port))
-
-        # XXX Perform two probe scans in a row, to work around a known
-        # race where gp_request_fts_probe_scan() can return early during the
-        # first call. Remove this duplication once that race is fixed.
-        for _ in range(2):
-            dbconn.execSQL(conn,"SELECT gp_request_fts_probe_scan()")
-        conn.close()
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]

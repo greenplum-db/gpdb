@@ -361,5 +361,8 @@ extern bool moveArrayTypeName(Oid typeOid, const char *typeName,
 							  Oid typeNamespace);
 
 extern void add_type_encoding(Oid typid, Datum typoptions);
+extern void remove_type_encoding(Oid typid);
+extern void update_type_encoding(Oid typid, Datum typoptions);
+extern List *get_type_encoding(TypeName *typname);
 
 #endif							/* PG_TYPE_H */

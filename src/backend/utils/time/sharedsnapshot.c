@@ -379,7 +379,10 @@ retry:
 		SharedSnapshotSlot *testSlot = &arrayP->slots[i];
 
 		if (testSlot->slotindex > arrayP->maxSlots)
+		{
+			LWLockRelease(SharedSnapshotLock);
 			elog(ERROR, "Shared Local Snapshots Array appears corrupted: %s", SharedSnapshotDump());
+		}
 
 		if (testSlot->slotid == slotId)
 		{
@@ -403,8 +406,10 @@ retry:
 		}
 		else
 		{
+			char *slot_dump = SharedSnapshotDump();
+			LWLockRelease(SharedSnapshotLock);
 			elog(ERROR, "writer segworker group shared snapshot collision on id %d. Slot array dump: %s",
-				 slotId, SharedSnapshotDump());
+				 slotId, slot_dump);
 		}
 	}
 

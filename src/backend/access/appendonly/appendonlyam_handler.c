@@ -1778,9 +1778,17 @@ appendonly_estimate_rel_size(Relation rel, int32 *attr_widths,
 	UnregisterSnapshot(snapshot);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Do not bother scanning the visimap aux table.
-	 * Investigate if really needed
+	 * Do not bother scanning the visimap aux table.
+	 * Investigate if really needed.
+	 * 
+	 * For Heap table, visibility map may help to estimate
+	 * the number of page fetches can be avoided during an
+	 * index-only scan. That is not the case for AO/AOCS table
+	 * since index-only scan hasn't been used with AO/AOCS.
+	 * So leave the comment here for future reference once
+	 * we have a clear requirement to do that.
 	 */
+
 	return;
 }
 

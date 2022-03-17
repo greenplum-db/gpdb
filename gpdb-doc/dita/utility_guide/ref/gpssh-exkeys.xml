@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gpssh-exkeys.xml has a conref to this topic. -->
     <title id="jw137116">gpssh-exkeys</title>
     <body>
         <p>Exchanges SSH public keys between hosts.</p>

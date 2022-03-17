@@ -63,6 +63,9 @@ private:
 	// test expression -- not null if quantified/existential subplan
 	CDXLNode *m_dxlnode_test_expr;
 
+	// does test expression contain outer param
+	BOOL m_outer_param;
+
 public:
 	CDXLScalarSubPlan(CDXLScalarSubPlan &) = delete;
 
@@ -70,7 +73,7 @@ public:
 	CDXLScalarSubPlan(CMemoryPool *mp, IMDId *first_col_type_mdid,
 					  CDXLColRefArray *dxl_colref_array,
 					  EdxlSubPlanType dxl_subplan_type,
-					  CDXLNode *dxlnode_test_expr);
+					  CDXLNode *dxlnode_test_expr, BOOL outer_param = false);
 
 	~CDXLScalarSubPlan() override;
 
@@ -106,6 +109,12 @@ public:
 	GetDxlTestExpr() const
 	{
 		return m_dxlnode_test_expr;
+	}
+
+	BOOL
+	FOuterParam() const
+	{
+		return m_outer_param;
 	}
 
 	// serialize operator in DXL format

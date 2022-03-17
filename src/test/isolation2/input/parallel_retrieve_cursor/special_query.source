@@ -11,12 +11,12 @@ SELECT make_record(x) FROM t1;
 
 1: BEGIN;
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
-1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_endpoints() WHERE cursorname='c1';
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
 
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
 
-*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
 *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
 
 1<:
@@ -45,7 +45,7 @@ SET gp_interconnect_queue_depth=1;
 2: BEGIN;
 2: SHOW gp_max_packet_size;
 2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
-2: SELECT state FROM gp_endpoints() WHERE cursorname='c2';
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
 2: CLOSE c2;
 2: END;
 
