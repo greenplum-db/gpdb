@@ -16,7 +16,7 @@
             <topicref href="ref/dropuser.xml"/>
             <topicref href="ref/gpactivatestandby.xml"/>
             <topicref href="ref/gpaddmirrors.xml"/>
-            <topicref href="ref/gpbackup_manager.xml" otherprops="pivotal"/>
+            <topicref href="ref/gpbackup_manager.xml"/>
             <topicref href="ref/gpbackup.xml"/>
             <topicref href="ref/gpcheckcat.xml"/>
             <topicref href="ref/gpcheckperf.xml"/>
