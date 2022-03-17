@@ -608,6 +608,31 @@ After Greenplum moves the query, there is no way to guarantee that a query curre
 
 `pg_resgroup_move_query()` moves only the specified query to the destination resource group. Greenplum Database assigns subsequent queries that you submit in the session to the original resource group.
 
+**Note:** Greenplum Database version 6.8 introduced support for moving a query to a different resource group.
+
+-   If you upgraded from a previous Greenplum 6.x installation, you must manually register the supporting functions for this feature, and grant access to the functions as follows:
+
+    ```
+    CREATE FUNCTION gp_toolkit.pg_resgroup_check_move_query(IN session_id int, IN groupid oid, OUT session_mem int, OUT available_mem int)
+    RETURNS SETOF record
+    AS 'gp_resource_group', 'pg_resgroup_check_move_query'
+    VOLATILE LANGUAGE C;
+    GRANT EXECUTE ON FUNCTION gp_toolkit.pg_resgroup_check_move_query(int, oid, OUT int, OUT int) TO public;
+    
+    CREATE FUNCTION gp_toolkit.pg_resgroup_move_query(session_id int4, groupid text)
+    RETURNS bool
+    AS 'gp_resource_group', 'pg_resgroup_move_query'
+    VOLATILE LANGUAGE C;
+    GRANT EXECUTE ON FUNCTION gp_toolkit.pg_resgroup_move_query(int4, text) TO public;
+    ```
+
+-   If you register the supporting functions and then you downgrade your Greenplum Database installation to version 6.7.x or older, manually drop these functions as follows:
+
+    ```
+    DROP FUNCTION gp_toolkit.pg_resgroup_check_move_query(IN int, IN oid, OUT int, OUT int);
+    DROP FUNCTION gp_toolkit.pg_resgroup_move_query(int4, text);
+    ```
+
 ## <a id="topic777999"></a>Resource Group Frequently Asked Questions 
 
 ### <a id="topic791"></a>CPU 
