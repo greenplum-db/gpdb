@@ -52,7 +52,7 @@
         <note type="important">For incremental backup sets, the backups must be on a single device.
           For example, a backup set must all be on a Data Domain system. </note></p>
       <p>For information about incremental backups, see <xref
-          href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</p>
+          href="../../admin_guide/managing/backup-gpbackup-incremental.html" format="html" scope="external">Creating and Using Incremental Backups with gpbackup and gprestore</xref>.</p>
       <p>When restoring from a backup set, <codeph>gprestore</codeph> restores to a database with
         the same name as the name specified when creating the backup set. If the target database
         exists and a table being restored exists in the database, the restore operation fails.
@@ -91,8 +91,7 @@
       <p><codeph>gprestore</codeph> can send status email notifications after a back up operation
         completes. You specify when the utility sends the mail and the email recipients in a
         configuration file. See <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
-        />.</p>
+          href="../../admin_guide/managing/backup-gpbackup.html#topic_qwd_d5d_tbb" format="html" scope="external">Configuring Email Notifications</xref>.</p>
     </section>
     <note>This utility uses secure shell (SSH) connections between systems to perform its tasks. In
       large Greenplum Database deployments, cloud deployments, or deployments with a large number of
@@ -215,7 +214,7 @@
             in the database. </pd>
           <pd>You cannot use this option if objects in the backup set have dependencies on multiple
             schemas.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external"
               >Filtering the Contents of a Backup or Restore</xref> for more information.</pd>
         </plentry>
         <plentry>
@@ -274,7 +273,7 @@
               <codeph>gprestore</codeph> does not create roles or set the owner of the tables. The
             utility restores table indexes and rules. Triggers are also restored but are not
             supported in Greenplum Database.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information.</pd>
         </plentry>
         <plentry>
@@ -283,7 +282,7 @@
             data in the incremental backup specified by the <codeph>--timestamp</codeph> option.
             Table data is not restored from previous incremental backups in the backup set. For
             information about incremental backups, see <xref
-              href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.
+              href="../../admin_guide/managing/backup-gpbackup-incremental.html" format="html" scope="external"/>.
             <note type="warning">This is a Beta feature<ph otherprops="pivotal"> and is not
                 supported in a production environment</ph>.</note></pd>
           <pd>An incremental backup contains the following table data that can be restored.</pd>
@@ -388,7 +387,7 @@
             corresponding plugin application when you restore the database from the backup.</pd>
           <pd>You cannot combine this option with the option <codeph>--backup-dir</codeph>.</pd>
           <pd>For information about using storage plugin applications, see <xref
-              href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
+              href="../../admin_guide/managing/backup-plugins.html" format="html" scope="external">Using gpbackup Storage
               Plugins</xref>.</pd>
         </plentry>
         <plentry>
@@ -413,7 +412,7 @@
           <pt><b>--with-globals</b></pt>
           <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
             database objects. See <xref
-              href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
+              href="../../admin_guide/managing/backup-gpbackup.html#topic_x3s_lqj_tbb" format="html" scope="external">Objects Included in a Backup or Restore</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--with-stats</b></pt>
@@ -495,8 +494,8 @@ $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --tim
       <title>See Also</title>
       <p>
         <codeph><xref href="./gpbackup.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
-          href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
+          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external">Parallel Backup with gpbackup and gprestore</xref> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external">Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
     </section>
   </body>
 </topic>

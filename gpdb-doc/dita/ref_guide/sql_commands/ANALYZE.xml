@@ -43,7 +43,7 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition_table_name</varna
           ROOTPARTITION</codeph> command. For information about collecting statistics on partitioned
         tables and when the <codeph>ROOTPARTITION</codeph> keyword is required, see <xref
           href="#topic1/section5" format="dita">Notes</xref>. For information about GPORCA, see
-          <xref href="../../admin_guide/query/topics/query-piv-opt-overview.xml"/><ph
+          <xref href="../../admin_guide/query/topics/query-piv-opt-overview.html" format="html" scope="external">Overview of GPORCA</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </note>
       <note>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update
         table statistics. The <codeph>analyzedb</codeph> utility can update statistics for multiple

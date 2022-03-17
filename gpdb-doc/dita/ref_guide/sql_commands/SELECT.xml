@@ -200,7 +200,8 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
           reading its <codeph>RETURNING</codeph> output. If two such data-modifying statements
           attempt to modify the same row, the results are unspecified. </p>
         <p>See <xref
-            href="../../admin_guide/query/topics/CTE-query.xml"/><ph
+            href="../../admin_guide/query/topics/CTE-query.html" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref><ph
             otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
           for additional information.</p>
       </sectiondiv>
@@ -415,7 +416,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           aggregate function can be further filtered by attaching a <codeph>FILTER</codeph> clause
           to the aggregate function call. When a <codeph>FILTER</codeph> clause is present, only
           those rows matching it are included in the input to that aggregate function. See <xref
-            href="../../admin_guide/query/topics/defining-queries.xml#topic11"/>.</p><p>When
+            href="../../admin_guide/query/topics/defining-queries.html#topic11" format="html" scope="external">Aggregate Expressions</xref>.</p><p>When
             <codeph>GROUP BY</codeph> is present, or any aggregate functions are present, it is not
           valid for the <codeph>SELECT</codeph> list expressions to refer to ungrouped columns
           except within aggregate functions or when the ungrouped column is functionally dependent
@@ -426,7 +427,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           expressions in the <codeph>HAVING</codeph> clause or <codeph>SELECT</codeph> list. This
           means that, for example, a <codeph>CASE</codeph> expression cannot be used to skip
           evaluation of an aggregate function; see <xref
-            href="../../admin_guide/query/topics/defining-queries.xml#topic25"/>. </p><p>Greenplum
+            href="../../admin_guide/query/topics/defining-queries.html#topic25" format="html" scope="external">Expression Evaluation Rules</xref>. </p><p>Greenplum
           Database has the following additional OLAP grouping extensions (often referred to as
             <i>supergroups</i>):</p><parml>
           <plentry>
@@ -852,7 +853,7 @@ OFFSET <varname>start</varname></codeblock><p>where
               <varname>lock_strength</varname></codeph>). The Global Deadlock Detector is enabled by
           setting the <xref href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             >gp_enable_global_deadlock_detector</xref> configuration parameter to
-            <codeph>on</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd"> Global
+            <codeph>on</codeph>. See <xref href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external"> Global
             Deadlock Detector</xref> in the <cite>Greenplum Database Administrator Guide</cite> for
           information about the Global Deadlock Detector.</p><p>The locking clause has the general
           form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>The
@@ -1041,7 +1042,8 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           [ALL]</codeph>, followed by the recursive part of the query. Be sure that the recursive
         part of the query will eventually return no tuples, or else the query will loop
         indefinitely. See <xref
-          href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
+          href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref><ph
           otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
     </section>

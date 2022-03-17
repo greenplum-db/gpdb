@@ -271,8 +271,8 @@
                         on a host across different hosts in the Greenplum Database array. Spreading
                         is only allowed if the number of hosts is greater than the number of segment
                         instances per host. See <xref
-                            href="../../admin_guide/highavail/topics/g-overview-of-segment-mirroring.xml#topic3"
-                        /> for information about Greenplum Database mirroring strategies. </pd>
+                            href="../../admin_guide/highavail/topics/g-overview-of-segment-mirroring.html#topic3" format="html" scope="external"
+                        >Overview of Segment Mirroring</xref> for information about Greenplum Database mirroring strategies. </pd>
                 </plentry>
                 <plentry>
                     <pt>-v | --version</pt>
@@ -487,7 +487,7 @@ sdw1~sdw1~50001~/gpdata/mirror2/gpseg3~9~3
                         the <codeph>pg_hba.conf</codeph> file. </pd>
                     <pd>For information about how Greenplum Database resolves host names in the
                             <codeph>pg_hba.conf</codeph> file, see <xref
-                            href="../../admin_guide/client_auth.xml#topic1"/>.</pd>
+                            href="../../admin_guide/client_auth.html#topic1" format="html" scope="external">Configuring Client Authentication</xref>.</pd>
                 </plentry>
             </parml>
         </section>

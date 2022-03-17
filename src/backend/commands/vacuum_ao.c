@@ -748,8 +748,6 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 }
 
 /*
- * GPDB_12_MERGE_FIXME: taken almost verbadim from appendonly_vacuum.c, verify
- *
  *	scan_index() -- scan one index relation to update pg_class statistics.
  *
  * We use this when we have no deletions to do.
@@ -761,7 +759,6 @@ scan_index(Relation indrel, double num_tuples,
 	IndexBulkDeleteResult *stats;
 	IndexVacuumInfo ivinfo;
 	PGRUsage	ru0;
-	BlockNumber relallvisible;
 
 	pg_rusage_init(&ru0);
 
@@ -777,11 +774,6 @@ scan_index(Relation indrel, double num_tuples,
 	if (!stats)
 		return;
 
-	if (RelationIsAppendOptimized(indrel))
-		relallvisible = 0;
-	else
-		visibilitymap_count(indrel, &relallvisible, NULL);
-
 	/*
 	 * Now update statistics in pg_class, but only if the index says the count
 	 * is accurate.
@@ -789,7 +781,7 @@ scan_index(Relation indrel, double num_tuples,
 	if (!stats->estimated_count)
 		vac_update_relstats(indrel,
 							stats->num_pages, stats->num_index_tuples,
-							relallvisible,
+							0, /* relallvisible, don't bother for indexes */
 							false,
 							InvalidTransactionId,
 							InvalidMultiXactId,
