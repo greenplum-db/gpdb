@@ -3,6 +3,7 @@
 -- ----------------------------------------------------------------------
 create schema qp_correlated_query;
 set search_path to qp_correlated_query;
+set optimizer_trace_fallback TO on;
 -- ----------------------------------------------------------------------
 -- Test: csq_heap_in.sql (Correlated Subquery: CSQ using IN clause (Heap))
 -- ----------------------------------------------------------------------
@@ -3799,3 +3800,4 @@ DROP TABLE IF EXISTS supplier;
 -- ----------------------------------------------------------------------
 set client_min_messages='warning';
 drop schema qp_correlated_query cascade;
+reset optimizer_trace_fallback;
