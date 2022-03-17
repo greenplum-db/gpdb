@@ -96,12 +96,13 @@ old_8_3_check_for_name_data_type_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"name\" data type in user tables.  This\n"
-		"data type changed its internal alignment between your old and new\n"
-				 "clusters so this cluster cannot currently be upgraded.  You can remove\n"
-		"the problem tables and restart the upgrade.  A list of the problem\n"
-				 "columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"name\" data type in user tables.  This\n"
+				"| data type changed its internal alignment between your old and new\n"
+				"| clusters so this cluster cannot currently be upgraded.  You can remove\n"
+				"| the problem tables and restart the upgrade.  A list of the problem\n"
+				"| columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -186,12 +187,13 @@ old_8_3_check_for_tsquery_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"tsquery\" data type.    This data type\n"
-				 "added a new internal field between your old and new clusters so this\n"
-		"cluster cannot currently be upgraded.  You can remove the problem\n"
-				 "columns and restart the upgrade.  A list of the problem columns is in the\n"
-				 "file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"tsquery\" data type.    This data type\n"
+				"| added a new internal field between your old and new clusters so this\n"
+				"| cluster cannot currently be upgraded.  You can remove the problem\n"
+				"| columns and restart the upgrade.  A list of the problem columns is in the\n"
+				"| file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -264,13 +266,14 @@ old_8_3_check_ltree_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"ltree\" data type.  This data type\n"
-				 "changed its internal storage format between your old and new clusters so this\n"
-				 "cluster cannot currently be upgraded.  You can manually upgrade databases\n"
-				 "that use \"contrib/ltree\" facilities and remove \"contrib/ltree\" from the old\n"
-				 "cluster and restart the upgrade.  A list of the problem functions is in the\n"
-				 "file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"ltree\" data type.  This data type\n"
+				"| changed its internal storage format between your old and new clusters so this\n"
+				"| cluster cannot currently be upgraded.  You can manually upgrade databases\n"
+				"| that use \"contrib/ltree\" facilities and remove \"contrib/ltree\" from the old\n"
+				"| cluster and restart the upgrade.  A list of the problem functions is in the\n"
+				"| file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();

@@ -131,7 +131,7 @@ check_online_expansion(void)
 	if (expansion)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation is in progress of online expansion,\n"
 			   "| must complete that job before the upgrade.\n\n");
 	}
@@ -216,7 +216,7 @@ check_unique_primary_constraint(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains unique or primary key constraints\n"
 			   "| on tables.  These constraints need to be removed\n"
 			   "| from the tables before the upgrade.  A list of\n"
@@ -297,7 +297,7 @@ check_external_partition(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains partitioned tables with external\n"
 			   "| tables as partitions.  These partitions need to be removed\n"
 			   "| from the partition hierarchy before the upgrade.  A list of\n"
@@ -405,7 +405,7 @@ check_covering_aoindex(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains partitioned append-only tables\n"
 			   "| with an index defined on the partition parent which isn't\n"
 			   "| present on all partition members.  These indexes must be\n"
@@ -469,7 +469,7 @@ check_orphaned_toastrels(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains orphaned toast tables which\n"
 			   "| must be dropped before upgrade.\n"
 			   "| A list of the problem databases is in the file:\n"
@@ -588,7 +588,7 @@ check_heterogeneous_partition(void)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains heterogeneous partition tables. Either one or more\n"
 			   "| child partitions have invalid dropped column references or the columns are\n"
 			   "| misaligned compared to the root partition. Upgrade cannot output partition\n"
@@ -691,7 +691,7 @@ check_partition_indexes(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains partitioned tables with\n"
 			   "| indexes defined on them.  Indexes on partition parents,\n"
 			   "| as well as children, must be dropped before upgrade.\n"
@@ -769,7 +769,7 @@ check_gphdfs_external_tables(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains gphdfs external tables.  These \n"
 			   "| tables need to be dropped before upgrade.  A list of\n"
 			   "| external gphdfs tables to remove is provided in the file:\n"
@@ -846,7 +846,7 @@ check_gphdfs_user_roles(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains roles that have gphdfs privileges.\n"
 			   "| These privileges need to be revoked before upgrade.  A list\n"
 			   "| of roles and their corresponding gphdfs privileges that\n"
@@ -913,11 +913,9 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 	if (strlen(dependee_partition_report))
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal(
-			"Array types derived from partitions of a partitioned table must not have dependants.\n"
-			"OIDs of such types found and their original partitions:\n%s",
-			dependee_partition_report
-		);
+		gp_fatal_log(
+			"| Array types derived from partitions of a partitioned table must not have dependants.\n"
+			"| OIDs of such types found and their original partitions:\n%s", dependee_partition_report);
 	}
 	pfree(dependee_partition_report);
 
@@ -989,13 +987,13 @@ check_partition_schemas(void)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal(
-			"Your installation contains partitioned tables where one or more\n"
-			"child partitions are not in the same schema as the root partition.\n"
-			"ALTER TABLE ... SET SCHEMA must be performed on the child partitions\n"
-			"to match them before upgrading. A list of problem tables is in the\n"
-			"file:\n"
-			"    %s\n\n", output_path);
+		gp_fatal_log(
+			"| Your installation contains partitioned tables where one or more\n"
+			"| child partitions are not in the same schema as the root partition.\n"
+			"| ALTER TABLE ... SET SCHEMA must be performed on the child partitions\n"
+			"| to match them before upgrading. A list of problem tables is in the\n"
+			"| file:\n"
+			"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1049,10 +1047,11 @@ check_large_objects(void)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains large objects.  These objects are not supported\n"
-				 "by the new cluster and must be dropped.\n"
-				 "A list of databases which contains large objects is in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains large objects.  These objects are not supported\n"
+				"| by the new cluster and must be dropped.\n"
+				"| A list of databases which contains large objects is in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1128,10 +1127,11 @@ check_invalid_indexes(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains invalid indexes.  These indexes either \n"
-			     "need to be dropped or reindexed before proceeding to upgrade.\n"
-			     "A list of invalid indexes is provided in the file:\n"
-		         "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains invalid indexes.  These indexes either \n"
+				"| need to be dropped or reindexed before proceeding to upgrade.\n"
+				"| A list of invalid indexes is provided in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1197,11 +1197,12 @@ check_foreign_key_constraints_on_root_partition(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains foreign key constraint on root \n"
-				 "partition tables. These constraints need to be dropped before \n"
-				 "proceeding to upgrade. A list of foreign key constraints is \n"
-				 "in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains foreign key constraint on root \n"
+				"| partition tables. These constraints need to be dropped before \n"
+				"| proceeding to upgrade. A list of foreign key constraints is \n"
+				"| in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1269,11 +1270,12 @@ check_views_with_unsupported_lag_lead_function(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains views using lag or lead \n"
-				 "functions with the second parameter as bigint. These views \n"
-				 "need to be dropped before proceeding to upgrade. \n"
-				 "A list of views is in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains views using lag or lead \n"
+				"| functions with the second parameter as bigint. These views \n"
+				"| need to be dropped before proceeding to upgrade. \n"
+				"| A list of views is in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1344,12 +1346,13 @@ check_views_with_fabricated_anyarray_casts()
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains views having anyarray\n"
-				 "casts. Drop the view or recreate the view without explicit \n"
-				 "array-type type casts before running the upgrade. Alternatively, drop the view \n"
-				 "before the upgrade and recreate the view after the upgrade. \n"
-				 "A list of views is in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains views having anyarray\n"
+				"| casts. Drop the view or recreate the view without explicit \n"
+				"| array-type type casts before running the upgrade. Alternatively, drop the view \n"
+				"| before the upgrade and recreate the view after the upgrade. \n"
+				"| A list of views is in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1420,11 +1423,12 @@ check_views_with_fabricated_unknown_casts()
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains views having unknown\n"
-				 "casts. Drop the view or recreate the view without explicit \n"
-				 "unknown::cstring type casts before running the upgrade.\n"
-				 "A list of views is in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains views having unknown\n"
+				"| casts. Drop the view or recreate the view without explicit \n"
+				"| unknown::cstring type casts before running the upgrade.\n"
+				"| A list of views is in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1504,12 +1508,13 @@ check_views_referencing_deprecated_tables()
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains views referencing catalog\n"
-				 "tables that no longer exist in the target cluster.\n"
-				 "Drop these views before running the upgrade. Please refer to\n"
-				 "the documentation for a complete list of deprecated tables.\n"
-				 "A list of such views is in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains views referencing catalog\n"
+				"| tables that no longer exist in the target cluster.\n"
+				"| Drop these views before running the upgrade. Please refer to\n"
+				"| the documentation for a complete list of deprecated tables.\n"
+				"| A list of such views is in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1589,12 +1594,13 @@ check_views_referencing_deprecated_columns()
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains views referencing columns\n"
-				 "in catalog tables that no longer exist in the target cluster.\n"
-				 "Drop these views before running the upgrade. Please refer to\n"
-				 "the documentation for a complete list of deprecated columns.\n"
-				 "A list of such views is in the file:\n"
-				 "\t%s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains views referencing columns\n"
+				"| in catalog tables that no longer exist in the target cluster.\n"
+				"| Drop these views before running the upgrade. Please refer to\n"
+				"| the documentation for a complete list of deprecated columns.\n"
+				"| A list of such views is in the file:\n"
+				"| \t%s\n\n", output_path);
 	}
 	else
 		check_ok();

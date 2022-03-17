@@ -234,7 +234,8 @@ report_clusters_compatible(void)
 {
 	if (user_opts.check)
 	{
-		pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
+		pg_log(PG_REPORT, (get_check_fatal_occurred() ?
+			"\n*Some cluster objects are not compatible*\n" : "\n*Clusters are compatible*\n"));
 		/* stops new cluster */
 		stop_postmaster(false);
 		exit(0);
@@ -481,13 +482,13 @@ check_locale_and_encoding(ControlData *oldctrl,
 						  ControlData *newctrl)
 {
 	if (!equivalent_locale(LC_COLLATE, oldctrl->lc_collate, newctrl->lc_collate))
-		pg_fatal("lc_collate cluster values do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("| lc_collate cluster values do not match:  old \"%s\", new \"%s\"\n",
 				 oldctrl->lc_collate, newctrl->lc_collate);
 	if (!equivalent_locale(LC_CTYPE, oldctrl->lc_ctype, newctrl->lc_ctype))
-		pg_fatal("lc_ctype cluster values do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("| lc_ctype cluster values do not match:  old \"%s\", new \"%s\"\n",
 				 oldctrl->lc_ctype, newctrl->lc_ctype);
 	if (!equivalent_encoding(oldctrl->encoding, newctrl->encoding))
-		pg_fatal("encoding cluster values do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("| encoding cluster values do not match:  old \"%s\", new \"%s\"\n",
 				 oldctrl->encoding, newctrl->encoding);
 }
 
@@ -590,7 +591,7 @@ check_new_cluster_is_empty(void)
 		{
 			/* pg_largeobject and its index should be skipped */
 			if (strcmp(rel_arr->rels[relnum].nspname, "pg_catalog") != 0)
-				pg_fatal("New cluster database \"%s\" is not empty\n",
+				gp_fatal_log("| New cluster database \"%s\" is not empty\n",
 						 new_cluster.dbarr.dbs[dbnum].db_name);
 		}
 	}
@@ -912,6 +913,7 @@ check_for_prepared_transactions(ClusterInfo *cluster)
 {
 	PGresult   *res;
 	PGconn	   *conn = connectToServer(cluster, "template1");
+	bool 			 found = false;
 
 	prep_status("Checking for prepared transactions");
 
@@ -920,14 +922,19 @@ check_for_prepared_transactions(ClusterInfo *cluster)
 							"FROM pg_catalog.pg_prepared_xacts");
 
 	if (PQntuples(res) != 0)
-		pg_fatal("The %s cluster contains prepared transactions\n",
+	{
+		found = true;
+		pg_log(PG_REPORT, "fatal\n");
+		gp_fatal_log("| The %s cluster contains prepared transactions\n",
 				 CLUSTER_NAME(cluster));
+	}
 
 	PQclear(res);
 
 	PQfinish(conn);
 
-	check_ok();
+	if (!found)
+		check_ok();
 }
 
 
@@ -1008,13 +1015,14 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains \"contrib/isn\" functions which rely on the\n"
-		  "bigint data type.  Your old and new clusters pass bigint values\n"
-		"differently so this cluster cannot currently be upgraded.  You can\n"
-				 "manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
-				 "\"contrib/isn\" from the old cluster and restart the upgrade.  A list of\n"
-				 "the problem functions is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains \"contrib/isn\" functions which rely on the\n"
+				"| bigint data type.  Your old and new clusters pass bigint values\n"
+				"| differently so this cluster cannot currently be upgraded.  You can\n"
+				"| manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
+				"| \"contrib/isn\" from the old cluster and restart the upgrade.  A list of\n"
+				"| the problem functions is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1115,12 +1123,13 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains one of the reg* data types in user tables.\n"
-		 "These data types reference system OIDs that are not preserved by\n"
-		"pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
-				 "remove the problem tables and restart the upgrade.  A list of the problem\n"
-				 "columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains one of the reg* data types in user tables.\n"
+				"| These data types reference system OIDs that are not preserved by\n"
+				"| pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
+				"| remove the problem tables and restart the upgrade.  A list of the problem\n"
+				"| columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1206,11 +1215,12 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains one of the JSONB data types in user tables.\n"
-		 "The internal format of JSONB changed during 9.4 beta so this cluster cannot currently\n"
-				 "be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
-				 "of the problem columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"jsonb\" data type in user tables.\n"
+				"| The internal format of \"jsonb\" changed during 9.4 beta so this cluster cannot currently\n"
+				"| be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
+				"| of the problem columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();

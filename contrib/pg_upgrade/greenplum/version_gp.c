@@ -268,7 +268,7 @@ check_hash_partition_usage(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains hash partitioned tables.\n"
 			   "| Upgrading hash partitioned tables is not supported,\n"
 			   "| so this cluster cannot currently be upgraded.  You\n"
