@@ -332,8 +332,33 @@ check_cluster_versions(void)
 {
 	prep_status("Checking cluster versions");
 
-	/* get old and new cluster versions */
+	/* get old cluster versions */
 	old_cluster.major_version = get_major_server_version(&old_cluster);
+
+	/*
+	 * Upgrading from anything older than an 8.2 based Greenplum is not
+	 * supported. TODO: This needs to be amended to check for the actual
+	 * 4.3.x version we target and not a blanket 8.2 check, but for now
+	 * this will cover most cases.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
+		pg_fatal("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
+
+	/* get old and new binary versions */
+	get_bin_version(&old_cluster);
+
+	/* Ensure binaries match the designated data directories */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
+		GET_MAJOR_VERSION(old_cluster.bin_version))
+		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
+
+	if(is_skip_target_check())
+	{
+		check_ok();
+		return;
+	}
+
+	/* get new cluster versions */
 	new_cluster.major_version = get_major_server_version(&new_cluster);
 
 	/*
@@ -353,15 +378,6 @@ check_cluster_versions(void)
 	 * upgrades
 	 */
 
-	/*
-	 * Upgrading from anything older than an 8.2 based Greenplum is not
-	 * supported. TODO: This needs to be amended to check for the actual
-	 * 4.3.x version we target and not a blanket 8.2 check, but for now
-	 * this will cover most cases.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
-		pg_fatal("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
-
 	/* Only current PG version is supported as a target */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
 		pg_fatal("This utility can only upgrade to Greenplum version %s.\n",
@@ -375,14 +391,10 @@ check_cluster_versions(void)
 	if (old_cluster.major_version > new_cluster.major_version)
 		pg_fatal("This utility cannot be used to downgrade to older major Greenplum versions.\n");
 
-	/* get old and new binary versions */
-	get_bin_version(&old_cluster);
+	/* new binary versions */
 	get_bin_version(&new_cluster);
 
 	/* Ensure binaries match the designated data directories */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
-		GET_MAJOR_VERSION(old_cluster.bin_version))
-		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
 	if (GET_MAJOR_VERSION(new_cluster.major_version) !=
 		GET_MAJOR_VERSION(new_cluster.bin_version))
 		pg_fatal("New cluster data and binary directories are from different major versions.\n");
@@ -396,14 +408,19 @@ check_cluster_compatibility(bool live_check)
 {
 	/* get/check pg_control data of servers */
 	get_control_data(&old_cluster, live_check);
-	get_control_data(&new_cluster, false);
-	check_control_data(&old_cluster.controldata, &new_cluster.controldata);
+
+	if(!is_skip_target_check())
+	{
+		get_control_data(&new_cluster, false);
+		check_control_data(&old_cluster.controldata, &new_cluster.controldata);
+	}
 
 	/* Is it 9.0 but without tablespace directories? */
-	if (GET_MAJOR_VERSION(new_cluster.major_version) == 900 &&
-		new_cluster.controldata.cat_ver < TABLE_SPACE_SUBDIRS_CAT_VER)
-		pg_fatal("This utility can only upgrade to PostgreSQL version 9.0 after 2010-01-11\n"
-				 "because of backend API changes made during development.\n");
+	if(!is_skip_target_check())
+		if (GET_MAJOR_VERSION(new_cluster.major_version) == 900 &&
+			new_cluster.controldata.cat_ver < TABLE_SPACE_SUBDIRS_CAT_VER)
+			pg_fatal("This utility can only upgrade to PostgreSQL version 9.0 after 2010-01-11\n"
+					 "because of backend API changes made during development.\n");
 
 	/* We read the real port number for PG >= 9.1 */
 	if (live_check && GET_MAJOR_VERSION(old_cluster.major_version) < 901 &&
@@ -411,9 +428,10 @@ check_cluster_compatibility(bool live_check)
 		pg_fatal("When checking a pre-PG 9.1 live old server, "
 				 "you must specify the old server's port number.\n");
 
-	if (live_check && old_cluster.port == new_cluster.port)
-		pg_fatal("When checking a live server, "
-				 "the old and new port numbers must be different.\n");
+	if(!is_skip_target_check())
+		if (live_check && old_cluster.port == new_cluster.port)
+			pg_fatal("When checking a live server, "
+					 "the old and new port numbers must be different.\n");
 }
 
 

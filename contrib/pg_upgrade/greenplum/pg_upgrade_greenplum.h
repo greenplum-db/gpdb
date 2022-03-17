@@ -49,7 +49,8 @@ typedef enum {
 	GREENPLUM_OLD_GP_DBID = 5,
 	GREENPLUM_NEW_GP_DBID = 6,
 	GREENPLUM_OLD_TABLESPACES_FILE = 7,
-	GREENPLUM_CONTINUE_CHECK_ON_FATAL = 8
+	GREENPLUM_CONTINUE_CHECK_ON_FATAL = 8,
+	GREENPLUM_SKIP_TARGET_CHECK = 9
 } greenplumOption;
 
 
@@ -61,7 +62,8 @@ typedef enum {
 	{"old-gp-dbid", required_argument, NULL, GREENPLUM_OLD_GP_DBID}, \
 	{"new-gp-dbid", required_argument, NULL, GREENPLUM_NEW_GP_DBID}, \
 	{"old-tablespaces-file", required_argument, NULL, GREENPLUM_OLD_TABLESPACES_FILE}, \
-	{"continue-check-on-fatal", no_argument, NULL, GREENPLUM_CONTINUE_CHECK_ON_FATAL},
+	{"continue-check-on-fatal", no_argument, NULL, GREENPLUM_CONTINUE_CHECK_ON_FATAL}, \
+	{"skip-target-check", no_argument, NULL, GREENPLUM_SKIP_TARGET_CHECK},
 
 #define GREENPLUM_USAGE "\
 	--mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
@@ -72,6 +74,7 @@ typedef enum {
 	--new-gp-dbid             greenplum database id of the new segment\n\
 	--old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
 	--continue-check-on-fatal continue to run through all pg_upgrade checks without upgrade. Stops on major issues\n\
+	--skip-target-check       skip all checks and comparisons of new cluster\n\
 "
 
 /* option_gp.c */
@@ -84,6 +87,7 @@ void validate_greenplum_options(void);
 bool is_continue_check_on_fatal(void);
 void set_check_fatal_occured(void);
 bool get_check_fatal_occurred(void);
+bool is_skip_target_check(void);
 
 /* pg_upgrade_greenplum.c */
 void freeze_all_databases(void);
