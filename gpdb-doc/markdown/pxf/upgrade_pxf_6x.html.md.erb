@@ -1,5 +1,5 @@
 ---
-title: Upgrading PXF When You Upgrade Greenplum 6
+title: Upgrading PXF When You Upgrade from a Previous Greenplum 6.x Version
 ---
 
 <div class="note"> Starting in Greenplum Database version 6.19.0, the PXF software is no longer bundled in the Greenplum Server distribution. You may be required to download and install the PXF <code>rpm</code> or <code>deb</code> package to use PXF in your Greenplum cluster as described in the procedures below.</div>
@@ -50,9 +50,9 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. If you previously installed the PXF `rpm` or `deb` on your Greenplum 6 hosts, you must register it to continue using PXF:
+2. If you previously installed the PXF `rpm` or `deb` on your Greenplum 6.x hosts, you must register it to continue using PXF:
    
-    1. Copy the PXF extension files from the PXF installation directory to the new Greenplum 6 install directory:
+    1. Copy the PXF extension files from the PXF installation directory to the new Greenplum 6.x install directory:
 
         ``` shell
         gpadmin@gpmaster pxf cluster register
