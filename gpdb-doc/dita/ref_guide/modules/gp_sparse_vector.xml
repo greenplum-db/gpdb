@@ -36,9 +36,10 @@
           <codeph>search_path</codeph>, or alternatively you can choose to prepend
           <codeph>sparse_vector.</codeph> to all non-<codeph>CAST</codeph>
           <codeph>gp_sparse_vector</codeph> function or object name references.</note>
-        <p>Update the <codeph>gp_sparse_vector</codeph> module to version
-            1.0.1 in each database in which you are using the module:
-            <codeblock>ALTER EXTENSION gp_sparse_vector UPDATE TO '1.0.1';</codeblock></p>
+        <p>Update the <codeph>gp_sparse_vector</codeph> module
+            in each database in which you are using the module:
+            <codeblock>DROP EXTENSION gp_sparse_vector;
+CREATE EXTENSION gp_sparse_vector;</codeblock></p>
       </body>
     </topic>
     <topic id="topic_about">
