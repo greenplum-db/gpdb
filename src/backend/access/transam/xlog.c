@@ -7531,8 +7531,6 @@ StartupXLOG(void)
 	 * problem by making the new active segment have a new timeline ID.
 	 *
 	 * In a normal crash recovery, we can just extend the timeline we were in.
-	 *
-	 * GPDB: Greenplum doesn't support archive recovery.
 	 */
 	PrevTimeLineID = ThisTimeLineID;
 	if (ArchiveRecoveryRequested)
