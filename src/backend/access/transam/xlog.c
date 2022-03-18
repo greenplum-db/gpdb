@@ -7711,12 +7711,10 @@ StartupXLOG(void)
 		/*
 		 * And finally, execute the recovery_end_command, if any.
 		 */
-#if 0
 		if (recoveryEndCommand)
 			ExecuteRecoveryCommand(recoveryEndCommand,
 								   "recovery_end_command",
 								   true);
-#endif
 	}
 
 	/*
