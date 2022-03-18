@@ -148,7 +148,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         sources. Regular readable external tables access static flat files, whereas external web
         tables access dynamic data sources – either on a web server or by running OS commands or
         scripts. </p>
-      <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.html">Working with External Data</xref> for
+      <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.html" format="html" scope="external">Working with External Data</xref> for
         detailed information about working with external tables.</p>
     </section>
     <section id="section4">

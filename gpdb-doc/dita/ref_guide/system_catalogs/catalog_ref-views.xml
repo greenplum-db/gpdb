@@ -75,7 +75,7 @@
         <xref href="./pg_stats_resqueue.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>session_level_memory_consumption (See <xref
-          href="../../admin_guide/managing/monitor.html#topic_slt_ddv_1q">Monitoring a Greenplum System</xref>.)</li>
+          href="../../admin_guide/managing/monitor.html#topic_slt_ddv_1q" format="html" scope="external">Monitoring a Greenplum System</xref>.)</li>
     </ul>
     <p>For more information about the standard system views supported in PostgreSQL and Greenplum
       Database, see the following sections of the PostgreSQL documentation:</p>
