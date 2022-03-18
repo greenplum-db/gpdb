@@ -31,6 +31,8 @@ INSERT INTO tst_missing_tbl values(2),(1),(5);
 0U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
 1: INSERT INTO tst_missing_tbl values(2),(1),(5);
 
+-- Make sure primary/mirror pair is in sync, otherwise FTS can't promote mirror
+1: SELECT wait_until_all_segments_synchronized();
 -- Mark down the primary with content 0 via fts fault injection.
 1: SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
 
