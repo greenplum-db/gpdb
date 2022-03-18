@@ -11,7 +11,7 @@
       <p>Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database
         MPP platform. Greenplum Database text search is immediately available to you, with no need
         to install and maintain additional software. For full details on this topic, see <xref
-          href="../admin_guide/textsearch/intro.xml" format="dita" scope="peer">Greenplum Database
+          href="../admin_guide/textsearch/intro.html" format="html" scope="external">Greenplum Database
           text search</xref>.</p>
     </section>
     <section otherprops="Pivotal" id="section_ywf_4v1_rqb">
@@ -26,7 +26,7 @@
         services. Tanzu Greenplum Text, with Solr, has many capabilities that are not available
         with Greenplum Database text search. In particular, Tanzu Greenplum Text is better for
         advanced text analysis applications. For a comparative between these methods, see <xref
-          href="../admin_guide/textsearch/intro.xml#gptext">Comparing Greenplum Database Text Search
+          href="../admin_guide/textsearch/intro.html#gptext" format="html" scope="external">Comparing Greenplum Database Text Search
           with Tanzu Greenplum Text</xref>.</p>
     </section>
   </body>

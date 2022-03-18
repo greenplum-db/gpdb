@@ -137,10 +137,6 @@ END
 ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
 -- session 3: in transaction and has a cursor, cann't update
 --            cdb_component_dbs, following query should fail
-3:FETCH ALL FROM c1;
- c1 | c2 
-----+----
-(0 rows)
 3:END;
 ERROR:  Error on receive from seg1 slice1 127.0.1.1:7003 pid=31911: server closed the connection unexpectedly
 	This probably means the server terminated abnormally

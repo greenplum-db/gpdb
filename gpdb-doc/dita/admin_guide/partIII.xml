@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en">
-  <title id="nq173529">Managing Greenplum Database Access</title>
-  <shortdesc>Securing Greenplum Database includes protecting access to the database through network
-    configuration, database user authentication, and encryption. </shortdesc>
-  <body/>
-</topic>

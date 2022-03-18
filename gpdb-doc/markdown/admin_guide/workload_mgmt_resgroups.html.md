@@ -258,7 +258,7 @@ Refer to the [Greenplum Command Center documentation](http://gpcc.docs.pivotal.i
 
 ## <a id="topic71717999"></a>Configuring and Using Resource Groups 
 
-**Important:** Significant Greenplum Database performance degradation has been observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in CentOS 7.x and Red Hat 7.x systems.
+**Important:** Significant Greenplum Database performance degradation has been observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in CentOS 7.x and Red Hat 7.x/8.x systems.
 
 If you use RedHat 6 and the performance with resource groups is acceptable for your use case, upgrade your kernel to version 2.6.32-696 or higher to benefit from other fixes to the cgroups implementation.
 
@@ -304,7 +304,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for those resource groups created with the `cgroup` `MEMORY_AUDITOR`.
 
 3.  If not already installed and running, install the Control Groups operating system package and start the cgroups service on each Greenplum Database node. The commands that you run to perform these tasks will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run these commands:
-    -   Redhat/CentOS 7.x systems:
+    -   Redhat/CentOS 7.x/8.x systems:
 
         ```
         sudo yum install libcgroup-tools
@@ -337,7 +337,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database CPU resource management.
 
 6.  To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/CentOS 7.x\) or `cgconfig` \(Redhat/CentOS 6.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
-    -   Redhat/CentOS 7.x systems:
+    -   Redhat/CentOS 7.x/8.x systems:
 
         ```
         sudo systemctl enable cgconfig.service

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en">
-  <title id="ns173529">Working with Databases</title>
-  <shortdesc>The topics in this section describe how to create and manage database objects and
-    manipulate data in the database. Additional topics describe parallel data loading and writing
-    SQL queries in the Greenplum MPP environment.</shortdesc>
-</topic>

@@ -56,8 +56,8 @@
             updating this file. For consistency, use the same value that was specified for
               <codeph>HBA_HOSTNAMES</codeph> when the Greenplum Database system was initialized. For
             information about how Greenplum Database resolves host names in the
-              <codeph>pg_hba.conf</codeph> file, see <xref href="../../admin_guide/client_auth.xml"
-            />.</pd>
+              <codeph>pg_hba.conf</codeph> file, see <xref href="../../admin_guide/client_auth.html" format="html" scope="external"
+            >Configuring Client Authentication</xref>.</pd>
         </plentry>
         <plentry>
           <pt>-i <varname>move_config_file</varname></pt>

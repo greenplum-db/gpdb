@@ -272,8 +272,8 @@ remote_password_encryption: "on"
       <title>See Also</title>
       <p>
         <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
-          href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
+          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external">Parallel Backup with gpbackup and gprestore</xref> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external">Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
     </section>
   </body>
 </topic>
