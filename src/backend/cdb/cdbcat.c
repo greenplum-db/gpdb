@@ -35,6 +35,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/syscache.h"
+#include "utils/uri.h"
 
 /*
  * The default numsegments when creating tables.  The value can be an integer
@@ -326,17 +327,36 @@ GpPolicyFetch(Oid tbloid)
 		 * regular tables. Readable external tables are implicitly randomly
 		 * distributed, except for "EXECUTE ... ON MASTER" ones.
 		 */
-		if (e && !e->iswritable)
+		if (e)
 		{
 			char	   *on_clause = (char *) strVal(linitial(e->execlocations));
 
-			if (strcmp(on_clause, "MASTER_ONLY") == 0)
+			if (!e->iswritable)
 			{
-				return makeGpPolicy(POLICYTYPE_ENTRY,
+				if (strcmp(on_clause, "MASTER_ONLY") == 0)
+				{
+					return makeGpPolicy(POLICYTYPE_ENTRY,
 									0, getgpsegmentCount());
+				}
+				return createRandomPartitionedPolicy(getgpsegmentCount());
 			}
+			else if (strcmp(on_clause, "MASTER_ONLY") == 0)
+			{
+				ListCell   *cell;
+				Assert(e->urilocations != NIL);
 
-			return createRandomPartitionedPolicy(getgpsegmentCount());
+				/* set policy for writable s3 on master external table */
+				foreach(cell, e->urilocations)
+				{
+					const char *uri_str = (char *) strVal(lfirst(cell));
+					Uri	*uri = ParseExternalTableUri(uri_str);
+					if (uri->protocol == URI_CUSTOM && 0 == pg_strncasecmp(uri->customprotocol, "s3", 2))
+					{
+						return makeGpPolicy(POLICYTYPE_ENTRY,
+									0, getgpsegmentCount());
+					}
+				}
+			}
 		}
 	}
 	else if (get_rel_relstorage(tbloid) == RELSTORAGE_FOREIGN)
