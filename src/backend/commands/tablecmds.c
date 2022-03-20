@@ -15866,60 +15866,6 @@ get_rel_opts(Relation rel)
 	return newOptions;
 }
 
-/*
- * GPDB: Convenience function to judge a relation option whether already in opts
- */
-static bool
-reloptions_has_opt(List *opts, const char *name)
-{
-	ListCell *lc;
-	foreach(lc, opts)
-	{
-		DefElem *de = lfirst(lc);
-		if (strcmp(de->defname, name) == 0)
-			return true;
-	}
-	return false;
-}
-
-/*
- * GPDB: Convenience function to build storage reloptions for a given relation, just for AO table.
- */
-static List*
-build_ao_rel_storage_opts(List *opts, Relation rel)
-{
-	bool		checksum = true;
-	int32		blocksize = -1;
-	int16		compresslevel = 0;
-	char	   *compresstype = NULL;
-	NameData	compresstype_nd;
-
-	GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
-								 &blocksize,
-								 NULL,
-								 &compresslevel,
-								 &checksum,
-								 &compresstype_nd);
-	compresstype = NameStr(compresstype_nd);
-
-	if (!reloptions_has_opt(opts, "blocksize"))
-		opts = lappend(opts, makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1));
-
-	if (!reloptions_has_opt(opts, "compresslevel"))
-		opts = lappend(opts, makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1));
-
-	if (!reloptions_has_opt(opts, "checksum"))
-		opts = lappend(opts, makeDefElem("checksum", (Node *) makeInteger(checksum), -1));
-
-	if (!reloptions_has_opt(opts, "compresstype"))
-	{
-		compresstype = (compresstype && compresstype[0]) ? compresstype : "none";
-		opts = lappend(opts, makeDefElem("compresstype", (Node *) makeString(compresstype), -1));
-	}
-
-	return opts;
-}
-
 static RangeVar *
 make_temp_table_name(Relation rel, BackendId id)
 {
