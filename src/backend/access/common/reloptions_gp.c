@@ -30,6 +30,7 @@
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 
 /*
  * Confusingly, RELOPT_KIND_HEAP is also used for AO/CO tables. To reduce
@@ -1298,4 +1299,51 @@ get_option_set(relopt_value *options, int num_options, const char *opt_name)
 			return &options[i];
 	}
 	return NULL;
+}
+
+/*
+ * GPDB: Convenience function to judge a relation option whether already in opts
+ */
+bool
+reloptions_has_opt(List *opts, const char *name)
+{
+	ListCell *lc;
+	foreach(lc, opts)
+	{
+		DefElem *de = lfirst(lc);
+		if (pg_strcasecmp(de->defname, name) == 0)
+			return true;
+	}
+	return false;
+}
+
+/*
+ * GPDB: Convenience function to build storage reloptions for a given relation, just for AO table .
+ */
+List*
+build_ao_rel_storage_opts(List *opts, Relation rel)
+{
+	if (!reloptions_has_opt(opts, "blocksize"))
+		opts = lappend(opts, makeDefElem("blocksize", (Node *) makeInteger(rel->rd_appendonly->blocksize)));
+
+	if (!reloptions_has_opt(opts, "compresslevel"))
+		opts = lappend(opts, makeDefElem("compresslevel", (Node *) makeInteger(rel->rd_appendonly->compresslevel)));
+
+	if (!reloptions_has_opt(opts, "checksum"))
+		opts = lappend(opts, makeDefElem("checksum", (Node *) makeInteger(rel->rd_appendonly->checksum)));
+
+	if (!reloptions_has_opt(opts, "compresstype"))
+	{
+		char *compresstype = rel->rd_appendonly->compresstype.data;
+		compresstype = (compresstype && compresstype[0]) ? compresstype : "none";
+		opts = lappend(opts, makeDefElem("compresstype", (Node *) makeString(compresstype)));
+	}
+
+	if (!reloptions_has_opt(opts, "orientation"))
+	{
+		char *orientation = rel->rd_appendonly->columnstore ? "column" : "row";
+		opts = lappend(opts, makeDefElem("orientation", (Node *) makeString(orientation)));
+	}
+
+	return opts;
 }

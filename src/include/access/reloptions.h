@@ -316,5 +316,7 @@ extern void validate_and_refill_options(StdRdOptions *result, relopt_value *opti
 							int numoptions, relopt_kind kind, bool validate);
 extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
 										int num_options, relopt_kind kind, bool validate);
+extern bool reloptions_has_opt(List *opts, const char *name);
+extern List *build_ao_rel_storage_opts(List *opts, Relation rel);
 
 #endif   /* RELOPTIONS_H */
