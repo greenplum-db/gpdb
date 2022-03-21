@@ -327,8 +327,8 @@ extern void validate_and_refill_options(StdRdOptions *result, relopt_value *opti
 extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
 										int num_options, relopt_kind kind, bool validate);
 
-bool reloptions_has_opt(List *opts, const char *name);
-List* build_ao_rel_storage_opts(List *opts, Relation rel);
+extern bool reloptions_has_opt(List *opts, const char *name);
+extern List* build_ao_rel_storage_opts(List *opts, Relation rel);
 
 /* attribute enconding specific functions */
 extern List *transformColumnEncoding(Relation rel, List *colDefs,
