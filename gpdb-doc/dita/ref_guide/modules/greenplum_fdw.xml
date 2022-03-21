@@ -38,7 +38,7 @@
     <title>About Module Dependencies</title>
     <body>
       <p><codeph>greenplum_fdw</codeph> depends on the 
-        <xref href="./gp_parallel_retrieve_cursor.html" format="html" scope="peer"/>
+        <xref href="./gp_parallel_retrieve_cursor.xml" format="dita"/>
         module.
         <note>You must register the <codeph>gp_parallel_retrieve_cursor</codeph> module in
           <b>each remote Greenplum database</b> with tables that you plan to access using 
