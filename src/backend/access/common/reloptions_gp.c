@@ -1734,8 +1734,8 @@ build_ao_rel_storage_opts(List *opts, Relation rel)
 
 	if (!reloptions_has_opt(opts, "compresstype"))
 	{
-		compresstype = (compresstype && compresstype[0]) ? compresstype : "none";
-		opts = lappend(opts, makeDefElem("compresstype", (Node *) makeString(pstrdup(compresstype)), -1));
+		compresstype = (compresstype && compresstype[0]) ? pstrdup(compresstype) : "none";
+		opts = lappend(opts, makeDefElem("compresstype", (Node *) makeString(compresstype), -1));
 	}
 
 	return opts;
