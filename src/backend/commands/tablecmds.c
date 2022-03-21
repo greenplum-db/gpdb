@@ -15996,7 +15996,6 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 				 */
 				cs->options = build_ao_rel_storage_opts(cs->options, rel);
 			}
-
 		}
 
 

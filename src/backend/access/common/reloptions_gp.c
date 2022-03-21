@@ -1706,7 +1706,7 @@ reloptions_has_opt(List *opts, const char *name)
 /*
  * GPDB: Convenience function to build storage reloptions for a given relation, just for AO table.
  */
-List*
+List *
 build_ao_rel_storage_opts(List *opts, Relation rel)
 {
 	bool		checksum = true;
