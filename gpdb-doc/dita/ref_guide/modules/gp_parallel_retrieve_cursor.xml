@@ -280,7 +280,7 @@ SELECT * FROM gp_endpoints;</codeblock>
               to <codeph>true</codeph> .</li>
           </ul>
           <p>For example, if you are initiating a retrieve session via <codeph>psql</codeph>:</p>
-          <codeblock>PGOPTIONS='-c gp_retrieve_conn=true' psql -h <i>hostname</i> -p <i>port</i> -u <i>username</i> -d <i>dbname</i></codeblock>
+          <codeblock>PGOPTIONS='-c gp_retrieve_conn=true' psql -h <i>hostname</i> -p <i>port</i> -U <i>username</i> -d <i>dbname</i></codeblock>
           <p>To distinguish a retrieve session from other sessions running on a segment
             host, Greenplum Database includes the <codeph>[retrieve]</codeph> tag on the
             <codeph>ps</codeph> command output display for the process.</p>
