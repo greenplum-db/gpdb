@@ -14861,7 +14861,6 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro, List
 			}
 		}
 
-
 		for (attno = 0; attno < tupdesc->natts; attno++)
 		{
 			ColumnDef *cd = makeNode(ColumnDef);
