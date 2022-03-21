@@ -3905,7 +3905,7 @@ select * from
                                              Output: i4.f1
                            ->  Materialize
                                  Output: t1.f1
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                 ->  Broadcast Motion 1:3  (slice1; segments: 1)
                                        Output: t1.f1
                                        ->  Seq Scan on public.text_tbl t1
                                              Output: t1.f1

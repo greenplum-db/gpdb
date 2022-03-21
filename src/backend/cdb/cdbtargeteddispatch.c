@@ -712,28 +712,6 @@ AssignContentIdsToPlanData(Query *query, Plan *plan, PlannerInfo *root)
 		FinalizeDirectDispatchDataForSlice((Node *) plan, &data, true);
 	}
 
-	/*
-	 * now check to see if we are multi-slice.  If so then we will disable the
-	 * direct dispatch (because it's not working right now -- see MPP-7630)
-	 */
-	if (list_length(data.allSlices) > 2)
-	{
-		/*
-		 * NOTE!!!  When this is fixed, make a test for subquery initPlan and
-		 * qual case (hitting code in AssignContentIdsToPlanData_SubqueryScan)
-		 */
-		ListCell   *cell;
-
-		foreach(cell, data.allSlices)
-		{
-			Plan	   *plan = (Plan *) lfirst(cell);
-
-			plan->directDispatch.isDirectDispatch = false;
-			list_free(plan->directDispatch.contentIds);
-			plan->directDispatch.contentIds = NIL;
-		}
-	}
-
 	MemoryContextSwitchTo(old_context);
 	MemoryContextDelete(new_context);
 }
