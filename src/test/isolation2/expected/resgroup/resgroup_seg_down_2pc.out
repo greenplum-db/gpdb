@@ -7,6 +7,9 @@
 include: helpers/server_helpers.sql;
 CREATE
 
+create extension if not exists gp_inject_fault;
+CREATE
+
 -- set these values purely to cut down test time, as default fts trigger is
 -- every min and 5 retries
 alter system set gp_fts_probe_interval to 10;
@@ -53,13 +56,8 @@ CREATE
 -----------------
  Success:        
 (1 row)
--- reset the injected fault on primary segment
-2:select gp_inject_fault('fts_conn_startup_packet', 'reset', dbid) from gp_segment_configuration where content=0;
- gp_inject_fault 
------------------
- Success:        
- Success:        
-(2 rows)
+-- No need to reset fts_conn_startup_packet fault inject because the segment we have set
+-- is down now, and later we will full recover it back with new init clean shared memory.
 1<:  <... completed>
 ALTER
 -- make sure "alter resource group" has taken effect.
