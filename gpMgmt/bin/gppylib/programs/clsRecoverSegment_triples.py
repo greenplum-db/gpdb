@@ -137,7 +137,7 @@ class RecoveryTriplets(abc.ABC):
             if(req.failover_host):
                hostlist.add(req.failover_host)
         unreachable_hosts = get_unreachable_segment_hosts(list(hostlist), min(paralleldegree, len(hostlist)))
-    return unreachable_hosts
+        return unreachable_hosts
 
     def getInterfaceHostnameWarnings(self):
         return self.interfaceHostnameWarnings
