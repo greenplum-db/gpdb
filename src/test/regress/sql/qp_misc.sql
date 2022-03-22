@@ -15607,3 +15607,8 @@ WITH cte_coll AS
 SELECT *
 FROM   cte_coll
 WHERE  tkn_arr <> '{nullout}' ;
+-- Test paramcolid is correctly set
+CREATE TABLE tparam (a varchar(100) PRIMARY KEY);
+INSERT INTO tparam VALUES ('a_value');
+
+SELECT * FROM tparam t1 JOIN tparam t2 ON UPPER(t1.a) = t2.a;
