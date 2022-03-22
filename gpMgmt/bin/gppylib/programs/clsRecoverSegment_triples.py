@@ -293,7 +293,7 @@ class RecoveryTripletsNewHosts(RecoveryTriplets):
 
 
 class RecoveryTripletsUserConfigFile(RecoveryTriplets):
-    def __init__(self, gpArray, config_file), parallelgegree:
+    def __init__(self, gpArray, config_file, parallelgegree):
         super().__init__(gpArray)
         self.config_file = config_file
         self.rows = self._parseConfigFile(self.config_file)
