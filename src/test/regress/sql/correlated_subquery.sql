@@ -1,6 +1,5 @@
 SET optimizer_enforce_subplans = 1;
 SET optimizer_trace_fallback=on;
-SET client_min_messages=log;
 
 SELECT a = ALL (SELECT generate_series(1, 2)), a FROM (values (1),(2)) v(a);
 SELECT a = ALL (SELECT generate_series(2, 2)), a FROM (values (1),(2)) v(a);
@@ -19,3 +18,12 @@ SELECT (SELECT 3) = ALL (SELECT generate_series(3, 3)) FROM  (values (1),(2)) v(
 SELECT (SELECT 1) = ALL (SELECT generate_series(1, 1));
 SELECT (SELECT 1) = ALL (SELECT generate_series(1, 2));
 SELECT (SELECT 3) = ALL (SELECT generate_series(3, 3));
+
+CREATE TABLE correlated_subquery_test(
+   a varchar(100),
+   b int
+);
+SELECT (SELECT a FROM correlated_subquery_test LIMIT 1)=ALL(SELECT a FROM correlated_subquery_test);
+CREATE CAST (integer AS text) WITH INOUT AS IMPLICIT;
+SELECT (SELECT b FROM correlated_subquery_test LIMIT 1)=ALL(SELECT a FROM correlated_subquery_test);
+DROP CAST (integer AS text);
