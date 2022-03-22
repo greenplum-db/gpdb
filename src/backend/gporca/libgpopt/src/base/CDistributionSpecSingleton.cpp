@@ -114,7 +114,6 @@ CDistributionSpecSingleton::AppendEnforcers(CMemoryPool *mp,
 		this == prpp->Ped()->PdsRequired() &&
 		"required plan properties don't match enforced distribution spec");
 
-
 	if (GPOS_FTRACE(EopttraceDisableMotionGather))
 	{
 		// gather Motion is disabled

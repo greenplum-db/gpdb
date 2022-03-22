@@ -274,12 +274,6 @@ private:
 	// initialize group's stats
 	void InitStats(IStatistics *stats);
 
-	// retrieve first group expression
-	CGroupExpression *PgexprFirst();
-
-	// retrieve next group expression
-	CGroupExpression *PgexprNext(CGroupExpression *pgexpr);
-
 	// return true if first promise is better than second promise
 	static BOOL FBetterPromise(CMemoryPool *mp, CLogical::EStatPromise espFst,
 							   CGroupExpression *pgexprFst,
@@ -347,6 +341,12 @@ public:
 
 	// group stats accessor
 	IStatistics *Pstats() const;
+
+	// retrieve first group expression
+	CGroupExpression *PgexprFirst();
+
+	// retrieve next group expression
+	CGroupExpression *PgexprNext(CGroupExpression *pgexpr);
 
 	// attempt initializing stats with the given stat object
 	BOOL FInitStats(IStatistics *stats);

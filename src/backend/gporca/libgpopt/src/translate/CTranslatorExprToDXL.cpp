@@ -7675,7 +7675,6 @@ IntPtrArray *
 CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 {
 	GPOS_ASSERT(1 == pexprMotion->Arity());
-
 	// derive the distribution of child expression
 	CExpression *pexprChild = (*pexprMotion)[0];
 	CDrvdPropPlan *pdpplan = CDrvdPropPlan::Pdpplan(pexprChild->PdpDerive());
@@ -7707,6 +7706,11 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 		// motion (which cannot be a result hash filter node) will read the
 		// input from one segment in order to ensure that data is consistent
 		// after bring read from operator delivering tainted replication.
+		//
+		// Additionally, if there is a CTE producer in the sub-tree with a CTE
+		// consumer, we need to make sure the CTE producer and consumer are running
+		// locally.
+
 		IntPtrArray *pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
 		INT iSegmentId = *((*m_pdrgpiSegments)[0]);
 		pdrgpi->Append(GPOS_NEW(m_mp) INT(iSegmentId));

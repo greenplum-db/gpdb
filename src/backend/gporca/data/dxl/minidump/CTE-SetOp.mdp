@@ -96,7 +96,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
         </dxl:UnionAll>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3">
+    <dxl:Plan Id="0" SpaceSize="4">
       <dxl:Sequence>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.000059" Rows="3.000000" Width="4"/>

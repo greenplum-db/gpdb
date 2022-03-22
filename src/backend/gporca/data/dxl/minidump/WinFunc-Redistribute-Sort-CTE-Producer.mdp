@@ -455,10 +455,10 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
         </dxl:LogicalWindow>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="13616">
-      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+    <dxl:Plan Id="0" SpaceSize="3932">
+      <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3141.988407" Rows="333333.333333" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="3214.159636" Rows="333333.333333" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="27" Alias="row_number">
@@ -471,26 +471,21 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
             <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:Filter/>
-        <dxl:SortingColumnList/>
-        <dxl:Sequence>
+        <dxl:CTEProducer CTEId="0" Columns="0,1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3106.068407" Rows="333333.333333" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.258154" Rows="1000.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
-            <dxl:ProjElem ColId="27" Alias="row_number">
-              <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
+            <dxl:ProjElem ColId="0" Alias="a">
+              <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="28" Alias="rank">
-              <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
-            </dxl:ProjElem>
-            <dxl:ProjElem ColId="29" Alias="count">
-              <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
+            <dxl:ProjElem ColId="1" Alias="b">
+              <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:CTEProducer CTEId="0" Columns="0,1">
+          <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.236594" Rows="1000.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.257154" Rows="1000.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -500,9 +495,14 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
+            <dxl:Filter/>
+            <dxl:SortingColumnList>
+              <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+              <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+            </dxl:SortingColumnList>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.233754" Rows="1000.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.221234" Rows="1000.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -519,9 +519,9 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
               </dxl:SortingColumnList>
               <dxl:LimitCount/>
               <dxl:LimitOffset/>
-              <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
+              <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.030410" Rows="1000.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.010450" Rows="1000.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">
@@ -532,60 +532,65 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:HashExprList>
-                  <dxl:HashExpr>
-                    <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:HashExpr>
-                </dxl:HashExprList>
-                <dxl:TableScan>
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.010450" Rows="1000.000000" Width="8"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="0" Alias="a">
-                      <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="1" Alias="b">
-                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.44875439.1.1" TableName="t1">
-                    <dxl:Columns>
-                      <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                      <dxl:Column ColId="3" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="4" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="5" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="6" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="7" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                      <dxl:Column ColId="8" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                    </dxl:Columns>
-                  </dxl:TableDescriptor>
-                </dxl:TableScan>
-              </dxl:RedistributeMotion>
+                <dxl:TableDescriptor Mdid="0.44875439.1.1" TableName="t1">
+                  <dxl:Columns>
+                    <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                    <dxl:Column ColId="3" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="4" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="5" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="6" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="7" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                    <dxl:Column ColId="8" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:TableScan>
             </dxl:Sort>
-          </dxl:CTEProducer>
-          <dxl:Sequence>
+          </dxl:GatherMotion>
+        </dxl:CTEProducer>
+        <dxl:Sequence>
+          <dxl:Properties>
+            <dxl:Cost StartupCost="0" TotalCost="2774.901482" Rows="333333.333333" Width="24"/>
+          </dxl:Properties>
+          <dxl:ProjList>
+            <dxl:ProjElem ColId="27" Alias="row_number">
+              <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="28" Alias="rank">
+              <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
+            </dxl:ProjElem>
+            <dxl:ProjElem ColId="29" Alias="count">
+              <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
+            </dxl:ProjElem>
+          </dxl:ProjList>
+          <dxl:CTEProducer CTEId="1" Columns="30,31,32,33,34,35">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2670.831813" Rows="333333.333333" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="1395.385232" Rows="333333.333333" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="27" Alias="row_number">
-                <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
+              <dxl:ProjElem ColId="30" Alias="a">
+                <dxl:Ident ColId="30" ColName="a" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="28" Alias="rank">
-                <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
+              <dxl:ProjElem ColId="31" Alias="b">
+                <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="29" Alias="count">
-                <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
+              <dxl:ProjElem ColId="32" Alias="a">
+                <dxl:Ident ColId="32" ColName="a" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="33" Alias="b">
+                <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="34" Alias="row_number">
+                <dxl:Ident ColId="34" ColName="row_number" TypeMdid="0.20.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="35" Alias="rank">
+                <dxl:Ident ColId="35" ColName="rank" TypeMdid="0.20.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:CTEProducer CTEId="1" Columns="30,31,32,33,34,35">
+            <dxl:Window PartitionColumns="31">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1344.406016" Rows="333333.333333" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="1395.051899" Rows="333333.333333" Width="32"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="30" Alias="a">
@@ -604,14 +609,18 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                   <dxl:Ident ColId="34" ColName="row_number" TypeMdid="0.20.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="35" Alias="rank">
-                  <dxl:Ident ColId="35" ColName="rank" TypeMdid="0.20.1.0"/>
+                  <dxl:WindowFunc Mdid="0.7001.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
+              <dxl:Filter/>
               <dxl:Window PartitionColumns="31">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1344.239349" Rows="333333.333333" Width="32"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1387.051899" Rows="333333.333333" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
+                  <dxl:ProjElem ColId="34" Alias="row_number">
+                    <dxl:WindowFunc Mdid="0.7000.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
+                  </dxl:ProjElem>
                   <dxl:ProjElem ColId="30" Alias="a">
                     <dxl:Ident ColId="30" ColName="a" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
@@ -624,22 +633,13 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                   <dxl:ProjElem ColId="33" Alias="b">
                     <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="34" Alias="row_number">
-                    <dxl:Ident ColId="34" ColName="row_number" TypeMdid="0.20.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="35" Alias="rank">
-                    <dxl:WindowFunc Mdid="0.7001.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
-                  </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:Window PartitionColumns="31">
+                <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1340.239349" Rows="333333.333333" Width="24"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1387.051899" Rows="333333.333333" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="34" Alias="row_number">
-                      <dxl:WindowFunc Mdid="0.7000.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
-                    </dxl:ProjElem>
                     <dxl:ProjElem ColId="30" Alias="a">
                       <dxl:Ident ColId="30" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
@@ -654,9 +654,15 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+                  <dxl:JoinFilter>
+                    <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+                      <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:Comparison>
+                  </dxl:JoinFilter>
+                  <dxl:CTEConsumer CTEId="0" Columns="30,31">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1340.239349" Rows="333333.333333" Width="16"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.019280" Rows="1000.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="30" Alias="a">
@@ -665,6 +671,13 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                       <dxl:ProjElem ColId="31" Alias="b">
                         <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
+                    </dxl:ProjList>
+                  </dxl:CTEConsumer>
+                  <dxl:Materialize Eager="true">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="431.027280" Rows="1000.000000" Width="8"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
                       <dxl:ProjElem ColId="32" Alias="a">
                         <dxl:Ident ColId="32" ColName="a" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
@@ -673,28 +686,9 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:JoinFilter>
-                      <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-                        <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
-                        <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
-                      </dxl:Comparison>
-                    </dxl:JoinFilter>
-                    <dxl:CTEConsumer CTEId="0" Columns="30,31">
+                    <dxl:CTEConsumer CTEId="0" Columns="32,33">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.009640" Rows="1000.000000" Width="8"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="30" Alias="a">
-                          <dxl:Ident ColId="30" ColName="a" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="31" Alias="b">
-                          <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                    </dxl:CTEConsumer>
-                    <dxl:Materialize Eager="false">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.227040" Rows="2000.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.019280" Rows="1000.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="32" Alias="a">
@@ -704,191 +698,176 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                           <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.219040" Rows="2000.000000" Width="8"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="32" Alias="a">
-                            <dxl:Ident ColId="32" ColName="a" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="33" Alias="b">
-                            <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:CTEConsumer CTEId="0" Columns="32,33">
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.009640" Rows="1000.000000" Width="8"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="32" Alias="a">
-                              <dxl:Ident ColId="32" ColName="a" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="33" Alias="b">
-                              <dxl:Ident ColId="33" ColName="b" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                        </dxl:CTEConsumer>
-                      </dxl:BroadcastMotion>
-                    </dxl:Materialize>
-                  </dxl:NestedLoopJoin>
-                  <dxl:WindowKeyList>
-                    <dxl:WindowKey>
-                      <dxl:SortingColumnList/>
-                    </dxl:WindowKey>
-                  </dxl:WindowKeyList>
-                </dxl:Window>
+                    </dxl:CTEConsumer>
+                  </dxl:Materialize>
+                </dxl:NestedLoopJoin>
                 <dxl:WindowKeyList>
                   <dxl:WindowKey>
-                    <dxl:SortingColumnList>
-                      <dxl:SortingColumn ColId="31" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                    </dxl:SortingColumnList>
+                    <dxl:SortingColumnList/>
                   </dxl:WindowKey>
                 </dxl:WindowKeyList>
               </dxl:Window>
-            </dxl:CTEProducer>
-            <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+              <dxl:WindowKeyList>
+                <dxl:WindowKey>
+                  <dxl:SortingColumnList>
+                    <dxl:SortingColumn ColId="31" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  </dxl:SortingColumnList>
+                </dxl:WindowKey>
+              </dxl:WindowKeyList>
+            </dxl:Window>
+          </dxl:CTEProducer>
+          <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+            <dxl:Properties>
+              <dxl:Cost StartupCost="0" TotalCost="1371.516250" Rows="333333.333333" Width="24"/>
+            </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="27" Alias="row_number">
+                <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="28" Alias="rank">
+                <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="29" Alias="count">
+                <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:Filter/>
+            <dxl:JoinFilter>
+              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+            </dxl:JoinFilter>
+            <dxl:Window PartitionColumns="10">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1322.425797" Rows="333333.333333" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="444.640000" Rows="333333.333333" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
+                <dxl:ProjElem ColId="28" Alias="rank">
+                  <dxl:WindowFunc Mdid="0.7001.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="10" Alias="b">
+                  <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
                 <dxl:ProjElem ColId="27" Alias="row_number">
                   <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="28" Alias="rank">
-                  <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
-                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:CTEConsumer CTEId="1" Columns="9,10,18,19,27,28">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="440.640000" Rows="333333.333333" Width="12"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="9" Alias="a">
+                    <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="10" Alias="b">
+                    <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="18" Alias="a">
+                    <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="19" Alias="b">
+                    <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="27" Alias="row_number">
+                    <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="28" Alias="rank">
+                    <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+              </dxl:CTEConsumer>
+              <dxl:WindowKeyList>
+                <dxl:WindowKey>
+                  <dxl:SortingColumnList>
+                    <dxl:SortingColumn ColId="10" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  </dxl:SortingColumnList>
+                </dxl:WindowKey>
+              </dxl:WindowKeyList>
+            </dxl:Window>
+            <dxl:Materialize Eager="true">
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="458.201583" Rows="1.000000" Width="8"/>
+              </dxl:Properties>
+              <dxl:ProjList>
                 <dxl:ProjElem ColId="29" Alias="count">
                   <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:JoinFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:JoinFilter>
-              <dxl:Window PartitionColumns="10">
+              <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="437.820000" Rows="333333.333333" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="458.201575" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="28" Alias="rank">
-                    <dxl:WindowFunc Mdid="0.7001.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="10" Alias="b">
-                    <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="27" Alias="row_number">
-                    <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:CTEConsumer CTEId="1" Columns="9,10,18,19,27,28">
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="435.820000" Rows="333333.333333" Width="12"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="9" Alias="a">
-                      <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="10" Alias="b">
-                      <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="18" Alias="a">
-                      <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="19" Alias="b">
-                      <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="27" Alias="row_number">
-                      <dxl:Ident ColId="27" ColName="row_number" TypeMdid="0.20.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="28" Alias="rank">
-                      <dxl:Ident ColId="28" ColName="rank" TypeMdid="0.20.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                </dxl:CTEConsumer>
-                <dxl:WindowKeyList>
-                  <dxl:WindowKey>
-                    <dxl:SortingColumnList>
-                      <dxl:SortingColumn ColId="10" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                    </dxl:SortingColumnList>
-                  </dxl:WindowKey>
-                </dxl:WindowKeyList>
-              </dxl:Window>
-              <dxl:Materialize Eager="true">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="434.768464" Rows="2.000000" Width="8"/>
-                </dxl:Properties>
+                <dxl:GroupingColumns/>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="29" Alias="count">
-                    <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
+                    <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                      <dxl:ValuesList ParamType="aggargs">
+                        <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
+                      </dxl:ValuesList>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
+                    </dxl:AggFunc>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
+                <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="434.768456" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="458.201127" Rows="1000.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="29" Alias="count">
-                      <dxl:Ident ColId="29" ColName="count" TypeMdid="0.20.1.0"/>
+                    <dxl:ProjElem ColId="52" Alias="a">
+                      <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
-                  <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                  <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="434.768037" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="458.183167" Rows="1000.000000" Width="4"/>
                     </dxl:Properties>
-                    <dxl:GroupingColumns/>
+                    <dxl:GroupingColumns>
+                      <dxl:GroupingColumn ColId="52"/>
+                    </dxl:GroupingColumns>
                     <dxl:ProjList>
-                      <dxl:ProjElem ColId="29" Alias="count">
-                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
-                          <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="98" ColName="ColRef_0098" TypeMdid="0.20.1.0"/>
-                          </dxl:ValuesList>
-                          <dxl:ValuesList ParamType="aggdirectargs"/>
-                          <dxl:ValuesList ParamType="aggorder"/>
-                          <dxl:ValuesList ParamType="aggdistinct"/>
-                        </dxl:AggFunc>
+                      <dxl:ProjElem ColId="52" Alias="a">
+                        <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+                    <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="434.768036" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="458.121821" Rows="1000.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
-                        <dxl:ProjElem ColId="98" Alias="ColRef_0098">
-                          <dxl:Ident ColId="98" ColName="ColRef_0098" TypeMdid="0.20.1.0"/>
+                        <dxl:ProjElem ColId="52" Alias="a">
+                          <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
                       <dxl:SortingColumnList/>
-                      <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                      <dxl:HashExprList>
+                        <dxl:HashExpr>
+                          <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
+                        </dxl:HashExpr>
+                      </dxl:HashExprList>
+                      <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="434.768000" Rows="1.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="458.115561" Rows="1000.000000" Width="4"/>
                         </dxl:Properties>
-                        <dxl:GroupingColumns/>
+                        <dxl:GroupingColumns>
+                          <dxl:GroupingColumn ColId="52"/>
+                        </dxl:GroupingColumns>
                         <dxl:ProjList>
-                          <dxl:ProjElem ColId="98" Alias="ColRef_0098">
-                            <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Partial" AggKind="n" AggArgTypes="">
-                              <dxl:ValuesList ParamType="aggargs">
-                              <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
-                              </dxl:ValuesList>
-                              <dxl:ValuesList ParamType="aggdirectargs"/>
-                              <dxl:ValuesList ParamType="aggorder"/>
-                              <dxl:ValuesList ParamType="aggdistinct"/>
-                            </dxl:AggFunc>
+                          <dxl:ProjElem ColId="52" Alias="a">
+                            <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
+                        <dxl:RandomMotion InputSegments="-1" OutputSegments="0,1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="434.693333" Rows="333333.333333" Width="4"/>
+                            <dxl:Cost StartupCost="0" TotalCost="437.853333" Rows="333333.333333" Width="4"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="52" Alias="a">
@@ -897,14 +876,9 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                           </dxl:ProjList>
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
-                          <dxl:HashExprList>
-                            <dxl:HashExpr>
-                              <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
-                            </dxl:HashExpr>
-                          </dxl:HashExprList>
                           <dxl:Result>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="432.606667" Rows="333333.333333" Width="4"/>
+                              <dxl:Cost StartupCost="0" TotalCost="434.213333" Rows="333333.333333" Width="4"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="52" Alias="a">
@@ -915,7 +889,7 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                             <dxl:OneTimeFilter/>
                             <dxl:CTEConsumer CTEId="1" Columns="50,51,52,53,54,55">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="432.606667" Rows="333333.333333" Width="4"/>
+                                <dxl:Cost StartupCost="0" TotalCost="434.213333" Rows="333333.333333" Width="4"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="50" Alias="a">
@@ -939,16 +913,16 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                               </dxl:ProjList>
                             </dxl:CTEConsumer>
                           </dxl:Result>
-                        </dxl:RedistributeMotion>
+                        </dxl:RandomMotion>
                       </dxl:Aggregate>
-                    </dxl:GatherMotion>
+                    </dxl:RedistributeMotion>
                   </dxl:Aggregate>
-                </dxl:BroadcastMotion>
-              </dxl:Materialize>
-            </dxl:NestedLoopJoin>
-          </dxl:Sequence>
+                </dxl:GatherMotion>
+              </dxl:Aggregate>
+            </dxl:Materialize>
+          </dxl:NestedLoopJoin>
         </dxl:Sequence>
-      </dxl:GatherMotion>
+      </dxl:Sequence>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

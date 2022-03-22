@@ -16,9 +16,14 @@
 #include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalCTEConsumer.h"
+#include "gpopt/operators/CPhysicalMotionBroadcast.h"
+#include "gpopt/operators/CPhysicalMotionGather.h"
+#include "gpopt/operators/CPhysicalMotionRandom.h"
 
 using namespace gpopt;
 
@@ -165,6 +170,91 @@ CPhysicalSequence::FProvidesReqdCols(CExpressionHandle &exprhdl,
 	return pcrsChild->ContainsAll(pcrsRequired);
 }
 
+// We try and find whether any parent of the CTE consumer (and child of ours)
+// derives a distribution spec. The CTE producer is a direct child
+// so whatever distribution we derive here will be its distribution.
+// We only need to match the distribution of the consumer with the distribution
+// of the producer in the number of segments (so there is no distinction between
+// singleton segment and singleton master, for example)
+
+static BOOL
+FSearchOperationLocality(CMemoryPool *mp, CGroupExpression *pgexpr,
+						 COperator::EOperatorId eopid,
+						 CUtils::EExecLocalityType *eelt, ULONG visitBit)
+{
+	GPOS_CHECK_STACK_SIZE;
+
+	if (pgexpr == NULL)
+	{
+		return false;
+	}
+
+	GPOS_ASSERT(pgexpr->Id() < sizeof(ULONG) * 8);
+
+	const ulong visitMask = 1 << pgexpr->Id();
+	if (visitBit & visitMask)
+	{
+		return false;
+	}
+
+	CDistributionSpec *pds = nullptr;
+	switch (pgexpr->Pop()->Eopid())
+	{
+		case COperator::EopPhysicalMotionBroadcast:
+		{
+			CPhysicalMotionBroadcast *motion =
+				CPhysicalMotionBroadcast::PopConvert(pgexpr->Pop());
+			GPOS_ASSERT(motion != nullptr);
+			pds = motion->Pds();
+		}
+		break;
+		case COperator::EopPhysicalMotionGather:
+		{
+			CPhysicalMotionGather *motion =
+				CPhysicalMotionGather::PopConvert(pgexpr->Pop());
+			GPOS_ASSERT(motion != nullptr);
+			pds = motion->Pds();
+		}
+		break;
+		case COperator::EopPhysicalMotionRandom:
+		{
+			CPhysicalMotionRandom *motion =
+				CPhysicalMotionRandom::PopConvert(pgexpr->Pop());
+			GPOS_ASSERT(motion != nullptr);
+			pds = motion->Pds();
+		}
+		break;
+		case COperator::EopPhysicalCTEConsumer:
+			// NOTE: Presumably the default state is matching the CTE Producer, which
+			// we have to give it as a relational child. This is the default
+			// value for eelt, so we return true without writing to it
+			return true;
+			break;
+		default:
+			break;
+	}
+
+	if (pds)
+	{
+		*eelt = CUtils::ExecLocalityType(pds);
+	}
+
+	for (ULONG i = 0; i < pgexpr->Arity(); i++)
+	{
+		CGroupExpression *cur = (*pgexpr)[i]->PgexprFirst();
+		do
+		{
+			if (FSearchOperationLocality(mp, cur, eopid, eelt,
+										 visitBit | visitMask))
+			{
+				return true;
+			}
+		} while ((cur = (*pgexpr)[i]->PgexprNext(cur)) != nullptr);
+	}
+
+	return false;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalSequence::PdsRequired
@@ -174,12 +264,7 @@ CPhysicalSequence::FProvidesReqdCols(CExpressionHandle &exprhdl,
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalSequence::PdsRequired(CMemoryPool *mp,
-							   CExpressionHandle &
-#ifdef GPOS_DEBUG
-								   exprhdl
-#endif	// GPOS_DEBUG
-							   ,
+CPhysicalSequence::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							   CDistributionSpec *pdsRequired,
 							   ULONG child_index, CDrvdPropArray *pdrgpdpCtxt,
 							   ULONG ulOptReq) const
@@ -206,8 +291,38 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 
 	if (0 == child_index)
 	{
-		// no distribution requirement on first child
-		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+		// CTE Producer distribution must match the CTE consumer distribution,
+		// so we traverse the tree, track the distribution nodes, and enforce
+		// the distribution which satisfies the locality. pdsRequired is the
+		// default derived distribution for CTE Producer, so unless there are
+		// motions that cause a cardinality mis-match, we can use that.
+		CUtils::EExecLocalityType eelt = CUtils::ExecLocalityType(pdsRequired);
+
+		if (FSearchOperationLocality(
+				m_mp, exprhdl.Pgexpr(),
+				COperator::EOperatorId::EopPhysicalCTEProducer, &eelt, 0))
+		{
+			// CTE Consumer exists as a child and eelt is populated with the
+			// locality. We force the CTE Producer child to have the same
+			// number of nodes (the physical location does not matter)
+
+			switch (eelt)
+			{
+				case CUtils::EeltMaster:
+				case CUtils::EeltSingleton:
+					return GPOS_NEW(mp) CDistributionSpecSingleton();
+				case CUtils::EeltSegments:
+					return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+				default:
+					// no motion has been introduced for the CTE Consumer
+					return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+					break;
+			}
+		}
+		else
+		{
+			return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+		}
 	}
 
 	// get derived plan properties of first child
