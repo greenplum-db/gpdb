@@ -800,6 +800,46 @@ SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
  update_gp_rangep_10_to_20 | 11 | 1 |      4
 (3 rows)
 
+-- Test for update with LASJ_NOTIN
+-- See Issue: https://github.com/greenplum-db/gpdb/issues/13265
+-- Actually master branch does not have the above issue even master
+-- does have the same problematic code (other parts of code are
+-- refactored). Also cherry-pick the case to master and keep it
+-- since more test cases do no harm.
+create table t1_13265(a int, b int, c int, d int) distributed by (a);
+create table t2_13265(a int, b int, c int, d int) distributed by (a);
+insert into t1_13265 values (1, null, 1, 1);
+insert into t2_13265 values (2, null, 2, 2);
+explain (verbose, costs off)
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Update on public.t1_13265
+   ->  Nested Loop Left Anti Semi (Not-In) Join
+         Output: t1_13265.a, 2, t1_13265.c, t1_13265.d, t1_13265.ctid, t1_13265.gp_segment_id, t2_13265.ctid
+         Join Filter: ((t1_13265.c = t2_13265.c) AND (t1_13265.d = t2_13265.d))
+         ->  Seq Scan on public.t1_13265
+               Output: t1_13265.a, t1_13265.c, t1_13265.d, t1_13265.ctid, t1_13265.gp_segment_id
+         ->  Materialize
+               Output: t2_13265.ctid, t2_13265.c, t2_13265.d
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     Output: t2_13265.ctid, t2_13265.c, t2_13265.d
+                     ->  Seq Scan on public.t2_13265
+                           Output: t2_13265.ctid, t2_13265.c, t2_13265.d
+                           Filter: (t2_13265.a = 2)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=on
+(15 rows)
+
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+select * from t1_13265;
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 1 | 1
+(1 row)
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -808,4 +848,6 @@ drop table update_ao_table;
 drop table update_aoco_table;
 drop table nosplitupdate;
 drop table tsplit_entry;
+drop table t1_13265;
+drop table t2_13265;
 -- end_ignore
