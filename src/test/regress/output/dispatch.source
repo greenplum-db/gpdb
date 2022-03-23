@@ -348,7 +348,7 @@ select cleanupAllGangs();
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
-DETAIL:  Segments are in recovery mode.
+DETAIL:  Segments are in reset/recovery mode.
 set gp_gang_creation_retry_count to 10;
 -- should success and process_startup_packet will be invalid after this query
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3

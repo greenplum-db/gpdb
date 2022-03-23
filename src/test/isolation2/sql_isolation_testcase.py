@@ -422,6 +422,7 @@ class SQLIsolationExecutor(object):
                         self.create_exception = e
                         break
                     elif (("the database system is starting up" in str(e) or
+                         "the database system is resetting" in str(e) or
                          "the database system is in recovery mode" in str(e)) and
                         retry > 1):
                         retry -= 1

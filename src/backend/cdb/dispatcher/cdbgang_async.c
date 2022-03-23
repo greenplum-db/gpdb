@@ -233,7 +233,7 @@ create_gang_retry:
 						{
 							in_recovery_mode_count++;
 							connStatusDone[i] = true;
-							elog(LOG, "segment is in recovery mode (%s)", segdbDesc->whoami);
+							elog(LOG, "segment is in reset/recovery mode (%s)", segdbDesc->whoami);
 						}
 						else
 						{
@@ -305,7 +305,7 @@ create_gang_retry:
 		ELOG_DISPATCHER_DEBUG("createGang: %d processes requested; %d successful connections %d in recovery",
 							  size, successful_connections, in_recovery_mode_count);
 
-		/* some segments are in recovery mode */
+		/* some segments are in reset/recovery mode */
 		if (successful_connections != size)
 		{
 			Assert(successful_connections + in_recovery_mode_count == size);
@@ -314,7 +314,7 @@ create_gang_retry:
 				create_gang_retry_counter++ >= gp_gang_creation_retry_count)
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("failed to acquire resources on one or more segments"),
-								errdetail("Segments are in recovery mode.")));
+								errdetail("Segments are in reset/recovery mode.")));
 
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 

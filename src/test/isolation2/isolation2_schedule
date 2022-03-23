@@ -239,6 +239,7 @@ test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: fts_manual_probe
 test: fts_session_reset
+test: fts_segment_reset
 
 # Reindex tests
 test: reindex/abort_reindex
