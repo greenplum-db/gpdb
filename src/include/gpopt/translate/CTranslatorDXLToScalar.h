@@ -182,6 +182,12 @@ private:
 								const CDXLColRefArray *outer_refs,
 								CMappingColIdVar *colid_var);
 
+	// translate subplan test expression parameters
+	void TranslateDXLTestExprScalarIdentToExpr(CDXLNode *child_node,
+											   Param *param,
+											   CDXLScalarIdent **ident,
+											   Expr **expr);
+
 	CHAR *GetSubplanAlias(ULONG plan_id);
 
 	Param *TranslateParamFromMapping(
