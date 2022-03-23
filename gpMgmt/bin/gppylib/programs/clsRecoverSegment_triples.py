@@ -321,7 +321,7 @@ class RecoveryTripletsUserConfigFile(RecoveryTriplets):
             req = RecoveryTripletRequest(_find_failed_from_row(), row.get('newAddress'), row.get('newPort'), row.get('newDataDirectory'))
             requests.append(req)
 
-        return self._convert_requests_to_triplets(requests)
+        return self._convert_requests_to_triplets(requests, self.paralleldegree)
 
 
     @staticmethod
