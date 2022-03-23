@@ -317,16 +317,9 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	 * parameters have no effect on non-SSL connections, so there is no reason
 	 * to exclude them since none of them are mandatory.
 	 */
-#ifndef FRONTEND
-	/* Internal QD to QE communications don't use SSL */
-	{"sslmode", "PGSSLMODE", "disable", NULL,
-		"SSL-Mode", "", 8,		/* sizeof("disable") == 8 */
-	offsetof(struct pg_conn, sslmode)},
-#else
 	{"sslmode", "PGSSLMODE", DefaultSSLMode, NULL,
 		"SSL-Mode", "", 12,		/* sizeof("verify-full") == 12 */
 	offsetof(struct pg_conn, sslmode)},
-#endif
 
 	{"sslcompression", "PGSSLCOMPRESSION", "0", NULL,
 		"SSL-Compression", "", 1,
