@@ -109,6 +109,7 @@ CMappingColIdVarPlStmt::ParamFromDXLNodeScId(const CDXLScalarIdent *dxlop)
 		param->paramid = elem->ParamId();
 		param->paramtype = CMDIdGPDB::CastMdid(elem->MdidType())->Oid();
 		param->paramtypmod = elem->TypeModifier();
+		param->paramcollid = gpdb::TypeCollation(param->paramtype);
 	}
 
 	return param;
