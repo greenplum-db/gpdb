@@ -3943,6 +3943,7 @@ ResetTempNamespace(void)
 	cancel_before_shmem_exit(RemoveTempRelationsCallback, 0);
 
 	myTempNamespace = InvalidOid;
+	myTempToastNamespace = InvalidOid;
 	myTempNamespaceSubID = InvalidSubTransactionId;
 	baseSearchPathValid = false;	/* need to rebuild list */
 
@@ -4303,6 +4304,45 @@ bool
 TempNamespaceOidIsValid(void)
 {
 	return OidIsValid(myTempNamespace);
+}
+
+
+/*
+ * GetTempNamespaceState - fetch status of session's temporary namespace
+ *
+ * This is used for conveying state to a parallel worker, and is not meant
+ * for general-purpose access.
+ *
+ * GPDB: also used when dispatch MPP query
+ */
+void
+GetTempNamespaceState(Oid *tempNamespaceId, Oid *tempToastNamespaceId)
+{
+	/* Return namespace OIDs, or 0 if session has not created temp namespace */
+	*tempNamespaceId = myTempNamespace;
+	*tempToastNamespaceId = myTempToastNamespace;
+}
+
+/*
+ * GPDB: used to set session level temporary namespace after reader gang launched.
+ */
+void
+SetTempNamespaceStateAfterBoot(Oid tempNamespaceId, Oid tempToastNamespaceId)
+{
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
+	/* writer gang will do InitTempTableNamespace(), ignore the dispatch on writer gang */
+	if (Gp_is_writer)
+		return;
+
+	/* skip rebuild search path if search path is correct and valid */
+	if (tempNamespaceId == myTempNamespace && myTempToastNamespace == tempToastNamespaceId)
+		return;
+
+	myTempNamespace = tempNamespaceId;
+	myTempToastNamespace = tempToastNamespaceId;
+
+	baseSearchPathValid = false;	/* need to rebuild list */
 }
 
 /*
