@@ -179,6 +179,10 @@ segment_failure_due_to_recovery(const char *error_message)
 	ptr = strstr(error_message, fatal);
 	if ((ptr != NULL) && ptr[fatal_len] == ':')
 	{
+		if (strstr(error_message, _(POSTMASTER_IN_RESET_MSG)))
+		{
+			return true;
+		}
 		if (strstr(error_message, _(POSTMASTER_IN_STARTUP_MSG)))
 		{
 			return true;

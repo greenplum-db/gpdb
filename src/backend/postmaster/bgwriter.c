@@ -391,6 +391,8 @@ BackgroundWriterMain(void)
 static void
 bg_quickdie(SIGNAL_ARGS)
 {
+	SIMPLE_FAULT_INJECTOR("fault_in_background_writer_quickdie");
+
 	/*
 	 * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
 	 * because shared memory may be corrupted, so we don't want to try to
