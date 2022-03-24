@@ -7,3 +7,4 @@ CREATE WRITABLE EXTERNAL TABLE s3regress_create_wet_on_master (date text) LOCATI
 EXPLAIN (verbose, costs off) INSERT INTO s3regress_create_wet_on_master VALUES ('aaa');
 
 DROP EXTERNAL TABLE s3regress_create_wet;
+DROP EXTERNAL TABLE s3regress_create_wet_on_master;
