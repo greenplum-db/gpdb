@@ -12,3 +12,4 @@ EXPLAIN (verbose, costs off) INSERT INTO s3regress_create_wet_on_master VALUES (
 (4 rows)
 
 DROP EXTERNAL TABLE s3regress_create_wet;
+DROP EXTERNAL TABLE s3regress_create_wet_on_master;
