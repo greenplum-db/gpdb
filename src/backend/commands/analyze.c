@@ -2712,8 +2712,7 @@ std_typanalyze(VacAttrStats *stats)
 	if (get_rel_relkind(attr->attrelid) == RELKIND_PARTITIONED_TABLE &&
 		!get_rel_relispartition(attr->attrelid) &&
 		leaf_parts_analyzed(stats->attr->attrelid, InvalidOid, va_cols, stats->elevel) &&
-		(op_hashjoinable(eqopr, stats->attrtypid)
-		 || (!OidIsValid(eqopr) && optimizer_analyze_merge_minimal_leaf_stats)))
+		((!OidIsValid(eqopr)) || op_hashjoinable(eqopr, stats->attrtypid)))
 	{
 		stats->merge_stats = true;
 		stats->compute_stats = merge_leaf_stats;
