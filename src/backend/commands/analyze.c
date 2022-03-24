@@ -2712,7 +2712,8 @@ std_typanalyze(VacAttrStats *stats)
 	if (get_rel_relkind(attr->attrelid) == RELKIND_PARTITIONED_TABLE &&
 		!get_rel_relispartition(attr->attrelid) &&
 		leaf_parts_analyzed(stats->attr->attrelid, InvalidOid, va_cols, stats->elevel) &&
-		op_hashjoinable(eqopr, stats->attrtypid))
+		(op_hashjoinable(eqopr, stats->attrtypid)
+		 || (!OidIsValid(eqopr) && optimizer_analyze_merge_minimal_leaf_stats)))
 	{
 		stats->merge_stats = true;
 		stats->compute_stats = merge_leaf_stats;
@@ -4162,10 +4163,15 @@ merge_leaf_stats(VacAttrStatsP stats,
 	pfree(nDistincts);
 	pfree(nMultiples);
 
-	if (allDistinct || (!OidIsValid(eqopr) && !OidIsValid(ltopr)))
+	if (allDistinct)
 	{
 		/* If we found no repeated values, assume it's a unique column */
 		ndistinct = -1.0;
+	}
+	else if (!OidIsValid(eqopr) && !OidIsValid(ltopr))
+	{
+		/* If operators are not available, NDV is unknown. */
+		ndistinct = 0;
 	}
 	else if ((int) nmultiple >= (int) ndistinct)
 	{
