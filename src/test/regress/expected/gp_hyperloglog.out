@@ -1,0 +1,99 @@
+-- This file contains test cases from gp_hyperloglog.
+-- 1. Test estimating the cardinality of an given stream.
+SELECT gp_hyperloglog_get_estimate(gp_hyperloglog_accum(i))
+  FROM generate_series(1, 10000)i;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+           9998.401034851891
+(1 row)
+
+-- 2. Test merging two hloglog counter.
+-- a) A ∩ B = {}, A ∪ B = {1, 2, ..., 20}
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_merge(gp_hyperloglog_accum(x), gp_hyperloglog_accum(y)))
+  FROM generate_series(1, 10)x, generate_series(11, 20)y;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+           20.01316254251873
+(1 row)
+
+-- b) A ∩ B = {5, 6, 7, 8, 9, 10}, A ∪ B = {1, 2, ..., 20}
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_merge(gp_hyperloglog_accum(x), gp_hyperloglog_accum(y)))
+  FROM generate_series(1, 10)x, generate_series(5, 20)y;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+           20.01316254251873
+(1 row)
+
+-- c) A ∩ B = A, A ∪ B = {1, 2, ..., 20}
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_merge(gp_hyperloglog_accum(x), gp_hyperloglog_accum(y)))
+  FROM generate_series(1, 10)x, generate_series(1, 20)y;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+           20.01316254251873
+(1 row)
+
+-- 3. Test the gp_hyperloglog_add_item_agg_default() UDF.
+-- a) The newly added item is out of the range of the original set.
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_add_item_agg_default(gp_hyperloglog_accum(i), 101))
+  FROM generate_series(1, 100)i;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+          101.31306376074124
+(1 row)
+
+-- b) The newly added item is within the range of the original set.
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_add_item_agg_default(gp_hyperloglog_accum(i), 50))
+  FROM generate_series(1, 100)i;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+          100.30560977271011
+(1 row)
+
+-- c) When the first argument of gp_hyperloglog_add_item_agg_default() is null,
+-- it will create a new hloglog counter for us. The following test will create
+-- 5 hloglog counters.
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_add_item_agg_default(null, 50))
+  FROM generate_series(1, 5)i;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+          0.9999694836635816
+          0.9999694836635816
+          0.9999694836635816
+          0.9999694836635816
+          0.9999694836635816
+(5 rows)
+
+-- d) When the second argument of gp_hyperloglog_add_item_agg_default() is null,
+-- hloglog counter will skip that value.
+SELECT gp_hyperloglog_get_estimate(
+    gp_hyperloglog_add_item_agg_default(gp_hyperloglog_accum(i), null::int))
+  FROM generate_series(1, 100)i;
+ gp_hyperloglog_get_estimate 
+-----------------------------
+          100.30560977271011
+(1 row)
+
+-- 3. Test printing out hloglog counter in base64.
+SELECT gp_hyperloglog_accum(i) FROM generate_series(1, 100)i;
+                                                                                                                                                                                                                                                                                                                                                             gp_hyperloglog_accum                                                                                                                                                                                                                                                                                                                                                             
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 8gYCAP////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAegAPAWQGDyANDwH/DwH/DwECAdsPIA0PAQgDDyANDwEUAg8gDQ8BNe8P5ygPAXofLVUPARgEDyANDwH4H7t/9w8BFhjjBcQFDy4IDwH/DwEET48F/0+mWQ9rNG8ENA8Bxh/PWQ8BDx+qRQ/jev8PARpvuf8PAVUvMBJ/K3wv4mEfATNfm3T3H8xGLyRmD3hlBw/xZw8B/w8BLk9QKf8/03QPAUFfZGEGAc/NEw+hFj+mYR88H/+P+8g6IC9Uag8BEQ+fjQ8BFg/HtQ8B/98PAVJvz8cPAT0/ZH8fuYgHDyANDwH//yliL2g0L65/DwEdD8BSrydDH3mbD62b/w8Bas+fAR88Rx+VyA/ayA8B/w8B/w8Bif+vSTp/VEMPAf8fc0vPWIh/kg0PARltin8P9JQPATx/jicfLeIPASeP9P8PAR0E/w8gDQ8BQx+1/w8Bti9OHS8IHi84/w8BzP8f74MPlYMPAXFvSSCP6NbftPE/Nf8PAaX/P7N/L1lCL61gD3IFAhcPjjsP22BcBr9vJgAvU38PAf8PAbcv/gc/FxIDf8gA/z9OaQ8BsR8+FB9kdq/fIA8B/w8BB2MDHx/qHC8Ydg8BVUJ8fytbAAAAAA==
+(1 row)
+
+-- 4. Test convert a base64 string to hloglog counter.
+-- a) Test convert a valid hloglog counter.
+SELECT gp_hyperloglog_get_estimate('8gYCAP////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAegAPAWQGDyANDwH/DwH/DwECAdsPIA0PAQgDDyANDwEUAg8gDQ8BNe8P5ygPAXofLVUPARgEDyANDwH4H7t/9w8BFhjjBcQFDy4IDwH/DwEET48F/0+mWQ9rNG8ENA8Bxh/PWQ8BDx+qRQ/jev8PARpvuf8PAVUvMBJ/K3wv4mEfATNfm3T3H8xGLyRmD3hlBw/xZw8B/w8BLk9QKf8/03QPAUFfZGEGAc/NEw+hFj+mYR88H/+P+8g6IC9Uag8BEQ+fjQ8BFg/HtQ8B/98PAVJvz8cPAT0/ZH8fuYgHDyANDwH//yliL2g0L65/DwEdD8BSrydDH3mbD62b/w8Bas+fAR88Rx+VyA/ayA8B/w8B/w8Bif+vSTp/VEMPAf8fc0vPWIh/kg0PARltin8P9JQPATx/jicfLeIPASeP9P8PAR0E/w8gDQ8BQx+1/w8Bti9OHS8IHi84/w8BzP8f74MPlYMPAXFvSSCP6NbftPE/Nf8PAaX/P7N/L1lCL61gD3IFAhcPjjsP22BcBr9vJgAvU38PAf8PAbcv/gc/FxIDf8gA/z9OaQ8BsR8+FB9kdq/fIA8B/w8BB2MDHx/qHC8Ydg8BVUJ8fytbAAAAAA==');
+ gp_hyperloglog_get_estimate 
+-----------------------------
+          100.30560977271011
+(1 row)
+
+-- b) Test convert an invalid hloglog counter.
+SELECT gp_hyperloglog_get_estimate('blah');
+ERROR:  ERROR: The stored counter is version 161 while the library is version 2. Please change library version or use upgrade function to upgrade the counter (gp_hyperloglog.c:970)

@@ -407,14 +407,6 @@ static const double PE[NUM_OF_PRECOMPUTED_EXPONENTS] = { 1.,
 
 #define POW2(a) (1 << (a))
 
-/* Provides encoding and decoding to convert the estimator bytes into a human
- * readable form. Currently only base 64 encoding is provided. */
-
-int gp_hll_b64_encode(const char *src, unsigned len, char *dst);
-int gp_hll_b64_decode(const char *src, unsigned len, char *dst);
-int gp_b64_enc_len(const char *src, unsigned srclen);
-int gp_b64_dec_len(const char *src, unsigned srclen);
-
 uint64_t GpMurmurHash64A (const void * key, int len, unsigned int seed);
 
 #endif // #ifndef _GP_HYPERLOGLOG_H_
