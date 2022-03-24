@@ -13,8 +13,6 @@ use warnings;
 use PostgreSQL::Test::Cluster;
 use PostgreSQL::Test::Utils;
 use Test::More;
-use Config;
-use Time::HiRes qw(usleep);
 
 # To avoid hanging while expecting some specific input from a psql
 # instance being driven by us, add a timeout high enough that it

@@ -3,7 +3,6 @@
 #
 use strict;
 use warnings;
-use Config;
 use IPC::Run 'run';
 use PostgreSQL::Test::Cluster;
 use Test::More;

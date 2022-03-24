@@ -1,7 +1,5 @@
 use strict;
 use warnings;
-use Cwd;
-use Config;
 use File::Basename qw(basename dirname);
 use File::Compare;
 use File::Path qw(rmtree);
