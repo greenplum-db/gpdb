@@ -3788,14 +3788,19 @@ compute_scalar_stats(VacAttrStatsP stats,
 /*
  *	merge_leaf_stats() -- merge leaf stats for the root
  *
- *	We use this when we can find "=" and "<" operators for the datatype.
- *
  *	This is only used when the relation is the root partition and merges
  *	the statistics available in pg_statistic for the leaf partitions.
  *
- *	We determine the fraction of non-null rows, the average width, the
- *	most common values, the (estimated) number of distinct values, the
- *	distribution histogram.
+ *  We use this for two scenarios:
+ *
+ *	1. When we can find "=" and "<" operators for the datatype, and the
+ *	"=" operator is hashjoinable. In this case, we determine the fraction
+ *	of non-null rows, the average width, the most common values, the
+ *	(estimated) number of distinct values, the distribution histogram.
+ *
+ *	2. When we can find neither "=" nor "<" operator for the data type. In
+ *	this case, we only dertermin the fraction of non-nul rows and the
+ *	average width.
  */
 static void
 merge_leaf_stats(VacAttrStatsP stats,
