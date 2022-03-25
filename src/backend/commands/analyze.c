@@ -3799,7 +3799,7 @@ compute_scalar_stats(VacAttrStatsP stats,
  *	(estimated) number of distinct values, the distribution histogram.
  *
  *	2. When we can find neither "=" nor "<" operator for the data type. In
- *	this case, we only dertermin the fraction of non-nul rows and the
+ *	this case, we only determine the fraction of non-null rows and the
  *	average width.
  */
 static void
