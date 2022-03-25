@@ -238,11 +238,10 @@ extendBufFile(BufFile *file)
 	 * Register the file as a "work file", so that the Greenplum workfile
 	 * limits apply to it.
 	 *
-	 * GPDB_12_MERGE_FIXME: In previous Greenplum versions, we had disabled
-	 * the Postgres 1 GB segmentation of BufFiles. It was resurrected with
-	 * The v12 merge. Now each 1 GB segment file counts as one work file.
-	 * That makes the limit on the number of work files work differently.
-	 * Is that OK? Documentation changes needed, at least.
+	 * Note: The GUC gp_workfile_limit_files_per_query is used to control the
+	 * maximum number of spill files for a given query, to prevent runaway
+	 * queries from destroying the entire system. Counting each segment file is
+	 * reasonable for this scenario.
 	 */
 	FileSetIsWorkfile(pfile);
 	RegisterFileWithSet(pfile, file->work_set);
