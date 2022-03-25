@@ -140,6 +140,8 @@ sub new
 	my $self = {
 		_port    => $pgport,
 		_host    => $pghost,
+		# GPDB needs dbid for a node for certain operations
+		_dbid    => int(rand(10)),
 		_basedir => TestLib::tempdir("data_" . $name),
 		_name    => $name,
 		_logfile_generation => 0,
@@ -184,6 +186,20 @@ sub host
 {
 	my ($self) = @_;
 	return $self->{_host};
+}
+
+=pod
+
+=item $node->dbid()
+
+Return the dbid for this instance.
+
+=cut
+
+sub dbid
+{
+	my ($self) = @_;
+	return $self->{_dbid};
 }
 
 =pod
@@ -388,6 +404,7 @@ sub init
 	my $port   = $self->port;
 	my $pgdata = $self->data_dir;
 	my $host   = $self->host;
+	my $dbid   = $self->dbid;
 
 	$params{allows_streaming} = 0 unless defined $params{allows_streaming};
 	$params{has_archiving}    = 0 unless defined $params{has_archiving};
@@ -416,7 +433,7 @@ sub init
 		print $conf "shared_buffers = 1MB\n";
 		print $conf "wal_log_hints = on\n";
 		print $conf "hot_standby = on\n";
-		print $conf "max_connections = 10\n";
+		print $conf "max_connections = 20\n";
 	}
 
 	if ($use_tcp)
@@ -433,6 +450,14 @@ sub init
 
 	$self->set_replication_conf if $params{allows_streaming};
 	$self->enable_archiving     if $params{has_archiving};
+
+	# We have to specify the master's dbid explicitly because initdb
+	# only creates an empty file. gpconfigurenewseg is tasked with
+	# populating the master's dbid.
+	open $conf, '>>', "$pgdata/internal.auto.conf";
+	print $conf "\n# Added by PostgresNode.pm\n";
+	print $conf "gp_dbid=$dbid\n";
+	close $conf;
 }
 
 =pod
@@ -673,7 +698,7 @@ sub start
 	BAIL_OUT("node \"$name\" is already running") if defined $self->{_pid};
 	print("### Starting node \"$name\"\n");
 	my $ret = TestLib::system_log('pg_ctl', '-w', '-D', $self->data_dir, '-l',
-		$self->logfile, '-o', "-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1 --logging-collector=off",
+		$self->logfile, '-o', "-c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0 --logging-collector=on",
 		'start');
 
 	if ($ret != 0)
