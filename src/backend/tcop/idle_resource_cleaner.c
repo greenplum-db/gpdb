@@ -49,6 +49,15 @@ void
 CancelIdleResourceCleanupTimers()
 {
 	disable_timeout(GANG_TIMEOUT, false);
+
+	/*
+	 * If backend received SIGALRM between DisableClientWaitTimeoutInterrupt()
+	 * and CancelIdleResourceCleanupTimers(), idle_gang_timeout_occurred will
+	 * be set to 1 by IdleGangTimeoutHandler(). Then it will affect next round
+	 * of idle gang timeout process. So reset idle_gang_timeout_occurred to
+	 * zero after disable GANG_TIMEOUT.
+	 */
+	idle_gang_timeout_occurred = 0;
 }
 
 void
