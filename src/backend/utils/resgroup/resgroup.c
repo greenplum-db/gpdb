@@ -587,8 +587,14 @@ InitResGroups(void)
 	/* These initialization must be done before createGroup() */
 	decideTotalChunks(&pResGroupControl->totalChunks, &pResGroupControl->chunkSizeInBits);
 	pg_atomic_write_u32(&pResGroupControl->freeChunks, pResGroupControl->totalChunks);
-	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold100,
+
+	/* Runaway detector is not enbled */
+	if (runaway_detector_activation_percent == 0)
+		pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold100, 0);
+	else
+		pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold100,
 						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent));
+
 	if (pResGroupControl->totalChunks == 0)
 		ereport(PANIC,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
@@ -2029,8 +2035,11 @@ mempoolReserve(Oid groupId, int32 chunks)
 			break;
 	}
 
-	/* also update the safeChunksThreshold which is used in runaway detector */
-	if (reserved != 0)
+	/*
+	 * If runaway detector is enabled, update the safeChunksThreshold which is
+	 * used in it.
+	 */
+	if (reserved != 0 && runaway_detector_activation_percent != 0)
 	{
 		uint32	safeChunksThreshold100;
 		int		safeChunksDelta100;
@@ -2066,8 +2075,12 @@ mempoolRelease(Oid groupId, int32 chunks)
 	newFreeChunks = pg_atomic_add_fetch_u32(&pResGroupControl->freeChunks,
 											chunks);
 
-	/* also update the safeChunksThreshold which is used in runaway detector */
-	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold100,
+	/*
+	 * If runaway detector is enabled, update the safeChunksThreshold which is
+	 * used in it.
+	 */
+	if (runaway_detector_activation_percent != 0)
+		pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold100,
 							chunks * (100 - runaway_detector_activation_percent));
 
 	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
@@ -4498,18 +4511,25 @@ EnsureCpusetIsAvailable(int elevel)
 bool
 IsGroupInRedZone(void)
 {
-	uint32				remainGlobalSharedMem;
+	int64				remainGlobalSharedMem;
 	uint32				safeChunksThreshold100;
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
+
+	if (runaway_detector_activation_percent == 0)
+		return false;
 
 	/*
 	 * IsGroupInRedZone is called frequently, we should put the
 	 * condition which returns with higher probability in front.
 	 * 
 	 * safe: global shared memory is not in redzone
+	 *
+	 * pResGroupControl->freeChunks may overlow (be negative),
+	 * we should use a signed integer to read value from it,
+	 * or the condition below may be false positive.
 	 */
-	remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
+	remainGlobalSharedMem =  pg_atomic_read_u32(&pResGroupControl->freeChunks);
 	safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
 	if (remainGlobalSharedMem * 100 >= safeChunksThreshold100)
 		return false;
