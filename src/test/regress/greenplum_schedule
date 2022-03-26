@@ -96,7 +96,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql gp_array_agg
 
 # The test must be run by itself as it injects a fault on QE to fail
 # at the 2nd phase of 2PC.

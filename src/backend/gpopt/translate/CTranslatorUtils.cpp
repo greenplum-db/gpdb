@@ -1743,6 +1743,32 @@ CTranslatorUtils::IsSortingColumn(const TargetEntry *target_entry,
 	return false;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorUtils::HasOrderedAggRefInProjList
+//
+//	@doc:
+//		check if the project list contains AggRef with ORDER BY
+//---------------------------------------------------------------------------
+BOOL
+CTranslatorUtils::HasOrderedAggRefInProjList(CDXLNode *proj_list_dxlnode)
+{
+	GPOS_ASSERT(nullptr != proj_list_dxlnode &&
+				EdxlopScalarProjectList ==
+					proj_list_dxlnode->GetOperator()->GetDXLOperator());
+	const ULONG arity = proj_list_dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *proj_elem_dxlnode = (*proj_list_dxlnode)[ul];
+		CDXLNode *dxlnode = (*proj_elem_dxlnode)[0];
+		if (dxlnode->GetOperator()->GetDXLOperator() == EdxlopScalarAggref &&
+			(*dxlnode)[EdxlscalaraggrefIndexAggOrder]->Arity() > 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

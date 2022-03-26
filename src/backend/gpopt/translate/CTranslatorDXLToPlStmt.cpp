@@ -2584,6 +2584,13 @@ CTranslatorDXLToPlStmt::TranslateDXLAgg(
 			GPOS_ASSERT(!"Invalid aggregation strategy");
 	}
 
+	if (agg->aggstrategy == AGG_HASHED &&
+		CTranslatorUtils::HasOrderedAggRefInProjList(project_list_dxlnode))
+	{
+		GPOS_RAISE(gpopt::ExmaDXL, gpopt::ExmiExpr2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Hash aggregation with ORDER BY"));
+	}
+
 	agg->streaming = dxl_phy_agg_dxlop->IsStreamSafe();
 
 	// translate grouping cols
