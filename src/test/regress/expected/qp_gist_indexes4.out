@@ -269,13 +269,13 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
                                         QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.56 rows=1 width=129)
-   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..200.56 rows=1 width=129)
-         Index Cond: c ~= '<(1255,7955),1227>'::circle
-         Filter: c ~= '<(1255,7955),1227>'::circle
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.43..1192.80 rows=20 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.43..1192.80 rows=7 width=129)
+         Recheck Cond: (c ~= '<(1255,7955),1227>'::circle)
+         ->  Bitmap Index Scan on gt_index_c  (cost=0.00..100.43 rows=7 width=0)
+               Index Cond: (c ~= '<(1255,7955),1227>'::circle)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 SELECT * FROM geometricTypes 
@@ -288,13 +288,14 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
                                         QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.56 rows=1 width=129)
-   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..200.56 rows=1 width=129)
-         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.43..1192.80 rows=20 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.43..1192.80 rows=7 width=129)
+         Recheck Cond: (b ~= '(7352,7352),(7350,-3128)'::box)
+         ->  Bitmap Index Scan on gt_index_b  (cost=0.00..100.43 rows=7 width=0)
+               Index Cond: (b ~= '(7352,7352),(7350,-3128)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
@@ -306,13 +307,13 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
                                         QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.56 rows=1 width=129)
-   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..200.56 rows=1 width=129)
-         Index Cond: p ~= '((4679,8579),(4670,-3232))'::polygon
-         Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.43..1192.80 rows=20 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.43..1192.80 rows=7 width=129)
+         Recheck Cond: (p ~= '((4679,8579),(4670,-3232))'::polygon)
+         ->  Bitmap Index Scan on gt_index_p  (cost=0.00..100.43 rows=7 width=0)
+               Index Cond: (p ~= '((4679,8579),(4670,-3232))'::polygon)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 -- ----------------------------------------------------------------------
@@ -369,12 +370,12 @@ EXPLAIN SELECT * FROM gone
  WHERE already_gone ~= SeedToCircle(857);
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using gone_around_the_bend on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: already_gone ~= '<(-3176,7824),3174>'::circle
-         Filter: already_gone ~= '<(-3176,7824),3174>'::circle
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (already_gone ~= '<(-3176,7824),3174>'::circle)
+         ->  Bitmap Index Scan on gone_around_the_bend  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (already_gone ~= '<(-3176,7824),3174>'::circle)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 ROLLBACK WORK;
@@ -415,12 +416,12 @@ EXPLAIN SELECT * FROM gone
  WHERE paragon ~= SeedToPolygon(858);
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using polly_wanna_cracker on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: paragon ~= '((7625,8425),(7643,7849))'::polygon
-         Filter: paragon ~= '((7625,8425),(7643,7849))'::polygon
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (paragon ~= '((7625,8425),(7643,7849))'::polygon)
+         ->  Bitmap Index Scan on polly_wanna_cracker  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (paragon ~= '((7625,8425),(7643,7849))'::polygon)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 ROLLBACK WORK;
@@ -435,13 +436,13 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE paragon ~= SeedToPolygon(858);
                                    QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using polly_gone on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: paragon ~= '((7625,8425),(7643,7849))'::polygon
-         Filter: paragon ~= '((7625,8425),(7643,7849))'::polygon
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (paragon ~= '((7625,8425),(7643,7849))'::polygon)
+         ->  Bitmap Index Scan on polly_gone  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (paragon ~= '((7625,8425),(7643,7849))'::polygon)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 CREATE INDEX box_of_rain ON gone USING GiST (too_far_gone) 
@@ -460,13 +461,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 ROLLBACK WORK;
 SELECT * FROM gone 
@@ -479,13 +481,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 BEGIN WORK;
 ALTER INDEX box_of_rain SET (FILLFACTOR = 40);
@@ -499,13 +502,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 ROLLBACK WORK;
 BEGIN WORK;
@@ -521,13 +525,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.29 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.29 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 ROLLBACK WORK;
 BEGIN WORK;
@@ -542,13 +547,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 REINDEX TABLE gone;
 SELECT * FROM gone 
@@ -561,13 +567,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 ROLLBACK WORK;
 SELECT * FROM gone 
@@ -580,13 +587,14 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
                                     QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=129)
-   ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
-         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.35..666.33 rows=10 width=129)
+   ->  Bitmap Heap Scan on gone  (cost=100.35..666.33 rows=4 width=129)
+         Recheck Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+         ->  Bitmap Index Scan on box_of_rain  (cost=0.00..100.35 rows=4 width=0)
+               Index Cond: (too_far_gone ~= '(7342,8385),(7338,6538)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 DROP TABLE IF EXISTS gone;
 -- ----------------------------------------------------------------------
@@ -613,13 +621,13 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
                                         QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..202.29 rows=1 width=129)
-   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..202.29 rows=1 width=129)
-         Index Cond: c ~= '<(1255,7955),1227>'::circle
-         Filter: c ~= '<(1255,7955),1227>'::circle
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.43..1192.80 rows=20 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.43..1192.80 rows=7 width=129)
+         Recheck Cond: (c ~= '<(1255,7955),1227>'::circle)
+         ->  Bitmap Index Scan on gt_index_c  (cost=0.00..100.43 rows=7 width=0)
+               Index Cond: (c ~= '<(1255,7955),1227>'::circle)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 SELECT * FROM geometricTypes 
@@ -632,13 +640,14 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
                                         QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..202.21 rows=1 width=129)
-   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..202.21 rows=1 width=129)
-         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.43..1192.80 rows=20 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.43..1192.80 rows=7 width=129)
+         Recheck Cond: (b ~= '(7352,7352),(7350,-3128)'::box)
+         ->  Bitmap Index Scan on gt_index_b  (cost=0.00..100.43 rows=7 width=0)
+               Index Cond: (b ~= '(7352,7352),(7350,-3128)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
@@ -650,13 +659,13 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
                                         QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..202.21 rows=1 width=129)
-   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..202.21 rows=1 width=129)
-         Index Cond: p ~= '((4679,8579),(4670,-3232))'::polygon
-         Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.43..1192.80 rows=20 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.43..1192.80 rows=7 width=129)
+         Recheck Cond: (p ~= '((4679,8579),(4670,-3232))'::polygon)
+         ->  Bitmap Index Scan on gt_index_p  (cost=0.00..100.43 rows=7 width=0)
+               Index Cond: (p ~= '((4679,8579),(4670,-3232))'::polygon)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 -- ----------------------------------------------------------------------
@@ -683,12 +692,14 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
                                           QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..201.27 rows=1 width=129)
-   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..201.27 rows=1 width=129)
-         Index Cond: c ~= '<(-3197,7903),3150>'::circle AND c << '<(7879,8779),7868>'::circle
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..272.74 rows=7 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.30..272.74 rows=3 width=129)
+         Recheck Cond: ((c ~= '<(-3197,7903),3150>'::circle) AND (c << '<(7879,8779),7868>'::circle))
+         ->  Bitmap Index Scan on gt_index_c  (cost=0.00..100.30 rows=1 width=0)
+               Index Cond: ((c ~= '<(-3197,7903),3150>'::circle) AND (c << '<(7879,8779),7868>'::circle))
  Optimizer: Postgres query optimizer
-(4 rows)
+(6 rows)
 
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
@@ -700,13 +711,14 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
                                             QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.37 rows=1 width=129)
-   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..200.37 rows=1 width=129)
-         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box AND b << '(8479,7579),(8441,-3121)'::box
- Settings:  enable_seqscan=off; optimizer=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..272.74 rows=7 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.30..272.74 rows=3 width=129)
+         Recheck Cond: ((b ~= '(7352,7352),(7350,-3128)'::box) AND (b << '(8479,7579),(8441,-3121)'::box))
+         ->  Bitmap Index Scan on gt_index_b  (cost=0.00..100.30 rows=1 width=0)
+               Index Cond: ((b ~= '(7352,7352),(7350,-3128)'::box) AND (b << '(8479,7579),(8441,-3121)'::box))
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
@@ -718,13 +730,13 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
                                                  QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.37 rows=1 width=129)
-   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..200.37 rows=1 width=129)
-         Index Cond: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
-         Filter: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
- Settings:  enable_seqscan=off; optimizer=off
- Optimizer status: Postgres query optimizer
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..272.74 rows=7 width=129)
+   ->  Bitmap Heap Scan on geometrictypes  (cost=100.30..272.74 rows=3 width=129)
+         Recheck Cond: ((p ~= '((1252,8252),(1274,7975))'::polygon) AND (p << '((8778,6578),(8765,8265))'::polygon))
+         ->  Bitmap Index Scan on gt_index_p  (cost=0.00..100.30 rows=1 width=0)
+               Index Cond: ((p ~= '((1252,8252),(1274,7975))'::polygon) AND (p << '((8778,6578),(8765,8265))'::polygon))
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 -- ----------------------------------------------------------------------

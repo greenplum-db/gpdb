@@ -169,13 +169,14 @@ SELECT id, property AS "ProperTee" FROM GistTable3
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
                                       QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.28 rows=1 width=36)
-   ->  Index Scan using gistindex3a on gisttable3  (cost=0.00..200.28 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.18..395.33 rows=4 width=36)
+   ->  Bitmap Heap Scan on gisttable3  (cost=100.18..395.33 rows=2 width=36)
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
+         ->  Bitmap Index Scan on gistindex3a  (cost=0.00..100.18 rows=2 width=0)
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test07Reindex.sql
@@ -208,13 +209,14 @@ SELECT id, property AS "Property" FROM GistTable3
 EXPLAIN SELECT id, property AS "Property" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
                                       QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex3a on gisttable3  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off
- Optimizer status: Postgres query optimizer
-(5 rows)
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..395.45 rows=4 width=36)
+   ->  Bitmap Heap Scan on gisttable3  (cost=100.30..395.45 rows=2 width=36)
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
+         ->  Bitmap Index Scan on gistindex3a  (cost=0.00..100.30 rows=2 width=0)
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test08UniqueAndPKey.sql

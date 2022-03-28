@@ -3551,9 +3551,7 @@ compute_very_minimal_stats(VacAttrStatsP stats,
 			stats->stawidth = total_width / (double) nonnull_cnt;
 		else
 			stats->stawidth = stats->attrtype->typlen;
-
-		/* Assume it's a unique column */
-		stats->stadistinct = -1.0;
+		stats->stadistinct = 0.0;	/* "unknown" */
 	}
 	else if (null_cnt > 0)
 	{
