@@ -3214,6 +3214,39 @@ create index part_table13_4_idx on part_table13_1_prt_p4 using bitmap(c);
 explain select * from part_table13 where c=7;
 select * from part_table13 where c=7;
 
+-- Test ORCA not falling back to Postgres planner during
+-- SimplifySelectOnOuterJoin stage. Previously, we could get assertion error
+-- trying to EberEvaluate() strict function with zero arguments.
+-- Postgres planner will fold our function, because it has additional
+-- eval_const_expressions() call for subplan. ORCA has only one call to
+-- fold_constants() at the very beginning and doesn't perform folding later.
+CREATE TABLE join_null_rej1(i int);
+CREATE TABLE join_null_rej2(i int);
+
+INSERT INTO join_null_rej1(i) VALUES (1), (2), (3);
+INSERT INTO join_null_rej2 SELECT i FROM join_null_rej1;
+
+CREATE OR REPLACE FUNCTION join_null_rej_func() RETURNS int AS $$
+BEGIN
+    RETURN 5;
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+EXPLAIN (COSTS OFF) SELECT (
+    SELECT count(*) cnt
+    FROM join_null_rej1 t1
+    LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
+    WHERE t2.i < join_null_rej_func()
+);
+-- Optional, but let's check we get same result for both, folded and
+-- not folded join_null_rej_func() function.
+SELECT (
+    SELECT count(*) cnt
+    FROM join_null_rej1 t1
+    LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
+    WHERE t2.i < join_null_rej_func()
+);
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
