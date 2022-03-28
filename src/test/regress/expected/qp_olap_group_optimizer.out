@@ -6031,12 +6031,18 @@ PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS
 EXECUTE p(2);
  cn_r | f  | g 
 ------+----+---
+    1 | 12 | 2
     1 | 22 | 2
     2 | 32 | 2
-    1 | 12 | 2
     3 | 42 | 2
     2 | 52 | 2
-(5 rows)
+    1 | 12 |  
+    1 | 22 |  
+    2 | 32 |  
+    3 | 42 |  
+    2 | 52 |  
+    4 |    |  
+(11 rows)
 
 -- ###### Queries involving CUBE with HAVING CLAUSE ###### --
 WITH src AS (SELECT 1 AS a, 1 AS b)

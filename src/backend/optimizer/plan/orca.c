@@ -102,6 +102,12 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 		return NULL;
 
 	/*
+	 * ORCA doesn't currently support PARAM nodes and likewise boundParams.
+	 */
+	if (boundParams)
+		return NULL;
+
+	/*
 	 * Initialize a dummy PlannerGlobal struct. ORCA doesn't use it, but the
 	 * pre- and post-processing steps do.
 	 */

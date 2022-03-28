@@ -320,9 +320,9 @@ INFO:  Dispatch command to ALL contents
 prepare test_update (int) as update direct_test set value = 'boo' where key = $1;
 -- Known_opt_diff: MPP-21346
 execute test_update(2);
-INFO:  Dispatch command to ALL contents
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 select * from direct_test;
 INFO:  Dispatch command to ALL contents
  key | value 
