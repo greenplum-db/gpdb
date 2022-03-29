@@ -14307,6 +14307,40 @@ SELECT (
    3
 (1 row)
 
+-- Check Sort node placed under GatherMerge in case we use Update from Select
+-- with window function. Placing Sort node upper and executing it on one
+-- segment can lead to slow query execution and can consume all spills for
+-- heavy datasets. Sort node should be on it's place for both, Postgres
+-- optimizer and ORCA.
+create table window_agg_test(i int, j int) distributed randomly;
+explain
+update window_agg_test t
+set i = tt.i 
+from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
+where t.j = tt.j;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Update on window_agg_test t  (cost=11777.75..1016866.10 rows=2471070 width=50)
+   ->  Explicit Redistribute Motion 3:3  (slice4; segments: 3)  (cost=11777.75..1016866.10 rows=2471070 width=50)
+         ->  Hash Join  (cost=11777.75..1016866.10 rows=2471070 width=50)
+               Hash Cond: (tt.j = t.j)
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=8018.50..12108.25 rows=86100 width=40)
+                     Hash Key: tt.j
+                     ->  Subquery Scan on tt  (cost=8018.50..10386.25 rows=86100 width=40)
+                           ->  WindowAgg  (cost=8018.50..9525.25 rows=86100 width=8)
+                                 Order By: window_agg_test.j
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=8018.50..8233.75 rows=86100 width=8)
+                                       Merge Key: window_agg_test.j
+                                       ->  Sort  (cost=8018.50..8233.75 rows=28700 width=8)
+                                             Sort Key: window_agg_test.j
+                                             ->  Seq Scan on window_agg_test  (cost=0.00..961.00 rows=28700 width=8)
+               ->  Hash  (cost=2683.00..2683.00 rows=28700 width=14)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..2683.00 rows=28700 width=14)
+                           Hash Key: t.j
+                           ->  Seq Scan on window_agg_test t  (cost=0.00..961.00 rows=28700 width=14)
+ Optimizer: Postgres query optimizer
+(19 rows)
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 NOTICE:  drop cascades to 167 other objects
