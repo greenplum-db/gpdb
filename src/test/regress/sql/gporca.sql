@@ -3467,6 +3467,17 @@ SELECT (
     LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
     WHERE t2.i < join_null_rej_func()
 );
+-- Check Sort node placed under GatherMerge in case we use Update from Select
+-- with window function. Placing Sort node upper and executing it on one
+-- segment can lead to slow query execution and can consume all spills for
+-- heavy datasets. Sort node should be on it's place for both, Postgres
+-- optimizer and ORCA.
+create table window_agg_test(i int, j int) distributed randomly;
+explain
+update window_agg_test t
+set i = tt.i 
+from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
+where t.j = tt.j;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
