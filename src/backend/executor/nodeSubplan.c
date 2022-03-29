@@ -1167,12 +1167,6 @@ PG_TRY();
 									CurrentMemoryContext, true);
 
 	/*
-	 * Enforce forward scan direction regardless of caller. It's hard but not
-	 * impossible to get here in backward scan, so make it work anyway.
-	 */
-	estate->es_direction = ForwardScanDirection;
-
-	/*
 	 * Must switch to per-query memory context.
 	 */
 	oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
