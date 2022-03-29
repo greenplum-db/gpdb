@@ -130,12 +130,12 @@ class RecoveryTriplets(abc.ABC):
         pass
 
     @staticmethod
-    def _check_if_request_hosts_can_be_reached(requests, paralleldegree=1)-> List[str]:
-        #hostlist = set(self.gpArray.get_hostlist(includeCoordinator=False))
-        hostlist = set()
-        for req in requests:
-            if(req.failover_host):
-               hostlist.add(req.failover_host)
+    def _get_unreachable_failover_hosts(requests, paralleldegree=1)-> List[str]:
+        # hostlist = set()
+        # for req in requests:
+        #     if(req.failover_host):
+        #        hostlist.add(req.failover_host)
+        hostlist = {req for req in requests if req.failover_host}
         unreachable_hosts = get_unreachable_segment_hosts(list(hostlist), min(paralleldegree, len(hostlist)))
         return unreachable_hosts
 
@@ -151,7 +151,7 @@ class RecoveryTriplets(abc.ABC):
     def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest], paralleldegree) -> List[RecoveryTriplet]:
         triplets = []
         # Get list of hosts unreachable from the request
-        unreachable_hosts = self._check_if_request_hosts_can_be_reached(requests, paralleldegree)
+        unreachable_hosts = self._get_unreachable_failover_hosts(requests, paralleldegree)
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
         for req in requests:
