@@ -533,6 +533,10 @@ DECLARE
     param text;
 
 BEGIN
+    -- Hack! ORCA doesn't support enforcing that a function run on all segments.
+    -- GPDB 6X commit aa148d2a3cb introduces a less-hacky workaround for this
+    -- scenario.
+    SET optimizer=off;
     FOR param in (SELECT name FROM pg_settings order by name) LOOP
         FOR paramsettings IN
             SELECT pls.*
@@ -541,6 +545,7 @@ BEGIN
             RETURN NEXT paramsettings;
         END LOOP;
     END LOOP;
+    RESET optimizer;
 END
 $$
 LANGUAGE plpgSQL READS SQL DATA;
