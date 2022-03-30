@@ -950,6 +950,8 @@ class gpexpand:
             self.tempDir = createTempDirectoryName(self.options.coordinator_data_directory, "gpexpand")
         self.queue = None
         self.segTemplate = None
+        self.icProxyAddresses = None
+        self.isIcProxy = False
 
     @staticmethod
     def prepare_gpdb_state(logger, dburl, options):
@@ -1069,6 +1071,7 @@ class gpexpand:
 
         self.conn.close()
 
+        self.restore_interconnect_proxy()
         self.statusLogger.remove_status_file()
         self.statusLogger.remove_segment_configuration_backup_file()
 
@@ -1140,6 +1143,44 @@ class gpexpand:
         cursor = dbconn.query(self.conn, sql)
         return dict(cursor.fetchall())
 
+    def check_interconnect_type(self):
+        self.get_interconnect_proxy_addresses()
+        if self.icProxyAddresses is not None:
+            self.isIcProxy = True
+
+    def update_interconnect_proxy(self):
+        if not self.isIcProxy:
+            return
+        if self.icProxyAddresses is None:
+            self.get_interconnect_proxy_addresses()
+        # os.system('''gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"'''.format(self.icProxyAddresses))
+        cmd = GpConfigHelper("add interconnect proxy addresses",
+                                self.options.coordinator_data_directory,
+                                'gp_interconnect_proxy_addresses',
+                                value="'" + self.icProxyAddresses + "'")
+        cmd.run(validateAfter=True)
+        os.system('gpstop -u')
+
+    def get_interconnect_proxy_addresses(self):
+        if self.conn is None:
+            self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods=True)
+        sql = "show gp_interconnect_proxy_addresses;"
+        self.icProxyAddresses = dbconn.queryRow(self.conn, sql)[0]
+        outputfile = 'gpexpand_ic_proxy_backup.bak'
+        logger.info("Backing up IC proxy addresses...")
+        with open(outputfile, 'w') as outf:
+            outf.write(self.icProxyAddresses)
+        return self.icProxyAddresses
+
+    def restore_interconnect_proxy(self):
+        infile = 'gpexpand_ic_proxy_backup.bak'
+        logger.info("Restoring up IC proxy addresses...")
+        with open(infile, 'r') as inf:
+            oldIcProxyAddresses = inf.readline()
+            if oldIcProxyAddresses is not None:
+                self.icProxyAddresses = oldIcProxyAddresses
+                self.update_interconnect_proxy()
+
     def addNewSegments(self, inputFileEntryList):
         for seg in inputFileEntryList:
             self.gparray.addExpansionSeg(content=int(seg.contentId)
@@ -1151,6 +1192,12 @@ class gpexpand:
                                          , port=int(seg.port)
                                          , datadir=os.path.abspath(seg.datadir.strip())
                                          )
+            if self.isIcProxy:
+                delta = -2000
+                icPort = str(int(seg.port) + delta)
+                newAddr = '{}:{}:{}:{}'.format(seg.dbid, seg.contentId, seg.address.strip(), icPort)
+                self.icProxyAddresses += ','
+                self.icProxyAddresses += newAddr
         try:
             self.gparray.validateExpansionSegs()
         except Exception as e:
@@ -2447,6 +2494,7 @@ def main(options, args, parser):
         elif gpexpand_db_status is None and gpexpand_file_status is None and options.filename:
             _gp_expand.validate_heap_checksums()
             newSegList = _gp_expand.read_input_files()
+            _gp_expand.check_interconnect_type()
             _gp_expand.addNewSegments(newSegList)
             _gp_expand.sync_packages()
             _gp_expand.start_prepare()
@@ -2456,6 +2504,7 @@ def main(options, args, parser):
             _gp_expand.update_original_segments()
             _gp_expand.cleanup_new_segments()
             _gp_expand.update_catalog()
+            _gp_expand.update_interconnect_proxy()
             _gp_expand.unlock_catalog()
             _gp_expand.setup_schema()
             _gp_expand.prepare_schema()
