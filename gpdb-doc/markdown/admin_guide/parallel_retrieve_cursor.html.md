@@ -99,7 +99,7 @@ You will perform the following tasks when you use a Greenplum Database parallel 
 1. [Handle data retrieval errors](#error_handling).
 1. [Close the parallel retrieve cursor](#close).
 
-In addition to the above, you may optionally choose to open a utility-mode connection to an endpoint to [List segment-specific retrieve session information](#utility_endpoints).
+In addition to the above, you may optionally choose to [List all parallel retrieve cursors](#list_all_prc) in the system or [List segment-specific retrieve session information](#utility_endpoints).
 
 ### <a id="declare_cursor"></a>Declaring a Parallel Retrieve Cursor
 
@@ -348,6 +348,14 @@ END;
 <div class="note">When you close a parallel retrieve cursor, Greenplum Database terminates any open retrieve sessions associated with the cursor.</div>
 
 On closing, Greenplum Database frees all resources associated with the parallel retrieve cursor and its endpoints.
+
+### <a id="list_all_prc"></a>Listing All Parallel Retrieve Cursors
+
+The [pg_cursors](../ref_guide/system_catalogs/pg_cursors.html#topic1) view lists all declared cursors that are currently available in the system. You can obtain information about all parallel retrieve cursors by running the following command:
+
+``` sql
+SELECT * FROM pg_cursors WHERE is_parallel = true;
+```
 
 ### <a id="utility_endpoints"></a>Listing Segment-Specific Retrieve Session Information
 
