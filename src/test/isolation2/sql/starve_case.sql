@@ -35,6 +35,7 @@ declare /*in func*/
 	num_awaited int := 0; /*in func*/
 	iterations int := 0; /*in func*/
 begin /*in func*/
+	set optimizer=off; /*n func*/
 	while num_awaited = 0 and iterations < 20 loop /*in func*/
 		with locks_awaited as /*in func*/
 		(select * from pg_locks where granted = false and gp_segment_id = -1) /*in func*/
@@ -44,9 +45,10 @@ begin /*in func*/
 		perform pg_sleep(.1); /*in func*/
 		iterations := iterations + 1; /*in func*/
 	end loop; /*in func*/
+	reset optimizer; /*in func*/
 	return num_awaited > 0; /*in func*/
 end $$ /*in func*/
-LANGUAGE plpgsql STABLE;
+LANGUAGE plpgsql VOLATILE;
 
 -- Hold access shared lock, so that session2 must wait.
 1: begin;
