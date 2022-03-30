@@ -603,31 +603,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 */
 			if (list_length(queryDesc->plannedstmt->paramExecTypes) > 0)
 			{
-				ParamListInfoData *pli = queryDesc->params;
-
-				/*
-				 * First, use paramFetch to fetch any "lazy" parameters, so that
-				 * they are dispatched along with the queries. The QE nodes cannot
-				 * call the callback function on their own.
-				 */
-				if (pli && pli->paramFetch)
-				{
-					int			iparam;
-
-					for (iparam = 0; iparam < queryDesc->params->numParams; iparam++)
-					{
-						ParamExternData *prm = &pli->params[iparam];
-						ParamExternData prmdata;
-
-						/*
-						 * GPDB_12_MERGE_FIXME: What should speculative value
-						 * should paramFetch be called with?
-						 */
-						if (!OidIsValid(prm->ptype))
-							(*pli->paramFetch) (pli, iparam + 1, false, &prmdata);
-					}
-				}
-
 				preprocess_initplans(queryDesc);
 			}
 
