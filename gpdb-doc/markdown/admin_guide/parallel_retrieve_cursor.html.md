@@ -2,7 +2,7 @@
 title: Retrieving Query Results with a Parallel Retrieve Cursor (Beta)</title>
 ---
 
-A *parallel retrieve cursor* is an enhanced cursor implementation that you can use to create a special kind of cursor on the Greenplum Database master node, and retrieve query results, on demand and in parallel, directly from the Greenplum segments.
+A *parallel retrieve cursor* is an enhanced cursor implementation that you can use to create a special kind of cursor on the Greenplum Database coordinator node, and retrieve query results, on demand and in parallel, directly from the Greenplum segments.
 
 ## <a id="topic_about"></a>About Parallel Retrieve Cursors
 
@@ -116,7 +116,7 @@ DECLARE prc1 PARALLEL RETRIEVE CURSOR FOR <i>query</i>;
 
 Greenplum Database creates the endpoint(s) on the QD or QEs, depending on the *query* parameters:
 
-- Greenplum Database creates an endpoint on the QD when the query results must be gathered by the master. For example, this `DECLARE` statement requires that the master gather the query results:
+- Greenplum Database creates an endpoint on the QD when the query results must be gathered by the coordinator. For example, this `DECLARE` statement requires that the coordinator gather the query results:
 
     ``` sql
     DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 ORDER BY a;
@@ -142,7 +142,7 @@ The `DECLARE` command returns when the endpoints are ready and query execution h
 You can obtain the information that you need to initiate a retrieve
             connection to an endpoint by invoking the `gp_get_endpoints()`
             function or examining the `gp_endpoints` view in a session on
-            the Greenplum Database master host:
+            the Greenplum Database coordinator host:
 
 ``` sql
 SELECT * FROM gp_get_endpoints();
@@ -514,7 +514,7 @@ Refer to the [README](https://github.com/greenplum-db/gpdb/tree/master/src/backe
 
 Create a parallel retrieve cursor and use it to pull query results from a Greenplum Database cluster:
 
-1. Open a `psql` session to the Greenplum Database master host:
+1. Open a `psql` session to the Greenplum Database coordinator host:
 
     ``` shell
     psql -d testdb
