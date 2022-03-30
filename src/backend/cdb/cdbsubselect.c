@@ -1297,6 +1297,8 @@ fetch_outer_exprs(Node *testexpr)
 		else
 			return NIL;
 	}
+	else if (IsA(testexpr, OpExpr))
+		return list_make1(linitial(((OpExpr *)testexpr)->args));
 	else
 		return NIL;
 }

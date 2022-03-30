@@ -658,7 +658,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 			else if (sublink->subLinkType == ANY_SUBLINK || sublink->subLinkType == ALL_SUBLINK)
 			{
 				sublink->subLinkType = (sublink->subLinkType == ANY_SUBLINK) ? ALL_SUBLINK : ANY_SUBLINK;
-				sublink->testexpr = (Node *) canonicalize_qual(negate_clause(sublink->testexpr), false);
+				sublink->testexpr = (Node *) canonicalize_qual((Expr *) negate_clause(sublink->testexpr), false);
 				return pull_up_sublinks_qual_recurse(root, (Node *) sublink,
 														jtlink1, available_rels1,
 														jtlink2, available_rels2);
