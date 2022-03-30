@@ -40,6 +40,7 @@ CDrvdPropScalar::CDrvdPropScalar(CMemoryPool *mp)
 	  m_fHasNonScalarFunction(false),
 	  m_ulDistinctAggs(0),
 	  m_fHasMultipleDistinctAggs(false),
+	  m_ulOrderedAggs(0),
 	  m_fHasScalarArrayCmp(false),
 	  m_is_complete(false)
 {
@@ -417,6 +418,16 @@ CDrvdPropScalar::DeriveHasScalarArrayCmp(CExpressionHandle &exprhdl)
 	return m_fHasScalarArrayCmp;
 }
 
+ULONG
+CDrvdPropScalar::DeriveTotalOrderedAggs(CExpressionHandle &exprhdl)
+{
+	if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid() &&
+		!m_is_prop_derived->ExchangeSet(EdptUlOrderedAggs))
+	{
+		m_ulOrderedAggs = CScalarProjectList::UlOrderedAggs(exprhdl);
+	}
+	return m_ulOrderedAggs;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

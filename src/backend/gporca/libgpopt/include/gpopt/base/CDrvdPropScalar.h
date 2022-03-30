@@ -51,6 +51,7 @@ class CDrvdPropScalar : public CDrvdProp
 		EdptPfp,
 		EdptFHasNonScalarFunction,
 		EdptUlDistinctAggs,
+		EdptUlOrderedAggs,
 		EdptFHasMultipleDistinctAggs,
 		EdptFHasScalarArrayCmp,
 		EdptFHasScalarFuncProject,
@@ -93,6 +94,7 @@ private:
 	// does operator define Distinct Aggs on different arguments (e.g., count(distinct a), sum(distinct b)),
 	// only applicable to project lists
 	BOOL m_fHasMultipleDistinctAggs;
+	ULONG m_ulOrderedAggs;
 
 	// does expression contain ScalarArrayCmp generated for "scalar op ANY/ALL (array)" construct
 	BOOL m_fHasScalarArrayCmp;
@@ -135,6 +137,7 @@ protected:
 	BOOL DeriveHasMultipleDistinctAggs(CExpressionHandle &);
 
 	BOOL DeriveHasScalarArrayCmp(CExpressionHandle &);
+	ULONG DeriveTotalOrderedAggs(CExpressionHandle &);
 
 public:
 	// ctor

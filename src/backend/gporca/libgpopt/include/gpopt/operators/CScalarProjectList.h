@@ -93,6 +93,9 @@ public:
 	// return number of distinct aggs in project list attached to given handle
 	static ULONG UlDistinctAggs(CExpressionHandle &exprhdl);
 
+	// return number of ordered aggs in project list attached to given handle
+	static ULONG UlOrderedAggs(CExpressionHandle &exprhdl);
+
 	// check if a project list has multiple distinct aggregates
 	static BOOL FHasMultipleDistinctAggs(CExpressionHandle &exprhdl);
 

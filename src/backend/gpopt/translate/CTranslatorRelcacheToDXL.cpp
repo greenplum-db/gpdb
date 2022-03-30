@@ -1606,13 +1606,13 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 
 	// get standard aggregates
 	CMDIdGPDB *mdid_min =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("min", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("min", oid_type, 1));
 	CMDIdGPDB *mdid_max =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("max", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("max", oid_type, 1));
 	CMDIdGPDB *mdid_avg =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("avg", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("avg", oid_type, 1));
 	CMDIdGPDB *mdid_sum =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("sum", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("sum", oid_type, 1));
 
 	// count aggregate is the same for all types
 	CMDIdGPDB *mdid_count = GPOS_NEW(mp) CMDIdGPDB(COUNT_ANY_OID);
