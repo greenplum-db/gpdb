@@ -153,6 +153,8 @@ REGRESS := $(foreach test,$(REGRESS),$(if $(filter $(test),$(REGRESS_PLPYTHON3_M
 .PHONY: pgregress-python3-mangle
 pgregress-python3-mangle:
 	$(MKDIR_P) sql/python3 expected/python3 results/python3
+	# for python and python3 types and returns test are not the same.
+	cp -f ../plpython/expected/plpython_returns_3.out ../plpython/expected/python3/plpython_returns.out
 	for file in $(patsubst %,$(srcdir)/sql/%.sql,$(REGRESS_PLPYTHON3_MANGLE)) $(patsubst %,$(srcdir)/expected/%*.out,$(REGRESS_PLPYTHON3_MANGLE)); do \
 	  sed -e 's/except \([[:alpha:]][[:alpha:].]*\), *\([[:alpha:]][[:alpha:]]*\):/except \1 as \2:/g' \
 	      -e "s/<type 'exceptions\.\([[:alpha:]]*\)'>/<class '\1'>/g" \

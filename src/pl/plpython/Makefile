@@ -94,30 +94,29 @@ else
 REGRESS_OPTS += --load-extension=plpython3u
 endif
 
-REGRESS = plpython_record plpython_returns
-# REGRESS = \
-# 	plpython_schema \
-# 	plpython_populate \
-# 	plpython_test \
-# 	plpython_do \
-# 	plpython_global \
-# 	plpython_import \
-# 	plpython_spi \
-# 	plpython_newline \
-# 	plpython_void \
-# 	plpython_params \
-# 	plpython_setof \
-# 	plpython_record \
-# 	plpython_trigger \
-# 	plpython_types \
-# 	plpython_error \
-# 	plpython_unicode \
-# 	plpython_quote \
-# 	plpython_composite \
-# 	plpython_subtransaction \
-# 	plpython_returns \
-# 	plpython_gpdb \
-# 	plpython_drop
+REGRESS = \
+	plpython_schema \
+	plpython_populate \
+	plpython_test \
+	plpython_do \
+	plpython_global \
+	plpython_import \
+	plpython_spi \
+	plpython_newline \
+	plpython_void \
+	plpython_params \
+	plpython_setof \
+	plpython_record \
+	plpython_trigger \
+	plpython_types \
+	plpython_error \
+	plpython_unicode \
+	plpython_quote \
+	plpython_composite \
+	plpython_subtransaction \
+	plpython_returns \
+	plpython_gpdb \
+	plpython_drop
 
 REGRESS_PLPYTHON3_MANGLE := $(REGRESS)
 
@@ -160,6 +159,9 @@ REGRESS := $(foreach test,$(REGRESS),$(if $(filter $(test),$(REGRESS_PLPYTHON3_M
 .PHONY: pgregress-python3-mangle
 pgregress-python3-mangle:
 	$(MKDIR_P) sql/python3 expected/python3 results/python3
+	# for python and python3 types and returns test are not the same.
+	cp expected/plpython_types_3.out expected/python3/plpython_types.out
+	cp expected/plpython_returns_3.out expected/python3/plpython_returns.out
 	for file in $(patsubst %,$(srcdir)/sql/%.sql,$(REGRESS_PLPYTHON3_MANGLE)) $(patsubst %,$(srcdir)/expected/%*.out,$(REGRESS_PLPYTHON3_MANGLE)); do \
 	  sed -e 's/except \([[:alpha:]][[:alpha:].]*\), *\([[:alpha:]][[:alpha:]]*\):/except \1 as \2:/g' \
 	      -e "s/<type 'exceptions\.\([[:alpha:]]*\)'>/<class '\1'>/g" \
@@ -176,7 +178,6 @@ pgregress-python3-mangle:
 	      -e "s/EXTENSION plpython2u/EXTENSION plpython3u/Ig" \
 	    $$file >`echo $$file | sed 's,^.*/\([^/][^/]*/\)\([^/][^/]*\)$$,\1python3/\2,'` || exit; \
 	done
-	cp expected/plpython_types_3.out expected/python3/plpython_types.out
 
 check installcheck: pgregress-python3-mangle
 

@@ -570,9 +570,17 @@ SELECT test_return_text(
 --     b) The returned string contains null characters (valid in Python)
 -- [ERROR] From Python String with null characters
 SELECT test_return_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_text 
+------------------
+ test
+(1 row)
+
 SELECT * FROM test_return_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_text 
+------------------
+ test
+(1 row)
+
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
@@ -610,189 +618,117 @@ FROM gp_single_row;
 
 -- From Python bool
 SELECT test_return_bytea('True');
- test_return_bytea 
--------------------
- \x54727565
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_bytea('True');
- test_return_bytea 
--------------------
- \x54727565
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_bytea('True') 
 FROM gp_single_row;
- test_return_bytea 
--------------------
- \x54727565
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python empty string
 SELECT test_return_bytea('""');
- test_return_bytea 
--------------------
- \x
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_bytea('""');
- test_return_bytea 
--------------------
- \x
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_bytea('""') 
 FROM gp_single_row;
- test_return_bytea 
--------------------
- \x
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python string
 SELECT test_return_bytea('"value"');
- test_return_bytea 
--------------------
- \x76616c7565
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_bytea('"value"');
- test_return_bytea 
--------------------
- \x76616c7565
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_bytea('"value"') 
 FROM gp_single_row;
- test_return_bytea 
--------------------
- \x76616c7565
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python empty list
 SELECT test_return_bytea('[]');
  test_return_bytea 
 -------------------
- \x5b5d
+ \x
 (1 row)
 
 SELECT * FROM test_return_bytea('[]');
  test_return_bytea 
 -------------------
- \x5b5d
+ \x
 (1 row)
 
 SELECT test_return_bytea('[]') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- \x5b5d
+ \x
 (1 row)
 
 -- From Python non-empty list
 SELECT test_return_bytea('[False]');
  test_return_bytea 
 -------------------
- \x5b46616c73655d
+ \x00
 (1 row)
 
 SELECT * FROM test_return_bytea('[False]');
  test_return_bytea 
 -------------------
- \x5b46616c73655d
+ \x00
 (1 row)
 
 SELECT test_return_bytea('[False]') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- \x5b46616c73655d
+ \x00
 (1 row)
 
 -- From Python empty dict
 SELECT test_return_bytea('{}');
  test_return_bytea 
 -------------------
- \x7b7d
+ \x
 (1 row)
 
 SELECT * FROM test_return_bytea('{}');
  test_return_bytea 
 -------------------
- \x7b7d
+ \x
 (1 row)
 
 SELECT test_return_bytea('{}') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- \x7b7d
+ \x
 (1 row)
 
 -- From Python non-empty dict
 SELECT test_return_bytea('{None: None}');
-     test_return_bytea      
-----------------------------
- \x7b4e6f6e653a204e6f6e657d
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_bytea('{None: None}');
-     test_return_bytea      
-----------------------------
- \x7b4e6f6e653a204e6f6e657d
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_bytea('{None: None}') 
 FROM gp_single_row;
-     test_return_bytea      
-----------------------------
- \x7b4e6f6e653a204e6f6e657d
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python Object with str() function
 SELECT test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
- test_return_bytea 
--------------------
- \x74657374
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 );
- test_return_bytea 
--------------------
- \x74657374
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return \\"test\\"", globals()); y = Foo()'
 ) FROM gp_single_row;
- test_return_bytea 
--------------------
- \x74657374
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python String with null characters
 SELECT test_return_bytea(E'"test\\0"');
- test_return_bytea 
--------------------
- \x7465737400
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_bytea(E'"test\\0"');
- test_return_bytea 
--------------------
- \x7465737400
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_bytea(E'"test\\0"') 
 FROM gp_single_row;
- test_return_bytea 
--------------------
- \x7465737400
-(1 row)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- Error conditions
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_bytea(
@@ -917,9 +853,9 @@ SELECT * FROM test_return_circle('{None: None}');
 ERROR:  invalid input syntax for type circle: "{None: None}"
 -- [ERROR] From Python String with null characters
 SELECT test_return_circle(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ERROR:  invalid input syntax for type circle: "test"
 SELECT * FROM test_return_circle(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ERROR:  invalid input syntax for type circle: "test"
 --
 -- Case 5: Return array of integers
 --
@@ -1315,15 +1251,15 @@ SELECT * FROM test_return_setof_bool(E'"test\\0"');
 SELECT test_return_setof_bool('{True: "ignored", False: "ignored"}');
  test_return_setof_bool 
 ------------------------
- f
  t
+ f
 (2 rows)
 
 SELECT * FROM test_return_setof_bool('{True: "ignored", False: "ignored"}');
  test_return_setof_bool 
 ------------------------
- f
  t
+ f
 (2 rows)
 
 --
@@ -1391,9 +1327,25 @@ SELECT * FROM test_return_setof_text('True');
 ERROR:  returned object cannot be iterated
 -- [ERROR] From Python string with null values
 SELECT test_return_setof_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_setof_text 
+------------------------
+ t
+ e
+ s
+ t
+ 
+(5 rows)
+
 SELECT * FROM test_return_setof_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_setof_text 
+------------------------
+ t
+ e
+ s
+ t
+ 
+(5 rows)
+
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_text('""');
@@ -1442,15 +1394,15 @@ SELECT * FROM test_return_setof_text('"value"');
 SELECT test_return_setof_text('{True: "ignored", False: "ignored"}');
  test_return_setof_text 
 ------------------------
- False
  True
+ False
 (2 rows)
 
 SELECT * FROM test_return_setof_text('{True: "ignored", False: "ignored"}');
  test_return_setof_text 
 ------------------------
- False
  True
+ False
 (2 rows)
 
 --
@@ -1475,36 +1427,12 @@ FROM gp_single_row;
 
 -- From Python List of values
 SELECT test_return_setof_bytea(E'[None, True, "value", [1], {"\\0": "B"}]');
-   test_return_setof_bytea    
-------------------------------
- 
- \x54727565
- \x76616c7565
- \x5b315d
- \x7b275c783030273a202742277d
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_setof_bytea(E'[None, True, "value", [1], {"\\0": "B"}]');
-   test_return_setof_bytea    
-------------------------------
- 
- \x54727565
- \x76616c7565
- \x5b315d
- \x7b275c783030273a202742277d
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT test_return_setof_bytea(E'[None, True, "value", [1], {"\\0": "B"}]') 
 FROM gp_single_row;
-   test_return_setof_bytea    
-------------------------------
- 
- \x54727565
- \x76616c7565
- \x5b315d
- \x7b275c783030273a202742277d
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- Error conditions
 -- [ERROR] From Python None
 SELECT test_return_setof_bytea('None');
@@ -1541,61 +1469,19 @@ SELECT * FROM test_return_setof_bytea('{}');
 
 -- From Python string
 SELECT test_return_setof_bytea('"value"');
- test_return_setof_bytea 
--------------------------
- \x76
- \x61
- \x6c
- \x75
- \x65
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_setof_bytea('"value"');
- test_return_setof_bytea 
--------------------------
- \x76
- \x61
- \x6c
- \x75
- \x65
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python string with null values
 SELECT test_return_setof_bytea(E'"test\\0"');
- test_return_setof_bytea 
--------------------------
- \x74
- \x65
- \x73
- \x74
- \x00
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_setof_bytea(E'"test\\0"');
- test_return_setof_bytea 
--------------------------
- \x74
- \x65
- \x73
- \x74
- \x00
-(5 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 -- From Python dictionary 
 SELECT test_return_setof_bytea('{True: "ignored", False: "ignored"}');
- test_return_setof_bytea 
--------------------------
- \x46616c7365
- \x54727565
-(2 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 SELECT * FROM test_return_setof_bytea('{True: "ignored", False: "ignored"}');
- test_return_setof_bytea 
--------------------------
- \x46616c7365
- \x54727565
-(2 rows)
-
+ERROR:  could not create bytes representation of Python object (plpy_elog.c:121)
 --
 -- Case 5: Return SETOF Circle
 --
@@ -2511,9 +2397,17 @@ SELECT test_return_out_text(
 --     b) The returned string contains null characters (valid in Python)
 -- [ERROR] From Python String with null characters
 SELECT test_return_out_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_out_text 
+----------------------
+ test
+(1 row)
+
 SELECT * FROM test_return_out_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_out_text 
+----------------------
+ test
+(1 row)
+
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_out_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None", globals()); y = Foo()'
@@ -2778,9 +2672,25 @@ SELECT * FROM test_return_out_setof_text('True');
 ERROR:  returned object cannot be iterated
 -- [ERROR] From Python string with null values
 SELECT test_return_out_setof_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_out_setof_text 
+----------------------------
+ t
+ e
+ s
+ t
+ 
+(5 rows)
+
 SELECT * FROM test_return_out_setof_text(E'"test\\0"');
-ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
+ test_return_out_setof_text 
+----------------------------
+ t
+ e
+ s
+ t
+ 
+(5 rows)
+
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_out_setof_text('""');
@@ -2829,15 +2739,15 @@ SELECT * FROM test_return_out_setof_text('"value"');
 SELECT test_return_out_setof_text('{True: "ignored", False: "ignored"}');
  test_return_out_setof_text 
 ----------------------------
- False
  True
+ False
 (2 rows)
 
 SELECT * FROM test_return_out_setof_text('{True: "ignored", False: "ignored"}');
  test_return_out_setof_text 
 ----------------------------
- False
  True
+ False
 (2 rows)
 
 --
