@@ -117,6 +117,7 @@ static int	port = -1;
 static bool port_specified_by_user = false;
 static char *dlpath = PKGLIBDIR;
 static char *user = NULL;
+static char *sslmode = NULL;
 static _stringlist *extraroles = NULL;
 static _stringlist *extra_install = NULL;
 static char *config_auth_datadir = NULL;
@@ -1333,6 +1334,8 @@ initialize_environment(void)
 		}
 		if (user != NULL)
 			doputenv("PGUSER", user);
+		if (sslmode != NULL)
+			doputenv("PGSSLMODE", sslmode);
 
 		/*
 		 * Report what we're connecting to
@@ -2798,6 +2801,7 @@ help(void)
 	printf(_("  --host=HOST               use postmaster running on HOST\n"));
 	printf(_("  --port=PORT               use postmaster running at PORT\n"));
 	printf(_("  --user=USER               connect as USER\n"));
+	printf(_("  --sslmode=SSLMODE         connect with SSLMODE\n"));
 	printf(_("  --psqldir=DIR             use psql in DIR (default: configured bindir)\n"));
 	printf(_("\n"));
 	printf(_("The exit status is 0 if all tests passed, 1 if some tests failed, and 2\n"));
@@ -2840,6 +2844,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"ignore-plans", no_argument, NULL, 27},
 		{"prehook", required_argument, NULL, 28},
 		{"print-failure-diffs", no_argument, NULL, 29},
+		{"sslmode", required_argument, NULL, 30},
 
 		/* GDPB specific arguments for upgrade testing */
 		{"old-port", required_argument, NULL, 128},
@@ -2975,6 +2980,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
 			case 29:
 				print_failure_diffs_is_enabled = true;
+				break;
+			case 30:
+				sslmode = strdup(optarg);
 				break;
 			default:
 				/* getopt_long already emitted a complaint */

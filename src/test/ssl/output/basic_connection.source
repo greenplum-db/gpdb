@@ -1,0 +1,23 @@
+SELECT current_user;
+ current_user 
+--------------
+ ssltestuser  
+(1 row)
+SHOW ssl;
+ ssl 
+-----
+ on  
+(1 row)
+
+CREATE TABLE test(a int) DISTRIBUTED BY (a);
+CREATE
+INSERT INTO test SELECT generate_series(1, 100);
+INSERT 100
+SELECT COUNT(*) from test;
+ count 
+-------
+ 100   
+(1 row)
+
+DROP TABLE test;
+DROP

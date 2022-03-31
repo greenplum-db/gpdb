@@ -1,0 +1,1 @@
+CREATE EXTENSION IF NOT EXISTS gp_parallel_retrieve_cursor;
