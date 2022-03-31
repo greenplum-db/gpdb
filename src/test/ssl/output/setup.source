@@ -1,0 +1,5 @@
+SHOW ssl;
+ ssl 
+-----
+ on  
+(1 row)

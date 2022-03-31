@@ -1,0 +1,28 @@
+-- current user is ssltestuser which only can login via SSL
+SELECT current_user;
+ current_user 
+--------------
+ ssltestuser  
+(1 row)
+-- gpadmin still can login without SSL
+! psql -d postgres -U gpadmin -c "SELECT current_user";
+ current_user 
+--------------
+ gpadmin
+(1 row)
+
+
+
+-- ssltestuser can read/write data with SSL
+CREATE TABLE test(a int) DISTRIBUTED BY (a);
+CREATE
+INSERT INTO test SELECT generate_series(1, 100);
+INSERT 100
+SELECT COUNT(*) from test;
+ count 
+-------
+ 100   
+(1 row)
+
+DROP TABLE test;
+DROP

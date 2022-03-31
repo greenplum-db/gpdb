@@ -112,6 +112,7 @@ static int	port = -1;
 static bool port_specified_by_user = false;
 static char *dlpath = PKGLIBDIR;
 static char *user = NULL;
+static char *sslmode = NULL;
 static _stringlist *extraroles = NULL;
 static char *config_auth_datadir = NULL;
 static bool  ignore_plans = false;
@@ -1286,6 +1287,8 @@ initialize_environment(void)
 		}
 		if (user != NULL)
 			doputenv("PGUSER", user);
+		if (sslmode != NULL)
+			doputenv("PGSSLMODE", sslmode);
 
 		/*
 		 * Report what we're connecting to
@@ -2757,6 +2760,7 @@ help(void)
 	printf(_("      --host=HOST               use postmaster running on HOST\n"));
 	printf(_("      --port=PORT               use postmaster running at PORT\n"));
 	printf(_("      --user=USER               connect as USER\n"));
+	printf(_("      --sslmode=SSLMODE         connect with SSLMODE\n"));
 	printf(_("\n"));
 	printf(_("The exit status is 0 if all tests passed, 1 if some tests failed, and 2\n"));
 	printf(_("if the tests could not be run for some reason.\n"));
@@ -2799,6 +2803,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"print-failure-diffs", no_argument, NULL, 84},
 		{"tablespace-dir", required_argument, NULL, 85},
 		{"exclude-file", required_argument, NULL, 87}, /* 86 conflicts with 'V' */
+		{"sslmode", required_argument, NULL, 88},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2942,6 +2947,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				exclude_tests_file = strdup(optarg);
 				load_exclude_tests_file(&exclude_tests, exclude_tests_file);
 				break;
+			case 88:
+				sslmode = strdup(optarg);
+				break;
+
 			default:
 				/* getopt_long already emitted a complaint */
 				fprintf(stderr, _("\nTry \"%s -h\" for more information.\n"),
