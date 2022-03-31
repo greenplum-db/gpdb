@@ -548,7 +548,7 @@ external_insert_init(Relation rel)
 	 */
 	extInsertDesc = (ExternalInsertDesc) palloc0(sizeof(ExternalInsertDescData));
 	extInsertDesc->ext_rel = rel;
-	if (strcmp(on_clause, "MASTER_ONLY") == 0)
+	if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
 		extInsertDesc->ext_noop = false;
 	else
 		extInsertDesc->ext_noop = (Gp_role == GP_ROLE_DISPATCH);
