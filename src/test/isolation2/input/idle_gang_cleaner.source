@@ -6,6 +6,23 @@
 
 CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
 AS '@abs_builddir@/../regress/regress.so', 'cleanupAllGangs' LANGUAGE C;
+
+create or replace language plpython3u;
+create extension if not exists gp_inject_fault;
+
+CREATE OR REPLACE FUNCTION idle_gang_pressure_test() RETURNS VOID LANGUAGE plpython3u AS $$
+from pg import DB
+
+dbname = plpy.execute("select current_database() db")[0]["db"]
+db = DB(dbname=dbname)
+
+db.query("SET gp_vmem_idle_resource_timeout = 1")
+for i in range(1000):
+    db.query("SELECT count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2);")
+db.query("RESET gp_vmem_idle_resource_timeout")
+db.close()
+$$;
+
 set gp_vmem_idle_resource_timeout to '0.5s';
 set gp_snapshotadd_timeout to 0;
 
@@ -28,6 +45,8 @@ select count(*) from idle_gang_cleaner_t a
 ;
 
 0U: select gp_inject_fault('proc_kill', 'reset', 2, target_session_id) from target_session_id_t;
+
+select idle_gang_pressure_test();
 
 drop table target_session_id_t;
 drop table idle_gang_cleaner_t;
