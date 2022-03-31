@@ -106,11 +106,17 @@ Feature: gprecoverseg tests involving migrating to a new host
          And segment hosts "sdw1" are disconnected from the cluster and from the spare segment hosts "sdw5"
          And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
          And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
-         When the user runs command "echo 'sdw1|20000|/data/gpdata/primary/gpseg0 sdw5|20000|/data/gpdata/primary/gpseg0' > /tmp/test-gprecoverseg01-scheraio-config-file"
-         Then the user runs command "echo 'sdw1|21001|/data/gpdata/mirror/gpseg7 sdw5|21001|/data/gpdata/mirror/gpseg7' >> /tmp/test-gprecoverseg01-scheraio-config-file"
-         Then the user runs command "echo 'sdw1|21000|/data/gpdata/mirror/gpseg6 sdw5|21000|/data/gpdata/mirror/gpseg6' >> /tmp/test-gprecoverseg01-scheraio-config-file"
-         Then the user runs command "echo 'sdw1|20001|/data/gpdata/primary/gpseg1 sdw5|20001|/data/gpdata/primary/gpseg1' >> /tmp/test-gprecoverseg01-scheraio-config-file"
-         Then the user runs "gprecoverseg -i /tmp/test-gprecoverseg01-scheraio-config-file -av"
+         And a gprecoverseg input file is created
+         And edit the input file to recover with content id 0 to host sdw5
+         And edit the input file to recover with content id 7 to host sdw5
+         And edit the input file to recover with content id 6 to host sdw5
+         And edit the input file to recover with content id 1 to host sdw5
+#         When the user runs command "echo 'sdw1|20000|/data/gpdata/primary/gpseg0 sdw5|20000|/data/gpdata/primary/gpseg0' > /tmp/test-gprecoverseg01-scheraio-config-file"
+#         Then the user runs command "echo 'sdw1|21001|/data/gpdata/mirror/gpseg7 sdw5|21001|/data/gpdata/mirror/gpseg7' >> /tmp/test-gprecoverseg01-scheraio-config-file"
+#         Then the user runs command "echo 'sdw1|21000|/data/gpdata/mirror/gpseg6 sdw5|21000|/data/gpdata/mirror/gpseg6' >> /tmp/test-gprecoverseg01-scheraio-config-file"
+#         Then the user runs command "echo 'sdw1|20001|/data/gpdata/primary/gpseg1 sdw5|20001|/data/gpdata/primary/gpseg1' >> /tmp/test-gprecoverseg01-scheraio-config-file"
+#         Then the user runs "gprecoverseg -i /tmp/test-gprecoverseg01-scheraio-config-file -av"
+         When the user runs gprecoverseg with input file and additional args "-av"
          Then gprecoverseg should return a return code of 0
          Then the original cluster state is recreated for "one_host_down-1"
          And the cluster configuration is saved for "after_recreation"

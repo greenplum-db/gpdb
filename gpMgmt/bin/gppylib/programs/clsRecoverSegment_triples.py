@@ -131,12 +131,13 @@ class RecoveryTriplets(abc.ABC):
 
     @staticmethod
     def _get_unreachable_failover_hosts(requests, paralleldegree=1)-> List[str]:
-        # hostlist = set()
+        hostlist = set()
         # for req in requests:
-        #     if(req.failover_host):
-        #        hostlist.add(req.failover_host)
-        hostlist = {req for req in requests if req.failover_host}
-        unreachable_hosts = get_unreachable_segment_hosts(list(hostlist), min(paralleldegree, len(hostlist)))
+        #    if(req.failover_host):
+        #      hostlist.add(req.failover_host)
+        hostlist = {req.failover_host for req in requests if req.failover_host}
+        #hostlist = {req for req in requests if req.failover_host}
+        unreachable_hosts = get_unreachable_segment_hosts(hostlist, min(paralleldegree, len(hostlist)))
         return unreachable_hosts
 
     def getInterfaceHostnameWarnings(self):
@@ -160,7 +161,6 @@ class RecoveryTriplets(abc.ABC):
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
             failover = None
             if req.failover_host:
-
                 # these two lines make it so that failover points to the object that is registered in gparray
                 #   as the failed segment(!).
                 failover = req.failed
@@ -171,14 +171,11 @@ class RecoveryTriplets(abc.ABC):
                 failover.setSegmentHostName(req.failover_host)
                 failover.setSegmentPort(int(req.failover_port))
                 failover.setSegmentDataDirectory(req.failover_datadir)
-                failover.unreachable = False if (req.failover_to_new_host or failover.getSegmentHostName() not in unreachable_hosts) else failover.unreachable
+                failover.unreachable = False if (failover.getSegmentHostName() not in unreachable_hosts) else failover.unreachable
             else:
-                # This means recovery in place, check for host reachable
-                # this must come AFTER the if check above because failedSegment can be adjusted to
-                #   point to a different object
-                if(req.failed.address in unreachable_hosts or req.failed.unreachable):
-                    req.failed.unreachable = True
-                    # As ureachable, skip the recovery
+                # recovery in place, check for host reachable
+                if(req.failed.unreachable):
+                    # skip the recovery
                     continue
 
             peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
