@@ -293,4 +293,7 @@ test: run_utility_gpexpand_phase1
 # check correct error message when create extension error on segment
 test: create_extension_fail
 
+# test if motion sockets are created with the gp_segment_configuration.address
+test: motion_socket
+
 # end of tests

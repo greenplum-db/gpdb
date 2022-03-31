@@ -1021,7 +1021,6 @@ ensureInterconnectAddress(void)
 	if (GpIdentity.segindex >= 0)
 	{
 		Assert(Gp_role == GP_ROLE_EXECUTE);
-		Assert(MyProcPort != NULL);
 		Assert(MyProcPort->laddr.addr.ss_family == AF_INET
 				|| MyProcPort->laddr.addr.ss_family == AF_INET6);
 		/*
@@ -1055,8 +1054,7 @@ ensureInterconnectAddress(void)
 		 */
 		interconnect_address = qdHostname;
 	}
-	else
-		Assert(false);
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
 }
 /*
  * performs all necessary setup required for Greenplum Database mode.

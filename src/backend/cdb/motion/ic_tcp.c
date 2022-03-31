@@ -155,28 +155,18 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_STREAM;	/* Two-way, out of band connection */
-	hints.ai_flags = AI_PASSIVE;	/* For wildcard IP address */
 	hints.ai_protocol = 0;		/* Any protocol - TCP implied for network use due to SOCK_STREAM */
 
 	/*
-	 * We set interconnect_address on the primary to the local address of the connection from QD
-	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
-	 * used for interconnection.
-	 * However it's wrong on the master. Because the connection from the client to the master may
-	 * have different IP addresses as its destination, which is very likely not the master's
-	 * ADDRESS in gp_segment_configuration.
+	 * Restrict what IP address we will listen on to just the one that was
+	 * used to create this QE session.
 	 */
-	if (interconnect_address)
-	{
-		/*
-		 * Restrict what IP address we will listen on to just the one that was
-		 * used to create this QE session.
-		 */
-		hints.ai_flags |= AI_NUMERICHOST;
-		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			ereport(DEBUG4, (errmsg("binding listener %s", interconnect_address)));
-	}
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
+	hints.ai_flags |= AI_NUMERICHOST;
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+		ereport(DEBUG1,
+				(errmsg("getaddrinfo called with interconnect_address %s",
+						interconnect_address)));
 
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
