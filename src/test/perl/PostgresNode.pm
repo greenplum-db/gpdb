@@ -367,9 +367,6 @@ a directory that's only accessible to the current user to ensure that.
 On Windows, we use SSPI authentication to ensure the same (by pg_regress
 --config-auth).
 
-pg_hba.conf is configured to allow replication connections. Pass the keyword
-parameter hba_permit_replication => 0 to disable this.
-
 WAL archiving can be enabled on this node by passing the keyword parameter
 has_archiving => 1. This is disabled by default.
 
@@ -388,8 +385,6 @@ sub init
 	my $pgdata = $self->data_dir;
 	my $host   = $self->host;
 
-	$params{hba_permit_replication} = 1
-	  unless defined $params{hba_permit_replication};
 	$params{allows_streaming} = 0 unless defined $params{allows_streaming};
 	$params{has_archiving}    = 0 unless defined $params{has_archiving};
 
@@ -431,7 +426,7 @@ sub init
 	}
 	close $conf;
 
-	$self->set_replication_conf if $params{hba_permit_replication};
+	$self->set_replication_conf if $params{allows_streaming};
 	$self->enable_archiving     if $params{has_archiving};
 }
 
@@ -571,9 +566,6 @@ Does not start the node after initializing it.
 
 A recovery.conf is not created.
 
-pg_hba.conf is configured to allow replication connections. Pass the keyword
-parameter hba_permit_replication => 0 to disable this.
-
 Streaming replication can be enabled on this node by passing the keyword
 parameter has_streaming => 1. This is disabled by default.
 
@@ -595,8 +587,6 @@ sub init_from_backup
 	my $root_name   = $root_node->name;
 
 	$params{has_streaming} = 0 unless defined $params{has_streaming};
-	$params{hba_permit_replication} = 1
-	  unless defined $params{hba_permit_replication};
 	$params{has_restoring} = 0 unless defined $params{has_restoring};
 
 	print
@@ -618,7 +608,6 @@ sub init_from_backup
 		qq(
 port = $port
 ));
-	$self->set_replication_conf         if $params{hba_permit_replication};
 	$self->enable_streaming($root_node) if $params{has_streaming};
 	$self->enable_restoring($root_node) if $params{has_restoring};
 }
