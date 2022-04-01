@@ -4,9 +4,10 @@
 -- the motion sockets is equal to gp_segment_configuration.address.
 
 
--- start_matchignore
--- m/^INFO:  Checking postgres backend postgres:*/
--- end_matchignore
+-- start_matchsubs
+-- m/^INFO:  Checking postgres backend postgres:.*/
+-- s/^INFO:  Checking postgres backend postgres:.*/INFO:  Checking postgres backend postgres: XXX/
+-- end_matchsubs
 CREATE FUNCTION check_motion_sockets()
     RETURNS VOID as $$
 import psutil, socket
