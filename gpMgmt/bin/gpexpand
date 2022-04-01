@@ -29,6 +29,7 @@ try:
     from gppylib.db import catalog
     from gppylib.db import dbconn
     from gppylib.userinput import *
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
     from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
     from gppylib.system import configurationInterface, configurationImplGpdb
     from gppylib.system.environment import GpCoordinatorEnvironment
@@ -1153,12 +1154,30 @@ class gpexpand:
             return
         if self.icProxyAddresses is None:
             self.get_interconnect_proxy_addresses()
-        # os.system('''gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"'''.format(self.icProxyAddresses))
-        cmd = GpConfigHelper("add interconnect proxy addresses",
-                                self.options.coordinator_data_directory,
+        hosts = [self.gparray.coordinator.hostname]
+        if self.gparray.standbyCoordinator is not None:
+            hosts.append(self.gparray.standbyCoordinator.hostname)
+        
+        unreachable_hosts = get_unreachable_segment_hosts(hosts, len(set(hosts)))
+        
+        reachable_host = [seg for seg in self.gparray.getSegDbList() if seg.hostname not in unreachable_hosts]
+        reachable_coordinator = [seg for seg in [self.gparray.coordinator, self.gparray.standbyCoordinator] if seg is not None and seg.hostname not in unreachable_hosts]
+        reachable_host.extend(reachable_coordinator)
+        pool = WorkerPool()
+        for seg in reachable_host:
+            cmd_name = "set gp_interconnect_proxy_addresses parameter on host %s:%s" % (seg.hostname, seg.port)
+            print(cmd_name)
+            cmd = GpConfigHelper(cmd_name,
+                                seg.datadir,
                                 'gp_interconnect_proxy_addresses',
-                                value="'" + self.icProxyAddresses + "'")
-        cmd.run(validateAfter=True)
+                                value="'" + self.icProxyAddresses + "'",
+                                ctxt=REMOTE,
+                                remoteHost=seg.hostname)
+            pool.addCommand(cmd)
+        pool.join()
+        pool.check_results()
+        pool.haltWork()
+        pool.joinWorkers()
         os.system('gpstop -u')
 
     def get_interconnect_proxy_addresses(self):
@@ -2496,6 +2515,7 @@ def main(options, args, parser):
             newSegList = _gp_expand.read_input_files()
             _gp_expand.check_interconnect_type()
             _gp_expand.addNewSegments(newSegList)
+            _gp_expand.update_interconnect_proxy()
             _gp_expand.sync_packages()
             _gp_expand.start_prepare()
             _gp_expand.lock_catalog()
@@ -2504,7 +2524,6 @@ def main(options, args, parser):
             _gp_expand.update_original_segments()
             _gp_expand.cleanup_new_segments()
             _gp_expand.update_catalog()
-            _gp_expand.update_interconnect_proxy()
             _gp_expand.unlock_catalog()
             _gp_expand.setup_schema()
             _gp_expand.prepare_schema()
