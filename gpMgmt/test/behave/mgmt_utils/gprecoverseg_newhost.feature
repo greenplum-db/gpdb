@@ -106,6 +106,7 @@ Feature: gprecoverseg tests involving migrating to a new host
          And segment hosts "sdw1" are disconnected from the cluster and from the spare segment hosts "sdw5"
          And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
          And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
+         And a gprecoverseg directory under '/tmp' with mode '0700' is created
          And a gprecoverseg input file is created
          And edit the input file to recover with content id 0 to host sdw5
          And edit the input file to recover with content id 7 to host sdw5
