@@ -818,6 +818,10 @@ sub promote
 	print "### Promoting node \"$name\"\n";
 	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-l', $logfile,
 							'promote');
+	# GPDB: In 6X_STABLE, pg_ctl promote does not wait until promotion is finished
+	# so we need to manually check in a loop.
+	$self->poll_query_until('postgres', "SELECT NOT pg_is_in_recovery()")
+		or die "Timed out while waiting for standby to promote";
 }
 
 # Internal routine to enable streaming replication on a standby node.
