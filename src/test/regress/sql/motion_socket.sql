@@ -11,8 +11,13 @@ CREATE FUNCTION check_motion_sockets()
     RETURNS VOID as $$
 import psutil, socket
 
-# Create a temporary table to create a gang
+# Create a temporary table to create a writer gang
 plpy.execute("CREATE TEMP TABLE motion_socket_force_create_gang(i int);")
+
+# Since we have slightly different logic in constructing the source address of
+# motion sockets for singleton readers on the QD, create a singleton reader on
+# the QD as well.
+plpy.execute("SELECT * FROM motion_socket_force_create_gang, pg_database;")
 
 # We expect different number of sockets to be created for different
 # interconnect types
