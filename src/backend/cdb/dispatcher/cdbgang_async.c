@@ -79,8 +79,14 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	newGangDefinition = buildGangDefinition(segments, segmentType);
 	CurrentGangCreating = newGangDefinition;
 	/*
-	 * If we're in a global transaction, and there is some primary segment down,
+	 * If we're in a global transaction, and there is some segment configuration change,
 	 * we have to error out so that the current global transaction can be aborted.
+	 * This is because within a transaction we use cached version of configuration information 
+	 * obtained at start of transaction, which we can't update in-middle of transaction.
+	 * so QD will still talk to the old primary but not a new promoted one. This isn't an issue 
+	 * if the old primary is completely down since we'll find a FATAL error during communication,
+	 * but becomes an issue if the old primary is working and acting like normal to QD.
+	 * 
 	 * Before error out, we need to reset the session instead of disconnectAndDestroyAllGangs.
 	 * The latter will drop CdbComponentsContext what we will use in AtAbort_Portals.
 	 * Because some primary segment is down writerGangLost will be marked when recycling gangs,
