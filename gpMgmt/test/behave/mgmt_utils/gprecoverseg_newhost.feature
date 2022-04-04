@@ -154,7 +154,6 @@ Feature: gprecoverseg tests involving migrating to a new host
          And edit the input file to recover with content id 1 to host sdw5
          When the user runs gprecoverseg with input file and additional args "-av"
          Then gprecoverseg should return a return code of 0
-         Then gprecoverseg should return a return code of 0
          Then the original cluster state is recreated for "one_host_down-3"
          And the cluster configuration is saved for "after_recreation"
          And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost

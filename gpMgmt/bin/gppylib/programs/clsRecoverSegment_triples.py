@@ -149,10 +149,10 @@ class RecoveryTriplets(abc.ABC):
     # reflect this failover segment.  This is how we implement the `-o` option.
     # The returned RecoveryTriplets specify the recovery that needs to be done, but the gparray is mutated to reflect
     # the state as if that recovery had already completed.
-    def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest], paralleldegree) -> List[RecoveryTriplet]:
+    def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest]) -> List[RecoveryTriplet]:
         triplets = []
         # Get list of hosts unreachable from the request
-        unreachable_hosts = self._get_unreachable_failover_hosts(requests, paralleldegree)
+        unreachable_hosts = self._get_unreachable_failover_hosts(requests, self.paralleldegree)
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
         for req in requests:
@@ -200,7 +200,7 @@ class RecoveryTripletsInplace(RecoveryTriplets):
             req = RecoveryTripletRequest(failedSeg)
             requests.append(req)
 
-        return self._convert_requests_to_triplets(requests, self.paralleldegree)
+        return self._convert_requests_to_triplets(requests)
 
 
 class RecoveryTripletsNewHosts(RecoveryTriplets):
@@ -239,7 +239,7 @@ class RecoveryTripletsNewHosts(RecoveryTriplets):
                 req = RecoveryTripletRequest(failed, failoverHost, failoverPort, failed.getSegmentDataDirectory(), True)
                 requests.append(req)
 
-        return self._convert_requests_to_triplets(requests, self.paralleldegree)
+        return self._convert_requests_to_triplets(requests)
 
     class _PortAssigner:
         """
@@ -318,7 +318,7 @@ class RecoveryTripletsUserConfigFile(RecoveryTriplets):
             req = RecoveryTripletRequest(_find_failed_from_row(), row.get('newAddress'), row.get('newPort'), row.get('newDataDirectory'))
             requests.append(req)
 
-        return self._convert_requests_to_triplets(requests, self.paralleldegree)
+        return self._convert_requests_to_triplets(requests)
 
 
     @staticmethod
