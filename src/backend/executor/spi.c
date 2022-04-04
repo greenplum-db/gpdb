@@ -1178,7 +1178,7 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	if (plan->saved)
 	{
 		/* Replan if needed, and increment plan refcount for portal */
-		cplan = RevalidateCachedPlanWithParams(plansource, false, paramLI, NULL);
+		cplan = RevalidateCachedPlanWithParams(plansource, false, optimizer ? NULL : paramLI, NULL);
 		stmt_list = cplan->stmt_list;
 	}
 	else
@@ -1791,7 +1791,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			if (plan->saved)
 			{
 				/* Replan if needed, and increment plan refcount locally */
-				cplan = RevalidateCachedPlanWithParams(plansource, true, paramLI, NULL);
+				cplan = RevalidateCachedPlanWithParams(plansource, true, optimizer ? NULL : paramLI, NULL);
 				stmt_list = cplan->stmt_list;
 			}
 			else
