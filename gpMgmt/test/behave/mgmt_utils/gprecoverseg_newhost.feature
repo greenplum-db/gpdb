@@ -131,7 +131,7 @@ Feature: gprecoverseg tests involving migrating to a new host
          And a gprecoverseg directory under '/tmp' with mode '0700' is created
          And a gprecoverseg input file is created
          And edit the input file to recover with content id 0 to host sdw5
-         And edit the input file to recover with content id 7 to host sdw5
+         And edit the input file to recover with content id 6 to host sdw5
          When the user runs gprecoverseg with input file and additional args "-av"
          Then gprecoverseg should return a return code of 0
          Then the original cluster state is recreated for "one_host_down-2"
