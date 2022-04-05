@@ -99,12 +99,13 @@
             <entry><codeph>last_vacuum</codeph></entry>
             <entry>timestamp with time zone</entry>
             <entry>Last time this table was manually vacuumed (not counting <codeph>VACUUM
-                FULL</codeph>)</entry>
+                FULL</codeph>)<note>Greenplum Database 5.x does not populate this column value.</note></entry>
           </row>
           <row>
             <entry><codeph>last_autovacuum</codeph></entry>
             <entry>timestamp with time zone</entry>
-            <entry>Last time this table was vacuumed by the autovacuum daemon<sup>1</sup></entry>
+            <entry>Last time this table was vacuumed by the autovacuum daemon<sup>1</sup>
+              <note>Greenplum Database 5.x does not populate this column value.</note></entry>
           </row>
           <row>
             <entry><codeph>last_analyze</codeph></entry>
@@ -114,7 +115,8 @@
           <row>
             <entry><codeph>last_autoanalyze</codeph></entry>
             <entry>timestamp with time zone</entry>
-            <entry>Last time this table was analyzed by the autovacuum daemon<sup>1</sup></entry>
+            <entry>Last time this table was analyzed by the autovacuum daemon<sup>1</sup>
+              <note>Greenplum Database 5.x does not populate this column value.</note></entry>
           </row>
         </tbody>
       </tgroup>
@@ -148,10 +150,7 @@ SELECT
     m.n_tup_hot_upd,
     m.n_live_tup,
     m.n_dead_tup,
-    s.last_vacuum,
-    s.last_autovacuum,
-    s.last_analyze,
-    s.last_autoanalyze
+    s.last_analyze
 FROM
     (SELECT
          relid,
@@ -167,10 +166,7 @@ FROM
          sum(n_tup_hot_upd) as n_tup_hot_upd,
          sum(n_live_tup) as n_live_tup,
          sum(n_dead_tup) as n_dead_tup,
-         max(last_vacuum) as last_vacuum,
-         max(last_autovacuum) as last_autovacuum,
-         max(last_analyze) as last_analyze,
-         max(last_autoanalyze) as last_autoanalyze
+         max(last_analyze) as last_analyze
      FROM gp_dist_random('pg_stat_all_tables')
      WHERE relid >= 16384
      GROUP BY relid, schemaname, relname
