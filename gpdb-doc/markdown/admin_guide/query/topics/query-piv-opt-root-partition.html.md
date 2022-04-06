@@ -21,7 +21,7 @@ Follow these best practices for running `ANALYZE` or `ANALYZE ROOTPARTITION` on 
 -   For very large tables, run `ANALYZE` or `ANALYZE ROOTPARTITION` only weekly, or at some interval longer than daily.
 -   Avoid running `ANALYZE` with no arguments, because doing so runs the command on all database tables including partitioned tables. With large databases, these global `ANALYZE` operations are difficult to monitor, and it can be difficult to predict the time needed for completion.
 -   Consider running multiple `ANALYZE <table_name>` or `ANALYZE ROOTPARTITION <table_name>` operations in parallel to speed the operation of statistics collection, if your I/O throughput can support the load.
--   You can also use the Greenplum Database utility `analyzedb` to update table statistics. Using `analyzedb` ensures that tables that were previously analzyed are not re-analyzed if no modifications were made to the leaf partition.
+-   You can also use the Greenplum Database utility `analyzedb` to update table statistics. Using `analyzedb` ensures that tables that were previously analyzed are not re-analyzed if no modifications were made to the leaf partition.
 
 ## <a id="topic_h2x_hks_wbb"></a>GPORCA and Leaf Partition Statistics 
 
