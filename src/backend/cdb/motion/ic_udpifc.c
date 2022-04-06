@@ -774,8 +774,6 @@ static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
 
 static inline bool pollAcks(ChunkTransportState *transportStates, int fd, int timeout);
 
-static ssize_t sendtoWithRetry(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len, int retry, const char *errDetail);
-
 /* #define TRANSFER_PROTOCOL_STATS */
 
 #ifdef TRANSFER_PROTOCOL_STATS
@@ -1782,6 +1780,9 @@ destroyConnHashTable(ConnHashTable *ht)
 /*
  * sendControlMessage
  * 		Helper function to send a control message.
+ *
+ * It is different from sendOnce which retries on interrupts...
+ * Here, we leave it to retransmit logic to handle these cases.
  */
 static inline void
 sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerLen)
@@ -1802,10 +1803,13 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	if (gp_interconnect_full_crc)
 		addCRC(pkt);
 
-	char errDetail[100];
-	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %d", pkt->seq);
-	/* Retry for infinite times since we have no retransmit mechanism for control message */
-	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, 0, errDetail);
+	n = sendto(fd, (const char *) pkt, pkt->len, 0, addr, peerLen);
+
+	/*
+	 * No need to handle EAGAIN here: no-space just means that we dropped the
+	 * packet: our ordinary retransmit mechanism will handle that case
+	 */
+
 	if (n < pkt->len)
 		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
 }
@@ -4545,59 +4549,13 @@ prepareXmit(MotionConn *conn)
 }
 
 /*
- * sendtoWithRetry
- * 		Retry sendto logic and send the packets.
- */
-static ssize_t sendtoWithRetry(int socket, const void *message, size_t length,
-           int flags, const struct sockaddr *dest_addr,
-           socklen_t dest_len, int retry, const char *errDetail) {
-	int32		n;
-	int count = 0;
-
-xmit_retry:
-	if (retry > 0 && ++count > retry)
-		return n;
-	n = sendto(socket, message, length, flags, dest_addr, dest_len);
-	if (n < 0)
-	{
-		if (errno == EINTR)
-			goto xmit_retry;
-
-		if (errno == EAGAIN)	/* no space ? not an error. */
-			return n;
-
-		/*
-		 * If Linux iptables (nf_conntrack?) drops an outgoing packet, it may
-		 * return an EPERM to the application. This might be simply because of
-		 * traffic shaping or congestion, so ignore it.
-		 */
-		if (errno == EPERM)
-		{
-			ereport(LOG,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("Interconnect error writing an outgoing packet: %m"),
-					 errdetail("error during sendto() %s", errDetail)));
-			return n;
-		}
-
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error writing an outgoing packet: %m"),
-						errdetail("error during sendto() call (error:%d).\n"
-								  "%s", errno, errDetail)));
-		/* not reached */
-	}
-
-	return n;
-}
-
-/*
  * sendOnce
  * 		Send a packet.
  */
 static void
 sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
 {
-	int32 n;
+	int32		n;
 
 #ifdef USE_ASSERT_CHECKING
 	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
@@ -4609,12 +4567,41 @@ sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry,
 	}
 #endif
 
-	char errDetail[100];
-	snprintf(errDetail, sizeof(errDetail), "For Remote Connection: contentId=%d at %s",
-					  conn->remoteContentId,
-					  conn->remoteHostAndPort);
-	n = sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
-                          (struct sockaddr *) &conn->peer, conn->peer_len, 0, errDetail);
+xmit_retry:
+	n = sendto(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
+			   (struct sockaddr *) &conn->peer, conn->peer_len);
+	if (n < 0)
+	{
+		if (errno == EINTR)
+			goto xmit_retry;
+
+		if (errno == EAGAIN)	/* no space ? not an error. */
+			return;
+
+		/*
+		 * If Linux iptables (nf_conntrack?) drops an outgoing packet, it may
+		 * return an EPERM to the application. This might be simply because of
+		 * traffic shaping or congestion, so ignore it.
+		 */
+		if (errno == EPERM)
+		{
+			ereport(LOG,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("Interconnect error writing an outgoing packet: %m"),
+					 errdetail("error during sendto() for Remote Connection: contentId=%d at %s",
+							   conn->remoteContentId, conn->remoteHostAndPort)));
+			return;
+		}
+
+		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						errmsg("Interconnect error writing an outgoing packet: %m"),
+						errdetail("error during sendto() call (error:%d).\n"
+								  "For Remote Connection: contentId=%d at %s",
+								  errno, conn->remoteContentId,
+								  conn->remoteHostAndPort)));
+		/* not reached */
+	}
+
 	if (n != buf->pkt->len)
 	{
 		if (DEBUG1 >= log_min_messages)
@@ -4626,6 +4613,7 @@ sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry,
 		logPkt("PKT DETAILS ", buf->pkt);
 #endif
 	}
+
 	return;
 }
 
@@ -6964,7 +6952,7 @@ SendDummyPacket(void)
 
 	if (counter >= 10)
 	{
-		elog(LOG, "send dummy packet failed, sendto failed with 10 times: %m");
+		elog(LOG, "send dummy packet failed, sendto failed: %m");
 		goto send_error;
 	}
 
