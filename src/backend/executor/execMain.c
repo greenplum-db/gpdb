@@ -602,9 +602,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 * First, pre-execute any initPlan subplans.
 			 */
 			if (list_length(queryDesc->plannedstmt->paramExecTypes) > 0)
-			{
 				preprocess_initplans(queryDesc);
-			}
 
 			if (toplevelOidCache != NIL)
 			{
