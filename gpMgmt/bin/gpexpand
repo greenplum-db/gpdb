@@ -921,6 +921,15 @@ class NewSegmentInput:
         self.contentId = contentId
         self.role = role
 
+class NewIcProxyAddress:
+    def __init__(self, dbid, contentId, address, port):
+        self.dbid = dbid
+        self.contentId = contentId
+        self.address = address
+        self.port = port
+
+    def __str__(self):
+        return '{}:{}:{}:{}'.format(self.dbid, self.contentId, self.address, self.port)
 
 # ------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------
@@ -951,7 +960,7 @@ class gpexpand:
             self.tempDir = createTempDirectoryName(self.options.coordinator_data_directory, "gpexpand")
         self.queue = None
         self.segTemplate = None
-        self.icProxyAddresses = None
+        self.icProxyAddresses = []
         self.isIcProxy = False
 
     @staticmethod
@@ -1103,6 +1112,20 @@ class gpexpand:
 
         return outputfile
 
+    def generate_proxyfile(self):
+        self.check_interconnect_type()
+        if not self.isIcProxy:
+            return
+        icproxyFilename = 'gpexpand.ic'
+        delta = -2000
+        with open(icproxyFilename, 'w') as proxyFile:
+            logger.info("Generating ic proxy addresses config...")
+            for db in self.gparray.getExpansionSegDbList():
+                icPort = str(int(db.getSegmentPort()) + delta)
+                proxyStr = '{}:{}:{}:{}'.format(db.getSegmentDbId(), db.getSegmentContentId(), \
+                        db.getSegmentAddress(), icPort)
+                proxyFile.write(proxyStr + "\n")
+
     def generate_tablespace_inputfile(self, filename):
         coordinator_tblspc_dir = self.gparray.coordinator.getSegmentTableSpaceDirectory()
         tblspc_oids = os.listdir(coordinator_tblspc_dir)
@@ -1164,13 +1187,14 @@ class gpexpand:
         reachable_coordinator = [seg for seg in [self.gparray.coordinator, self.gparray.standbyCoordinator] if seg is not None and seg.hostname not in unreachable_hosts]
         reachable_host.extend(reachable_coordinator)
         pool = WorkerPool()
+        icProxyAddrStr = self.__encodeIcProxyAddress()
         for seg in reachable_host:
             cmd_name = "set gp_interconnect_proxy_addresses parameter on host %s:%s" % (seg.hostname, seg.port)
             print(cmd_name)
             cmd = GpConfigHelper(cmd_name,
                                 seg.datadir,
                                 'gp_interconnect_proxy_addresses',
-                                value="'" + self.icProxyAddresses + "'",
+                                value="'" + icProxyAddrStr + "'",
                                 ctxt=REMOTE,
                                 remoteHost=seg.hostname)
             pool.addCommand(cmd)
@@ -1184,20 +1208,28 @@ class gpexpand:
         if self.conn is None:
             self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods=True)
         sql = "show gp_interconnect_proxy_addresses;"
-        self.icProxyAddresses = dbconn.queryRow(self.conn, sql)[0]
+        icProxyAddressesStr = dbconn.queryRow(self.conn, sql)[0]
+        self._parseIcProxyAddressStr(icProxyAddressesStr)
         outputfile = 'gpexpand_ic_proxy_backup.bak'
         logger.info("Backing up IC proxy addresses...")
         with open(outputfile, 'w') as outf:
-            outf.write(self.icProxyAddresses)
-        return self.icProxyAddresses
+            outf.write(icProxyAddressesStr)
+
+    def _parseIcProxyAddressStr(self, icProxyAddressesStr):
+        icProxyAddresses = icProxyAddressesStr.split(',')
+        for lineno, proxyAddr in enumerate(icProxyAddresses):
+            self.icProxyAddresses.append(self._getParsedIcProxyAddressInput(lineno, proxyAddr))
+
+    def __encodeIcProxyAddress(self):
+        return ','.join([str(item) for item in self.icProxyAddresses])
 
     def restore_interconnect_proxy(self):
         infile = 'gpexpand_ic_proxy_backup.bak'
         logger.info("Restoring up IC proxy addresses...")
         with open(infile, 'r') as inf:
-            oldIcProxyAddresses = inf.readline()
-            if oldIcProxyAddresses is not None:
-                self.icProxyAddresses = oldIcProxyAddresses
+            oldIcProxyAddressStr = inf.readline()
+            if oldIcProxyAddressStr is not None:
+                self._parseIcProxyAddressStr(oldIcProxyAddressStr)
                 self.update_interconnect_proxy()
 
     def addNewSegments(self, inputFileEntryList):
@@ -1211,18 +1243,12 @@ class gpexpand:
                                          , port=int(seg.port)
                                          , datadir=os.path.abspath(seg.datadir.strip())
                                          )
-            if self.isIcProxy:
-                delta = -2000
-                icPort = str(int(seg.port) + delta)
-                newAddr = '{}:{}:{}:{}'.format(seg.dbid, seg.contentId, seg.address.strip(), icPort)
-                self.icProxyAddresses += ','
-                self.icProxyAddresses += newAddr
         try:
             self.gparray.validateExpansionSegs()
         except Exception as e:
             raise ExpansionError('Invalid input file: %s' % e)
 
-    def _getParsedRow(self, lineno, line):
+    def _getParsedSegmentInput(self, lineno, line):
         parts = line.split('|')
         if len(parts) != 7:
             raise ExceptionNoStackTraceNeeded("expected 7 parts, obtained %d" % len(parts))
@@ -1238,6 +1264,19 @@ class gpexpand:
                                         , role=role
                                         )
 
+    def _getParsedIcProxyAddressInput(self, lineno, line):
+        parts = line.split(':')
+        if len(parts) != 4:
+            raise ExceptionNoStackTraceNeeded("expected 4 parts, obtained %d" % len(parts))
+        dbid, contentId, address, port = parts
+        check_values(lineno, address=address, port=port, content=contentId,
+                     dbid=dbid)
+        return NewIcProxyAddress(port=port
+                                        , address=address
+                                        , dbid=dbid
+                                        , contentId=contentId
+                                        )
+
     def read_input_files(self, inputFilename=None):
         """Reads and validates line format of the input file passed
         in on the command line via the -i arg"""
@@ -1249,22 +1288,37 @@ class gpexpand:
 
         if self.options.filename:
             inputFilename = self.options.filename
-        f = None
+                        
+        inputFile = None
+        icproxyFile = None
 
         try:
-            f = open(inputFilename, 'r')
-            for lineno, line in line_reader(f):
+            inputFile = open(inputFilename, 'r')
+            for lineno, line in line_reader(inputFile):
                 try:
-                    retValue.append(self._getParsedRow(lineno, line))
+                    retValue.append(self._getParsedSegmentInput(lineno, line))
                 except ValueError:
                     raise ExpansionError('Missing or invalid value on line %d of file %s.' % (lineno, inputFilename))
                 except Exception as e:
                     raise ExpansionError('Invalid input file on line %d of file %s: %s' % (lineno, inputFilename, str(e)))
+            self.check_interconnect_type()
+            if self.isIcProxy:
+                icproxyFilename = 'gpexpand.ic'
+                icproxyFile = open(icproxyFilename, 'r')
+                for lineno, line in line_reader(icproxyFile):
+                    try:
+                        self.icProxyAddresses.append(self._getParsedIcProxyAddressInput(lineno, line))
+                    except ValueError:
+                        raise ExpansionError('Missing or invalid value on line %d of file %s.' % (lineno, icproxyFilename))
+                    except Exception as e:
+                        raise ExpansionError('Invalid input file on line %d of file %s: %s' % (lineno, icproxyFilename, str(e)))
         except IOError:
             raise ExpansionError('Input file %s not found' % inputFilename)
         finally:
-            if f is not None:
-                f.close()
+            if inputFile is not None:
+                inputFile.close()
+            if icproxyFile is not None:
+                icproxyFile.close()
 
         return retValue
 
@@ -2397,6 +2451,8 @@ before continuing by re-running this utility and providing the input file. """
     outFileStr = """\nInput configuration file was written to '%s'.""" % (outfile)
     print(outFileStr)
 
+    _gp_expand.generate_proxyfile()
+
     outfile_ts = _gp_expand.generate_tablespace_inputfile(outfile + ".ts")
     if outfile_ts:
         outFileTsStr = """Tablespace Input configuration file was written to '%s'.""" % (outfile_ts)
@@ -2513,7 +2569,6 @@ def main(options, args, parser):
         elif gpexpand_db_status is None and gpexpand_file_status is None and options.filename:
             _gp_expand.validate_heap_checksums()
             newSegList = _gp_expand.read_input_files()
-            _gp_expand.check_interconnect_type()
             _gp_expand.addNewSegments(newSegList)
             _gp_expand.update_interconnect_proxy()
             _gp_expand.sync_packages()
