@@ -42,4 +42,13 @@ OBJS += nodeMotion.o \
        nodeTupleSplit.o \
        nodePartitionSelector.o
 
+OBJS += nodeDynamicSeqscan.o
+
+# GPDB_12_MERGE_FIXME: Are any of these still needed?
+#OBJS += nodeDynamicIndexscan.o \
+#       nodeDynamicBitmapHeapscan.o \
+#       nodeDynamicBitmapIndexscan.o \
+#       nodeDynamicSeqscan.o
+#       execDynamicScan.o
+
 include $(top_srcdir)/src/backend/common.mk

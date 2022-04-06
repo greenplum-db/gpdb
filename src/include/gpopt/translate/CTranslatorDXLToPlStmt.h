@@ -333,6 +333,22 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
+	// translate a dynamic table scan operator
+	Plan *TranslateDXLDynTblScan(
+		const CDXLNode *dyn_tbl_scan_dxlnode,
+		CDXLTranslateContext *output_context,
+		CDXLTranslationContextArray *
+			ctxt_translation_prev_siblings	// translation contexts of previous siblings
+	);
+
+	// translate a dynamic index scan operator
+	/* Plan *TranslateDXLDynIdxScan */
+	/* 	( */
+	/* 	const CDXLNode *dyn_idx_scan_dxlnode, */
+	/* 	CDXLTranslateContext *output_context, */
+	/* 	CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings */
+	/* 	); */
+
 	// translate a DML operator
 	Plan *TranslateDXLDml(
 		const CDXLNode *dml_dxlnode, CDXLTranslateContext *output_context,
@@ -370,7 +386,7 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
-	// translate a bitmap table scan operator
+	// translate a (dynamic) bitmap table scan operator
 	Plan *TranslateDXLBitmapTblScan(
 		const CDXLNode *bitmapscan_dxlnode,
 		CDXLTranslateContext *output_context,
@@ -458,7 +474,7 @@ private:
 							   List **hash_expr_types_out_list,
 							   CDXLTranslateContext *output_context);
 
-	// translate the tree of bitmap index operators that are under a bitmap table scan
+	// translate the tree of bitmap index operators that are under a (dynamic) bitmap table scan
 	Plan *TranslateDXLBitmapAccessPath(
 		const CDXLNode *bitmap_access_path_dxlnode,
 		CDXLTranslateContext *output_context, const IMDRelation *md_rel,
@@ -476,7 +492,7 @@ private:
 		CDXLTranslationContextArray *ctxt_translation_prev_siblings,
 		BitmapHeapScan *bitmap_tbl_scan);
 
-	// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan
+	// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan or DynamicBitmapIndexScan
 	Plan *TranslateDXLBitmapIndexProbe(
 		const CDXLNode *bitmap_index_probe_dxlnode,
 		CDXLTranslateContext *output_context, const IMDRelation *md_rel,

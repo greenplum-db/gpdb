@@ -86,6 +86,7 @@ enum Edxltoken
 
 	EdxltokenPhysicalTableScan,
 	EdxltokenPhysicalBitmapTableScan,
+	EdxltokenPhysicalDynamicBitmapTableScan,
 	EdxltokenPhysicalExternalScan,
 	EdxltokenPhysicalIndexScan,
 	EdxltokenPhysicalIndexOnlyScan,
@@ -106,6 +107,8 @@ enum Edxltoken
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,
 	EdxltokenPhysicalSequence,
+	EdxltokenPhysicalDynamicTableScan,
+	EdxltokenPhysicalDynamicIndexScan,
 	EdxltokenPhysicalTVF,
 	EdxltokenPhysicalWindow,
 	EdxltokenPhysicalPartitionSelector,

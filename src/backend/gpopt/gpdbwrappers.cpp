@@ -2034,6 +2034,37 @@ gpdb::GetRelationIndexes(Relation relation)
 	GP_WRAP_END;
 	return NIL;
 }
+#if 0
+LogicalIndexes *
+gpdb::GetLogicalPartIndexes
+	(
+	Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition, pg_partition_rule, pg_index */
+		return BuildLogicalIndexInfo(oid);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
+LogicalIndexInfo *
+gpdb::GetLogicalIndexInfo
+	(
+	Oid root_oid,
+	Oid index_oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_index */
+		return logicalIndexInfoForIndexOid(root_oid, index_oid);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
+#endif
 
 gpdb::RelationWrapper
 gpdb::GetRelation(Oid rel_oid)

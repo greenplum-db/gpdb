@@ -46,6 +46,7 @@
 #include "utils/xml.h"
 
 #include "cdb/cdbgang.h"
+#include "executor/execDynamicScan.h"
 #include "optimizer/tlist.h"
 #include "optimizer/optimizer.h"
 
@@ -1344,6 +1345,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 		case T_IndexScan:
 		case T_IndexOnlyScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_SubqueryScan:
 		case T_FunctionScan:
@@ -1352,6 +1354,8 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 		case T_CteScan:
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
+		case T_DynamicSeqScan:
+		case T_DynamicIndexScan:
 		case T_ShareInputScan:
 			*rels_used = bms_add_member(*rels_used,
 										((Scan *) plan)->scanrelid);
@@ -1508,6 +1512,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_SeqScan:
 			pname = sname = "Seq Scan";
 			break;
+		case T_DynamicSeqScan:
+			pname = sname = "Dynamic Seq Scan";
+			break;
 		case T_SampleScan:
 			pname = sname = "Sample Scan";
 			break;
@@ -1520,11 +1527,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_IndexScan:
 			pname = sname = "Index Scan";
 			break;
+		case T_DynamicIndexScan:
+			pname = sname = "Dynamic Index Scan";
+			break;
 		case T_IndexOnlyScan:
 			pname = sname = "Index Only Scan";
 			break;
 		case T_BitmapIndexScan:
 			pname = sname = "Bitmap Index Scan";
+			break;
+		case T_DynamicBitmapIndexScan:
+			pname = sname = "Dynamic Bitmap Index Scan";
 			break;
 		case T_BitmapHeapScan:
 			/*
@@ -1533,6 +1546,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			 * of the table type.
 			 */
 			pname = sname = "Bitmap Heap Scan";
+			break;
+		case T_DynamicBitmapHeapScan:
+			pname = sname = "Dynamic Bitmap Heap Scan";
 			break;
 		case T_TidScan:
 			pname = sname = "Tid Scan";
@@ -1810,8 +1826,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	switch (nodeTag(plan))
 	{
 		case T_SeqScan:
+		case T_DynamicSeqScan:
+		case T_DynamicIndexScan:
 		case T_SampleScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_SubqueryScan:
 		case T_FunctionScan:
@@ -1857,6 +1876,29 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					appendStringInfo(es->str, " on %s", indexname);
 				else
 					ExplainPropertyText("Index Name", indexname, es);
+			}
+			break;
+		case T_DynamicBitmapIndexScan:
+			{
+			/* GPDB_12_MERGE_FIXME */
+#if 0
+				BitmapIndexScan *bitmapindexscan = (BitmapIndexScan *) plan;
+				Oid indexoid = bitmapindexscan->indexid;
+				Oid parentOid = rel_partition_get_root(indexoid);
+				while (parentOid != InvalidOid)
+				{
+					indexoid = parentOid;
+					parentOid = rel_partition_get_root(indexoid);
+				}
+
+				const char *indexname =
+				explain_get_index_name(indexoid);
+
+				if (es->format == EXPLAIN_FORMAT_TEXT)
+					appendStringInfo(es->str, " on %s", indexname);
+				else
+					ExplainPropertyText("Index Name", indexname, es);
+#endif
 			}
 			break;
 		case T_ModifyTable:
@@ -2091,6 +2133,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	switch (nodeTag(plan))
 	{
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
 						   "Index Cond", planstate, ancestors, es);
 			if (((IndexScan *) plan)->indexqualorig)
@@ -2120,10 +2163,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 									 planstate->instrument->ntuples2, 0, es);
 			break;
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
 						   "Index Cond", planstate, ancestors, es);
 			break;
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		{
 			List		*bitmapqualorig;
 
@@ -2149,11 +2194,26 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			/* fall through to print additional fields the same as SeqScan */
 			/* FALLTHROUGH */
 		case T_SeqScan:
+		case T_DynamicSeqScan:
 		case T_ValuesScan:
 		case T_CteScan:
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
 		case T_SubqueryScan:
+			/*
+			 * GPDB_12_MERGE_FIXME: we used to show something along the lines of
+			 * "Partitions selected: 1 (out of 5)" under the partition selector.
+			 * By eleminating the (static) partition selector during translation,
+			 * we only get the survivor count, and lose the size of the universe
+			 * temporarily. However, if we manage to shift the static pruning
+			 * information sufficiently adjacent to (or better, into) a DXL Dynamic
+			 * Table Scan, we should be able to get that information back.
+			 */
+			if (IsA(plan, DynamicSeqScan))
+				ExplainPropertyInteger(
+					"Number of partitions to scan", "",
+					list_length(((DynamicSeqScan *) plan)->partOids), es);
+
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
@@ -3826,10 +3886,13 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 	switch (nodeTag(plan))
 	{
 		case T_SeqScan:
+		case T_DynamicSeqScan:
 		case T_SampleScan:
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 		case T_IndexOnlyScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_ForeignScan:
 		case T_CustomScan:
@@ -3840,6 +3903,15 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 			if (es->verbose)
 				namespace = get_namespace_name(get_rel_namespace(rte->relid));
 			objecttag = "Relation Name";
+
+			/* Print dynamic scan id for dynamic scan operators */
+/* GPDB_12_MERGE_FIXME */
+#if 0
+			if (isDynamicScan(plan))
+			{
+				dynamicScanId = DynamicScan_GetDynamicScanIdPrintable(plan);
+			}
+#endif
 
 			break;
 		case T_FunctionScan:

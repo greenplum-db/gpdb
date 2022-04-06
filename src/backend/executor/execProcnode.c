@@ -80,6 +80,8 @@
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeBitmapIndexscan.h"
+#include "executor/nodeDynamicBitmapHeapscan.h"
+#include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
 #include "executor/nodeCtescan.h"
 #include "executor/nodeCustom.h"
@@ -121,6 +123,8 @@
 #include "cdb/cdbvars.h"
 #include "cdb/ml_ipc.h"			/* interconnect context */
 #include "executor/nodeAssertOp.h"
+#include "executor/nodeDynamicIndexscan.h"
+#include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeMotion.h"
 #include "executor/nodePartitionSelector.h"
 #include "executor/nodeSequence.h"
@@ -273,6 +277,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 													 estate, eflags);
 			break;
 
+		case T_DynamicSeqScan:
+			result = (PlanState *) ExecInitDynamicSeqScan((DynamicSeqScan *) node,
+												   estate, eflags);
+			break;
+
 		case T_SampleScan:
 			result = (PlanState *) ExecInitSampleScan((SampleScan *) node,
 													  estate, eflags);
@@ -283,6 +292,14 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 													 estate, eflags);
 			break;
 
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicIndexScan:
+			result = (PlanState *) ExecInitDynamicIndexScan((DynamicIndexScan *) node,
+													estate, eflags);
+			break;
+#endif
+			
 		case T_IndexOnlyScan:
 			result = (PlanState *) ExecInitIndexOnlyScan((IndexOnlyScan *) node,
 														 estate, eflags);
@@ -293,10 +310,26 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 														   estate, eflags);
 			break;
 
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicBitmapIndexScan:
+			result = (PlanState *) ExecInitDynamicBitmapIndexScan((DynamicBitmapIndexScan *) node,
+																  estate, eflags);
+			break;
+#endif
+
 		case T_BitmapHeapScan:
 			result = (PlanState *) ExecInitBitmapHeapScan((BitmapHeapScan *) node,
 														  estate, eflags);
 			break;
+
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicBitmapHeapScan:
+			result = (PlanState *) ExecInitDynamicBitmapHeapScan((DynamicBitmapHeapScan *) node,
+																 estate, eflags);
+			break;
+#endif
 
 		case T_TidScan:
 			result = (PlanState *) ExecInitTidScan((TidScan *) node,
@@ -685,6 +718,13 @@ MultiExecProcNode(PlanState *node)
 			result = MultiExecBitmapIndexScan((BitmapIndexScanState *) node);
 			break;
 
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicBitmapIndexScanState:
+			result = MultiExecDynamicBitmapIndexScan((DynamicBitmapIndexScanState *) node);
+			break;
+#endif
+
 		case T_BitmapAndState:
 			result = MultiExecBitmapAnd((BitmapAndState *) node);
 			break;
@@ -794,6 +834,10 @@ ExecEndNode(PlanState *node)
 			ExecEndSeqScan((SeqScanState *) node);
 			break;
 
+		case T_DynamicSeqScanState:
+			ExecEndDynamicSeqScan((DynamicSeqScanState *) node);
+			break;
+
 		case T_SampleScanState:
 			ExecEndSampleScan((SampleScanState *) node);
 			break;
@@ -810,6 +854,13 @@ ExecEndNode(PlanState *node)
 			ExecEndIndexScan((IndexScanState *) node);
 			break;
 
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicIndexScanState:
+			ExecEndDynamicIndexScan((DynamicIndexScanState *) node);
+			break;
+#endif
+
 		case T_IndexOnlyScanState:
 			ExecEndIndexOnlyScan((IndexOnlyScanState *) node);
 			break;
@@ -818,9 +869,23 @@ ExecEndNode(PlanState *node)
 			ExecEndBitmapIndexScan((BitmapIndexScanState *) node);
 			break;
 
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicBitmapIndexScanState:
+			ExecEndDynamicBitmapIndexScan((DynamicBitmapIndexScanState *) node);
+			break;
+#endif
+
 		case T_BitmapHeapScanState:
 			ExecEndBitmapHeapScan((BitmapHeapScanState *) node);
 			break;
+
+/* GPDB_12_MERGE_FIXME */
+#if 0
+		case T_DynamicBitmapHeapScanState:
+			ExecEndDynamicBitmapHeapScan((DynamicBitmapHeapScanState *) node);
+			break;
+#endif
 
 		case T_TidScanState:
 			ExecEndTidScan((TidScanState *) node);

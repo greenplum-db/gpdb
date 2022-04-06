@@ -556,6 +556,31 @@ typedef struct SampleScan
 } SampleScan;
 
 /* ----------------
+ *		index type information
+ */
+typedef enum LogicalIndexType
+{
+	INDTYPE_BTREE = 0,
+	INDTYPE_BITMAP = 1,
+	INDTYPE_GIST = 2,
+	INDTYPE_GIN = 3
+} LogicalIndexType;
+
+typedef struct LogicalIndexInfo
+{
+	Oid	logicalIndexOid;	/* OID of the logical index */
+	int	nColumns;		/* Number of columns in the index */
+	AttrNumber	*indexKeys;	/* column numbers of index keys */
+	List	*indPred;		/* predicate if partial index, or NIL */
+	List	*indExprs;		/* index on expressions */
+	bool	indIsUnique;		/* unique index */
+	LogicalIndexType indType;  /* index type: btree or bitmap */
+	Node	*partCons;		/* concatenated list of check constraints
+					 * of each partition on which this index is defined */
+	List	*defaultLevels;		/* Used to identify a default partition */
+} LogicalIndexInfo;
+
+/* ----------------
  *		index scan node
  *
  * indexqualorig is an implicitly-ANDed list of index qual expressions, each
@@ -603,6 +628,26 @@ typedef struct IndexScan
 	List	   *indexorderbyops;	/* OIDs of sort ops for ORDER BY exprs */
 	ScanDirection indexorderdir;	/* forward or backward or don't care */
 } IndexScan;
+
+/*
+ * DynamicIndexScan
+ *   Scan a list of indexes that will be determined at run time.
+ *   The primary application of this operator is to be used
+ *   for partition tables.
+*/
+typedef struct DynamicIndexScan
+{
+	/* Fields shared with a normal IndexScan. Must be first! */
+	IndexScan	indexscan;
+
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+
+	/* logical index to use */
+	LogicalIndexInfo *logicalIndexInfo;
+} DynamicIndexScan;
 
 /* ----------------
  *		index-only scan node
@@ -663,6 +708,25 @@ typedef struct BitmapIndexScan
 	List	   *indexqualorig;	/* the same in original form */
 } BitmapIndexScan;
 
+/*
+ * DynamicBitmapIndexScan
+ *   Scan a list of indexes that will be determined at run time.
+ *   For use with partitioned tables.
+*/
+typedef struct DynamicBitmapIndexScan
+{
+	/* Fields shared with a normal BitmapIndexScan. Must be first! */
+	BitmapIndexScan biscan;
+
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+
+	/* logical index to use */
+	LogicalIndexInfo *logicalIndexInfo;
+} DynamicBitmapIndexScan;
+
 /* ----------------
  *		bitmap sequential scan node
  *
@@ -677,6 +741,43 @@ typedef struct BitmapHeapScan
 	Scan		scan;
 	List	   *bitmapqualorig; /* index quals, in standard expr form */
 } BitmapHeapScan;
+
+/*
+ * DynamicBitmapHeapScan
+ *   Scan a list of tables that will be determined at run time.
+ *
+ * Dynamic counterpart of a BitmapHeapScan, for use with partitioned tables.
+ */
+typedef struct DynamicBitmapHeapScan
+{
+	BitmapHeapScan bitmapheapscan;
+
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+} DynamicBitmapHeapScan;
+
+/*
+ * DynamicSeqScan
+ *   Scan a list of tables that will be determined at run time.
+ */
+typedef struct DynamicSeqScan
+{
+	/* Fields shared with a normal SeqScan. Must be first! */
+	SeqScan		seqscan;
+
+	/*
+	 * Index to arrays in EState->dynamicTableScanInfo, that contain information
+	 * about the partitiones that need to be scanned.
+	 */
+	int32 		partIndex;
+	int32 		partIndexPrintable;
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+} DynamicSeqScan;
 
 /* ----------------
  *		tid scan node

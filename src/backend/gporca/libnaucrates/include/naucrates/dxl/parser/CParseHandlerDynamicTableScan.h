@@ -3,20 +3,18 @@
 //	Copyright (C) 2012 EMC Corp.
 //
 //	@filename:
-//		CParseHandlerIndexScan.h
+//		CParseHandlerDynamicTableScan.h
 //
 //	@doc:
-//		SAX parse handler class for parsing index scan operator nodes
+//		SAX parse handler class for parsing dynamic table scan operator nodes
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CParseHandlerIndexScan_H
-#define GPDXL_CParseHandlerIndexScan_H
+#ifndef GPDXL_CParseHandlerDynamicTableScan_H
+#define GPDXL_CParseHandlerDynamicTableScan_H
 
 #include "gpos/base.h"
 
-#include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
-#include "naucrates/dxl/xml/dxltokens.h"
 
 namespace gpdxl
 {
@@ -24,19 +22,25 @@ using namespace gpos;
 
 XERCES_CPP_NAMESPACE_USE
 
+// fwd decl
+class CDXLPhysicalDynamicTableScan;
+
 //---------------------------------------------------------------------------
 //	@class:
-//		CParseHandlerIndexScan
+//		CParseHandlerDynamicTableScan
 //
 //	@doc:
-//		Parse handler for index scan operator nodes
+//		Parse handler for parsing a dynamic table scan operator
 //
 //---------------------------------------------------------------------------
-class CParseHandlerIndexScan : public CParseHandlerPhysicalOp
+class CParseHandlerDynamicTableScan : public CParseHandlerPhysicalOp
 {
 private:
-	// index scan direction
-	EdxlIndexScanDirection m_index_scan_dir;
+	// the id of the partition index structure
+	ULONG m_part_index_id;
+
+	// printable partition index id
+	ULONG m_part_index_id_printable;
 
 	// process the start of an element
 	void StartElement(
@@ -53,26 +57,17 @@ private:
 		const XMLCh *const element_qname		// element's qname
 		) override;
 
-protected:
-	// common StartElement functionality for IndexScan and IndexOnlyScan
-	void StartElementHelper(const XMLCh *const element_local_name,
-							const Attributes &attrs, Edxltoken token_type);
-
-	// common EndElement functionality for IndexScan and IndexOnlyScan
-	void EndElementHelper(const XMLCh *const element_local_name,
-						  Edxltoken token_type, ULONG part_idx_id = 0,
-						  ULONG part_idx_id_printable = 0);
-
 public:
-	CParseHandlerIndexScan(const CParseHandlerIndexScan &) = delete;
+	CParseHandlerDynamicTableScan(const CParseHandlerDynamicTableScan &) =
+		delete;
 
 	// ctor
-	CParseHandlerIndexScan(CMemoryPool *mp,
-						   CParseHandlerManager *parse_handler_mgr,
-						   CParseHandlerBase *parse_handler_root);
+	CParseHandlerDynamicTableScan(CMemoryPool *mp,
+								  CParseHandlerManager *parse_handler_mgr,
+								  CParseHandlerBase *pph);
 };
 }  // namespace gpdxl
 
-#endif	// !GPDXL_CParseHandlerIndexScan_H
+#endif	// !GPDXL_CParseHandlerDynamicTableScan_H
 
 // EOF

@@ -64,6 +64,8 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLPhysicalCTAS.h"
 #include "naucrates/dxl/operators/CDXLPhysicalCTEConsumer.h"
 #include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicBitmapTableScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalHashJoin.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
@@ -421,6 +423,12 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 										ctxt_translation_prev_siblings);
 			break;
 		}
+		case EdxlopPhysicalDynamicTableScan:
+		{
+			plan = TranslateDXLDynTblScan(dxlnode, output_context,
+										  ctxt_translation_prev_siblings);
+			break;
+		}
 		/* case EdxlopPhysicalDynamicIndexScan: { plan = TranslateDXLDynIdxScan(dxlnode, output_context, ctxt_translation_prev_siblings); break;} */
 		case EdxlopPhysicalTVF:
 		{
@@ -455,6 +463,7 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 			break;
 		}
 		case EdxlopPhysicalBitmapTableScan:
+		case EdxlopPhysicalDynamicBitmapTableScan:
 		{
 			plan = TranslateDXLBitmapTblScan(dxlnode, output_context,
 											 ctxt_translation_prev_siblings);
@@ -3913,6 +3922,73 @@ CTranslatorDXLToPlStmt::TranslateDXLSequence(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLDynTblScan
+//
+//	@doc:
+//		Translates a DXL dynamic table scan node into a DynamicSeqScan node
+//
+//---------------------------------------------------------------------------
+Plan *
+CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
+	const CDXLNode *dyn_tbl_scan_dxlnode, CDXLTranslateContext *output_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+{
+	// translate table descriptor into a range table entry
+	CDXLPhysicalDynamicTableScan *dyn_tbl_scan_dxlop =
+		CDXLPhysicalDynamicTableScan::Cast(dyn_tbl_scan_dxlnode->GetOperator());
+
+	// translation context for column mappings in the base relation
+	CDXLTranslateContextBaseTable base_table_context(m_mp);
+
+	// add the new range table entry as the last element of the range table
+	Index index =
+		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
+
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
+		dyn_tbl_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
+	GPOS_ASSERT(nullptr != rte);
+	rte->requiredPerms |= ACL_SELECT;
+
+	m_dxl_to_plstmt_context->AddRTE(rte);
+
+	// create dynamic scan node
+	DynamicSeqScan *dyn_seq_scan = MakeNode(DynamicSeqScan);
+
+	dyn_seq_scan->seqscan.scanrelid = index;
+	dyn_seq_scan->partIndex = dyn_tbl_scan_dxlop->GetPartIndexId();
+	dyn_seq_scan->partIndexPrintable =
+		dyn_tbl_scan_dxlop->GetPartIndexIdPrintable();
+
+	Plan *plan = &(dyn_seq_scan->seqscan.plan);
+	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	//plan->nMotionNodes = 0;
+
+	// translate operator costs
+	TranslatePlanCosts(dyn_tbl_scan_dxlnode, plan);
+
+	GPOS_ASSERT(2 == dyn_tbl_scan_dxlnode->Arity());
+
+	// translate proj list and filter
+	CDXLNode *project_list_dxlnode =
+		(*dyn_tbl_scan_dxlnode)[EdxltsIndexProjList];
+	CDXLNode *filter_dxlnode = (*dyn_tbl_scan_dxlnode)[EdxltsIndexFilter];
+
+	TranslateProjListAndFilter(
+		project_list_dxlnode, filter_dxlnode,
+		&base_table_context,  // translate context for the base table
+		nullptr,			  // translate_ctxt_left and pdxltrctxRight,
+		&plan->targetlist, &plan->qual, output_context);
+
+	SetParamIds(plan);
+	/*
+	 * 	auto *prune_result = m_dxl_to_plstmt_context->GetStaticPruneResult(
+		dyn_tbl_scan_dxlop->GetPartIndexIdPrintable());
+
+	dyn_seq_scan->partOids = prune_result;
+*/
+}
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLDml
 //
 //	@doc:
@@ -5397,13 +5473,30 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	const CDXLNode *bitmapscan_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
+	ULONG part_index_id = 0;
+	ULONG part_idx_printable_id = 0;
+	BOOL is_dynamic = false;
 	const CDXLTableDescr *table_descr = nullptr;
 
 	CDXLOperator *dxl_operator = bitmapscan_dxlnode->GetOperator();
+	if (EdxlopPhysicalBitmapTableScan == dxl_operator->GetDXLOperator())
+	{
+		table_descr =
+			CDXLPhysicalBitmapTableScan::Cast(dxl_operator)->GetDXLTableDescr();
+	}
+	else
+	{
+		GPOS_ASSERT(EdxlopPhysicalDynamicBitmapTableScan ==
+					dxl_operator->GetDXLOperator());
+		CDXLPhysicalDynamicBitmapTableScan *phy_dyn_bitmap_tblscan_dxlop =
+			CDXLPhysicalDynamicBitmapTableScan::Cast(dxl_operator);
+		table_descr = phy_dyn_bitmap_tblscan_dxlop->GetDXLTableDescr();
 
-	table_descr =
-		CDXLPhysicalBitmapTableScan::Cast(dxl_operator)->GetDXLTableDescr();
-
+		part_index_id = phy_dyn_bitmap_tblscan_dxlop->GetPartIndexId();
+		part_idx_printable_id =
+			phy_dyn_bitmap_tblscan_dxlop->GetPartIndexIdPrintable();
+		is_dynamic = true;
+	}
 
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
@@ -5429,9 +5522,22 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 
 	BitmapHeapScan *bitmap_tbl_scan;
 
+	if (is_dynamic)
+	{
+		DynamicBitmapHeapScan *dscan = MakeNode(DynamicBitmapHeapScan);
 
+		// GPDB_12_MERGE_FIXME: broken with the Partition Selector refactoring
+#if 0
+		dscan->partIndex = part_index_id;
+		dscan->partIndexPrintable = part_idx_printable_id;
+#endif
 
-	bitmap_tbl_scan = MakeNode(BitmapHeapScan);
+		bitmap_tbl_scan = &dscan->bitmapheapscan;
+	}
+	else
+	{
+		bitmap_tbl_scan = MakeNode(BitmapHeapScan);
+	}
 	bitmap_tbl_scan->scan.scanrelid = index;
 
 	Plan *plan = &(bitmap_tbl_scan->scan.plan);
@@ -5474,7 +5580,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 //
 //	@doc:
 //		Translate the tree of bitmap index operators that are under the given
-//		bitmap table scan.
+//		(dynamic) bitmap table scan.
 //
 //---------------------------------------------------------------------------
 Plan *
@@ -5568,6 +5674,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapBoolOp(
 //
 //	@doc:
 //		Translate CDXLScalarBitmapIndexProbe into a BitmapIndexScan
+//		or a DynamicBitmapIndexScan
 //
 //---------------------------------------------------------------------------
 Plan *
@@ -5584,8 +5691,26 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe(
 			bitmap_index_probe_dxlnode->GetOperator());
 
 	BitmapIndexScan *bitmap_idx_scan;
+	DynamicBitmapIndexScan *dyn_bitmap_idx_scan;
 
-	bitmap_idx_scan = MakeNode(BitmapIndexScan);
+	if (IsA(bitmap_tbl_scan, DynamicBitmapHeapScan))
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
+				   GPOS_WSZ_LIT("FIXME: dynamic bitmap index scan"));
+#if 0
+		/* It's a Dynamic Bitmap Index Scan */
+		dyn_bitmap_idx_scan = MakeNode(DynamicBitmapIndexScan);
+		dyn_bitmap_idx_scan->partIndex = ((DynamicBitmapHeapScan *) bitmap_tbl_scan)->partIndex;
+		dyn_bitmap_idx_scan->partIndexPrintable = ((DynamicBitmapHeapScan *) bitmap_tbl_scan)->partIndexPrintable;
+
+		bitmap_idx_scan = &(dyn_bitmap_idx_scan->biscan);
+#endif
+	}
+	else
+	{
+		dyn_bitmap_idx_scan = nullptr;
+		bitmap_idx_scan = MakeNode(BitmapIndexScan);
+	}
 	bitmap_idx_scan->scan.scanrelid = bitmap_tbl_scan->scan.scanrelid;
 
 	CMDIdGPDB *mdid_index = CMDIdGPDB::CastMdid(
@@ -5621,6 +5746,17 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe(
 	 * available or needed in IndexScan. Ignore them.
 	 */
 	SetParamIds(plan);
+
+#if 0
+	/*
+	 * If it's a Dynamic Bitmap Index Scan, also fill in the information
+	 * about the indexes on the partitions.
+	 */
+	if (dyn_bitmap_idx_scan)
+	{
+		dyn_bitmap_idx_scan->logicalIndexInfo = gpdb::GetLogicalIndexInfo(oidRel, index_oid);
+	}
+#endif
 
 	return plan;
 }

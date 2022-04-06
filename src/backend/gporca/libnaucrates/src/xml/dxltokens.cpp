@@ -107,6 +107,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenPhysicalTableScan, GPOS_WSZ_LIT("TableScan")},
 		{EdxltokenPhysicalBitmapTableScan, GPOS_WSZ_LIT("BitmapTableScan")},
+		{EdxltokenPhysicalDynamicBitmapTableScan,
+		 GPOS_WSZ_LIT("DynamicBitmapTableScan")},
 		{EdxltokenPhysicalExternalScan, GPOS_WSZ_LIT("ExternalScan")},
 		{EdxltokenPhysicalIndexScan, GPOS_WSZ_LIT("IndexScan")},
 		{EdxltokenPhysicalIndexOnlyScan, GPOS_WSZ_LIT("IndexOnlyScan")},
@@ -131,6 +133,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalAppend, GPOS_WSZ_LIT("Append")},
 		{EdxltokenPhysicalMaterialize, GPOS_WSZ_LIT("Materialize")},
 		{EdxltokenPhysicalSequence, GPOS_WSZ_LIT("Sequence")},
+		{EdxltokenPhysicalDynamicTableScan, GPOS_WSZ_LIT("DynamicTableScan")},
+		{EdxltokenPhysicalDynamicIndexScan, GPOS_WSZ_LIT("DynamicIndexScan")},
 		{EdxltokenPhysicalTVF, GPOS_WSZ_LIT("TableValuedFunction")},
 		{EdxltokenPhysicalWindow, GPOS_WSZ_LIT("Window")},
 		{EdxltokenPhysicalDMLInsert, GPOS_WSZ_LIT("DMLInsert")},

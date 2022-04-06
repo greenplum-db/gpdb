@@ -18,6 +18,7 @@
 #include "naucrates/dxl/parser/CParseHandlerIndexScan.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
@@ -176,7 +177,9 @@ CParseHandlerIndexScan::StartElementHelper(
 //---------------------------------------------------------------------------
 void
 CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
-										 Edxltoken token_type)
+										 Edxltoken token_type,
+										 ULONG part_idx_id,
+										 ULONG part_idx_id_printable)
 {
 	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type),
 									  element_local_name))
@@ -216,14 +219,21 @@ CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
 			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
-	else
+	else if (EdxltokenPhysicalIndexScan == token_type)
 	{
-		GPOS_ASSERT(EdxltokenPhysicalIndexScan == token_type);
 		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
 			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
+	else
+	{
+		GPOS_ASSERT(EdxltokenPhysicalDynamicIndexScan == token_type);
 
+		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexScan(
+			m_mp, dxl_table_descr, part_idx_id, part_idx_id_printable,
+			dxl_index_descr, m_index_scan_dir);
+		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
+	}
 
 	// set statistics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);

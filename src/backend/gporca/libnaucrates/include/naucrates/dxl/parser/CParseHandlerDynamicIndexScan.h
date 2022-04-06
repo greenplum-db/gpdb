@@ -1,21 +1,21 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2013 EMC Corp.
 //
 //	@filename:
-//		CParseHandlerIndexScan.h
+//		CParseHandlerDynamicIndexScan.h
 //
 //	@doc:
-//		SAX parse handler class for parsing index scan operator nodes
+//		SAX parse handler class for parsing dynamic index scan operator nodes
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CParseHandlerIndexScan_H
-#define GPDXL_CParseHandlerIndexScan_H
+#ifndef GPDXL_CParseHandlerDynamicIndexScan_H
+#define GPDXL_CParseHandlerDynamicIndexScan_H
 
 #include "gpos/base.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerIndexScan.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
 namespace gpdxl
@@ -26,17 +26,20 @@ XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CParseHandlerIndexScan
+//		CParseHandlerDynamicIndexScan
 //
 //	@doc:
 //		Parse handler for index scan operator nodes
 //
 //---------------------------------------------------------------------------
-class CParseHandlerIndexScan : public CParseHandlerPhysicalOp
+class CParseHandlerDynamicIndexScan : public CParseHandlerIndexScan
 {
 private:
-	// index scan direction
-	EdxlIndexScanDirection m_index_scan_dir;
+	// part index id
+	ULONG m_part_index_id;
+
+	// printable partition index id
+	ULONG m_part_index_id_printable;
 
 	// process the start of an element
 	void StartElement(
@@ -53,26 +56,17 @@ private:
 		const XMLCh *const element_qname		// element's qname
 		) override;
 
-protected:
-	// common StartElement functionality for IndexScan and IndexOnlyScan
-	void StartElementHelper(const XMLCh *const element_local_name,
-							const Attributes &attrs, Edxltoken token_type);
-
-	// common EndElement functionality for IndexScan and IndexOnlyScan
-	void EndElementHelper(const XMLCh *const element_local_name,
-						  Edxltoken token_type, ULONG part_idx_id = 0,
-						  ULONG part_idx_id_printable = 0);
-
 public:
-	CParseHandlerIndexScan(const CParseHandlerIndexScan &) = delete;
+	CParseHandlerDynamicIndexScan(const CParseHandlerDynamicIndexScan &) =
+		delete;
 
 	// ctor
-	CParseHandlerIndexScan(CMemoryPool *mp,
-						   CParseHandlerManager *parse_handler_mgr,
-						   CParseHandlerBase *parse_handler_root);
+	CParseHandlerDynamicIndexScan(CMemoryPool *mp,
+								  CParseHandlerManager *parse_handler_mgr,
+								  CParseHandlerBase *parse_handler_root);
 };
 }  // namespace gpdxl
 
-#endif	// !GPDXL_CParseHandlerIndexScan_H
+#endif	// !GPDXL_CParseHandlerDynamicIndexScan_H
 
 // EOF

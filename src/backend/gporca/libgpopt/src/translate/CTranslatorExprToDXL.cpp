@@ -101,6 +101,7 @@
 #include "naucrates/dxl/operators/CDXLPhysicalCTAS.h"
 #include "naucrates/dxl/operators/CDXLPhysicalCTEConsumer.h"
 #include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalHashJoin.h"
@@ -1327,6 +1328,70 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	CDistributionSpecArray *pdrgpdsBaseTables, CExpression *pexprScalarCond,
 	CDXLPhysicalProperties *dxl_properties)
 {
+	GPOS_ASSERT(NULL != pexprDTS);
+	GPOS_ASSERT_IFF(NULL != pexprScalarCond, NULL != dxl_properties);
+
+	CPhysicalDynamicTableScan *popDTS =
+		CPhysicalDynamicTableScan::PopConvert(pexprDTS->Pop());
+	CColRefArray *pdrgpcrOutput = popDTS->PdrgpcrOutput();
+
+	// translate table descriptor
+	CDXLTableDescr *table_descr =
+		MakeDXLTableDescr(popDTS->Ptabdesc(), pdrgpcrOutput, pexprDTS->Prpp());
+
+	// construct plan costs
+	CDXLPhysicalProperties *pdxlpropDTS = GetProperties(pexprDTS);
+
+	if (NULL != dxl_properties)
+	{
+		CWStringDynamic *rows_out_str = GPOS_NEW(m_mp) CWStringDynamic(
+			m_mp,
+			dxl_properties->GetDXLOperatorCost()->GetRowsOutStr()->GetBuffer());
+		CWStringDynamic *pstrCost = GPOS_NEW(m_mp)
+			CWStringDynamic(m_mp, dxl_properties->GetDXLOperatorCost()
+									  ->GetTotalCostStr()
+									  ->GetBuffer());
+
+		pdxlpropDTS->GetDXLOperatorCost()->SetRows(rows_out_str);
+		pdxlpropDTS->GetDXLOperatorCost()->SetCost(pstrCost);
+		dxl_properties->Release();
+	}
+
+	// construct dynamic table scan operator
+	CDXLPhysicalDynamicTableScan *pdxlopDTS =
+		GPOS_NEW(m_mp) CDXLPhysicalDynamicTableScan(
+			m_mp, table_descr, 0 /* CHRIS */, popDTS->ScanId());
+
+	CDXLNode *pdxlnDTS = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopDTS);
+	pdxlnDTS->SetProperties(pdxlpropDTS);
+
+	CDXLNode *pdxlnCond = NULL;
+
+	if (NULL != pexprScalarCond)
+	{
+		pdxlnCond = PdxlnScalar(pexprScalarCond);
+	}
+
+	CDXLNode *filter_dxlnode = PdxlnFilter(pdxlnCond);
+
+	// construct projection list
+	GPOS_ASSERT(NULL != pexprDTS->Prpp());
+
+	CColRefSet *pcrsOutput = pexprDTS->Prpp()->PcrsRequired();
+	pdxlnDTS->AddChild(PdxlnProjList(pcrsOutput, colref_array));
+	pdxlnDTS->AddChild(filter_dxlnode);
+
+#ifdef GPOS_DEBUG
+	pdxlnDTS->GetOperator()->AssertValid(pdxlnDTS, false);
+#endif
+
+	CDistributionSpec *pds = pexprDTS->GetDrvdPropPlan()->Pds();
+	pds->AddRef();
+	pdrgpdsBaseTables->Append(pds);
+
+	return pdxlnDTS;
+
+	/*
 	GPOS_ASSERT(nullptr != pexprDTS);
 	GPOS_ASSERT_IFF(nullptr != pexprScalarCond, nullptr != dxl_properties);
 
@@ -1456,6 +1521,8 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 
 	GPOS_ASSERT(pdxlnAppend);
 	return pdxlnAppend;
+
+ */
 }
 
 //---------------------------------------------------------------------------
@@ -4055,8 +4122,12 @@ UlIndexFilter(Edxlopid edxlopid)
 		case EdxlopPhysicalExternalScan:
 			return EdxltsIndexFilter;
 		case EdxlopPhysicalBitmapTableScan:
+		case EdxlopPhysicalDynamicBitmapTableScan:
 			return EdxlbsIndexFilter;
+		case EdxlopPhysicalDynamicTableScan:
+			return EdxldtsIndexFilter;
 		case EdxlopPhysicalIndexScan:
+		case EdxlopPhysicalDynamicIndexScan:
 			return EdxlisIndexFilter;
 		case EdxlopPhysicalResult:
 			return EdxlresultIndexFilter;
@@ -4096,7 +4167,10 @@ CTranslatorExprToDXL::PdxlnResultFromNLJoinOuter(
 		case EdxlopPhysicalTableScan:
 		case EdxlopPhysicalExternalScan:
 		case EdxlopPhysicalBitmapTableScan:
+		case EdxlopPhysicalDynamicTableScan:
 		case EdxlopPhysicalIndexScan:
+		case EdxlopPhysicalDynamicIndexScan:
+		case EdxlopPhysicalDynamicBitmapTableScan:
 		case EdxlopPhysicalResult:
 		{
 			// if the scalar join condition is a constant TRUE, just translate the child, no need to create an AND expression
