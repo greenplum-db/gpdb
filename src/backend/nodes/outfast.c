@@ -377,6 +377,10 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_INT_FIELD(nInitPlans);
 	WRITE_NODE_FIELD(intoPolicy);
 	WRITE_UINT64_FIELD(query_mem);
+
+	WRITE_INT_FIELD(total_memory_master);
+	WRITE_INT_FIELD(nsegments_master);
+
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
 	WRITE_NODE_FIELD(refreshClause);

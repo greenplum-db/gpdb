@@ -227,6 +227,7 @@ double		gp_resource_group_cpu_limit;
 bool		gp_resource_group_cpu_ceiling_enforcement;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
+bool		gp_resource_group_enable_recalculate_query_mem;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
@@ -3037,6 +3038,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_resource_group_cpu_ceiling_enforcement,
 		false, NULL, NULL
+	},
+
+	{
+		{"gp_resource_group_enable_recalculate_query_mem", PGC_USERSET, RESOURCES,
+			 gettext_noop("Enable resource group re-calculate the query_mem on QE"),
+			 NULL
+		},
+		&gp_resource_group_enable_recalculate_query_mem,
+		false,
+		NULL, NULL, NULL
 	},
 
 	{
