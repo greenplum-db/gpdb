@@ -1,1 +1,1 @@
-SHOW ssl;
+CREATE EXTENSION sslinfo;

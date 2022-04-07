@@ -4,11 +4,24 @@ SELECT current_user;
 --------------
  ssltestuser  
 (1 row)
+SELECT ssl_is_used();
+ ssl_is_used 
+-------------
+ t           
+(1 row)
+
 -- gpadmin still can login without SSL
-! psql -d postgres -U gpadmin -c "SELECT current_user";
+! unset PGHOST; psql -d test_sslconnection -U gpadmin -c "SELECT current_user";
  current_user 
 --------------
  gpadmin
+(1 row)
+
+
+! unset PGHOST; psql -d test_sslconnection -U gpadmin -c "SELECT ssl_is_used()";
+ ssl_is_used 
+-------------
+ f
 (1 row)
 
 
