@@ -4563,7 +4563,7 @@ xmit_retry:
 		if (errno == EINTR)
 			goto xmit_retry;
 
-		if (errno == EAGAIN)	/* no space ? not an error. */
+		if (errno == EAGAIN || errno == EFAULT)	/* no space ? not an error. */
 			return n;
 
 		/*
@@ -5108,7 +5108,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 	{
 		ereport(WARNING,
 				(errmsg("interconnect may encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %u) to %s (pid %d cid %d) after %u retries.",
+				 errdetail("Failing to send packet (seq %u) to %s (pid %d cid %d) after %u retries.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry)));
