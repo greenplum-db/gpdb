@@ -44,27 +44,3 @@ select * from terminate_backend_t;
 ---
 (0 rows)
 1q: ... <quitting>
-
--- kill psql client and expect QD can sense the event and exit accordingly
-!& psql -c "set client_connection_check_interval to 5000; commit; select pg_sleep(1359);" postgres; 2: select count(*) from pg_stat_activity where query='set client_connection_check_interval to 5000; commit; select pg_sleep(1359);';
- count 
--------
- 1     
-(1 row)
-!\retcode kill `ps -ef | grep -v /bin/sh | grep psql | grep client_connection_check_interval | awk '{print $2}' | head -1`;
--- start_ignore
-
--- end_ignore
-(exited with code 0)
-2: select pg_sleep(6);
- pg_sleep 
-----------
-          
-(1 row)
-2: select count(*) from pg_stat_activity where query='set client_connection_check_interval to 5000; commit; select pg_sleep(1359);';
- count 
--------
- 0     
-(1 row)
-2q: ... <quitting>
-

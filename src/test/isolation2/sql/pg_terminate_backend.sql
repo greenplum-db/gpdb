@@ -27,12 +27,3 @@ select gp_inject_fault('heap_insert', 'reset', dbid)
 -- the table should be empty if insert was terminated
 select * from terminate_backend_t;
 1q:
-
--- kill psql client and expect QD can sense the event and exit accordingly
-!& psql -c "set client_connection_check_interval to 5000; commit; select pg_sleep(1359);" postgres;
-2: select count(*) from pg_stat_activity where query='set client_connection_check_interval to 5000; commit; select pg_sleep(1359);';
-!\retcode kill `ps -ef | grep -v /bin/sh | grep psql | grep client_connection_check_interval | awk '{print $2}' | head -1`;
-2: select pg_sleep(6);
-2: select count(*) from pg_stat_activity where query='set client_connection_check_interval to 5000; commit; select pg_sleep(1359);';
-2q:
-
