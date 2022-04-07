@@ -263,7 +263,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 */
 			if (IsResGroupEnabled())
 			{
-				int32 	total_memory_coordinator = queryDesc->plannedstmt->total_memory_coordinator;
+				int 	total_memory_coordinator = queryDesc->plannedstmt->total_memory_coordinator;
 				int    	nsegments_coordinator = queryDesc->plannedstmt->nsegments_coordinator;
 
 				/*
@@ -275,7 +275,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 					should_skip_operator_memory_assign = false;
 
 					/* Get total system memory on the QE in MB */
-					int32 	total_memory_segment = ResGroupOps_GetTotalMemory();
+					int 	total_memory_segment = ResGroupOps_GetTotalMemory();
 					int 	nsegments_segment = ResGroupGetSegmentNum();
 					uint64	coordinator_query_mem = queryDesc->plannedstmt->query_mem;
 

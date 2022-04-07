@@ -144,7 +144,7 @@ typedef struct PlannedStmt
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
 
-	int32		total_memory_coordinator;	/* GPDB: The total usable virtual memory on coordinator node in MB */
+	int			total_memory_coordinator;	/* GPDB: The total usable virtual memory on coordinator node in MB */
 	int			nsegments_coordinator;		/* GPDB: The number of primary segments on coordinator node  */
 
 	/*
