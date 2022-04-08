@@ -104,10 +104,10 @@
       <p>To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib
         package and then install the MADlib function libraries on all databases that will use
         MADlib.</p>
-      <p>The <codeph><xref href="../utility_guide/ref/gppkg.xml#topic1">gppkg</xref></codeph>
-        utility installs Greenplum Database extensions, along with any dependencies, on all hosts
-        across a cluster. It also automatically installs extensions on new hosts in the case of
-        system expansion segment recovery. </p>
+      <p>The <xref href="../utility_guide/ref/gppkg.xml#topic1">gppkg</xref> utility installs
+        Greenplum Database extensions, along with any dependencies, on all hosts across a cluster.
+        It also automatically installs extensions on new hosts in the case of system expansion
+        segment recovery. </p>
       <p dir="ltr">If you have GPUs installed on some or across all hosts in the cluster, then the
         segments residing on those hosts can benefit from GPU acceleration. GPUs and deep learning
         libraries such as Keras, TensorFlow, cudNN, and CUDA are managed separately from MADlib. For

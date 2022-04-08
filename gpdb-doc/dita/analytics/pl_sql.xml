@@ -38,12 +38,12 @@
         query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
           <codeph>LANGUAGE</codeph> clause to classify the type of function, For information about
-        the creating functions and function attributes, see the <codeph><xref
-            href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1" scope="peer">CREATE FUNCTION</xref></codeph>
-        command in the <cite>Greenplum Database Reference Guide</cite>.</p>
-      <p>You can run PL/SQL code blocks as anonymous code blocks. See the <codeph><xref
-            href="../ref_guide/sql_commands/DO.xml#topic1">DO</xref></codeph> command in the <cite>Greenplum Database
-          Reference Guide</cite>.</p>
+        the creating functions and function attributes, see the <xref
+          href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1" scope="peer">CREATE
+          FUNCTION</xref> command in the <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>You can run PL/SQL code blocks as anonymous code blocks. See the <xref
+          href="../ref_guide/sql_commands/DO.xml#topic1">DO</xref> command in the <cite>Greenplum
+          Database Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title>Greenplum Database SQL Limitations</title>
@@ -414,8 +414,8 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
       <p>The PostgreSQL documentation about PL/pgSQL is at <xref
           href="https://www.postgresql.org/docs/9.4/plpgsql.html" scope="external"
           format="html">https://www.postgresql.org/docs/9.4/plpgsql.html</xref></p>
-      <p>Also, see the <codeph><xref href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph>
-        command in the <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>Also, see the <xref href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1">CREATE
+          FUNCTION</xref> command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
         href="../ref_guide/function-summary.xml#topic1">Summary of Built-in Functions</xref> in the <cite>Greenplum Database Reference
           Guide</cite>. For information about using Greenplum Database functions see "Querying Data"

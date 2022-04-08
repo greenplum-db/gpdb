@@ -50,8 +50,8 @@
             <codeph>$GPHOME/greenplum_path.sh</codeph> for Greenplum Database to use R.</p>
         <p>To use PL/R on Ubuntu host systems, you must install and configure R on all Greenplum
           Database host systems before installing PL/R.</p>
-        <note>You can use the <codeph><xref href="../utility_guide/ref/gpssh.xml" scope="peer">gpssh</xref>
-        </codeph> utility to run bash shell commands on multiple remote hosts.</note>
+        <note>You can use the <xref href="../utility_guide/ref/gpssh.xml" scope="peer">gpssh</xref>
+          utility to run bash shell commands on multiple remote hosts.</note>
         <ol id="ol_ypp_qnn_w3b">
           <li>To install R, run these <codeph>apt</codeph> commands on all host
               systems.<codeblock>$ sudo apt update &amp;&amp; sudo apt install r-base</codeblock><p>Installing
@@ -293,8 +293,8 @@ CREATE TABLE wj_model_results_roi AS SELECT *
           <li id="py219006">From the command line, use the <codeph>wget</codeph> utility to download
             the <codeph>tar.gz</codeph> files for the arm package to the Greenplum Database master
             host:<codeblock>wget https://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz</codeblock><codeblock>wget https://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_0.9996875-1.tar.gz</codeblock></li>
-          <li id="py219012">Use the <codeph><xref href="../utility_guide/ref/gpscp.xml" scope="peer"
-              >gpscp</xref></codeph> utility and the <codeph>hosts_all</codeph> file to copy the
+          <li id="py219012">Use the <xref href="../utility_guide/ref/gpscp.xml" scope="peer"
+              >gpscp</xref> utility and the <codeph>hosts_all</codeph> file to copy the
               <codeph>tar.gz</codeph> files to the same directory on all nodes of the Greenplum
             Database cluster. The <codeph>hosts_all</codeph> file contains a list of all the
             Greenplum Database segment hosts. You might require root access to do

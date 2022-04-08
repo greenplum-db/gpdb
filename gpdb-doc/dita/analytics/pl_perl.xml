@@ -105,22 +105,21 @@
             <title>Enabling PL/Perl Support</title>
             <body>
                 <p> For each database in which you want to enable PL/Perl, register the language
-                    using the SQL <codeph><xref
-                            href="../ref_guide/sql_commands/CREATE_EXTENSION.xml">CREATE
-                            EXTENSION</xref></codeph> command. For example, run the following
-                    command as the <codeph>gpadmin</codeph> user to register the trusted PL/Perl
-                    language for the database named <codeph>testdb</codeph>: </p>
+                    using the SQL <xref href="../ref_guide/sql_commands/CREATE_EXTENSION.xml">CREATE
+                        EXTENSION</xref> command. For example, run the following command as the
+                        <codeph>gpadmin</codeph> user to register the trusted PL/Perl language for
+                    the database named <codeph>testdb</codeph>: </p>
                 <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plperl;'</codeblock>
             </body>
         </topic>
         <topic id="topic62" xml:lang="en">
             <title>Removing PL/Perl Support</title>
             <body>
-                <p> To remove support for PL/Perl from a database, run the SQL <codeph><xref
-                            href="../ref_guide/sql_commands/DROP_EXTENSION.xml">DROP
-                            EXTENSION</xref></codeph> command. For example, run the following
-                    command as the <codeph>gpadmin</codeph> user to remove support for the trusted
-                    PL/Perl language from the database named <codeph>testdb</codeph>: </p>
+                <p> To remove support for PL/Perl from a database, run the SQL <xref
+                        href="../ref_guide/sql_commands/DROP_EXTENSION.xml">DROP EXTENSION</xref>
+                    command. For example, run the following command as the <codeph>gpadmin</codeph>
+                    user to remove support for the trusted PL/Perl language from the database named
+                        <codeph>testdb</codeph>: </p>
                 <codeblock>$ psql -d testdb -c 'DROP EXTENSION plperl;'</codeblock>
                 <p> The default command fails if any existing objects (such as functions) depend on
                     the language. Specify the <codeph>CASCADE</codeph> option to also drop all
@@ -132,17 +131,16 @@
     <topic id="topic33" xml:lang="en">
         <title>Developing Functions with PL/Perl</title>
         <body>
-            <p> You define a PL/Perl function using the standard SQL <codeph><xref
-                        href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1" scope="peer"
-                        >CREATE FUNCTION</xref></codeph> syntax. The body of a PL/Perl user-defined
-                function is ordinary Perl code. The PL/Perl interpreter wraps this code inside a
-                Perl subroutine. </p>
+            <p> You define a PL/Perl function using the standard SQL <xref
+                    href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1" scope="peer">CREATE
+                    FUNCTION</xref> syntax. The body of a PL/Perl user-defined function is ordinary
+                Perl code. The PL/Perl interpreter wraps this code inside a Perl subroutine. </p>
             <p> You can also create an anonymous code block with PL/Perl. An anonymous code block,
-                called with the SQL <codeph><xref href="../ref_guide/sql_commands/DO.xml#topic1"
-                        scope="peer">DO</xref></codeph> command, receives no arguments, and whatever
-                value it might return is discarded. Otherwise, a PL/Perl anonymous code block
-                behaves just like a function. Only database superusers create an anonymous code
-                block with the untrusted <codeph>plperlu</codeph> language. </p>
+                called with the SQL <xref href="../ref_guide/sql_commands/DO.xml#topic1"
+                    scope="peer">DO</xref> command, receives no arguments, and whatever value it
+                might return is discarded. Otherwise, a PL/Perl anonymous code block behaves just
+                like a function. Only database superusers create an anonymous code block with the
+                untrusted <codeph>plperlu</codeph> language. </p>
             <p> The syntax of the <codeph>CREATE FUNCTION</codeph> command requires that you write
                 the PL/Perl function body as a string constant. While it is more convenient to use
                 dollar-quoting, you can choose to use escape string syntax (<codeph>E''</codeph>)
