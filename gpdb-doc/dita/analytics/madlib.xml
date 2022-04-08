@@ -145,7 +145,7 @@
         <p>After installing the MADlib package, run the <codeph>madpack</codeph> command to add
           MADlib functions to Greenplum Database. <codeph>madpack</codeph> is in
             <codeph>$GPHOME/madlib/bin</codeph>. </p>
-        <codeblock>$ madpack [-s <varname>schema_name</varname>] -p greenplum -c <varname>user</varname>@<varname>host</varname>:<varname>port</varname>/<varname>database</varname> install</codeblock>
+        <codeblock>$ madpack [-s &lt;schema_name>] -p greenplum -c &lt;user>@&lt;host>:&lt;port>/&lt;database> install</codeblock>
         <p>For example, this command creates MADlib functions in the Greenplum database
             <codeph>testdb</codeph> running on server <codeph>mdw</codeph> on port
             <codeph>5432</codeph>. The <codeph>madpack</codeph> command logs in as the user

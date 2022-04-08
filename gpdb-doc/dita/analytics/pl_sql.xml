@@ -67,7 +67,7 @@
       <body>
         <p>PL/pgSQL is a block-structured language. The complete text of a function definition must
           be a block. A block is defined as:</p>
-        <codeblock>[ <varname>label</varname> ]
+        <codeblock>[ &lt;label> ]
 [ DECLARE
    declarations ]
 BEGIN

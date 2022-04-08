@@ -423,7 +423,7 @@ $$;</codeblock>
       <codeblock>which python</codeblock>
       <p>The command returns the location of the Python installation. The Python installed with
         Greenplum Database is in the Greenplum Database <codeph>ext/python</codeph> directory.</p>
-      <codeblock>/<varname>path_to_greenplum-db</varname>/ext/python/bin/python</codeblock>
+      <codeblock>/&lt;path_to_greenplum-db>/ext/python/bin/python</codeblock>
       <p>When running shell commands on remote hosts with <codeph>gpssh</codeph>, you can specify
         the <codeph>-s</codeph> option. When the option is specified, <codeph>gpssh</codeph> sources
         the <codeph>greenplum_path.sh</codeph> file before running commands on the remote hosts. For
@@ -560,7 +560,7 @@ $$ language plpythonu;</codeblock>
             <codeph>gp_segment_configuration</codeph> contains information about mirroring and
           segment configuration. This command returns the host name for a segment ID.</p>
         <codeblock>SELECT hostname, content AS seg_ID FROM gp_segment_configuration
-  WHERE content = <varname>seg_id</varname> ;</codeblock>
+  WHERE content = &lt;seg_id> ;</codeblock>
         <p>If <codeph>FAILURE</codeph> is returned, these are some possible causes:</p>
         <ul id="ul_kx1_rwq_wt">
           <li>A problem accessing required libraries. For the NumPy example, a Greenplum Database
