@@ -204,7 +204,7 @@ $ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives -
             </ul></li>
           <li>Ubuntu - These <codeph>apt</codeph> commands install OpenJDK 8 or
               11.<codeblock>$ sudo apt update
-$ sudo apt install openjdk-&lt;&lt;version>>-jdk</codeblock><p>For
+$ sudo apt install openjdk-version-jdk</codeblock><p>For
               OpenJDK 8 the <varname>version</varname> is <codeph>8</codeph>, for OpenJDK 11 the
                 <varname>version</varname> is <codeph>11</codeph>.</p></li>
         </ul></p>
@@ -612,12 +612,12 @@ throws SQLException
     <topic id="topic19" xml:lang="en">
       <title id="pv165879">Functions That Return Sets</title>
       <body>
-        <p>When returning result set, you should not build a result set before returning it, because
-          building a large result set would consume a large amount of resources. It is better to
-          produce one row at a time. Incidentally, that is what the Greenplum Database backend
-          expects a function with SETOF return to do. You can return a SETOF a scalar type such as
-          an <codeph>int</codeph>, <codeph>float</codeph> or <codeph>varchar</codeph>, or you can
-          return a SETOF a complex type. </p>
+        <p>When returning result sets, you should not build a result set before returning it,
+          because building a large result set would consume a large amount of resources. It is
+          better to produce one row at a time. Incidentally, that is what the Greenplum Database
+          backend expects a function with SETOF return to do. You can return a SETOF a scalar type
+          such as an <codeph>int</codeph>, <codeph>float</codeph> or <codeph>varchar</codeph>, or
+          you can return a SETOF a complex type. </p>
       </body>
     </topic>
     <topic id="topic20" xml:lang="en">
@@ -713,7 +713,7 @@ int increment)
               <codeph>ResultSetProvider</codeph>. Here the Java class <codeph>Fum</codeph>
             implements this interface so it returns an instance of itself. The method
               <codeph>assignRowValues</codeph> will then be called repeatedly until it returns
-            false. At that time, close will be called</p>
+            false. At that time, close will be called.</p>
         </body>
       </topic>
       <topic id="topic23" xml:lang="en">
@@ -798,7 +798,7 @@ eateStatement();
           same function.</li>
         <li id="pv157574">A ResultSet returned from <codeph>executeQuery()</codeph> are always
             <codeph>FETCH_FORWARD</codeph> and <codeph>CONCUR_READ_ONLY</codeph>.</li>
-        <li id="pv157575">Meta-data is only available in PL/Java 1.1 or higher.</li>
+        <li id="pv157575">Metadata is only available in PL/Java 1.1 or higher.</li>
         <li id="pv157576"><codeph>CallableStatement</codeph> (for stored procedures) is not
           implemented.</li>
         <li id="pv157577">The types <codeph>Clob</codeph> or <codeph>Blob</codeph> are not
@@ -830,7 +830,7 @@ eateStatement();
       <ul>
         <li id="pv157584">A savepoint must be rolled back or released in the function where it was
           set.</li>
-        <li id="pv157585">A savepoint must not outlive the function where it was set</li>
+        <li id="pv157585">A savepoint must not outlive the function where it was set.</li>
       </ul>
     </body>
   </topic>
@@ -1009,7 +1009,7 @@ Date(System.currentTimeMillis()));</codeblock>
         <title>Solution</title>
         <body>
           <p>The PL/Java contains code that ensures that stale pointers are cleared when the
-            MemoryContext or stack where they where allocated goes out of scope. The Java wrapper
+            MemoryContext or stack where they were allocated goes out of scope. The Java wrapper
             objects might live on but any attempt to use them will result in a stale native handle
             exception.</p>
         </body>
