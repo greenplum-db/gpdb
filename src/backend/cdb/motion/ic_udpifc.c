@@ -1806,7 +1806,7 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 		addCRC(pkt);
 
 	char errDetail[100];
-	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %d", pkt->seq);
+	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %u", pkt->seq);
 	/* Retry for infinite times since we have no retransmit mechanism for control message */
 	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, 0, errDetail);
 	if (n < pkt->len)
@@ -5087,7 +5087,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries in %d seconds.",
+				 errdetail("Failed to send packet (seq %u) to %s (pid %d cid %d) after %u retries in %d seconds.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry, Gp_interconnect_transmit_timeout)));
@@ -5108,7 +5108,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 	{
 		ereport(WARNING,
 				(errmsg("interconnect may encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries.",
+				 errdetail("Failed to send packet (seq %u) to %s (pid %d cid %d) after %u retries.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry)));
