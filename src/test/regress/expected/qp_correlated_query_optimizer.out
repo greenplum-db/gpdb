@@ -965,7 +965,6 @@ select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j =
 -- -- -- --
 create table qp_csq_all_t1(a int) distributed by (a);
 create table qp_csq_all_t2(b int) distributed by (b);
-truncate qp_csq_all_t1, qp_csq_all_t2;
 insert into qp_csq_all_t1 values (null);
 select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
  a 
