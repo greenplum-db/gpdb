@@ -94,8 +94,8 @@
         arguments are also passed as ordinary variables to the Python script. The result is returned
         from the PL/Python function with <codeph>return</codeph> statement, or
           <codeph>yield</codeph> statement in case of a result-set statement. </p>
-      <p>PL/Python translates Python's <codeph>None</codeph> into the SQL
-        <codeph>null</codeph> value</p>
+      <p>PL/Python translates Python's <codeph>None</codeph> into the SQL <codeph>null</codeph>
+        value.</p>
     </body>
     <topic id="topic_datatypemap" xml:lang="en">
       <title id="pw2137121113">Data Type Mapping</title>

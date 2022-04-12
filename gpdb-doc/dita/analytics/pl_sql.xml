@@ -37,7 +37,7 @@
       <p>When using PL/pgSQL functions, function attributes affect how Greenplum Database creates
         query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
-          <codeph>LANGUAGE</codeph> clause to classify the type of function, For information about
+          <codeph>LANGUAGE</codeph> clause to classify the type of function. For information about
         the creating functions and function attributes, see the <xref
           href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1" scope="peer">CREATE
           FUNCTION</xref> command in the <cite>Greenplum Database Reference Guide</cite>.</p>
