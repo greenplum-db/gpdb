@@ -307,14 +307,14 @@ CREATE TABLE wj_model_results_roi AS SELECT *
             <codeblock>$R_HOME/bin/R CMD INSTALL Matrix_0.9996875-1.tar.gz   arm_1.5-03.tar.gz</codeblock></li>
           <li id="py219023">Ensure that the package is installed in the
               <codeph>$R_HOME/library</codeph> directory on all the segments (the
-              <codeph>gpssh</codeph> can be use to install the package). For example, this
+              <codeph>gpssh</codeph> can be used to install the package). For example, this
               <codeph>gpssh</codeph> command list the contents of the R library
               directory.<codeblock>gpssh -s -f all_hosts "ls $R_HOME/library"</codeblock><p>The
                 <codeph>gpssh</codeph> option <codeph>-s</codeph> sources the
                 <codeph>greenplum_path.sh</codeph> file before running commands on the remote hosts.
             </p></li>
           <li id="py219025">Test if the R package can be loaded. <p>This function performs a simple
-              test to if an R package can be
+              test to determine if an R package can be
               loaded:</p><codeblock>CREATE OR REPLACE FUNCTION R_test_require(fname text)
 RETURNS boolean AS
 $BODY$
@@ -385,7 +385,7 @@ LANGUAGE 'plr';</codeblock><p>This
       <title id="py216497">References</title>
       <body>
         <p><xref href="https://www.r-project.org/" scope="external" format="html"
-            >https://www.r-project.org/</xref> - The R Project home page</p>
+            >https://www.r-project.org/</xref> - The R Project home page.</p>
         <p><xref href="https://cran.r-project.org/web/packages/PivotalR/" format="html"
             scope="external">https://cran.r-project.org/web/packages/PivotalR/</xref> - The home
           page for PivotalR, a package that provides an R interface to operate on Greenplum Database

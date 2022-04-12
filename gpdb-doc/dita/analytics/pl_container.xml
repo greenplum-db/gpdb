@@ -434,8 +434,8 @@ postgres=# select dummyR();
     <topic xml:lang="en" id="topic_qnb_3cj_kw">
       <title>Remove PL/Container Support for a Database</title>
       <body>
-        <p>To remove support for PL/Container,  drop the extension from the database. Use the
-            <codeph>psql</codeph> utility with <codeph>DROP EXTENION</codeph> command (using
+        <p>To remove support for PL/Container, drop the extension from the database. Use the
+            <codeph>psql</codeph> utility with <codeph>DROP EXTENSION</codeph> command (using
             <codeph>-c</codeph>) to remove PL/Container from <codeph>mytest</codeph> database.</p>
         <codeblock>psql -d mytest -c 'DROP EXTENSION plcontainer CASCADE;'</codeblock>
         <p>The <codeph>CASCADE</codeph> keyword drops PL/Container-specific functions and views.</p>
