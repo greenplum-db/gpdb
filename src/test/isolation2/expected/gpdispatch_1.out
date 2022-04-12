@@ -50,24 +50,20 @@ BEGIN
 1: declare cur12703 cursor for select * from t_12703;
 DECLARE
 
-2: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=1), 'stop');
- pg_ctl 
---------
- OK     
+-- next, trigger a segment down so the existing session will be reset
+2: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
 (1 row)
--- next sql will trigger FTS to mark seg1 as down
-2: select gp_request_fts_probe_scan();
- gp_request_fts_probe_scan 
----------------------------
- t                         
-(1 row)
+2: create table t_12703_2(a int);
+ERROR:  fault triggered, fault name:'start_prepare' fault type:'panic'  (seg0 127.0.1.1:7002 pid=18359)
 
 -- this will go to cdbgang_createGang_async's code path
 -- for some segments are DOWN. It should not PANIC even
 -- with a named portal existing.
 1: select * from t_12703;
-ERROR:  gang was lost due to cluster reconfiguration (cdbgang_async.c:98)
-ERROR:  Error on receive from seg1 slice1 127.0.1.1:7003 pid=58391: server closed the connection unexpectedly
+ERROR:  Error on receive from seg0 : server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
 1: abort;
@@ -95,16 +91,13 @@ select gp_wait_until_triggered_fault('cdb_copy_end_internal_start', 1, dbid) fro
  Success:                      
 (1 row)
 -- make Gang connection is BAD
-select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=2), 'stop');
- pg_ctl 
---------
- OK     
+3: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
 (1 row)
-2: select gp_request_fts_probe_scan();
- gp_request_fts_probe_scan 
----------------------------
- t                         
-(1 row)
+3: create table t_12703_2(a int);
+ERROR:  fault triggered, fault name:'start_prepare' fault type:'panic'  (seg0 127.0.1.1:7002 pid=18412)
 2: begin;
 BEGIN
 select gp_inject_fault('cdb_copy_end_internal_start', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
@@ -126,186 +119,6 @@ ERROR:  MPP detected 1 segment failures, system is reconnected
 END
 2q: ... <quitting>
 
-!\retcode gprecoverseg -aF --no-progress;
--- start_ignore
-20211101:14:57:13:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting gprecoverseg with args: -aF --no-progress
-20211101:14:57:13:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14950.gaf07f2a6fe build dev'
-20211101:14:57:13:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 12beta2 (Greenplum Database 7.0.0-alpha.0+dev.14950.gaf07f2a6fe build dev) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0, 64-bit compiled on Nov  1 2021 11:23:12 (with assert checking)'
-20211101:14:57:13:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery type              = Standard
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery 1 of 2
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Synchronization mode                 = Full
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance host                 = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance address              = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance port                 = 7003
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance host        = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance address     = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance port        = 7006
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery 2 of 2
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Synchronization mode                 = Full
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance host                 = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance address              = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast3/demoDataDir2
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance port                 = 7004
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance host        = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance address     = zlyu
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror3/demoDataDir2
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance port        = 7007
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:14:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting to create new pg_hba.conf on primary segments
-20211101:14:57:15:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Successfully modified pg_hba.conf on primary segments to allow replication connections
-20211101:14:57:15:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-2 segment(s) to recover
-20211101:14:57:15:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Ensuring 2 failed segment(s) are stopped
-20211101:14:57:17:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Validating remote directories
-20211101:14:57:18:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Configuring new segments
-.
-20211101:14:57:20:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Updating configuration with new mirrors
-20211101:14:57:20:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Updating mirrors
-20211101:14:57:20:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting mirrors
-20211101:14:57:20:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-era is fbb165f204b577b2_211101145214
-20211101:14:57:20:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Process results...
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Triggering FTS probe
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-********************************
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Segments successfully recovered.
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-********************************
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovered mirror segments need to sync WAL with primary segments.
-20211101:14:57:21:101597 gprecoverseg:zlyu:gpadmin-[INFO]:-Use 'gpstate -e' to check progress of WAL sync remaining bytes
-
--- end_ignore
-(exited with code 0)
-
--- loop while segments come in sync
-select wait_until_all_segments_synchronized();
- wait_until_all_segments_synchronized 
---------------------------------------
- OK                                   
-(1 row)
-
-!\retcode gprecoverseg -ar;
--- start_ignore
-20211101:14:57:21:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting gprecoverseg with args: -ar
-20211101:14:57:21:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14950.gaf07f2a6fe build dev'
-20211101:14:57:21:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 12beta2 (Greenplum Database 7.0.0-alpha.0+dev.14950.gaf07f2a6fe build dev) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0, 64-bit compiled on Nov  1 2021 11:23:12 (with assert checking)'
-20211101:14:57:21:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery type              = Rebalance
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Unbalanced segment 1 of 4
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance host        = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance address     = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance port        = 7006
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Balanced role                   = Mirror
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Current role                    = Primary
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Unbalanced segment 2 of 4
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance host        = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance address     = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance port        = 7003
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Balanced role                   = Primary
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Current role                    = Mirror
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Unbalanced segment 3 of 4
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance host        = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance address     = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror3/demoDataDir2
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance port        = 7007
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Balanced role                   = Mirror
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Current role                    = Primary
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Unbalanced segment 4 of 4
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance host        = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance address     = zlyu
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast3/demoDataDir2
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Unbalanced instance port        = 7004
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Balanced role                   = Primary
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Current role                    = Mirror
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Determining primary and mirror segment pairs to rebalance
-20211101:14:57:22:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Stopping unbalanced primary segments...
-20211101:14:57:23:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Triggering segment reconfiguration
-20211101:14:57:28:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting segment synchronization
-20211101:14:57:28:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-=============================START ANOTHER RECOVER=========================================
-20211101:14:57:28:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14950.gaf07f2a6fe build dev'
-20211101:14:57:28:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 12beta2 (Greenplum Database 7.0.0-alpha.0+dev.14950.gaf07f2a6fe build dev) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0, 64-bit compiled on Nov  1 2021 11:23:12 (with assert checking)'
-20211101:14:57:28:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Greenplum instance recovery parameters
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery type              = Standard
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery 1 of 2
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Synchronization mode                 = Incremental
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance host                 = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance address              = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance port                 = 7006
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance host        = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance address     = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance port        = 7003
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovery 2 of 2
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Synchronization mode                 = Incremental
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance host                 = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance address              = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror3/demoDataDir2
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Failed instance port                 = 7007
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance host        = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance address     = zlyu
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast3/demoDataDir2
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Source instance port        = 7004
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-   Recovery Target                      = in-place
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:----------------------------------------------------------
-20211101:14:57:29:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting to create new pg_hba.conf on primary segments
-20211101:14:57:30:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Successfully modified pg_hba.conf on primary segments to allow replication connections
-20211101:14:57:30:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-2 segment(s) to recover
-20211101:14:57:30:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Ensuring 2 failed segment(s) are stopped
-20211101:14:57:32:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Updating configuration with new mirrors
-20211101:14:57:32:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Updating mirrors
-20211101:14:57:32:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Running pg_rewind on failed segments
-zlyu (dbid 6): pg_rewind: no rewind required
-zlyu (dbid 7): pg_rewind: no rewind required
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Starting mirrors
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-era is fbb165f204b577b2_211101145214
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Process results...
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Triggering FTS probe
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-********************************
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Segments successfully recovered.
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-********************************
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Recovered mirror segments need to sync WAL with primary segments.
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-Use 'gpstate -e' to check progress of WAL sync remaining bytes
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-==============================END ANOTHER RECOVER==========================================
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-******************************************************************
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-The rebalance operation has completed successfully.
-20211101:14:57:36:103065 gprecoverseg:zlyu:gpadmin-[INFO]:-******************************************************************
-
--- end_ignore
-(exited with code 0)
 
 -- loop while segments come in sync
 select wait_until_all_segments_synchronized();

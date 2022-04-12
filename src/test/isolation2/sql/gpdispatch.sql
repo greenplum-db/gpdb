@@ -28,9 +28,9 @@ select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segm
 -- make a cursor so that we have a named portal
 1: declare cur12703 cursor for select * from t_12703;
 
-2: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=1), 'stop');
--- next sql will trigger FTS to mark seg1 as down
-2: select gp_request_fts_probe_scan();
+-- next, trigger a segment down so the existing session will be reset
+2: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 0;
+2: create table t_12703_2(a int);
 
 -- this will go to cdbgang_createGang_async's code path
 -- for some segments are DOWN. It should not PANIC even
@@ -50,8 +50,8 @@ select gp_inject_fault('cdb_copy_end_internal_start', 'suspend', dbid) from gp_s
 1&: copy t_12703 from '/tmp/t_12703';
 select gp_wait_until_triggered_fault('cdb_copy_end_internal_start', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
 -- make Gang connection is BAD
-select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=2), 'stop');
-2: select gp_request_fts_probe_scan();
+3: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 1;
+3: create table t_12703_2(a int);
 2: begin;
 select gp_inject_fault('cdb_copy_end_internal_start', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 -- continue copy it should not PANIC
@@ -62,12 +62,11 @@ select gp_inject_fault('cdb_copy_end_internal_start', 'reset', dbid) from gp_seg
 2: end;
 2q:
 
-!\retcode gprecoverseg -aF --no-progress;
-
--- loop while segments come in sync
-select wait_until_all_segments_synchronized();
-
-!\retcode gprecoverseg -ar;
+-- start_ignore
+-- For a mirrorless cluster this will return a non-zero code, so ignore all the output, we'll verify segments' status anyway.
+!\ gprecoverseg -aF --no-progress;
+!\ gprecoverseg -ar;
+-- end_ignore
 
 -- loop while segments come in sync
 select wait_until_all_segments_synchronized();
