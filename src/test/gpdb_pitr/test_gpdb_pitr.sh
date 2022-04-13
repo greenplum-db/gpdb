@@ -42,7 +42,7 @@ REPLICA_PRIMARY2_DBID=12
 REPLICA_PRIMARY3_DBID=13
 
 # The options for pg_regress and pg_isolation2_regress.
-REGRESS_OPTS="--dbname=gpdb_pitr_database --use-existing --init-file=../regress/init_file --load-extension=gp_inject_fault"
+REGRESS_OPTS="--dbname=gpdb_pitr_database --use-existing --init-file=../regress/init_file --init-file=init_file --load-extension=gp_inject_fault"
 ISOLATION2_REGRESS_OPTS="${REGRESS_OPTS} --init-file=../isolation2/init_file_isolation2"
 
 # Run test via pg_regress with given test name.

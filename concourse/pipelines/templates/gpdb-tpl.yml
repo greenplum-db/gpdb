@@ -243,6 +243,7 @@ groups:
   - icw_planner_icproxy_centos7
   - fips_centos7
   - unit_tests_gporca_centos7
+  - gpdb_pitr_centos7
 {% endif %}
 {% if "rhel8" in os_types %}
   - icw_gporca_rhel8
@@ -1710,6 +1711,25 @@ jobs:
     file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
     image: gpdb6-centos7-build
 
+- name: gpdb_pitr_centos7
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [compile_gpdb_centos7]
+          - get: bin_gpdb
+            passed: [compile_gpdb_centos7]
+            resource: bin_gpdb_centos7
+            trigger: [[ test_trigger ]]
+          - get: gpdb6-centos7-test
+    - task: gpdb_pitr
+      file: gpdb_src/concourse/tasks/gpdb_pitr.yml
+      image: gpdb6-centos7-test
+      params:
+        WITH_MIRRORS: true
+        TEST_OS: centos
+        CONFIGURE_FLAGS: ((configure_flags))
+
 {% endif %}
 {% if "rhel8" in os_types %}
 - name: icw_gporca_rhel8
@@ -2078,6 +2098,7 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - unit_tests_gporca_centos7
+        - gpdb_pitr_centos7
 {% endif %}
 {% if "rhel8" in os_types %}
         - icw_gporca_rhel8
@@ -3177,6 +3198,7 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - unit_tests_gporca_centos7
+        - gpdb_pitr_centos7
         - icw_gporca_rhel8
         - icw_planner_rhel8
         - icw_gporca_icproxy_rhel8
