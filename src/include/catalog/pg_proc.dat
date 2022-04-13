@@ -11022,6 +11022,10 @@
 { oid => 7182, descr => 'wait until all endpoint of this parallel retrieve cursor has been retrieved finished',
    proname => 'gp_wait_parallel_retrieve_cursor', provolatile => 'v', proparallel => 'u', prorettype => 'bool', proargtypes => 'text int4', proallargtypes => '{text,int4,bool}', proargmodes => '{i,i,o}', proargnames => '{cursorname,timeout_sec,finished}', prosrc => 'gp_wait_parallel_retrieve_cursor', proexeclocation => 'c' },
 
+{ oid => 7183, descr => 'debugging information for segment backends',
+   proname => 'gp_backend_info', prorettype => 'record', prorows => '1', proretset => 't', proargtypes => '', proallargtypes => '{int4,char,int4,text,int4,int4}', prosrc => 'gp_backend_info', pronargs => 6,
+   proargnames => '{id,type,content,host,port,pid}', proargmodes => '{o,o,o,o,o,o}', proexeclocation => 'c'}
+
 { oid => 7050, oid_symbol => 'BITMAP_INDEXAM_HANDLER_OID', descr => 'bitmap(internal)',
    proname => 'bmhandler', provolatile => 'v', prorettype => 'index_am_handler', proargtypes => 'internal', prosrc => 'bmhandler' },
 
@@ -11481,7 +11485,6 @@
 
 { oid => 6171, descr => 'Legacy cdbhash function',
    proname => 'cdblegacyhash_anyenum', prorettype => 'int4', proargtypes => 'anyenum', prosrc => 'cdblegacyhash_anyenum' },
-
 
 { oid => 6998, descr => 'Create a named restore point on all segments',
    proname => 'gp_create_restore_point', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => 'text', prosrc => 'gp_create_restore_point' },

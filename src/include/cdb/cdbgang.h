@@ -129,4 +129,6 @@ typedef struct CdbProcess
 
 typedef Gang *(*CreateGangFunc)(List *segments, SegmentType segmentType);
 
+extern Datum gp_backend_info(PG_FUNCTION_ARGS);
+
 #endif   /* _CDBGANG_H_ */
