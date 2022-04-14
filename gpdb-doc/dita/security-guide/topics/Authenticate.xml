@@ -38,13 +38,13 @@
         up of a number of fields which are separated by spaces and/or tabs. Fields can contain white
         space if the field value is quoted. Records cannot be continued across lines. </p>
       <p>A record can have one of seven formats:
-        <codeblock>local      <varname>database</varname>  <varname>user</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-host       <varname>database</varname>  <varname>user</varname>  <varname>address</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostssl    <varname>database</varname>  <varname>user</varname>  <varname>address</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>address</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-host       <varname>database</varname>  <varname>user</varname>  <varname>IP-address</varname>  <varname>IP-mask</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostssl    <varname>database</varname>  <varname>user</varname>  <varname>IP-address</varname>  <varname>IP-mask</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-address</varname>  <varname>IP-mask</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]</codeblock></p>
+        <codeblock>local &lt;database>  &lt;user>  &lt;auth-method>  [&lt;auth-options>]
+host       &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  [&lt;auth-options>]
+hostssl    &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  [&lt;auth-options>]
+hostnossl  &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  [&lt;auth-options>]
+host       &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  &lt;auth-options>  [&lt;auth-options>]
+hostssl    &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  &lt;auth-options>  [&lt;auth-options>]
+hostnossl  &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  &lt;auth-options>  [&lt;auth-options>]</codeblock></p>
       <p>The meaning of the <codeph>pg_hba.conf</codeph> fields is as follows: <parml>
           <plentry>
             <pt><codeph>local</codeph></pt>
