@@ -1902,6 +1902,27 @@ def impl(context, filename, output):
     print(contents)
     check_stdout_msg(context, output)
 
+
+def get_logfile(gpAdminLogDir, utility):
+    cmd = "ls -t %s | grep \"%s\" | head -1" % (gpAdminLogDir, utility)
+    rc, output, error = run_cmd(cmd)
+
+    if rc:
+        raise Exception(error)
+    return output.strip()
+
+
+@then('verify that the "{utility}" logfile contains the string "{output}"')
+def impl(context, utility, output):
+    gpAdminLogsDir = _get_gpAdminLogs_directory()
+    filename = get_logfile(gpAdminLogsDir, utility)
+    filepath = os.path.join(gpAdminLogsDir, filename)
+    with open(filepath) as fr:
+        for line in fr:
+            if output in line.strip():
+                return True
+    raise Exception("Expected string %s but not found" % output)
+
 @then('verify that the last line of the file "{filename}" in the coordinator data directory {contain} the string "{output}"{escape}')
 def impl(context, filename, contain, output, escape):
     if contain == 'should contain':

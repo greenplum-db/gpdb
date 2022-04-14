@@ -9,6 +9,8 @@
 
 import sys, os, stat, re
 import hashlib
+from gppylib import gplog
+import logging
 
 ERA_RE = re.compile(r"era\s*=\s*(\w+)")
 
@@ -145,7 +147,7 @@ def read_era(datadir, logger):
     if os.path.exists(erafile.filepath):
         erafile.read_gp_era()
 
-    if logger: logger.info('era is %s' % erafile.era)
+    if logger: gplog.log_to_file_only('era is %s' % erafile.era, logging.DEBUG)
     return erafile.era
 
 

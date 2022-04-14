@@ -266,6 +266,16 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+    Scenario: gprecoverseg should output master era details to log file only and not to stdout
+        Given the database is running
+        And user immediately stops all primary processes
+        And user can start transactions
+        When the user runs "gprecoverseg -a -v"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "ers is *" to stdout
+        And verify that the "gprecoverseg" logfile contains the string "era is"
+        And the segments are synchronized
+
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
