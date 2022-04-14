@@ -882,14 +882,9 @@ ExecGetRangeTableRelation(EState *estate, Index rti)
 			 * seems sufficient to check this only when rellockmode is higher
 			 * than the minimum.
 			 */
-			/* GPDB_12_MERGE_FIXME: if GDD is not enabled, we acquire a stronger
-			 * lock earlier. What would be a good way to formulate this check?
-			 * For now, just pass orstronger=true.
-			 */
 			rel = table_open(rte->relid, NoLock);
 			Assert(rte->rellockmode == AccessShareLock ||
-				   CheckRelationLockedByMe(rel, rte->rellockmode,
-										   true /* orstronger */));
+				   CheckRelationLockedByMe(rel, rte->rellockmode, false));
 		}
 		else
 		{
