@@ -275,6 +275,7 @@ Feature: gprecoverseg tests
         And gprecoverseg should not print "ers is *" to stdout
         And verify that the "gprecoverseg" logfile contains the string "era is"
         And the segments are synchronized
+        And the cluster is rebalanced
 
 
 ########################### @concourse_cluster tests ###########################
