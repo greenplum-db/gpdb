@@ -17,8 +17,8 @@
 
 using namespace gpos;
 
-const CHAR *CException::m_severity[] = {"INVALID", "PANIC",	 "FATAL", "ERROR",
-										"WARNING", "NOTICE", "TRACE"};
+const CHAR *CException::m_severity[] = {"INVALID", "ERROR", "WARNING", "NOTICE",
+										"TRACE"};
 
 
 // invalid exception
@@ -52,19 +52,6 @@ CException::CException(ULONG major, ULONG minor, const CHAR *filename,
 	  m_filename(const_cast<CHAR *>(filename)),
 	  m_line(line)
 {
-	m_severity_level = CException::ExsevSentinel;
-	m_sql_state = GetSQLState(major, minor);
-}
-
-// ctor
-CException::CException(ULONG major, ULONG minor, const CHAR *filename,
-					   ULONG line, ULONG severity_level)
-	: m_major(major),
-	  m_minor(minor),
-	  m_filename(const_cast<CHAR *>(filename)),
-	  m_line(line),
-	  m_severity_level(severity_level)
-{
 	m_sql_state = GetSQLState(major, minor);
 }
 
@@ -80,7 +67,6 @@ CException::CException(ULONG major, ULONG minor, const CHAR *filename,
 CException::CException(ULONG major, ULONG minor)
 	: m_major(major), m_minor(minor), m_filename(nullptr), m_line(0)
 {
-	m_severity_level = CException::ExsevSentinel;
 	m_sql_state = GetSQLState(major, minor);
 }
 
