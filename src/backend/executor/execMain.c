@@ -1742,29 +1742,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		ResultRelInfo *resultRelInfos;
 		ResultRelInfo *resultRelInfo;
 
-		/*
-		 * MPP-2879: The QEs don't pass their MPPEXEC statements through
-		 * the parse (where locks would ordinarily get acquired). So we
-		 * need to take some care to pick them up here (otherwise we get
-		 * some very strange interactions with QE-local operations (vacuum?
-		 * utility-mode ?)).
-		 *
-		 * NOTE: There is a comment in lmgr.c which reads forbids use of
-		 * heap_open/relation_open with "NoLock" followed by use of
-		 * RelationOidLock/RelationLock with a stronger lock-mode:
-		 * RelationOidLock/RelationLock expect a relation to already be
-		 * locked.
-		 *
-		 * But we also need to serialize CMD_UPDATE && CMD_DELETE to preserve
-		 * order on mirrors.
-		 *
-		 * So we're going to ignore the "NoLock" issue above.
-		 */
-
-		/* CDB: we must promote locks for UPDATE and DELETE operations for ao table. */
-		LOCKMODE    lockmode;
-		lockmode = (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer) ? RowExclusiveLock : NoLock;
-
 		resultRelInfos = (ResultRelInfo *)
 			palloc(numResultRelations * sizeof(ResultRelInfo));
 		resultRelInfo = resultRelInfos;
@@ -1861,10 +1838,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			switch (rc->markType)
 			{
 				/*
-				 * GPDB_12_MERGE_FIXME: We lost the GPDB change that this comment
-				 * talks about in the merge. I'm not sure where it should go now.
-				 * In ExecGetRangeTableRelation maybe?
-				 *
 				 * Greenplum specific behavior:
 				 * The implementation of select statement with locking clause
 				 * (for update | no key update | share | key share) in postgres
