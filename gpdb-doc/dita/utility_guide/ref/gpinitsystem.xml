@@ -8,26 +8,26 @@
                 <codeph>gpinitsystem_config</codeph> file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpinitsystem</b> <b>-c</b> <varname>cluster_configuration_file</varname> 
-            [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
-            [<b>-B</b> <varname>parallel_processes</varname>] 
-            [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
-            [<b>-s</b> <varname>standby_coordinator_host</varname>
-                [<b>-P</b> <varname>standby_coordinator_port</varname>]
-                [<b>-S</b> <varname>standby_coordinator_datadir</varname> | <b>--standby_datadir</b>=<varname>standby_coordinator_datadir</varname>]]
-            [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
-            [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
-            [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
-            [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
-            [<b>--lc-monetary</b>=<varname>locale</varname>] [<b>--lc-numeric</b>=<varname>locale</varname>] 
-            [<b>--lc-time</b>=<varname>locale</varname>] [<b>-e</b> <varname>password</varname> | <b>--su_password</b>=<varname>password</varname>] 
-            [<b>--mirror-mode</b>={group|spread}] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
-            [<b>-I</b> <varname>input_configuration_file</varname>]
-            [<b>-O</b> <varname>output_configuration_file</varname>]
+            <codeblock>gpinitsystem -c &lt;cluster_configuration_file> 
+            [-h &lt;hostfile_gpinitsystem>]
+            [-B &lt;parallel_processes>] 
+            [-p &lt;postgresql_conf_param_file>]
+            [-s &lt;standby_coordinator_host>
+                [-P &lt;standby_coordinator_port>]
+                [-S &lt;standby_coordinator_datadir> | --standby_datadir=&lt;standby_coordinator_datadir>]]
+            [-m &lt;number> | --max_connections=number>]
+            [-b &lt;size> | --shared_buffers=&lt;size>]
+            [-n &lt;locale> | --locale=&lt;locale>] [--lc-collate=&lt;locale>] 
+            [--lc-ctype=&lt;locale>] [--lc-messages=&lt;locale>] 
+            [--lc-monetary=&lt;locale>] [--lc-numeric=&lt;locale>] 
+            [--lc-time=&lt;locale>] [-e &lt;password> | --su_password=&lt;password>] 
+            [--mirror-mode={group|spread}] [-a] [-q] [-l &lt;logfile_directory>] [-D]
+            [-I &lt;input_configuration_file>]
+            [-O &lt;output_configuration_file>]
 
-<b>gpinitsystem</b> <b>-v | --version</b>
+gpinitsystem -v | --version
 
-<b>gpinitsystem</b> <b>-? | --help</b></codeblock>
+gpinitsystem -? | --help</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -37,7 +37,7 @@
                     href="#topic1/section5" type="section" format="dita"/> for more information
                 about the configuration file. Before running this utility, make sure that you have
                 installed the Greenplum Database software on all the hosts in the array.</p>
-            <p>With the <codeph><varname>-O output_configuration_file</varname></codeph> option,
+            <p>With the <codeph>&lt;-O output_configuration_file></codeph> option,
                     <codeph>gpinitsystem</codeph> writes all provided configuration information to
                 the specified output file. This file can be used with the <codeph>-I</codeph> option
                 to create a new cluster or re-create a cluster from a backed up configuration. See
@@ -96,9 +96,9 @@
                         contains all of the defined parameters to configure and initialize a new
                         Greenplum Database system. See <xref href="#topic1/section5" type="section"
                             format="dita"/> for a description of this file. You must provide either
-                        the <codeph>-c <varname>cluster_configuration_file</varname></codeph> option
-                        or the <codeph>-I <varname>input_configuration_file</varname></codeph>
-                        option to <codeph>gpinitsystem</codeph>. </pd>
+                        the <codeph>-c &lt;cluster_configuration_file></codeph> option or the
+                            <codeph>-I &lt;input_configuration_file></codeph> option to
+                            <codeph>gpinitsystem</codeph>. </pd>
                 </plentry>
                 <plentry>
                     <pt>-D</pt>
@@ -114,17 +114,17 @@
                 <plentry>
                     <pt>-I <varname>input_configuration_file</varname></pt>
                     <pd>The full path and filename of an input configuration file, which defines the
-                        Greenplum Database host systems, the coordinator instance and segment instances
-                        on the hosts, using the <codeph>QD_PRIMARY_ARRAY</codeph>,
+                        Greenplum Database host systems, the coordinator instance and segment
+                        instances on the hosts, using the <codeph>QD_PRIMARY_ARRAY</codeph>,
                             <codeph>PRIMARY_ARRAY</codeph>, and <codeph>MIRROR_ARRAY</codeph>
                         parameters. The input configuration file is typically created by using
                             <codeph>gpinitsystem</codeph> with the <codeph>-O
                                 <varname>output_configuration_file</varname></codeph> option. Edit
                         those parameters in order to initialize a new cluster or re-create a cluster
                         from a backed up configuration. You must provide either the <codeph>-c
-                                <varname>cluster_configuration_file</varname></codeph> option or the
-                            <codeph>-I <varname>input_configuration_file</varname></codeph> option
-                        to <codeph>gpinitsystem</codeph>. </pd>
+                            &lt;cluster_configuration_file></codeph> option or the <codeph>-I
+                            &lt;input_configuration_file></codeph> option to
+                            <codeph>gpinitsystem</codeph>. </pd>
                 </plentry>
                 <plentry>
                     <pt> -n <varname>locale</varname> | --locale=<varname>locale</varname>
@@ -430,8 +430,8 @@ MIRROR_PORT_BASE = 7000</codeblock>
                         the <codeph>gpinitsystem</codeph>
                         <codeph>-I <varname>input_configuration_file</varname></codeph> option. Use
                         one of the following formats to specify the host
-                        information:<codeblock><varname>hostname</varname>~<varname>address</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock>or
-                        <codeblock><varname>host</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock></pd>
+                        information:<codeblock>&lt;hostname>~&lt;address>~&lt;port>~&lt;data_directory>/&lt;seg_prefix&lt;segment_id>>~&lt;dbid>~&lt;content_id></codeblock>or
+                        <codeblock>&lt;host>~&lt;port>~&lt;data_directory>/&lt;seg_prefix&lt;segment_id>~&lt;dbid>~&lt;content_id></codeblock></pd>
                     <pd>The first format populates the <codeph>hostname</codeph> and
                             <codeph>address</codeph> fields in the
                             <codeph>gp_segment_configuration</codeph> catalog table with the
@@ -439,11 +439,11 @@ MIRROR_PORT_BASE = 7000</codeblock>
                         provided in the input configuration file. The second format populates
                             <codeph>hostname</codeph> and <codeph>address</codeph> fields with the
                         same value, derived from <varname>host</varname>.</pd>
-                    <pd>The Greenplum Database coordinator always uses the value -1 for the segment ID
-                        and content ID. For example, <varname>seg_prefix&lt;segment_id></varname>
+                    <pd>The Greenplum Database coordinator always uses the value -1 for the segment
+                        ID and content ID. For example, <varname>seg_prefix&lt;segment_id></varname>
                         and <varname>dbid</varname> values for <codeph>QD_PRIMARY_ARRAY</codeph> use
                             <codeph>-1</codeph> to indicate the coordinator
-                        instance:<codeblock>QD_PRIMARY_ARRAY=cdw~cdw~5432~/gpdata/coordinator/gpseg<b>-1</b>~1~<b>-1</b>
+                        instance:<codeblock>QD_PRIMARY_ARRAY=cdw~cdw~5432~/gpdata/coordinator/gpseg-1~1~-1
 declare -a PRIMARY_ARRAY=(
 sdw1~sdw1~40000~/gpdata/data1/gpseg0~2~0
 sdw1~sdw1~40001~/gpdata/data2/gpseg1~3~1
@@ -512,13 +512,13 @@ sdw1~sdw1~50001~/gpdata/mirror2/gpseg3~9~3
                         requirement to use IP addresses.</li>
                 </ul></p>
             <p>When initializing the Greenplum Database system, <codeph>gpinitsystem</codeph> uses
-                the initialization information to populate the <codeph><xref
-                        href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
-                        >gp_segment_configuration</xref></codeph> catalog table and adds hosts to
-                the <codeph>pg_hba.conf</codeph> file. By default, the host IP address is added to
+                the initialization information to populate the <xref
+                    href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+                    >gp_segment_configuration</xref> catalog table and adds hosts to the
+                    <codeph>pg_hba.conf</codeph> file. By default, the host IP address is added to
                 the file. Specify the <codeph>gpinitsystem</codeph> configuration file parameter
-                        <codeph><xref href="#topic1/hba_hostnames" format="dita"
-                        >HBA_HOSTNAMES</xref>=1</codeph> to add hostnames to the file.</p>
+                    <xref href="#topic1/hba_hostnames" format="dita">HBA_HOSTNAMES</xref>=1 to add
+                hostnames to the file.</p>
             <p>Greenplum Database uses the <codeph>address</codeph> value of the
                     <codeph>gp_segment_configuration</codeph> catalog table when looking up host
                 systems for Greenplum interconnect (internal) communication between the coordinator and
@@ -568,27 +568,25 @@ cdw~cdw.local~7001~/data/mirror1/gpseg0~3~0
                     href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/>.</p>
             <p>For this simple coordinator and segment instance configuration, the host system
                     <codeph>gp6m</codeph> is configured with two NICs <codeph>gp6m-1</codeph> and
-                    <codeph>gp6m-2</codeph>. In the configuration, the <codeph><xref
-                        href="#topic1/array_params" format="dita">QD_PRIMARY_ARRAY</xref></codeph>
-                parameter defines the coordinator segment using <codeph>gp6m-1</codeph>. The
-                        <codeph><xref href="#topic1/array_params" format="dita"
-                    >PRIMARY_ARRAY</xref></codeph> and <codeph><xref href="#topic1/array_params"
-                        format="dita">MIRROR_ARRAY</xref></codeph> parameters use
+                    <codeph>gp6m-2</codeph>. In the configuration, the <xref
+                    href="#topic1/array_params" format="dita">QD_PRIMARY_ARRAY</xref> parameter
+                defines the coordinator segment using <codeph>gp6m-1</codeph>. The <xref
+                    href="#topic1/array_params" format="dita">PRIMARY_ARRAY</xref> and <xref
+                    href="#topic1/array_params" format="dita">MIRROR_ARRAY</xref> parameters use
                     <codeph>gp6m-2</codeph> to define a primary and mirror segment instance.
-                <codeblock>QD_PRIMARY_ARRAY=gp6m~<b>gp6m-1</b>~5432~/data/coordinator/gpseg-1~1~-1
+                <codeblock>QD_PRIMARY_ARRAY=gp6m~gp6m-1~5432~/data/coordinator/gpseg-1~1~-1
 declare -a PRIMARY_ARRAY=(
-gp6m~<b>gp6m-2</b>~40000~/data/data1/gpseg0~2~0
+gp6m~gp6m-2~40000~/data/data1/gpseg0~2~0
 gp6s~gp6s~40000~/data/data1/gpseg1~3~1
 )
 declare -a MIRROR_ARRAY=(
 gp6s~gp6s~50000~/data/mirror1/gpseg0~4~0
-gp6m~<b>gp6m-2</b>~50000~/data/mirror1/gpseg1~5~1
+gp6m~gp6m-2~50000~/data/mirror1/gpseg1~5~1
 )</codeblock></p>
         </section>
-        <section id="section7"><title>See Also</title><codeph><xref href="./gpssh-exkeys.xml#topic1"
-                    type="topic" format="dita"/></codeph>, <codeph><xref
-                    href="gpdeletesystem.xml#topic1" type="topic" format="dita"/></codeph>, <xref
-                href="../../install_guide/init_gpdb.xml" type="topic" scope="peer">Initializing
-                Greenplum Database</xref>.</section>
+        <section id="section7"><title>See Also</title><xref href="./gpssh-exkeys.xml#topic1"
+                type="topic" format="dita"/>, <xref href="gpdeletesystem.xml#topic1" type="topic"
+                format="dita"/>, <xref href="../../install_guide/init_gpdb.xml" type="topic"
+                scope="peer">Initializing Greenplum Database</xref>.</section>
     </body>
 </topic>

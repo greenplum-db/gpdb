@@ -7,14 +7,14 @@
         <p>Starts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstart</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>]
-        [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
-        [<b>--skip-heap-checksum-validation</b>]
-        [<b>-v</b> | <b>-q</b>]
+            <codeblock>gpstart [-d &lt;coordinator_data_directory>] [-B &lt;parallel_processes>] [-R]
+        [-m] [-y] [-a] [-t &lt;timeout_seconds>] [-l &lt;logfile_directory>] 
+        [--skip-heap-checksum-validation]
+        [-v | -q]
 
-<b>gpstart</b> <b>-?</b> | <b>-h</b> | <b>--help</b> 
+gpstart -? | -h | --help 
 
-<b>gpstart</b> <b>--version</b></codeblock>
+gpstart --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -153,8 +153,8 @@ PGOPTIONS='-c gp_role=utility' psql</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="gpstop.xml#topic1">gpstop</xref></codeph>, <codeph><xref
-                        href="gpinitsystem.xml#topic1"/></codeph></p>
+            <p><xref href="gpstop.xml#topic1">gpstop</xref>, <xref href="gpinitsystem.xml#topic1"
+                /></p>
         </section>
     </body>
 </topic>

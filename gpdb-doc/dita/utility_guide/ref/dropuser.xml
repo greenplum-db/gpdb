@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pe137116">dropuser</title><body><p id="client_util_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>dropuser</b> [<varname>connection-option</varname> ...] [<b>-e</b>] [<b>-i</b>] <varname>role_name</varname>
+<topic id="topic1"><title id="pe137116">dropuser</title><body><p id="client_util_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">dropuser [&lt;connection-option> ...] [-e] [-i] &lt;role_name
 
-<b>dropuser</b> <b>-? | --help</b> 
+dropuser -? | --help 
 
-<b>dropuser</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>dropuser</codeph> removes an existing role from Greenplum Database. Only
+dropuser -V | --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>dropuser</codeph> removes an existing role from Greenplum Database. Only
         superusers and users with the <codeph>CREATEROLE</codeph> privilege can remove roles. To
         remove a superuser role, you must yourself be a superuser.</p><p><codeph>dropuser</codeph> is a wrapper around the SQL command <codeph>DROP
 ROLE</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>role_name</varname></pt><pd>The name of the role to be removed. You will be prompted for a name if not specified on the
@@ -36,13 +36,13 @@ and a password is not available by other means such as a <codeph>.pgpass</codeph
 file, the connection attempt will fail. This option can be useful in
 batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To remove the role <codeph>joe</codeph> using default connection options:</p><codeblock>dropuser joe
 DROP ROLE</codeblock><p>To remove the role <varname>joe</varname> using connection options, with verification,
-and a peek at the underlying command:</p><codeblock><b>dropuser -p 54321 -h coordinatorhost -i -e joe</b>
+and a peek at the underlying command:</p><codeblock>dropuser -p 54321 -h coordinatorhost -i -e joe
 Role "joe" will be permanently removed.
-Are you sure? (y/n) <b>y</b>
+Are you sure? (y/n) y
 DROP ROLE "joe"
 DROP ROLE</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>DROP ROLE</codeph> in the <i>Greenplum Database Reference
-            Guide</i></ph><ph><codeph><xref href="createuser.xml#topic1"/></codeph>, <codeph><xref
-              href="../../ref_guide/sql_commands/DROP_ROLE.xml#topic1"/></codeph></ph></p>
+            Guide</i></ph><ph><xref href="createuser.xml#topic1"/>, <xref
+            href="../../ref_guide/sql_commands/DROP_ROLE.xml#topic1"/></ph></p>
     </section></body></topic>

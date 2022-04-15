@@ -8,12 +8,12 @@
                 <codeph>gpinitsystem</codeph>.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpdeletesystem</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
-   [<b>-f</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
+            <codeblock>gpdeletesystem [-d &lt;coordinator_data_directory>] [-B &lt;parallel_processes>] 
+   [-f] [-l &lt;logfile_directory>] [-D]
 
-<b>gpdeletesystem</b> <b>-?</b> 
+gpdeletesystem -? 
 
-<b>gpdeletesystem</b> <b>-v</b></codeblock>
+gpdeletesystem -v</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -86,7 +86,7 @@
         </section>
         <section>
             <title>See Also</title>
-            <p><codeph><xref href="gpinitsystem.xml#topic1"/></codeph></p>
+            <p><xref href="gpinitsystem.xml#topic1"/></p>
         </section>
     </body>
 </topic>

@@ -6,33 +6,33 @@
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpbackup --dbname</b> <varname>database_name</varname>
-   [<b>--backup-dir</b> <varname>directory</varname>]
-   [<b>--compression-level</b> <varname>level</varname>]
-   [<b>--data-only</b>]
-   [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname> [<b>--exclude-schema</b> <varname>schema_name</varname> ...]]
-   [<b>--exclude-table</b> <varname>schema.table</varname> [<b>--exclude-table</b> <varname>schema.table</varname> ...]]
-   [<b>--exclude-schema-file</b> <varname>file_name</varname>]
-   [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname> [<b>--include-schema</b> <varname>schema_name</varname> ...]]
-   [<b>--include-table</b> <varname>schema.table</varname> [<b>--include-table</b> <varname>schema.table</varname> ...]]
-   [<b>--include-schema-file</b> <varname>file_name</varname>]
-   [<b>--include-table-file</b> <varname>file_name</varname>]
-   [<b>--incremental</b> [<b>--from-timestamp</b> <varname>backup-timestamp</varname>]]
-   [<b>--jobs</b> <varname>int</varname>]
-   [<b>--leaf-partition-data</b>]
-   [<b>--metadata-only</b>]
-   [<b>--no-compression</b>]
-   [<b>--plugin-config</b> <varname>config_file_location</varname>]
-   [<b>--quiet</b>]
-   [<b>--single-data-file]</b>
-   [<b>--verbose</b>]
-   [<b>--version</b>]
-   [<b>--with-stats</b>]
-   [<b>--without-globals</b>]
+      <codeblock>gpbackup --dbname &lt;database_name>
+   [--backup-dir &lt;directory>]
+   [--compression-level &lt;level>]
+   [--data-only]
+   [--debug]
+   [--exclude-schema &lt;schema_name> [--exclude-schema &lt;schema_name> ...]]
+   [--exclude-table &lt;schema.table> [--exclude-table &lt;schema.table> ...]]
+   [--exclude-schema-file &lt;file_name>]
+   [--exclude-table-file &lt;file_name>]
+   [--include-schema &lt;schema_name> [--include-schema &lt;schema_name> ...]]
+   [--include-table &lt;schema.table> [--include-table &lt;schema.table> ...]]
+   [--include-schema-file &lt;file_name>]
+   [--include-table-file &lt;file_name>]
+   [--incremental [--from-timestamp &lt;backup-timestamp>]]
+   [--jobs &lt;int>]
+   [--leaf-partition-data]
+   [--metadata-only]
+   [--no-compression]
+   [--plugin-config &lt;config_file_location>]
+   [--quiet]
+   [--single-data-file]
+   [--verbose]
+   [--version]
+   [--with-stats]
+   [--without-globals]
 
-<b>gpbackup --help</b> </codeblock>
+gpbackup --help </codeblock>
     </section>
     <section>
       <title>Description</title>
@@ -60,12 +60,13 @@
         Greenplum Database master and segment hosts to an absolute path for later use. Additional
         options are provided to filter the backup set in order to include or exclude specific
         tables.</p>
-      <p>You can create an incremental backup with the <codeph><xref href="#topic1/incremental"
-            format="dita">--incremental</xref></codeph> option. Incremental backups are efficient
-        when the total amount of data in append-optimized tables or table partitions that changed is
-        small compared to the data has not changed. See <xref
-          href="../../admin_guide/managing/backup-gpbackup-incremental.html" format="html" scope="external">Creating and Using Incremental Backups with gpbackup and gprestore</xref> for information about
-        incremental backups. </p>
+      <p>You can create an incremental backup with the <xref href="#topic1/incremental"
+          format="dita">--incremental</xref> option. Incremental backups are efficient when the
+        total amount of data in append-optimized tables or table partitions that changed is small
+        compared to the data has not changed. See <xref
+          href="../../admin_guide/managing/backup-gpbackup-incremental.html" format="html"
+          scope="external">Creating and Using Incremental Backups with gpbackup and gprestore</xref>
+        for information about incremental backups. </p>
       <p>With the default <codeph>--jobs</codeph> option (1 job), each <codeph>gpbackup</codeph>
         operation uses a single transaction on the Greenplum Database master host. The <codeph>COPY
           ... ON SEGMENT</codeph> command performs the backup task in parallel on each segment host.
@@ -101,8 +102,8 @@
           <pt><b>--backup-dir</b>
             <varname>directory</varname></pt>
           <pd>Optional. Copies all required backup files (metadata files and data files) to the
-            specified directory. You must specify <varname>directory</varname> as an absolute path
-            (not relative). If you do not supply this option, metadata files are created on the
+            specified directory. You must specify <b><varname>directory</varname></b> as an absolute
+            path (not relative). If you do not supply this option, metadata files are created on the
             Greenplum Database master host in the
               <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory. Segment hosts create CSV data files in the
@@ -202,8 +203,7 @@
             information.</pd>
         </plentry>
         <plentry>
-          <pt><b>--include-schema-file</b>
-            <varname>file_name</varname></pt>
+          <pt><b>--include-schema-file</b> &lt;file_name></pt>
           <pd>Optional. Specifies a text file containing a list of schemas to back up. Each line in
             the text file must define a single schema. The file must not include trailing lines. If
             a schema name uses any character other than a lowercase letter, number, or an underscore
@@ -212,8 +212,7 @@
             information.</pd>
         </plentry>
         <plentry>
-          <pt><b>--include-table</b>
-            <varname>schema.table</varname></pt>
+          <pt><b>--include-table</b> &lt;schema.table></pt>
           <pd>Optional. Specifies a table to include in the backup. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. For information on specifying
             special characters in schema and table names, see <xref
@@ -455,9 +454,11 @@ my#1schema.my_$590_Table</codeblock></p>
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external">Parallel Backup with gpbackup and gprestore</xref> and <xref
-          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external">Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
+        <xref href="./gprestore.xml" type="topic" format="dita"/>, <xref
+          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external"
+          >Parallel Backup with gpbackup and gprestore</xref> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external"
+          >Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
     </section>
   </body>
 </topic>

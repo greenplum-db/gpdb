@@ -8,13 +8,13 @@
         available only with the commercial release of Tanzu Greenplum Backup and Restore.</note></p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpbackup_manager</b> [<b><varname>command</varname></b>]</codeblock>
+      <codeblock>gpbackup_manager [&lt;command>]</codeblock>
       <p>where <i>command</i> is: </p>
-      <codeblock><b>delete-backup</b> <b><varname>timestamp</varname></b> [--plugin-config <b><varname>config-file</varname></b>]
-| <b>display-report</b> <b><varname>timestamp</varname></b>  
-| <b>encrypt-password --plugin-config <varname>config-file</varname></b>  
-| <b>list-backups</b>
-| <b>help [<varname>command</varname>]</b></codeblock>
+      <codeblock>delete-backup &lt;timestamp [--plugin-config &lt;config-file>]
+| display-report &lt;timestamp>  
+| encrypt-password --plugin-config> &lt;config-file>  
+| list-backups
+| help [<varname>command</varname>]</codeblock>
     </section>
     <section>
       <title>Commands</title>
@@ -40,7 +40,7 @@
             this list.</pd>
         </plentry>
         <plentry>
-          <pt><codeph>help <varname>command</varname></codeph></pt>
+          <pt><codeph>help &lt;command></codeph></pt>
           <pd>Displays a help message for the specified command.</pd>
         </plentry>
       </parml>
@@ -58,7 +58,7 @@
           <pt>-h | --help </pt>
           <pd>Displays a help message for the <codeph>gpbackup_manager</codeph> command. For help on
             a specific <codeph>gpbackup_manager</codeph> command, enter <codeph>gpbackup_manager
-              help <varname>command</varname></codeph>. For
+              help &lt;command></codeph>. For
             example:<codeblock>$ gpbackup_manager help encrypt-password</codeblock></pd>
         </plentry>
       </parml>
@@ -174,7 +174,7 @@
       <title>Examples</title>
       <ol>
         <li>Display a list of the existing backups.
-          <codeblock>gpadmin@cdw:$ <b>gpbackup_manager list-backups</b>
+          <codeblock>gpadmin@cdw:$ gpbackup_manager list-backups
   timestamp        date                       database   type            object filtering   plugin   duration   date deleted
   20190719092809   Fri Jul 19 2019 09:28:09   sales      full            include-schema              01:49:38   Fri Jul 19 2019 09:30:34
   20190719092716   Fri Jul 19 2019 09:27:16   sales      full            exclude-schema              01:38:45
@@ -183,7 +183,7 @@
   20190719092530   Fri Jul 19 2019 09:25:30   sales      full                                        01:50:27
 </codeblock></li>
         <li>Display the backup report for the backup with timestamp
-          20190612154608.<codeblock>$ <b>gpbackup_manager display-report 20190612154608</b>
+          20190612154608.<codeblock>$ gpbackup_manager display-report 20190612154608
   
 Greenplum Database Backup Report
   
@@ -236,7 +236,7 @@ Triggers                     0
 Types                        2
 Views                        0</codeblock></li>
         <li>Delete the local backup with timestamp
-          20190620145126.<codeblock>$ <b>gpbackup_manager delete-backup 20190620145126</b>
+          20190620145126.<codeblock>$ gpbackup_manager delete-backup 20190620145126
 
 Are you sure you want to delete-backup 20190620145126? (y/n)<b>y</b>
 Deletion of 20190620145126 in progress.
@@ -244,7 +244,7 @@ Deletion of 20190620145126 in progress.
 Deletion of 20190620145126 complete.</codeblock></li>
         <li>Delete a backup stored on a Data Domain system. The DD Boost plugin configuration file
           must be specified with the <codeph>--plugin-config</codeph>
-          option.<codeblock>$ <b>gpbackup_manager delete-backup 20190620160656 --plugin-config ~/ddboost_config.yaml</b>
+          option.<codeblock>$ gpbackup_manager delete-backup 20190620160656 --plugin-config ~/ddboost_config.yaml
 
 Are you sure you want to delete-backup 20190620160656? (y/n)<b>y</b>
 Deletion of 20190620160656 in progress.
@@ -252,7 +252,7 @@ Deletion of 20190620160656 in progress.
 Deletion of 20190620160656 done.</codeblock></li>
         <li>Encrypt a password. A DD Boost plugin configuration file must be specified with the
             <codeph>--plugin-config</codeph>
-          option.<codeblock>$ <b>gpbackup_manager encrypt-password --plugin-config ~/ddboost_rep_on_config.yaml</b>
+          option.<codeblock>$ gpbackup_manager encrypt-password --plugin-config ~/ddboost_rep_on_config.yaml
           
 Please enter your password ******
 Please verify your password ******
@@ -271,9 +271,11 @@ remote_password_encryption: "on"
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external">Parallel Backup with gpbackup and gprestore</xref> and <xref
-          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external">Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
+        <xref href="./gprestore.xml" type="topic" format="dita"/>, <xref
+          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external"
+          >Parallel Backup with gpbackup and gprestore</xref> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external"
+          >Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
     </section>
   </body>
 </topic>

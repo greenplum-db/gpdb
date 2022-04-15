@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--table</b> | <b>-t</b> <varname>table</varname> ] 
-        [<b>--index</b> | <b>-i</b> <varname>index</varname> ] [<varname>dbname</varname>]
+<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">reindexdb [&lt;connection-option> ...] [--table | -t &lt;table ] 
+        [--index | -i &lt;index> ] [&lt;dbname>]
 
-<b>reindexdb</b> [<varname>connection-option</varname> ...] <b>--all</b> | <b>-a</b>
+reindexdb [&lt;connection-option> ...] --all | -a
 
-<b>reindexdb</b> [<varname>connection-option</varname> ...] <b>--system</b> | <b>-s</b> [<varname>dbname</varname>]
+reindexdb [&lt;connection-option> ...] --system | -s [&lt;dbname>]
 
-<b>reindexdb</b> <b>-? | --help</b>
+reindexdb -? | --help
 
-<b>reindexdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database.</p>
+reindexdb -V | --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database.</p>
 <p> <codeph>reindexdb</codeph> is a wrapper around the SQL command <codeph>REINDEX</codeph>. There is no effective difference between reindexing databases via this utility and via other methods for accessing the server. </p></section>
 <section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Reindex all databases.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt><pd>Specifies the name of the database to be reindexed. If this is not specified and
               <codeph>-all</codeph> is not used, the database name is read from the environment
@@ -50,6 +50,6 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
           <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>REINDEX</codeph> in the <i>Greenplum Database Reference
-            Guide</i></ph><ph><codeph><xref href="../../ref_guide/sql_commands/REINDEX.xml#topic1"
-            /></codeph></ph></p>
+            Guide</i></ph><ph><xref href="../../ref_guide/sql_commands/REINDEX.xml#topic1"
+        /></ph></p>
     </section></body></topic>

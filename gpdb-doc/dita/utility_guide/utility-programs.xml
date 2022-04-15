@@ -9,9 +9,10 @@
                 provides additional management utilities for administering a distributed Greenplum
                 Database DBMS.</p>
             <p>Several utilities are installed when you install the Greenplum Database server. These
-                utilities reside in <codeph>$GPHOME/bin</codeph>. <ph otherprops="pivotal"> Other
-                    utilities must be downloaded from VMware Tanzu Network and installed separately.
-                    These include:</ph></p>
+                utilities reside in
+                    <?oxy_custom_start type="oxy_content_highlight" color="140,255,140"?><codeph>$GPHOME/bin</codeph><?oxy_custom_end?>.
+                    <ph otherprops="pivotal"> Other utilities must be downloaded from VMware Tanzu
+                    Network and installed separately. These include:</ph></p>
             <ul otherprops="pivotal">
                 <li>The <xref href="http://gpdb.docs.pivotal.io/backup-restore/latest/index.html"
                         scope="external" format="html">Tanzu Greenplum Backup and Restore</xref>

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pc137116">dropdb</title><body><p id="client_util_desc">Removes a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>dropdb</b> [<varname>connection-option</varname> ...] [<b>-e</b>] [<b>-i</b>] <varname>dbname</varname>
+<topic id="topic1"><title id="pc137116">dropdb</title><body><p id="client_util_desc">Removes a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">dropdb [&lt;connection-option ...] [-e] [-i] &lt;dbname>
 
-<b>dropdb</b> <b>-? | --help</b>
+dropdb -? | --help
 
-<b>dropdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>dropdb</codeph> destroys an existing database. The user who
+dropdb -V | --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>dropdb</codeph> destroys an existing database. The user who
 runs this command must be a superuser or the owner of the database
 being dropped. </p><p><codeph>dropdb</codeph> is a wrapper around the SQL command <codeph>DROP DATABASE</codeph>. <ph
                                        >See the <i>Greenplum Database Reference
@@ -43,14 +43,13 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
               that does not exist (or if it is the name of the database being dropped),
                 <codeph>template1</codeph> will be used.</pd>
           </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To destroy the database named <codeph>demo</codeph> using default connection parameters:</p><codeblock>dropdb demo</codeblock><p>To destroy the database named <codeph>demo</codeph> using connection options, with verification,
-        and a peek at the underlying command:</p><codeblock><b>dropdb -p 54321 -h coordinatorhost -i -e demo</b>
+        and a peek at the underlying command:</p><codeblock>dropdb -p 54321 -h coordinatorhost -i -e demo
 Database "demo" will be permanently deleted.
-Are you sure? (y/n) <b>y</b>
+Are you sure? (y/n) y
 DROP DATABASE "demo"
 DROP DATABASE</codeblock></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>DROP DATABASE</codeph> in the
-            <i>Greenplum Database Reference Guide</i></ph><ph><codeph><xref
-              href="createdb.xml#topic1"/></codeph>, <codeph><xref
-              href="../../ref_guide/sql_commands/DROP_DATABASE.xml#topic1"/></codeph></ph></p>
+            <i>Greenplum Database Reference Guide</i></ph><ph><xref href="createdb.xml#topic1"/>,
+            <xref href="../../ref_guide/sql_commands/DROP_DATABASE.xml#topic1"/></ph></p>
                 </section></body></topic>

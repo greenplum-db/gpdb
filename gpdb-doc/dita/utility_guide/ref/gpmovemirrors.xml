@@ -7,13 +7,13 @@
     <p>Moves mirror segment instances to new locations.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpmovemirrors</b> <b>-i</b> <varname>move_config_file</varname> [<b>-d</b> <varname>coordinator_data_directory</varname>] 
-          [<b>-l</b> <varname>logfile_directory</varname>] [<b>-b</b> <varname>segment_batch_size</varname>]
-          [<b>-B</b> <varname>batch_size</varname>] [<b>-v</b>] [<b>--hba-hostnames</b> <varname>boolean</varname>] 
+      <codeblock>gpmovemirrors -i &lt;move_config_file> [-d &lt;coordinator_data_directory>] 
+          [-l &lt;logfile_directory>] [-b &lt;segment_batch_size>]
+          [-B &lt;batch_size>] [-v] [--hba-hostnames &lt;boolean>] 
 
-<b>gpmovemirrors</b> <b>-?</b> 
+gpmovemirrors -? 
 
-<b>gpmovemirrors</b> <b>--version</b></codeblock>
+gpmovemirrors --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
