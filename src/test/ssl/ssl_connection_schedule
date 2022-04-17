@@ -1,5 +1,2 @@
-test: set
 test: basic_connection
 test: utility_connection
-test: retrieve_quit_check
-test: unset

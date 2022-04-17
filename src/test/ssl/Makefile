@@ -116,12 +116,6 @@ ssl/server.crl: ssl/server-revoked.crt
 ssl/root.crl: ssl/root_ca.crt
 	openssl ca -config cas.config -name root_ca -gencrl -out ssl/root.crl
 
-sql_isolation_testcase.py:
-	rm -f $@ && $(LN_S) $(top_builddir)/src/test/isolation2/sql_isolation_testcase.py
-
-global_sh_executor.sh:
-	rm -f $@ && $(LN_S) $(top_builddir)/src/test/isolation2/global_sh_executor.sh
-
 # If a CRL is used, OpenSSL requires a CRL file for *all* the CAs in the
 # chain, even if some of them are empty.
 ssl/root+server.crl: ssl/root.crl ssl/server.crl
@@ -143,10 +137,10 @@ else
 	@echo "SSL is disabled for this build"
 endif
 
-install: sql_isolation_testcase.py global_sh_executor.sh
+install:
 	./configure_ssl.sh
 
 HOSTNAME=$(shell hostname)
 installcheck: install
-	$(top_builddir)/src/test/isolation2/pg_isolation2_regress $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_ssl_connection --psqldir='$(PSQLDIR)' --inputdir=$(srcdir) --dbname=test_sslconnection --schedule=$(srcdir)/ssl_connection_schedule --user=ssltestuser --host=$(HOSTNAME) --sslmode=verify-full
+	$(top_builddir)/src/test/regress/pg_regress $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_ssl_connection --psqldir='$(PSQLDIR)' --inputdir=$(srcdir) --dbname=test_sslconnection --schedule=$(srcdir)/ssl_connection_schedule --user=ssltestuser --host=$(HOSTNAME) --sslmode=verify-full
 	./clear_ssl.sh

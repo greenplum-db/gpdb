@@ -1,1 +1,0 @@
-DROP EXTENSION gp_parallel_retrieve_cursor;
