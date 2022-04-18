@@ -1,2 +1,4 @@
+test: set
 test: basic_connection
 test: utility_connection
+test: unset
