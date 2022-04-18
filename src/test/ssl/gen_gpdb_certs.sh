@@ -15,22 +15,10 @@ mkdir -p ${CLIENT_CERTS_PATH}
 function gencert() {
 openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
     -subj "/C=US/ST=California/L=Palo Alto/O=Pivotal/CN=$1root" \
-    -extensions san -config \
-    <(echo "[req]";
-      echo distinguished_name=req;
-      echo "[san]";
-      echo subjectAltName=DNS:$HOST_NAME
-      ) \
     -keyout $1root.key  -out $1root.crt
 
 openssl req -new -newkey rsa:4096 -nodes \
     -subj "/C=US/ST=California/L=Palo Alto/O=Pivotal/CN=$1ca" \
-    -extensions san -config \
-    <(echo "[req]";
-      echo distinguished_name=req;
-      echo "[san]";
-      echo subjectAltName=DNS:$HOST_NAME
-      ) \
     -keyout $1ca.key -out $1ca.csr
 
 openssl x509 -req -in $1ca.csr -CA $1root.crt -CAkey $1root.key \
@@ -39,12 +27,6 @@ openssl x509 -req -in $1ca.csr -CA $1root.crt -CAkey $1root.key \
 
 openssl req -new -newkey rsa:2048 -nodes \
     -subj "/C=US/ST=California/L=Palo Alto/O=Pivotal/CN=$2" \
-    -extensions san -config \
-    <(echo "[req]";
-      echo distinguished_name=req;
-      echo "[san]";
-      echo subjectAltName=DNS:$HOST_NAME
-      ) \
     -keyout $1.key  -out $1.csr
 
 openssl x509 -req -in $1.csr -CA $1ca.crt -CAkey $1ca.key \
