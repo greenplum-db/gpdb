@@ -12,7 +12,7 @@
       <codeblock>analyzedb -d &lt;dbname>
    { -s &lt;schema>  | 
    { -t &lt;schema>.&lt;table> 
-     [ -i &lt;col1>[,&lt;col2, ...] | 
+     [ -i &lt;col1>[,&lt;col2>, ...] | 
        -x &lt;col1>[,&lt;col2>, ...] ] } |
      { -f | --file} &lt;config-file> }
    [ -l | --list ]
