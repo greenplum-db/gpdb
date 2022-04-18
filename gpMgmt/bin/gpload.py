@@ -2117,7 +2117,7 @@ class gpload:
                          pg_namespace pgns
                          on(pg_class.relnamespace = pgns.oid)
                       """
-            conditionStr = "pgns.nspname = '%s'" % schemaName
+            conditionStr = "pgns.nspname = '%s'" % self.get_sql_name(schemaName)
         if noGpVersion or self.gpdb_version < "7.0.0":
             relkind='r'
         else:
@@ -2204,7 +2204,7 @@ class gpload:
             joinStr = """join
                     pg_namespace pgns
                     on(pg_class.relnamespace = pgns.oid)"""
-            conditionStr = "pgns.nspname = '%s'" % schemaName
+            conditionStr = "pgns.nspname = '%s'" % self.get_sql_name(schemaName)
         if noGpVersion or self.gpdb_version < "7.0.0":
             relkind='r'
         else:
@@ -2263,20 +2263,35 @@ class gpload:
 		
         return '%s:%s:%s:%s' % (target_table_name, columns_num, staging_cols_str, distribution_cols_str)
 
-		
 
-    def get_reuse_staging_table_query(self, encoding_conditions):
+    def get_sql_name(self, name):
+        '''
+        this function return the sql name without double quotes and in right lower or upper case
+        if name is double quoted, then return the content in it
+        if not, returen the name in lower case
+        '''
+        if isDelimited(name):
+            # if the name is double quoted, we keep the capital letters
+            name = quote_unident(name)
+        else:
+            # if not, table name should be lower letters
+            name = name.lower()
+        return name
+
+
+    def get_reuse_staging_table_query(self, table_name):
         '''
         This function will return the SQL to run in order to find out whether
         we have an existing staging table in the catalog which could be reused for this
         operation, according to the method and the encoding conditions.
-
         return:
             sql(string)
         '''
-        sql = """SELECT oid::regclass \
-FROM pg_class \
-WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
+        if self.extSchemaName:
+            schema_name = self.get_sql_name(self.extSchemaName)
+            sql = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = '%s' AND tablename = '%s'" % (schema_name, table_name)
+        else:
+            sql = "SELECT oid::regclass FROM pg_class WHERE relname = '%s';" % (table_name)
 
         self.log(self.DEBUG, "query used to identify reusable temporary relations: %s" % sql)
         return sql
@@ -2453,13 +2468,16 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
             if self.staging_table:
                 if '.' in self.staging_table:
                     self.log(self.ERROR, "Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table")
-                self.extTableName = quote_unident(self.staging_table) 
+                self.extTableName = self.staging_table
+                # we need a name without double quotes and in right upper or lower case
+                sql_table_name = self.get_sql_name(self.extTableName)
+
                 sql = """SELECT n.nspname as Schema, c.relname as Name
                          FROM pg_catalog.pg_class c
                          INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                          WHERE c.relkind IN ('r','v','S','f','')
                            AND c.relname = '%s'
-                        """ % self.extTableName
+                        """ % sql_table_name
                 if self.extSchemaName is not None:
                     sql += "AND n.nspname = '%s'" % quote_unident(self.extSchemaName)
                 else:
@@ -2469,7 +2487,7 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
                               AND n.nspname !~ '^pg_toast'"""
                 result = self.db.query(sql).getresult()
                 if len(result) > 0:
-                    self.extSchemaTable = self.get_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                    self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
                     self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
                     return
             # staging table is not specified, we need to find it manually
@@ -2489,7 +2507,7 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
                     self.extTableName = (resultList[0])[0]
                     # fast match result is only table name, so we need add schema info
                     if self.fast_match:
-                        self.extSchemaTable = self.get_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                        self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
                     else:
                         self.extSchemaTable = self.extTableName
                     self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
@@ -2588,14 +2606,14 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
             # create a string from all reuse conditions for staging tables and ancode it
             conditions_str = self.get_staging_conditions_string(target_table_name, target_columns, distcols).encode()
             encoding_conditions = hashlib.md5(conditions_str).hexdigest()
-					
-            sql = self.get_reuse_staging_table_query(encoding_conditions)
+            table_name = 'staging_gpload_reusable_%s'% (encoding_conditions)	
+            sql = self.get_reuse_staging_table_query(table_name)
             resultList = self.db.query(sql).getresult()
 
             if len(resultList) > 0:
 
                 # found a temp table to reuse. no need to create one. we're done here.
-                self.staging_table_name = (resultList[0])[0]
+                self.staging_table_name = self.get_schematable(self.extSchemaName, table_name)
                 self.log(self.INFO, "reusing staging table %s" % self.staging_table_name)
 
                 # truncate it so we don't use old data

@@ -1800,9 +1800,7 @@ SpillCurrentBatch(HashJoinState *node)
 
 	for (i = 0; i < hashtable->nbuckets; i++)
 	{
-		/* GPDB_12_MERGE_FIXME: this only looks at 'unshared'. I think this is
-		 * broken for parallel hashjoins
-		 */
+		/* don't need to consider parallel hashjoins which use shared tuplestores instead of raw files */
 		tuple = hashtable->buckets.unshared[i];
 
 		while (tuple != NULL)

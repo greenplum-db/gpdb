@@ -156,7 +156,8 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">smirecs </entry>
-                <entry colname="col2" class="- topic/entry ">Number of rows in the table.</entry>
+                <entry colname="col2" class="- topic/entry ">The total number of columns in
+                  the table that have statistics recorded.</entry>
               </row>
             </tbody>
           </tgroup>

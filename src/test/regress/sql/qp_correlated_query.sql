@@ -3,6 +3,7 @@
 -- ----------------------------------------------------------------------
 create schema qp_correlated_query;
 set search_path to qp_correlated_query;
+set optimizer_trace_fallback TO on;
 
 -- ----------------------------------------------------------------------
 -- Test: csq_heap_in.sql (Correlated Subquery: CSQ using IN clause (Heap))
@@ -190,6 +191,37 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
 select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
 explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
 select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+
+-- -- -- --
+-- Test ALL clause with subqueries
+-- -- -- --
+create table qp_csq_all_t1(a int) distributed by (a);
+create table qp_csq_all_t2(b int) distributed by (b);
+
+insert into qp_csq_all_t1 values (null);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t2 values (null);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t2 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+insert into qp_csq_all_t2 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+insert into qp_csq_all_t2 values (2);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
 
 
 -- ----------------------------------------------------------------------
@@ -752,3 +784,4 @@ DROP TABLE IF EXISTS supplier;
 -- ----------------------------------------------------------------------
 set client_min_messages='warning';
 drop schema qp_correlated_query cascade;
+reset optimizer_trace_fallback;

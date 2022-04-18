@@ -960,8 +960,9 @@ PolicyEagerFreeAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 int64
 ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 {
+	/* Returns QD's query_mem if we are on the QE, for re-calculating QE's query_mem */
 	if (Gp_role != GP_ROLE_DISPATCH)
-		return 0;
+		return stmt->query_mem;
 
 	/* no limits in single user mode. */
 	if (!IsUnderPostmaster)

@@ -853,8 +853,14 @@ gpload --version</codeblock>
                                 <pd>If <codeph>SCHEMA</codeph> is not set, the utility searches for
                                     the table (using the schemas in the database
                                         <codeph>search_path</codeph>). If the table is not found,
-                                    &lt;external_table_name> is created in the default
-                                        <codeph>PUBLIC</codeph> schema. </pd>
+                                        <varname>external_table_name</varname> is created in the
+                                    default <codeph>PUBLIC</codeph> schema. </pd>
+                                <pd><codeph>gpload</codeph> creates the staging table using the
+                                  distribution key(s) of the target table as the distribution key(s)
+                                  for the staging table. If the target table was created
+                                  <codeph>DISTRIBUTED RANDOMLY</codeph>, <codeph>gpload</codeph>
+                                  uses <codeph>MATCH_COLUMNS</codeph> as the staging table's
+                                  distribution key(s).</pd>
                             </plentry>
                             <plentry>
                                 <pt id="cffastmatch">FAST_MATCH</pt>

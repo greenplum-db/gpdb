@@ -43,7 +43,6 @@
 #include "postmaster/fts.h"
 #include "replication/walsender.h"
 #include "storage/proc.h"
-#include "tcop/idle_resource_cleaner.h"
 #include "utils/builtins.h"
 #include "utils/gdd.h"
 #include "utils/guc_tables.h"
@@ -221,6 +220,7 @@ double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
 bool		gp_resource_group_cpu_ceiling_enforcement;
+bool		gp_resource_group_enable_recalculate_query_mem;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -2763,6 +2763,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_resource_group_cpu_ceiling_enforcement,
 		false, NULL, NULL
+	},
+
+	{
+		{"gp_resource_group_enable_recalculate_query_mem", PGC_USERSET, RESOURCES,
+		 	gettext_noop("Enable resource group re-calculate the query_mem on QE"),
+		 	NULL
+		},
+		&gp_resource_group_enable_recalculate_query_mem,
+		true,
+		NULL, NULL, NULL
 	},
 
 	{

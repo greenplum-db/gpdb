@@ -84,7 +84,4 @@ extern bool set_plan_disabling_options(const char *arg,
 									   GucContext context, GucSource source);
 extern const char *get_stats_option_name(const char *arg);
 
-extern void enable_client_wait_timeout_interrupt(void);
-extern void disable_client_wait_timeout_interrupt(void);
-
 #endif							/* TCOPPROT_H */

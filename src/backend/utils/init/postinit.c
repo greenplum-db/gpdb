@@ -64,7 +64,6 @@
 #include "storage/smgr.h"
 #include "storage/sync.h"
 #include "tcop/tcopprot.h"
-#include "tcop/idle_resource_cleaner.h"
 #include "utils/acl.h"
 #include "utils/backend_cancel.h"
 #include "utils/faultinjector.h"
@@ -94,6 +93,7 @@ static void ShutdownPostgres(int code, Datum arg);
 static void StatementTimeoutHandler(void);
 static void LockTimeoutHandler(void);
 static void IdleInTransactionSessionTimeoutHandler(void);
+static void IdleGangTimeoutHandler(void);
 static void ClientCheckTimeoutHandler(void);
 static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
@@ -726,7 +726,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		RegisterTimeout(LOCK_TIMEOUT, LockTimeoutHandler);
 		RegisterTimeout(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 						IdleInTransactionSessionTimeoutHandler);
-		RegisterTimeout(GANG_TIMEOUT, IdleGangTimeoutHandler);
+		RegisterTimeout(IDLE_GANG_TIMEOUT, IdleGangTimeoutHandler);
 		RegisterTimeout(CLIENT_CONNECTION_CHECK_TIMEOUT, ClientCheckTimeoutHandler);
 	}
 
@@ -1508,6 +1508,14 @@ static void
 IdleInTransactionSessionTimeoutHandler(void)
 {
 	IdleInTransactionSessionTimeoutPending = true;
+	InterruptPending = true;
+	SetLatch(MyLatch);
+}
+
+static void
+IdleGangTimeoutHandler(void)
+{
+	IdleGangTimeoutPending = true;
 	InterruptPending = true;
 	SetLatch(MyLatch);
 }

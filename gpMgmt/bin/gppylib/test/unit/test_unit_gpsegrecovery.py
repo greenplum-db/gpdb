@@ -106,14 +106,12 @@ class FullRecoveryTestCase(GpTestCase):
         self.maxDiff = None
         self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
         self.apply_patches([
-            patch('gpsegrecovery.ModifyConfSetting', return_value=Mock()),
             patch('gpsegrecovery.start_segment', return_value=Mock()),
             patch('gpsegrecovery.PgBaseBackup.__init__', return_value=None),
             patch('gpsegrecovery.PgBaseBackup.run')
         ])
         self.mock_pgbasebackup_run = self.get_mock_from_apply_patch('run')
         self.mock_pgbasebackup_init = self.get_mock_from_apply_patch('__init__')
-        self.mock_pgbasebackup_modifyconfsetting = self.get_mock_from_apply_patch('ModifyConfSetting')
 
         p = Segment.initFromString("1|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         m = Segment.initFromString("2|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
@@ -135,11 +133,9 @@ class FullRecoveryTestCase(GpTestCase):
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
         self.assertEqual(expected_init_args, self.mock_pgbasebackup_init.call_args)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
-        self.assertEqual(1, self.mock_pgbasebackup_modifyconfsetting.call_count)
         self.assertEqual(call(validateAfter=True), self.mock_pgbasebackup_run.call_args)
         expected_logger_info_args = [call('Running pg_basebackup with progress output temporarily in /tmp/test_progress_file'),
-                                     call("Successfully ran pg_basebackup for dbid: 2"),
-                                     call("Updating /data/mirror0/postgresql.conf")]
+                                     call("Successfully ran pg_basebackup for dbid: 2")]
         self.assertEqual(expected_logger_info_args, self.mock_logger.info.call_args_list)
         gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
 

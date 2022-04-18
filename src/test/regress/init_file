@@ -132,4 +132,7 @@ s/.//gs
 m/HINT:  For non-partitioned tables, run analyze .+\. For partitioned tables, run analyze rootpartition .+\. See log for columns missing statistics\./
 s/.//gs
 
+m/\(dbsize\.c\:\d+\)/
+s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
+
 -- end_matchsubs
