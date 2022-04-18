@@ -1,41 +1,37 @@
+CREATE EXTENSION sslinfo;
 -- current user is ssltestuser which only can login via SSL
 SELECT current_user;
  current_user 
 --------------
- ssltestuser  
+ ssltestuser
 (1 row)
+
 SELECT ssl_is_used();
  ssl_is_used 
 -------------
- t           
+ t
 (1 row)
 
 -- gpadmin still can login without SSL
-! unset PGHOST; psql -d test_sslconnection -U gpadmin -c "SELECT current_user";
+\! unset PGHOST; psql -d test_sslconnection -U gpadmin -c "SELECT current_user";
  current_user 
 --------------
  gpadmin
 (1 row)
 
-
-! unset PGHOST; psql -d test_sslconnection -U gpadmin -c "SELECT ssl_is_used()";
+\! unset PGHOST; psql -d test_sslconnection -U gpadmin -c "SELECT ssl_is_used()";
  ssl_is_used 
 -------------
  f
 (1 row)
 
-
-
 -- ssltestuser can read/write data with SSL
 CREATE TABLE test(a int) DISTRIBUTED BY (a);
-CREATE
 INSERT INTO test SELECT generate_series(1, 100);
-INSERT 100
 SELECT COUNT(*) from test;
  count 
 -------
- 100   
+   100
 (1 row)
 
 DROP TABLE test;
-DROP
