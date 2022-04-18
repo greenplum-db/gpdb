@@ -70,7 +70,6 @@
 #include "cdb/cdbvars.h"  /*Gp_is_writer*/
 #include "port/atomics.h"
 #include "postmaster/fts.h"
-#include "tcop/idle_resource_cleaner.h"
 #include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 #include "utils/session_state.h"
@@ -80,6 +79,7 @@ int			DeadlockTimeout = 1000;
 int			StatementTimeout = 0;
 int			LockTimeout = 0;
 int			IdleInTransactionSessionTimeout = 0;
+int			IdleSessionGangTimeout = 0;
 bool		log_lock_waits = false;
 
 /* Pointer to this process's PGPROC and PGXACT structs, if any */

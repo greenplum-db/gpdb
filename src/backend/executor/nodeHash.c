@@ -982,11 +982,8 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 	Assert(!hashtable->eagerlyReleased);
 
 	/*
-	 * Make sure all the temp files are closed.  We skip batch 0, since it
-	 * can't have any temp files (and the arrays might not even exist if
-	 * nbatch is only 1).  Parallel hash joins don't use these files.
-	 *
-	 * GPDB_12_MERGE_FIXME: In GPDB, we don't skip batch 0. Why?
+	 * Make sure all the temp files are closed.
+	 * GPDB supports rescan of hashjoin, the batch0 can still have temp files.
 	 */
 	if (hashtable->innerBatchFile != NULL)
 	{
@@ -2674,76 +2671,88 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
     /* Final size of hash table for this batch */
     batchstats->hashspace_final = hashtable->spaceUsed;
 
-    /* Collect workfile I/O statistics. */
-	/* GPDB_12_MERGE_FIXME: broken */
-#if 0
-    if (hashtable->nbatch > 1)
+    /* Collect buffile I/O statistics. */
+    /* Parallel hash join uses shared tuplestores, don't consider it now. */
+    if (hashtable->parallel_state == NULL)
     {
-        uint64      owrbytes = 0;
-        uint64      iwrbytes = 0;
-
-        Assert(stats->batchstats &&
-               hashtable->nbatch <= stats->nbatchstats);
-
-        /* How much was read from inner workfile for current batch? */
-        batchstats->irdbytes = batchstats->innerfilesize;
-
-        /* How much was read from outer workfiles for current batch? */
-		if (hashtable->outerBatchFile &&
-			hashtable->outerBatchFile[curbatch] != NULL)
+		if (hashtable->nbatch > 1)
 		{
-			batchstats->ordbytes = BufFileSize(hashtable->outerBatchFile[curbatch]);
-		}
+			uint64      owrbytes = 0;
+			uint64      iwrbytes = 0;
 
-		/*
-		 * How much was written to workfiles for the remaining batches?
-		 */
-		for (i = curbatch + 1; i < hashtable->nbatch; i++)
-		{
-			HashJoinBatchStats *bs = &stats->batchstats[i];
-			uint64              filebytes = 0;
+			Assert(stats->batchstats &&
+					hashtable->nbatch <= stats->nbatchstats);
 
+			/* for curbatch=0, the inner tuple is in the in-memory hash table, the outer tuple is
+			 * read from outer relation, nothing need to read from batch file, but the innerfilesize
+			 * is initialized to 0 and the outerBatchFile[0] is initialized to NULL.
+			 * for curbatch>0, the inner tuple and outer tuple are read from batch file.
+			 */
+
+			/* How much was read from inner buffile for current batch? */
+			batchstats->irdbytes = batchstats->innerfilesize;
+
+			/* How much was read from outer buffiles for current batch? */
 			if (hashtable->outerBatchFile &&
-				hashtable->outerBatchFile[i] != NULL)
+					hashtable->outerBatchFile[curbatch] != NULL)
 			{
-				filebytes = BufFileGetSize(hashtable->outerBatchFile[i]);
+				batchstats->ordbytes = BufFileSize(hashtable->outerBatchFile[curbatch]);
 			}
 
-			Assert(filebytes >= bs->outerfilesize);
-			owrbytes += filebytes - bs->outerfilesize;
-			bs->outerfilesize = filebytes;
+			/* for curbatch=0, the tuple which is not belong to the batch 0 is put into the temp
+			 * file for later batches.
+			 * for curbatch>0, It's possible that we increase the number, so that by the time we
+			 * reload curbatch file, some of the tuples we wrote here will logically belong to a later
+			 * file, they may be sent to future batches, so we count the increasing size here.
+			 */
 
-			filebytes = 0;
-
-			if (hashtable->innerBatchFile &&
-				hashtable->innerBatchFile[i])
+			/* How much was written to buffiles for the remaining batches? */
+			for (int i = curbatch + 1; i < hashtable->nbatch; i++)
 			{
-				filebytes = BufFileGetSize(hashtable->innerBatchFile[i]);
+				HashJoinBatchStats *bs = &stats->batchstats[i];
+				uint64              filebytes = 0;
+
+				if (hashtable->outerBatchFile &&
+						hashtable->outerBatchFile[i] != NULL)
+				{
+					filebytes = BufFileSize(hashtable->outerBatchFile[i]);
+				}
+
+				Assert(filebytes >= bs->outerfilesize);
+				owrbytes += filebytes - bs->outerfilesize;
+				bs->outerfilesize = filebytes;
+
+				filebytes = 0;
+
+				if (hashtable->innerBatchFile &&
+						hashtable->innerBatchFile[i])
+				{
+					filebytes = BufFileSize(hashtable->innerBatchFile[i]);
+				}
+
+				Assert(filebytes >= bs->innerfilesize);
+				iwrbytes += filebytes - bs->innerfilesize;
+				bs->innerfilesize = filebytes;
 			}
+			batchstats->owrbytes = owrbytes;
+			batchstats->iwrbytes = iwrbytes;
+		}                           /* give buffile I/O statistics */
 
-			Assert(filebytes >= bs->innerfilesize);
-			iwrbytes += filebytes - bs->innerfilesize;
-			bs->innerfilesize = filebytes;
-		}
-		batchstats->owrbytes = owrbytes;
-		batchstats->iwrbytes = iwrbytes;
-    }                           /* give workfile I/O statistics */
-
-	/* Collect hash chain statistics. */
-	stats->nonemptybatches++;
-	for (i = 0; i < hashtable->nbuckets; i++)
-	{
-		HashJoinTuple   hashtuple = hashtable->buckets[i];
-		int             chainlength;
-
-		if (hashtuple)
+		/* Collect hash chain statistics. */
+		stats->nonemptybatches++;
+		for (int i = 0; i < hashtable->nbuckets; i++)
 		{
-			for (chainlength = 0; hashtuple; hashtuple = hashtuple->next)
-				chainlength++;
-			cdbexplain_agg_upd(&stats->chainlength, chainlength, i);
+			HashJoinTuple   hashtuple = hashtable->buckets.unshared[i];
+			int             chainlength;
+
+			if (hashtuple)
+			{
+				for (chainlength = 0; hashtuple; hashtuple = hashtuple->next.unshared)
+					chainlength++;
+				cdbexplain_agg_upd(&stats->chainlength, chainlength, i);
+			}
 		}
-	}
-#endif
+    }
 }                               /* ExecHashTableExplainBatchEnd */
 
 

@@ -1,12 +1,12 @@
 2021-01-17 20:28:18|INFO|gpload session started 2021-01-17 20:28:18
 2021-01-17 20:28:18|INFO|setting schema 'public' for table 'texttable'
 2021-01-17 20:28:18|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/temp/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-01-17 20:28:18|INFO|reusing external staging table staging_test
+2021-01-17 20:28:18|INFO|reusing external staging table "STAGING_test"
 2021-01-17 20:28:18|ERROR|ERROR:  column "n8" does not exist
 LINE 1: ..."s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM ...
                                                              ^
 HINT:  There is a column named "n8" in table "texttable", but it cannot be referenced from this part of the query.
- encountered while running INSERT INTO public."texttable" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM staging_test
+ encountered while running INSERT INTO public."texttable" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM "STAGING_test"
 2021-01-17 20:28:18|INFO|rows Inserted          = 0
 2021-01-17 20:28:18|INFO|rows Updated           = 0
 2021-01-17 20:28:18|INFO|data formatting errors = 0

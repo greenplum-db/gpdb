@@ -175,18 +175,6 @@ class ConfExpSegCmd(Command):
                             raise
 
                     logger.info("Successfully ran pg_basebackup: %s" % cmd.cmdStr)
-
-                    # updating port number on conf once the mirror got created
-                    logger.info("Updating %s/postgresql.conf" % self.datadir)
-                    modifyConfCmd = ModifyConfSetting('Updating %s/postgresql.conf' % self.datadir,
-                                                      self.datadir + '/postgresql.conf',
-                                                      'port', self.port, optType='number')
-                    try:
-                        modifyConfCmd.run(validateAfter=True)
-                    except:
-                        self.set_results(modifyConfCmd.get_results())
-                        raise
-
                     return
 
                 logger.info("Create or update data directories for new segment")

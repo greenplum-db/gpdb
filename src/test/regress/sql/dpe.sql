@@ -10,6 +10,12 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/Extra Text: \(seg\d+\)/
+-- s/Extra Text: \(seg\d+\)/Extra Text: ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max/
+-- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 
 drop schema if exists dpe_single cascade;
