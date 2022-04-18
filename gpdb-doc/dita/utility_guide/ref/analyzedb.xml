@@ -156,7 +156,7 @@ public.lineitem -i l_shipdate,l_receiptdate </codeblock></pd>
           <pd>This option is no longer used, you may remove it from your scripts.</pd>
         </plentry>
         <plentry>
-          <pt><varname>--skip_orca_root_stats</varname></pt>
+          <pt><codeph>--skip_orca_root_stats</codeph></pt>
           <pd>
             <note>Do not use this option if GPORCA is enabled.</note>
           </pd>
