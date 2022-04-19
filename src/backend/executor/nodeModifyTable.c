@@ -1094,7 +1094,7 @@ ldelete:;
 	 * triggers on an UPDATE that moves tuples from one partition to another.
 	 * Should we follow that example with cross-segment UPDATEs too?
 	 */
-	if (!RelationIsAppendOptimized(resultRelationDesc) && !splitUpdate)
+	if (!table_relation_append_only_optimized(resultRelationDesc) && !splitUpdate)
 	{
 		ExecARDeleteTriggers(estate, resultRelInfo, tupleid, oldtuple,
 							 ar_delete_trig_tcs);
@@ -1503,7 +1503,7 @@ lreplace:;
 				 * AO case, as visimap update within same command happens at end
 				 * of command.
 				 */
-				if (!RelationIsAppendOptimized(resultRelationDesc) &&
+				if (!table_relation_append_only_optimized(resultRelationDesc) &&
 					tmfd.cmax != estate->es_output_cid)
 					ereport(ERROR,
 							(errcode(ERRCODE_TRIGGERED_DATA_CHANGE_VIOLATION),
@@ -1615,7 +1615,7 @@ lreplace:;
 
 	/* AFTER ROW UPDATE Triggers */
 	/* GPDB: AO and AOCO tables don't support triggers */
-	if (!RelationIsAppendOptimized(resultRelationDesc))
+	if (!table_relation_append_only_optimized(resultRelationDesc))
 		ExecARUpdateTriggers(estate, resultRelInfo, tupleid, oldtuple, slot,
 						 recheckIndexes,
 						 mtstate->operation == CMD_INSERT ?

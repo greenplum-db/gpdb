@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "access/table.h"
+#include "access/tableam.h"
 #include "catalog/aovisimap.h"
 #include "catalog/aocatalog.h"
 #include "catalog/pg_opclass.h"
@@ -45,7 +46,7 @@ AlterTableCreateAoVisimapTable(Oid relOid)
 	 */
 	rel = table_open(relOid, AccessExclusiveLock);
 
-	if (!RelationIsAppendOptimized(rel))
+	if (!table_relation_append_only_optimized(rel))
 	{
 		table_close(rel, NoLock);
 		return;

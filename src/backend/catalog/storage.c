@@ -20,7 +20,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
-
+#include "access/tableam.h"
 #include "access/visibilitymap.h"
 #include "access/xact.h"
 #include "access/xlog.h"
@@ -159,7 +159,7 @@ RelationDropStorage(Relation rel)
 	pending->atCommit = true;	/* delete if commit */
 	pending->nestLevel = GetCurrentTransactionNestLevel();
 	pending->relnode.smgr_which =
-		RelationIsAppendOptimized(rel) ? SMGR_AO : SMGR_MD;
+		table_relation_append_only_optimized(rel) ? SMGR_AO : SMGR_MD;
 	pending->next = pendingDeletes;
 	pendingDeletes = pending;
 

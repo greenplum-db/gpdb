@@ -1081,7 +1081,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	/*
 	 * If this is an append-only relation, create the auxliary tables necessary
 	 */
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 		NewRelationCreateAOAuxTables(RelationGetRelid(rel), stmt->buildAoBlkdir);
 
 	/*
@@ -1718,7 +1718,7 @@ relid_set_new_relfilenode(Oid relid)
 static void
 ao_aux_tables_safe_truncate(Relation rel)
 {
-	if (!RelationIsAppendOptimized(rel))
+	if (!table_relation_append_only_optimized(rel))
 		return;
 
 	Oid relid = RelationGetRelid(rel);
@@ -7326,7 +7326,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		 * should be smarter..
 		 */
 
-		if (RelationIsAppendOptimized(rel))
+		if (table_relation_append_only_optimized(rel))
 		{
 			if (!defval)
 				defval = (Expr *) makeNullConst(typeOid, -1, collOid);
@@ -13766,7 +13766,7 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing, LOCKMODE lock
 			ATExecChangeOwner(tuple_class->reltoastrelid, newOwnerId,
 							  true, lockmode);
 
-		if (RelationIsAppendOptimized(target_rel))
+		if (table_relation_append_only_optimized(target_rel))
 		{
 			Oid segrelid, blkdirrelid;
 			Oid visimap_relid;
@@ -13968,7 +13968,7 @@ ATExecClusterOn(Relation rel, const char *indexName, LOCKMODE lockmode)
 				 errmsg("index \"%s\" for table \"%s\" does not exist",
 						indexName, RelationGetRelationName(rel))));
 
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 	{
 		bool isBtree = false;
 		Relation oldIndex = index_open(indexOid, AccessExclusiveLock);
@@ -14163,7 +14163,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		case RELKIND_AOSEGMENTS:
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
-			if (RelationIsAppendOptimized(rel))
+			if (table_relation_append_only_optimized(rel))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("altering reloptions for append only tables"
@@ -14400,7 +14400,7 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	}
 
 	/* Get the ao sub objects */
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 		GetAppendOnlyEntryAuxOids(tableOid, NULL,
 								  &relaosegrelid,
 								  &relaoblkdirrelid, &relaoblkdiridxid,
@@ -14758,7 +14758,7 @@ index_copy_data(Relation rel, RelFileNode newrnode)
 {
 	SMgrRelation dstrel;
 
-	SMgrImpl smgr_which = RelationIsAppendOptimized(rel) ? SMGR_AO : SMGR_MD;
+	SMgrImpl smgr_which = table_relation_append_only_optimized(rel) ? SMGR_AO : SMGR_MD;
 
 	dstrel = smgropen(newrnode, rel->rd_backend, smgr_which);
 					  
@@ -15776,7 +15776,7 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 	pre_built = prebuild_temp_table(rel, tmprel, dist_clause,
 									get_am_name(rel->rd_rel->relam),
 									storage_opts,
-									RelationIsAppendOptimized(rel),
+									table_relation_append_only_optimized(rel),
 									useExistingColumnAttributes);
 	if (pre_built)
 	{

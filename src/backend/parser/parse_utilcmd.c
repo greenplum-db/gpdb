@@ -1342,7 +1342,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 		 */
 		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
 
-		if (RelationIsAppendOptimized(relation))
+		if (table_relation_append_only_optimized(relation))
 		{
 			int32 blocksize;
 			int32 safefswritersize;

@@ -1375,7 +1375,7 @@ get_ao_distribution(PG_FUNCTION_ARGS)
 		/*
 		 * verify this is an AO relation
 		 */
-		if (!RelationIsAppendOptimized(parentrel))
+		if (!table_relation_append_only_optimized(parentrel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only relation",
@@ -1526,7 +1526,7 @@ get_ao_compression_ratio(PG_FUNCTION_ARGS)
 	/* open the parent (main) relation */
 	parentrel = table_open(relid, AccessShareLock);
 
-	if (!RelationIsAppendOptimized(parentrel))
+	if (!table_relation_append_only_optimized(parentrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("'%s' is not an append-only relation",

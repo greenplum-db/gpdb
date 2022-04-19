@@ -375,7 +375,7 @@ vacuum_appendonly_index_should_vacuum(Relation aoRelation,
 	int64		hidden_tupcount;
 	FileSegTotals *totals;
 
-	Assert(RelationIsAppendOptimized(aoRelation));
+	Assert(table_relation_append_only_optimized(aoRelation));
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -437,7 +437,7 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
 	Oid			visimaprelid;
 	Oid			visimapidxid;
 
-	Assert(RelationIsAppendOptimized(aoRelation));
+	Assert(table_relation_append_only_optimized(aoRelation));
 
 	memset(&vacuumIndexState, 0, sizeof(vacuumIndexState));
 

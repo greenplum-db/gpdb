@@ -19,6 +19,7 @@
 
 #include "access/htup_details.h"
 #include "access/relation.h"
+#include "access/tableam.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
@@ -136,7 +137,7 @@ get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
 						RelationGetRelationName(rel))));
 
 	/* Check that this relation has the right kind of storage */
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("cannot get raw page from append-optimized relation \"%s\"",

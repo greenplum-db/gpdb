@@ -22,6 +22,7 @@
 #include "access/relation.h"
 #include "access/sysattr.h"
 #include "access/table.h"
+#include "access/tableam.h"
 #include "catalog/heap.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_proc_callback.h"
@@ -1293,7 +1294,7 @@ addRangeTableEntry(ParseState *pstate,
 
 		if (rel->rd_rel->relkind != RELKIND_RELATION ||
 			GpPolicyIsReplicated(rel->rd_cdbpolicy) ||
-			RelationIsAppendOptimized(rel))
+			table_relation_append_only_optimized(rel))
 			pstate->p_canOptSelectLockingClause = false;
 
 		if (rel->rd_rel->relkind == RELKIND_MATVIEW)

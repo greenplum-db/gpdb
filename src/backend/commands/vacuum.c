@@ -1436,7 +1436,7 @@ vac_update_relstats(Relation relation,
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
-			Assert(RelationIsAppendOptimized(relation));
+			Assert(table_relation_append_only_optimized(relation));
 			num_tuples = 0;
 		}
 
@@ -2173,7 +2173,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	else
 		toast_relid = InvalidOid;
 
-	if (RelationIsAppendOptimized(onerel))
+	if (table_relation_append_only_optimized(onerel))
 	{
 		GetAppendOnlyEntryAuxOids(RelationGetRelid(onerel), NULL,
 								  &aoseg_relid,
@@ -2263,7 +2263,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		return false;
 	}
 
-	is_appendoptimized = RelationIsAppendOptimized(onerel);
+	is_appendoptimized = table_relation_append_only_optimized(onerel);
 	is_toast = (onerel->rd_rel->relkind == RELKIND_TOASTVALUE);
 
 	if (ao_vacuum_phase && !(is_appendoptimized || is_toast))

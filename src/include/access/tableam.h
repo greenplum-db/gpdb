@@ -602,6 +602,12 @@ typedef struct TableAmRoutine
 	 */
 	bool		(*relation_needs_toast_table) (Relation rel);
 
+	/*
+	 * If append only storage with row orientation or column orientation, return true;
+	 * otherwise, return false.
+	 */
+	bool		(*relation_append_only_optimized) (Relation rel);
+
 
 	/* ------------------------------------------------------------------------
 	 * Planner related functions.
@@ -1668,6 +1674,16 @@ static inline bool
 table_relation_needs_toast_table(Relation rel)
 {
 	return rel->rd_tableam->relation_needs_toast_table(rel);
+}
+
+/*
+ * If append only storage with row orientation or column orientation, return true;
+ * otherwise, return false.
+ */
+static inline bool
+table_relation_append_only_optimized(Relation rel)
+{
+	return rel->rd_amhandler == AO_ROW_TABLE_AM_HANDLER_OID || rel->rd_amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID;
 }
 
 

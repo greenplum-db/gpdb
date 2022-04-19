@@ -639,12 +639,8 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	bool		swap_toast_by_content;
 	TransactionId frozenXid;
 	MultiXactId cutoffMulti;
-	/*
-	 * GPDB_12_MERGE_FIXME: We use specific bool in abstract code. This should
-	 * be somehow hidden by table am api or necessity of this switch should be
-	 * revisited.
-	 */
-	bool		is_ao = RelationIsAppendOptimized(OldHeap);
+
+	bool		is_ao = table_relation_append_only_optimized(OldHeap);
 
 	/* Mark the correct index as clustered */
 	if (OidIsValid(indexOid))
@@ -808,7 +804,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 		ReleaseSysCache(tuple);
 	}
 
-	if (RelationIsAppendOptimized(OldHeap))
+	if (table_relation_append_only_optimized(OldHeap))
 		NewRelationCreateAOAuxTables(OIDNewHeap, createAoBlockDirectory);
 
 	CacheInvalidateRelcacheByRelid(OIDNewHeap);

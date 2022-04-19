@@ -182,7 +182,7 @@ readindex(PG_FUNCTION_ARGS)
 		info->ireloid = irelid;
 
 		hrel = relation_open(irel->rd_index->indrelid, AccessShareLock);
-		if (hrel->rd_rel != NULL && RelationIsAppendOptimized(hrel))
+		if (hrel->rd_rel != NULL && table_relation_append_only_optimized(hrel))
 		{
 			relation_close(hrel, AccessShareLock);
 			hrel = NULL;

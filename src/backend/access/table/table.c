@@ -23,6 +23,7 @@
 
 #include "access/relation.h"
 #include "access/table.h"
+#include "access/tableam.h"
 #include "storage/lmgr.h"
 
 #include "catalog/namespace.h"
@@ -200,7 +201,7 @@ CdbTryOpenTable(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 	 * okay.
 	 */
 	if (lockmode == RowExclusiveLock &&
-		Gp_role == GP_ROLE_DISPATCH && RelationIsAppendOptimized(rel))
+		Gp_role == GP_ROLE_DISPATCH && rel->rd_tableam->relation_append_only_optimized(rel))
 	{
 		elog(ERROR, "table \"%s\" concurrently updated", 
 			 RelationGetRelationName(rel));

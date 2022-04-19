@@ -1240,7 +1240,7 @@ default_column_encoding_clause(Relation rel)
 	char	   *compresstype = NULL;
 	NameData	compresstype_nd;
 
-	appendonly = rel && RelationIsAppendOptimized(rel);
+	appendonly = rel && table_relation_append_only_optimized(rel);
 	if (appendonly)
 	{
 		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),

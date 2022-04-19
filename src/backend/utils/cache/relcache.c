@@ -1822,7 +1822,7 @@ RelationInitTableAccessMethod(Relation relation)
 		 * Greenplum: append-optimized relations should not have a valid
 		 * relfrozenxid.
 		 */
-		Assert (!RelationIsAppendOptimized(relation) ||
+		Assert (!table_relation_append_only_optimized(relation) ||
 				!TransactionIdIsValid(relation->rd_rel->relfrozenxid));
 	}
 

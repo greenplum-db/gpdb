@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "access/table.h"
+#include "access/tableam.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/aoblkdir.h"
@@ -44,7 +45,7 @@ AlterTableCreateAoBlkdirTable(Oid relOid)
 	 * Check if this is an appendoptimized table, without acquiring any lock.
 	 */
 	rel = table_open(relOid, NoLock);
-	isAO = RelationIsAppendOptimized(rel);
+	isAO = table_relation_append_only_optimized(rel);
 	table_close(rel, NoLock);
 	if (!isAO)
 		return;

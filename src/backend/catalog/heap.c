@@ -502,7 +502,7 @@ heap_create(const char *relname,
 		 * AO tables don't use the buffer manager, better to not keep the
 		 * smgr open for it.
 		 */
-		if (RelationIsAppendOptimized(rel))
+		if (table_relation_append_only_optimized(rel))
 			RelationCloseSmgr(rel);
 	}
 
@@ -1577,7 +1577,7 @@ heap_create_with_catalog(const char *relname,
 	 * OID first on QD and use the name as key to retrieve the pre-assigned
 	 * OID from QE.
 	 */
-	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION  && !RelationIsAppendOptimized(new_rel_desc)) ||
+	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION  && !table_relation_append_only_optimized(new_rel_desc)) ||
 							  relkind == RELKIND_VIEW ||
 							  relkind == RELKIND_MATVIEW ||
 							  relkind == RELKIND_FOREIGN_TABLE ||
@@ -1664,7 +1664,7 @@ heap_create_with_catalog(const char *relname,
 	/*
 	 * If this is an append-only relation, add an entry in pg_appendonly.
 	 */
-	if (RelationIsAppendOptimized(new_rel_desc))
+	if (table_relation_append_only_optimized(new_rel_desc))
 	{
 		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
 																	 !valid_opts,
@@ -2310,7 +2310,7 @@ heap_drop_with_catalog(Oid relid)
 	 */
 	rel = relation_open(relid, AccessExclusiveLock);
 
-	is_appendonly_rel = RelationIsAppendOptimized(rel);
+	is_appendonly_rel = table_relation_append_only_optimized(rel);
 
 	/*
 	 * There can no longer be anyone *else* touching the relation, but we

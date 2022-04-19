@@ -407,7 +407,7 @@ calculate_relation_size(Relation rel, ForkNumber forknum)
 	unsigned int segcount = 0;
 
 	/* Call into the tableam api for AO/AOCO relations */
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 		return table_relation_size(rel, forknum);
 
 	relationpath = relpathbackend(rel->rd_node, rel->rd_backend, forknum);
@@ -582,7 +582,7 @@ calculate_table_size(Relation rel)
 	if (OidIsValid(rel->rd_rel->reltoastrelid))
 		size += calculate_toast_table_size(rel->rd_rel->reltoastrelid);
 
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 	{
 		Oid	auxRelIds[3];
 		GetAppendOnlyEntryAuxOids(rel->rd_id, NULL, &auxRelIds[0],

@@ -428,7 +428,7 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	 * If the data table is append only table, we need to calculate the range
 	 * of tid in each aoseg.
 	 */
-	if (RelationIsAppendOptimized(heapRel))
+	if (table_relation_append_only_optimized(heapRel))
 	{
 		Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 		Oid			segrelid;
@@ -494,7 +494,7 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 		 * If the largest row number of the current aoseg is scanned, switch to
 		 * the next aoseg.
 		 */
-		if (RelationIsAppendOptimized(heapRel))
+		if (table_relation_append_only_optimized(heapRel))
 		{
 			seg_start_blk = segnoGetCurrentAosegStart(segno);
 
@@ -751,7 +751,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	BlockNumber pagesPerRange;
 	bool		isAo;
 
-	isAo = RelationIsAppendOptimized(heap);
+	isAo = table_relation_append_only_optimized(heap);
 	/*
 	 * We expect to be called exactly once for any index relation.
 	 */
@@ -769,7 +769,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	LockBuffer(meta, BUFFER_LOCK_EXCLUSIVE);
 
 	brin_metapage_init(BufferGetPage(meta), BrinGetPagesPerRange(index),
-					   BRIN_CURRENT_VERSION, RelationIsAppendOptimized(heap));
+					   BRIN_CURRENT_VERSION, table_relation_append_only_optimized(heap));
 	MarkBufferDirty(meta);
 
 	if (RelationNeedsWAL(index))
@@ -1424,7 +1424,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 	 * If the data table is append only table, we need to calculate the range
 	 * of tid in each aoseg.
 	 */
-	if (RelationIsAppendOptimized(heapRel))
+	if (table_relation_append_only_optimized(heapRel))
 	{
 		Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 		Oid			segrelid;
@@ -1491,7 +1491,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		 * If the data table is append only table, we need to calculate the range
 		 * of tid in each aoseg.
 		 */
-		if (RelationIsAppendOptimized(heapRel))
+		if (table_relation_append_only_optimized(heapRel))
 		{
 			seg_start_blk = segnoGetCurrentAosegStart(segno);
 

@@ -1353,7 +1353,7 @@ CondUpgradeRelLock(Oid relid)
 
 	if (!rel)
 		return false;
-	else if (RelationIsAppendOptimized(rel))
+	else if (table_relation_append_only_optimized(rel))
 		upgrade = true;
 	else
 		upgrade = false;

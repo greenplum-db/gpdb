@@ -20,6 +20,7 @@
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 #include "storage/dbdirnode.h"
+#include "utils/relcache.h"
 
 typedef enum SMgrImplementation
 {
@@ -91,6 +92,7 @@ typedef SMgrRelationData *SMgrRelation;
 extern void smgrinit(void);
 extern SMgrRelation smgropen(RelFileNode rnode, BackendId backend,
 							 SMgrImpl smgr_which);
+extern SMgrRelation smgropenrel(Relation rel);
 extern bool smgrexists(SMgrRelation reln, ForkNumber forknum);
 extern void smgrsetowner(SMgrRelation *owner, SMgrRelation reln);
 extern void smgrclearowner(SMgrRelation *owner, SMgrRelation reln);

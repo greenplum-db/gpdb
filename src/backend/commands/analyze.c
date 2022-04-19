@@ -915,7 +915,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	{
 		BlockNumber relallvisible;
 
-		if (RelationIsAppendOptimized(onerel))
+		if (table_relation_append_only_optimized(onerel))
 			relallvisible = 0;
 		else
 			visibilitymap_count(onerel, &relallvisible, NULL);
@@ -1412,7 +1412,7 @@ acquire_sample_rows(Relation onerel, int elevel,
 	 * GPDB_12_MERGE_FIXME: BlockNumber is uint32 and Number of tuples is uint64.
 	 * That means that after row number UINT_MAX we will never analyze the table.
 	 */
-	if (RelationIsAppendOptimized(onerel))
+	if (table_relation_append_only_optimized(onerel))
 	{
 		BlockNumber pages;
 		double		tuples;

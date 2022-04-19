@@ -708,7 +708,7 @@ DefineIndex(Oid relationId,
 	 * we can use the same lock as heap tables.
 	 */
 	rel = table_open(relationId, NoLock);
-	if (RelationIsAppendOptimized(rel))
+	if (table_relation_append_only_optimized(rel))
 	{
 		Oid blkdirrelid = InvalidOid;
 		GetAppendOnlyEntryAuxOids(relationId, NULL, NULL, &blkdirrelid, NULL, NULL, NULL);
@@ -946,7 +946,7 @@ DefineIndex(Oid relationId,
 				 errmsg("access method \"%s\" does not support exclusion constraints",
 						accessMethodName)));
 
-    if  (stmt->unique && RelationIsAppendOptimized(rel))
+    if  (stmt->unique && table_relation_append_only_optimized(rel))
         ereport(ERROR,
                 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
                  errmsg("append-only tables do not support unique indexes")));

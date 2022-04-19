@@ -129,7 +129,7 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
     Oid         visimaprelid;
     Oid         visimapidxid;
 
-	Assert(RelationIsAppendOptimized(aoRelation));
+	Assert(table_relation_append_only_optimized(aoRelation));
     GetAppendOnlyEntryAuxOids(aoRelation->rd_id, appendOnlyMetaDataSnapshot,
                               NULL, NULL, NULL,
                               &visimaprelid, &visimapidxid);
@@ -508,7 +508,7 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
 	TransactionId cutoff_xid = InvalidTransactionId;
 	Oid			segrelid;
 
-	Assert(RelationIsAppendOptimized(aorel));
+	Assert(table_relation_append_only_optimized(aorel));
 
 	/*
 	 * The algorithm below for choosing a target segment is not concurrent-safe.
@@ -639,7 +639,7 @@ AppendOnlyTruncateToEOF(Relation aorel)
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	Oid			segrelid;
 
-	Assert(RelationIsAppendOptimized(aorel));
+	Assert(table_relation_append_only_optimized(aorel));
 
 	relname = RelationGetRelationName(aorel);
 

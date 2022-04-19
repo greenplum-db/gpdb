@@ -20,6 +20,7 @@
 #include "postgres.h"
 
 #include "access/aomd.h"
+#include "access/tableam.h"
 #include "access/xact.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
@@ -236,6 +237,19 @@ smgropen(RelFileNode rnode, BackendId backend, SMgrImpl which)
 	}
 
 	return reln;
+}
+
+/*
+ *	smgropenrel() -- Return an SMgrRelation object, creating it if need be.
+ *
+ *		This overrides smgopen() with no explicit SMgrImpl given, but infered from
+ *		the relation.
+ */
+SMgrRelation
+smgropenrel(Relation rel)
+{
+	SMgrImpl which = table_relation_append_only_optimized(rel)?SMGR_AO:SMGR_MD;
+	return smgropen(rel->rd_node, rel->rd_backend, which);
 }
 
 /*

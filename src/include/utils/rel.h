@@ -432,17 +432,6 @@ typedef struct ViewOptions
 #define RelationIsAoCols(relation) \
 	((relation)->rd_amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID)
 
-/*
- * CAUTION: this macro is a violation of the absraction that table AM and
- * index AM interfaces provide.  Use of this macro is discouraged.  If
- * table/index AM API falls short for your use case, consider enhancing the
- * interface.
- *
- * RelationIsAppendOptimized
- * 		True iff relation has append only storage (can be row or column orientation)
- */
-#define RelationIsAppendOptimized(relation) \
-	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
 
 /*
  * RelationIsBitmapIndex
@@ -535,9 +524,7 @@ typedef struct ViewOptions
 	do { \
 		if ((relation)->rd_smgr == NULL) \
 			smgrsetowner(&((relation)->rd_smgr), \
-						 smgropen((relation)->rd_node, \
-								  (relation)->rd_backend, \
-								  RelationIsAppendOptimized(relation)?SMGR_AO:SMGR_MD)); \
+						 smgropenrel(relation)); \
 	} while (0)
 
 /*

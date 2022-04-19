@@ -734,7 +734,7 @@ CreateTrigger(CreateTrigStmt *stmt, const char *queryString,
 	}
 
 	/* Check GPDB limitations */
-	if (RelationIsAppendOptimized(rel) &&
+	if (table_relation_append_only_optimized(rel) &&
 		TRIGGER_FOR_ROW(tgtype) &&
 		!stmt->isconstraint)
 	{
@@ -3412,7 +3412,7 @@ GetTupleForTrigger(EState *estate,
 	Relation	relation = relinfo->ri_RelationDesc;
 
 	/* these should be rejected when you try to create such triggers, but let's check */
-	if (RelationIsAppendOptimized(relation))
+	if (table_relation_append_only_optimized(relation))
 		elog(ERROR, "UPDATE and DELETE triggers are not supported on append-only tables");
 
 	Assert(RelationIsHeap(relation));
