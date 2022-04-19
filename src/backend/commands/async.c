@@ -137,9 +137,6 @@
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
 
-#include "tcop/idle_resource_cleaner.h"
-
-
 /*
  * Maximum size of a NOTIFY payload, including terminating NULL.  This
  * must be kept small enough so that a notification message fits on one
@@ -2145,7 +2142,6 @@ static void
 ProcessIncomingNotify(void)
 {
 	bool		catchup_enabled;
-	bool		client_wait_timeout_enabled;
 
 	/* We *must* reset the flag */
 	notifyInterruptOccurred = 0;
@@ -2156,7 +2152,6 @@ ProcessIncomingNotify(void)
 
 	/* Must prevent catchup interrupt while I am running */
 	catchup_enabled = DisableCatchupInterrupt();
-	client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
 
 	if (Trace_notify)
 		elog(DEBUG1, "ProcessIncomingNotify");
@@ -2185,9 +2180,6 @@ ProcessIncomingNotify(void)
 
 	if (catchup_enabled)
 		EnableCatchupInterrupt();
-
-	if (client_wait_timeout_enabled)
-		EnableClientWaitTimeoutInterrupt();
 }
 
 /*

@@ -60,7 +60,6 @@
 #include "storage/sinvaladt.h"
 #include "storage/smgr.h"
 #include "tcop/tcopprot.h"
-#include "tcop/idle_resource_cleaner.h"
 #include "utils/acl.h"
 #include "utils/backend_cancel.h"
 #include "utils/faultinjector.h"
@@ -95,6 +94,7 @@ static void ClientCheckTimeoutHandler(void);
 static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
 static void process_settings(Oid databaseid, Oid roleid);
+static void IdleGangTimeoutHandler(void);
 
 #ifdef USE_ORCA
 extern void InitGPOPT();
@@ -687,7 +687,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		RegisterTimeout(DEADLOCK_TIMEOUT, CheckDeadLock);
 		RegisterTimeout(STATEMENT_TIMEOUT, StatementTimeoutHandler);
 		RegisterTimeout(LOCK_TIMEOUT, LockTimeoutHandler);
-		RegisterTimeout(GANG_TIMEOUT, IdleGangTimeoutHandler);
+		RegisterTimeout(IDLE_GANG_TIMEOUT, IdleGangTimeoutHandler);
 		RegisterTimeout(CLIENT_CONNECTION_CHECK_TIMEOUT, ClientCheckTimeoutHandler);
 	}
 
@@ -1459,6 +1459,14 @@ static void
 ClientCheckTimeoutHandler(void)
 {
 	CheckClientConnectionPending = true;
+	InterruptPending = true;
+	SetLatch(&MyProc->procLatch);
+}
+
+static void
+IdleGangTimeoutHandler(void)
+{
+	IdleGangTimeoutPending = true;
 	InterruptPending = true;
 	SetLatch(&MyProc->procLatch);
 }

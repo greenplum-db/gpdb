@@ -97,7 +97,7 @@ extern PGDLLIMPORT volatile bool TermSignalReceived;
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
 extern PGDLLIMPORT volatile int32 QueryCancelHoldoffCount;
 extern PGDLLIMPORT volatile int32 CritSectionCount;
-
+extern PGDLLIMPORT volatile sig_atomic_t IdleGangTimeoutPending;
 /* in tcop/postgres.c */
 extern void ProcessInterrupts(const char* filename, int lineno);
 extern bool CancelRequested();

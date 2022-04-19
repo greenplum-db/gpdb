@@ -100,7 +100,6 @@
 
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
-#include "tcop/idle_resource_cleaner.h"
 
 /* ----------------
  *		global variables
@@ -675,7 +674,6 @@ prepare_for_client_read(void)
 		/* Enable immediate processing of asynchronous signals */
 		EnableNotifyInterrupt();
 		EnableCatchupInterrupt();
-		EnableClientWaitTimeoutInterrupt();
 
 		/* Allow die interrupts to be processed while waiting */
 		ImmediateInterruptOK = true;
@@ -713,7 +711,6 @@ client_read_ended(void)
 
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
-		DisableClientWaitTimeoutInterrupt();
 
 		errno = save_errno;
 	}
@@ -3768,7 +3765,6 @@ ProcessInterrupts(const char* filename, int lineno)
 		LockErrorCleanup();
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
-		DisableClientWaitTimeoutInterrupt();
 		/* As in quickdie, don't risk sending to client during auth */
 		if (ClientAuthInProgress && whereToSendOutput == DestRemote)
 			whereToSendOutput = DestNone;
@@ -3840,7 +3836,6 @@ ProcessInterrupts(const char* filename, int lineno)
 		LockErrorCleanup();
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
-		DisableClientWaitTimeoutInterrupt();
 		/* don't send to client, we already know the connection to be dead. */
 		whereToSendOutput = DestNone;
 		ereport(FATAL,
@@ -4006,6 +4001,19 @@ ProcessInterrupts(const char* filename, int lineno)
 		}
 	}
 	/* If we get here, do nothing (probably, QueryCancelPending was reset) */
+
+	if (IdleGangTimeoutPending)
+	{
+		/*
+		 * * If the GUC has been reset to zero, ignore the signal.  This is
+		 * important because the GUC update itself won't disable any pending
+		 * interrupt.
+		 */
+		if (IdleSessionGangTimeout > 0)
+			DisconnectAndDestroyUnusedQEs();
+
+		IdleGangTimeoutPending = false;
+	}
 }
 
 /*
@@ -4655,6 +4663,7 @@ PostgresMain(int argc, char *argv[],
 	StringInfoData input_message;
 	sigjmp_buf	local_sigjmp_buf;
 	volatile bool send_ready_for_query = true;
+	bool		idle_gang_timeout_enabled = false;
 
 	MemoryAccountIdType postgresMainMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 
@@ -5029,7 +5038,6 @@ PostgresMain(int argc, char *argv[],
 		DoingCommandRead = false;
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
-		DisableClientWaitTimeoutInterrupt();
 
 		/* Make sure libpq is in a good state */
 		pq_comm_reset();
@@ -5216,6 +5224,14 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity(STATE_IDLE, NULL);
 			}
 
+			/* Start the idle-gang timer */
+			if (Gp_role == GP_ROLE_DISPATCH && IdleSessionGangTimeout > 0 && cdbcomponent_qesExist())
+			{
+				idle_gang_timeout_enabled = true;
+				enable_timeout_after(IDLE_GANG_TIMEOUT,
+									 IdleSessionGangTimeout);
+			}
+
 			ReadyForQuery(whereToSendOutput);
 			send_ready_for_query = false;
 		}
@@ -5230,12 +5246,10 @@ PostgresMain(int argc, char *argv[],
 
 		/*
 		 * (2b) Check for temp table delete reset session work.
-		 * Also clean up idle resources.
 		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
 			CheckForResetSession();
-			StartIdleResourceCleanupTimers();
 		}
 
 		/*
@@ -5243,8 +5257,14 @@ PostgresMain(int argc, char *argv[],
 		 */
 		firstchar = ReadCommand(&input_message);
 
-		if (Gp_role == GP_ROLE_DISPATCH)
-			CancelIdleResourceCleanupTimers();
+		/*
+		 * (4) turn off the idle gang timeout
+		 */
+		if (idle_gang_timeout_enabled)
+		{
+			disable_timeout(IDLE_GANG_TIMEOUT, false);
+			idle_gang_timeout_enabled = false;
+		}
 
 		/*
 		 * Reset QueryFinishPending flag, so that if we received a delayed

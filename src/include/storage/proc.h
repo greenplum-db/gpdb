@@ -295,7 +295,7 @@ extern PGDLLIMPORT int DeadlockTimeout;
 extern PGDLLIMPORT int StatementTimeout;
 extern PGDLLIMPORT int LockTimeout;
 extern bool log_lock_waits;
-
+extern int	IdleSessionGangTimeout;
 
 /*
  * Function Prototypes
