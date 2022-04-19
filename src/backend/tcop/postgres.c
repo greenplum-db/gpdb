@@ -5219,14 +5219,14 @@ PostgresMain(int argc, char *argv[],
 				strncat(activity, "idle", remain);
 				set_ps_display(activity, false);
 				pgstat_report_activity(STATE_IDLE, NULL);
+			}
 
-				/* Start the idle-gang timer */
-				if (Gp_role == GP_ROLE_DISPATCH && IdleSessionGangTimeout > 0 && cdbcomponent_qesExist())
-				{
-					idle_gang_timeout_enabled = true;
-					enable_timeout_after(IDLE_GANG_TIMEOUT,
-										 IdleSessionGangTimeout);
-				}
+			/* Start the idle-gang timer */
+			if (Gp_role == GP_ROLE_DISPATCH && IdleSessionGangTimeout > 0 && cdbcomponent_qesExist())
+			{
+				idle_gang_timeout_enabled = true;
+				enable_timeout_after(IDLE_GANG_TIMEOUT,
+									 IdleSessionGangTimeout);
 			}
 
 			ReadyForQuery(whereToSendOutput);

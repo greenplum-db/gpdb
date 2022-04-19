@@ -65,6 +65,38 @@ select count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2)
  Success:        
 (1 row)
 
+-- Release idle Reader gangs in transaction or transaction block
+select cleanupAllGangs();
+ cleanupallgangs 
+-----------------
+ t               
+(1 row)
+0U: select gp_inject_fault('proc_kill', 'suspend', 2, target_session_id) from target_session_id_t;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+begin;
+BEGIN
+select count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2) ;
+ count 
+-------
+ 0     
+(1 row)
+0U: select gp_inject_fault('proc_kill', 'wait_until_triggered', '','','', 1, 1, 1, 2 ,target_session_id) from target_session_id_t;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+0U: select gp_inject_fault('proc_kill', 'reset', 2, target_session_id) from target_session_id_t;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+end;
+END
+
 select idle_gang_pressure_test();
  idle_gang_pressure_test 
 -------------------------
