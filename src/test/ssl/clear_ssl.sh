@@ -1,6 +1,6 @@
-#!/bin/bash -l
+#!/bin/bash
 
-set -eox pipefail
+set -eo pipefail
 
 function set_ssl_off {
     sed -ri 's/ssl=on/ssl=off/g' $1/postgresql.conf
@@ -16,4 +16,3 @@ for dir in $(find $MASTER_DATA_DIRECTORY/../../.. -name pg_hba.conf)
 done
 
 gpstop -ar
-

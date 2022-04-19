@@ -1,6 +1,6 @@
-#!/bin/bash -l
+#!/bin/bash
 
-set -eox pipefail
+set -eo pipefail
 
 function set_ssl_on {
     echo "ssl=on" >> $1/postgresql.conf
@@ -20,5 +20,5 @@ for dir in $(find $MASTER_DATA_DIRECTORY/../../.. -name pg_hba.conf)
 done
 
 gpstop -ar
-createuser ssltestuser -s
+createuser ssltestuser -s || true
 
