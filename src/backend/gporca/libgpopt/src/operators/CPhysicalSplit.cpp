@@ -365,6 +365,16 @@ CPhysicalSplit::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	{
 		CColRefSet *pcrsHashedEquiv = CUtils::PcrsExtractColumns(
 			mp, pdsHashed->PdshashedEquiv()->Pdrgpexpr());
+		CDistributionSpecHashed *pdsHashedEquiv = pdsHashed->PdshashedEquiv();
+		// recursively check for hashed-equivalent colrefs
+		while (pdsHashedEquiv->PdshashedEquiv())
+		{
+			CColRefSet *pcrsHashedEquiv1 = CUtils::PcrsExtractColumns(
+				mp, pdsHashedEquiv->PdshashedEquiv()->Pdrgpexpr());
+			pcrsHashedEquiv->Include(pcrsHashedEquiv1);
+			pcrsHashedEquiv1->Release();
+			pdsHashedEquiv = pdsHashedEquiv->PdshashedEquiv();
+		}
 		if (!pcrsModified->IsDisjoint(pcrsHashedEquiv))
 		{
 			pcrsHashed->Release();
