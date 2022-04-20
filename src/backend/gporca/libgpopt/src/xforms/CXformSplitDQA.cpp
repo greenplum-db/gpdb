@@ -504,6 +504,7 @@ CXformSplitDQA::PexprSplitHelper(CMemoryPool *mp, CColumnFactory *col_factory,
 			{
 				CExpression *pexprDirectArg =
 					(*(*pexprAggFunc)[EaggfuncIndexDistinct])[ul];
+				pexprDirectArg->AddRef();
 				pdrgpexprDirectArgs->Append(pexprDirectArg);
 			}
 			pdrgpexprChildren->Append(GPOS_NEW(mp) CExpression(
