@@ -1808,7 +1808,7 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	char errDetail[100];
 	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %u", pkt->seq);
 	/* Retry for infinite times since we have no retransmit mechanism for control message */
-	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, 0, errDetail);
+	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, -1, errDetail);
 	if (n < pkt->len)
 		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
 }
@@ -4546,13 +4546,19 @@ prepareXmit(MotionConn *conn)
  * sendtoWithRetry
  * 		Retry sendto logic and send the packets.
  */
-static ssize_t sendtoWithRetry(int socket, const void *message, size_t length,
+static ssize_t
+sendtoWithRetry(int socket, const void *message, size_t length,
            int flags, const struct sockaddr *dest_addr,
-           socklen_t dest_len, int retry, const char *errDetail) {
+           socklen_t dest_len, int retry, const char *errDetail)
+{
 	int32		n;
 	int count = 0;
 
 xmit_retry:
+	/*
+	 * If given retry count is positive, retry up to the limited times.
+	 * Otherwise, retry for unlimited times until succeed. 
+	 */
 	if (retry > 0 && ++count > retry)
 		return n;
 	n = sendto(socket, message, length, flags, dest_addr, dest_len);
@@ -4563,7 +4569,14 @@ xmit_retry:
 		if (errno == EINTR)
 			goto xmit_retry;
 
-		if (errno == EAGAIN || errno == EFAULT)	/* no space ? not an error. */
+		/* 
+		 * EAGAIN: no space ? not an error.
+		 * 
+		 * EFAULT: In Linux system call, it only happens when copying a socket 
+		 * address into kernel space failed, which is less likely to happen, 
+		 * but mocked heavily by our fault injection in regression tests. 
+		 */
+		if (errno == EAGAIN || errno == EFAULT)
 			return n;
 
 		/*
@@ -4614,7 +4627,7 @@ sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry,
 					  conn->remoteContentId,
 					  conn->remoteHostAndPort);
 	n = sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
-                          (struct sockaddr *) &conn->peer, conn->peer_len, 0, errDetail);
+                          (struct sockaddr *) &conn->peer, conn->peer_len, -1, errDetail);
 	if (n != buf->pkt->len)
 	{
 		if (DEBUG1 >= log_min_messages)
