@@ -259,6 +259,9 @@ CLogicalDynamicGetBase::SetPartConstraint(CPartConstraint *ppartcnstr)
 {
 	GPOS_ASSERT(NULL != ppartcnstr);
 	GPOS_ASSERT(NULL != m_part_constraint);
+	GPOS_ASSERT_IMP(m_is_partial,
+					NULL != ppartcnstr->PcnstrCombined() &&
+						"Partial scan with unsupported constraint type");
 
 	m_part_constraint->Release();
 	m_part_constraint = ppartcnstr;

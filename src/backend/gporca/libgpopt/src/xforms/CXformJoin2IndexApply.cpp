@@ -175,10 +175,13 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives(
 		CPartConstraint *ppartcnstrIndex = NULL;
 		if (NULL != popDynamicGet)
 		{
+			// Partition constraints are expensive to compute and needed only for
+			// partial scans. For all other cases, pass along dummy constraints
+			const BOOL fDummyConstraint = !popDynamicGet->IsPartial();
 			ppartcnstrIndex = CUtils::PpartcnstrFromMDPartCnstr(
 				mp, COptCtxt::PoctxtFromTLS()->Pmda(),
 				popDynamicGet->PdrgpdrgpcrPart(), pmdindex->MDPartConstraint(),
-				popDynamicGet->PdrgpcrOutput());
+				popDynamicGet->PdrgpcrOutput(), fDummyConstraint);
 		}
 		CreateAlternativesForBtreeIndex(
 			mp, joinOp, pexprOuter, pexprInner, origJoinPred,
