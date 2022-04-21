@@ -3740,3 +3740,57 @@ def impl(context, args):
 def impl(context):
     locale = get_en_utf_locale()
     context.execute_steps('''When a demo cluster is created using gpinitsystem args "--lc-ctype=%s"''' % locale)
+
+@given(u'the cluster is running in IC proxy mode')
+def step_impl(context):
+    create_extension_sql = """
+        CREATE EXTENSION plpython3u;
+    """
+    create_icproxy_setup_func_sql = """
+        create or replace function my_setup_ic_proxy(delta int, action text)
+returns table(dbid smallint, content smallint, address text, port int) as $$
+    import os
+    import socket
+
+    results = []
+    value = ''
+
+    segs = plpy.execute('''SELECT dbid, content, port, address
+                              FROM gp_segment_configuration
+                            ORDER BY 1''')
+    for seg in segs:
+        dbid = seg['dbid']
+        content = seg['content']
+        port = seg['port']
+        address = seg['address']
+
+        # decide the proxy port
+        port = port + delta
+
+        # append to the result list
+        results.append((dbid, content, address, port))
+
+        # build the value for the GUC
+        if value:
+            value += ','
+        value += '{}:{}:{}:{}'.format(dbid, content, address, port)
+
+    if action.lower() == 'update proxy':
+        os.system('''gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"'''.format(value))
+        plpy.notice('''the settings are applied, please reload with 'gpstop -u' to take effect.''')
+    else:
+        plpy.notice('''if the settings are correct, re-run with 'update proxy' to apply.''')
+    return results
+    $$ language plpython3u execute on master;
+    """
+    update_icproxy_guc_sql = """
+        select my_setup_ic_proxy(-2000, 'update proxy');
+    """
+    with closing(dbconn.connect(allowSystemTableMods=True, unsetSearchPath=False)) as conn:
+        dbconn.execSQL(conn, create_extension_sql)
+    with closing(dbconn.connect(allowSystemTableMods=True, unsetSearchPath=False)) as conn:
+        dbconn.execSQL(conn, create_icproxy_setup_func_sql)
+    with closing(dbconn.connect(allowSystemTableMods=True, unsetSearchPath=False)) as conn:
+        dbconn.execSQL(conn, update_icproxy_guc_sql)
+    cmd = Command(name="Gpstop to signal up the cluster", cmdStr='gpstop -u')
+    cmd.run(validateAfter=True)

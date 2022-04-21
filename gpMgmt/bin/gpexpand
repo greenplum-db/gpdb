@@ -1202,7 +1202,8 @@ class gpexpand:
         pool.check_results()
         pool.haltWork()
         pool.joinWorkers()
-        os.system('gpstop -u')
+        cmd = Command(name="Gpstop to signal up the cluster", cmdStr='gpstop -u')
+        cmd.run(validateAfter=True)
 
     def get_interconnect_proxy_addresses(self):
         if self.conn is None:

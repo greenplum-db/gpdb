@@ -474,3 +474,25 @@ Feature: expand the cluster by adding more segments
         Then the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
         Then verify that pg_hba.conf file has "replication" entries in each segment data directories
+
+    @gpexpand_no_mirrors
+    @gpexpand_icproxy
+    Scenario: expand a cluster online with IC proxy mode enabled
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And the user runs command "rm -rf /data/gpdata/gpexpand/*"
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And the coordinator pid has been saved
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is running in IC proxy mode
+        And the cluster is setup for an expansion on hosts "mdw"
+        And the user runs gpexpand interview to add 1 new segment and 0 new host "ignore.host"
+        And the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then gpexpand should return a return code of 0
+        And verify that the cluster has 1 new segments
+        And all the segments are running
+        And check segment conf: postgresql.conf
+        And verify that the coordinator pid has not been changed
