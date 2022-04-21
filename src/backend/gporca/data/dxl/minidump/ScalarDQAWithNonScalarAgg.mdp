@@ -1431,10 +1431,10 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="28">
+    <dxl:Plan Id="0" SpaceSize="40">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="456.680133" Rows="100000.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="449.305467" Rows="100000.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="count">
@@ -1445,7 +1445,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="453.698800" Rows="100000.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="446.324133" Rows="100000.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="10" Alias="count">
@@ -1456,7 +1456,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="453.698800" Rows="100000.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="446.324133" Rows="100000.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="2"/>
@@ -1465,7 +1465,7 @@
               <dxl:ProjElem ColId="10" Alias="count">
                 <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -1477,14 +1477,10 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
+            <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="449.519333" Rows="100000.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="442.144667" Rows="100000.000000" Width="8"/>
               </dxl:Properties>
-              <dxl:GroupingColumns>
-                <dxl:GroupingColumn ColId="2"/>
-                <dxl:GroupingColumn ColId="1"/>
-              </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="b">
                   <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1494,10 +1490,20 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+              <dxl:SortingColumnList/>
+              <dxl:HashExprList>
+                <dxl:HashExpr>
+                  <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
+                </dxl:HashExpr>
+              </dxl:HashExprList>
+              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="441.310000" Rows="100000.000000" Width="8"/>
                 </dxl:Properties>
+                <dxl:GroupingColumns>
+                  <dxl:GroupingColumn ColId="2"/>
+                  <dxl:GroupingColumn ColId="1"/>
+                </dxl:GroupingColumns>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="b">
                     <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1507,20 +1513,10 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:HashExprList>
-                  <dxl:HashExpr>
-                    <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
-                  </dxl:HashExpr>
-                </dxl:HashExprList>
-                <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+                <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="440.475333" Rows="100000.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="433.100667" Rows="100000.000000" Width="8"/>
                   </dxl:Properties>
-                  <dxl:GroupingColumns>
-                    <dxl:GroupingColumn ColId="2"/>
-                    <dxl:GroupingColumn ColId="1"/>
-                  </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1" Alias="b">
                       <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1530,6 +1526,18 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
+                  <dxl:SortingColumnList/>
+                  <dxl:HashExprList>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                  </dxl:HashExprList>
                   <dxl:TableScan>
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.770000" Rows="100000.000000" Width="8"/>
@@ -1558,9 +1566,9 @@
                       </dxl:Columns>
                     </dxl:TableDescriptor>
                   </dxl:TableScan>
-                </dxl:Aggregate>
-              </dxl:RedistributeMotion>
-            </dxl:Aggregate>
+                </dxl:RedistributeMotion>
+              </dxl:Aggregate>
+            </dxl:RedistributeMotion>
           </dxl:Aggregate>
         </dxl:Result>
       </dxl:GatherMotion>
