@@ -193,7 +193,7 @@ CXformSplitDQA::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	//
 	// After we re-implement intermediate aggregate stage in executor we should
 	// be able to re-enable the following transform optimization.
-	if (fScalarDQA && !FContainsRideAlongAggregate(pexprProjectList))
+	if (!FContainsRideAlongAggregate(pexprProjectList))
 	{
 		// generate two-stage agg for scalar DQA case
 		// this transform is useful for cases where distinct column is same as distributed column.
