@@ -92,6 +92,7 @@ REGRESS = \
 	plpython_schema \
 	plpython_populate \
 	plpython_test \
+	plpython3_path_guc \
 	plpython_do \
 	plpython_global \
 	plpython_import \

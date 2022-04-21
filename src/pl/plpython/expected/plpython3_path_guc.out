@@ -1,0 +1,39 @@
+--
+-- Tests for functions that return set PYTHONPATH guc only for gpdb6 plpython3
+--
+LOAD 'plpython3';
+show plpython3.python_path;
+ plpython3.python_path 
+-----------------------
+ 
+(1 row)
+
+set plpython3.python_path='/foo';
+show plpython3.python_path;
+ plpython3.python_path 
+-----------------------
+ /foo
+(1 row)
+
+-- Set up test path functions first.
+CREATE FUNCTION test_path_added() 
+RETURNS text AS $$
+  import sys
+  return str(sys.path[0])
+$$ language plpython3u;
+SELECT test_path_added();
+ test_path_added 
+-----------------
+ /foo
+(1 row)
+
+-- when the plpython init can not set again --
+set plpython3.python_path='/bar';
+ERROR:  SET PYTHONPATH failed, the GUC value can only be changed before initializing the python interpreter.
+-- run again the path will not change still /foo --
+SELECT test_path_added();
+ test_path_added 
+-----------------
+ /foo
+(1 row)
+
