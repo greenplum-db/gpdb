@@ -9,7 +9,7 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock>gpmapreduce -f &lt;config.yaml> [dbname [&lt;username>]] 
-     [-k &lt;name=value> | --key &lt;name=valu>e] 
+     [-k &lt;name=value> | --key &lt;name=value>] 
      [-h &lt;hostname> | --host &lt;hostname>] [-p &lt;port>| --port &lt;port>] 
      [-U &lt;username> | --username &lt;username>] [-W] [-v]
 
