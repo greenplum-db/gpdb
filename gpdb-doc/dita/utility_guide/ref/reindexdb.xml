@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">reindexdb [&lt;connection-option> ...] [--table | -t &lt;table ] 
+<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">reindexdb [&lt;connection-option> ...] [--table | -t &lt;table> ] 
         [--index | -i &lt;index> ] [&lt;dbname>]
 
 reindexdb [&lt;connection-option> ...] --all | -a

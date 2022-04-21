@@ -430,7 +430,7 @@ MIRROR_PORT_BASE = 7000</codeblock>
                         the <codeph>gpinitsystem</codeph>
                         <codeph>-I <varname>input_configuration_file</varname></codeph> option. Use
                         one of the following formats to specify the host
-                        information:<codeblock>&lt;hostname>~&lt;address>~&lt;port>~&lt;data_directory>/&lt;seg_prefix&lt;segment_id>>~&lt;dbid>~&lt;content_id></codeblock>or
+                        information:<codeblock>&lt;hostname>~&lt;address>~&lt;port>~&lt;data_directory>/&lt;seg_prefix&lt;segment_id>~&lt;dbid>~&lt;content_id></codeblock>or
                         <codeblock>&lt;host>~&lt;port>~&lt;data_directory>/&lt;seg_prefix&lt;segment_id>~&lt;dbid>~&lt;content_id></codeblock></pd>
                     <pd>The first format populates the <codeph>hostname</codeph> and
                             <codeph>address</codeph> fields in the

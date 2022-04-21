@@ -116,7 +116,7 @@ gpcheckperf --version</codeblock>
                         user name and/or SSH port number per host. The syntax of the host file is
                         one host per line as follows:</pd>
                     <pd>
-                        <codeblock>[&lt;username@>]&lt;hostname>[:&lt;ssh_port>]</codeblock>
+                        <codeblock>[&lt;username>@]&lt;hostname>[:&lt;ssh_port>]</codeblock>
                     </pd>
                 </plentry>
                 <plentry>

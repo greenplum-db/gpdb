@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pe137116">dropuser</title><body><p id="client_util_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">dropuser [&lt;connection-option> ...] [-e] [-i] &lt;role_name
+<topic id="topic1"><title id="pe137116">dropuser</title><body><p id="client_util_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">dropuser [&lt;connection-option> ...] [-e] [-i] &lt;role_name>
 
 dropuser -? | --help 
 
