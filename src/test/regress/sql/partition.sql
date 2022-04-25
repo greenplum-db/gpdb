@@ -3793,3 +3793,19 @@ RESET ROLE;
 DROP TABLE public.t_part_acl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
 DROP ROLE user_prt_acl;
+
+
+-- test outer join in partition table and the partition key is varchar,
+-- more details can be found at https://github.com/greenplum-db/gpdb/issues/13402#issuecomment-1102147978
+create table foo_13402 (id varchar(32), t varchar(32))
+	distributed by (id)
+	partition by range(t)
+	(
+		partition p1 start ('0') end ('100'),
+		partition p2 start ('101') end ('201') 
+	);
+create table bar_13402 (id varchar(32), t varchar(32))
+	distributed by (id);
+-- should not have Redistribute Motion node in the output
+explain select * from bar_13402 a left join foo_13402 b on a.id=b.id;
+

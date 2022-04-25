@@ -684,6 +684,14 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 				cur_em->em_is_const)
 				continue;
 
+			/*
+			 * CDB: if cur_em->em_expr is a RelabelType, we compare the actual
+			 * expr wrapped.
+			 */
+			if (IsA(cur_em->em_expr, RelabelType) &&
+				equal(expr, ((RelabelType *)cur_em->em_expr)->arg))
+				return cur_ec;
+
 			if (opcintype == cur_em->em_datatype &&
 				equal(expr, cur_em->em_expr))
 				return cur_ec;	/* Match! */
