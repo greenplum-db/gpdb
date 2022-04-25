@@ -53,7 +53,7 @@ See "Creating Groups \(Role Membership\)" in the *Greenplum Database Administrat
 
 Only the owner and superusers have full permissions to new objects. Permission must be granted to allow other rules \(users or groups\) to access objects. Each type of database object has different privileges that may be granted. Use the `GRANT` statement to add a permission to a role and the `REVOKE` statement to remove the permission.
 
-You can change the owner of an object using the `REASIGN OWNED BY` statement. For example, to prepare to drop a role, change the owner of the objects that belong to the role. Use the `DROP OWNED BY` to drop objects, including dependent objects, that are owned by a role.
+You can change the owner of an object using the `REASSIGN OWNED BY` statement. For example, to prepare to drop a role, change the owner of the objects that belong to the role. Use the `DROP OWNED BY` to drop objects, including dependent objects, that are owned by a role.
 
 Schemas can be used to enforce an additional layer of object permissions checking, but schema permissions do not override object privileges set on objects contained within the schema.
 

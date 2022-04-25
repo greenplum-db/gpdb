@@ -25,13 +25,13 @@ The general format of the `pg_hba.conf` file is a set of records, one per line. 
 A record can have one of seven formats:
 
 ```
-local      database  user  auth-method  [auth-options]
-host       database  user  address  auth-method  [auth-options]
-hostssl    database  user  address  auth-method  [auth-options]
-hostnossl  database  user  address  auth-method  [auth-options]
-host       database  user  IP-address  IP-mask  auth-method  [auth-options]
-hostssl    database  user  IP-address  IP-mask  auth-method  [auth-options]
-hostnossl  database  user  IP-address  IP-mask  auth-method  [auth-options]
+local      <database>  <user>  <auth-method>  [<auth-options>]
+host       <database>  <user>  <address>  <auth-method>  [<auth-options>]
+hostssl    <database>  <user>  <address>  <auth-method>  [<auth-options>]
+hostnossl  <database>  <user>  <address>  <auth-method>  [<auth-options>]
+host       <database>  <user>  <IP-address>  <IP-mask>  <auth-method>  [<auth-options>]
+hostssl    <database>  <user>  <IP-address>  <IP-mask>  <auth-method>  [<auth-options>]
+hostnossl  <database>  <user>  <IP-address>  <IP-mask>  <auth-method>  [<auth-options>]
 ```
 
 The meaning of the `pg_hba.conf` fields is as follows:

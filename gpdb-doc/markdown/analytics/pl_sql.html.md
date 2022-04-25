@@ -42,7 +42,7 @@ PL/pgSQL is a block-structured language. The complete text of a function definit
    declarations ]
 BEGIN
    statements
-END [ label ];
+END [ <label> ];
 ```
 
 Each declaration and each statement within a block is terminated by a semicolon \(;\). A block that appears within another block must have a semicolon after `END`, as shown in the previous block. The `END` that concludes a function body does not require a semicolon.
