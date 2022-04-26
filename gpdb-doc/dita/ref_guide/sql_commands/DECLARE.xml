@@ -19,7 +19,7 @@
         <codeph><xref href="./FETCH.xml#topic1" type="topic" format="dita" /></codeph>.</p>
       <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different, see <xref
-          href="../../analytics/pl_sql.xml" scope="peer">PL/pgSQL</xref>.</note>
+          href="../../analytics/pl_sql.html" scope="external" format="html">PL/pgSQL</xref>.</note>
       <p>Normal cursors return data in text format, the same as a <codeph>SELECT</codeph> would
         produce. Since data is stored natively in binary format, the system must do a conversion to
         produce the text format. Once the information comes back in text form, the client

@@ -16,7 +16,7 @@
   the rows from it.</note>
 <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different. See <xref
-          href="../../analytics/pl_sql.xml#topic1" scope="peer" format="dita">PL/pgSQL function</xref>.</note><p>A cursor has an associated position, which is used by <codeph>FETCH</codeph>.
+          href="../../analytics/pl_sql.html#topic1" scope="external" format="html">PL/pgSQL function</xref>.</note><p>A cursor has an associated position, which is used by <codeph>FETCH</codeph>.
 The cursor position can be before the first row of the query result,
 on any particular row of the result, or after the last row of the result.
 When created, a cursor is positioned before the first row. After fetching

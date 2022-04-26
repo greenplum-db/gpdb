@@ -6240,7 +6240,7 @@
         levels that follow it. The later the level, the fewer messages are sent to the log.</p>
       <p>If the Greenplum Database PL/Container extension is installed. This parameter also controls
         the PL/Container log level. For information about the extension, see <xref
-          href="../../analytics/pl_container.xml" scope="peer" format="dita"/>.</p>
+          href="../../analytics/pl_container.html" scope="external" format="html">PL/pgSQL Language</xref>.</p>
       <table id="log_min_messages_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
