@@ -65,7 +65,7 @@ The Greenplum to Python data type mapping follows.
 
 |Greenplum Primitive Type|Python Data Type|
 |------------------------|----------------|
-|boolean1|bool|
+|boolean<sup>1</sup>|bool|
 |bytea|bytes|
 |smallint, bigint, oid|int|
 |real, double|float|
@@ -73,7 +73,7 @@ The Greenplum to Python data type mapping follows.
 |*other primitive types*|string|
 |SQL null value|None|
 
-1 When the UDF return type is `boolean`, the Greenplum Database evaluates the return value for truth according to Python rules. That is, `0` and empty string are `false`, but notably `'f'` is `true`.
+<sup>1</sup> When the UDF return type is `boolean`, the Greenplum Database evaluates the return value for truth according to Python rules. That is, `0` and empty string are `false`, but notably `'f'` is `true`.
 
 Example:
 

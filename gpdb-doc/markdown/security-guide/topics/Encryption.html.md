@@ -6,7 +6,7 @@ Describes how to encrypt data at rest in the database or in transit over the net
 
 -   Connections between clients and the master database can be encrypted with SSL. This is enabled with the `ssl` server configuration parameter, which is `off` by default. Setting the `ssl` parameter to `on` allows client communications with the master to be encrypted. The master database must be set up for SSL. See [OpenSSL Configuration](Authenticate.html#openssl_config) for more about encrypting client connections with SSL.
 -   Greenplum Database allows SSL encryption of data in transit between the Greenplum parallel file distribution server, `gpfdist`, and segment hosts. See [Encrypting gpfdist Connections](#gpfdist_connections) for more information. 
--   The `pgcrypto` module of encryption/decryptions functions protect data at rest in the database. Encryption at the column level protects sensitive information, such as social security numbers or credit card numbers. See [Encrypting Data at Rest with pgcrypto](#pgcrypto) for more information.
+-   The `pgcrypto` module of encryption/decryption functions protect data at rest in the database. Encryption at the column level protects sensitive information, such as social security numbers or credit card numbers. See [Encrypting Data at Rest with pgcrypto](#pgcrypto) for more information.
 
 **Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
 
@@ -87,10 +87,10 @@ Pgcrypto has various levels of encryption ranging from basic to advanced built-i
 |:------------------|:-------|:-----------|
 |MD5|yes|yes|
 |SHA1|yes|yes|
-|SHA224/256/384/512|yes|yes [1](#fntarg_1)|
-|Other digest algorithms|no|yes [2](#fntarg_2)|
+|SHA224/256/384/512|yes|yes <sup>[1](#fnsrc)</sup>|
+|Other digest algorithms|no|yes <sup>[2](#fnsrc)</sup>|
 |Blowfish|yes|yes|
-|AES|yes|yes[3](#fntarg_3)|
+|AES|yes|yes<sup>[3](#fnsrc)</sup>|
 |DES/3DES/CAST5|no|yes|
 |Raw Encryption|yes|yes|
 |PGP Symmetric-Key|yes|yes|
@@ -472,5 +472,6 @@ Consider the following questions when planning for key management:
 
 The Open Web Application Security Project \(OWASP\) provides a very comprehensive [guide to securing encryption keys](https://www.owasp.org/index.php/Cryptographic_Storage_Cheat_Sheet).
 
-[1](#fnsrc_1) SHA2 algorithms were added to OpenSSL in version 0.9.8. For older versions, pgcrypto will use built-in code.[2](#fnsrc_2) Any digest algorithm OpenSSL supports is automatically picked up. This is not possible with ciphers, which need to be supported explicitly.[3](#fnsrc_3) AES is included in OpenSSL since version 0.9.7. For older versions, pgcrypto will use built-in code.
+<a id="fnsrc"></a>
+<sup>[1](#fnsrc_1)</sup> SHA2 algorithms were added to OpenSSL in version 0.9.8. For older versions, pgcrypto will use built-in code.<br/><sup>[2](#fnsrc_2)</sup> Any digest algorithm OpenSSL supports is automatically picked up. This is not possible with ciphers, which need to be supported explicitly.<br/><sup>[3](#fnsrc_3)</sup> AES is included in OpenSSL since version 0.9.7. For older versions, pgcrypto will use built-in code.
 

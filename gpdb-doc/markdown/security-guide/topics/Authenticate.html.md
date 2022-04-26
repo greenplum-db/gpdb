@@ -353,7 +353,7 @@ The following Server settings need to be specified in the `postgresql.conf` con
 -   `ssl_renegotiation_limit` *integer*. Specifies the data limit before key renegotiation.
 -   `ssl_ciphers` *string*. Configures the list SSL ciphers that are allowed. `ssl_ciphers` *overrides* any ciphers string specified in `/etc/openssl.cnf`. The default value `ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH` enables all ciphers except for ADH, LOW, EXP, and MD5 ciphers, and prioritizes ciphers by their strength.
 
-    **Note:** With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption \(no encryption for transport\), which the default `ssl_ciphers` string allows. To bypass NULL ciphers with TLS 1.2 use a string such as `TLSv1.2:!eNULL:!aNULL`.
+    <br/>**Note:** With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption \(no encryption for transport\), which the default `ssl_ciphers` string allows. To bypass NULL ciphers with TLS 1.2 use a string such as `TLSv1.2:!eNULL:!aNULL`.
 
     It is possible to have authentication without encryption overhead by using `NULL-SHA` or `NULL-MD5` ciphers. However, a man-in-the-middle could read and pass communications between client and server. Also, encryption overhead is minimal compared to the overhead of authentication. For these reasons, NULL ciphers should not be used.
 
@@ -376,14 +376,14 @@ SSL options:
 sslmode
 :   Specifies the level of protection.
 
-    `require`
-    :   Only use an SSL connection. If a root CA file is present, verify the certificate in the same way as if `verify-ca` was specified.
+`require`
+:   Only use an SSL connection. If a root CA file is present, verify the certificate in the same way as if `verify-ca` was specified.
 
-    `verify-ca`
-    :   Only use an SSL connection. Verify that the server certificate is issued by a trusted CA.
+`verify-ca`
+:   Only use an SSL connection. Verify that the server certificate is issued by a trusted CA.
 
-    `verify-full`
-    :   Only use an SSL connection. Verify that the server certificate is issued by a trusted CA and that the server host name matches that in the certificate.
+`verify-full`
+:   Only use an SSL connection. Verify that the server certificate is issued by a trusted CA and that the server host name matches that in the certificate.
 
 sslcert
 :   The file name of the client SSL certificate. The default is `$MASTER_DATA_DIRECTORY/postgresql.crt`.

@@ -713,7 +713,7 @@ The following simple Java example creates a JAR file that contains a single meth
 
 The following method returns a substring.
 
-```
+``` pre
 {
 public static String substring(String text, int beginIndex,
   int endIndex)
