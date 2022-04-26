@@ -243,8 +243,11 @@ extendBufFile(BufFile *file)
 	 * queries from destroying the entire system. Counting each segment file is
 	 * reasonable for this scenario.
 	 */
-	FileSetIsWorkfile(pfile);
-	RegisterFileWithSet(pfile, file->work_set);
+	if (file->work_set)
+	{
+		FileSetIsWorkfile(pfile);
+		RegisterFileWithSet(pfile, file->work_set);
+	}
 }
 
 /*
@@ -286,9 +289,12 @@ BufFileCreateTempInSet(char *operation_name, bool interXact, workfile_set *work_
 	 * Register the file as a "work file", so that the Greenplum workfile
 	 * limits apply to it.
 	 */
-	file->work_set = work_set;
-	FileSetIsWorkfile(pfile);
-	RegisterFileWithSet(pfile, work_set);
+	if (work_set)
+	{
+		file->work_set = work_set;
+		FileSetIsWorkfile(pfile);
+		RegisterFileWithSet(pfile, work_set);
+	}
 
 	SIMPLE_FAULT_INJECTOR("workfile_creation_failure");
 
@@ -1024,7 +1030,7 @@ BufFileTellBlock(BufFile *file)
 #endif
 
 /*
- * Return the current shared BufFile size.
+ * Return the current fileset based BufFile size.
  *
  * Counts any holes left behind by BufFileAppend as part of the size.
  * ereport()s on failure.
@@ -1049,6 +1055,29 @@ BufFileSize(BufFile *file)
 
 	return ((file->numFiles - 1) * (int64) MAX_PHYSICAL_FILESIZE) +
 		lastFileSize;
+}
+
+/*
+ * Return the current shared BufFile size.
+ *
+ * When the BuffileFlush on Disk, BufFileGetSize() returns the same result
+ * as BufFileSize().
+ * But when the buffer is not full, BufFileSize() only returns the file size
+ * that flushed on Disk, not counting the size in buffer.
+ *
+ * Therefore, the BufFileGetSize() is used to return the whole size.
+ */
+int64
+BufFileGetSize(BufFile *file)
+{
+	int64 fileSizeWithoutBuffer;
+	fileSizeWithoutBuffer = BufFileSize(file);
+	/* When seek back then write some data, and the write doesn't add size. */
+	if (fileSizeWithoutBuffer > (file->curOffset + file->pos))
+	{
+		return fileSizeWithoutBuffer;
+	}
+	return file->curOffset + file->pos;
 }
 
 /*

@@ -79,6 +79,46 @@ CREATE
  f                    
  f                    
 (4 rows)
+1: select gp_workfile_mgr_test('buffile_size_test', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('buffile_large_file_test', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('execworkfile_buffile_test', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('execworkfile_create_one_MB_file', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('logicaltape_test', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
 
 -- test will fail when the workset exceeds gp_workfile_max_entries, the workset will be released at the end of transaction.
 1: select gp_workfile_mgr_test('workfile_fill_sharedcache', 0);
