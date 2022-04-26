@@ -1,5 +1,5 @@
 ---
-title: pg\_dumpall 
+title: pg_dumpall 
 ---
 
 Extracts all databases in a Greenplum Database system to a single script file or other archive file.

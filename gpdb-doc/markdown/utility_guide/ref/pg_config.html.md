@@ -1,5 +1,5 @@
 ---
-title: pg\_config 
+title: pg_config 
 ---
 
 Retrieves information about the installed version of Greenplum Database.

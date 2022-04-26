@@ -79,7 +79,6 @@ Running the `ANALYZE` command on a table, not using the `analyzedb` utility, doe
 :   When performing ANALYZE operations on multiple tables, analyzedb creates concurrent sessions to analyze tables in parallel. The `-p` option controls the maximum number of concurrent sessions.
 
 :   In the following example, the first line performs an ANALYZE operation on the table `public.nation`, the second line performs an ANALYZE operation only on the columns `l_shipdate` and `l_receiptdate` in the table `public.lineitem`.
-
     ```
     public.nation
     public.lineitem -i l_shipdate,l_receiptdate 

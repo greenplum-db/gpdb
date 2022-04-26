@@ -1,5 +1,5 @@
 ---
-title: gpbackup\_manager 
+title: gpbackup_manager 
 ---
 
 Display information about existing backups, delete existing backups, or encrypt passwords for secure storage in plugin configuration files.
@@ -46,7 +46,6 @@ delete-backup <timestamp> [--plugin-config <config-file>]
 
 -h \| --help
 :   Displays a help message for the `gpbackup_manager` command. For help on a specific `gpbackup_manager` command, enter `gpbackup_manager help <command>`. For example:
-
     ```
     $ gpbackup_manager help encrypt-password
     ```

@@ -53,7 +53,6 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 :   The number of processes to run in parallel.
 
 :   The `gpcheckcat` utility attempts to determine the number of simultaneous processes \(the batch size\) to use. The utility assumes it can use a buffer with a minimum of 20MB for each process. The maximum number of parallel processes is the number of Greenplum Database segment instances. The utility displays the number of parallel processes that it uses when it starts checking the catalog.
-
     **Note:** The utility might run out of memory if the number of errors returned exceeds the buffer size. If an out of memory error occurs, you can lower the batch size with the `-B` option. For example, if the utility displays a batch size of 936 and runs out of memory, you can specify `-B 468` to run 468 processes in parallel.
 
 -C catalog\_table

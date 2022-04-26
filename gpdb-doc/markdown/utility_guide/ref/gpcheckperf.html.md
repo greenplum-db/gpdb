@@ -75,12 +75,10 @@ sdw3-1
 
 -r ds\{n\|N\|M\}
 :   Specifies which performance tests to run. The default is `dsn`:
-
     -   Disk I/O test \(`d`\)
     -   Stream test \(`s`\)
     -   Network performance test in sequential \(`n`\), parallel \(`N`\), or full-matrix \(`M`\) mode. The optional `--duration` option specifies how long \(in seconds\) to run the network test. To use the parallel \(`N`\) mode, you must run the test on an even number of hosts.
-
-        If you would rather use `netperf` \([https://github.com/HewlettPackard/netperf](https://github.com/HewlettPackard/netperf)\) instead of the Greenplum network test, you can download it and install it into `$GPHOME/bin/lib` on all Greenplum hosts \(coordinator and segments\). You would then specify the optional `--netperf` option to use the `netperf` binary instead of the default `gpnetbench*` utilities.
+        <br/><br/>If you would rather use `netperf` \([https://github.com/HewlettPackard/netperf](https://github.com/HewlettPackard/netperf)\) instead of the Greenplum network test, you can download it and install it into `$GPHOME/bin/lib` on all Greenplum hosts \(coordinator and segments\). You would then specify the optional `--netperf` option to use the `netperf` binary instead of the default `gpnetbench*` utilities.
 
 
 -S file\_size

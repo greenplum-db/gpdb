@@ -1,5 +1,5 @@
 ---
-title: pg\_dump 
+title: pg_dump 
 ---
 
 Extracts a database into a single script file or other archive file.

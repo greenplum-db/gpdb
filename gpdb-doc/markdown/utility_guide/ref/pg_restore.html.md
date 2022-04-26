@@ -1,5 +1,5 @@
 ---
-title: pg\_restore 
+title: pg_restore 
 ---
 
 Restores a database from an archive file created by `pg_dump`.

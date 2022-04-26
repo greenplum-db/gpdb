@@ -118,7 +118,6 @@ You must make sure that the user who runs `gpaddmirrors` \(the `gpadmin` user\) 
 
 -p port\_offset
 :   Optional. This number is used to calculate the database ports used for mirror segments. The default offset is 1000. Mirror port assignments are calculated as follows:
-
     ```
     primary_port + offset = mirror_database_port
     ```
@@ -148,7 +147,7 @@ When enabling a mirroring configuration that adds hosts to the Greenplum system,
 
 ## <a id="multi_nic"></a>Using Host Systems with Multiple NICs 
 
-If hosts systems are configured with multiple NICs, you can initialize a Greenplum Database system to use each NIC as a Greenplum host system. You must ensure that the host systems are configured with sufficient resources to support all the segment instances being added to the host. Also, if you enable segment mirroring, you must ensure that the Greenplum system configuration supports failover if a host system fails. For information about Greenplum Database mirroring schemes, see [../../best\_practices/ha.html\#topic\_ngz\_qf4\_tt](../../best_practices/ha.html#topic_ngz_qf4_tt).
+If hosts systems are configured with multiple NICs, you can initialize a Greenplum Database system to use each NIC as a Greenplum host system. You must ensure that the host systems are configured with sufficient resources to support all the segment instances being added to the host. Also, if you enable segment mirroring, you must ensure that the Greenplum system configuration supports failover if a host system fails. For information about Greenplum Database mirroring schemes, see [Segment Mirroring Configurations](../../best_practices/ha.html#topic_ngz_qf4_tt).
 
 For example, this is a segment instance configuration for a simple Greenplum system. The segment host `gp6m` is configured with two NICs, `gp6m-1` and `gp6m-2`, where the Greenplum Database system uses `gp6m-1` for the coordinator segment and `gp6m-2` for segment instances.
 
