@@ -245,6 +245,10 @@ $$ language plpgsql;
 
 create or replace function wait_until_all_segments_synchronized() returns text as $$
 begin
+	/* no-op for a mirrorless cluster */
+	if (select count(*) = 0 from gp_segment_configuration where role = 'm') then
+		return 'OK'; /* in func */
+	end if; /* in func */
 	for i in 1..1200 loop
 		if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then
 			return 'OK'; /* in func */

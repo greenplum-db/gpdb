@@ -65,26 +65,6 @@ VACUUM
 
 -- Validate wal records (mirrorless setting has alternative answer file for this since wal_level is already minimal)
 ! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
-rmgr: Appendonly  len (rec/tot):    186/   186, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:0/0 len:136
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:128/0 len:0
-rmgr: Appendonly  len (rec/tot):    130/   130, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:0/0 len:80
-rmgr: Appendonly  len (rec/tot):    130/   130, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:128/0 len:80
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:0/136
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:1/0 len:0
-rmgr: Appendonly  len (rec/tot):    138/   138, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:1/0 len:88
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:0/0
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:0/80
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:128/80
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:1/88
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:0/0
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:0/80
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:128/80
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:1/0 len:0
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:129/0 len:0
-rmgr: Appendonly  len (rec/tot):    114/   114, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:1/0 len:64
-rmgr: Appendonly  len (rec/tot):    114/   114, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_INSERT insert: rel ####/######/###### seg/offset:129/0 len:64
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:0/0
-rmgr: Appendonly  len (rec/tot):     50/    50, tx: ##, lsn: #/########, prev #/########, desc: APPENDONLY_TRUNCATE truncate: rel ####/######/###### seg/offset:128/0
 
 
 -- *********** Set wal_level=minimal **************
