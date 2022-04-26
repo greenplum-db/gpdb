@@ -32,20 +32,20 @@ Provide a descriptive subject line and in the body of the email include the foll
 
 The Greenplum Database project team will respond to vulnerability reports as follows:
 
-1. The Security/project Team will investigate the vulnerability and determine its effects and criticality.
-2. If the issue is not deemed to be a vulnerability, the Security/poject Team will follow up with a detailed reason for rejection.
-3. The Security/project Team will initiate a conversation with the reporter promptly.
-4. If a vulnerability is acknowledged and the timeline for a fix is determined, the Security/project Team will work on a plan to communicate with the appropriate community, including identifying mitigating steps that affected users can take to protect themselves until the fix is rolled out.
-5. The Security/project Team will also create a [CVSS](https://www.first.org/cvss/specification-document) using the [CVSS Calculator](https://www.first.org/cvss/calculator/3.0). The Security/project Team makes the final call on the calculated CVSS; it is better to move quickly than making the CVSS perfect. Issues may also be reported to [Mitre](https://cve.mitre.org/) using this [scoring calculator](https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator). The CVE will initially be set to private.
-6. The Security/project Team will work on fixing the vulnerability and perform internal testing before preparing to roll out the fix.
+1. The Greenplum project team will investigate the vulnerability and determine its effects and criticality.
+2. If the issue is not deemed to be a vulnerability, the Greenplum project team will follow up with a detailed reason for rejection.
+3. The Greenplum project team will initiate a conversation with the reporter promptly.
+4. If a vulnerability is acknowledged and the timeline for a fix is determined, the Greenplum project team will work on a plan to communicate with the appropriate community, including identifying mitigating steps that affected users can take to protect themselves until the fix is rolled out.
+5. The Greenplum project team will also create a [CVSS](https://www.first.org/cvss/specification-document) using the [CVSS Calculator](https://www.first.org/cvss/calculator/3.0). The Greenplum project team makes the final call on the calculated CVSS; it is better to move quickly than making the CVSS perfect. Issues may also be reported to [Mitre](https://cve.mitre.org/) using this [scoring calculator](https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator). The CVE will initially be set to private.
+6. The Greenplum project team will work on fixing the vulnerability and perform internal testing before preparing to roll out the fix.
 7. A public disclosure date is negotiated by the Greenplum Database project team, and the bug submitter. We prefer to fully disclose the bug as soon as possible once a user mitigation or patch is available. It is reasonable to delay disclosure when the bug or the fix is not yet fully understood, or the solution is not well-tested. The timeframe for disclosure is from immediate (especially if it’s already publicly known) to a few weeks. The Greenplum Database project team holds the final say when setting a public disclosure date.
-8. Once the fix is confirmed, the Security/project Team will patch the vulnerability in the next patch or minor release, and backport a patch release into earlier supported releases as necessary. Upon release of the patched version of Greenplum Database, we will follow the **Public Disclosure Process**.
+8. Once the fix is confirmed, the Greenplum project team will patch the vulnerability in the next patch or minor release, and backport a patch release into earlier supported releases as necessary. Upon release of the patched version of Greenplum Database, we will follow the **Public Disclosure Process**.
 
 ## Public Disclosure Process
 
-The Security/project Team publishes a [public advisory](https://github.com/greenplum-db/gpdb/security/advisories?state=published) to the Greenplum Database community via GitHub. In most cases, additional communication via Slack, Twitter, mailing lists, blog and other channels will assist in educating Greenplum Database users and rolling out the patched release to affected users.
+The Greenplum project team publishes a [public advisory](https://github.com/greenplum-db/gpdb/security/advisories?state=published) to the Greenplum Database community via GitHub. In most cases, additional communication via Slack, Twitter, mailing lists, blog and other channels will assist in educating Greenplum Database users and rolling out the patched release to affected users.
 
-The Security/project Team will also publish any mitigating steps users can take until the fix can be applied to their Greenplum Database instances. 
+The Greenplum project team will also publish any mitigating steps users can take until the fix can be applied to their Greenplum Database instances. 
 
 ## Mailing lists
 
