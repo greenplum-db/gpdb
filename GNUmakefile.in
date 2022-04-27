@@ -184,6 +184,11 @@ $(call recurse,installcheck-world, $(ICW_TARGETS),installcheck)
 $(call recurse,installcheck-world, \
 			   src/test/ssl,check)
 
+.PHONY: installcheck-mirrorless
+installcheck-mirrorless:
+	$(MAKE) -C src/test/regress installcheck-mirrorless
+	$(MAKE) -C src/test/isolation2 installcheck-mirrorless
+
 .PHONY: installcheck-gpcheckcat
 installcheck-world: installcheck-gpcheckcat
 installcheck-gpcheckcat:

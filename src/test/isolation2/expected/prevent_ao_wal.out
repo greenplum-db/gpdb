@@ -63,7 +63,7 @@ DELETE 5
 VACUUM
 -1Uq: ... <quitting>
 
--- Validate wal records
+-- Validate wal records (mirrorless setting has alternative answer file for this since wal_level is already minimal)
 ! last_wal_file=$(psql -At -c "SELECT pg_xlogfile_name(pg_current_xlog_location())" postgres) && pg_xlogdump ${last_wal_file} -p ${MASTER_DATA_DIRECTORY}/pg_xlog -r appendonly;
 rmgr: Appendonly  len (rec/tot):    160/   192, tx: ##, lsn: #/########, prev #/########, bkp: 0000, desc: insert: rel ####/######/###### seg/offset:0/0 len:136
 rmgr: Appendonly  len (rec/tot):     24/    56, tx: ##, lsn: #/########, prev #/########, bkp: 0000, desc: insert: rel ####/######/###### seg/offset:128/0 len:0

@@ -230,6 +230,9 @@ installcheck-icudp: all tablespace-setup
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/icudp_schedule --dbname=regression_icudp $(EXTRA_TESTS)
 endif
 
+installcheck-mirrorless: all tablespace-setup
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/mirrorless_schedule --dbname=regress-mirrorless --load-extension=gp_inject_fault $(EXTRA_TESTS)
+
 testbouncer: all
 	bash -c "bouncer/setup.sh"
 	$(pg_regress_check)  --port=65432 --schedule=./minimal_schedule --host=`hostname` $(EXTRA_TESTS)

@@ -242,6 +242,7 @@ groups:
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
   - fips_centos7
+  - icw_mirrorless_centos7
   - unit_tests_gporca_centos7
   - gpdb_pitr_centos7
 {% endif %}
@@ -250,6 +251,7 @@ groups:
   - icw_planner_rhel8
   - icw_gporca_icproxy_rhel8
   - icw_planner_icproxy_rhel8
+  - icw_mirrorless_rhel8
   - unit_tests_gporca_rhel8
 {% endif %}
 {% if "oracle7" in os_types %}
@@ -261,6 +263,7 @@ groups:
   - icw_planner_ubuntu18.04
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
+  - icw_mirrorless_ubuntu18.04
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -394,6 +397,7 @@ groups:
   - icw_planner_centos7
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
+  - icw_mirrorless_centos7
   - unit_tests_gporca_centos7
   - compile_gpdb_centos7
   - fips_centos7
@@ -403,6 +407,7 @@ groups:
   - icw_planner_rhel8
   - icw_gporca_icproxy_rhel8
   - icw_planner_icproxy_rhel8
+  - icw_mirrorless_rhel8
   - unit_tests_gporca_rhel8
   - compile_gpdb_rhel8
 {% endif %}
@@ -415,6 +420,7 @@ groups:
   - icw_planner_ubuntu18.04
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
+  - icw_mirrorless_ubuntu18.04
 {% endif %}
   - gate_icw_end
 
@@ -430,6 +436,7 @@ groups:
 {% endif %}
 
 {% endif %}
+
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
 
@@ -1699,6 +1706,38 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: ((configure_flags))
 
+- name: icw_mirrorless_centos7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+      - get: bin_gpdb
+        passed: [compile_gpdb_centos7]
+        resource: bin_gpdb_centos7
+        trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
+      - get: gpdb6-centos7-test
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-centos7]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-centos7-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
+      TEST_OS: centos
+      CONFIGURE_FLAGS: ((configure_flags))
+      WITH_MIRRORS: false
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - wal_level=minimal
+        - max_wal_senders=0
+        - gp_dispatch_keepalives_idle=30
+        - gp_dispatch_keepalives_interval=10
+        - gp_dispatch_keepalives_count=4
+
 - name: unit_tests_gporca_centos7
   plan:
   - in_parallel:
@@ -1775,7 +1814,6 @@ jobs:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: centos
         CONFIGURE_FLAGS: ((configure_flags))
-
 - name: icw_gporca_icproxy_rhel8
   plan:
     - in_parallel:
@@ -1819,6 +1857,36 @@ jobs:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: centos
         CONFIGURE_FLAGS: ((configure_flags))
+
+- name: icw_mirrorless_rhel8
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_rhel8]
+      - get: bin_gpdb
+        passed: [compile_gpdb_rhel8]
+        resource: bin_gpdb_rhel8
+        trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
+      - get: gpdb6-rhel8-test
+  - task: ic_gpdb
+    tags: [icw-rhel8]
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-rhel8-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
+      TEST_OS: centos
+      CONFIGURE_FLAGS: ((configure_flags))
+      WITH_MIRRORS: false
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - wal_level=minimal
+        - max_wal_senders=0
+        - gp_dispatch_keepalives_idle=30
+        - gp_dispatch_keepalives_interval=10
+        - gp_dispatch_keepalives_count=4
 
 - name: unit_tests_gporca_rhel8
   plan:
@@ -1986,6 +2054,38 @@ jobs:
         TEST_OS: ubuntu
         CONFIGURE_FLAGS: ((configure_flags))
 
+- name: icw_mirrorless_ubuntu18.04
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_ubuntu18.04]
+      - get: bin_gpdb
+        passed: [compile_gpdb_ubuntu18.04]
+        resource: bin_gpdb_ubuntu18.04
+        trigger: [[ test_trigger ]]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
+      - get: gpdb6-ubuntu18.04-test
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-ubuntu18.04]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-ubuntu18.04-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
+      TEST_OS: centos
+      CONFIGURE_FLAGS: ((configure_flags))
+      WITH_MIRRORS: false
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - wal_level=minimal
+        - max_wal_senders=0
+        - gp_dispatch_keepalives_idle=30
+        - gp_dispatch_keepalives_interval=10
+        - gp_dispatch_keepalives_count=4
+
 {% endif %}
 
 {% if "centos7" in os_types %}
@@ -2097,6 +2197,7 @@ jobs:
         - icw_gporca_centos7
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
+        - icw_mirrorless_centos7
         - unit_tests_gporca_centos7
         - gpdb_pitr_centos7
 {% endif %}
@@ -2104,6 +2205,7 @@ jobs:
         - icw_gporca_rhel8
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
+        - icw_mirrorless_rhel8
         - unit_tests_gporca_rhel8
 {% endif %}
         trigger: true
@@ -2114,6 +2216,7 @@ jobs:
 {% endif %}
 
 {% endif %}
+
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
 ##  ___ _   _ _____ _____ ____   ____ ___  _   _ _   _ _____ ____ _____
@@ -3199,17 +3302,20 @@ jobs:
         - icw_planner_icproxy_centos7
         - unit_tests_gporca_centos7
         - gpdb_pitr_centos7
+        - icw_mirrorless_centos7
         - icw_gporca_rhel8
         - icw_planner_rhel8
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - unit_tests_gporca_rhel8
+        - icw_mirrorless_rhel8
         - icw_gporca_oracle7
         - icw_planner_oracle7
         - icw_gporca_ubuntu18.04
         - icw_planner_ubuntu18.04
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
+        - icw_mirrorless_ubuntu18.04
         - icw_planner_ictcp_centos6
         - icw_extensions_gpcloud_centos6
         - test_gpdb_clients_rhel8
@@ -3268,6 +3374,7 @@ jobs:
         - icw_planner_icproxy_centos7
         - icw_gporca_oracle7
         - icw_planner_oracle7
+        - icw_mirrorless_centos7
         - resource_group_centos7
         - interconnect_centos7
         - MADlib_Test_orca_centos7
@@ -3280,6 +3387,7 @@ jobs:
         - icw_planner_rhel8
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
+        - icw_mirrorless_rhel8
         - resource_group_rhel8
         - interconnect_rhel8
 {% for test in CLI_BEHAVE_TESTS %}
@@ -3307,6 +3415,7 @@ jobs:
         - icw_planner_ubuntu18.04
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
+        - icw_mirrorless_ubuntu18.04
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_ubuntu18
 {% endfor %}
