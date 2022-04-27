@@ -913,7 +913,7 @@
   proparallel => 'u', prorettype => 'int4', proargtypes => 'regclass',
   prosrc => 'brin_summarize_new_values_internal' },
 { oid => '3999', descr => 'brin: standalone scan new table pages',
-  proexeclocation => 's',
+  proexeclocation => 's', prorows => '1000', proretset => 't',
   proname => 'brin_summarize_range', provolatile => 'v', proparallel => 'u',
   prorettype => 'int4', proargtypes => 'regclass int8',
   prosrc => 'brin_summarize_range' },
@@ -8731,7 +8731,7 @@
   prosrc => 'gin_tsquery_consistent_oldsig' },
 
 { oid => '3789', descr => 'clean up GIN pending list',
-  proexeclocation => 's',
+  proexeclocation => 's', prorows => '1000', proretset => 't',
   proname => 'gin_clean_pending_list', provolatile => 'v', proparallel => 'u',
   prorettype => 'int8', proargtypes => 'regclass',
   prosrc => 'gin_clean_pending_list' },
@@ -11020,7 +11020,8 @@
    proname => 'gp_get_segment_endpoints', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => '', proallargtypes => '{text,oid,int4,int4,text,int4,int4,text,text,text}', proargmodes => '{o,o,o,o,o,o,o,o,o,o}', proargnames => '{auth_token,databaseid,senderpid,receiverpid,state,gp_segment_id,sessionid,username,endpointname,cursorname}', prosrc => 'gp_get_segment_endpoints' },
 
 { oid => 7182, descr => 'wait until all endpoint of this parallel retrieve cursor has been retrieved finished',
-   proname => 'gp_wait_parallel_retrieve_cursor', provolatile => 'v', proparallel => 'u', prorettype => 'bool', proargtypes => 'text int4', proallargtypes => '{text,int4,bool}', proargmodes => '{i,i,o}', proargnames => '{cursorname,timeout_sec,finished}', prosrc => 'gp_wait_parallel_retrieve_cursor', proexeclocation => 'c' },
+   proname => 'gp_wait_parallel_retrieve_cursor', prorows => '1000', proretset => 't', 
+   provolatile => 'v', proparallel => 'u', prorettype => 'bool', proargtypes => 'text int4', proallargtypes => '{text,int4,bool}', proargmodes => '{i,i,o}', proargnames => '{cursorname,timeout_sec,finished}', prosrc => 'gp_wait_parallel_retrieve_cursor', proexeclocation => 'c' },
 
 { oid => 7050, oid_symbol => 'BITMAP_INDEXAM_HANDLER_OID', descr => 'bitmap(internal)',
    proname => 'bmhandler', provolatile => 'v', prorettype => 'index_am_handler', proargtypes => 'internal', prosrc => 'bmhandler' },
@@ -11101,7 +11102,8 @@
    proname => 'gp_remove_segment', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'bool', proargtypes => 'int2', prosrc => 'gp_remove_segment' },
 
 { oid => 5035, descr => 'Request a FTS probe scan and wait for response',
-   proname => 'gp_request_fts_probe_scan', proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'gp_request_fts_probe_scan', proexeclocation => 'c' },
+   proname => 'gp_request_fts_probe_scan', prorows => '1000', proretset => 't', 
+   proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'gp_request_fts_probe_scan', proexeclocation => 'c' },
 
 
 { oid => 7054, descr => 'anytable type serialization input function',

@@ -70,7 +70,7 @@ $$ language sql VOLATILE;
 -- do a SUM() over the return values, and it's always 0, regardless of the
 -- number of segments in the cluster.)
 CREATE FUNCTION corrupt_file(data_file text, corruption_offset int4)
-RETURNS integer as $$
+RETURNS setof integer as $$
   import os;
 
   if not os.path.isfile(data_file):
@@ -90,7 +90,7 @@ RETURNS integer as $$
       f.write(write_char)
       f.close()
 
-  return 0
+  return []
 $$ LANGUAGE plpython3u EXECUTE ON ALL SEGMENTS;
 
 CREATE OR REPLACE FUNCTION invalidate_buffers_for_rel(tablename text) RETURNS BOOL AS
@@ -122,7 +122,7 @@ insert into corrupt_table select i from generate_series(1, 10) i;
 checkpoint;
 select invalidate_buffers_for_rel('corrupt_table') from gp_dist_random('gp_id');
 -- Verify corruption on heap table
-select SUM(corrupt_file(get_relation_path('corrupt_table'), -50));
+select corrupt_file(get_relation_path('corrupt_table'), -50);
 SELECT COUNT(*) FROM corrupt_table;
 
 -- Corrupt a heap table, with toast table 
@@ -131,7 +131,7 @@ insert into corrupt_toast_table select i, ("decode"(repeat('a',3000000),'escape'
 checkpoint;
 select invalidate_buffers_for_rel(get_toast_name('corrupt_toast_table')) from gp_dist_random('gp_id');
 -- Verify corruption on toast table
-select SUM(corrupt_file(get_toast_path('corrupt_toast_table'), -50));
+select corrupt_file(get_toast_path('corrupt_toast_table'), -50);
 SELECT md5(comment::text) FROM corrupt_toast_table;
 
 -- Corrupt a Btree Index
@@ -141,7 +141,7 @@ insert into corrupt_btree_index select i, 'a' from generate_series(1, 10) i;
 checkpoint;
 select invalidate_buffers_for_rel('btree_index') from gp_dist_random('gp_id');
 -- Verify corruption on Btree index
-select SUM(corrupt_file(get_index_path('corrupt_btree_index'), -50));
+select corrupt_file(get_index_path('corrupt_btree_index'), -50);
 insert into corrupt_btree_index select i, 'a' from generate_series(1, 10) i; -- insert will trigger scan of the index
 
 -- Corrupt a Bitmap Index 
@@ -151,7 +151,7 @@ insert into corrupt_bitmap_index select i, 'a' from generate_series(1, 10) i;
 checkpoint;
 select invalidate_buffers_for_rel('bitmap_index') from gp_dist_random('gp_id');
 -- Verify corruption on Bitmap index 
-select SUM(corrupt_file(get_index_path('corrupt_bitmap_index'), -50));
+select corrupt_file(get_index_path('corrupt_bitmap_index'), -50);
 insert into corrupt_bitmap_index select i, 'a' from generate_series(1, 10) i; -- insert will trigger scan of the index
 
 -- Test make sure full page image is captured in XLOG if hint bit change is the first change after checkpoint
@@ -168,7 +168,7 @@ select count(*) from mark_buffer_dirty_hint;
 -- using a DML to trigger the XLogFlush() to have the backup block written
 create table flush_xlog_page_to_disk (c int);
 -- corrupt the page on disk
-select SUM(corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50));
+select corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50);
 -- invalidate buffer and confirm data is corrupted
 select invalidate_buffers_for_rel('mark_buffer_dirty_hint') from gp_dist_random('gp_id');
 select count(*) from mark_buffer_dirty_hint;
