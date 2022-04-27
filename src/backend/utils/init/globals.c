@@ -37,7 +37,6 @@ volatile bool ClientConnectionLost = false;
 volatile bool ImmediateInterruptOK = false;
 /* Make these signed integers (instead of uint32) to detect garbage negative values. */
 volatile sig_atomic_t ConfigReloadPending = false;
-volatile sig_atomic_t IdleGangTimeoutPending = false;
 volatile int32 InterruptHoldoffCount = 0;
 volatile int32 QueryCancelHoldoffCount = 0;
 volatile int32 CritSectionCount = 0;
