@@ -199,5 +199,5 @@ CREATE LANGUAGE plpythonu;
 
 ## <a id="seealso"></a>See Also 
 
-ANALYZE in the *Greenplum Database Reference Guide* [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html)
+[ANALYZE](../../ref_guide/sql_commands/ANALYZE.html)
 

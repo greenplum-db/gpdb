@@ -78,5 +78,5 @@ DROP ROLE
 
 ## <a id="section7"></a>See Also 
 
-`DROP ROLE` in the *Greenplum Database Reference Guide*[createuser](createuser.html), [DROP ROLE](../../ref_guide/sql_commands/DROP_ROLE.html)
+[createuser](createuser.html), [DROP ROLE](../../ref_guide/sql_commands/DROP_ROLE.html)
 

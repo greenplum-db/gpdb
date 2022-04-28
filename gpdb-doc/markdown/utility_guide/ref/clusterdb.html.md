@@ -88,5 +88,5 @@ clusterdb --table foo xyzzyb
 
 ## <a id="section7"></a>See Also 
 
-`CLUSTER` in the *Greenplum Database Reference Guide*[CLUSTER](../../ref_guide/sql_commands/CLUSTER.html)
+[CLUSTER](../../ref_guide/sql_commands/CLUSTER.html)
 

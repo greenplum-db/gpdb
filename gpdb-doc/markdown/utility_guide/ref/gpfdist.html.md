@@ -162,5 +162,5 @@ kill 3456
 
 ## <a id="section7"></a>See Also 
 
-[gpload](gpload.html), `CREATE EXTERNAL TABLE`in the *Greenplum Database Reference Guide*
+[gpload](gpload.html), `CREATE EXTERNAL TABLE`
 

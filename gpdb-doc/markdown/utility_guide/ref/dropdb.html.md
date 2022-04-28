@@ -80,5 +80,5 @@ DROP DATABASE
 
 ## <a id="section7"></a>See Also 
 
-`DROP DATABASE` in the *Greenplum Database Reference Guide*[createdb](createdb.html), [DROP DATABASE](../../ref_guide/sql_commands/DROP_DATABASE.html)
+[createdb](createdb.html), [DROP DATABASE](../../ref_guide/sql_commands/DROP_DATABASE.html)
 

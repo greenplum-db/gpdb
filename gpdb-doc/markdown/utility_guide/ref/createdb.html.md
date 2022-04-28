@@ -98,5 +98,5 @@ createdb -p 54321 -h gpmaster -E LATIN1 demo
 
 ## <a id="section7"></a>See Also 
 
-`CREATE DATABASE` in the *Greenplum Database Reference Guide*[CREATE DATABASE](../../ref_guide/sql_commands/CREATE_DATABASE.html), [dropdb](dropdb.html)
+[CREATE DATABASE](../../ref_guide/sql_commands/CREATE_DATABASE.html), [dropdb](dropdb.html)
 

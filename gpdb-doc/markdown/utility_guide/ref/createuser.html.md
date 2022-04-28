@@ -146,5 +146,5 @@ In the above example, the new password is not actually echoed when typed, but we
 
 ## <a id="section7"></a>See Also 
 
-`CREATE ROLE` in the *Greenplum Database Reference Guide*[CREATE ROLE](../../ref_guide/sql_commands/CREATE_ROLE.html), [dropuser](dropuser.html)
+[CREATE ROLE](../../ref_guide/sql_commands/CREATE_ROLE.html), [dropuser](dropuser.html)
 

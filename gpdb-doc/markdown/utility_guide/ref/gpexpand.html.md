@@ -167,5 +167,5 @@ $ gpexpand -d 60:00:00
 
 ## <a id="section7"></a>See Also 
 
-[gpssh-exkeys](gpssh-exkeys.html), [Expanding a Greenplum System](../../admin_guide/expand/expand-main.html) in the *Greenplum Database Administrator Guide*
+[gpssh-exkeys](gpssh-exkeys.html), [Expanding a Greenplum System](../../admin_guide/expand/expand-main.html)
 
