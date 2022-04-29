@@ -544,7 +544,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         <p>Your designated <varname>delimiter_character</varname> is <codeph>|</codeph> (pipe
           character), and your designated <varname>escape</varname> character is <codeph>*</codeph>
           (asterisk). The formatted row in your data file would look like this:</p>
-        <codeblock>percentage sign = % | vertical bar = <b>*|</b> | backslash = \</codeblock>
+        <codeblock>percentage sign = % | vertical bar = *| | backslash = \</codeblock>
         <p>Notice how the pipe character that is part of the data has been escaped using the
           asterisk character (*). Also notice that we do not need to escape the backslash since we
           are using an alternative escape character.</p>

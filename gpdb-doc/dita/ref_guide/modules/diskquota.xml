@@ -93,7 +93,7 @@ $ gpstop -ar</codeblock></li>
           used.</p>The <codeph>diskquota.show_fast_schema_quota_view</codeph> view lists active
         quotas for schemas in the current database. The <codeph>nspsize_in_bytes</codeph> column
         contains the calculated size for all tables that belong to the schema.
-          <codeblock>=# <b>SELECT * FROM diskquota.show_fast_schema_quota_view;</b>
+          <codeblock>=# SELECT * FROM diskquota.show_fast_schema_quota_view;
  schema_name | schema_oid | quota_in_mb | nspsize_in_bytes
 -------------+------------+-------------+------------------
  acct        |      16561 |      256000 |           131072
@@ -104,7 +104,7 @@ $ gpstop -ar</codeblock></li>
             <codeph>diskquota.show_fast_role_quota_view</codeph> view lists the active quotas for
           roles in the current database. The <codeph>rolsize_in_bytes</codeph> column contains the
           calculated size for all tables that are owned by the
-        role.</p><codeblock>=# <b>SELECT * FROM diskquota.show_fast_role_quota_view;</b>
+        role.</p><codeblock>=# SELECT * FROM diskquota.show_fast_role_quota_view;
  role_name | role_oid | quota_in_mb | rolsize_in_bytes
 -----------+----------+-------------+------------------
  mdach     |    16558 |         500 |           131072
@@ -185,54 +185,54 @@ $ gpstop -ar</codeblock></section>
         as data is added to the schema.</p>
       <ol id="ol_rfb_gb1_b3b">
         <li>Create a database named <codeph>test</codeph> and log in to
-          it.<codeblock>$ <b>createdb test</b>
-$ <b>psql -d test</b></codeblock></li>
+          it.<codeblock>$ createdb test
+$ psql -d test</codeblock></li>
         <li>Create the diskquota extension in the
-          database.<codeblock>=# <b>CREATE EXTENSION diskquota;</b>
+          database.<codeblock>=# CREATE EXTENSION diskquota;
 CREATE EXTENSION</codeblock></li>
         <li> Create the <codeph>s1</codeph>
-          schema.<codeblock>=# <b>CREATE SCHEMA s1;</b>
+          schema.<codeblock>=# CREATE SCHEMA s1;
 CREATE SCHEMA</codeblock></li>
         <li>Set a 1MB disk quota for the <codeph>s1</codeph>
-          schema.<codeblock>=# <b>SELECT diskquota.set_schema_quota('s1', '1MB');</b>
+          schema.<codeblock>=# SELECT diskquota.set_schema_quota('s1', '1MB');
  set_schema_quota
 ------------------
 
 (1 row)</codeblock></li>
         <li>The following commands create a table in the <codeph>s1</codeph> schema and insert a
           small amount of data into it. The schema has no data yet, so it is not on the denylist.
-          <codeblock>=# <b>SET search_path TO s1;
+          <codeblock>=# SET search_path TO s1;
 SET
-</b>=# <b>CREATE TABLE a(i int);</b>
+</b>=# CREATE TABLE a(i int);
 CREATE TABLE
-=# <b>INSERT INTO a SELECT generate_series(1,100);</b>
+=# INSERT INTO a SELECT generate_series(1,100);
 INSERT 0 100
 </codeblock></li>
         <li>This command inserts a large amount of data, enough to exceed the 1MB quota that was set
           for the schema. Before the <codeph>INSERT</codeph> command, the <codeph>s1</codeph> schema
           is still not on the denylist, so this command should be allowed to run, even though it
           will exceed the limit set for the
-          schema.<codeblock>=# <b>INSERT INTO a SELECT generate_series(1,10000000);</b>
+          schema.<codeblock>=# INSERT INTO a SELECT generate_series(1,10000000);
 INSERT 0 10000000
 </codeblock></li>
         <li>This command attempts to insert a small amount of data. Because the previous command
           exceeded the schema's disk quota limit, the schema should be denylisted and any data
           loading command should be cancelled.
-          <codeblock>=# <b>INSERT INTO a SELECT generate_series(1,100);</b>
+          <codeblock>=# INSERT INTO a SELECT generate_series(1,100);
 ERROR:  schema's disk space quota exceeded with name:s1
 </codeblock></li>
         <li>This command removes the quota from the <codeph>s1</codeph> schema by setting it to
             <codeph>-1</codeph> and again inserts a small amount of data. A 5-second sleep before
           the <codeph>INSERT</codeph> command ensures that the <codeph>diskquota</codeph> table size
           data is updated before the command is
-          run.<codeblock>=# <b>SELECT diskquota.set_schema_quota('s1', '-1');</b>
+          run.<codeblock>=# SELECT diskquota.set_schema_quota('s1', '-1');
  set_schema_quota
 ------------------
 
 (1 row)
 # Wait for 5 seconds to ensure the denylist is updated
-#= <b>SELECT pg_sleep(5);</b>
-#= <b>INSERT INTO a SELECT generate_series(1,100);</b>
+#= SELECT pg_sleep(5);
+#= INSERT INTO a SELECT generate_series(1,100);
 INSERT 0 100
 </codeblock></li>
       </ol>

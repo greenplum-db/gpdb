@@ -26,7 +26,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
 [ DISTRIBUTED BY (&lt;column> [&lt;opclass>], [ ... ] ) 
        | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
 
-{ <b>--partitioned table using SUBPARTITION TEMPLATE</b>
+{ --partitioned table using SUBPARTITION TEMPLATE
 [ PARTITION BY &lt;partition_type> (&lt;column>) 
   {  [ SUBPARTITION BY &lt;partition_type> (&lt;column1>) 
        SUBPARTITION TEMPLATE ( &lt;template_spec> ) ]
@@ -36,8 +36,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
   ( &lt;partition_spec> ) ]
 } |
 
-{ <b>-- partitioned table without SUBPARTITION TEMPLATE
-</b>[ PARTITION BY &lt;partition_type> (&lt;column>)
+{ -- partitioned table without SUBPARTITION TEMPLATE
+[ PARTITION BY &lt;partition_type> (&lt;column>)
    [ SUBPARTITION BY &lt;partition_type> (&lt;column1>) ]
       [ SUBPARTITION BY &lt;partition_type> (&lt;column2>) ]
          [...]
