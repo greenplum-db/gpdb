@@ -423,7 +423,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         client encoding, even if the data does not pass through the client but is read from or
         written to a file directly by the server.</p>
       <p>When copying XML data from a file in text mode, the server configuration parameter
-            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
+            <xref href="../config_params/guc-list.xml#xmloption">xmloption</xref>
         affects the validation of the XML data that is copied. If the value is
           <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
         If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
@@ -759,9 +759,7 @@ COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] 
     <section id="section13">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>
-        </codeph>
       </p>
     </section>
   </body>

@@ -39,11 +39,11 @@ SQL allows only <codeph>WORK</codeph>, not <codeph>TRANSACTION</codeph>,
 as a noise word after <codeph>ROLLBACK</codeph>. Also, SQL has an optional
 clause <codeph>AND [NO] CHAIN</codeph> which is not currently supported
 by Greenplum Database. Otherwise, this command conforms to the SQL standard.
-</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+</p></section><section id="section8"><title>See Also</title><p><xref href="BEGIN.xml#topic1" type="topic" format="dita"/>, <xref
                                                 href="COMMIT.xml#topic1" type="topic" format="dita"
-                                        /></codeph>, <codeph><xref href="./SAVEPOINT.xml#topic1"
-                                                type="topic" format="dita"/></codeph>, <codeph><xref
+                                        />, <xref href="./SAVEPOINT.xml#topic1"
+                                                type="topic" format="dita"/>, <xref
                                                 href="RELEASE_SAVEPOINT.xml#topic1" type="topic"
-                                                format="dita"/></codeph>, <codeph><xref
+                                                format="dita"/>, <xref
                                                 href="ROLLBACK.xml#topic1" type="topic"
-                                                format="dita"/></codeph></p></section></body></topic>
+                                                format="dita"/></p></section></body></topic>

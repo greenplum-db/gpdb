@@ -81,16 +81,16 @@ RESET ALL</codeblock></section>
           <pd><codeph>CALLED ON NULL INPUT</codeph> changes the function so that it will be invoked
             when some or all of its arguments are null. <codeph>RETURNS NULL ON NULL INPUT</codeph>
             or <codeph>STRICT</codeph> changes the function so that it is not invoked if any of its
-            arguments are null; instead, a null result is assumed automatically. See <codeph><xref
-                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> for more
+            arguments are null; instead, a null result is assumed automatically. See <xref
+                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref> for more
             information.</pd>
         </plentry>
         <plentry>
           <pt>IMMUTABLE</pt>
           <pt>STABLE</pt>
           <pt>VOLATILE</pt>
-          <pd>Change the volatility of the function to the specified setting. See <codeph><xref
-                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> for details. </pd>
+          <pd>Change the volatility of the function to the specified setting. See <xref
+                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref> for details. </pd>
         </plentry>
         <plentry>
           <pt>[ EXTERNAL ] SECURITY INVOKER</pt>
@@ -125,13 +125,13 @@ RESET ALL</codeblock></section>
             command that dispatches queries to the segment instances and requires special processing
             on the master instance by Greenplum Database when possible. </pd>
           <pd>For more information about the <codeph>EXECUTE ON</codeph> attributes, see
-                <codeph><xref href="CREATE_FUNCTION.xml#topic1">CREATE
-            FUNCTION</xref></codeph>.</pd>
+                <xref href="CREATE_FUNCTION.xml#topic1">CREATE
+            FUNCTION</xref>.</pd>
         </plentry>
         <plentry>
           <pt>COST <varname>execution_cost</varname></pt>
-          <pd>Change the estimated execution cost of the function. See <codeph><xref
-                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> for more
+          <pd>Change the estimated execution cost of the function. See <xref
+                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref> for more
             information.</pd>
         </plentry>
         <plentry>
@@ -151,8 +151,8 @@ RESET ALL</codeblock></section>
         </plentry>
       </parml></section>
     <section id="section5"><title>Notes</title><p>Greenplum Database has limitations on the use of
-        functions defined as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph>. See <codeph><xref
-            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph> for more
+        functions defined as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph>. See <xref
+            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/> for more
         information.</p></section>
     <section id="section6"><title>Examples</title><p>To rename the function <codeph>sqrt</codeph>
         for type <codeph>integer</codeph> to
@@ -169,8 +169,8 @@ RESET ALL</codeblock></section>
         function, make a function a security definer, or change the owner, schema, or volatility of
         a function. The standard also requires the <codeph>RESTRICT</codeph> key word, which is
         optional in Greenplum Database. </p></section>
-    <section id="section8"><title>See Also</title><p><codeph><xref
-            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph></p></section>
+    <section id="section8"><title>See Also</title><p><xref
+            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"/></p></section>
   </body>
 </topic>

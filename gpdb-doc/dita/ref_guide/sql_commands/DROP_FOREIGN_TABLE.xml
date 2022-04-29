@@ -53,9 +53,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_FOREIGN_TABLE.xml#topic1">ALTER FOREIGN TABLE</xref></codeph>,
-                        <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE
-                    FOREIGN TABLE</xref></codeph></p>
+            <p><xref href="ALTER_FOREIGN_TABLE.xml#topic1">ALTER FOREIGN TABLE</xref>,
+                        <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE
+                    FOREIGN TABLE</xref></p>
         </section>
     </body>
 </topic>

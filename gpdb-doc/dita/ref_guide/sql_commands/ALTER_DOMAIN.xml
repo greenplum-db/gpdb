@@ -83,5 +83,5 @@ This is the default behavior. </pd></plentry>
           <codeph>OWNER</codeph>, <codeph>RENAME</codeph>, <codeph>SET SCHEMA</codeph>, and
           <codeph>VALIDATE CONSTRAINT</codeph> variants, which are Greenplum Database extensions.
         The <codeph>NOT VALID</codeph> clause of the <codeph>ADD CONSTRAINT</codeph> variant is also
-        a Greenplum Database extension. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        a Greenplum Database extension. </p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_DOMAIN.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

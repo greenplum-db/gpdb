@@ -18,6 +18,6 @@ class anyway.) </p></section><section id="section4"><title>Parameters</title><pa
   <pt><varname>new_schema</varname></pt>
   <pd>The new schema for the operator class.</pd>
 </plentry></parml></section><section id="section5"><title>Compatibility</title><p>There is no <codeph>ALTER OPERATOR CLASS</codeph> statement in the SQL
-standard. </p></section><section id="section6"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
-          /></codeph></p></section></body></topic>
+standard. </p></section><section id="section6"><title>See Also</title><p><xref href="./CREATE_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
+          /></p></section></body></topic>

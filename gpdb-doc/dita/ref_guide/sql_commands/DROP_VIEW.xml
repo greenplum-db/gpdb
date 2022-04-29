@@ -7,5 +7,5 @@ in this case.</pd></plentry><plentry><pt><varname>name</varname></pt><pd>The nam
 views).</pd></plentry><plentry><pt>RESTRICT</pt><pd>Refuse to drop the view if any objects depend on it. This is the
 default.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Remove the view <codeph>topten</codeph>;</p><codeblock>DROP VIEW topten;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>DROP VIEW</codeph> is fully conforming with the SQL standard,
 except that the standard only allows one view to be dropped per command.
-Also, the <codeph>IF EXISTS</codeph> option is a Greenplum Database extension.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_VIEW.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="ALTER_VIEW.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+Also, the <codeph>IF EXISTS</codeph> option is a Greenplum Database extension.</p></section><section id="section7"><title>See Also</title><p><xref href="CREATE_VIEW.xml#topic1" type="topic" format="dita"/>, <xref
+            href="ALTER_VIEW.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

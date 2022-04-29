@@ -40,6 +40,6 @@
     <title>Notes</title>
     <p>The <codeph>PARSER</codeph> and <codeph>COPY</codeph> options are mutually exclusive, because when an existing configuration is copied, its parser selection is copied too.</p> 
   </section>
-  <section id="section6"><title>Compatibility</title><p>There is no <codeph>CREATE TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph id="codeph_qcn_twd_mfb"><xref href="ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1"
-          /></codeph>, <codeph id="codeph_e3b_xwd_mfb"><xref
-            href="DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1"/></codeph></p></section></body></topic>
+  <section id="section6"><title>Compatibility</title><p>There is no <codeph>CREATE TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1"
+          />, <xref
+            href="DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1"/></p></section></body></topic>

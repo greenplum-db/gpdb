@@ -314,7 +314,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
           <pd>When the <codeph>FORMAT</codeph> clause identfies delimited text (<codeph>TEXT</codeph>)
             or comma separated values (<codeph>CSV</codeph>) format, formatting options are similar
         to those available with the
-        PostgreSQL <codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>
+        PostgreSQL <xref href="COPY.xml#topic1" type="topic" format="dita"/>
         command. If the data in the file does not use the default column delimiter, escape
         character, null string and so on, you must specify the additional formatting options so that
         the data in the external file is read correctly by Greenplum Database. For information about
@@ -626,11 +626,11 @@ customer_id=123;</codeblock>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./SELECT_INTO.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./INSERT.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="COPY.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./SELECT_INTO.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./INSERT.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

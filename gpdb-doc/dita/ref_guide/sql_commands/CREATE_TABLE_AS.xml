@@ -28,7 +28,7 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>CREATE TABLE AS</codeph> creates a table and fills it with data computed by a
-            <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> command.
+            <xref href="./SELECT.xml#topic1" type="topic" format="dita"/> command.
         The table columns have the names and data types associated with the output columns of the
           <codeph>SELECT</codeph>, however you can override the column names by giving an explicit
         list of new column names. </p>
@@ -122,8 +122,8 @@
             zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only
             be set to 1. If not declared, the default is 1. The <codeph>compresslevel</codeph>
             option is valid only if <codeph>appendoptimized=TRUE</codeph>.</pd>
-          <pd><b>fillfactor</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
-                format="dita"/></codeph> for more information about this index storage parameter. </pd>
+          <pd><b>fillfactor</b> — See <xref href="CREATE_INDEX.xml#topic1" type="topic"
+                format="dita"/> for more information about this index storage parameter. </pd>
           <pd><b>oids=FALSE</b> — This setting is the default, and it ensures that rows do not have
             object identifiers assigned to them. <ph otherprops="pivotal">VMware does not support
               using <codeph>WITH OIDS</codeph> or <codeph>oids=TRUE</codeph> to assign an OID system
@@ -158,11 +158,11 @@
         </plentry>
         <plentry>
           <pt>AS <varname>query</varname></pt>
-          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
-                <codeph><xref href="SELECT.xml#topic1/table-command">TABLE</xref></codeph>, or
-                <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
-            command, or an <codeph><xref href="./EXECUTE.xml#topic1" type="topic" format="dita"
-              /></codeph> command that runs a prepared <codeph>SELECT</codeph> or
+          <pd>A <xref href="./SELECT.xml#topic1" type="topic" format="dita"/>,
+                <xref href="SELECT.xml#topic1/table-command">TABLE</xref>, or
+                <xref href="./VALUES.xml#topic1" type="topic" format="dita"/>
+            command, or an <xref href="./EXECUTE.xml#topic1" type="topic" format="dita"
+              /> command that runs a prepared <codeph>SELECT</codeph> or
               <codeph>VALUES</codeph> query.</pd>
         </plentry>
         <plentry>
@@ -203,14 +203,14 @@
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>This command is functionally similar to <codeph><xref href="./SELECT_INTO.xml#topic1"
-            type="topic" format="dita"/></codeph>, but it is preferred since it is less likely to be
+      <p>This command is functionally similar to <xref href="./SELECT_INTO.xml#topic1"
+            type="topic" format="dita"/>, but it is preferred since it is less likely to be
         confused with other uses of the <codeph>SELECT INTO</codeph> syntax. Furthermore,
           <codeph>CREATE TABLE AS</codeph> offers a superset of the functionality offered by
           <codeph>SELECT INTO</codeph>. </p>
       <p><codeph>CREATE TABLE AS</codeph> can be used for fast data loading from external table data
-        sources. See <codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
-            format="dita"/></codeph>.</p>
+        sources. See <xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
+            format="dita"/>.</p>
     </section>
     <section id="section6">
       <title>Examples</title>
@@ -249,13 +249,13 @@ EXECUTE recentfilms('2007-01-01');</codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
-        /></codeph>, <codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./EXECUTE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./SELECT.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./SELECT_INTO.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./VALUES.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
+        />, <xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./EXECUTE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./SELECT.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./SELECT_INTO.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./VALUES.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

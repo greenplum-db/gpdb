@@ -71,6 +71,6 @@ of -1 means there is no limitation.</pd></plentry></parml></section><section id=
           <codeph>template1</codeph>'s encoding is not ISO-8859-1. Note that changing encoding might
         require selecting new <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> settings as
         well.</p></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CREATE DATABASE</codeph> statement in the SQL standard.
-Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

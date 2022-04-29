@@ -87,9 +87,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_PROTOCOL.xml#topic1"/></codeph>, <codeph><xref
-                        href="CREATE_EXTERNAL_TABLE.xml#topic1"/></codeph>, <codeph><xref
-                        href="DROP_PROTOCOL.xml#topic1"/></codeph>, <xref href="GRANT.xml#topic1"
+            <p><xref href="ALTER_PROTOCOL.xml#topic1"/>, <xref
+                        href="CREATE_EXTERNAL_TABLE.xml#topic1"/>, <xref
+                        href="DROP_PROTOCOL.xml#topic1"/>, <xref href="GRANT.xml#topic1"
                 /></p>
         </section>
     </body>

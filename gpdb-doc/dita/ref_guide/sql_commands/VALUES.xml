@@ -25,10 +25,10 @@ column's default value should be inserted. <codeph>DEFAULT</codeph>
 cannot be used when <codeph>VALUES</codeph> appears in other contexts.</pd></plentry><plentry><pt><varname>sort_expression</varname></pt><pd>An expression or integer constant indicating how to sort the result rows. This expression may
                         refer to the columns of the <codeph>VALUES</codeph> result as
                             <codeph>column1</codeph>, <codeph>column2</codeph>, etc. For more
-                        details, see "The ORDER BY Clause" in the parameters for <codeph><xref
-                                href="SELECT.xml#topic1"/></codeph>.</pd></plentry><plentry><pt><varname>operator</varname></pt><pd>A sorting operator. For more details, see "The ORDER BY Clause" in the parameters for
-                                <codeph><xref href="SELECT.xml#topic1"/></codeph>. </pd></plentry><plentry><pt>LIMIT count</pt><pt>OFFSET start</pt><pd>The maximum number of rows to return. For more details, see "The LIMIT Clause" in the parameters
-                        for <codeph><xref href="SELECT.xml#topic1"/></codeph>.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>VALUES</codeph> lists with very large numbers of rows should
+                        details, see "The ORDER BY Clause" in the parameters for <xref
+                                href="SELECT.xml#topic1"/>.</pd></plentry><plentry><pt><varname>operator</varname></pt><pd>A sorting operator. For more details, see "The ORDER BY Clause" in the parameters for
+                                <xref href="SELECT.xml#topic1"/>. </pd></plentry><plentry><pt>LIMIT count</pt><pt>OFFSET start</pt><pd>The maximum number of rows to return. For more details, see "The LIMIT Clause" in the parameters
+                        for <xref href="SELECT.xml#topic1"/>.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>VALUES</codeph> lists with very large numbers of rows should
 be avoided, as you may encounter out-of-memory failures or poor performance.
 <codeph>VALUES</codeph> appearing within <codeph>INSERT</codeph> is a
 special case (because the desired column types are known from the <codeph>INSERT</codeph>'s
@@ -71,5 +71,5 @@ type for all: </p><codeblock>SELECT * FROM machines WHERE ip_address IN
                 efficient.</note></section><section id="section7"><title>Compatibility</title><p><codeph>VALUES</codeph> conforms to the SQL standard. <codeph>LIMIT</codeph>
                 and <codeph>OFFSET</codeph> are Greenplum Database extensions;
                 see also under <xref href="SELECT.xml#topic1" type="topic"
-                    format="dita"/>.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="INSERT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-                        href="SELECT.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+                    format="dita"/>.</p></section><section id="section8"><title>See Also</title><p><xref href="INSERT.xml#topic1" type="topic" format="dita"/>, <xref
+                        href="SELECT.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

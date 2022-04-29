@@ -182,8 +182,8 @@ ALTER DEFAULT PRIVILEGES FOR ROLE admin REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
   <title>See Also</title>
 
   <p>
-   <codeph><xref href="GRANT.xml" format="dita"/></codeph>, 
-   <codeph><xref href="REVOKE.xml" format="dita"/></codeph>
+   <xref href="GRANT.xml" format="dita"/>, 
+   <xref href="REVOKE.xml" format="dita"/>
   </p>
  </section>
 </body>

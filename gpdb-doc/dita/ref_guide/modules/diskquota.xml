@@ -169,8 +169,8 @@ $ gpstop -ar</codeblock></section>
         background worker framework. The <codeph>diskquota</codeph> launcher process only runs on
         the active master node. The postmaster on the standby master does not start the
           <codeph>diskquota</codeph> launcher process when it is in standby mode. When the master is
-        down and the administrator runs the <codeph><xref
-            href="../../utility_guide/ref/gpactivatestandby.xml#topic1"/></codeph>
+        down and the administrator runs the <xref
+            href="../../utility_guide/ref/gpactivatestandby.xml#topic1"/>
         command, the standby master changes its role to master and the <codeph>diskquota</codeph>
         launcher process is forked automatically. Using the <codeph>diskquota</codeph>-enabled
         database list in the <codeph>diskquota</codeph> database, the <codeph>diskquota</codeph>

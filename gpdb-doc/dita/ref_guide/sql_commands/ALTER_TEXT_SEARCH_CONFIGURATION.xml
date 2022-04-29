@@ -78,6 +78,6 @@ ALTER TEXT SEARCH CONFIGURATION <varname>name</varname> SET SCHEMA <varname>new_
           <codeph>swedish</codeph> dictionary anywhere that <codeph>english</codeph> is used within
           <codeph>my_config</codeph>.</p>
       <codeblock>ALTER TEXT SEARCH CONFIGURATION my_config
-  ALTER MAPPING REPLACE english WITH swedish;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1" type="topic"
-            format="dita"/></codeph></p></section></body></topic>
+  ALTER MAPPING REPLACE english WITH swedish;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1" type="topic"
+            format="dita"/></p></section></body></topic>

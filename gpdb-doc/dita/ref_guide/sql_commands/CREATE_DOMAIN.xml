@@ -77,5 +77,5 @@ email column.</p>
         </plentry>
       </parml></section><section id="section5"><title>Examples</title><p>Create the <codeph>us_zip_code</codeph> data type. A regular expression test is used to verify
         that the value looks like a valid US zip code. </p><codeblock>CREATE DOMAIN us_zip_code AS TEXT CHECK 
-       ( VALUE ~ '^\d{5}$' OR VALUE ~ '^\d{5}-\d{4}$' );</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>CREATE DOMAIN</codeph> conforms to the SQL standard. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+       ( VALUE ~ '^\d{5}$' OR VALUE ~ '^\d{5}-\d{4}$' );</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>CREATE DOMAIN</codeph> conforms to the SQL standard. </p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_DOMAIN.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

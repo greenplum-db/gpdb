@@ -57,9 +57,9 @@
               queries, so using cost-based limits can lead to unexpected results.</p></note>
       <p>If a value is not defined for <codeph>ACTIVE_STATEMENTS</codeph> or
           <codeph>MAX_COST</codeph>, it is set to <codeph>-1</codeph> by default (meaning no limit).
-        After defining a resource queue, you must assign roles to the queue using the <codeph><xref
-            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
-            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> command.</p>
+        After defining a resource queue, you must assign roles to the queue using the <xref
+            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/> or <xref
+            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/> command.</p>
       <p>You can optionally assign a <codeph>PRIORITY</codeph> to a resource queue to control the
         relative share of available CPU resources used by queries associated with the queue in
         relation to other resource queues. If a value is not defined for <codeph>PRIORITY</codeph>,
@@ -195,11 +195,11 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

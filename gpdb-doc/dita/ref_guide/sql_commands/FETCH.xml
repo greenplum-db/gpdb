@@ -12,7 +12,7 @@
     FORWARD ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>FETCH</codeph> retrieves rows using a previously-created cursor.
 </p>
 <note>You cannot <codeph>FETCH</codeph> from a <codeph>PARALLEL RETRIEVE CURSOR</codeph>,
-  you must <codeph><xref href="RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>
+  you must <xref href="RETRIEVE.xml#topic1" type="topic" format="dita"/>
   the rows from it.</note>
 <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different. See <xref
@@ -68,6 +68,6 @@ in host variables. Other than this point, <codeph>FETCH</codeph> is fully
 upward-compatible with the SQL standard. </p><p>The <codeph>FETCH</codeph> forms involving <codeph>FORWARD</codeph>,
 as well as the forms <codeph>FETCH</codeph> count and <codeph>FETCH</codeph><codeph>ALL</codeph>, in which <codeph>FORWARD</codeph> is implicit,
 are Greenplum Database extensions. <codeph>BACKWARD</codeph> is not supported.</p><p>The SQL standard allows only <codeph>FROM</codeph> preceding the cursor name; the option to use
-          <codeph>IN</codeph>, or to leave them out altogether, is an extension.</p></section><section id="section9"><title>See Also</title><p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CLOSE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+          <codeph>IN</codeph>, or to leave them out altogether, is an extension.</p></section><section id="section9"><title>See Also</title><p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CLOSE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./MOVE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

@@ -107,7 +107,7 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_LANGUAGE.xml" format="dita"/></codeph></p>
+      <p><xref href="CREATE_LANGUAGE.xml" format="dita"/></p>
     </section>
   </body>
 </topic>

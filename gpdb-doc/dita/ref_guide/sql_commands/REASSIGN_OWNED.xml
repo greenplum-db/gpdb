@@ -58,9 +58,9 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="DROP_OWNED.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_DATABASE.xml#topic1">ALTER DATABASE</xref></codeph></p>
+      <p><xref href="DROP_OWNED.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_DATABASE.xml#topic1">ALTER DATABASE</xref></p>
     </section>
   </body>
 </topic>

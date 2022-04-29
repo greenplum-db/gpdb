@@ -51,6 +51,6 @@
     </section><section
           id="section6"><title>Compatibility</title><p>There is no <codeph>CREATE TEXT SEARCH
             DICTIONARY</codeph> statement in the SQL standard.</p></section><section
-              id="section7"><title>See Also</title><p><codeph><xref href="ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic"
-            format="dita"/></codeph></p></section></body></topic>
+              id="section7"><title>See Also</title><p><xref href="ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic"
+            format="dita"/></p></section></body></topic>

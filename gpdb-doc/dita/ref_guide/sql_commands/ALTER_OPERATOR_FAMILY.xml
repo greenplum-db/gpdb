@@ -146,9 +146,9 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
   OPERATOR 3 (int2, int4) ,
   OPERATOR 4 (int2, int4) ,
   OPERATOR 5 (int2, int4) ,
-  FUNCTION 1 (int2, int4) ;</codeblock></p><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="CREATE_OPERATOR_CLASS.xml#topic1"
-            type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+  FUNCTION 1 (int2, int4) ;</codeblock></p><section id="section8"><title>See Also</title><p><xref href="./CREATE_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"
+          />, <xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic"
+            format="dita"/>, <xref href="CREATE_OPERATOR_CLASS.xml#topic1"
+            type="topic" format="dita"/>, <xref
+            href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

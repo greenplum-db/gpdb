@@ -28,7 +28,7 @@
         <li id="ak137262"><b>OWNER</b> — Changes the owner of the external table to the specified
           user. </li>
       </ul>
-      <p>Use the <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph>
+      <p>Use the <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/>
         command to perform these actions on an external table.<ul id="ul_gtv_mcm_kbb">
           <li>Set (change) the table schema.</li>
           <li>Rename the table.</li>
@@ -89,9 +89,9 @@
     <section id="section6"><title>Compatibility</title><p><codeph>ALTER EXTERNAL TABLE</codeph> is a
         Greenplum Database extension. There is no <codeph>ALTER EXTERNAL TABLE</codeph> statement in
         the SQL standard or regular PostgreSQL. </p></section>
-    <section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph>,  <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph></p></section>
+    <section id="section7"><title>See Also</title><p><xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
+          />,  <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
+          /></p></section>
   </body>
 </topic>

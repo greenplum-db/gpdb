@@ -20,6 +20,6 @@ anyway.) </p></section><section id="section4"><title>Parameters</title><parml><p
           <codeph>latin1_to_unicode</codeph>:</p><codeblock>ALTER CONVERSION iso_8859_1_to_utf8 RENAME TO 
 latin1_to_unicode;</codeblock><p>To change the owner of the conversion <codeph>iso_8859_1_to_utf8</codeph> to
         <codeph>joe</codeph>:</p><codeblock>ALTER CONVERSION iso_8859_1_to_utf8 OWNER TO joe;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER CONVERSION</codeph> statement in the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_CONVERSION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_CONVERSION.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_CONVERSION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_CONVERSION.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

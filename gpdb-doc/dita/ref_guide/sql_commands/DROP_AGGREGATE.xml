@@ -47,6 +47,6 @@ This is the default. </pd></plentry></parml></section>
     arguments:</p>
   <codeblock>DROP AGGREGATE myrank(VARIADIC "any" ORDER BY VARIADIC "any");</codeblock>
 </section><section id="section6"><title>Compatibility</title><p>There is no <codeph>DROP AGGREGATE</codeph> statement in the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_AGGREGATE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_AGGREGATE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

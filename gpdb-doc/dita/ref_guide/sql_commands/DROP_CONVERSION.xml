@@ -9,6 +9,6 @@ conversions.</pd></plentry></parml></section><section id="section5"><title>Examp
           <codeph>CREATE TRANSLATION</codeph> and <codeph>DROP TRANSLATION</codeph> statements that
         are similar to the Greenplum Database <codeph>CREATE CONVERSION</codeph> and <codeph>DROP
           CONVERSION</codeph> statements.</p></section>
-  <section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_CONVERSION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_CONVERSION.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+  <section id="section7"><title>See Also</title><p><xref href="ALTER_CONVERSION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_CONVERSION.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

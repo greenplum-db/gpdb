@@ -86,6 +86,6 @@ ALTER VIEW a_view ALTER COLUMN ts SET DEFAULT now();
 INSERT INTO base_table(id) VALUES(1);  -- ts will receive a NULL
 INSERT INTO a_view(id) VALUES(2);  -- ts will receive the current time</codeblock>
     </section>
-  <section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref></codeph>, <codeph><xref
-            href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref></codeph> in the <i>Greenplum
+  <section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref>, <xref
+            href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref> in the <i>Greenplum
           Database Utility Guide</i></p></section></body></topic>

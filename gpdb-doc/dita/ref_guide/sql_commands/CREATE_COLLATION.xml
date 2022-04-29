@@ -95,8 +95,8 @@ CREATE COLLATION <varname>name</varname> FROM <varname>existing_collation</varna
     <section id="section8">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DROP_COLLATION.xml#topic1"/></codeph>
+        <xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DROP_COLLATION.xml#topic1"/>
       </p>
     </section>
   </body>

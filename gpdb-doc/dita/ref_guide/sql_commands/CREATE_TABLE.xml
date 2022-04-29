@@ -313,7 +313,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pd>In Greenplum Database, the <codeph>INHERITS</codeph> clause is not used when creating
             partitioned tables. Although the concept of inheritance is used in partition
             hierarchies, the inheritance structure of a partitioned table is created using the
-                <codeph><xref href="#topic1/part_by" format="dita">PARTITION BY</xref></codeph>
+                <xref href="#topic1/part_by" format="dita">PARTITION BY</xref>
             clause. </pd>
           <pd>If the same column name exists in more than one parent table, an error is reported
             unless the data types of the columns match in each of the parent tables. If there is no
@@ -801,9 +801,9 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
               <cmdname>orientation</cmdname>
             </li>
           </ul><p>The defaults can be set for the system, a database, or a user. For information
-            about setting storage options, see the server configuration parameter <codeph><xref
+            about setting storage options, see the server configuration parameter <xref
                 href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
-                >gp_default_storage_options</xref></codeph>.</p></li>
+                >gp_default_storage_options</xref>.</p></li>
       </ul>
       <note type="important">The current Postgres Planner allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
@@ -958,12 +958,12 @@ PARTITION BY RANGE (year)
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_TABLE.xml#topic1" type="topic" format="dita">ALTER
-          TABLE</xref></codeph>, <codeph><xref href="./DROP_TABLE.xml#topic1" type="topic"
-            format="dita">DROP TABLE</xref></codeph>, <codeph><xref
+      <p><xref href="ALTER_TABLE.xml#topic1" type="topic" format="dita">ALTER
+          TABLE</xref>, <xref href="./DROP_TABLE.xml#topic1" type="topic"
+            format="dita">DROP TABLE</xref>, <xref
             href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita">CREATE EXTERNAL
-            TABLE</xref></codeph>, <codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic"
-            format="dita">CREATE TABLE AS</xref></codeph></p>
+            TABLE</xref>, <xref href="./CREATE_TABLE_AS.xml#topic1" type="topic"
+            format="dita">CREATE TABLE AS</xref></p>
     </section>
   </body>
 </topic>

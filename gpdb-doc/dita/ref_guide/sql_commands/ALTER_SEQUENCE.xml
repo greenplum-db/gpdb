@@ -91,6 +91,6 @@ will be affected immediately.</p><p>For historical reasons, <codeph>ALTER TABLE<
         the forms shown above.</p></section><section id="section6"><title>Examples</title><p>Restart a sequence called <codeph>serial</codeph> at <codeph>105</codeph>:</p><codeblock>ALTER SEQUENCE serial RESTART WITH 105;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER SEQUENCE</codeph> conforms to the SQL standard, except for the <codeph>START
           WITH</codeph>, <codeph>OWNED BY</codeph>, <codeph>OWNER TO</codeph>, <codeph>RENAME
           TO</codeph>, and <codeph>SET SCHEMA</codeph> clauses, which are Greenplum Database
-        extensions.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        extensions.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

@@ -58,5 +58,5 @@ objects within it. Greenplum Database allows schemas to contain objects
 owned by users other than the schema owner. This can happen only if the
 schema owner grants the <codeph>CREATE</codeph> privilege on the schema
 to someone else, or a superuser chooses to create objects in it.</p>
-      <p>The <codeph>IF NOT EXISTS</codeph> option is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_SCHEMA.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_SCHEMA.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+      <p>The <codeph>IF NOT EXISTS</codeph> option is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_SCHEMA.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DROP_SCHEMA.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

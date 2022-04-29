@@ -43,8 +43,8 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pt>ADD COLUMN</pt>
                     <pd>
                         <p>This form adds a new column to the foreign table, using the same syntax
-                            as <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN
-                                    TABLE</xref></codeph>. Unlike the case when you add a column to
+                            as <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN
+                                    TABLE</xref>. Unlike the case when you add a column to
                             a regular table, nothing happens to the underlying storage: this action
                             simply declares that some new column is now accessible through the
                             foreign table.</p>
@@ -94,8 +94,8 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pd>
                         <p>This form sets the per-column statistics-gathering target for subsequent
                                 <codeph>ANALYZE</codeph> operations. See the similar form of
-                                    <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER
-                                TABLE</xref></codeph> for more details.</p>
+                                    <xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -104,8 +104,8 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pt>RESET ( <varname>attribute_option</varname> [, ... ] )</pt>
                     <pd>
                         <p>This form sets or resets per-attribute options. See the similar form of
-                                    <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER
-                                TABLE</xref></codeph> for more details.</p>
+                                    <xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -239,7 +239,7 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
             <title>Notes</title>
               <p>The key word <codeph>COLUMN</codeph> is noise and can be omitted.</p>
               <p>Consistency with the foreign server is not checked when a column is added or removed with <codeph>ADD COLUMN</codeph> or <codeph>DROP COLUMN</codeph>, a <codeph>NOT NULL</codeph> constraint is added, or a column type is changed with <codeph>SET DATA TYPE</codeph>. It is your responsibility to ensure that the table definition matches the remote side.</p>
-              <p>Refer to <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph> for a further description of valid parameters.</p>
+              <p>Refer to <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref> for a further description of valid parameters.</p>
         </section>
         <section id="section6">
             <title>Examples</title>
@@ -254,10 +254,10 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph>,
-                <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>,
-                        <codeph><xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
-                    FOREIGN TABLE</xref></codeph></p>
+            <p><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref>,
+                <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref>,
+                        <xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
+                    FOREIGN TABLE</xref></p>
         </section>
     </body>
 </topic>

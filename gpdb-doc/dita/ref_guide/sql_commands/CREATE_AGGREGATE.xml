@@ -77,8 +77,8 @@
         functions in the same schema can have the same name if they operate on different input
         types. The name and input data types of an aggregate function must also be distinct from the
         name and input data types of every ordinary function in the same schema. This behavior is
-        identical to overloading of ordinary function names. See <codeph><xref
-            href="CREATE_FUNCTION.xml#topic1"/></codeph>.</p>
+        identical to overloading of ordinary function names. See <xref
+            href="CREATE_FUNCTION.xml#topic1"/>.</p>
       <p>A simple aggregate function is made from one, two, or three ordinary functions (which must
         be <codeph>IMMUTABLE</codeph> functions): </p>
       <ul id="ul_d5c_5yl_dhb">
@@ -456,10 +456,10 @@ Aggregate (cost=1.10..1.11 rows=1 width=32)  
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
-        /></codeph></p>
+      <p><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
+        /></p>
     </section>
   </body>
 </topic>

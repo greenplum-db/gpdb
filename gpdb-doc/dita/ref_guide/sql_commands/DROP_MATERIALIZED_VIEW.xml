@@ -50,9 +50,9 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-            href="CREATE_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-            href="REFRESH_MATERIALIZED_VIEW.xml"/></codeph></p>
+      <p><xref href="ALTER_MATERIALIZED_VIEW.xml"/>, <xref
+            href="CREATE_MATERIALIZED_VIEW.xml"/>, <xref
+            href="REFRESH_MATERIALIZED_VIEW.xml"/></p>
     </section>
   </body>
 </topic>

@@ -49,9 +49,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_USER_MAPPING.xml#topic1">CREATE USER MAPPING</xref></codeph>,
-                        <codeph><xref href="DROP_USER_MAPPING.xml#topic1">DROP
-                    USER MAPPING</xref></codeph></p>
+            <p><xref href="CREATE_USER_MAPPING.xml#topic1">CREATE USER MAPPING</xref>,
+                        <xref href="DROP_USER_MAPPING.xml#topic1">DROP
+                    USER MAPPING</xref></p>
         </section>
     </body>
 </topic>

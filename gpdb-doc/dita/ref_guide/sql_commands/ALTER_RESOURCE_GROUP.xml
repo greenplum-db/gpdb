@@ -100,8 +100,8 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>Use <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or
-            <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> to
+      <p>Use <xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/> or
+            <xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/> to
         assign a specific resource group to a role (user).</p>
       <p>You cannot submit an <codeph>ALTER RESOURCE GROUP</codeph> command in an explicit transaction or sub-transaction.</p>
     </section>
@@ -125,11 +125,11 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./ALTER_ROLE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

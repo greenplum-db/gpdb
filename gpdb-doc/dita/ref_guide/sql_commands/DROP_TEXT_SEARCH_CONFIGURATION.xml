@@ -33,6 +33,6 @@
       <codeblock>DROP TEXT SEARCH CONFIGURATION my_english;</codeblock>
       <p>This command will not succeed if there are any existing indexes that reference the
         configuration in <codeph>to_tsvector</codeph> calls. Add <codeph>CASCADE</codeph> to drop
-        such indexes along with the text search configuration.</p></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>DROP TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./ALTER_TEXT_SEARCH_CONFIGURATION.xml" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_TEXT_SEARCH_CONFIGURATION.xml" type="topic" format="dita"
-          /></codeph></p></section></body></topic>
+        such indexes along with the text search configuration.</p></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>DROP TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="./ALTER_TEXT_SEARCH_CONFIGURATION.xml" type="topic" format="dita"/>,
+            <xref href="./CREATE_TEXT_SEARCH_CONFIGURATION.xml" type="topic" format="dita"
+          /></p></section></body></topic>

@@ -520,8 +520,8 @@ CREATE TABLE big_objs (
                     <codeph>CREATE TABLE</codeph>). </p>
     </section><section id="section11"><title>See Also</title>
             <p>
-                <codeph><xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_DOMAIN.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./DROP_TYPE.xml#topic1"
-                        type="topic" format="dita"/></codeph></p></section></body></topic>
+                <xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="CREATE_DOMAIN.xml#topic1" type="topic" format="dita"
+                    />, <xref href="CREATE_FUNCTION.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="./DROP_TYPE.xml#topic1"
+                        type="topic" format="dita"/></p></section></body></topic>

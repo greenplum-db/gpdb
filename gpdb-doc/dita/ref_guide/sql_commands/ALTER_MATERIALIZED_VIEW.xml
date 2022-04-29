@@ -42,8 +42,8 @@ where <varname>action</varname> is one of:
         ownership of any view anyway.)</p>
       <p>The statement subforms and actions available for <codeph>ALTER MATERIALIZED VIEW</codeph>
         are a subset of those available for <codeph>ALTER TABLE</codeph>, and have the same meaning
-        when used for materialized views. See the descriptions for <codeph><xref
-            href="ALTER_TABLE.xml"/></codeph> for details.</p>
+        when used for materialized views. See the descriptions for <xref
+            href="ALTER_TABLE.xml"/> for details.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -86,9 +86,9 @@ where <varname>action</varname> is one of:
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-            href="DROP_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-            href="REFRESH_MATERIALIZED_VIEW.xml"/></codeph></p>
+      <p><xref href="CREATE_MATERIALIZED_VIEW.xml"/>, <xref
+            href="DROP_MATERIALIZED_VIEW.xml"/>, <xref
+            href="REFRESH_MATERIALIZED_VIEW.xml"/></p>
     </section>
   </body>
 </topic>

@@ -33,8 +33,8 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
         <section id="section4">
             <title>Parameters</title>
             <p>The majority of parameters for <codeph>SELECT INTO</codeph> are the same as
-                        <codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"
-                /></codeph>. </p>
+                        <xref href="SELECT.xml#topic1" type="topic" format="dita"
+                />. </p>
             <parml>
                 <plentry>
                     <pt>TEMPORARY</pt>
@@ -70,15 +70,15 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
             <p>The SQL standard uses <codeph>SELECT INTO</codeph> to represent selecting values into
                 scalar variables of a host program, rather than creating a new table. The Greenplum
                 Database usage of <codeph>SELECT INTO</codeph> to represent table creation is
-                historical. It is best to use <codeph><xref href="CREATE_TABLE_AS.xml#topic1"
-                        type="topic" format="dita"/></codeph> for this purpose in new
+                historical. It is best to use <xref href="CREATE_TABLE_AS.xml#topic1"
+                        type="topic" format="dita"/> for this purpose in new
                 applications.</p>
         </section>
         <section id="section7">
             <title>See Also</title>
-            <p><codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="SELECT.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>

@@ -53,7 +53,7 @@ for a specific role (user) rather than to a database. Role-specific settings
 override database-specific ones if there is a conflict. See <codeph>ALTER
 ROLE</codeph>.</p></section><section id="section6"><title>Examples</title><p>To set the default schema search path for the <codeph>mydatabase</codeph> database:</p><codeblock>ALTER DATABASE mydatabase SET search_path TO myschema, 
 public, pg_catalog;</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>ALTER DATABASE</codeph> statement is a Greenplum Database
-extension. </p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_TABLESPACE.xml#topic1"/></codeph></p></section></body></topic>
+extension. </p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./SET.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_TABLESPACE.xml#topic1"/></p></section></body></topic>

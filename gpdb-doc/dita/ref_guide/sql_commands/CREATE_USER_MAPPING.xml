@@ -52,13 +52,13 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_USER_MAPPING.xml#topic1">ALTER USER MAPPING</xref></codeph>,
-                        <codeph><xref href="DROP_USER_MAPPING.xml#topic1">DROP
-                    USER MAPPING</xref></codeph>,
-                        <codeph><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE
-                    FOREIGN DATA WRAPPER</xref></codeph>,
-                        <codeph><xref href="CREATE_SERVER.xml#topic1">CREATE
-                    SERVER</xref></codeph></p>
+            <p><xref href="ALTER_USER_MAPPING.xml#topic1">ALTER USER MAPPING</xref>,
+                        <xref href="DROP_USER_MAPPING.xml#topic1">DROP
+                    USER MAPPING</xref>,
+                        <xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE
+                    FOREIGN DATA WRAPPER</xref>,
+                        <xref href="CREATE_SERVER.xml#topic1">CREATE
+                    SERVER</xref></p>
         </section>
     </body>
 </topic>

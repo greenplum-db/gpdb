@@ -132,5 +132,5 @@ where <varname>action</varname> is one of:
       <codeblock>ALTER TYPE compfoo ADD ATTRIBUTE f3 int;</codeblock>
       <p> To add a new value to an enum type in a particular sort position:</p>
       <codeblock>ALTER TYPE colors ADD VALUE 'orange' AFTER 'red';</codeblock>
-    </section><section id="section6"><title>Compatibility</title><p>The variants to add and drop attributes are part of the SQL standard; the other variants are Greenplum Database extensions.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+    </section><section id="section6"><title>Compatibility</title><p>The variants to add and drop attributes are part of the SQL standard; the other variants are Greenplum Database extensions.</p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

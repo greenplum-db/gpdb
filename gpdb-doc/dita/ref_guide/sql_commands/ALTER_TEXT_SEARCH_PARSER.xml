@@ -41,9 +41,9 @@ ALTER TEXT SEARCH PARSER <varname>name</varname> SET SCHEMA <varname>new_schema<
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_TEXT_SEARCH_PARSER.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="DROP_TEXT_SEARCH_PARSER.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="CREATE_TEXT_SEARCH_PARSER.xml#topic1" type="topic" format="dita"
+          />, <xref href="DROP_TEXT_SEARCH_PARSER.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

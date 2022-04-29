@@ -135,9 +135,9 @@ where <varname>action</varname> is one of:
                                 There are several subforms: </p>
                         <ul>
                                 <li id="ay136723"><b>ADD COLUMN</b> — Adds a new column to the
-                                        table, using the same syntax as <codeph><xref
+                                        table, using the same syntax as <xref
                                                   href="CREATE_TABLE.xml">CREATE
-                                                TABLE</xref></codeph>. The <codeph>ENCODING</codeph>
+                                                TABLE</xref>. The <codeph>ENCODING</codeph>
                                         clause is valid only for append-optimized, column-oriented
                                                 tables.<p>When you add a column to an
                                                 append-optimized, column-oriented table, Greenplum
@@ -154,9 +154,9 @@ where <varname>action</varname> is one of:
                                                   in the <codeph>WITH</codeph> clause when the table
                                                   was created.</li>
                                                   <li>The compression parameter setting specified in
-                                                  the server configuration parameter <codeph><xref
+                                                  the server configuration parameter <xref
                                                   href="../config_params/guc-list.xml#gp_default_storage_options"
-                                                  >gp_default_storage_option</xref></codeph>.</li>
+                                                  >gp_default_storage_option</xref>.</li>
                                                   <li>The default compression parameter value.</li>
                                                 </ol></p><p>For append-optimized and hash tables,
                                                   <codeph>ADD COLUMN</codeph> requires a table
@@ -224,8 +224,8 @@ where <varname>action</varname> is one of:
                                                 options are <codeph>n_distinct</codeph> and
                                                   <codeph>n_distinct_inherited</codeph>, which
                                                 override the number-of-distinct-values estimates
-                                                made by subsequent <codeph><xref
-                                                  href="ANALYZE.xml#topic1">ANALYZE</xref></codeph>
+                                                made by subsequent <xref
+                                                  href="ANALYZE.xml#topic1">ANALYZE</xref>
                                                 operations. <codeph>n_distinct</codeph> affects the
                                                 statistics for the table itself, while
                                                   <codeph>n_distinct_inherited</codeph> affects the
@@ -267,8 +267,8 @@ where <varname>action</varname> is one of:
                                         assume that the constraint holds for all rows in the table,
                                         until it is validated by using the <codeph>VALIDATE
                                                 CONSTRAINT</codeph> option. Constraint checks are
-                                        skipped at create table time, so the <codeph><xref
-                                                href="CREATE_TABLE.xml#topic1"/></codeph> syntax
+                                        skipped at create table time, so the <xref
+                                                href="CREATE_TABLE.xml#topic1"/> syntax
                                         does not include this option. </li>
                                 <li><b>VALIDATE CONSTRAINT</b> — This form validates a foreign key
                                         constraint that was previously created as <codeph>NOT
@@ -333,8 +333,8 @@ where <varname>action</varname> is one of:
                                                 <codeph>CLUSTER</codeph> is not the recommended way
                                         to physically reorder a table in Greenplum Database because
                                         it takes so long. It is better to recreate the table with
-                                                  <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> and order it
+                                                  <xref href="./CREATE_TABLE_AS.xml#topic1"
+                                                  type="topic" format="dita"/> and order it
                                         by the index column(s). <note><codeph>CLUSTER ON</codeph> is
                                                 not supported on append-optimized
                                         tables.</note></li>
@@ -373,8 +373,8 @@ where <varname>action</varname> is one of:
                                         fillfactors are appropriate. Note that the table contents
                                         will not be modified immediately by this command. You will
                                         need to rewrite the table to get the desired effects. That
-                                        can be done with <codeph><xref href="VACUUM.xml#topic1"
-                                                /></codeph> or one of the forms of <codeph>ALTER
+                                        can be done with <xref href="VACUUM.xml#topic1"
+                                                /> or one of the forms of <codeph>ALTER
                                                 TABLE</codeph> that forces a table rewrite. For
                                         information about the forms of <codeph>ALTER TABLE</codeph>
                                         that perform a table rewrite, see <xref
@@ -619,8 +619,8 @@ where <varname>action</varname> is one of:
                                                 not the recommended way to physically reorder a
                                                 table in Greenplum Database because it takes so
                                                 long. It is better to recreate the table with
-                                                  <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> and order it
+                                                  <xref href="./CREATE_TABLE_AS.xml#topic1"
+                                                  type="topic" format="dita"/> and order it
                                                 by the index column(s).</pd>
                                 </plentry>
                                 <plentry>
@@ -766,8 +766,8 @@ where <varname>action</varname> is one of:
                                                 partition. For example, you may want older
                                                 partitions to be append-optimized tables and newer
                                                 partitions to be regular heap tables. See
-                                                  <codeph><xref href="./CREATE_TABLE.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> for a
+                                                  <xref href="./CREATE_TABLE.xml#topic1"
+                                                  type="topic" format="dita"/> for a
                                                 description of the storage options.</pd>
                                         <pd><b>TABLESPACE</b> - The name of the tablespace in which
                                                 the partition is to be created.</pd>
@@ -1041,9 +1041,9 @@ where <varname>action</varname> is one of:
                                 to the descendants. This ensures that the descendants always have
                                 columns matching the parent. </p>
                         <p>To see the structure of a partitioned table, you can use the view
-                                                <codeph><xref
+                                                <xref
                                                 href="../system_catalogs/pg_partitions.xml"
-                                                type="topic" format="dita"/></codeph>. This view can
+                                                type="topic" format="dita"/>. This view can
                                 help identify the particular partitions you may want to alter.</p>
                         <p>A recursive <codeph>DROP COLUMN</codeph> operation will remove a
                                 descendant table's column only if the descendant does not inherit
@@ -1160,9 +1160,9 @@ INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                 </section>
                 <section id="section8">
                         <title>See Also</title>
-                        <p><codeph><xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"
-                                        /></codeph>, <codeph><xref href="./DROP_TABLE.xml#topic1"
-                                                type="topic" format="dita"/></codeph></p>
+                        <p><xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"
+                                        />, <xref href="./DROP_TABLE.xml#topic1"
+                                                type="topic" format="dita"/></p>
                 </section>
         </body>
 </topic>

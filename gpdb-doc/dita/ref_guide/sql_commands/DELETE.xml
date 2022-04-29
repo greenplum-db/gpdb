@@ -72,7 +72,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     <pd>See <xref
                             href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
 </xref>
-                        and <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
+                        and <xref href="SELECT.xml#topic1"/> for details. </pd>
                 </plentry>
                 <plentry>
                     <pt>ONLY</pt>
@@ -101,8 +101,8 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     </pt>
                     <pd>A list of table expressions, allowing columns from other tables to appear in
                         the <codeph>WHERE</codeph> condition. This is similar to the list of tables
-                        that can be specified in the <codeph>FROM</codeph> Clause of a <codeph><xref
-                                href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>
+                        that can be specified in the <codeph>FROM</codeph> Clause of a <xref
+                                href="./SELECT.xml#topic1" type="topic" format="dita"/>
                         statement; for example, an alias for the table name can be specified. Do not
                         repeat the target table in the <codeph>usinglist</codeph>, unless you wish
                         to set up a self-join. </pd>
@@ -128,8 +128,8 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                         run on the server, for example in an interactive psql session or a
                         script. Language extensions such as PL/pgSQL do not have support for
                         updatable cursors. </pd>
-                    <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
-                            /></codeph> for more information about creating cursors.</pd>
+                    <pd>See <xref href="DECLARE.xml#topic1" type="topic" format="dita"
+                            /> for more information about creating cursors.</pd>
                 </plentry>
                 <plentry>
                     <pt><varname>output_expression</varname></pt>
@@ -188,9 +188,9 @@ name = 'Hannah';</codeblock>
         </section>
         <section id="section9">
             <title>See Also</title>
-            <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>

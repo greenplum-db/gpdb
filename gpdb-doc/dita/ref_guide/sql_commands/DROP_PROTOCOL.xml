@@ -45,8 +45,8 @@
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1"/></codeph>, <codeph><xref
-            href="CREATE_PROTOCOL.xml#topic1"/></codeph></p>
+      <p><xref href="CREATE_EXTERNAL_TABLE.xml#topic1"/>, <xref
+            href="CREATE_PROTOCOL.xml#topic1"/></p>
     </section>
   </body>
 </topic>

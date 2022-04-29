@@ -31,9 +31,9 @@
         To set appropriate limits for resource groups, the Greenplum Database administrator must
         be familiar with the queries typically run on the system, as well as the users/roles running those queries and the external components they may be using, such as PL/Containers.</p>
       <p>
-        After creating a resource group for a role, assign the group to one or more roles using the <codeph><xref
-            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
-            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> commands.</p>
+        After creating a resource group for a role, assign the group to one or more roles using the <xref
+            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/> or <xref
+            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/> commands.</p>
       <p>
         After you create a resource group to manage the CPU and memory resources of an external component, configure the external component to use the resource group. For example, configure the PL/Container runtime <codeph>resource_group_id</codeph>.</p>
     </section>
@@ -128,11 +128,11 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>
