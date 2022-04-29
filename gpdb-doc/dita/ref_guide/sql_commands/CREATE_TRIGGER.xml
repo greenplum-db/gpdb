@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="cg20941">CREATE TRIGGER</title><body><p id="sql_command_desc">Defines a new trigger. User-defined triggers are not supported in Greenplum
-Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TRIGGER <varname>name</varname> {BEFORE | AFTER} {<varname>event</varname> [OR ...]}
-       ON <varname>table</varname> [ FOR [EACH] {ROW | STATEMENT} ]
-       EXECUTE PROCEDURE <varname>funcname</varname> ( <varname>arguments</varname> )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TRIGGER</codeph> creates a new trigger. The trigger will
+Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TRIGGER &lt;name> {BEFORE | AFTER} {&lt;event> [OR ...]}
+       ON &lt;table> [ FOR [EACH] {ROW | STATEMENT} ]
+       EXECUTE PROCEDURE &lt;funcname> ( &lt;arguments> )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TRIGGER</codeph> creates a new trigger. The trigger will
 be associated with the specified table and will run the specified
 function when certain events occur. </p><p>Due to the distributed nature of a Greenplum Database system, the
 use of triggers is very limited in Greenplum Database. The function used

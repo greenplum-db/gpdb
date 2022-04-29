@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="du20941">LOAD</title><body><p id="sql_command_desc">Loads or reloads a shared library file.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">LOAD '<varname>filename</varname>'</codeblock></section><section id="section3"><title>Description</title><p>This command loads a shared library file into the Greenplum Database
+<topic id="topic1"><title id="du20941">LOAD</title><body><p id="sql_command_desc">Loads or reloads a shared library file.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">LOAD '&lt;filename>'</codeblock></section><section id="section3"><title>Description</title><p>This command loads a shared library file into the Greenplum Database
 server address space. If the file had been loaded previously, it is first
 unloaded. This command is primarily useful to unload and reload a shared
 library file that has been changed since the server first loaded it.

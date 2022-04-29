@@ -4,81 +4,81 @@
 <topic id="topic1"><title id="ec20941">REVOKE</title><body><p id="sql_command_desc">Removes access privileges.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">REVOKE [GRANT OPTION FOR] { {SELECT | INSERT | UPDATE | DELETE 
        | REFERENCES | TRIGGER | TRUNCATE } [, ...] | ALL [PRIVILEGES] }
 
-       ON { [TABLE] <varname>table_name</varname> [, ...]
+       ON { [TABLE] &lt;table_name> [, ...]
             | ALL TABLES IN SCHEMA schema_name [, ...] }
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC} [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC} [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [ GRANT OPTION FOR ] { { SELECT | INSERT | UPDATE 
-       | REFERENCES } ( <varname>column_name</varname> [, ...] )
-       [, ...] | ALL [ PRIVILEGES ] ( <varname>column_name</varname> [, ...] ) }
-       ON [ TABLE ] <varname>table_name</varname> [, ...]
-       FROM { [ GROUP ]  <varname>role_name</varname> | PUBLIC } [, ...]
+       | REFERENCES } ( &lt;column_name> [, ...] )
+       [, ...] | ALL [ PRIVILEGES ] ( &lt;column_name> [, ...] ) }
+       ON [ TABLE ] &lt;table_name> [, ...]
+       FROM { [ GROUP ]  &lt;role_name> | PUBLIC } [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [GRANT OPTION FOR] { {USAGE | SELECT | UPDATE} [,...] 
        | ALL [PRIVILEGES] }
-       ON { SEQUENCE <varname>sequence_name</varname> [, ...]
+       ON { SEQUENCE &lt;sequence_name> [, ...]
             | ALL SEQUENCES IN SCHEMA schema_name [, ...] }
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [GRANT OPTION FOR] { {CREATE | CONNECT 
        | TEMPORARY | TEMP} [, ...] | ALL [PRIVILEGES] }
-       ON DATABASE <varname>database_name</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC} [, ...]
+       ON DATABASE &lt;database_name> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC} [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
-       ON DOMAIN <varname>domain_name</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       ON DOMAIN &lt;domain_name> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
        [ CASCADE | RESTRICT ]
 
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
-       ON FOREIGN DATA WRAPPER <varname>fdw_name</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       ON FOREIGN DATA WRAPPER &lt;fdw_name> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
-       ON FOREIGN SERVER <varname>server_name</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       ON FOREIGN SERVER &lt;server_name> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [GRANT OPTION FOR] {EXECUTE | ALL [PRIVILEGES]}
-       ON { FUNCTION <varname>funcname</varname> ( [[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname>
+       ON { FUNCTION &lt;funcname> ( [[&lt;argmode>] [&lt;argname>] &lt;argtype>
                               [, ...]] ) [, ...]
             | ALL FUNCTIONS IN SCHEMA schema_name [, ...] }
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC} [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC} [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [GRANT OPTION FOR] {USAGE | ALL [PRIVILEGES]}
-       ON LANGUAGE <varname>langname</varname> [, ...]
-       FROM { [ GROUP ]  <varname>role_name</varname> | PUBLIC} [, ...]
+       ON LANGUAGE &lt;langname> [, ...]
+       FROM { [ GROUP ]  &lt;role_name> | PUBLIC} [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [GRANT OPTION FOR] { {CREATE | USAGE} [, ...] 
        | ALL [PRIVILEGES] }
-       ON SCHEMA <varname>schema_name</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC} [, ...]
+       ON SCHEMA &lt;schema_name> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC} [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [GRANT OPTION FOR] { CREATE | ALL [PRIVILEGES] }
-       ON TABLESPACE <varname>tablespacename</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       ON TABLESPACE &lt;tablespacename> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
-       ON TYPE <varname>type_name</varname> [, ...]
-       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       ON TYPE &lt;type_name> [, ...]
+       FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
        [ CASCADE | RESTRICT ] 
 
-REVOKE [ADMIN OPTION FOR] <varname>parent_role</varname> [, ...] 
-       FROM [ GROUP ] <varname>member_role</varname> [, ...]
+REVOKE [ADMIN OPTION FOR] &lt;parent_role> [, ...] 
+       FROM [ GROUP ] &lt;member_role> [, ...]
        [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>REVOKE</codeph> command revokes previously granted privileges
 from one or more roles. The key word <codeph>PUBLIC</codeph> refers to
 the implicitly defined group of all roles. </p><p>See the description of the <xref href="GRANT.xml#topic1" type="topic" format="dita"

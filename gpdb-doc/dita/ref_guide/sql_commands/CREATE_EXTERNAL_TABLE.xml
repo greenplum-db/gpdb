@@ -7,122 +7,122 @@
     <p id="sql_command_desc">Defines a new external table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>     
-    ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION ('file://<varname>seghost</varname>[:<varname>port</varname>]/<varname>path</varname>/<varname>file</varname>' [, ...])
-       | ('gpfdist://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
+      <codeblock id="sql_command_synopsis">CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE &lt;table_name>     
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table >)
+     LOCATION ('file://&lt;seghost>[:&lt;port>]/&lt;path>/&lt;file>' [, ...])
+       | ('gpfdist://&lt;filehost>[:&lt;port>]/&lt;file_pattern>[#transform=&lt;trans_name>]'
            [, ...]
-       | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
+       | ('gpfdists://&lt;filehost>[:&lt;port>]/&lt;file_pattern>[#transform=&lt;trans_name>]'
            [, ...])
-       | ('pxf://<varname>path-to-data</varname>?PROFILE=<varname>profile_name</varname>[&amp;SERVER=<varname>server_name</varname>][&amp;<varname>custom-option</varname>=<varname>value</varname>[...]]'))
-       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname> | config_server=<varname>url</varname>]')
+       | ('pxf://&lt;path-to-data>?PROFILE=&lt;profile_name>[&amp;SERVER=&lt;server_name>][&amp;&lt;custom-option>=&lt;value>[...]]'))
+       | ('s3://&lt;S3_endpoint>[:&lt;port>]/&lt;bucket_name>/[&lt;S3_prefix>] [region=&lt;S3-region>] [config=&lt;config_file> | config_server=&lt;url>]')
      [ON MASTER]
      FORMAT 'TEXT' 
            [( [HEADER]
-              [DELIMITER [AS] '<varname>delimiter</varname>' | 'OFF']
-              [NULL [AS] '<varname>null string</varname>']
-              [ESCAPE [AS] '<varname>escape</varname>' | 'OFF']
+              [DELIMITER [AS] '&lt;delimiter>' | 'OFF']
+              [NULL [AS] '&lt;null string>']
+              [ESCAPE [AS] '&lt;escape>' | 'OFF']
               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
               [FILL MISSING FIELDS] )]
           | 'CSV'
            [( [HEADER]
-              [QUOTE [AS] '<varname>quote</varname>'] 
-              [DELIMITER [AS] '<varname>delimiter</varname>']
-              [NULL [AS] '<varname>null string</varname>']
-              [FORCE NOT NULL <varname>column</varname> [, ...]]
-              [ESCAPE [AS] '<varname>escape</varname>']
+              [QUOTE [AS] '&lt;quote>'] 
+              [DELIMITER [AS] '&lt;delimiter>']
+              [NULL [AS] '&lt;null string>']
+              [FORCE NOT NULL &lt;column> [, ...]]
+              [ESCAPE [AS] '&lt;escape>']
               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
               [FILL MISSING FIELDS] )]
-          | 'CUSTOM' (Formatter=<varname>&lt;formatter_specifications&gt;</varname>)
-    [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
-    [ ENCODING '<varname>encoding</varname>' ]
-      [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <varname>count</varname>
+          | 'CUSTOM' (Formatter=&lt;&lt;formatter_specifications&gt;>)
+    [ OPTIONS ( &lt;key> '&lt;value>' [, ...] ) ]
+    [ ENCODING '&lt;encoding>' ]
+      [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT &lt;count>
       [ROWS | PERCENT] ]
 
-CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varname>     
-   ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-      LOCATION ('http://<varname>webhost</varname>[:<varname>port</varname>]/<varname>path</varname>/<varname>file</varname>' [, ...])
-    | EXECUTE '<varname>command</varname>' [ON ALL 
+CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE &lt;table_name>     
+   ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table >)
+      LOCATION ('http://&lt;webhost>[:&lt;port>]/&lt;path>/&lt;file>' [, ...])
+    | EXECUTE '&lt;command>' [ON ALL 
                           | MASTER
-                          | <varname>number_of_segments</varname>
-                          | HOST ['<varname>segment_hostname</varname>'] 
-                          | SEGMENT <varname>segment_id</varname> ]
+                          | &lt;number_of_segments>
+                          | HOST ['&lt;segment_hostname>'] 
+                          | SEGMENT &lt;segment_id> ]
       FORMAT 'TEXT' 
             [( [HEADER]
-               [DELIMITER [AS] '<varname>delimiter</varname>' | 'OFF']
-               [NULL [AS] '<varname>null string</varname>']
-               [ESCAPE [AS] '<varname>escape</varname>' | 'OFF']
+               [DELIMITER [AS] '&lt;delimiter>' | 'OFF']
+               [NULL [AS] '&lt;null string>']
+               [ESCAPE [AS] '&lt;escape>' | 'OFF']
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CSV'
             [( [HEADER]
-               [QUOTE [AS] '<varname>quote</varname>'] 
-               [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [FORCE NOT NULL <varname>column</varname> [, ...]]
-               [ESCAPE [AS] '<varname>escape</varname>']
+               [QUOTE [AS] '&lt;quote>'] 
+               [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [FORCE NOT NULL &lt;column> [, ...]]
+               [ESCAPE [AS] '&lt;escape>']
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
-           | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
-     [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
-     [ ENCODING '<varname>encoding</varname>' ]
-     [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <varname>count</varname>
+           | 'CUSTOM' (Formatter=&lt;&lt;formatter specifications&gt;>)
+     [ OPTIONS ( &lt;key> '&lt;value>' [, ...] ) ]
+     [ ENCODING '&lt;encoding>' ]
+     [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT &lt;count>
        [ROWS | PERCENT] ]
 
-CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
-    ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('gpfdist://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>filename</varname>[#transform=<varname>trans_name</varname>]'
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE &lt;table_name>
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table >)
+     LOCATION('gpfdist://&lt;outputhost>[:&lt;port>]/&lt;filename>[#transform=&lt;trans_name>]'
           [, ...])
-      | ('gpfdists://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
+      | ('gpfdists://&lt;outputhost>[:&lt;port>]/&lt;file_pattern>[#transform=&lt;trans_name>]'
           [, ...])
       FORMAT 'TEXT' 
-               [( [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [ESCAPE [AS] '<varname>escape</varname>' | 'OFF'] )]
+               [( [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [ESCAPE [AS] '&lt;escape>' | 'OFF'] )]
           | 'CSV'
-               [([QUOTE [AS] '<varname>quote</varname>'] 
-               [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
-               [ESCAPE [AS] '<varname>escape</varname>'] )]
+               [([QUOTE [AS] '&lt;quote>'] 
+               [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [FORCE QUOTE &lt;column> [, ...]] | * ]
+               [ESCAPE [AS] '&lt;escape>'] )]
 
-           | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
-    [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
-    [ ENCODING '<varname>write_encoding</varname>' ]
-    [ DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+           | 'CUSTOM' (Formatter=&lt;&lt;formatter specifications&gt;>)
+    [ OPTIONS ( &lt;key> '&lt;value>' [, ...] ) ]
+    [ ENCODING '&lt;write_encoding>' ]
+    [ DISTRIBUTED BY ({&lt;column> [&lt;opclass>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
-CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
-    ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname> | config_server=<varname>url</varname>]')
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE &lt;table_name>
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table >)
+     LOCATION('s3://&lt;S3_endpoint>[:&lt;port>]/&lt;bucket_name>/[&lt;S3_prefix>] [region=&lt;S3-region>] [config=&lt;config_file> | config_server=&lt;url>]')
       [ON MASTER]
       FORMAT 'TEXT' 
-               [( [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [ESCAPE [AS] '<varname>escape</varname>' | 'OFF'] )]
+               [( [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [ESCAPE [AS] '&lt;escape>' | 'OFF'] )]
           | 'CSV'
-               [([QUOTE [AS] '<varname>quote</varname>'] 
-               [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
-               [ESCAPE [AS] '<varname>escape</varname>'] )]
+               [([QUOTE [AS] '&lt;quote>'] 
+               [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [FORCE QUOTE &lt;column> [, ...]] | * ]
+               [ESCAPE [AS] '&lt;escape>'] )]
 
-CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
-    ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table</varname> )
-    EXECUTE '<varname>command</varname>' [ON ALL]
+CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE &lt;table_name>
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table> )
+    EXECUTE '&lt;command>' [ON ALL]
     FORMAT 'TEXT' 
-               [( [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [ESCAPE [AS] '<varname>escape</varname>' | 'OFF'] )]
+               [( [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [ESCAPE [AS] '&lt;escape>' | 'OFF'] )]
           | 'CSV'
-               [([QUOTE [AS] '<varname>quote</varname>'] 
-               [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
-               [ESCAPE [AS] '<varname>escape</varname>'] )]
-           | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
-    [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
-    [ ENCODING '<varname>write_encoding</varname>' ]
-    [ DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]</codeblock>
+               [([QUOTE [AS] '&lt;quote>'] 
+               [DELIMITER [AS] '&lt;delimiter>']
+               [NULL [AS] '&lt;null string>']
+               [FORCE QUOTE &lt;column> [, ...]] | * ]
+               [ESCAPE [AS] '&lt;escape>'] )]
+           | 'CUSTOM' (Formatter=&lt;&lt;formatter specifications&gt;>)
+    [ OPTIONS ( &lt;key> '&lt;value>' [, ...] ) ]
+    [ ENCODING '&lt;write_encoding>' ]
+    [ DISTRIBUTED BY ({&lt;column> [&lt;opclass>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -500,7 +500,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
       <title>Examples</title>
       <p>Start the <codeph>gpfdist</codeph> file server program in the background on port
           <codeph>8081</codeph> serving files from directory <codeph>/var/data/staging</codeph>: </p>
-      <codeblock>gpfdist -p 8081 -d /var/data/staging -l /home/<varname>gpadmin</varname>/log &amp;</codeblock>
+      <codeblock>gpfdist -p 8081 -d /var/data/staging -l /home/&lt;gpadmin>/log &amp;</codeblock>
       <p>Create a readable external table named <codeph>ext_customer</codeph> using the
           <codeph>gpfdist</codeph> protocol and any text formatted files (<codeph>*.txt</codeph>)
         found in the <codeph>gpfdist</codeph> directory. The files are formatted with a pipe

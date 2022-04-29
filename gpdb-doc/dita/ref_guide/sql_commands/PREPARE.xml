@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Prepare a statement for execution.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">PREPARE <varname>name</varname> [ (<varname>datatype</varname> [, ...] ) ] AS <varname>statement</varname></codeblock>
+      <codeblock id="sql_command_synopsis">PREPARE &lt;name> [ (&lt;datatype> [, ...] ) ] AS &lt;statement></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

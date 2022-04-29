@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dk20941">DROP TRIGGER</title><body><p id="sql_command_desc">Removes a trigger.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP TRIGGER [IF EXISTS] <varname>name</varname> ON <varname>table</varname> [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP TRIGGER</codeph> will remove an existing trigger definition.
+<topic id="topic1"><title id="dk20941">DROP TRIGGER</title><body><p id="sql_command_desc">Removes a trigger.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP TRIGGER [IF EXISTS] &lt;name> ON &lt;table> [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP TRIGGER</codeph> will remove an existing trigger definition.
 To run this command, the current user must be the owner of the table
 for which the trigger is defined.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the trigger does not exist. A notice is
 issued in this case.</pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name of the trigger to remove.</pd></plentry><plentry><pt><varname>table</varname></pt><pd>The name (optionally schema-qualified) of the table for which the

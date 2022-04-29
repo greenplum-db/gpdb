@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ea20941">RELEASE SAVEPOINT</title><body><p id="sql_command_desc">Destroys a previously defined savepoint.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">RELEASE [SAVEPOINT] <varname>savepoint_name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>RELEASE SAVEPOINT</codeph> destroys a savepoint previously defined
+<topic id="topic1"><title id="ea20941">RELEASE SAVEPOINT</title><body><p id="sql_command_desc">Destroys a previously defined savepoint.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">RELEASE [SAVEPOINT] &lt;savepoint_name></codeblock></section><section id="section3"><title>Description</title><p><codeph>RELEASE SAVEPOINT</codeph> destroys a savepoint previously defined
 in the current transaction. </p><p>Destroying a savepoint makes it unavailable as a rollback point, but it has no other user visible
         behavior. It does not undo the effects of commands run after the savepoint was
         established. (To do that, see <xref href="./ROLLBACK_TO_SAVEPOINT.xml#topic1"

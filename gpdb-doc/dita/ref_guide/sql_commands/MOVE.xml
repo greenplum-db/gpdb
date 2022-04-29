@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dw20941">MOVE</title><body><p id="sql_command_desc">Positions a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">MOVE [ <varname>forward_direction</varname> [ FROM | IN ] ] <varname>cursor_name</varname></codeblock><p>where <varname>forward_direction</varname> can be empty or one of:</p><codeblock>    NEXT
+<topic id="topic1"><title id="dw20941">MOVE</title><body><p id="sql_command_desc">Positions a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">MOVE [ &lt;forward_direction> [ FROM | IN ] ] &lt;cursor_name></codeblock><p>where <varname>forward_direction</varname> can be empty or one of:</p><codeblock>    NEXT
     FIRST
     LAST
-    ABSOLUTE <varname>count</varname>
-    RELATIVE <varname>count</varname>
-    <varname>count</varname>
+    ABSOLUTE &lt;count>
+    RELATIVE &lt;count>
+    &lt;count>
     ALL
     FORWARD
-    FORWARD <varname>count</varname>
+    FORWARD &lt;count>
     FORWARD ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>MOVE</codeph> repositions a cursor
         without retrieving any data. <codeph>MOVE</codeph> works exactly like the <xref
             href="FETCH.xml#topic1" type="topic" format="dita"/> command, except it only
@@ -20,7 +20,7 @@
         cursor position backwards in Greenplum Database, since scrollable cursors are not supported.
         You can only move a cursor forward in position using <codeph>MOVE</codeph>.</p><sectiondiv
         id="section4"><b>Outputs</b><p>On successful completion, a <codeph>MOVE</codeph> command
-          returns a command tag of the form</p><codeblock>MOVE <varname>count</varname></codeblock><p>The count
+          returns a command tag of the form</p><codeblock>MOVE &lt;count></codeblock><p>The count
           is the number of rows that a <codeph>FETCH</codeph> command with the same parameters would
           have returned (possibly zero). </p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>forward_direction</varname></pt><pd>The parameters for the <codeph>MOVE</codeph> command are identical to those of the
               <codeph>FETCH</codeph> command; refer to <xref href="FETCH.xml#topic1"

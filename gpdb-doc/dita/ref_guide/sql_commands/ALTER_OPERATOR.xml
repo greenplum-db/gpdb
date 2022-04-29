@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ar20941">ALTER OPERATOR</title><body><p id="sql_command_desc">Changes the definition of an operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR <varname>name</varname> ( {<varname>left_type</varname> | NONE} , {<varname>right_type</varname> | NONE} ) 
-   OWNER TO <varname>new_owner</varname>
+<topic id="topic1"><title id="ar20941">ALTER OPERATOR</title><body><p id="sql_command_desc">Changes the definition of an operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR &lt;name> ( {&lt;left_type> | NONE} , {&lt;right_type> | NONE} ) 
+   OWNER TO &lt;new_owner>
 
-ALTER OPERATOR <varname>name</varname> ( {<varname>left_type</varname> | NONE} , {<varname>right_type</varname> | NONE} ) 
-    SET SCHEMA <varname>new_schema</varname>
+ALTER OPERATOR &lt;name> ( {&lt;left_type> | NONE} , {&lt;right_type> | NONE} ) 
+    SET SCHEMA &lt;new_schema>
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR</codeph> changes the definition of an operator.
 The only currently available functionality is to change the owner of
 the operator. </p><p>You must own the operator to use <codeph>ALTER OPERATOR</codeph>.

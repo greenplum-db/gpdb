@@ -7,11 +7,11 @@
         <p id="sql_command_desc">Defines a new foreign server.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE SERVER <varname>server_name</varname> [ TYPE '<varname>server_type</varname>' ] [ VERSION '<varname>server_version</varname>' ]
-    FOREIGN DATA WRAPPER <varname>fdw_name</varname>
+            <codeblock id="sql_command_synopsis">CREATE SERVER &lt;server_name> [ TYPE '&lt;server_type>' ] [ VERSION '&lt;server_version>' ]
+    FOREIGN DATA WRAPPER &lt;fdw_name>
     [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ]
-                [ num_segments '<varname>num</varname>' [, ] ]
-                [ <varname>option</varname> '<varname>value</varname>' [, ... ]] ) ]</codeblock>
+                [ num_segments '&lt;num>' [, ] ]
+                [ &lt;option> '&lt;value>' [, ... ]] ) ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

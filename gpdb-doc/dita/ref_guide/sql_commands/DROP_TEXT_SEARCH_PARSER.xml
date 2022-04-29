@@ -10,7 +10,7 @@
     <section>
       <title>Synopsis</title>
     </section>
-    <codeblock id="sql_command_synopsis">DROP TEXT SEARCH PARSER [ IF EXISTS ] <varname>name</varname> [ CASCADE | RESTRICT ]</codeblock>
+    <codeblock id="sql_command_synopsis">DROP TEXT SEARCH PARSER [ IF EXISTS ] &lt;name> [ CASCADE | RESTRICT ]</codeblock>
     <section id="section3">
       <title>Description</title>
       <p><codeph>DROP TEXT SEARCH PARSER</codeph> drops an existing text search parser. You must be

@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Changes the definition of an external table.</p>
     <section id="section2"><title>Synopsis</title>
       <sectiondiv id="sql_cmd_synopsis">
-        <codeblock id="sql_command_synopsis">ALTER EXTERNAL TABLE <varname>name</varname> <varname>action</varname> [, ... ]</codeblock>
+        <codeblock id="sql_command_synopsis">ALTER EXTERNAL TABLE &lt;name> &lt;action> [, ... ]</codeblock>
         <p>where <varname>action</varname> is one of:</p>
-        <codeblock>  ADD [COLUMN] <varname>new_column</varname> <varname>type</varname>
-  DROP [COLUMN] <varname>column</varname> [RESTRICT|CASCADE]
-  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname>
-  OWNER TO <varname>new_owner</varname></codeblock>
+        <codeblock>  ADD [COLUMN] &lt;new_column> &lt;type>
+  DROP [COLUMN] &lt;column> [RESTRICT|CASCADE]
+  ALTER [COLUMN] &lt;column> TYPE &lt;type>
+  OWNER TO &lt;new_owner></codeblock>
       </sectiondiv></section>
     <section id="section3">
       <title>Description</title>

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bq20941">CREATE DOMAIN</title><body><p id="sql_command_desc">Defines a new domain.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DOMAIN <varname>name</varname> [AS] <varname>data_type</varname> [DEFAULT <varname>expression</varname>]
-       [ COLLATE <varname>collation</varname> ] 
-       [ CONSTRAINT <varname>constraint_name</varname>
+<topic id="topic1"><title id="bq20941">CREATE DOMAIN</title><body><p id="sql_command_desc">Defines a new domain.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DOMAIN &lt;name> [AS] &lt;data_type> [DEFAULT &lt;expression>]
+       [ COLLATE &lt;collation> ] 
+       [ CONSTRAINT &lt;constraint_name>
        | NOT NULL | NULL 
-       | CHECK (<varname>expression</varname>) [...]]</codeblock></section><section id="section3"><title>Description</title>
+       | CHECK (&lt;expression>) [...]]</codeblock></section><section id="section3"><title>Description</title>
       <p><codeph>CREATE DOMAIN</codeph> creates a new domain. A domain is essentially a data type
         with optional constraints (restrictions on the allowed set of values). The user who defines
         a domain becomes its owner. The domain name must be unique among the data types and domains

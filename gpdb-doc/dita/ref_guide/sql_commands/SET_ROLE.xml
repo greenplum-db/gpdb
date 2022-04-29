@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ej20941">SET ROLE</title><body><p id="sql_command_desc">Sets the current role identifier of the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] ROLE <varname>rolename</varname>
+<topic id="topic1"><title id="ej20941">SET ROLE</title><body><p id="sql_command_desc">Sets the current role identifier of the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] ROLE &lt;rolename>
 
 SET [SESSION | LOCAL] ROLE NONE
 

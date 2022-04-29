@@ -7,65 +7,65 @@
                 <p id="sql_command_desc">Changes the definition of a table.</p>
                 <section id="section2">
                         <title>Synopsis</title>
-                        <codeblock id="sql_command_synopsis">ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> 
-    <varname>action</varname> [, ... ]
+                        <codeblock id="sql_command_synopsis">ALTER TABLE [IF EXISTS] [ONLY] &lt;name> 
+    &lt;action> [, ... ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> 
-    RENAME [COLUMN] <varname>column_name</varname> TO <varname>new_column_name</varname>
+ALTER TABLE [IF EXISTS] [ONLY] &lt;name> 
+    RENAME [COLUMN] &lt;column_name> TO &lt;new_column_name>
 
-ALTER TABLE [ IF EXISTS ] [ ONLY ] <varname>name</varname> 
-    RENAME CONSTRAINT <varname>constraint_name</varname> TO <varname>new_constraint_name</varname>
+ALTER TABLE [ IF EXISTS ] [ ONLY ] &lt;name> 
+    RENAME CONSTRAINT &lt;constraint_name> TO &lt;new_constraint_name>
 
-ALTER TABLE [IF EXISTS] <varname>name</varname> 
-    RENAME TO <varname>new_name</varname>
+ALTER TABLE [IF EXISTS] &lt;name> 
+    RENAME TO &lt;new_name>
 
-ALTER TABLE [IF EXISTS] <varname>name</varname> 
-    SET SCHEMA <varname>new_schema</varname>
+ALTER TABLE [IF EXISTS] &lt;name> 
+    SET SCHEMA &lt;new_schema>
 
-ALTER TABLE ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_name</varname> [, ... ] ]
-    SET TABLESPACE <varname>new_tablespace</varname> [ NOWAIT ]
+ALTER TABLE ALL IN TABLESPACE &lt;name> [ OWNED BY &lt;role_name> [, ... ] ]
+    SET TABLESPACE &lt;new_tablespace> [ NOWAIT ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> SET 
+ALTER TABLE [IF EXISTS] [ONLY] &lt;name> SET 
      WITH (REORGANIZE=true|false)
-   | DISTRIBUTED BY ({<varname>column_name</varname> [<varname>opclass</varname>]} [, ... ] )
+   | DISTRIBUTED BY ({&lt;column_name> [&lt;opclass>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
 
-ALTER TABLE <varname>name</varname>
-   [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) 
-   | FOR (<varname>value</varname>) } [...] ] <varname>partition_action</varname>
+ALTER TABLE &lt;name>
+   [ ALTER PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) 
+   | FOR (&lt;value>) } [...] ] &lt;partition_action>
 
-where <varname>action</varname> is one of:
+where &lt;action> is one of:
                         
-  ADD [COLUMN] <varname>column_name data_type</varname> [ DEFAULT <varname>default_expr</varname> ]
-      [<varname>column_constraint</varname> [ ... ]]
-      [ COLLATE <varname>collation</varname> ]
-      [ ENCODING ( <varname>storage_parameter</varname> [,...] ) ]
-  DROP [COLUMN] [IF EXISTS] <varname>column_name</varname> [RESTRICT | CASCADE]
-  ALTER [COLUMN] <varname>column_name</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
-  ALTER [COLUMN] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
-  ALTER [COLUMN] <varname>column_name</varname> DROP DEFAULT
-  ALTER [COLUMN] <varname>column_name</varname> { SET | DROP } NOT NULL
-  ALTER [COLUMN] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
-  ALTER [COLUMN] column SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
-  ALTER [COLUMN] column RESET ( <varname>attribute_option</varname> [, ... ] )
-  ADD <varname>table_constraint</varname> [NOT VALID]
-  ADD <varname>table_constraint_using_index</varname>
-  VALIDATE CONSTRAINT <varname>constraint_name</varname>
-  DROP CONSTRAINT [IF EXISTS] <varname>constraint_name</varname> [RESTRICT | CASCADE]
-  DISABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
-  ENABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
-  CLUSTER ON <varname>index_name</varname>
+  ADD [COLUMN] &lt;column_name data_type> [ DEFAULT &lt;default_expr> ]
+      [&lt;column_constraint> [ ... ]]
+      [ COLLATE &lt;collation> ]
+      [ ENCODING ( &lt;storage_parameter> [,...] ) ]
+  DROP [COLUMN] [IF EXISTS] &lt;column_name> [RESTRICT | CASCADE]
+  ALTER [COLUMN] &lt;column_name> [ SET DATA ] TYPE &lt;type> [COLLATE &lt;collation>] [USING &lt;expression>]
+  ALTER [COLUMN] &lt;column_name> SET DEFAULT &lt;expression>
+  ALTER [COLUMN] &lt;column_name> DROP DEFAULT
+  ALTER [COLUMN] &lt;column_name> { SET | DROP } NOT NULL
+  ALTER [COLUMN] &lt;column_name> SET STATISTICS &lt;integer>
+  ALTER [COLUMN] column SET ( &lt;attribute_option> = &lt;value> [, ... ] )
+  ALTER [COLUMN] column RESET ( &lt;attribute_option> [, ... ] )
+  ADD &lt;table_constraint> [NOT VALID]
+  ADD &lt;table_constraint_using_index>
+  VALIDATE CONSTRAINT &lt;constraint_name>
+  DROP CONSTRAINT [IF EXISTS] &lt;constraint_name> [RESTRICT | CASCADE]
+  DISABLE TRIGGER [&lt;trigger_name> | ALL | USER]
+  ENABLE TRIGGER [&lt;trigger_name> | ALL | USER]
+  CLUSTER ON &lt;index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET (<varname>storage_parameter</varname> = <varname>value</varname>)
-  RESET (<varname>storage_parameter</varname> [, ... ])
-  INHERIT <varname>parent_table</varname>
-  NO INHERIT <varname>parent_table</varname>
+  SET (&lt;storage_parameter> = &lt;value>)
+  RESET (&lt;storage_parameter> [, ... ])
+  INHERIT &lt;parent_table>
+  NO INHERIT &lt;parent_table>
   OF <codeph>type_name</codeph>
   NOT OF
-  OWNER TO <varname>new_owner</varname>
-  SET TABLESPACE <varname>new_tablespace</varname></codeblock>
+  OWNER TO &lt;new_owner>
+  SET TABLESPACE &lt;new_tablespace></codeblock>
                         <p>where <varname>table_constraint_using_index</varname> is:</p>
                         <pre>  [ CONSTRAINT <varname>constraint_name</varname> ]
   { UNIQUE | PRIMARY KEY } USING INDEX <varname>index_name</varname>
@@ -73,53 +73,53 @@ where <varname>action</varname> is one of:
                         <p>where <varname>partition_action</varname> is one of:</p>
                         <codeblock>  ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
-  DROP PARTITION [IF EXISTS] { <varname>partition_name</varname> | 
-      FOR (RANK(<varname>number</varname>)) | FOR (<varname>value</varname>) } [CASCADE]
+  DROP PARTITION [IF EXISTS] { &lt;partition_name> | 
+      FOR (RANK(&lt;number>)) | FOR (&lt;value>) } [CASCADE]
   TRUNCATE DEFAULT PARTITION
-  TRUNCATE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-      FOR (<varname>value</varname>) }
-  RENAME DEFAULT PARTITION TO <varname>new_partition_name</varname>
-  RENAME PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-      FOR (<varname>value</varname>) } TO <varname>new_partition_name</varname>
-  ADD DEFAULT PARTITION <varname>name</varname> [ ( <varname>subpartition_spec</varname> ) ]
-  ADD PARTITION [<varname>partition_name</varname>] <varname>partition_element</varname>
-     [ ( <varname>subpartition_spec</varname> ) ]
-  EXCHANGE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-       FOR (<varname>value</varname>) } WITH TABLE <varname>table_name</varname>
+  TRUNCATE PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+      FOR (&lt;value>) }
+  RENAME DEFAULT PARTITION TO &lt;new_partition_name>
+  RENAME PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+      FOR (&lt;value>) } TO &lt;new_partition_name>
+  ADD DEFAULT PARTITION &lt;name> [ ( &lt;subpartition_spec> ) ]
+  ADD PARTITION [&lt;partition_name>] &lt;partition_element>
+     [ ( &lt;subpartition_spec> ) ]
+  EXCHANGE PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+       FOR (&lt;value>) } WITH TABLE &lt;table_name>
         [ WITH | WITHOUT VALIDATION ]
-  EXCHANGE DEFAULT PARTITION WITH TABLE <varname>table_name</varname>
+  EXCHANGE DEFAULT PARTITION WITH TABLE &lt;table_name>
    [ WITH | WITHOUT VALIDATION ]
-  SET SUBPARTITION TEMPLATE (<varname>subpartition_spec</varname>)
+  SET SUBPARTITION TEMPLATE (&lt;subpartition_spec>)
   SPLIT DEFAULT PARTITION
-    {  AT (<varname>list_value</varname>)
-     | START([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] 
-        END([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] }
-    [ INTO ( PARTITION <varname>new_partition_name</varname>, 
-             PARTITION <varname>default_partition_name</varname> ) ]
-  SPLIT PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-     FOR (<varname>value</varname>) } AT (<varname>value</varname>) 
-    [ INTO (PARTITION <varname>partition_name</varname>, PARTITION <varname>partition_name</varname>)]  </codeblock>
+    {  AT (&lt;list_value>)
+     | START([&lt;datatype>] &lt;range_value>) [INCLUSIVE | EXCLUSIVE] 
+        END([&lt;datatype>] &lt;range_value>) [INCLUSIVE | EXCLUSIVE] }
+    [ INTO ( PARTITION &lt;new_partition_name>, 
+             PARTITION &lt;default_partition_name> ) ]
+  SPLIT PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+     FOR (&lt;value>) } AT (&lt;value>) 
+    [ INTO (PARTITION &lt;partition_name>, PARTITION &lt;partition_name>)]  </codeblock>
                         <p>where <varname>partition_element</varname> is:</p>
-                        <codeblock>    VALUES (<varname>list_value</varname> [,...] )
-  | START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
-  | END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+                        <codeblock>    VALUES (&lt;list_value> [,...] )
+  | START ([&lt;datatype>] '&lt;start_value>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE] ]
+  | END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE]
+[ WITH ( &lt;partition_storage_parameter>=&lt;value> [, ... ] ) ]
+[ TABLESPACE &lt;tablespace> ]</codeblock>
                         <p>where <varname>subpartition_spec</varname> is:</p>
-                        <codeblock><varname>subpartition_element</varname> [, ...]</codeblock>
+                        <codeblock>&lt;subpartition_element> [, ...]</codeblock>
                         <p>and <varname>subpartition_element</varname> is:</p>
-                        <codeblock>   DEFAULT SUBPARTITION <varname>subpartition_name</varname>
-  | [SUBPARTITION <varname>subpartition_name</varname>] VALUES (<varname>list_value</varname> [,...] )
-  | [SUBPARTITION <varname>subpartition_name</varname>] 
-     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
-     [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
-  | [SUBPARTITION <varname>subpartition_name</varname>] 
-     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
-[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+                        <codeblock>   DEFAULT SUBPARTITION &lt;subpartition_name>
+  | [SUBPARTITION &lt;subpartition_name>] VALUES (&lt;list_value> [,...] )
+  | [SUBPARTITION &lt;subpartition_name>] 
+     START ([&lt;datatype>] '&lt;start_value>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ( [&lt;number | datatype>] '&lt;interval_value>') ]
+  | [SUBPARTITION &lt;subpartition_name>] 
+     END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ( [&lt;number | datatype>] '&lt;interval_value>') ]
+[ WITH ( &lt;partition_storage_parameter>=&lt;value> [, ... ] ) ]
+[ TABLESPACE &lt;tablespace> ]</codeblock>
                         <p>where <varname>storage_parameter</varname> is:</p>
                         <codeblock>   appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}

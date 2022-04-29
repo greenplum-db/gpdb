@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) 
-       WITH FUNCTION <varname>funcname</varname> (<varname>argtype</varname> [, ...]) 
+<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (&lt;sourcetype> AS &lt;targettype>) 
+       WITH FUNCTION &lt;funcname> (&lt;argtype> [, ...]) 
        [AS ASSIGNMENT | AS IMPLICIT]
 
-CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
+CREATE CAST (&lt;sourcetype> AS &lt;targettype>)
        WITHOUT FUNCTION 
        [AS ASSIGNMENT | AS IMPLICIT]
 
-CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
+CREATE CAST (&lt;sourcetype> AS &lt;targettype>)
        WITH INOUT 
        [AS ASSIGNMENT | AS IMPLICIT]</codeblock></section>
     <section id="section3"><title>Description</title><p><codeph>CREATE CAST</codeph> defines a new

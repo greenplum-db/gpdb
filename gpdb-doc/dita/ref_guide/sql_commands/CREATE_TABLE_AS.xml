@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Defines a new table from the results of a query.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE <varname>table_name</varname>
-        [ (<varname>column_name</varname> [, ...] ) ]
-        [ WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ] ) | WITHOUT OIDS ]
+      <codeblock id="sql_command_synopsis">CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE &lt;table_name>
+        [ (&lt;column_name> [, ...] ) ]
+        [ WITH ( &lt;storage_parameter> [= &lt;value>] [, ... ] ) | WITHOUT OIDS ]
         [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
-        [ TABLESPACE <varname>tablespace_name</varname> ]
-        AS <varname>query</varname>
+        [ TABLESPACE &lt;tablespace_name> ]
+        AS &lt;query>
         [ WITH [ NO ] DATA ]
         [ DISTRIBUTED BY (column [, ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
       </codeblock>

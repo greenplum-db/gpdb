@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bo20941">CREATE CONVERSION</title><body><p id="sql_command_desc">Defines a new encoding conversion.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [DEFAULT] CONVERSION <varname>name</varname> FOR <varname>source_encoding</varname> TO 
-     <varname>dest_encoding</varname> FROM <varname>funcname</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE CONVERSION</codeph> defines a new conversion between
+<topic id="topic1"><title id="bo20941">CREATE CONVERSION</title><body><p id="sql_command_desc">Defines a new encoding conversion.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [DEFAULT] CONVERSION &lt;name> FOR &lt;source_encoding> TO 
+     &lt;dest_encoding> FROM &lt;funcname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE CONVERSION</codeph> defines a new conversion between
 character set encodings. Conversion names may be used in the convert
 function to specify a particular encoding conversion. Also, conversions
 that are marked <codeph>DEFAULT</codeph> can be used for automatic encoding

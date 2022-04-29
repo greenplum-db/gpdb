@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="az137232">ALTER TABLESPACE</title><body><p id="sql_command_desc">Changes the definition of a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TABLESPACE <varname>name</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="az137232">ALTER TABLESPACE</title><body><p id="sql_command_desc">Changes the definition of a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TABLESPACE &lt;name> RENAME TO &lt;new_name>
 
-ALTER TABLESPACE <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER TABLESPACE &lt;name> OWNER TO &lt;new_owner>
 
-ALTER TABLESPACE <varname>name</varname> SET ( <varname>tablespace_option</varname> = <varname>value</varname> [, ... ] )
+ALTER TABLESPACE &lt;name> SET ( &lt;tablespace_option> = &lt;value> [, ... ] )
 
-ALTER TABLESPACE <varname>name</varname> RESET ( <varname>tablespace_option</varname> [, ... ] )
+ALTER TABLESPACE &lt;name> RESET ( &lt;tablespace_option> [, ... ] )
 
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TABLESPACE</codeph> changes the definition of a tablespace.
 </p><p>You must own the tablespace to use <codeph>ALTER TABLESPACE</codeph>.

@@ -7,8 +7,8 @@
     <p id="sql_command_desc">Defines a new tablespace.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE TABLESPACE <varname>tablespace_name</varname> [OWNER <varname>username</varname>]  LOCATION '<varname>/path/to/dir</varname>' 
-   [WITH (content<varname>ID_1</varname>='<varname>/path/to/dir1</varname>'[, content<varname>ID_2</varname>='<varname>/path/to/dir2</varname>' ... ])]</codeblock>
+      <codeblock id="sql_command_synopsis">CREATE TABLESPACE &lt;tablespace_name> [OWNER &lt;username>]  LOCATION '&lt;/path/to/dir>' 
+   [WITH (content&lt;ID_1>='&lt;/path/to/dir1>'[, content&lt;ID_2>='&lt;/path/to/dir2>' ... ])]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

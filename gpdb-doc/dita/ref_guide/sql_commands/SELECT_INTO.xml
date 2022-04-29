@@ -7,20 +7,20 @@
         <p id="sql_command_desc">Defines a new table from the results of a query.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
-    * | <varname>expression</varname> [AS <varname>output_name</varname>] [, ...]
-    INTO [TEMPORARY | TEMP | UNLOGGED ] [TABLE] <varname>new_table</varname>
-    [FROM <varname>from_item</varname> [, ...]]
-    [WHERE <varname>condition</varname>]
-    [GROUP BY <varname>expression</varname> [, ...]]
-    [HAVING <varname>condition</varname> [, ...]]
-    [{UNION | INTERSECT | EXCEPT} [ALL | DISTINCT ] <varname>select</varname>]
-    [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
-    [LIMIT {<varname>count</varname> | ALL}]
-    [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
-    [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY ]
-    [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] 
+            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+SELECT [ALL | DISTINCT [ON ( &lt;expression> [, ...] )]]
+    * | &lt;expression> [AS &lt;output_name>] [, ...]
+    INTO [TEMPORARY | TEMP | UNLOGGED ] [TABLE] &lt;new_table>
+    [FROM &lt;from_item> [, ...]]
+    [WHERE &lt;condition>]
+    [GROUP BY &lt;expression> [, ...]]
+    [HAVING &lt;condition> [, ...]]
+    [{UNION | INTERSECT | EXCEPT} [ALL | DISTINCT ] &lt;select>]
+    [ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [, ...]]
+    [LIMIT {&lt;count> | ALL}]
+    [OFFSET &lt;start> [ ROW | ROWS ] ]
+    [FETCH { FIRST | NEXT } [ &lt;count> ] { ROW | ROWS } ONLY ]
+    [FOR {UPDATE | SHARE} [OF &lt;table_name> [, ...]] [NOWAIT] 
     [...]]</codeblock>
         </section>
         <section id="section3">

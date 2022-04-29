@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cx154761">DROP INDEX</title><body><p id="sql_command_desc">Removes an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP INDEX [ CONCURRENTLY ] [ IF EXISTS ] <varname>name</varname> [, ...] [ CASCADE | RESTRICT ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP INDEX</codeph> drops an existing index from the database
+<topic id="topic1"><title id="cx154761">DROP INDEX</title><body><p id="sql_command_desc">Removes an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP INDEX [ CONCURRENTLY ] [ IF EXISTS ] &lt;name> [, ...] [ CASCADE | RESTRICT ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP INDEX</codeph> drops an existing index from the database
 system. To run this command you must be the owner of the index. </p></section><section id="section4"><title>Parameters</title>
       <parml>
         <plentry>

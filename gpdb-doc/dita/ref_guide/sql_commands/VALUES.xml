@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="es20941">VALUES</title><body><p id="sql_command_desc">Computes a set of rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">VALUES ( <varname>expression</varname> [, ...] ) [, ...]
-   [ORDER BY <varname>sort_expression</varname> [ ASC | DESC | USING <varname>operator</varname> ] [, ...] ]
-   [LIMIT { <varname>count</varname> | ALL } ] 
-   [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
-   [FETCH { FIRST | NEXT } [<varname>count</varname> ] { ROW | ROWS } ONLY ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>VALUES</codeph> computes a row value or set of row values specified by value expressions.
+<topic id="topic1"><title id="es20941">VALUES</title><body><p id="sql_command_desc">Computes a set of rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">VALUES ( &lt;expression> [, ...] ) [, ...]
+   [ORDER BY &lt;sort_expression> [ ASC | DESC | USING &lt;operator> ] [, ...] ]
+   [LIMIT { &lt;count> | ALL } ] 
+   [OFFSET &lt;start> [ ROW | ROWS ] ]
+   [FETCH { FIRST | NEXT } [&lt;count> ] { ROW | ROWS } ONLY ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>VALUES</codeph> computes a row value or set of row values specified by value expressions.
                 It is most commonly used to generate a "constant table" within a larger command, but
                 it can be used on its own.</p><p>When more than one row is specified, all the rows must have the same
 number of elements. The data types of the resulting table's columns

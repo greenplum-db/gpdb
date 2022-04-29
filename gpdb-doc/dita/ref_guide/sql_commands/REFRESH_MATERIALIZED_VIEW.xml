@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Replaces the contents of a materialized view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] <varname>name</varname>
+      <codeblock id="sql_command_synopsis">REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] &lt;name>
     [ WITH [ NO ] DATA ]</codeblock>
     </section>
     <section id="section3">

@@ -7,9 +7,9 @@
     <p id="sql_command_desc">Defines a cursor.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DECLARE <varname>name</varname> [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
+      <codeblock id="sql_command_synopsis">DECLARE &lt;name> [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
      [{WITH | WITHOUT} HOLD] 
-     FOR <varname>query</varname> [FOR READ ONLY]</codeblock>
+     FOR &lt;query> [FOR READ ONLY]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

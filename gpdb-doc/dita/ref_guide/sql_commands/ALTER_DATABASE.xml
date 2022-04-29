@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ai20941">ALTER DATABASE</title><body><p id="sql_command_desc">Changes the attributes of a database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER DATABASE <varname>name</varname> [ WITH CONNECTION LIMIT <varname>connlimit</varname> ]
+<topic id="topic1"><title id="ai20941">ALTER DATABASE</title><body><p id="sql_command_desc">Changes the attributes of a database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER DATABASE &lt;name> [ WITH CONNECTION LIMIT &lt;connlimit> ]
 
-ALTER DATABASE <varname>name</varname> RENAME TO <varname>newname</varname>
+ALTER DATABASE &lt;name> RENAME TO &lt;newname>
 
-ALTER DATABASE <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER DATABASE &lt;name> OWNER TO &lt;new_owner>
 
-ALTER DATABASE <varname>name</varname> SET TABLESPACE <varname>new_tablespace</varname>
+ALTER DATABASE &lt;name> SET TABLESPACE &lt;new_tablespace>
 
-ALTER DATABASE <varname>name</varname> SET <varname>parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
-ALTER DATABASE <varname>name</varname> SET <varname>parameter</varname> FROM CURRENT
-ALTER DATABASE <varname>name</varname> RESET <varname>parameter</varname>
-ALTER DATABASE <varname>name</varname> RESET ALL
+ALTER DATABASE &lt;name> SET &lt;parameter> { TO | = } { &lt;value> | DEFAULT }
+ALTER DATABASE &lt;name> SET &lt;parameter> FROM CURRENT
+ALTER DATABASE &lt;name> RESET &lt;parameter>
+ALTER DATABASE &lt;name> RESET ALL
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER DATABASE</codeph> changes the attributes of a database.</p>
 <p>The first form changes the allowed connection limit for a database.
 Only the database owner or a superuser can change this setting. </p>

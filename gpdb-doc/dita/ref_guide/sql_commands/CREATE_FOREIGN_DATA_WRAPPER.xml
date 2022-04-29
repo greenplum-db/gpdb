@@ -7,10 +7,10 @@
         <p id="sql_command_desc">Defines a new foreign-data wrapper.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE FOREIGN DATA WRAPPER <varname>name</varname>
-    [ HANDLER <varname>handler_function</varname> | NO HANDLER ]
-    [ VALIDATOR <varname>validator_function</varname> | NO VALIDATOR ]
-    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+            <codeblock id="sql_command_synopsis">CREATE FOREIGN DATA WRAPPER &lt;name>
+    [ HANDLER &lt;handler_function> | NO HANDLER ]
+    [ VALIDATOR &lt;validator_function> | NO VALIDATOR ]
+    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] &lt;option> '&lt;value>' [, ... ] ) ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

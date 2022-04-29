@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Garbage-collects and optionally analyzes a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">VACUUM [({ FULL | FREEZE | VERBOSE | ANALYZE } [, ...])] [<varname>table</varname> [(<varname>column</varname> [, ...] )]]
+      <codeblock id="sql_command_synopsis">VACUUM [({ FULL | FREEZE | VERBOSE | ANALYZE } [, ...])] [&lt;table> [(&lt;column> [, ...] )]]
         
-VACUUM [FULL] [FREEZE] [VERBOSE] [<varname>table</varname>]
+VACUUM [FULL] [FREEZE] [VERBOSE] [&lt;table>]
 
 VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
-              [<varname>table</varname> [(<varname>column</varname> [, ...] )]]</codeblock>
+              [&lt;table> [(&lt;column> [, ...] )]]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

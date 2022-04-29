@@ -7,11 +7,11 @@
         <p id="sql_command_desc">Defines a new procedural language.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE [ OR REPLACE ] [ PROCEDURAL ] LANGUAGE <varname>name</varname>
+            <codeblock id="sql_command_synopsis">CREATE [ OR REPLACE ] [ PROCEDURAL ] LANGUAGE &lt;name>
 
-CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname>
-    HANDLER <varname>call_handler</varname> [ INLINE <varname>inline_handler</varname> ] 
-   [ VALIDATOR <varname>valfunction</varname> ]
+CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE &lt;name>
+    HANDLER &lt;call_handler> [ INLINE &lt;inline_handler> ] 
+   [ VALIDATOR &lt;valfunction> ]
             </codeblock>
         </section>
         <section id="section3">

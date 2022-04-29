@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ct20941">DROP EXTERNAL TABLE</title><body><p id="sql_command_desc">Removes an external table definition.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP EXTERNAL [WEB] TABLE [IF EXISTS] <varname>name</varname> [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP EXTERNAL TABLE</codeph> drops an existing external table definition from the
+<topic id="topic1"><title id="ct20941">DROP EXTERNAL TABLE</title><body><p id="sql_command_desc">Removes an external table definition.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP EXTERNAL [WEB] TABLE [IF EXISTS] &lt;name> [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP EXTERNAL TABLE</codeph> drops an existing external table definition from the
         database system. The external data sources or files are not deleted. To run this command
         you must be the owner of the external table.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>WEB</pt><pd>Optional keyword for dropping external web tables.</pd></plentry><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the external table does not exist. A notice
 is issued in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing external table.</pd></plentry><plentry><pt>CASCADE</pt><pd>Automatically drop objects that depend on the external table (such

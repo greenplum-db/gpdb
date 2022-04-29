@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Updates rows of a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
-   SET {<varname>column</varname> = {<varname>expression</varname> | DEFAULT} |
-   (<varname>column</varname> [, ...]) = ({<varname>expression</varname> | DEFAULT} [, ...])} [, ...]
-   [FROM <varname>fromlist</varname>]
-   [WHERE <varname>condition </varname>| WHERE CURRENT OF <varname>cursor_name</varname> ]</codeblock>
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+UPDATE [ONLY] &lt;table> [[AS] &lt;alias>]
+   SET {&lt;column> = {&lt;expression> | DEFAULT} |
+   (&lt;column> [, ...]) = ({&lt;expression> | DEFAULT} [, ...])} [, ...]
+   [FROM &lt;fromlist>]
+   [WHERE &lt;condition >| WHERE CURRENT OF &lt;cursor_name> ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -42,7 +42,7 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
         <b>Outputs</b>
         <p>On successful completion, an <codeph>UPDATE</codeph> command returns a command tag of the
           form:</p>
-        <codeblock>UPDATE <varname>count</varname></codeblock>
+        <codeblock>UPDATE &lt;count></codeblock>
         <p>where <varname>count</varname> is the number of rows updated. If <varname>count</varname>
           is 0, no rows matched the condition (this is not considered an error). </p>
       </sectiondiv>

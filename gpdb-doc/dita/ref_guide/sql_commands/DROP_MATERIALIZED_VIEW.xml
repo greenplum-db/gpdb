@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Removes a materialized view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP MATERIALIZED VIEW [ IF EXISTS ] <varname>name</varname> [, ...] [ CASCADE | RESTRICT ]</codeblock>
+      <codeblock id="sql_command_synopsis">DROP MATERIALIZED VIEW [ IF EXISTS ] &lt;name> [, ...] [ CASCADE | RESTRICT ]</codeblock>
     </section>
     <section id="section3"><title>Description</title><codeph>DROP MATERIALIZED VIEW</codeph> drops
       an existing materialized view. To run this command, you must be the owner of the

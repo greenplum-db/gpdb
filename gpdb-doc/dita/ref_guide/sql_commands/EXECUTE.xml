@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dp20941">EXECUTE</title><body><p id="sql_command_desc">Runs a prepared SQL statement.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">EXECUTE <varname>name</varname> [ (<varname>parameter</varname> [, ...] ) ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>EXECUTE</codeph> is used to run a previously prepared statement.
+<topic id="topic1"><title id="dp20941">EXECUTE</title><body><p id="sql_command_desc">Runs a prepared SQL statement.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">EXECUTE &lt;name> [ (&lt;parameter> [, ...] ) ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>EXECUTE</codeph> is used to run a previously prepared statement.
 Since prepared statements only exist for the duration of a session, the
 prepared statement must have been created by a <codeph>PREPARE</codeph>
 statement run earlier in the current session. </p><p>If the <codeph>PREPARE</codeph> statement that created the statement

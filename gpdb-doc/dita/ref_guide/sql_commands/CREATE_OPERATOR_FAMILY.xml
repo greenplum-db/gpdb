@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bx20941">CREATE OPERATOR FAMILY</title><body><p id="sql_command_desc">Defines a new operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR FAMILY <varname>name</varname>  USING <varname>index_method</varname>  </codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR FAMILY</codeph> creates a new operator family. An operator family defines
+<topic id="topic1"><title id="bx20941">CREATE OPERATOR FAMILY</title><body><p id="sql_command_desc">Defines a new operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR FAMILY &lt;name>  USING &lt;index_method>  </codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR FAMILY</codeph> creates a new operator family. An operator family defines
                 a collection of related operator classes, and perhaps some additional operators and
                 support functions that are compatible with these operator classes but not essential
                 for the functioning of any individual index. (Operators and functions that are

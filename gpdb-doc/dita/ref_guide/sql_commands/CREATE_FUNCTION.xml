@@ -6,21 +6,21 @@
     <body>
         <p id="sql_command_desc">Defines a new function.</p>
         <section id="section2"
-            ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION <varname>name</varname>    
-    ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [ { DEFAULT | = } <varname>default_expr</varname> ] [, ...] ] )
-      [ RETURNS <varname>rettype</varname> 
-        | RETURNS TABLE ( <varname>column_name</varname> <varname>column_type</varname> [, ...] ) ]
-    { LANGUAGE <varname>langname</varname>
+            ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION &lt;name>    
+    ( [ [&lt;argmode>] [&lt;argname>] &lt;argtype> [ { DEFAULT | = } &lt;default_expr> ] [, ...] ] )
+      [ RETURNS &lt;rettype> 
+        | RETURNS TABLE ( &lt;column_name> &lt;column_type> [, ...] ) ]
+    { LANGUAGE &lt;langname>
     | WINDOW
     | IMMUTABLE | STABLE | VOLATILE | [NOT] LEAKPROOF
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     | NO SQL | CONTAINS SQL | READS SQL DATA | MODIFIES SQL
     | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
-    | COST <varname>execution_cost</varname>
-    | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
-    | AS '<varname>definition</varname>'
-    | AS '<varname>obj_file</varname>', '<varname>link_symbol</varname>' } ...
+    | COST &lt;execution_cost>
+    | SET &lt;configuration_parameter> { TO &lt;value> | = &lt;value> | FROM CURRENT }
+    | AS '&lt;definition>'
+    | AS '&lt;obj_file>', '&lt;link_symbol>' } ...
     [ WITH ({ DESCRIBE = describe_function
            } [, ...] ) ]</codeblock>
         </section>

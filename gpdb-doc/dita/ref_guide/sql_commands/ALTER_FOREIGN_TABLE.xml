@@ -7,33 +7,33 @@
         <p id="sql_command_desc">Changes the definition of a foreign table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    <varname>action</varname> [, ... ]
-ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    RENAME [ COLUMN ] <varname>column_name</varname> TO <varname>new_column_name</varname>
-ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    RENAME TO <varname>new_name</varname>
-ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    SET SCHEMA <varname>new_schema</varname>
+            <codeblock id="sql_command_synopsis">ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    &lt;action> [, ... ]
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    RENAME [ COLUMN ] &lt;column_name> TO &lt;new_column_name>
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    RENAME TO &lt;new_name>
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    SET SCHEMA &lt;new_schema>
 </codeblock>
 
 <p>where <varname>action</varname> is one of:</p><codeblock>
-    ADD [ COLUMN ] <varname>column_name</varname> <varname>column_type</varname> [ COLLATE <varname>collation</varname> ] [ <varname>column_constraint</varname> [ ... ] ]
-    DROP [ COLUMN ] [ IF EXISTS ] <varname>column_name</varname> [ RESTRICT | CASCADE ]
-    ALTER [ COLUMN ] <varname>column_name</varname> [ SET DATA ] TYPE <varname>data_type</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> DROP DEFAULT
-    ALTER [ COLUMN ] <varname>column_name</varname> { SET | DROP } NOT NULL
-    ALTER [ COLUMN ] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
-    ALTER [ COLUMN ] <varname>column_name</varname> RESET ( <varname>attribute_option</varname> [, ... ] )
-    ALTER [ COLUMN ] <varname>column_name</varname> OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ])
-    DISABLE TRIGGER [ <varname>trigger_name</varname> | ALL | USER ]
-    ENABLE TRIGGER [ <varname>trigger_name</varname> | ALL | USER ]
-    ENABLE REPLICA TRIGGER <varname>trigger_name</varname>
-    ENABLE ALWAYS TRIGGER <varname>trigger_name</varname>
-    OWNER TO <varname>new_owner</varname>
-    OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] )</codeblock>
+    ADD [ COLUMN ] &lt;column_name> &lt;column_type> [ COLLATE &lt;collation> ] [ &lt;column_constraint> [ ... ] ]
+    DROP [ COLUMN ] [ IF EXISTS ] &lt;column_name> [ RESTRICT | CASCADE ]
+    ALTER [ COLUMN ] &lt;column_name> [ SET DATA ] TYPE &lt;data_type>
+    ALTER [ COLUMN ] &lt;column_name> SET DEFAULT &lt;expression>
+    ALTER [ COLUMN ] &lt;column_name> DROP DEFAULT
+    ALTER [ COLUMN ] &lt;column_name> { SET | DROP } NOT NULL
+    ALTER [ COLUMN ] &lt;column_name> SET STATISTICS &lt;integer>
+    ALTER [ COLUMN ] &lt;column_name> SET ( &lt;attribute_option> = &lt;value> [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name> RESET ( &lt;attribute_option> [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name> OPTIONS ( [ ADD | SET | DROP ] &lt;option> ['&lt;value>'] [, ... ])
+    DISABLE TRIGGER [ &lt;trigger_name> | ALL | USER ]
+    ENABLE TRIGGER [ &lt;trigger_name> | ALL | USER ]
+    ENABLE REPLICA TRIGGER &lt;trigger_name>
+    ENABLE ALWAYS TRIGGER &lt;trigger_name>
+    OWNER TO &lt;new_owner>
+    OPTIONS ( [ ADD | SET | DROP ] &lt;option> ['&lt;value>'] [, ... ] )</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

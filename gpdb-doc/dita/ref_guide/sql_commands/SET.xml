@@ -7,10 +7,10 @@
     <p id="sql_command_desc">Changes the value of a Greenplum Database configuration parameter.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] <varname>configuration_parameter</varname> {TO | =} <varname>value</varname> | 
-    '<varname>value</varname>' | DEFAULT}
+      <codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] &lt;configuration_parameter> {TO | =} &lt;value> | 
+    '&lt;value>' | DEFAULT}
 
-SET [SESSION | LOCAL] TIME ZONE {<varname>timezone</varname> | LOCAL | DEFAULT}</codeblock>
+SET [SESSION | LOCAL] TIME ZONE {&lt;timezone> | LOCAL | DEFAULT}</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

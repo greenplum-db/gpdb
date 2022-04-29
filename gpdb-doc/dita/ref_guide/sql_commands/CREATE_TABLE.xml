@@ -11,87 +11,87 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">
 CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS] 
-  <varname>table_name</varname> ( 
-  [ { <varname>column_name</varname> <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [<varname>column_constraint</varname> [ ... ] ]
-[ ENCODING ( <varname>storage_directive</varname> [, ...] ) ]
-    | <varname>table_constraint</varname>
-    | LIKE <varname>source_table</varname> [ <varname>like_option</varname> ... ] }
-    | [ <varname>column_reference_storage_directive</varname> [, ...]
+  &lt;table_name> ( 
+  [ { &lt;column_name> &lt;data_type> [ COLLATE &lt;collation> ] [&lt;column_constraint> [ ... ] ]
+[ ENCODING ( &lt;storage_directive> [, ...] ) ]
+    | &lt;table_constraint>
+    | LIKE &lt;source_table> [ &lt;like_option> ... ] }
+    | [ &lt;column_reference_storage_directive> [, ...]
     [, ... ]
 ] )
-[ INHERITS ( <varname>parent_table</varname> [, ... ] ) ]
-[ WITH ( <varname>storage_parameter</varname> [=<varname>value</varname>] [, ... ] ) ]
+[ INHERITS ( &lt;parent_table> [, ... ] ) ]
+[ WITH ( &lt;storage_parameter> [=&lt;value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
-[ TABLESPACE <varname>tablespace_name</varname> ]
-[ DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] ) 
+[ TABLESPACE &lt;tablespace_name> ]
+[ DISTRIBUTED BY (&lt;column> [&lt;opclass>], [ ... ] ) 
        | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
 
 { <b>--partitioned table using SUBPARTITION TEMPLATE</b>
-[ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>) 
-  {  [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column1</varname>) 
-       SUBPARTITION TEMPLATE ( <varname>template_spec</varname> ) ]
-          [ SUBPARTITION BY partition_type (<varname>column2</varname>) 
-            SUBPARTITION TEMPLATE ( <varname>template_spec</varname> ) ]
+[ PARTITION BY &lt;partition_type> (&lt;column>) 
+  {  [ SUBPARTITION BY &lt;partition_type> (&lt;column1>) 
+       SUBPARTITION TEMPLATE ( &lt;template_spec> ) ]
+          [ SUBPARTITION BY partition_type (&lt;column2>) 
+            SUBPARTITION TEMPLATE ( &lt;template_spec> ) ]
               [...]  }
-  ( <varname>partition_spec</varname> ) ]
+  ( &lt;partition_spec> ) ]
 } |
 
 { <b>-- partitioned table without SUBPARTITION TEMPLATE
-</b>[ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>)
-   [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column1</varname>) ]
-      [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column2</varname>) ]
+</b>[ PARTITION BY &lt;partition_type> (&lt;column>)
+   [ SUBPARTITION BY &lt;partition_type> (&lt;column1>) ]
+      [ SUBPARTITION BY &lt;partition_type> (&lt;column2>) ]
          [...]
-  ( <varname>partition_spec</varname>
-     [ ( <varname>subpartition_spec_column1</varname>
-          [ ( <varname>subpartition_spec_column2</varname>
+  ( &lt;partition_spec>
+     [ ( &lt;subpartition_spec_column1>
+          [ ( &lt;subpartition_spec_column2>
                [...] ) ] ) ],
-  [ <varname>partition_spec</varname>
-     [ ( <varname>subpartition_spec_column1</varname>
-        [ ( <varname>subpartition_spec_column2</varname>
+  [ &lt;partition_spec>
+     [ ( &lt;subpartition_spec_column1>
+        [ ( &lt;subpartition_spec_column2>
              [...] ) ] ) ], ]
     [...]
   ) ]
 }
 
 CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS] 
-   <varname>table_name</varname>
-    OF <varname>type_name</varname> [ (
-  { <varname>column_name</varname> WITH OPTIONS [ <varname>column_constraint</varname> [ ... ] ]
-    | <varname>table_constraint</varname> } 
+   &lt;table_name>
+    OF &lt;type_name> [ (
+  { &lt;column_name> WITH OPTIONS [ &lt;column_constraint> [ ... ] ]
+    | &lt;table_constraint> } 
     [, ... ]
 ) ]
-[ WITH ( <varname>storage_parameter</varname> [=<varname>value</varname>] [, ... ] ) ]
+[ WITH ( &lt;storage_parameter> [=&lt;value>] [, ... ] ) ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
-[ TABLESPACE <varname>tablespace_name</varname> ]
+[ TABLESPACE &lt;tablespace_name> ]
 </codeblock>
       <p>where <varname>column_constraint</varname> is:</p>
-      <codeblock>[ CONSTRAINT <varname>constraint_name</varname>]
+      <codeblock>[ CONSTRAINT &lt;constraint_name>]
 { NOT NULL 
   | NULL 
-  | CHECK  ( <varname>expression</varname> ) [ NO INHERIT ]
-  | DEFAULT <varname>default_expr</varname>
-  | UNIQUE <varname>index_parameters</varname>
-  | PRIMARY KEY <varname>index_parameters</varname>
-  | REFERENCES <varname>reftable</varname> [ ( refcolumn ) ] 
+  | CHECK  ( &lt;expression> ) [ NO INHERIT ]
+  | DEFAULT &lt;default_expr>
+  | UNIQUE &lt;index_parameters>
+  | PRIMARY KEY &lt;index_parameters>
+  | REFERENCES &lt;reftable> [ ( refcolumn ) ] 
       [ MATCH FULL | MATCH PARTIAL | MATCH SIMPLE ]  
-      [ ON DELETE <varname>key_action</varname> ] [ ON UPDATE <varname>key_action</varname> ] }
+      [ ON DELETE &lt;key_action> ] [ ON UPDATE &lt;key_action> ] }
 [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]</codeblock>
       <p>and <varname>table_constraint</varname> is:</p>
-      <codeblock>[ CONSTRAINT <varname>constraint_name</varname> ]
-{ CHECK ( <varname>expression</varname> ) [ NO INHERIT ]
-  | UNIQUE ( <varname>column_name</varname> [, ... ] ) <varname>index_parameters</varname>
-  | PRIMARY KEY ( <varname>column_name</varname> [, ... ] ) <varname>index_parameters</varname>
-  | FOREIGN KEY ( <varname>column_name</varname> [, ... ] ) 
-      REFERENCES <varname>reftable</varname> [ ( <varname>refcolumn</varname> [, ... ] ) ]
+      <codeblock>[ CONSTRAINT &lt;constraint_name> ]
+{ CHECK ( &lt;expression> ) [ NO INHERIT ]
+  | UNIQUE ( &lt;column_name> [, ... ] ) &lt;index_parameters>
+  | PRIMARY KEY ( &lt;column_name> [, ... ] ) &lt;index_parameters>
+  | FOREIGN KEY ( &lt;column_name> [, ... ] ) 
+      REFERENCES &lt;reftable> [ ( &lt;refcolumn> [, ... ] ) ]
       [ MATCH FULL | MATCH PARTIAL | MATCH SIMPLE ] 
-      [ ON DELETE <varname>key_action</varname> ] [ ON UPDATE <varname>key_action</varname> ] }
+      [ ON DELETE &lt;key_action> ] [ ON UPDATE &lt;key_action> ] }
 [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]</codeblock>
       <p>and <i>like_option</i>
         is:<codeblock>{INCLUDING|EXCLUDING} {DEFAULTS|CONSTRAINTS|INDEXES|STORAGE|COMMENTS|ALL}</codeblock></p>
       <p>and <varname>index_parameters</varname> in <codeph>UNIQUE</codeph> and <codeph>PRIMARY
           KEY</codeph> constraints are:</p>
-      <codeblock>[ WITH ( <varname>storage_parameter</varname> [=<varname>value</varname>] [, ... ] ) ]
-[ USING INDEX TABLESPACE <varname>tablespace_name</varname> ] </codeblock>
+      <codeblock>[ WITH ( &lt;storage_parameter> [=&lt;value>] [, ... ] ) ]
+[ USING INDEX TABLESPACE &lt;tablespace_name> ] </codeblock>
       <p>and <varname>storage_directive</varname> for a column is:</p>
       <codeblock>   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
     [compresslevel={0-9}]
@@ -116,35 +116,35 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
       <p>and <varname>partition_type</varname> is:</p>
       <codeblock>    LIST | RANGE</codeblock>
       <p>and <varname>partition_specification</varname> is:</p>
-      <codeblock><varname>partition_element</varname> [, ...]</codeblock>
+      <codeblock>&lt;partition_element> [, ...]</codeblock>
       <p>and <varname>partition_element</varname> is:</p>
-      <codeblock>   DEFAULT PARTITION <varname>name</varname>
-  | [PARTITION <varname>name</varname>] VALUES (<varname>list_value</varname> [,...] )
-  | [PARTITION <varname>name</varname>] 
-     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
-     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
-  | [PARTITION <varname>name</varname>] 
-     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
-[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-[ <varname>column_reference_storage_directive</varname> [, ...] ]
-[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+      <codeblock>   DEFAULT PARTITION &lt;name>
+  | [PARTITION &lt;name>] VALUES (&lt;list_value> [,...] )
+  | [PARTITION &lt;name>] 
+     START ([&lt;datatype>] '&lt;start_value>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ([&lt;datatype>] [&lt;number | >INTERVAL] '&lt;interval_value>') ]
+  | [PARTITION &lt;name>] 
+     END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ([&lt;datatype>] [&lt;number | >INTERVAL] '&lt;interval_value>') ]
+[ WITH ( &lt;partition_storage_parameter>=&lt;value> [, ... ] ) ]
+[ &lt;column_reference_storage_directive> [, ...] ]
+[ TABLESPACE &lt;tablespace> ]</codeblock>
       <p>where <varname>subpartition_spec</varname> or <varname>template_spec</varname> is:</p>
-      <codeblock><varname>subpartition_element</varname> [, ...]</codeblock>
+      <codeblock>&lt;subpartition_element> [, ...]</codeblock>
       <p>and <varname>subpartition_element</varname> is:</p>
-      <codeblock>   DEFAULT SUBPARTITION <varname>name</varname>
-  | [SUBPARTITION <varname>name</varname>] VALUES (<varname>list_value</varname> [,...] )
-  | [SUBPARTITION <varname>name</varname>] 
-     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
-     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
-  | [SUBPARTITION <varname>name</varname>] 
-     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
-[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-[ <varname>column_reference_storage_directive</varname> [, ...] ]
-[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+      <codeblock>   DEFAULT SUBPARTITION &lt;name>
+  | [SUBPARTITION &lt;name>] VALUES (&lt;list_value> [,...] )
+  | [SUBPARTITION &lt;name>] 
+     START ([&lt;datatype>] '&lt;start_value>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ([&lt;datatype>] [&lt;number | >INTERVAL] '&lt;interval_value>') ]
+  | [SUBPARTITION &lt;name>] 
+     END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ([&lt;datatype>] [&lt;number | >INTERVAL] '&lt;interval_value>') ]
+[ WITH ( &lt;partition_storage_parameter>=&lt;value> [, ... ] ) ]
+[ &lt;column_reference_storage_directive> [, ...] ]
+[ TABLESPACE &lt;tablespace> ]</codeblock>
       <p>where <varname>storage_parameter</varname> for a partition is:</p>
       <codeblock>   appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}

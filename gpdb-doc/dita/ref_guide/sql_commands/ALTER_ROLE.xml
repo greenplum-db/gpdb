@@ -7,9 +7,9 @@
     <p id="sql_command_desc">Changes a database role (user or group).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER ROLE <varname>name</varname> [ [ WITH ] <varname>option</varname> [ ... ] ]
+      <codeblock id="sql_command_synopsis">ALTER ROLE &lt;name> [ [ WITH ] &lt;option> [ ... ] ]
 
-where <varname>option</varname> can be:
+where &lt;option> can be:
 
     SUPERUSER | NOSUPERUSER
   | CREATEDB | NOCREATEDB
@@ -21,18 +21,18 @@ where <varname>option</varname> can be:
   | INHERIT | NOINHERIT
   | LOGIN | NOLOGIN
   | REPLICATION | NOREPLICATION
-  | CONNECTION LIMIT <varname>connlimit</varname>
-  | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-  | VALID UNTIL '<varname>timestamp</varname>'
+  | CONNECTION LIMIT &lt;connlimit>
+  | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '&lt;password>'
+  | VALID UNTIL '&lt;timestamp>'
 
-ALTER ROLE <varname>name</varname> RENAME TO <varname>new_name</varname>
+ALTER ROLE &lt;name> RENAME TO &lt;new_name>
 
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] SET <varname>configuration_parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] SET <varname>configuration_parameter</varname> FROM CURRENT
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] RESET <varname>configuration_parameter</varname>
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] RESET ALL
-ALTER ROLE <varname>name</varname> RESOURCE QUEUE {<varname>queue_name</varname> | NONE}
-ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname> | NONE}
+ALTER ROLE { &lt;name> | ALL } [ IN DATABASE &lt;database_name> ] SET &lt;configuration_parameter> { TO | = } { &lt;value> | DEFAULT }
+ALTER ROLE { &lt;name> | ALL } [ IN DATABASE &lt;database_name> ] SET &lt;configuration_parameter> FROM CURRENT
+ALTER ROLE { &lt;name> | ALL } [ IN DATABASE &lt;database_name> ] RESET &lt;configuration_parameter>
+ALTER ROLE { &lt;name> | ALL } [ IN DATABASE &lt;database_name> ] RESET ALL
+ALTER ROLE &lt;name> RESOURCE QUEUE {&lt;queue_name> | NONE}
+ALTER ROLE &lt;name> RESOURCE GROUP {&lt;group_name> | NONE}
 </codeblock>
     </section>
     <section id="section3">
@@ -202,7 +202,7 @@ ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname>
           <pd>The <codeph>DENY BETWEEN</codeph> clause uses two <varname>deny_point</varname>
             parameters which must indicate day and time.</pd>
           <pd>
-            <codeblock>DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname></codeblock>
+            <codeblock>DENY BETWEEN &lt;deny_point> AND &lt;deny_point></codeblock>
           </pd>
           <pd>For example:</pd>
           <pd>

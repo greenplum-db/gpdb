@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dg20941">DROP SCHEMA</title><body><p id="sql_command_desc">Removes a schema.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP SCHEMA [IF EXISTS] <varname>name</varname> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP SCHEMA</codeph> removes schemas from the database. A schema can only be dropped by
+<topic id="topic1"><title id="dg20941">DROP SCHEMA</title><body><p id="sql_command_desc">Removes a schema.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP SCHEMA [IF EXISTS] &lt;name> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP SCHEMA</codeph> removes schemas from the database. A schema can only be dropped by
         its owner or a superuser. Note that the owner can drop the schema (and thereby all contained
         objects) even if he does not own some of the objects within the schema.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the schema does not exist. A notice is issued
 in this case.</pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name of the schema to remove.</pd></plentry><plentry><pt>CASCADE</pt><pd>Automatically drops any objects contained in the schema (tables,

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="aw20941">ALTER SCHEMA</title><body><p id="sql_command_desc">Changes the definition of a schema.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SCHEMA <varname>name</varname> RENAME TO <varname>newname</varname>
+<topic id="topic1"><title id="aw20941">ALTER SCHEMA</title><body><p id="sql_command_desc">Changes the definition of a schema.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SCHEMA &lt;name> RENAME TO &lt;newname>
 
-ALTER SCHEMA <varname>name</varname> OWNER TO <varname>newowner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER SCHEMA</codeph> changes the definition of a schema. </p><p>You must own the schema to use <codeph>ALTER SCHEMA</codeph>. To rename
+ALTER SCHEMA &lt;name> OWNER TO &lt;newowner></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER SCHEMA</codeph> changes the definition of a schema. </p><p>You must own the schema to use <codeph>ALTER SCHEMA</codeph>. To rename
 a schema you must also have the <codeph>CREATE</codeph> privilege for
 the database. To alter the owner, you must also be a direct or indirect
 member of the new owning role, and you must have the <codeph>CREATE</codeph>

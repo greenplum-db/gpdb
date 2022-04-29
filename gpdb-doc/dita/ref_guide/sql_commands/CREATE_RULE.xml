@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ca20941">CREATE RULE</title><body><p id="sql_command_desc">Defines a new rewrite rule.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] RULE <varname>name</varname> AS ON <varname>event</varname>
-  TO <varname>table_name</varname> [WHERE <varname>condition</varname>] 
-  DO [ALSO | INSTEAD] { NOTHING | <varname>command</varname> | (<varname>command</varname>; <varname>command</varname> 
+<topic id="topic1"><title id="ca20941">CREATE RULE</title><body><p id="sql_command_desc">Defines a new rewrite rule.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] RULE &lt;name> AS ON &lt;event>
+  TO &lt;table_name> [WHERE &lt;condition>] 
+  DO [ALSO | INSTEAD] { NOTHING | &lt;command> | (&lt;command>; &lt;command> 
   ...) }</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE RULE</codeph> defines a new rule applying to a specified
 table or view. <codeph>CREATE OR REPLACE RULE</codeph> will either create
 a new rule, or replace an existing rule of the same name for the same

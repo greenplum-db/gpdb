@@ -7,11 +7,11 @@
         <p id="sql_command_desc">Deletes rows from a table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
-      [USING <varname>usinglist</varname>]
-      [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname>]
-      [RETURNING * | <varname>output_expression</varname> [[AS] <varname>output_name</varname>] [, …]]</codeblock>
+            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+DELETE FROM [ONLY] &lt;table> [[AS] &lt;alias>]
+      [USING &lt;usinglist>]
+      [WHERE &lt;condition> | WHERE CURRENT OF &lt;cursor_name>]
+      [RETURNING * | &lt;output_expression> [[AS] &lt;output_name>] [, …]]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -46,7 +46,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                 <b>Outputs</b>
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
                     of the form</p>
-                <codeblock>DELETE <varname>count</varname></codeblock>
+                <codeblock>DELETE &lt;count></codeblock>
                 <p>The <varname>count</varname> is the number of rows deleted. If <varname>count</varname> is 0, no
                     rows were deleted by the query (this is not considered an error).</p><p>If the
                         <codeph>DELETE</codeph> command contains a <codeph>RETURNING</codeph>

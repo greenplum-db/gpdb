@@ -7,9 +7,9 @@
         <p id="sql_command_desc">Defines a new mapping of a user to a foreign server.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE USER MAPPING FOR { <varname>username</varname> | USER | CURRENT_USER | PUBLIC }
-    SERVER <varname>servername</varname>
-    [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+            <codeblock id="sql_command_synopsis">CREATE USER MAPPING FOR { &lt;username> | USER | CURRENT_USER | PUBLIC }
+    SERVER &lt;servername>
+    [ OPTIONS ( &lt;option> '&lt;value>' [, ... ] ) ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

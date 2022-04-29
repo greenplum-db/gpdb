@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dd20941">DROP ROLE</title><body><p id="sql_command_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP ROLE [IF EXISTS] <varname>name</varname> [, ...]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP ROLE</codeph> removes the specified role(s). To drop a
+<topic id="topic1"><title id="dd20941">DROP ROLE</title><body><p id="sql_command_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP ROLE [IF EXISTS] &lt;name> [, ...]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP ROLE</codeph> removes the specified role(s). To drop a
 superuser role, you must be a superuser yourself. To drop non-superuser
 roles, you must have <codeph>CREATEROLE</codeph> privilege.</p><p>A role cannot be removed if it is still referenced in any database; an error will be raised if
         so. Before dropping the role, you must drop all the objects it owns (or reassign their

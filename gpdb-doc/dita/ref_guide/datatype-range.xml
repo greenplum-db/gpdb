@@ -130,10 +130,10 @@ SELECT isempty(numrange(1, 5));
          <body>
             <p> The input for a range value must follow one of the following patterns:
                <codeblock>
-(<varname>lower-bound</varname>,<varname>upper-bound</varname>)
-(<varname>lower-bound</varname>,<varname>upper-bound</varname>]
-[<varname>lower-bound</varname>,<varname>upper-bound</varname>)
-[<varname>lower-bound</varname>,<varname>upper-bound</varname>]
+(&lt;lower-bound>,&lt;upper-bound>)
+(&lt;lower-bound>,&lt;upper-bound>]
+[&lt;lower-bound>,&lt;upper-bound>)
+[&lt;lower-bound>,&lt;upper-bound>]
 empty
 </codeblock>
                The parentheses or brackets indicate whether the lower and upper bounds are exclusive

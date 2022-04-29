@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Retrieves rows from a query using a parallel retrieve cursor.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">RETRIEVE { <varname>count</varname> | ALL } FROM ENDPOINT <varname>endpoint_name</varname></codeblock>
+      <codeblock id="sql_command_synopsis">RETRIEVE { &lt;count> | ALL } FROM ENDPOINT &lt;endpoint_name></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

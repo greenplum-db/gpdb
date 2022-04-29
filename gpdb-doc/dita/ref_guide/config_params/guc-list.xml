@@ -5215,20 +5215,20 @@
         primary segments plus 3 mirrors activated on failure). </p>
       <p>This is the calculation for <codeph>gp_vmem_protect_limit</codeph>. The value should be
         converted to MB.</p>
-      <codeblock><codeph>gp_vmem_protect_limit</codeph> = <varname>gp_vmem</varname> / <varname>acting_primary_segments</varname></codeblock>
+      <codeblock><codeph>gp_vmem_protect_limit</codeph> = &lt;gp_vmem> / &lt;acting_primary_segments></codeblock>
       <p>For scenarios where a large number of workfiles are generated, this is the calculation for
           <varname>gp_vmem</varname> that accounts for the workfiles.<ul id="ul_hpm_gnb_sqb">
           <li>If the total system memory is less than 256
-            GB:<codeblock><varname>gp_vmem</varname> = ((<varname>SWAP</varname> + <varname>RAM</varname>) – (7.5GB + 0.05 * <varname>RAM</varname> - (300KB * <varname>total_#_workfiles</varname>))) / 1.7</codeblock></li>
+            GB:<codeblock>&lt;gp_vmem> = ((&lt;SWAP> + &lt;RAM>) – (7.5GB + 0.05 * &lt;RAM> - (300KB * &lt;total_#_workfiles>))) / 1.7</codeblock></li>
           <li>If the total system memory is equal to or greater than 256
-            GB:<codeblock><varname>gp_vmem</varname> = ((<varname>SWAP</varname> + <varname>RAM</varname>) – (7.5GB + 0.05 * <varname>RAM</varname> - (300KB * <varname>total_#_workfiles</varname>))) / 1.17</codeblock></li>
+            GB:<codeblock>&lt;gp_vmem> = ((&lt;SWAP> + &lt;RAM>) – (7.5GB + 0.05 * &lt;RAM> - (300KB * &lt;total_#_workfiles>))) / 1.17</codeblock></li>
         </ul></p>
       <p>For information about monitoring and managing workfile usage, see the <cite>Greenplum
           Database Administrator Guide</cite>.</p>
       <p>Based on the <varname>gp_vmem</varname> value you can calculate the value for the
           <codeph>vm.overcommit_ratio</codeph> operating system kernel parameter. This parameter is
         set when you configure each Greenplum Database host.
-        <codeblock>vm.overcommit_ratio = (<varname>RAM</varname> - (0.026 * <varname>gp_vmem</varname>)) / <varname>RAM</varname></codeblock></p>
+        <codeblock>vm.overcommit_ratio = (&lt;RAM> - (0.026 * &lt;gp_vmem>)) / &lt;RAM></codeblock></p>
       <note>The default value for the kernel parameter <codeph>vm.overcommit_ratio</codeph> in Red
         Hat Enterprise Linux is 50. </note>
       <p>For information about the kernel parameter, see the <cite>Greenplum Database Installation
@@ -8820,7 +8820,7 @@
         need to be adjusted.</p>
       <p>The operating system parameter <codeph>SHMMAX</codeph> specifies maximum size of a single
         shared memory allocation. The value of <codeph>SHMMAX</codeph> must be greater than this
-        value:<codeblock> <codeph>shared_buffers</codeph> + <varname>other_seg_shmem</varname></codeblock>The
+        value:<codeblock> <codeph>shared_buffers</codeph> + &lt;other_seg_shmem></codeblock>The
         value of <varname>other_seg_shmem</varname> is the portion the Greenplum Database shared
         memory calculation that is not accounted for by the <codeph>shared_buffers</codeph> value.
         The <varname>other_seg_shmem</varname> value will vary based on the segment configuration. </p>
@@ -8829,7 +8829,7 @@
         and approximately 79MB for the Greenplum Database master. </p>
       <p>The operating system parameter <codeph>SHMALL</codeph> specifies the maximum amount of
         shared memory on the host. The value of <codeph>SHMALL</codeph> must be greater than this
-        value:<codeblock> (<varname>num_instances_per_host</varname> * ( <codeph>shared_buffers</codeph> + <varname>other_seg_shmem</varname> )) + <varname>other_app_shared_mem</varname> </codeblock>The
+        value:<codeblock> (&lt;num_instances_per_host> * ( <codeph>shared_buffers</codeph> + &lt;other_seg_shmem> )) + &lt;other_app_shared_mem> </codeblock>The
         value of <varname>other_app_shared_mem</varname> is the amount of shared memory that is used
         by other applications and processes on the host. </p>
       <p>When shared memory allocation errors occur, possible ways to resolve shared memory
@@ -9014,7 +9014,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
         usage. </li>
         <li>You can use the following calculation to estimate a reasonable <codeph>statement_mem</codeph>
           value for a wide variety of situations:
-          <codeblock>( <varname>gp_vmem_protect_limit</varname>GB * .9 ) / <varname>max_expected_concurrent_queries</varname></codeblock>
+          <codeblock>( &lt;gp_vmem_protect_limit>GB * .9 ) / &lt;max_expected_concurrent_queries></codeblock>
           <p>For example, with a <varname>gp_vmem_protect_limit</varname> set to 8192MB (8GB)
             and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use
             the following calculation to determine the <codeph>statement_mem</codeph> value:</p>

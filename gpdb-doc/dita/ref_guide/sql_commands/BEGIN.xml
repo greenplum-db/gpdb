@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Starts a transaction block.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">BEGIN [WORK | TRANSACTION] [<varname>transaction_mode</varname>]</codeblock>
+            <codeblock id="sql_command_synopsis">BEGIN [WORK | TRANSACTION] [&lt;transaction_mode>]</codeblock>
             <p>where <varname>transaction_mode</varname> is:</p>
             <codeblock>   ISOLATION LEVEL {READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE}
    READ WRITE | READ ONLY

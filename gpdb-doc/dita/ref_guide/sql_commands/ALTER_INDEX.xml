@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX [ IF EXISTS ] <varname>name</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX [ IF EXISTS ] &lt;name> RENAME TO &lt;new_name>
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET TABLESPACE <varname>tablespace_name</varname>
+ALTER INDEX [ IF EXISTS ] &lt;name> SET TABLESPACE &lt;tablespace_name>
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET ( <varname>storage_parameter</varname> = <varname>value</varname> [, ...] )
+ALTER INDEX [ IF EXISTS ] &lt;name> SET ( &lt;storage_parameter> = &lt;value> [, ...] )
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> RESET ( <varname>storage_parameter</varname>  [, ...] )
+ALTER INDEX [ IF EXISTS ] &lt;name> RESET ( &lt;storage_parameter>  [, ...] )
 
-ALTER INDEX ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_name</varname> [, ... ] ]
-  SET TABLESPACE <varname>new_tablespace</varname> [ NOWAIT ]
+ALTER INDEX ALL IN TABLESPACE &lt;name> [ OWNED BY &lt;role_name> [, ... ] ]
+  SET TABLESPACE &lt;new_tablespace> [ NOWAIT ]
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
 There are several subforms: </p><ul>
 <li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect

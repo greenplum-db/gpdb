@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="az137232">CREATE TEXT SEARCH CONFIGURATION</title><body><p id="sql_command_desc">Defines a new text search configuration.</p><section id="section2"><title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH CONFIGURATION <varname>name</varname> (
-    PARSER = <varname>parser_name</varname> |
-    COPY = <varname>source_config</varname>
+      <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH CONFIGURATION &lt;name> (
+    PARSER = &lt;parser_name> |
+    COPY = &lt;source_config>
 )</codeblock></section><section id="section3"><title>Description</title>
       <p><codeph>CREATE TEXT SEARCH CONFIGURATION</codeph> creates a new text search configuration.
         A text search configuration specifies a text search parser that can divide a string into

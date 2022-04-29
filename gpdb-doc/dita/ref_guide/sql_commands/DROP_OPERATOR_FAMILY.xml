@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="da20941">DROP OPERATOR FAMILY</title><body><p id="sql_command_desc">Removes an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP OPERATOR FAMILY [IF EXISTS] <varname>name</varname> USING <varname>index_method</varname> [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP OPERATOR FAMILY</codeph> drops an existing operator family. To run this command
+<topic id="topic1"><title id="da20941">DROP OPERATOR FAMILY</title><body><p id="sql_command_desc">Removes an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP OPERATOR FAMILY [IF EXISTS] &lt;name> USING &lt;index_method> [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP OPERATOR FAMILY</codeph> drops an existing operator family. To run this command
         you must be the owner of the operator family.</p>
       <p><codeph>DROP OPERATOR FAMILY</codeph> includes dropping any operator classes contained in
         the family, but it does not drop any of the operators or functions referenced by the family.

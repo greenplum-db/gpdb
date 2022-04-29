@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Removes a tablespace.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP TABLESPACE [IF EXISTS] <varname>tablespacename</varname></codeblock>
+      <codeblock id="sql_command_synopsis">DROP TABLESPACE [IF EXISTS] &lt;tablespacename></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
