@@ -203,7 +203,7 @@ CREATE SCHEMA</codeblock></li>
           small amount of data into it. The schema has no data yet, so it is not on the denylist.
           <codeblock>=# SET search_path TO s1;
 SET
-</b>=# CREATE TABLE a(i int);
+=# CREATE TABLE a(i int);
 CREATE TABLE
 =# INSERT INTO a SELECT generate_series(1,100);
 INSERT 0 100
