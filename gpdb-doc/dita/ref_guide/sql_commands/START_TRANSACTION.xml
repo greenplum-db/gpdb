@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Starts a transaction block.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">START TRANSACTION [<varname>transaction_mode</varname>] [READ WRITE | READ ONLY]</codeblock>
+            <codeblock id="sql_command_synopsis">START TRANSACTION [&lt;transaction_mode>] [READ WRITE | READ ONLY]</codeblock>
             <p>where <varname>transaction_mode</varname> is:</p>
             <codeblock>   ISOLATION LEVEL {SERIALIZABLE | READ COMMITTED | READ UNCOMMITTED}</codeblock>
         </section>
@@ -15,8 +15,8 @@
             <title>Description</title>
             <p><codeph>START TRANSACTION</codeph> begins a new transaction block. If the isolation
                 level or read/write mode is specified, the new transaction has those
-                characteristics, as if <codeph><xref href="SET_TRANSACTION.xml#topic1" type="topic"
-                        format="dita"/></codeph> was run. This is the same as the
+                characteristics, as if <xref href="SET_TRANSACTION.xml#topic1" type="topic"
+                        format="dita"/> was run. This is the same as the
                     <codeph>BEGIN</codeph> command.</p>
         </section>
         <section id="section4">
@@ -84,14 +84,13 @@
             <p>The SQL standard requires commas between successive
                     <varname>transaction_modes</varname>, but for historical reasons Greenplum
                 Database allows the commas to be omitted.</p>
-            <p>See also the compatibility section of <codeph><xref href="SET_TRANSACTION.xml#topic1"
-                        type="topic" format="dita"/></codeph>.</p>
+            <p>See also the compatibility section of <xref href="SET_TRANSACTION.xml#topic1"
+                        type="topic" format="dita"/>.</p>
         </section>
         <section id="section7">
             <title>See Also</title>
-            <p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="SET_TRANSACTION.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="BEGIN.xml#topic1" type="topic" format="dita"/>,
+                        </p>
         </section>
     </body>
 </topic>

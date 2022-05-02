@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Closes a cursor.</p>
     <section id="section2">
       <title>Synopsis</title>
-        <codeblock id="sql_command_synopsis">CLOSE <varname>cursor_name</varname></codeblock>
+        <codeblock id="sql_command_synopsis">CLOSE &lt;cursor_name></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -25,7 +25,7 @@
       <title>Parameters</title>
       <parml>
         <plentry>
-          <pt><varname>cursor_name</varname></pt>
+          <pt>&lt;cursor_name></pt>
           <pd>The name of an open cursor to close.</pd>
         </plentry>
       </parml>
@@ -35,9 +35,8 @@
       <p>Greenplum Database does not have an explicit <codeph>OPEN</codeph> cursor
         statement. A cursor is considered open when it is declared. Use the <codeph>DECLARE</codeph>
         statement to declare (and open) a cursor. </p>
-      <p>You can see all available cursors by querying the
-        <codeph><xref href="../system_catalogs/pg_cursors.xml">pg_cursors</xref></codeph>
-        system view.</p>
+      <p>You can see all available cursors by querying the <xref
+          href="../system_catalogs/pg_cursors.xml">pg_cursors</xref> system view.</p>
       <p>If a cursor is closed after a savepoint which is later rolled back, the
         <codeph>CLOSE</codeph> is not rolled back; that is the cursor remains closed.</p>
     </section>
@@ -52,10 +51,10 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
-        <codeph><xref href="./FETCH.xml#topic1" type="topic" format="dita"/></codeph>,
-        <codeph><xref href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph>,
-        <codeph><xref href="./RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./DECLARE.xml#topic1" type="topic" format="dita"/>, <xref
+          href="./FETCH.xml#topic1" type="topic" format="dita"/>, <xref href="./MOVE.xml#topic1"
+          type="topic" format="dita"/>, <xref href="./RETRIEVE.xml#topic1" type="topic"
+          format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -6,7 +6,7 @@
   <body>
     <p>The <codeph>pg_stat_replication</codeph> view contains metadata of the
         <codeph>walsender</codeph> process that is used for Greenplum Database master mirroring.</p>
-    <p>The <codeph><xref href="gp_stat_replication.xml#topic1"/></codeph> view contains
+    <p>The <xref href="gp_stat_replication.xml#topic1"/> view contains
         <codeph>walsender</codeph> replication information for master and segment mirroring.</p>
     <table id="op164584">
       <title>pg_catalog.pg_stat_replication</title>

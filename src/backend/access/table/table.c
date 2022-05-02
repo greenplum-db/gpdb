@@ -180,15 +180,23 @@ table_close(Relation relation, LOCKMODE lockmode)
 Relation
 CdbTryOpenTable(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 {
-    LOCKMODE    lockmode = reqmode;
-	Relation    rel;
+	LOCKMODE    lockmode;
+	Relation    rel = InvalidRelation;
+
+	lockmode = UpgradeRelLockAndReuseRelIfNecessary(relid, &rel, reqmode);
 
 	if (lockUpgraded != NULL)
-		*lockUpgraded = false;
+	{
+		if (lockmode > reqmode)
+			*lockUpgraded = true;
+		else
+			*lockUpgraded = false;
+	}
 
-	lockmode = UpgradeRelLockIfNecessary(relid, lockmode, lockUpgraded);
+	/* use the table returned if possible, otherwise open it myself */
+	if (!RelationIsValid(rel))
+		rel = try_table_open(relid, lockmode, false);
 
-	rel = try_table_open(relid, lockmode, false);
 	if (!RelationIsValid(rel))
 		return NULL;
 

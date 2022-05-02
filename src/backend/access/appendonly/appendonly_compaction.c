@@ -497,7 +497,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
  * available. If it's not, no segments are dropped.
  */
 void
-AppendOnlyRecycleDeadSegments(Relation aorel)
+AppendOptimizedRecycleDeadSegments(Relation aorel)
 {
 	Relation	pg_aoseg_rel;
 	TupleDesc	pg_aoseg_dsc;
@@ -629,7 +629,7 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
  * the segment file is skipped.
  */
 void
-AppendOnlyTruncateToEOF(Relation aorel)
+AppendOptimizedTruncateToEOF(Relation aorel)
 {
 	const char *relname;
 	Relation	pg_aoseg_rel;

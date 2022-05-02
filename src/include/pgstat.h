@@ -933,6 +933,7 @@ typedef enum
 	/* GPDB additions */
 	,
 	WAIT_EVENT_DTX_RECOVERY,
+	WAIT_EVENT_SHAREINPUT_SCAN,
 	WAIT_EVENT_INTERCONNECT
 } WaitEventIPC;
 

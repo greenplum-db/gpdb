@@ -5980,7 +5980,7 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 	Assert(RelationIsAoCols(rel));
 
 	/* Try to recycle any old segfiles first. */
-	AppendOnlyRecycleDeadSegments(rel);
+	AppendOptimizedRecycleDeadSegments(rel);
 
 	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg);
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);

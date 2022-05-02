@@ -199,13 +199,13 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
 					get_namespace_name(RelationGetNamespace(onerel)),
 					relname)));
 
-	AppendOnlyRecycleDeadSegments(onerel);
+	AppendOptimizedRecycleDeadSegments(onerel);
 
 	/*
 	 * Also truncate all live segments to the EOF values stored in pg_aoseg.
 	 * This releases space left behind by aborted inserts.
 	 */
-	AppendOnlyTruncateToEOF(onerel);
+	AppendOptimizedTruncateToEOF(onerel);
 }
 
 
@@ -242,7 +242,7 @@ ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
 	 */
 	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
 
-	AppendOnlyRecycleDeadSegments(onerel);
+	AppendOptimizedRecycleDeadSegments(onerel);
 
 	vacuum_appendonly_indexes(onerel, options, bstrategy);
 
@@ -362,6 +362,33 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 	}
 
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
+}
+
+/*
+ * ao_vacuum_rel()
+ *
+ * Common interface for vacuuming Append-Optimized table.
+ */
+void
+ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy)
+{
+	Assert(RelationIsAppendOptimized(rel));
+	Assert(params != NULL);
+
+	int ao_vacuum_phase = (params->options & VACUUM_AO_PHASE_MASK);
+
+	/*
+	 * Do the actual work --- either FULL or "lazy" vacuum
+	 */
+	if (ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE)
+		ao_vacuum_rel_pre_cleanup(rel, params->options, params, bstrategy);
+	else if (ao_vacuum_phase == VACOPT_AO_COMPACT_PHASE)
+		ao_vacuum_rel_compact(rel, params->options, params, bstrategy);
+	else if (ao_vacuum_phase == VACOPT_AO_POST_CLEANUP_PHASE)
+		ao_vacuum_rel_post_cleanup(rel, params->options, params, bstrategy);
+	else
+		/* Do nothing here, we will launch the stages later */
+		Assert(ao_vacuum_phase == 0);
 }
 
 

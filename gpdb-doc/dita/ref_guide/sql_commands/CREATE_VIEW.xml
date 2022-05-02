@@ -7,9 +7,9 @@
     <p id="sql_command_desc">Defines a new view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [OR REPLACE] [TEMP | TEMPORARY] [RECURSIVE] VIEW <varname>name</varname> [ ( <varname>column_name</varname> [, ...] ) ]
+      <codeblock id="sql_command_synopsis">CREATE [OR REPLACE] [TEMP | TEMPORARY] [RECURSIVE] VIEW &lt;name> [ ( &lt;column_name> [, ...] ) ]
     [ WITH ( view_option_name [= view_option_value] [, ... ] ) ]
-    AS <varname>query</varname>
+    AS &lt;query>
     [ WITH [ CASCADED | LOCAL ] CHECK OPTION ]</codeblock>
     </section>
     <section id="section3">
@@ -42,11 +42,11 @@
           <pt>RECURSIVE</pt>
           <pd>Creates a recursive view. The syntax
             <codeblock>
-CREATE RECURSIVE VIEW [ <varname>schema</varname> . ] <varname>view_name</varname> (<varname>column_names</varname>) AS SELECT <varname>...</varname>;
+CREATE RECURSIVE VIEW [ &lt;schema> . ] &lt;view_name> (&lt;column_names>) AS SELECT &lt;...>;
 </codeblock>
             is equivalent to
             <codeblock>
-CREATE VIEW [ <varname>schema</varname> . ] <varname>view_name</varname> AS WITH RECURSIVE <varname>view_name</varname> (<varname>column_names</varname>) AS (SELECT <varname>...</varname>) SELECT <varname>column_names</varname> FROM <varname>view_name</varname>;
+CREATE VIEW [ &lt;schema> . ] &lt;view_name> AS WITH RECURSIVE &lt;view_name> (&lt;column_names>) AS (SELECT &lt;...>) SELECT &lt;column_names> FROM &lt;view_name>;
 </codeblock>
             A view column name list must be specified for a recursive view. </pd>
         </plentry>
@@ -68,8 +68,8 @@ CREATE VIEW [ <varname>schema</varname> . ] <varname>view_name</varname> AS WITH
                 <pd>This parameter may be either <codeph>local</codeph> or
                   <codeph>cascaded</codeph>, and is equivalent to specifying <codeph>WITH [ CASCADED
                     | LOCAL ] CHECK OPTION</codeph> (see below). This option can be changed on
-                  existing views using <codeph><xref href="ALTER_VIEW.xml#topic1">ALTER
-                    VIEW</xref></codeph>. </pd>
+                  existing views using <xref href="ALTER_VIEW.xml#topic1">ALTER
+                    VIEW</xref>. </pd>
               </plentry>
             </parml><parml>
               <plentry>
@@ -80,8 +80,8 @@ CREATE VIEW [ <varname>schema</varname> . ] <varname>view_name</varname> AS WITH
         </plentry>
         <plentry>
           <pt><varname>query</varname></pt>
-          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
-                <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
+          <pd>A <xref href="./SELECT.xml#topic1" type="topic" format="dita"/> or
+                <xref href="./VALUES.xml#topic1" type="topic" format="dita"/>
             command which will provide the columns and rows of the view.</pd>
         </plentry>
       </parml>
@@ -155,9 +155,9 @@ UNION ALL
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_VIEW.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_MATERIALIZED_VIEW.xml" type="topic"/></codeph></p>
+      <p><xref href="./SELECT.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_VIEW.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_MATERIALIZED_VIEW.xml" type="topic"/></p>
     </section>
   </body>
 </topic>

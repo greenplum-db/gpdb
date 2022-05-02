@@ -9,54 +9,54 @@
  <title>Synopsis</title>
 <codeblock id="sql_command_synopsis">
 ALTER DEFAULT PRIVILEGES
-    [ FOR { ROLE | USER } <varname>target_role</varname> [, ...] ]
-    [ IN SCHEMA <varname>schema_name</varname> [, ...] ]
-    <varname>abbreviated_grant_or_revoke</varname>
+    [ FOR { ROLE | USER } &lt;target_role> [, ...] ]
+    [ IN SCHEMA &lt;schema_name> [, ...] ]
+    &lt;abbreviated_grant_or_revoke>
 
-where <varname>abbreviated_grant_or_revoke</varname> is one of:
+where &lt;abbreviated_grant_or_revoke> is one of:
 
 GRANT { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
     [, ...] | ALL [ PRIVILEGES ] }
     ON TABLES
-    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] &lt;role_name> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { USAGE | SELECT | UPDATE }
     [, ...] | ALL [ PRIVILEGES ] }
     ON SEQUENCES
-    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] &lt;role_name> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { EXECUTE | ALL [ PRIVILEGES ] }
     ON FUNCTIONS
-    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] &lt;role_name> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON TYPES
-    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] &lt;role_name> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 REVOKE [ GRANT OPTION FOR ]
     { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
     [, ...] | ALL [ PRIVILEGES ] }
     ON TABLES
-    FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+    FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { { USAGE | SELECT | UPDATE }
     [, ...] | ALL [ PRIVILEGES ] }
     ON SEQUENCES
-    FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+    FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { EXECUTE | ALL [ PRIVILEGES ] }
     ON FUNCTIONS
-    FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+    FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { USAGE | ALL [ PRIVILEGES ] }
     ON TYPES
-    FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+    FROM { [ GROUP ] &lt;role_name> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 </codeblock>
 </section>
@@ -182,8 +182,8 @@ ALTER DEFAULT PRIVILEGES FOR ROLE admin REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
   <title>See Also</title>
 
   <p>
-   <codeph><xref href="GRANT.xml" format="dita"/></codeph>, 
-   <codeph><xref href="REVOKE.xml" format="dita"/></codeph>
+   <xref href="GRANT.xml" format="dita"/>, 
+   <xref href="REVOKE.xml" format="dita"/>
   </p>
  </section>
 </body>

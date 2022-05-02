@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes properties of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW [ IF EXISTS ] <varname>name</varname> ALTER [ COLUMN ] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
+<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes properties of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW [ IF EXISTS ] &lt;name> ALTER [ COLUMN ] &lt;column_name> SET DEFAULT &lt;expression>
 
-ALTER VIEW [ IF EXISTS ] <varname>name</varname> ALTER [ COLUMN ] <varname>column_name</varname> DROP DEFAULT
+ALTER VIEW [ IF EXISTS ] &lt;name> ALTER [ COLUMN ] &lt;column_name> DROP DEFAULT
 
-ALTER VIEW [ IF EXISTS ] <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER VIEW [ IF EXISTS ] &lt;name> OWNER TO &lt;new_owner>
 
-ALTER VIEW [ IF EXISTS ] <varname>name</varname> RENAME TO <varname>new_name</varname>
+ALTER VIEW [ IF EXISTS ] &lt;name> RENAME TO &lt;new_name>
 
-ALTER VIEW [ IF EXISTS ] <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
+ALTER VIEW [ IF EXISTS ] &lt;name> SET SCHEMA &lt;new_schema>
 
-ALTER VIEW [ IF EXISTS ] <varname>name</varname> SET ( <varname>view_option_name</varname> [= <varname>view_option_value</varname>] [, ... ] )
+ALTER VIEW [ IF EXISTS ] &lt;name> SET ( &lt;view_option_name> [= &lt;view_option_value>] [, ... ] )
 
-ALTER VIEW [ IF EXISTS ] <varname>name</varname> RESET ( <varname>view_option_name</varname> [, ... ] )</codeblock></section><section id="section3">
+ALTER VIEW [ IF EXISTS ] &lt;name> RESET ( &lt;view_option_name> [, ... ] )</codeblock></section><section id="section3">
       <title>Description</title>
       <p><codeph>ALTER VIEW</codeph> changes various auxiliary properties of a view. (If you want to
         modify the view's defining query, use <codeph>CREATE OR REPLACE VIEW</codeph>. </p>
@@ -86,6 +86,6 @@ ALTER VIEW a_view ALTER COLUMN ts SET DEFAULT now();
 INSERT INTO base_table(id) VALUES(1);  -- ts will receive a NULL
 INSERT INTO a_view(id) VALUES(2);  -- ts will receive the current time</codeblock>
     </section>
-  <section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref></codeph>, <codeph><xref
-            href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref></codeph> in the <i>Greenplum
+  <section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref>, <xref
+            href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref> in the <i>Greenplum
           Database Utility Guide</i></p></section></body></topic>

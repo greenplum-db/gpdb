@@ -12,8 +12,8 @@ By default, connections between the QD on the master and QEs on segment instance
 
 To enable interconnect proxies for the Greenplum system, set these system configuration parameters.
 
--   List the proxy ports with the parameter [gp\_interconnect\_proxy\_addresses](../../ref_guide/config_params/guc-list.html). You must specify a proxy port for the master, standby master, and all segment instances.
--   Set the parameter [gp\_interconnect\_type](../../ref_guide/config_params/guc-list.html) to `proxy`.
+-   List the proxy ports with the parameter [gp\_interconnect\_proxy\_addresses](../../ref_guide/config_params/guc-list.html#gp_interconnect_proxy_addresses). You must specify a proxy port for the master, standby master, and all segment instances.
+-   Set the parameter [gp\_interconnect\_type](../../ref_guide/config_params/guc-list.html#gp_interconnect_type) to `proxy`.
 
 **Note:** When expanding a Greenplum Database system, you must disable interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies.
 
@@ -21,7 +21,7 @@ To enable interconnect proxies for the Greenplum system, set these system config
 
 ## <a id="topic_z4l_lcg_4mb"></a>Example 
 
-This example sets up a Greenplum system to use proxies for the Greenplum interconnect when running queries. The example sets the [gp\_interconnect\_proxy\_addresses](../../ref_guide/config_params/guc-list.html) parameter and tests the proxies before setting the [gp\_interconnect\_type](../../ref_guide/config_params/guc-list.html) parameter for the Greenplum system.
+This example sets up a Greenplum system to use proxies for the Greenplum interconnect when running queries. The example sets the [gp\_interconnect\_proxy\_addresses](../../ref_guide/config_params/guc-list.html#gp_interconnect_proxy_addresses) parameter and tests the proxies before setting the [gp\_interconnect\_type](../../ref_guide/config_params/guc-list.html#gp_interconnect_type) parameter for the Greenplum system.
 
 -   [Setting the Interconnect Proxy Addresses](#set_proxy_address)
 -   [Testing the Interconnect Proxies](#test_proxy)

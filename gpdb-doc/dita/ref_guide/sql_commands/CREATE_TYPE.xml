@@ -1,43 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ch20941">CREATE TYPE</title><body><p id="sql_command_desc">Defines a new data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TYPE <varname>name</varname> AS 
-    ( <varname>attribute_name</varname> <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [, ... ] ] )
+<topic id="topic1"><title id="ch20941">CREATE TYPE</title><body><p id="sql_command_desc">Defines a new data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TYPE &lt;name> AS 
+    ( &lt;attribute_name> &lt;data_type> [ COLLATE &lt;collation> ] [, ... ] ] )
 
-CREATE TYPE <varname>name</varname> AS ENUM 
-    ( [ '<varname>label</varname>' [, ... ] ] )
+CREATE TYPE &lt;name> AS ENUM 
+    ( [ '&lt;label>' [, ... ] ] )
 
-CREATE TYPE <varname>name</varname> AS RANGE (
-    SUBTYPE = <varname>subtype</varname>
-    [ , SUBTYPE_OPCLASS = <varname>subtype_operator_class</varname> ]
-    [ , COLLATION = <varname>collation</varname> ]
-    [ , CANONICAL = <varname>canonical_function</varname> ]
-    [ , SUBTYPE_DIFF = <varname>subtype_diff_function</varname> ]
+CREATE TYPE &lt;name> AS RANGE (
+    SUBTYPE = &lt;subtype>
+    [ , SUBTYPE_OPCLASS = &lt;subtype_operator_class> ]
+    [ , COLLATION = &lt;collation> ]
+    [ , CANONICAL = &lt;canonical_function> ]
+    [ , SUBTYPE_DIFF = &lt;subtype_diff_function> ]
 )
 
-CREATE TYPE <varname>name</varname> (
-    INPUT = <varname>input_function</varname>,
-    OUTPUT = <varname>output_function</varname>
-    [, RECEIVE = <varname>receive_function</varname>]
-    [, SEND = <varname>send_function</varname>]
-    [, TYPMOD_IN = <varname>type_modifier_input_function</varname> ]
-    [, TYPMOD_OUT = <varname>type_modifier_output_function</varname> ]
-    [, INTERNALLENGTH = {<varname>internallength</varname> | VARIABLE}]
+CREATE TYPE &lt;name> (
+    INPUT = &lt;input_function>,
+    OUTPUT = &lt;output_function>
+    [, RECEIVE = &lt;receive_function>]
+    [, SEND = &lt;send_function>]
+    [, TYPMOD_IN = &lt;type_modifier_input_function> ]
+    [, TYPMOD_OUT = &lt;type_modifier_output_function> ]
+    [, INTERNALLENGTH = {&lt;internallength> | VARIABLE}]
     [, PASSEDBYVALUE]
-    [, ALIGNMENT = <varname>alignment</varname>]
-    [, STORAGE = <varname>storage</varname>]
-    [, LIKE = <varname>like_type</varname>
-    [, CATEGORY = <varname>category</varname>]
-    [, PREFERRED = <varname>preferred</varname>]
-    [, DEFAULT = <varname>default</varname>]
-    [, ELEMENT = <varname>element</varname>]
-    [, DELIMITER = <varname>delimiter</varname>]
-    [, COLLATABLE = <varname>collatable</varname>]
-    [, COMPRESSTYPE = <varname>compression_type</varname>]
-    [, COMPRESSLEVEL = <varname>compression_level</varname>]
-    [, BLOCKSIZE = <varname>blocksize</varname>] )
+    [, ALIGNMENT = &lt;alignment>]
+    [, STORAGE = &lt;storage>]
+    [, LIKE = &lt;like_type>
+    [, CATEGORY = &lt;category>]
+    [, PREFERRED = &lt;preferred>]
+    [, DEFAULT = &lt;default>]
+    [, ELEMENT = &lt;element>]
+    [, DELIMITER = &lt;delimiter>]
+    [, COLLATABLE = &lt;collatable>]
+    [, COMPRESSTYPE = &lt;compression_type>]
+    [, COMPRESSLEVEL = &lt;compression_level>]
+    [, BLOCKSIZE = &lt;blocksize>] )
 
-CREATE TYPE <varname>name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TYPE</codeph> registers a new data type for use in the
+CREATE TYPE &lt;name></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TYPE</codeph> registers a new data type for use in the
 current database. The user who defines a type becomes its owner. </p><p>If a schema name is given then the type is created in the specified
 schema. Otherwise it is created in the current schema. The type name
 must be distinct from the name of any existing type or domain in the
@@ -520,8 +520,8 @@ CREATE TABLE big_objs (
                     <codeph>CREATE TABLE</codeph>). </p>
     </section><section id="section11"><title>See Also</title>
             <p>
-                <codeph><xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_DOMAIN.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./DROP_TYPE.xml#topic1"
-                        type="topic" format="dita"/></codeph></p></section></body></topic>
+                <xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="CREATE_DOMAIN.xml#topic1" type="topic" format="dita"
+                    />, <xref href="CREATE_FUNCTION.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="./DROP_TYPE.xml#topic1"
+                        type="topic" format="dita"/></p></section></body></topic>

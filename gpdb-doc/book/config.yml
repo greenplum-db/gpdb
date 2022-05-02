@@ -39,14 +39,13 @@ sections:
   directory: 7-0/admin_guide
   subnav_template: admin-subnav
 
-dita_sections:
-
 - repository:
-    name: dita
+    name: markdown
     at_path: analytics
   directory: 7-0/analytics
-  ditamap_location: analytics.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
+  subnav_template: analytics-subnav
+  
+dita_sections:
 
 - repository:
     name: dita

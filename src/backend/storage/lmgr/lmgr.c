@@ -1320,50 +1320,16 @@ LockTagIsTemp(const LOCKTAG *tag)
 }
 
 /*
- * If gp_enable_global_deadlock_detector is set off, we always
- * have to upgrade lock level to avoid global deadlock, and then
- * because of the current disign of AO table's visibility map,
- * we have to keep upgrading locks for AO table.
+ * Upgrade the relation lock, and re-use the opened relation if necessary.
+ * We might open table in this function because of the current disign of AO table's 
+ * visibility map requires that we have to keep upgrading locks for AO table.
+ * 
+ * "relptr" will store an opened table if the caller passes a non-NULL relation
+ * pointer in. And we'll only set it if we have opened the table AND we don't need to
+ * upgrade because that's the only case we can avoid re-opening table. 
  */
-bool
-CondUpgradeRelLock(Oid relid)
-{
-	Relation rel;
-	bool upgrade = false;
-
-	if (!gp_enable_global_deadlock_detector)
-		return true;
-
-	/*
-	 * try_relation_open will throw error if
-	 * the relation is invaliad
-	 *
-	 * GPDB_12_MERGE_FIXME: This used to open the relation with NoLock.
-	 * But that's not cool, and there's an assertion in try_table_open()
-	 * that forbids using NoLock if you're not holding some lock
-	 * already. I (Heikki) changed this to take a RowExclusiveLock here,
-	 * as that's what all the callers will acquire at a minimum anyway.
-	 * If we take a RowExclusiveLock here, we should keep it; it's silly
-	 * to acquire the lock, release it, and then re-acquire it in the
-	 * caller. Upgrading the lock if this returns true is problematic,
-	 * of course, so it would be nice to avoid that altogether, but
-	 * that's a harder task.
-	 */
-	rel = try_table_open(relid, RowExclusiveLock, false);
-
-	if (!rel)
-		return false;
-	else if (RelationIsAppendOptimized(rel))
-		upgrade = true;
-	else
-		upgrade = false;
-
-	table_close(rel, RowExclusiveLock);
-
-	return upgrade;
-}
-
-int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded)
+LOCKMODE
+UpgradeRelLockAndReuseRelIfNecessary(Oid relid, Relation *relptr, LOCKMODE lockmode)
 {
 	/*
 	 * Since we have introduced GDD(global deadlock detector), for heap table
@@ -1376,14 +1342,38 @@ int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded)
 	 * Note: This code could be improved substantially after we redesign ao table
 	 * and select for update.
 	 */
-	if (lockmode == RowExclusiveLock)
+	if (lockmode == RowExclusiveLock && Gp_role == GP_ROLE_DISPATCH)
 	{
-		if (Gp_role == GP_ROLE_DISPATCH &&
-			CondUpgradeRelLock(relid))
+		bool upgrade = false;
+		Relation rel = NULL;
+
+		/* Check the conditions for upgrading. */
+		if (!gp_enable_global_deadlock_detector)
+			upgrade = true;
+		else
 		{
+			rel = try_table_open(relid, RowExclusiveLock, false);
+
+			/* the relation is invalid */
+			if (!RelationIsValid(rel))
+				return lockmode;
+
+			upgrade = RelationIsAppendOptimized(rel);
+		}
+
+		/* Update the lockmode to be returned. */
+		if (upgrade)
 			lockmode = ExclusiveLock;
-			if (lockUpgraded != NULL)
-			*lockUpgraded = true;
+
+		/* 
+		 * Deal with the opened table if there's one.
+		 */
+		if (rel)
+		{
+			if (relptr && !upgrade)
+				*relptr = rel;
+			else
+				table_close(rel, RowExclusiveLock);
 		}
 	}
 

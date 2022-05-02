@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bp20941">CREATE DATABASE</title><body><p id="sql_command_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DATABASE name [ [WITH] [OWNER [=] <varname>user_name</varname>]
-                     [TEMPLATE [=] <varname>template</varname>]
-                     [ENCODING [=] <varname>encoding</varname>]
-                     [LC_COLLATE [=] <varname>lc_collate</varname>]
-                     [LC_CTYPE [=] <varname>lc_ctype</varname>]
-                     [TABLESPACE [=] <varname>tablespace</varname>]
+<topic id="topic1"><title id="bp20941">CREATE DATABASE</title><body><p id="sql_command_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DATABASE name [ [WITH] [OWNER [=] &lt;user_name>]
+                     [TEMPLATE [=] &lt;template>]
+                     [ENCODING [=] &lt;encoding>]
+                     [LC_COLLATE [=] &lt;lc_collate>]
+                     [LC_CTYPE [=] &lt;lc_ctype>]
+                     [TABLESPACE [=] &lt;tablespace>]
                      [CONNECTION LIMIT [=] connlimit ] ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE DATABASE</codeph> creates a new database. To create a
 database, you must be a superuser or have the special <codeph>CREATEDB</codeph>
 privilege.</p><p>The creator becomes the owner of the new database by default. Superusers
@@ -71,6 +71,6 @@ of -1 means there is no limitation.</pd></plentry></parml></section><section id=
           <codeph>template1</codeph>'s encoding is not ISO-8859-1. Note that changing encoding might
         require selecting new <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> settings as
         well.</p></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CREATE DATABASE</codeph> statement in the SQL standard.
-Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

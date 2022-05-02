@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX [ IF EXISTS ] <varname>name</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX [ IF EXISTS ] &lt;name> RENAME TO &lt;new_name>
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET TABLESPACE <varname>tablespace_name</varname>
+ALTER INDEX [ IF EXISTS ] &lt;name> SET TABLESPACE &lt;tablespace_name>
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET ( <varname>storage_parameter</varname> = <varname>value</varname> [, ...] )
+ALTER INDEX [ IF EXISTS ] &lt;name> SET ( &lt;storage_parameter> = &lt;value> [, ...] )
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> RESET ( <varname>storage_parameter</varname>  [, ...] )
+ALTER INDEX [ IF EXISTS ] &lt;name> RESET ( &lt;storage_parameter>  [, ...] )
 
-ALTER INDEX ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_name</varname> [, ... ] ]
-  SET TABLESPACE <varname>new_tablespace</varname> [ NOWAIT ]
+ALTER INDEX ALL IN TABLESPACE &lt;name> [ OWNED BY &lt;role_name> [, ... ] ]
+  SET TABLESPACE &lt;new_tablespace> [ NOWAIT ]
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
 There are several subforms: </p><ul>
 <li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect
@@ -43,6 +43,6 @@ on the stored data.</li>
           <pd>The new value for an index-method-specific storage parameter. This might be a number or a word depending on the parameter.</pd>
         </plentry></parml></section><section id="section5"><title>Notes</title><p>These operations are also possible using <codeph>ALTER TABLE</codeph>.</p><p>Changing any part of a system catalog index is not permitted.</p></section><section id="section6"><title>Examples</title><p>To rename an existing index:</p><codeblock>ALTER INDEX distributors RENAME TO suppliers;</codeblock><p>To move an index to a different tablespace:</p><codeblock>ALTER INDEX distributors SET TABLESPACE fasttablespace;</codeblock><p>To change an index's fill factor (assuming that the index method supports
 it):</p><codeblock>ALTER INDEX distributors SET (fillfactor = 75);
-REINDEX INDEX distributors;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER INDEX</codeph> is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./REINDEX.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+REINDEX INDEX distributors;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER INDEX</codeph> is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./REINDEX.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

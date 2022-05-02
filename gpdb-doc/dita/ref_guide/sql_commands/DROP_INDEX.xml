@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cx154761">DROP INDEX</title><body><p id="sql_command_desc">Removes an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP INDEX [ CONCURRENTLY ] [ IF EXISTS ] <varname>name</varname> [, ...] [ CASCADE | RESTRICT ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP INDEX</codeph> drops an existing index from the database
+<topic id="topic1"><title id="cx154761">DROP INDEX</title><body><p id="sql_command_desc">Removes an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP INDEX [ CONCURRENTLY ] [ IF EXISTS ] &lt;name> [, ...] [ CASCADE | RESTRICT ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP INDEX</codeph> drops an existing index from the database
 system. To run this command you must be the owner of the index. </p></section><section id="section4"><title>Parameters</title>
       <parml>
         <plentry>
@@ -20,6 +20,6 @@ system. To run this command you must be the owner of the index. </p></section><s
       </parml><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the index does not exist. A notice is issued
 in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing index.</pd></plentry><plentry><pt>CASCADE</pt><pd>Automatically drop objects that depend on the index. </pd></plentry><plentry><pt>RESTRICT</pt><pd>Refuse to drop the index if any objects depend on it. This is the
 default. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Remove the index <codeph>title_idx</codeph>: </p><codeblock>DROP INDEX title_idx;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>DROP INDEX</codeph> is a Greenplum Database language extension.
-There are no provisions for indexes in the SQL standard. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_INDEX.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./REINDEX.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+There are no provisions for indexes in the SQL standard. </p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_INDEX.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./REINDEX.xml#topic1" type="topic" format="dita"/></p></section></body></topic>
