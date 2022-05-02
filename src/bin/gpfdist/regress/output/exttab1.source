@@ -734,6 +734,12 @@ CREATE EXTERNAL WEB TABLE gpfdist2_transform_start (x text)
 execute E'((@bindir@/gpfdist -p 7080 -d @abs_srcdir@/data/transform -c @abs_srcdir@/data/catfile.yml </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
+-- Test writable transform table report error.
+CREATE WRITABLE EXTERNAL TABLE writable_transform (a text) location('gpfdist://localhost:7081/filename#transform=write') format 'text';
+CREATE EXTERNAL WEB TABLE gpfdist3_transform_start (x text)
+execute E'((@bindir@/gpfdist -p 7081 -d @abs_srcdir@/data/transform -c @abs_srcdir@/data/errexe.yml </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7081 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
 -- start_ignore
 -- end_ignore
 select count(*) from ext_transform;
@@ -742,10 +748,13 @@ select count(*) from ext_transform;
     14
 (1 row)
 
+insert into writable_transform values('hello');
+ERROR:  http response code 500 from gpfdist (gpfdist://localhost:7081/filename#transform=write): HTTP/1.0 500 /usr/bin/env: /home/gpadmin/workspace/6_greenplum/gpfdist/error.sh: No such file or directory  (seg1 127.0.0.1:6003 pid=4875)
 -- start_ignore
 -- end_ignore
 -- drop tables
 DROP EXTERNAL TABLE ext_transform;
+drop external table writable_transform;
 --
 -- get an error for missing gpfdist
 --

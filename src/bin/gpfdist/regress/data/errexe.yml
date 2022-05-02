@@ -1,0 +1,7 @@
+TRANSFORMATIONS:
+    write:
+        TYPE: output
+        COMMAND: /usr/bin/env /home/gpadmin/workspace/6_greenplum/gpfdist/error.sh %filename%
+    read:
+        TYPE: input
+        COMMAND: /usr/bin/env /home/gpadmin/workspace/6_greenplum/gpfdist/error.sh %filename%
