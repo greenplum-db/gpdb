@@ -4,6 +4,9 @@ title: gpbackup_manager
 
 Display information about existing backups, delete existing backups, or encrypt passwords for secure storage in plugin configuration files.
 
+**Note:** The `gpbackup_manager` utility is available only in the commercial release of Tanzu Greenplum Backup and Restore.
+
+
 ## <a id="synopsis"></a>Synopsis 
 
 ```
