@@ -25,9 +25,7 @@ Each data type has an external representation determined by its input and output
 |circle| |24 bytes|<\(x,y\),r\> \(center and radius\)|circle in the plane - not allowed in distribution key columns.|
 |date| |4 bytes|4713 BC - 294,277 AD|calendar date \(year, month, day\)|
 |decimal \[ \(p, s\) \][1](#if139219)|numeric \[ \(p, s\) \]|variable|no limit|user-specified precision, exact|
-|double precision|float8float
-
-|8 bytes|15 decimal digits precision|variable-precision, inexact|
+|double precision|float8<br/><br/>float|8 bytes|15 decimal digits precision|variable-precision, inexact|
 |inet| |12 or 24 bytes| |IPv4 and IPv6 hosts and networks|
 |integer|int, int4|4 bytes|-2147483648 to +2147483647|usual choice for integer|
 |interval \[ fields \] \[ \(p\) \]| |16 bytes|-178000000 years to 178000000 years|time span|
