@@ -351,19 +351,7 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |S095|Array constructors by query|NO| |
 |S096|Optional array bounds|NO| |
 |S097|Array element assignment|NO| |
-|S098|`ARRAY_AGG`|Partially|Supported: Using array\_agg without a window specification; for exampleSELECT array\_agg\(x\) FROM ...
-
-SELECT array\_agg \(x order by y\) FROM ...
-
-Not supported: Using array\_agg as an aggregate derived window function; for example
-
-SELECT array\_agg\(x\) over \(ORDER BY y\) FROM ...
-
-SELECT array\_agg\(x order by y\) over \(PARTITION BY z\) FROM ...
-
-SELECT array\_agg\(x order by y\) over \(ORDER BY z\) FROM ...
-
-|
+|S098|`ARRAY_AGG`|Partially|Supported: Using array\_agg without a window specification; for example<br/><br/>SELECT array\_agg\(x\) FROM ...<br/><br/>SELECT array\_agg \(x order by y\) FROM ...<br/><br/>Not supported: Using array\_agg as an aggregate derived window function; for example<br/><br/>SELECT array\_agg\(x\) over \(ORDER BY y\) FROM ...<br/><br/>SELECT array\_agg\(x order by y\) over \(PARTITION BY z\) FROM ...<br/><br/>SELECT array\_agg\(x order by y\) over \(ORDER BY z\) FROM ...|
 |S111|`ONLY` in query expressions|YES| |
 |S151|Type predicate|NO| |
 |S161|Subtype treatment|NO| |
