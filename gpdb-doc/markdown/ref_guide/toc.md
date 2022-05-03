@@ -185,7 +185,6 @@ Doc Index
     - [Character Set Support](./character_sets.md)
     - [Server Configuration Parameters](./config_params/guc_config.md)
         - [Parameter Categories](./config_params/guc_category-list.md)
-
         - [Configuration Parameters](./config_params/guc-list.md)
     - [System Catalogs](./system_catalogs/catalog_ref.md)
         - [System Tables](./system_catalogs/catalog_ref-tables.md)
