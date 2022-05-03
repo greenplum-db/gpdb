@@ -155,7 +155,8 @@ The `gpbackup` utility cannot be run while `gpexpand` is initializing new segmen
 
 **--jobs** int
 :   Optional. Specifies the number of jobs to run in parallel when backing up tables. By default, `gpbackup` uses 1 job \(database connection\). Increasing this number can improve the speed of backing up data. When running multiple jobs, each job backs up tables in a separate transaction. For example, if you specify `--jobs 2`, the utility creates two processes, each process starts a single transaction, and the utility backs up the tables in parallel using the two processes.
-    <br/><br/>**Important:**  If you specify a value higher than 1, the database must be in a quiescent state at the very beginning while the utility creates the individual connections, initializes their transaction snapshots, and acquires a lock on the tables that are being backed up. If concurrent database operations are being performed on tables that are being backed up during the transaction snapshot initialization and table locking step, consistency between tables that are backed up in different parallel workers cannot be guaranteed.
+
+:   **Important:**  If you specify a value higher than 1, the database must be in a quiescent state at the very beginning while the utility creates the individual connections, initializes their transaction snapshots, and acquires a lock on the tables that are being backed up. If concurrent database operations are being performed on tables that are being backed up during the transaction snapshot initialization and table locking step, consistency between tables that are backed up in different parallel workers cannot be guaranteed.
 
 :   You cannot use this option in combination with the options `--metadata-only`, `--single-data-file`, or `--plugin-config`.
 
@@ -184,7 +185,8 @@ The `gpbackup` utility cannot be run while `gpexpand` is initializing new segmen
 
 **--single-data-file**
 :   Optional. Create a single data file on each segment host for all tables backed up on that segment. By default, each `gpbackup` creates one compressed CSV file for each table that is backed up on the segment.
-    **Note:** If you use the `--single-data-file` option to combine table backups into a single file per segment, you cannot set the `gprestore` option `--jobs` to a value higher than 1 to perform a parallel restore operation.
+
+:   **Note:** If you use the `--single-data-file` option to combine table backups into a single file per segment, you cannot set the `gprestore` option `--jobs` to a value higher than 1 to perform a parallel restore operation.
 
 **--verbose**
 :   Optional. Print verbose log messages.
