@@ -66,26 +66,114 @@ The `encrypt-password` command prompts you to enter and then re-enter the passwo
 
 The following table describes the contents of the columns in the list that is output by the `gpbackup_manager list-backups` command.
 
-|Column|Description|
-|------|-----------|
-|timestamp|Timestamp value \(`YYYYMMDDHHMMSS`\) that specifies the time the backup was taken.|
-|date|Date the backup was taken.|
-|database|Name of the database backed up \(specified on the `gpbackup` command line with the `--dbname` option\).|
-|type|Which classes of data are included in the backup. Can be one of the following: -   **full** - contains all global and local metadata, and user data for the database. This kind of backup can be the base for an incremental backup. Depending on the `gpbackup` options specified, some objects could have been filtered from the backup.
--   **incremental** – contains all global and local metadata, and user data changed since a previous **full** backup.
--   **metadata-only** – contains only the global and local metadata for the database. Depending on the `gpbackup` options specified, some objects could have been filtered from the backup.
--   **data-only** – contains only user data from the database. Depending on the `gpbackup` options specified, some objects could have been filtered from the backup.
+<table cellpadding="4" cellspacing="0" summary="" id="topic1__table_yls_rgw_g3b" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>Backup List Report</span></caption><colgroup><col style="width:33.33333333333333%" /><col style="width:66.66666666666666%" /></colgroup><thead class="thead" style="text-align:left;">
+          <tr class="row">
+            <th class="entry cellrowborder" style="vertical-align:top;" id="d66071e244">Column</th>
 
-|
-|object filtering|The object filtering options that were specified at least once on the `gpbackup` command line, or blank if no filtering operations were used. To see the object filtering details for a specific backup, run the `gpbackup_manager report` command for the backgit st-   **include-schema** – at least one `--include-schema` option was specified.
--   **exclude-schema** – at least one `--exclude-schema` option was specified.
--   **include-table** – at least one `--include-table` option was specified.
--   **exclude-table** – at least one `--exclude-table` option was specified.
+            <th class="entry cellrowborder" style="vertical-align:top;" id="d66071e247">Description</th>
 
-|
-|plugin|The name of the binary plugin file that was used to configure the backup destination, excluding path information.|
-|duration|The amount of time \(`hh:mm:ss` format\) taken to complete the backup.|
-|date deleted|The date the backup was deleted, or blank if the backup still exists.|
+          </tr>
+
+        </thead>
+<tbody class="tbody">
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">timestamp</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">Timestamp value (<code class="ph codeph">YYYYMMDDHHMMSS</code>) that specifies the time the
+              backup was taken.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">date</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">Date the backup was taken.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">database</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">Name of the database backed up (specified on the <code class="ph codeph">gpbackup</code>
+              command line with the <code class="ph codeph">--dbname</code> option).</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">type</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">Which classes of data are included in the backup. Can be one of the following: <ul class="sl simple">
+                <li class="sli"><strong class="ph b">full</strong> - contains all global and local metadata, and user data for the
+                  database. This kind of backup can be the base for an incremental backup. Depending
+                  on the <code class="ph codeph">gpbackup</code> options specified, some objects could have been
+                  filtered from the backup.</li>
+
+                <li class="sli"><strong class="ph b">incremental</strong> – contains all global and local metadata, and user data
+                  changed since a previous <strong class="ph b">full</strong> backup.</li>
+
+                <li class="sli"><strong class="ph b">metadata-only</strong> – contains only the global and local metadata for the
+                  database. Depending on the <code class="ph codeph">gpbackup</code> options specified, some
+                  objects could have been filtered from the backup.</li>
+
+                <li class="sli"><strong class="ph b">data-only</strong> – contains only user data from the database. Depending on the
+                    <code class="ph codeph">gpbackup</code> options specified, some objects could have been
+                  filtered from the backup.</li>
+
+              </ul>
+
+            </td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">object filtering</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">The object filtering options that were specified at least once on the
+                <code class="ph codeph">gpbackup</code> command line, or blank if no filtering operations were
+              used. To see the object filtering details for a specific backup, run the
+                <code class="ph codeph">gpbackup_manager report</code> command for the backgit st<ul class="sl simple">
+                <li class="sli"><strong class="ph b">include-schema</strong> – at least one <code class="ph codeph">--include-schema</code> option
+                  was specified.</li>
+
+                <li class="sli"><strong class="ph b">exclude-schema</strong> – at least one <code class="ph codeph">--exclude-schema</code> option
+                  was specified.</li>
+
+                <li class="sli"><strong class="ph b">include-table</strong> – at least one <code class="ph codeph">--include-table</code> option was
+                  specified.</li>
+
+                <li class="sli"><strong class="ph b">exclude-table</strong> – at least one <code class="ph codeph">--exclude-table</code> option was
+                  specified.</li>
+
+              </ul>
+</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">plugin</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">The name of the binary plugin file that was used to configure the backup
+              destination, excluding path information.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">duration</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">The amount of time (<code class="ph codeph">hh:mm:ss</code> format) taken to complete the
+              backup.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e244 ">date deleted</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d66071e247 ">The date the backup was deleted, or blank if the backup still exists. </td>
+
+          </tr>
+
+        </tbody>
+</table>
 
 ## <a id="exs"></a>Examples 
 
