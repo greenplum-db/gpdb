@@ -72,65 +72,75 @@ The `encrypt-password` command prompts you to enter and then re-enter the passwo
 
 The following table describes the contents of the columns in the list that is output by the `gpbackup_manager list-backups` command.
 
-<table cellpadding="4" cellspacing="0" summary="" id="topic1__table_yls_rgw_g3b" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>Backup List Report</span></caption><colgroup><col style="width:33.33333333333333%" /><col style="width:66.66666666666666%" /></colgroup><thead class="thead" style="text-align:left;">
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic1__table_yls_rgw_g3b" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 1. Backup List Report</span></caption>
+        
+        
+        <thead class="thead" align="left">
           <tr class="row">
-            <th class="entry cellrowborder" style="vertical-align:top;" id="d1143e275">Column</th>
+            <th class="entry" valign="top" width="33.33333333333333%" id="d15993e322">Column</th>
 
-            <th class="entry cellrowborder" style="vertical-align:top;" id="d1143e278">Description</th>
+            <th class="entry" valign="top" width="66.66666666666666%" id="d15993e325">Description</th>
 
           </tr>
 
         </thead>
-<tbody class="tbody">
-          <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">timestamp</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">Timestamp value (<code class="ph codeph">YYYYMMDDHHMMSS</code>) that specifies the time the
+        <tbody class="tbody">
+          <tr class="row">
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">timestamp</td>
+
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">Timestamp value (<samp class="ph codeph">YYYYMMDDHHMMSS</samp>) that specifies the time the
               backup was taken.</td>
 
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">date</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">date</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">Date the backup was taken.</td>
-
-          </tr>
-
-          <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">status</td>
-
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">Status of the backup operation, <code class="ph codeph">Success</code> or
-                <code class="ph codeph">Failure</code>.</td>
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">Date the backup was taken.</td>
 
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">database</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">status</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">Name of the database backed up (specified on the <code class="ph codeph">gpbackup</code>
-              command line with the <code class="ph codeph">--dbname</code> option).</td>
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">Status of the backup operation, <samp class="ph codeph">Success</samp> or
+                <samp class="ph codeph">Failure</samp>.</td>
 
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">type</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">database</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">Which classes of data are included in the backup. Can be one of the following: <ul class="sl simple">
-                <li class="sli"><strong class="ph b">full</strong> - contains all global and local metadata, and user data for the
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">Name of the database backed up (specified on the <samp class="ph codeph">gpbackup</samp>
+              command line with the <samp class="ph codeph">--dbname</samp> option).</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">type</td>
+
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">Which classes of data are included in the backup. Can be one of the following: <ul class="sl simple">
+                <li class="sli">
+<strong class="ph b">full</strong> - contains all global and local metadata, and user data for the
                   database. This kind of backup can be the base for an incremental backup. Depending
-                  on the <code class="ph codeph">gpbackup</code> options specified, some objects could have been
+                  on the <samp class="ph codeph">gpbackup</samp> options specified, some objects could have been
                   filtered from the backup.</li>
 
-                <li class="sli"><strong class="ph b">incremental</strong> – contains all global and local metadata, and user data
+                <li class="sli">
+<strong class="ph b">incremental</strong> – contains all global and local metadata, and user data
                   changed since a previous <strong class="ph b">full</strong> backup.</li>
 
-                <li class="sli"><strong class="ph b">metadata-only</strong> – contains only the global and local metadata for the
-                  database. Depending on the <code class="ph codeph">gpbackup</code> options specified, some
+                <li class="sli">
+<strong class="ph b">metadata-only</strong> – contains only the global and local metadata for the
+                  database. Depending on the <samp class="ph codeph">gpbackup</samp> options specified, some
                   objects could have been filtered from the backup.</li>
 
-                <li class="sli"><strong class="ph b">data-only</strong> – contains only user data from the database. Depending on the
-                    <code class="ph codeph">gpbackup</code> options specified, some objects could have been
+                <li class="sli">
+<strong class="ph b">data-only</strong> – contains only user data from the database. Depending on the
+                    <samp class="ph codeph">gpbackup</samp> options specified, some objects could have been
                   filtered from the backup.</li>
 
               </ul>
@@ -140,22 +150,26 @@ The following table describes the contents of the columns in the list that is ou
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">object filtering</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">object filtering</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">The object filtering options that were specified at least once on the
-                <code class="ph codeph">gpbackup</code> command line, or blank if no filtering operations were
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">The object filtering options that were specified at least once on the
+                <samp class="ph codeph">gpbackup</samp> command line, or blank if no filtering operations were
               used. To see the object filtering details for a specific backup, run the
-                <code class="ph codeph">gpbackup_manager report</code> command for the backgit st<ul class="sl simple">
-                <li class="sli"><strong class="ph b">include-schema</strong> – at least one <code class="ph codeph">--include-schema</code> option
+                <samp class="ph codeph">gpbackup_manager report</samp> command for the backgit st<ul class="sl simple">
+                <li class="sli">
+<strong class="ph b">include-schema</strong> – at least one <samp class="ph codeph">--include-schema</samp> option
                   was specified.</li>
 
-                <li class="sli"><strong class="ph b">exclude-schema</strong> – at least one <code class="ph codeph">--exclude-schema</code> option
+                <li class="sli">
+<strong class="ph b">exclude-schema</strong> – at least one <samp class="ph codeph">--exclude-schema</samp> option
                   was specified.</li>
 
-                <li class="sli"><strong class="ph b">include-table</strong> – at least one <code class="ph codeph">--include-table</code> option was
+                <li class="sli">
+<strong class="ph b">include-table</strong> – at least one <samp class="ph codeph">--include-table</samp> option was
                   specified.</li>
 
-                <li class="sli"><strong class="ph b">exclude-table</strong> – at least one <code class="ph codeph">--exclude-table</code> option was
+                <li class="sli">
+<strong class="ph b">exclude-table</strong> – at least one <samp class="ph codeph">--exclude-table</samp> option was
                   specified.</li>
 
               </ul>
@@ -164,32 +178,35 @@ The following table describes the contents of the columns in the list that is ou
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">plugin</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">plugin</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">The name of the binary plugin file that was used to configure the backup
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">The name of the binary plugin file that was used to configure the backup
               destination, excluding path information.</td>
 
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">duration</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">duration</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">The amount of time (<code class="ph codeph">hh:mm:ss</code> format) taken to complete the
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">The amount of time (<samp class="ph codeph">hh:mm:ss</samp> format) taken to complete the
               backup.</td>
 
           </tr>
 
           <tr class="row">
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e275 ">date deleted</td>
+            <td class="entry" valign="top" width="33.33333333333333%" headers="d15993e322 ">date deleted</td>
 
-            <td class="entry cellrowborder" style="vertical-align:top;" headers="d1143e278 ">Indicates the status of the deletion. If blank, the backup still exists. Other possible values include: 
+            <td class="entry" valign="top" width="66.66666666666666%" headers="d15993e325 ">Indicates the status of the deletion. If blank, the backup still exists. Other possible values include: 
               <ul class="sl simple">
-                <li class="sli"><strong class="ph b">In progress</strong> - the deletion is in progress.</li>
+                <li class="sli">
+<strong class="ph b">In progress</strong> - the deletion is in progress.</li>
 
-                <li class="sli"><strong class="ph b">Plugin Backup Delete Failed</strong> - Last delete attempt failed to delete
+                <li class="sli">
+<strong class="ph b">Plugin Backup Delete Failed</strong> - Last delete attempt failed to delete
                   backup from plugin storage.</li>
 
-                <li class="sli"><strong class="ph b">Local Delete Failed</strong> - Last delete attempt failed to delete backup from
+                <li class="sli">
+<strong class="ph b">Local Delete Failed</strong> - Last delete attempt failed to delete backup from
                   local storage.</li>
 
                 <li class="sli"><strong class="ph b">A timestamp indicating the date deleted.</strong></li>
@@ -200,7 +217,9 @@ The following table describes the contents of the columns in the list that is ou
           </tr>
 
         </tbody>
-</table>
+
+      </table>
+</div>
 
 ## <a id="examples"></a>Examples 
 
