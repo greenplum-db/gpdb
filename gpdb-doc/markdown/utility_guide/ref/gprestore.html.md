@@ -4,11 +4,12 @@ title: gprestore
 
 Restore a Greenplum Database backup that was created using the `gpbackup` utility. By default `gprestore` uses backed up metadata files and DDL files located in the Greenplum Database master host data directory, with table data stored locally on segment hosts in CSV data files.
 
-## <a id="syn"></a>Synopsis 
+## <a id="synopsis"></a>Synopsis 
 
 ```
-gprestore --timestamp <YYYMMDDHHMMSS>
+gprestore --timestamp <YYYYMMDDHHMMSS>
    [--backup-dir <directory>]
+   [--copy-queue-size <int>
    [--create-db]
    [--debug]
    [--exclude-schema <schema_name> [--exclude-schema <schema_name> ...]]
@@ -61,7 +62,7 @@ Performance of restore operations can be improved by creating multiple parallel 
 
 When a restore operation completes, `gprestore` returns a status code. See [Return Codes](#return_codes).
 
-`gprestore` can send status email notifications after a back up operation completes. You specify when the utility sends the mail and the email recipients in a configuration file. See [Configuring Email Notifications](../../admin_guide/managing/backup-gpbackup.html#topic_qwd_d5d_tbb).
+`gprestore` can send status email notifications after a back up operation completes. You specify when the utility sends the mail and the email recipients in a configuration file. See [Configuring Email Notifications](../../admin_guide/managing/backup-gpbackup.html).
 
 **Note:** This utility uses secure shell \(SSH\) connections between systems to perform its tasks. In large Greenplum Database deployments, cloud deployments, or deployments with a large number of segments per host, this utility may exceed the host's maximum threshold for unauthenticated connections. Consider updating the SSH `MaxStartups` and `MaxSessions` configuration parameters to increase this threshold. For more information about SSH configuration options, refer to the SSH documentation for your Linux distribution.
 
@@ -79,6 +80,9 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 :   Optional. Creates the database before restoring the database object metadata.
 
 :   The database is created by cloning the empty standard system database `template0`.
+
+**--copy-queue-size** int
+:   Optional. Specifies the number of `COPY` commands `gprestore` should enqueue when restoring a backup set. This option optimizes restore performance by reducing the amount of time spent initializing `COPY` commands. If you do not set this option to 2 or greater, `gprestore` enqueues 1 `COPY` command at a time.
 
 **--data-only**
 :   Optional. Restores table data from a backup created with the `gpbackup` utility, without creating the database tables. This option assumes the tables exist in the target database. To restore data for a specific set of tables from a backup set, you can specify an option to include tables or schemas or exclude tables or schemas. Specify the `--with-stats` option to restore table statistics from the backup.
@@ -98,7 +102,7 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 **--exclude-schema-file** file\_name
 :   Optional. Specifies a text file containing a list of schemas to exclude from the backup. Each line in the text file must define a single schema. The file must not include trailing lines. If a schema name uses any character other than a lowercase letter, number, or an underscore character, then you must include that name in double quotes. You cannot combine this option with the option `--include-schema` or `--include-schema-file`, or a table filtering option such as `--include-table`.
 
-**--exclude-table** <schema.table\>
+**--exclude-table** schema.table
 :   Optional. Specifies a table to exclude from the restore operation. You can specify this option multiple times. The table must be in the format `<schema-name>.<table-name>`. If a table or schema name uses any character other than a lowercase letter, number, or an underscore character, then you must include that name in double quotes. You can specify this option multiple times. If the table is not in the backup set, the restore operation fails. You cannot specify a leaf partition of a partitioned table.
 
 :   You cannot combine this option with the option `--exclude-schema`, `--exclude-schema-file`, or another a table filtering option such as `--include-table`.
@@ -115,7 +119,7 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 
 :   You cannot use this option if objects in the backup set have dependencies on multiple schemas.
 
-:   See [Filtering the Contents of a Backup or Restore](../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb) for more information.
+:   See [Filtering the Contents of a Backup or Restore](../../admin_guide/managing/backup-gpbackup.html) for more information.
 
 **--include-schema-file** file\_name
 :   Optional. Specifies a text file containing a list of schemas to restore. Each line in the text file must define a single schema. The file must not include trailing lines. If a schema name uses any character other than a lowercase letter, number, or an underscore character, then you must include that name in double quotes.
@@ -144,12 +148,11 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 
 :   If you use the `--include-table-file` option, `gprestore` does not create roles or set the owner of the tables. The utility restores table indexes and rules. Triggers are also restored but are not supported in Greenplum Database.
 
-:   See [Filtering the Contents of a Backup or Restore](../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb) for more information.
+:   See [Filtering the Contents of a Backup or Restore](../../admin_guide/managing/backup-gpbackup.html) for more information.
 
 --incremental \(Beta\)
-:   Optional. Requires the `--data-only option`. Restores only the table data in the incremental backup specified by the `--timestamp` option. Table data is not restored from previous incremental backups in the backup set. For information about incremental backups, see [../../admin\_guide/managing/backup-gpbackup-incremental.html](../../admin_guide/managing/backup-gpbackup-incremental.html).
-
-    **Warning:** This is a Beta featureand is not supported in a production environment.
+:   Optional. Requires the `--data-only option`. Restores only the table data in the incremental backup specified by the `--timestamp` option. Table data is not restored from previous incremental backups in the backup set. For information about incremental backups, see [Creating and Using Incremental Backups with gpbackup and gprestore](../../admin_guide/managing/backup-gpbackup-incremental.html).
+    <br/><br/>**Warning:** This is a Beta featureand is not supported in a production environment.
 
 :   An incremental backup contains the following table data that can be restored.
 
@@ -181,8 +184,7 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 
 **--jobs** int
 :   Optional. Specifies the number of parallel connections to use when restoring table data and metadata. By default, `gprestore` uses 1 connection. Increasing this number can improve the speed of restoring data.
-
-    **Note:** If you used the `gpbackup --single-data-file` option to combine table backups into a single file per segment, you cannot set `--jobs` to a value higher than 1 to perform a parallel restore operation.
+    <br/><br/>**Note:** If you used the `gpbackup --single-data-file` option to combine table backups into a single file per segment, you cannot set `--jobs` to a value higher than 1 to perform a parallel restore operation.
 
 **--metadata-only**
 :   Optional. Creates database tables from a backup created with the `gpbackup` utility, but does not restore the table data. This option assumes the tables do not exist in the target database. To create a specific set of tables from a backup set, you can specify an option to include tables or schemas or exclude tables or schemas. Specify the option `--with-globals` to restore the Greenplum Database system objects.
@@ -195,7 +197,6 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 :   Optional. Specify this option to continue the restore operation if an SQL error occurs when creating database metadata \(such as tables, roles, or functions\) or restoring data. If another type of error occurs, the utility exits. The default is to exit on the first error.
 
 :   When this option is included, the utility displays an error summary and writes error information to the `gprestore` log file and continues the restore operation. The utility also creates text files in the backup directory that contain the list of tables that generated SQL errors.
-
     -   Tables with metadata errors - `gprestore_<backup-timestamp>_<restore-time>_error_tables_metadata`
     -   Tables with data errors - `gprestore_<backup-timestamp>_<restore-time>_error_tables_data`
 
@@ -221,7 +222,7 @@ When a restore operation completes, `gprestore` returns a status code. See [Retu
 :   Optional. Print the version number and exit.
 
 **--with-globals**
-:   Optional. Restores Greenplum Database system objects in the backup set, in addition to database objects. See [Objects Included in a Backup or Restore](../../admin_guide/managing/backup-gpbackup.html#topic_x3s_lqj_tbb).
+:   Optional. Restores Greenplum Database system objects in the backup set, in addition to database objects. See [Objects Included in a Backup or Restore](../../admin_guide/managing/backup-gpbackup.html).
 
 **--with-stats**
 :   Optional. Restore query plan statistics from the backup set. If the backup set was not created with the `--with-stats` option, an error is returned. Restored tables will only have statistics from the backup. You cannot use this option with `--run-analyze`.
@@ -246,7 +247,7 @@ One of these codes is returned after `gprestore` completes.
 -   **1** – Restore completed with non-fatal errors. See log file for more information.
 -   **2** – Restore failed with a fatal error. See log file for more information.
 
-## <a id="exs"></a>Examples 
+## <a id="examples"></a>Examples 
 
 Create the demo database and restore all schemas and tables in the backup set for the indicated timestamp:
 
@@ -300,4 +301,6 @@ gprestore --timestamp 20121114064330 --redirect-db mystest --create-db
 ## <a id="section9"></a>See Also 
 
 [gpbackup](gpbackup.html), [Parallel Backup with gpbackup and gprestore](../../admin_guide/managing/backup-gpbackup.html) and [Using the S3 Storage Plugin with gpbackup and gprestore](../../admin_guide/managing/backup-s3-plugin.html)
+
+**Parent topic:**[Backup Utility Reference](../../backup-utilities.html)
 
