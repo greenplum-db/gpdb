@@ -47,8 +47,6 @@
         - [plcontainer](./ref/plcontainer.md)
         - [plcontainer Configuration File](./ref/plcontainer-configuration.md)
         - [psql](./ref/psql.md)
-        - [pxf](./../../pxf/latest/ref/pxf.md)
-        - [pxf cluster](./../../pxf/latest/ref/pxf-cluster.md)
         - [reindexdb](./ref/reindexdb.md)
         - [vacuumdb](./ref/vacuumdb.md)
     - [Additional Supplied Programs](./contrib-programs.md)
