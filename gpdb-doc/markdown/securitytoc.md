@@ -1,8 +1,0 @@
-- [Greenplum Database Security Configuration Guide](./security-guide/topics/preface.md)
-    - [Securing the Database](./security-guide/topics/SecuringGPDB.md)
-    - [Greenplum Database Ports and Protocols](./security-guide/topics/ports_and_protocols.md)
-    - [Configuring Client Authentication](./security-guide/topics/Authenticate.md)
-    - [Configuring Database Authorization](./security-guide/topics/Authorization.md)
-    - [Auditing](./security-guide/topics/Auditing.md)
-    - [Encrypting Data and Database Connections](./security-guide/topics/Encryption.md)
-    - [Security Best Practices](./security-guide/topics/BestPractices.md)
