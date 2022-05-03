@@ -50,5 +50,3 @@
         - [reindexdb](./ref/reindexdb.md)
         - [vacuumdb](./ref/vacuumdb.md)
     - [Additional Supplied Programs](./contrib-programs.md)
-        - [pg\_upgrade](https://www.postgresql.org/docs/9.4/pgupgrade.md)
-        - [pg\_xlogdump](https://www.postgresql.org/docs/9.4/pgxlogdump.md)
