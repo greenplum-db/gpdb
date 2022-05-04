@@ -90,12 +90,8 @@ The following output fields are reported by `gpstate -s` for the coordinator:
 |Coordinator postgres process ID|PID of the coordinator database listener process|
 |Coordinator data directory|file system location of the coordinator data directory|
 |Coordinator port|port of the coordinator `postgres` database listener process|
-|Coordinator current role|dispatch = regular operating modeutility = maintenance mode
-
-|
-|Greenplum array configuration type|Standard = one NIC per host Multi-Home = multiple NICs per host
-
-|
+|Coordinator current role|dispatch = regular operating mode<br/><br/>utility = maintenance mode|
+|Greenplum array configuration type|Standard = one NIC per host<br/><br/>Multi-Home = multiple NICs per host|
 |Greenplum initsystem version|version of Greenplum Database when system was first initialized|
 |Greenplum current version|current version of Greenplum Database|
 |Postgres version|version of PostgreSQL that Greenplum Database is based on|
@@ -113,11 +109,7 @@ The following output fields are reported by `gpstate -s` for each primary segmen
 |Port|port number of segment `postgres` database listener process|
 |Current Role|current role of a segment: Mirror or Primary|
 |Preferred Role|role at system initialization time: Mirror or Primary|
-|Mirror Status|status of a primary/mirror segment pair:Synchronized = data is up to date on both
-
-Not in Sync = the mirror segment has not caught up to the primary segment
-
-|
+|Mirror Status|status of a primary/mirror segment pair:<br/><br/>Synchronized = data is up to date on both<br/><br/>Not in Sync = the mirror segment has not caught up to the primary segment|
 |Current write location|Location where primary segment is writing new logs as they come in|
 |Bytes remaining to send to mirror|Bytes remaining to be sent from primary to mirror|
 |Active PID|active process ID of a segment|
@@ -134,11 +126,7 @@ The following output fields are reported by `gpstate -s` for each mirror segment
 |Port|port number of segment `postgres` database listener process|
 |Current Role|current role of a segment: Mirror or Primary|
 |Preferred Role|role at system initialization time: Mirror or Primary|
-|Mirror Status|status of a primary/mirror segment pair:Synchronized = data is up to date on both
-
-Not in Sync = the mirror segment has not caught up to the primary segment
-
-|
+|Mirror Status|status of a primary/mirror segment pair:<br/><br/>Synchronized = data is up to date on both<br/><br/>Not in Sync = the mirror segment has not caught up to the primary segment|
 |WAL Sent Location|Log location up to which the primary segment has sent log data to the mirror|
 |WAL Flush Location|Log location up to which the mirror segment has flushed the log data to disk|
 |WAL Replay Location|Log location up to which the mirror segment has replayed logs locally|
