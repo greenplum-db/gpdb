@@ -31,7 +31,7 @@ The default shutdown mode \(`-M smart`\) waits for current client connections to
 
 Specify the `-M fast` shutdown mode to roll back all in-progress transactions and terminate any connections before shutting down.
 
-With the `-u` option, the utility uploads changes made to the coordinator `pg_hba.conf` file or to *runtime* configuration parameters in the coordinator `postgresql.conf` file without interruption of service. Note that any active sessions will not pickup the changes until they reconnect to the database.
+With the `-u` option, the utility uploads changes made to the coordinator `pg_hba.conf` file or to *runtime* configuration parameters in the coordinator `postgresql.conf` file without interruption of service. Note that any active sessions will not pick up the changes until they reconnect to the database.
 
 ## <a id="section4"></a>Options 
 
