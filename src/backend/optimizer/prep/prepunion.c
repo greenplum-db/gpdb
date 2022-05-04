@@ -1806,6 +1806,52 @@ adjust_appendrel_attrs(PlannerInfo *root, Node *node, AppendRelInfo *appinfo)
 	return result;
 }
 
+/*
+ * nested_subplan_mutator
+ *	  Traverse through the plan tree and create subplan copies.
+ *	  Subplan copies are created when several nodes refer to
+ *	  one subplan. Initially, it was done in fixup_subplans,
+ *	  but it caused a sutiation when child plans were further in 
+ *	  a flat plan list then thier parent ones. nested_subplan_mutator
+ *	  is intended to fix this misbehaviour by adding nested subplans
+ *	  right in the place.
+ */
+static bool
+nested_subplan_mutator(Node *node, plan_tree_base_prefix *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan *sp = (SubPlan*) node;
+
+		if (!sp->is_initplan)
+		{
+			PlannerInfo *root = (PlannerInfo*)context->node;
+			Plan *newsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, sp));
+			PlannerInfo *newsubroot = makeNode(PlannerInfo);
+
+			memcpy(newsubroot, planner_subplan_get_root(root, sp), sizeof(PlannerInfo));
+
+			plan_tree_walker(newsubplan, nested_subplan_mutator, context);
+
+			root->glob->subplans = lappend(root->glob->subplans, newsubplan);
+			root->glob->subroots = lappend(root->glob->subroots, newsubroot);
+
+			/*
+			 * expression_tree_mutator made a copy of the SubPlan already, so
+			 * we can modify it directly.
+			 */
+			sp->plan_id = list_length(root->glob->subplans);
+		}
+	}
+	else
+		plan_tree_walker(node, nested_subplan_mutator, context);
+
+	return false;
+}
+
 /**
  * Mutator's function is to modify nodes so that they may be applicable
  * for a child partition.
@@ -2057,28 +2103,10 @@ adjust_appendrel_attrs_mutator(Node *node,
 	 */
 	if (IsA(node, SubPlan))
 	{
-		SubPlan *sp = (SubPlan *) node;
+		plan_tree_base_prefix new_context;
+		new_context.node = (Node *) context->root;
 
-		if (!sp->is_initplan)
-		{
-			PlannerInfo *root = context->root;
-			Plan *newsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, sp));
-			PlannerInfo *newsubroot = makeNode(PlannerInfo);
-
-			memcpy(newsubroot, planner_subplan_get_root(root, sp), sizeof(PlannerInfo));
-
-			/*
-			 * Add the subplan and its subroot to the global lists.
-			 */
-			root->glob->subplans = lappend(root->glob->subplans, newsubplan);
-			root->glob->subroots = lappend(root->glob->subroots, newsubroot);
-
-			/*
-			 * expression_tree_mutator made a copy of the SubPlan already, so
-			 * we can modify it directly.
-			 */
-			sp->plan_id = list_length(root->glob->subplans);
-		}
+		nested_subplan_mutator(node, &new_context);
 	}
 
 	return node;
