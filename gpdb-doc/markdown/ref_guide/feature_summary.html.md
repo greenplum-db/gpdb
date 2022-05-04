@@ -102,190 +102,112 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 **Note:** VMware does not support using `WITH OIDS` or `oids=TRUE` to assign an OID system column when creating or altering a table. This syntax is deprecated and will be removed in a future Greenplum release.
 
 <table cellpadding="4" cellspacing="0" summary="" id="topic8__ik213423" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>SQL Support in Greenplum Database</span></caption><colgroup><col style="width:143pt" /><col style="width:73pt" /><col style="width:233pt" /></colgroup><thead class="thead" style="text-align:left;">
-            <tr class="row">
-              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d119146e602">SQL Command</th>
-
-              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d119146e605">Supported in Greenplum</th>
-
-              <th class="entry cell-norowborder" style="vertical-align:top;" id="d119146e608">Modifications, Limitations, Exceptions</th>
-
-            </tr>
-
-          </thead>
+<tr class="row">
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d119146e602">SQL Command
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d119146e605">Supported in Greenplum
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d119146e608">Modifications, Limitations, Exceptions
+</tr>
+</thead>
 <tbody class="tbody">
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER AGGREGATE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER CONVERSION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER DATABASE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER DOMAIN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER EXTENSION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Changes the definition of a Greenplum Database extension - based
-                on PostgreSQL 9.6. </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER FUNCTION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER GROUP</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/ALTER_ROLE.html#topic1">ALTER ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER INDEX</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER LANGUAGE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER OPERATOR</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER OPERATOR CLASS</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER OPERATOR FAMILY</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER PROTOCOL</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER RESOURCE QUEUE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
-                PostgreSQL.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER ROLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">RESOURCE QUEUE
-                    </code><em class="ph i">queue_name</em><code class="ph codeph"> | none</code></p>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER AGGREGATE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER CONVERSION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER DATABASE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER DOMAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER EXTENSION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Changes the definition of a Greenplum Database extension - based
+    on PostgreSQL 9.6. </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER FUNCTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER GROUP</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/ALTER_ROLE.html#topic1">ALTER ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER INDEX</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER LANGUAGE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER OPERATOR</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER OPERATOR CLASS</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER OPERATOR FAMILY</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER PROTOCOL</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER RESOURCE QUEUE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
+    PostgreSQL.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER ROLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">RESOURCE QUEUE
+        </code><em class="ph i">queue_name</em><code class="ph codeph"> | none</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SCHEMA</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SEQUENCE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SYSTEM</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TABLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">CLUSTER
-                    ON</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SCHEMA</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SEQUENCE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER SYSTEM</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TABLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">CLUSTER
+        ON</code></p>
 <p class="p"><code class="ph codeph">ENABLE/DISABLE TRIGGER</code></p>
 <p class="p"><strong class="ph b">Greenplum
                     Database Clauses:</strong></p>
@@ -294,150 +216,90 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
                     </code><code class="ph codeph">(REORGANIZE=true | false) | SET DISTRIBUTED
                 BY</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TABLESPACE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TRIGGER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TYPE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">SET DEFAULT
-                    ENCODING</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TABLESPACE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER TYPE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">SET DEFAULT
+        ENCODING</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER USER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/ALTER_ROLE.html#topic1">ALTER ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER VIEW</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ANALYZE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">BEGIN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CHECKPOINT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CLOSE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CLUSTER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COMMENT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COMMIT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COMMIT PREPARED</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COPY</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Modified Clauses:</strong><p class="p"><code class="ph codeph">ESCAPE [ AS ]
-                    '</code><em class="ph i">escape</em><code class="ph codeph">' | 'OFF'</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER USER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/ALTER_ROLE.html#topic1">ALTER ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ALTER VIEW</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ANALYZE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">BEGIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CHECKPOINT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CLOSE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CLUSTER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COMMENT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COMMIT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COMMIT PREPARED</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">COPY</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Modified Clauses:</strong><p class="p"><code class="ph codeph">ESCAPE [ AS ]
+        '</code><em class="ph i">escape</em><code class="ph codeph">' | 'OFF'</code></p>
 <p class="p"><strong class="ph b">Greenplum Database
                     Clauses:</strong></p>
 <p class="p"><code class="ph codeph">[LOG ERRORS] SEGMENT REJECT LIMIT
                     </code><em class="ph i">count</em><code class="ph codeph"> [ROWS|PERCENT]</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE AGGREGATE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">[ , SORTOP =
-                    </code><em class="ph i">sort_operator</em><code class="ph codeph"> ]</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE AGGREGATE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">[ , SORTOP =
+        </code><em class="ph i">sort_operator</em><code class="ph codeph"> ]</code></p>
 <p class="p"><strong class="ph b">Greenplum Database
                     Clauses:</strong></p>
 <p class="p"><code class="ph codeph">[ , COMBINEFUNC = </code><em class="ph i">combinefunc</em><code class="ph codeph">
@@ -446,105 +308,65 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <p class="p">The functions used to implement the
                   aggregate must be <code class="ph codeph">IMMUTABLE</code> functions.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE CAST</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE CONSTRAINT TRIGGER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE CONVERSION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE DATABASE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE DOMAIN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EXTENSION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Loads a new extension into Greenplum Database - based on
-                PostgreSQL 9.6.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EXTERNAL TABLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database parallel ETL feature - not in PostgreSQL
-                9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE FUNCTION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">Functions defined as
-                    <code class="ph codeph">STABLE</code> or <code class="ph codeph">VOLATILE</code> can be run in
-                  Greenplum Database provided that they are run on the master only.
-                    <code class="ph codeph">STABLE</code> and <code class="ph codeph">VOLATILE</code> functions cannot be used
-                  in statements that run at the segment level. </p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE CAST</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE CONSTRAINT TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE CONVERSION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE DATABASE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE DOMAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EXTENSION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Loads a new extension into Greenplum Database - based on
+    PostgreSQL 9.6.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE EXTERNAL TABLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database parallel ETL feature - not in PostgreSQL
+    9.4.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE FUNCTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">Functions defined as
+        <code class="ph codeph">STABLE</code> or <code class="ph codeph">VOLATILE</code> can be run in
+      Greenplum Database provided that they are run on the master only.
+        <code class="ph codeph">STABLE</code> and <code class="ph codeph">VOLATILE</code> functions cannot be used
+      in statements that run at the segment level. </p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE GROUP</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE INDEX</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">USING
-                    bitmap</code> (bitmap
-                    indexes)</p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE GROUP</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE INDEX</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">USING
+        bitmap</code> (bitmap
+        indexes)</p>
 <p class="p"><strong class="ph b">Limitations:</strong></p>
 <p class="p"><code class="ph codeph">UNIQUE</code> indexes are
                   allowed only if they contain all of (or a superset of) the Greenplum distribution
@@ -554,125 +376,77 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <p class="p"><code class="ph codeph">CONCURRENTLY</code> keyword not supported in
                   Greenplum.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE LANGUAGE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE MATERIALIZED VIEW</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Based on PostgreSQL 9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE OPERATOR</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">The function used to implement the
-                  operator must be an <code class="ph codeph">IMMUTABLE</code> function.</p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE LANGUAGE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE MATERIALIZED VIEW</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Based on PostgreSQL 9.4.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE OPERATOR</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">The function used to implement the
+      operator must be an <code class="ph codeph">IMMUTABLE</code> function.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE OPERATOR CLASS</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE OPERATOR FAMILY</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE PROTOCOL</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE RESOURCE QUEUE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
-                PostgreSQL 9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE ROLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">RESOURCE QUEUE
-                    </code><em class="ph i">queue_name</em><code class="ph codeph"> | none</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE OPERATOR CLASS</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE OPERATOR FAMILY</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE PROTOCOL</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE RESOURCE QUEUE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
+    PostgreSQL 9.4.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE ROLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">RESOURCE QUEUE
+        </code><em class="ph i">queue_name</em><code class="ph codeph"> | none</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE RULE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE SCHEMA</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE SEQUENCE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">The <code class="ph codeph">lastval()</code> and
-                    <code class="ph codeph">currval()</code> functions are not supported.</p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE RULE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE SCHEMA</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE SEQUENCE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">The <code class="ph codeph">lastval()</code> and
+        <code class="ph codeph">currval()</code> functions are not supported.</p>
 <p class="p">The
                     <code class="ph codeph">setval()</code> function is only allowed in queries that do not
                   operate on distributed data.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">[GLOBAL |
-                    LOCAL]</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><code class="ph codeph">[GLOBAL |
+        LOCAL]</code></p>
 <p class="p"><code class="ph codeph">REFERENCES</code></p>
 <p class="p"><code class="ph codeph">FOREIGN
                     KEY</code></p>
@@ -696,89 +470,57 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
                     (appendoptimized=true      [,compresslevel=value,blocksize=value]
                 )</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLE AS</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">See <a class="xref" href="sql_commands/CREATE_TABLE.html#topic1">CREATE TABLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLESPACE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">YES</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p">Specify host file system
-                  locations for specific segment instances.</p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLE AS</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">See <a class="xref" href="sql_commands/CREATE_TABLE.html#topic1">CREATE TABLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TABLESPACE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">YES</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p">Specify host file system
+      locations for specific segment instances.</p>
 <p class="p"><code class="ph codeph">WITH
                       (content<var class="keyword varname">ID_1</var>='<var class="keyword varname">/path/to/dir1</var>...)</code></p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TRIGGER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TYPE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">COMPRESSTYPE |
-                    COMPRESSLEVEL | BLOCKSIZE</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE TYPE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><code class="ph codeph">COMPRESSTYPE |
+        COMPRESSLEVEL | BLOCKSIZE</code></p>
 <p class="p"><strong class="ph b">Limitations:</strong></p>
 <p class="p">The functions
                   used to implement a new base type must be <code class="ph codeph">IMMUTABLE</code>
                   functions.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE USER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE VIEW</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DEALLOCATE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DECLARE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses /
-                  Options:</strong><p class="p"><code class="ph codeph">SCROLL</code></p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE USER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">CREATE VIEW</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DEALLOCATE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DECLARE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses /
+      Options:</strong><p class="p"><code class="ph codeph">SCROLL</code></p>
 <p class="p"><code class="ph codeph">FOR UPDATE [ OF column [,
                     ...] ]</code></p>
 <p class="p"><strong class="ph b">Limitations:</strong></p>
@@ -787,319 +529,182 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <p class="p">PL/pgSQL does not have
                   support for updatable cursors. </p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DELETE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DISCARD</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DELETE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DISCARD</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">
                 <p class="p"><strong class="ph b">Limitation:</strong>
                   <code class="ph codeph">DISCARD ALL</code> is not supported.</p>
-
-              </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DO</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">PostgreSQL 9.0 feature</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP AGGREGATE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP CAST</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP CONVERSION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP DATABASE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP DOMAIN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EXTENSION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Removes an extension from Greenplum Database – based on
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DO</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">PostgreSQL 9.0 feature</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP AGGREGATE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP CAST</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP CONVERSION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP DATABASE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP DOMAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EXTENSION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Removes an extension from Greenplum Database – based on
                 PostgreSQL 9.6.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EXTERNAL TABLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database parallel ETL feature - not in PostgreSQL
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP EXTERNAL TABLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database parallel ETL feature - not in PostgreSQL
                 9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP FUNCTION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP GROUP</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/DROP_ROLE.html#topic1">DROP ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP INDEX</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP LANGUAGE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OPERATOR</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OPERATOR CLASS</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OPERATOR FAMILY</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OWNED</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP PROTOCOL</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP RESOURCE QUEUE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP FUNCTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP GROUP</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/DROP_ROLE.html#topic1">DROP ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP INDEX</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP LANGUAGE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OPERATOR</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OPERATOR CLASS</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OPERATOR FAMILY</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP OWNED</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP PROTOCOL</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP RESOURCE QUEUE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database resource management feature - not in
                 PostgreSQL 9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP ROLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP RULE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP SCHEMA</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP SEQUENCE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TABLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TABLESPACE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TRIGGER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TYPE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP USER</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/DROP_ROLE.html#topic1">DROP ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP VIEW</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">END</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">EXECUTE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">EXPLAIN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">FETCH</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses /
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP ROLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP RULE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP SCHEMA</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP SEQUENCE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TABLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TABLESPACE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TRIGGER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP TYPE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP USER</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">An alias for <a class="xref" href="sql_commands/DROP_ROLE.html#topic1">DROP ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">DROP VIEW</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">END</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">EXECUTE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">EXPLAIN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">FETCH</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Unsupported Clauses /
                   Options:</strong><p class="p"><code class="ph codeph">LAST</code></p>
 <p class="p"><code class="ph codeph">PRIOR</code></p>
 <p class="p"><code class="ph codeph">BACKWARD</code></p>
@@ -1109,204 +714,116 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 <p class="p">Cannot fetch rows in a
                   nonsequential fashion; backward scan is not supported.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">GRANT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">INSERT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LATERAL</code> Join Type</td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LISTEN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LOAD</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LOCK</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">MOVE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">See <a class="xref" href="sql_commands/FETCH.html#topic1">FETCH</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">NOTIFY</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">PREPARE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">PREPARE TRANSACTION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REASSIGN OWNED</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REFRESH MATERIALIZED VIEW</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Based on PostgreSQL 9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REINDEX</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">RELEASE SAVEPOINT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">RESET</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">RETRIEVE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database parallel retrieve cursor - not in PostgreSQL 9.4.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REVOKE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ROLLBACK</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ROLLBACK PREPARED</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ROLLBACK TO SAVEPOINT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SAVEPOINT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SELECT</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">Limited use of <code class="ph codeph">VOLATILE</code>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">GRANT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">INSERT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LATERAL</code> Join Type</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LISTEN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LOAD</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LOCK</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">MOVE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">See <a class="xref" href="sql_commands/FETCH.html#topic1">FETCH</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">NOTIFY</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">PREPARE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">PREPARE TRANSACTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REASSIGN OWNED</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REFRESH MATERIALIZED VIEW</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Based on PostgreSQL 9.4.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REINDEX</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">RELEASE SAVEPOINT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">RESET</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">RETRIEVE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Greenplum Database parallel retrieve cursor - not in PostgreSQL 9.4.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">REVOKE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ROLLBACK</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ROLLBACK PREPARED</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">ROLLBACK TO SAVEPOINT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SAVEPOINT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SELECT</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p">Limited use of <code class="ph codeph">VOLATILE</code>
                   and <code class="ph codeph">STABLE</code> functions in <code class="ph codeph">FROM</code> or
                     <code class="ph codeph">WHERE</code> clauses</p>
 <p class="p">Text search (<code class="ph codeph">Tsearch2</code>) is
@@ -1321,135 +838,81 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
                     (WHERE </code><em class="ph i">condition</em><code class="ph codeph">)]</code> applied to an aggregate
                   function in the <code class="ph codeph">SELECT</code> list</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SELECT INTO</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">See <a class="xref" href="sql_commands/SELECT.html#topic1">SELECT</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET CONSTRAINTS</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">In PostgreSQL, this only applies to foreign key constraints,
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SELECT INTO</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">See <a class="xref" href="sql_commands/SELECT.html#topic1">SELECT</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET CONSTRAINTS</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">In PostgreSQL, this only applies to foreign key constraints,
                 which are currently not enforced in Greenplum Database.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET ROLE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET SESSION AUTHORIZATION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Deprecated as of PostgreSQL 8.1 - see <a class="xref" href="sql_commands/SET_ROLE.html#topic1">SET ROLE</a></td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET TRANSACTION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">DEFERRABLE</code> clause has no
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET ROLE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET SESSION AUTHORIZATION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 ">Deprecated as of PostgreSQL 8.1 - see <a class="xref" href="sql_commands/SET_ROLE.html#topic1">SET ROLE</a></td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SET TRANSACTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">DEFERRABLE</code> clause has no
                   effect.</p>
 <p class="p"><code class="ph codeph">SET TRANSACTION SNAPSHOT</code> command is not
                   supported.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SHOW</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">START TRANSACTION</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">TRUNCATE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">UNLISTEN</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">UPDATE</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">SET</code> not allowed for
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">SHOW</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">START TRANSACTION</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">TRUNCATE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">UNLISTEN</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">UPDATE</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">SET</code> not allowed for
                   Greenplum distribution key columns.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">VACUUM</code></td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">VACUUM FULL</code> is not
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">VACUUM</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "><strong class="ph b">Limitations:</strong><p class="p"><code class="ph codeph">VACUUM FULL</code> is not
                   recommended in Greenplum Database.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">VALUES</code></td>
-
-              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
-
-            </tr>
-
-          </tbody>
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">VALUES</code></td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d119146e605 ">YES</td>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
+</tr>
+</tbody>
 </table>
 
