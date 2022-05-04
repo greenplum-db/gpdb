@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-    CREATE TABLE t(a bigint);
-    INSERT INTO t VALUES (1), (2), (3);
+    CREATE TABLE t(a int, b int) DISTRIBUTED BY (a);
+    INSERT INTO t VALUES (1, 1), (2, 2), (3, 3);
     ANALYZE t;
     SET optimizer_enable_groupagg=off;
 
