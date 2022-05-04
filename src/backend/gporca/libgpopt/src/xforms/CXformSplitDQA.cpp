@@ -195,7 +195,7 @@ CXformSplitDQA::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// be able to re-enable the following transform optimization.
 	if (!FContainsRideAlongAggregate(pexprProjectList))
 	{
-		// generate two-stage agg for scalar DQA case
+		// generate two-stage agg
 		// this transform is useful for cases where distinct column is same as distributed column.
 		// for a query like "select count(distinct a) from bar;"
 		// we generate a two stage agg where the aggregate operator gives us the distinct values.
