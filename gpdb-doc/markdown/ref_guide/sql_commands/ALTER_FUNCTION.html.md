@@ -22,7 +22,7 @@ ALTER FUNCTION <name> ( [ [<argmode>] [<argname>] <argtype> [, ...] ] )
 
 where action is one of:
 
-```
+``` pre
 {CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
 {IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF}
 {[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
