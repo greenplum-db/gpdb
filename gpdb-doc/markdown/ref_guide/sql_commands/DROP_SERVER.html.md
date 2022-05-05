@@ -44,5 +44,5 @@ DROP SERVER IF EXISTS foo;
 
 [CREATE SERVER](CREATE_SERVER.html), [ALTER SERVER](ALTER_SERVER.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

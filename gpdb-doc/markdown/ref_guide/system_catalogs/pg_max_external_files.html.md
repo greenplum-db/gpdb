@@ -9,5 +9,5 @@ The `pg_max_external_files` view shows the maximum number of external table file
 |`hostname`|name| |The host name used to access a particular segment instance on a segment host.|
 |`maxfiles`|bigint| |Number of primary segment instances on the host.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

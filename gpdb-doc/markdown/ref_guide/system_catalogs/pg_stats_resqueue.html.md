@@ -15,5 +15,5 @@ The `pg_stat_resqueues` view allows administrators to view metrics about a resou
 |`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
 |`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

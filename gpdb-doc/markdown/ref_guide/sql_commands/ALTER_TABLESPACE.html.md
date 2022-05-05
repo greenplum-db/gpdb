@@ -60,5 +60,5 @@ There is no `ALTER TABLESPACE` statement in the SQL standard.
 
 [CREATE TABLESPACE](CREATE_TABLESPACE.html), [DROP TABLESPACE](DROP_TABLESPACE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

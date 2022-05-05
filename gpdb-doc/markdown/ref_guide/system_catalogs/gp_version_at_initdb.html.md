@@ -9,5 +9,5 @@ The `gp_version_at_initdb` table is populated on the master and each segment in 
 |`schemaversion`|integer| |Schema version number.|
 |`productversion`|text| |Product version number.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

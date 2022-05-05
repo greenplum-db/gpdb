@@ -104,5 +104,5 @@ The SQL standard requires commas between successive transaction\_modes, but for 
 
 [BEGIN](BEGIN.html), [LOCK](LOCK.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

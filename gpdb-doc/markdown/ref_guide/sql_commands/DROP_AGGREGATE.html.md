@@ -71,5 +71,5 @@ There is no `DROP AGGREGATE` statement in the SQL standard.
 
 [ALTER AGGREGATE](ALTER_AGGREGATE.html), [CREATE AGGREGATE](CREATE_AGGREGATE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

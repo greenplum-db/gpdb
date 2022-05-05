@@ -13,5 +13,5 @@ The `gp_distributed_log` view contains status information about distributed tran
 |`status`|text| |The status of the distributed transaction \(Committed or Aborted\).|
 |`local_transaction`|xid| |The local transaction ID.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

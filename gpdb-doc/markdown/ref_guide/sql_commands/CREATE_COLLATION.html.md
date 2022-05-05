@@ -68,5 +68,5 @@ There is a `CREATE COLLATION` statement in the SQL standard, but it is limited t
 
 [ALTER COLLATION](ALTER_COLLATION.html), [DROP COLLATION](DROP_COLLATION.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

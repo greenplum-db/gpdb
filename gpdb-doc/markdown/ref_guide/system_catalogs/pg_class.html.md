@@ -43,5 +43,5 @@ The system catalog table `pg_class` catalogs tables and most everything else tha
 |`relacl`|aclitem\[\]| |Access privileges assigned by `GRANT` and `REVOKE`.|
 |`reloptions`|text\[\]| |Access-method-specific options, as "keyword=value" strings.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

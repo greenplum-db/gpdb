@@ -38,5 +38,5 @@ The `pg_am` table stores information about index access methods. There is one ro
 |`amcostestimate`|regproc|pg\_proc.oid|Function to estimate cost of an index scan|
 |`amoptions`|regproc|pg\_proc.oid|Function to parse and validate `reloptions` for an index|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

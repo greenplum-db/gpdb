@@ -22,5 +22,5 @@ Memory amounts are specified in MBs.
 |`memory_shared_used`|integer| |The group shared memory used by the resource group for the segment instance on the host.|
 |`memory_shared_available`|integer| |The amount of group shared memory available for the segment instance on the host. Resource group global shared memory is not included in this total.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

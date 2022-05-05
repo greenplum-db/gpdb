@@ -13,5 +13,5 @@ The `pg_amproc` table stores information about support procedures associated wit
 |`amprocnum`|int2| |Support procedure number|
 |`amproc`|regproc|pg\_proc.oid|OID of the procedure|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

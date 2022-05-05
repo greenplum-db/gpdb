@@ -49,5 +49,5 @@ DROP INDEX title_idx;
 
 [ALTER INDEX](ALTER_INDEX.html), [CREATE INDEX](CREATE_INDEX.html), [REINDEX](REINDEX.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

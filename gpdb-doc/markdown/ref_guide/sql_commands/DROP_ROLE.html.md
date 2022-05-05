@@ -42,5 +42,5 @@ The SQL standard defines `DROP ROLE`, but it allows only one role to be dropped 
 
 [REASSIGN OWNED](REASSIGN_OWNED.html), [DROP OWNED](DROP_OWNED.html), [CREATE ROLE](CREATE_ROLE.html), [ALTER ROLE](ALTER_ROLE.html), [SET ROLE](SET_ROLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

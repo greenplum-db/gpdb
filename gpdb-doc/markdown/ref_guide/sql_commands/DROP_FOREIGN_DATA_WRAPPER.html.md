@@ -44,5 +44,5 @@ DROP FOREIGN DATA WRAPPER dbi;
 
 [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [ALTER FOREIGN DATA WRAPPER](ALTER_FOREIGN_DATA_WRAPPER.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

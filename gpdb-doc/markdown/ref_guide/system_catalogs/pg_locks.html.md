@@ -29,5 +29,5 @@ There are several distinct types of lockable objects: whole relations \(such as 
 |`mppiswriter`|boolean| |Specifies whether the lock is held by a writer process.|
 |`gp_segment_id`|integer| |The Greenplum segment id \(`dbid`\) where the lock is held.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

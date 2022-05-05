@@ -12,5 +12,5 @@ This table is not currently used in Greenplum Database.
 |`listenerpid`|int4| |PID of the server process that created this entry.|
 |`notification`|int4| |Zero if no event is pending for this listener. If an event is pending, the PID of the server process that sent the notification.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

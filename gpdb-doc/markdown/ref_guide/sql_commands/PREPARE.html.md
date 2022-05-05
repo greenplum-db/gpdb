@@ -79,5 +79,5 @@ The SQL standard includes a `PREPARE` statement, but it can only be used in embe
 
 [EXECUTE](EXECUTE.html), [DEALLOCATE](DEALLOCATE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

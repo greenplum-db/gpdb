@@ -11,5 +11,5 @@ The `foreign_server_options` view contains all of the options defined for foreig
 |`option_name`|sql\_identifier| |Name of an option.|
 |`option_value`|character\_data| |Value of the option.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -63,5 +63,5 @@ The SQL standard allows some other expressions to appear in place of the literal
 
 [SET ROLE](SET_ROLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

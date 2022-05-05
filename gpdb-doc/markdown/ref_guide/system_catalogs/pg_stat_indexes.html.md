@@ -17,5 +17,5 @@ The `pg_stat_user_indexes` and `pg_stat_sys_indexes` views contain the same info
 |`idx_tup_read`|bigint|Number of index entries returned by scans on this index|
 |`idx_tup_fetch`|bigint|Number of live table rows fetched by simple index scans using this index|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

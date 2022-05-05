@@ -182,5 +182,5 @@ Greenplum Database does not support the concurrent creation of indexes \(`CONCUR
 
 [ALTER INDEX](ALTER_INDEX.html), [DROP INDEX](DROP_INDEX.html), [CREATE TABLE](CREATE_TABLE.html), [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

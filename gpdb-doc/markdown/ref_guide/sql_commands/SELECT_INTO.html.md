@@ -59,5 +59,5 @@ The SQL standard uses `SELECT INTO` to represent selecting values into scalar va
 
 [SELECT](SELECT.html), [CREATE TABLE AS](CREATE_TABLE_AS.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

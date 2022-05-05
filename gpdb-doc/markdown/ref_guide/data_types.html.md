@@ -58,7 +58,7 @@ Each data type has an external representation determined by its input and output
 -   **[Range Types](datatype-range.html)**  
 
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic: **[Greenplum Database Reference Guide](ref_guide.html)
 
 1 For variable length data types, if the data is greater than or equal to 127 bytes, the storage overhead is 4 bytes instead of 1.
 

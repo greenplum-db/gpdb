@@ -21,5 +21,5 @@ In a normal expansion operation it is not necessary to modify the data stored in
 |
 |`updated`|timestamp without time zone| |Timestamp of the last change in status.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

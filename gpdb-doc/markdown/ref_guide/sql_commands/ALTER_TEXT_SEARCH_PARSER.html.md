@@ -38,5 +38,5 @@ There is no `ALTER TEXT SEARCH PARSER` statement in the SQL standard.
 
 [CREATE TEXT SEARCH PARSER](CREATE_TEXT_SEARCH_PARSER.html), [DROP TEXT SEARCH PARSER](DROP_TEXT_SEARCH_PARSER.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

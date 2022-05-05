@@ -12,5 +12,5 @@ The `foreign_data_wrappers` view contains all foreign-data wrappers defined in t
 |`library_name`|character\_data| |File name of the library that implements this foreign-data wrapper.|
 |`foreign_data_wrapper_language`|character\_data| |Language used to implement the foreign-data wrapper.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

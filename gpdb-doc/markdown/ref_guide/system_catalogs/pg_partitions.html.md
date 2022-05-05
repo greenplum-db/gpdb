@@ -28,5 +28,5 @@ The `pg_partitions` system view is used to show the structure of a partitioned t
 |`parenttablespace`|text| |The tablespace of the parent table one level up from this partition.|
 |`partitiontablespace`|text| |The tablespace of this partition.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

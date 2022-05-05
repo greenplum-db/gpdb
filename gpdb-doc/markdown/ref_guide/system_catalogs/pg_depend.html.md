@@ -22,5 +22,5 @@ In all cases, a `pg_depend` entry indicates that the referenced object may not b
     |`deptype`|char| |A code defining the specific semantics of this dependency relationship.|
 
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

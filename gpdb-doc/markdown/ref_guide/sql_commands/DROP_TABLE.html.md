@@ -46,5 +46,5 @@ DROP TABLE mytable;
 
 [CREATE TABLE](CREATE_TABLE.html), [ALTER TABLE](ALTER_TABLE.html), [TRUNCATE](TRUNCATE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

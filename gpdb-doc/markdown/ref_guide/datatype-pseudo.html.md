@@ -18,7 +18,7 @@ The pseudo-type *anytable* is a Greenplum Database type that specifies a table e
 
 For more information about pseudo-types, see the PostgreSQL documentation about [Pseudo-Types](https://www.postgresql.org/docs/9.4/datatype-pseudo.html).
 
-**Parent topic:**[Data Types](data_types.html)
+**Parent topic: **[Data Types](data_types.html)
 
 ## <a id="topic_dbn_bpc_qfb"></a>Polymorphic Types 
 

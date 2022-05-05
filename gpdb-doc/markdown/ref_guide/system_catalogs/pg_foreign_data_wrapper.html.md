@@ -13,5 +13,5 @@ The system catalog table `pg_foreign_data_wrapper` stores foreign-data wrapper d
 |`fdwacl`|aclitem\[\]| |Access privileges; see [GRANT](../sql_commands/GRANT.html) and [REVOKE](../sql_commands/REVOKE.html) for details.|
 |`fdwoptions`|text\[\]| |Foreign-data wrapper-specific options, as "keyword=value" strings.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

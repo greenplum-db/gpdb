@@ -76,5 +76,5 @@ The following table lists the system-defined values of `typcategory`. Any future
 |V|Bit-string types|
 |X|`unknown` type|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -47,5 +47,5 @@ There is no `DROP EXTERNAL TABLE` statement in the SQL standard.
 
 [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html), , [ALTER EXTERNAL TABLE](ALTER_EXTERNAL_TABLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

@@ -22,5 +22,5 @@ The `pg_partition_templates` system view is used to show the subpartitions that 
 |`partitionisdefault`|boolean| |`T` if this is a default subpartition, otherwise `F`.|
 |`partitionboundary`|text| |The entire partition specification for this subpartition.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

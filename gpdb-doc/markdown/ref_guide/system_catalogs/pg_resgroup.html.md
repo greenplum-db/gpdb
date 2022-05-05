@@ -11,5 +11,5 @@ The `pg_resgroup` system catalog table contains information about Greenplum Data
 |`rsgname`|name| |The name of the resource group.|
 |`parent`|oid| |Unused; reserved for future use.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -30,5 +30,5 @@ The `pg_constraint` system catalog table stores check, primary key, unique, and 
 |`conbin`|text| |If a check constraint, an internal representation of the expression.|
 |`consrc`|text| |If a check constraint, a human-readable representation of the expression. This is not updated when referenced objects change; for example, it won't track renaming of columns. Rather than relying on this field, it is best to use `pg_get_constraintdef()` to extract the definition of a check constraint.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

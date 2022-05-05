@@ -10,5 +10,5 @@ The system catalog table `pg_foreign_table` contains auxiliary information about
 |`ftserver`|oid|pg\_foreign\_server.oid|OID of the foreign server for this foreign table.|
 |`ftoptions`|text\[\]| |Foreign table options, as "keyword=value" strings.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

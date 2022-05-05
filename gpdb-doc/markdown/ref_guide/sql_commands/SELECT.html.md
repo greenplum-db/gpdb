@@ -794,5 +794,5 @@ To prevent data from becoming out-of-sync across the segments in Greenplum Datab
 
 [EXPLAIN](EXPLAIN.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

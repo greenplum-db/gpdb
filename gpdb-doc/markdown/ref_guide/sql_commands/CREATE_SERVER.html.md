@@ -79,5 +79,5 @@ CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql
 
 [ALTER SERVER](ALTER_SERVER.html), [DROP SERVER](DROP_SERVER.html), [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

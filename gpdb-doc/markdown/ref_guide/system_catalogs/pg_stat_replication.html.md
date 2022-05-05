@@ -33,5 +33,5 @@ The [gp\_stat\_replication](gp_stat_replication.html) view contains `walsender` 
 |`sync_priority`|text| |Priority. the value is `1`.|
 |`sync_state`|text| |WAL sender synchronization state. The value is `sync`.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

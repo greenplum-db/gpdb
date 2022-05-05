@@ -122,5 +122,5 @@ There is no `ALTER DEFAULT PRIVILEGES` statement in the SQL standard.
 
 [GRANT](GRANT.html), [REVOKE](REVOKE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

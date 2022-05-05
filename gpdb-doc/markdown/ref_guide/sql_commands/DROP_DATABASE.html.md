@@ -46,5 +46,5 @@ There is no `DROP DATABASE` statement in the SQL standard.
 
 [ALTER DATABASE](ALTER_DATABASE.html), [CREATE DATABASE](CREATE_DATABASE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

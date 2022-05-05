@@ -144,5 +144,5 @@ There is no `ANALYZE` statement in the SQL standard.
 
 [ALTER TABLE](ALTER_TABLE.html), [EXPLAIN](EXPLAIN.html), [VACUUM](VACUUM.html), [analyzedb](../../utility_guide/ref/analyzedb.html).
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

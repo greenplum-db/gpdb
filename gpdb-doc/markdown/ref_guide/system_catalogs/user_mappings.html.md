@@ -10,5 +10,5 @@ The `user_mappings` view contains all of the user mappgins defined in the curren
 |`foreign_server_catalog`|sql\_identifier| |Name of the database in which the foreign server used by this mapping is defined \(always the current database\).|
 |`foreign_server_name`|sql\_identifier| |Name of the foreign server used by this mapping.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

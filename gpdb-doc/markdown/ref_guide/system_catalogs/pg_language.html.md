@@ -15,5 +15,5 @@ The `pg_language` system catalog table registers languages in which you can writ
 |`lanvalidator`|oid|pg\_proc.oid|This references a language validator function that is responsible for checking the syntax and validity of new functions when they are created. Zero if no validator is provided.|
 |`lanacl`|aclitem\[\]| |Access privileges for the language.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

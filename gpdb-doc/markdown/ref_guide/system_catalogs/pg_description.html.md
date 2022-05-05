@@ -11,5 +11,5 @@ The `pg_description` system catalog table stores optional descriptions \(comment
 |`objsubid`|int4| |For a comment on a table column, this is the column number. For all other object types, this column is zero.|
 |`description`|text| |Arbitrary text that serves as the description of this object.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

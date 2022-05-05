@@ -18,5 +18,5 @@ The `user_mapping_options` view contains all of the options defined for user map
 
 |
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

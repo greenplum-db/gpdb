@@ -97,5 +97,5 @@ There is no `MOVE` statement in the SQL standard.
 
 [DECLARE](DECLARE.html), [FETCH](FETCH.html), [CLOSE](CLOSE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

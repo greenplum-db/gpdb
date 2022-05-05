@@ -411,5 +411,5 @@ When multiple Greenplum Database external tables are defined with the `gpfdist`,
 
 [CREATE TABLE AS](CREATE_TABLE_AS.html), [CREATE TABLE](CREATE_TABLE.html), [COPY](COPY.html), [SELECT INTO](SELECT_INTO.html), [INSERT](INSERT.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

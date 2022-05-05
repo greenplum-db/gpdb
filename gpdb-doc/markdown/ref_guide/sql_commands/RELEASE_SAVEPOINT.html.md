@@ -46,5 +46,5 @@ This command conforms to the SQL standard. The standard specifies that the key w
 
 [BEGIN](BEGIN.html), [SAVEPOINT](SAVEPOINT.html), [ROLLBACK TO SAVEPOINT](ROLLBACK_TO_SAVEPOINT.html), [COMMIT](COMMIT.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

@@ -143,5 +143,5 @@ Possible limitations of the query clause are documented under `SELECT`.
 
 [COPY](COPY.html), [SELECT](SELECT.html), [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html), [s3:// Protocol](../../admin_guide/external/g-s3-protocol.html#amazon-emr)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 

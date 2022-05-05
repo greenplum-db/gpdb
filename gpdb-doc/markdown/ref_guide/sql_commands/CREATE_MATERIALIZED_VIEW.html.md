@@ -79,5 +79,5 @@ names, rank WHERE rank < '11' AND names.id=rank.id;
 
 [SELECT](SELECT.html), [VALUES](VALUES.html), [CREATE VIEW](CREATE_VIEW.html), [ALTER MATERIALIZED VIEW](ALTER_MATERIALIZED_VIEW.html), [DROP MATERIALIZED VIEW](DROP_MATERIALIZED_VIEW.html), [REFRESH MATERIALIZED VIEW](REFRESH_MATERIALIZED_VIEW.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
 
