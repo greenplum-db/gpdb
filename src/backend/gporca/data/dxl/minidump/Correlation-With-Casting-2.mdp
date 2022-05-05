@@ -415,7 +415,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr <> c.u_v
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3">
+    <dxl:Plan Id="0" SpaceSize="10">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="8659.156042" Rows="400.000000" Width="24"/>

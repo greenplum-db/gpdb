@@ -129,6 +129,8 @@ public:
 								   CDrvdPropArray *pdrgpdpCtxt,
 								   ULONG ulOptReq) const override;
 
+	CEnfdDistribution *PedOuterHashDistribute(CMemoryPool *mp,
+											  CExpressionHandle &exprhdl);
 	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						   CReqdPropPlan *prppInput, ULONG child_index,
 						   CDrvdPropArray *pdrgpdpCtxt,

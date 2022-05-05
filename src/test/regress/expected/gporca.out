@@ -14409,3 +14409,78 @@ select c from mix_func_cast();
  t
 (1 row)
 
+-- verify that a motion is introduced on the outer side
+-- verify that the varchar equality operator (which requires casts for both children)
+-- doesn't introduce additional predicates
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+explain SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=274.75..41859.58 rows=1344990 width=56)
+   ->  Hash Join  (cost=274.75..23926.38 rows=448330 width=56)
+         Hash Cond: ((a.a)::bpchar = b.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
+               Hash Key: a.a
+               ->  Seq Scan on dist_tab_a a  (cost=0.00..173.67 rows=13967 width=48)
+         ->  Hash  (cost=141.00..141.00 rows=10700 width=72)
+               ->  Seq Scan on dist_tab_b b  (cost=0.00..141.00 rows=10700 width=72)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+   a   | b 
+-------+---
+ 1     | 1
+ 3     | 3
+ 2     | 2
+(3 rows)
+
+set optimizer_enable_hashjoin=off;
+explain SELECT a.a, b.b FROM dist_tab_a a left JOIN dist_tab_b b ON a.a=b.a;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=274.75..41859.58 rows=1344990 width=56)
+   ->  Hash Left Join  (cost=274.75..23926.38 rows=448330 width=56)
+         Hash Cond: ((a.a)::bpchar = b.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
+               Hash Key: a.a
+               ->  Seq Scan on dist_tab_a a  (cost=0.00..173.67 rows=13967 width=48)
+         ->  Hash  (cost=141.00..141.00 rows=10700 width=72)
+               ->  Seq Scan on dist_tab_b b  (cost=0.00..141.00 rows=10700 width=72)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT a.a, b.b FROM dist_tab_a a left JOIN dist_tab_b b ON a.a=b.a;
+   a   | b 
+-------+---
+ 1     | 1
+ 3     | 3
+ 2     | 2
+(3 rows)
+
+explain SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=274.75..41859.58 rows=1344990 width=56)
+   ->  Hash Join  (cost=274.75..23926.38 rows=448330 width=56)
+         Hash Cond: ((a.a)::bpchar = b.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
+               Hash Key: a.a
+               ->  Seq Scan on dist_tab_a a  (cost=0.00..173.67 rows=13967 width=48)
+         ->  Hash  (cost=141.00..141.00 rows=10700 width=72)
+               ->  Seq Scan on dist_tab_b b  (cost=0.00..141.00 rows=10700 width=72)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+   a   | b 
+-------+---
+ 3     | 3
+ 2     | 2
+ 1     | 1
+(3 rows)
+
+reset optimizer_enable_hashjoin;

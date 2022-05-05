@@ -3504,6 +3504,24 @@ select a from mix_func_cast();
 select b from mix_func_cast();
 select c from mix_func_cast();
 
+-- verify that a motion is introduced on the outer side
+-- verify that the varchar equality operator (which requires casts for both children)
+-- doesn't introduce additional predicates
+
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+
+explain SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+set optimizer_enable_hashjoin=off;
+explain SELECT a.a, b.b FROM dist_tab_a a left JOIN dist_tab_b b ON a.a=b.a;
+SELECT a.a, b.b FROM dist_tab_a a left JOIN dist_tab_b b ON a.a=b.a;
+explain SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+reset optimizer_enable_hashjoin;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

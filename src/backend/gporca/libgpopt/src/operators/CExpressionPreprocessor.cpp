@@ -1438,8 +1438,24 @@ CExpressionPreprocessor::PexprConjEqualityPredicates(CMemoryPool *mp,
 				break;
 			}
 
-			pdrgpexpr->Append(CUtils::PexprScalarEqCmp(mp, pcrLeft, pcrRight));
-			ulPreds++;
+			CExpression *pexprScalarEqCmp =
+				CUtils::PexprScalarEqCmp(mp, pcrLeft, pcrRight);
+
+			// `varchar` is an example of a type that requires two casts for equality (as it recycles
+			// the text equaltiy operator). we do not introduce these because an additional type
+			// can't easily be simplified out (and can produce incorrect results)
+			if ((*pexprScalarEqCmp)[0]->Pop()->Eopid() !=
+					COperator::EopScalarCast ||
+				(*pexprScalarEqCmp)[1]->Pop()->Eopid() !=
+					COperator::EopScalarCast)
+			{
+				pdrgpexpr->Append(pexprScalarEqCmp);
+				ulPreds++;
+			}
+			else
+			{
+				pexprScalarEqCmp->Release();
+			}
 		}
 	}
 

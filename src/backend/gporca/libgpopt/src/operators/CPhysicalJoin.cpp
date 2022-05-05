@@ -21,7 +21,10 @@
 #include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
 #include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CScalarCast.h"
 #include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
 #include "naucrates/md/IMDScalarOp.h"
 
@@ -39,6 +42,9 @@ using namespace gpopt;
 CPhysicalJoin::CPhysicalJoin(CMemoryPool *mp, CXform::EXformId origin_xform)
 	: CPhysical(mp), m_origin_xform(origin_xform)
 {
+	// Req(1): Outer has Any requested, inner is distributed to match
+	// Req(2): Outer has Hashed requested, inner is distributed to match
+	SetDistrRequests(2);
 }
 
 
@@ -233,6 +239,44 @@ CPhysicalJoin::PdsRequired(CMemoryPool *mp GPOS_UNUSED,
 }
 
 CEnfdDistribution *
+CPhysicalJoin::PedOuterHashDistribute(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl)
+{
+	CExpression *pexprScPredicate =
+		exprhdl.PexprScalarExactChild(2, true /*reror_on_null_return*/);
+	CColRefSet *pcrsChildScalar = exprhdl.DeriveOutputColumns(0);
+	pcrsChildScalar->AddRef();
+
+	// compute the col refs required for an outer hash distribution given the predicates.
+	// we recursively parse and return true if we can verify that every operator is an
+	// equality. we collect all refs used in the predicates that exist in pcrsChildScalar
+	// so we can hash distribute accordingly
+
+	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+
+	if (CPredicateUtils::CollectEqualityWithinPcrs(pexprScPredicate, pdrgpexpr,
+												   pcrsChildScalar) &&
+		pdrgpexpr->Size() > 0)
+	{
+		pcrsChildScalar->Release();
+		// all predicates are equality and pdrgpexpr are the predicates we must hash distribyte by
+		return GPOS_NEW(mp) CEnfdDistribution(
+			GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexpr, false),
+			CEnfdDistribution::EdmSatisfy);
+	}
+	else
+	{
+		pcrsChildScalar->Release();
+		pdrgpexpr->Release();
+
+		// no distribution requirement on the outer side
+		return GPOS_NEW(mp)
+			CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecAny(this->Eopid()),
+							  CEnfdDistribution::EdmSatisfy);
+	}
+}
+
+CEnfdDistribution *
 CPhysicalJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				   CReqdPropPlan *prppInput, ULONG child_index,
 				   CDrvdPropArray *pdrgpdpCtxt, ULONG ulDistrReq)
@@ -305,9 +349,17 @@ CPhysicalJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			CEnfdDistribution::EdmSatisfy);
 	}
 
-	// no distribution requirement on the outer side
-	return GPOS_NEW(mp) CEnfdDistribution(
-		GPOS_NEW(mp) CDistributionSpecAny(this->Eopid()), dmatch);
+	if (ulDistrReq == 0)
+	{
+		// no distribution requirement on the outer side
+		return GPOS_NEW(mp) CEnfdDistribution(
+			GPOS_NEW(mp) CDistributionSpecAny(this->Eopid()), dmatch);
+	}
+	else
+	{
+		GPOS_ASSERT(1 == ulDistrReq);
+		return CPhysicalJoin::PedOuterHashDistribute(mp, exprhdl);
+	}
 }
 
 CEnfdDistribution *
@@ -363,11 +415,18 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 		if (fSuccess)
 		{
 			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
+			IMdIdArray *opfamilies = pdshashed->Opfamilies();
+
+			if (nullptr != opfamilies)
+			{
+				opfamilies->AddRef();
+			}
 
 			// create a matching hashed distribution request
 			BOOL fNullsColocated = pdshashed->FNullsColocated();
-			CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)
-				CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
+			CDistributionSpecHashed *pdshashedEquiv =
+				GPOS_NEW(mp) CDistributionSpecHashed(
+					pdrgpexprMatching, fNullsColocated, opfamilies);
 			pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
 			return GPOS_NEW(mp) CEnfdDistribution(pdshashedEquiv, dmatch);
 		}

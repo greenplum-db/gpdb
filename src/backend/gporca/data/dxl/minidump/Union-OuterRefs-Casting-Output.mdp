@@ -396,7 +396,7 @@ select * from x2 where a in (select a from y union select 1::int8);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="36">
+    <dxl:Plan Id="0" SpaceSize="48">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.002070" Rows="10.000000" Width="2"/>

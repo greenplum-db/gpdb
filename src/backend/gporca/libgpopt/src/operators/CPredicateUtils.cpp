@@ -27,6 +27,7 @@
 #include "gpopt/operators/CLogicalSetOp.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPhysicalJoin.h"
+#include "gpopt/operators/CScalarCast.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarFunc.h"
 #include "gpopt/operators/CScalarIdent.h"
@@ -335,6 +336,89 @@ CPredicateUtils::CollectDisjuncts(CExpression *pexpr,
 	{
 		pexpr->AddRef();
 		pdrgpexpr->Append(pexpr);
+	}
+}
+
+// recursively collect predicates included in equaltiy within some larger set.
+// 'true' if every preciate is equality (useful for JOINs where a hash
+// distribution preserves correctness on the expression array generated). this
+// is conservative in what it calls an equality predicate (future work could
+// be to add CScalarFunc)
+BOOL
+CPredicateUtils::CollectEqualityWithinPcrs(CExpression *pexpr,
+										   CExpressionArray *pdrgpexpr,
+										   CColRefSet *pcrsSrc)
+{
+	if (pexpr->Pop()->Eopid() == COperator::EopScalarIdent)
+	{
+		CScalarIdent *popScalarIdent = CScalarIdent::PopConvert(pexpr->Pop());
+		GPOS_ASSERT(nullptr != popScalarIdent);
+
+		if (pcrsSrc->FMember(popScalarIdent->Pcr()))
+		{
+			pexpr->AddRef();
+			pdrgpexpr->Append(pexpr);
+		}
+
+		return true;
+	}
+	else if (pexpr->Pop()->Eopid() == COperator::EopScalarCast)
+	{
+		if ((*pexpr->PdrgPexpr())[0]->Pop()->Eopid() ==
+			COperator::EopScalarIdent)
+		{
+			CScalarIdent *popScalarIdent =
+				CScalarIdent::PopConvert((*pexpr->PdrgPexpr())[0]->Pop());
+			GPOS_ASSERT(nullptr != popScalarIdent);
+
+			if (pcrsSrc->FMember(popScalarIdent->Pcr()))
+			{
+				pexpr->AddRef();
+				pdrgpexpr->Append(pexpr);
+			}
+		}
+
+		return true;
+	}
+	else if (pexpr->Pop()->Eopid() == COperator::EopScalarConst)
+	{
+		return true;
+	}
+	else if (pexpr->Pop()->Eopid() == COperator::EopScalarCmp)
+	{
+		if (CPredicateUtils::IsEqualityOp(pexpr))
+		{
+			CExpression *pexprLeft = (*pexpr->PdrgPexpr())[0];
+			CExpression *pexprRight = (*pexpr->PdrgPexpr())[1];
+
+			return CPredicateUtils::CollectEqualityWithinPcrs(
+					   pexprLeft, pdrgpexpr, pcrsSrc) &&
+				   CPredicateUtils::CollectEqualityWithinPcrs(
+					   pexprRight, pdrgpexpr, pcrsSrc);
+		}
+		else
+		{
+			return false;
+		}
+	}
+	else if (pexpr->Pop()->Eopid() == COperator::EopScalarBoolOp)
+	{
+		const ULONG ulSize = pexpr->Arity();
+		for (ULONG ul = 0; ul < ulSize; ul++)
+		{
+			CExpression *pexprChild = (*pexpr->PdrgPexpr())[ul];
+			if (!CPredicateUtils::CollectEqualityWithinPcrs(pexprChild,
+															pdrgpexpr, pcrsSrc))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 

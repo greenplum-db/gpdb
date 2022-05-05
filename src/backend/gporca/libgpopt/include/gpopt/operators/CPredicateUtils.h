@@ -487,6 +487,11 @@ public:
 	// NB: This does NOT recurse into Boolean AND/OR operations
 	static BOOL ExprsContainsOnlyStrictComparisons(CExpressionArray *conjuncts);
 
+	// recursively collect predicates included in equality within some larger set
+	static BOOL CollectEqualityWithinPcrs(CExpression *pexpr,
+										  CExpressionArray *pdrgpexpr,
+										  CColRefSet *pcrsSrc);
+
 };	// class CPredicateUtils
 }  // namespace gpopt
 

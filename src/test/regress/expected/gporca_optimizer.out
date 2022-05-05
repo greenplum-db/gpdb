@@ -14081,17 +14081,20 @@ set enable_nestloop=on;
 set enable_hashjoin=off;
 --- verify that the inner half of a left outer nested loop join is non-randomly distributed
 explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo r left outer join left_outer_index_nl_bar l on r.b=l.b;
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324033.80 rows=7 width=16)
-   ->  Nested Loop Left Join  (cost=0.00..1324033.80 rows=3 width=16)
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.81 rows=7 width=16)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.81 rows=3 width=16)
          Join Filter: (left_outer_index_nl_foo.b = left_outer_index_nl_bar.b)
-         ->  Seq Scan on left_outer_index_nl_foo  (cost=0.00..431.00 rows=2 width=12)
-         ->  Materialize  (cost=0.00..431.00 rows=5 width=8)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=12)
+               Hash Key: left_outer_index_nl_foo.b
+               ->  Seq Scan on left_outer_index_nl_foo  (cost=0.00..431.00 rows=2 width=12)
+         ->  Materialize  (cost=0.00..431.00 rows=2 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
+                     Hash Key: left_outer_index_nl_bar.b
                      ->  Seq Scan on left_outer_index_nl_bar  (cost=0.00..431.00 rows=2 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(11 rows)
 
 select r.a, r.b, r.c, l.c from left_outer_index_nl_foo r left outer join left_outer_index_nl_bar l on r.b=l.b;
  a | b | c | c 
@@ -14115,17 +14118,20 @@ analyze left_outer_index_nl_foo_hash;
 analyze left_outer_index_nl_bar_hash;
 --- verify that the inner half of a left outer nested loop join is non-randomly distributed
 explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar l on r.b=l.b;
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324033.77 rows=7 width=14)
-   ->  Nested Loop Left Join  (cost=0.00..1324033.77 rows=3 width=14)
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.78 rows=7 width=14)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.78 rows=3 width=14)
          Join Filter: (left_outer_index_nl_foo_hash.b = left_outer_index_nl_bar.b)
-         ->  Seq Scan on left_outer_index_nl_foo_hash  (cost=0.00..431.00 rows=2 width=10)
-         ->  Materialize  (cost=0.00..431.00 rows=5 width=8)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=10)
+               Hash Key: left_outer_index_nl_foo_hash.b
+               ->  Seq Scan on left_outer_index_nl_foo_hash  (cost=0.00..431.00 rows=2 width=10)
+         ->  Materialize  (cost=0.00..431.00 rows=2 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
+                     Hash Key: left_outer_index_nl_bar.b
                      ->  Seq Scan on left_outer_index_nl_bar  (cost=0.00..431.00 rows=2 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(11 rows)
 
 select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar l on r.b=l.b;
  a | b | c | c 
@@ -14140,15 +14146,18 @@ select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join le
 explain select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar_hash l on r.b=l.b;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324033.54 rows=7 width=12)
-   ->  Nested Loop Left Join  (cost=0.00..1324033.54 rows=3 width=12)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.73 rows=7 width=12)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.73 rows=3 width=12)
          Join Filter: (left_outer_index_nl_foo_hash.b = left_outer_index_nl_bar_hash.b)
-         ->  Seq Scan on left_outer_index_nl_foo_hash  (cost=0.00..431.00 rows=2 width=10)
-         ->  Materialize  (cost=0.00..431.00 rows=5 width=6)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=5 width=6)
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=10)
+               Hash Key: left_outer_index_nl_foo_hash.b
+               ->  Seq Scan on left_outer_index_nl_foo_hash  (cost=0.00..431.00 rows=2 width=10)
+         ->  Materialize  (cost=0.00..431.00 rows=2 width=6)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=6)
+                     Hash Key: left_outer_index_nl_bar_hash.b
                      ->  Seq Scan on left_outer_index_nl_bar_hash  (cost=0.00..431.00 rows=2 width=6)
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(11 rows)
 
 select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_hash r left outer join left_outer_index_nl_bar_hash l on r.b=l.b;
  a | b | c | c 
@@ -14780,3 +14789,77 @@ select c from mix_func_cast();
  t
 (1 row)
 
+-- verify that a motion is introduced on the outer side
+-- verify that the varchar equality operator (which requires casts for both children)
+-- doesn't introduce additional predicates
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+explain SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+         Hash Cond: (dist_tab_b.a = (dist_tab_a.a)::bpchar)
+         ->  Seq Scan on dist_tab_b  (cost=0.00..431.00 rows=1 width=16)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: dist_tab_a.a
+                     ->  Seq Scan on dist_tab_a  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+   a   | b 
+-------+---
+ 1     | 1
+ 2     | 2
+ 3     | 3
+(3 rows)
+
+set optimizer_enable_hashjoin=off;
+explain SELECT a.a, b.b FROM dist_tab_a a left JOIN dist_tab_b b ON a.a=b.a;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.44 rows=2 width=16)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.44 rows=1 width=16)
+         Join Filter: ((dist_tab_a.a)::bpchar = dist_tab_b.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               Hash Key: (dist_tab_a.a)::bpchar
+               ->  Seq Scan on dist_tab_a  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on dist_tab_b  (cost=0.00..431.00 rows=1 width=16)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+SELECT a.a, b.b FROM dist_tab_a a left JOIN dist_tab_b b ON a.a=b.a;
+   a   | b 
+-------+---
+ 1     | 1
+ 3     | 3
+ 2     | 2
+(3 rows)
+
+explain SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.42 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.42 rows=1 width=16)
+         Join Filter: ((dist_tab_a.a)::bpchar = dist_tab_b.a)
+         ->  Seq Scan on dist_tab_b  (cost=0.00..431.00 rows=1 width=16)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: dist_tab_a.a
+                     ->  Seq Scan on dist_tab_a  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+SELECT a.a, b.b FROM dist_tab_a a JOIN dist_tab_b b ON a.a=b.a;
+   a   | b 
+-------+---
+ 1     | 1
+ 2     | 2
+ 3     | 3
+(3 rows)
+
+reset optimizer_enable_hashjoin;
