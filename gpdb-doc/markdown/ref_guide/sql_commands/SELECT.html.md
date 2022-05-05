@@ -163,7 +163,7 @@ A key property of `WITH` queries is that they are evaluated only once per execut
 
 The primary query and the `WITH` queries are all \(notionally\) run at the same time. This implies that the effects of a data-modifying statement in `WITH` cannot be seen from other parts of the query, other than by reading its `RETURNING` output. If two such data-modifying statements attempt to modify the same row, the results are unspecified.
 
-See [WITH Queries \(Common Table Expressions\)](../../admin_guide/query/topics/CTE-query.html)in the *Greenplum Database Administrator Guide* for additional information.
+See [WITH Queries \(Common Table Expressions\)](../../admin_guide/query/topics/CTE-query.html) in the *Greenplum Database Administrator Guide* for additional information.
 
 **The SELECT List**
 
