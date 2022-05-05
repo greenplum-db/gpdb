@@ -63,13 +63,13 @@ neg\_op
 res\_proc
 :   The optional `RESTRICT` names a restriction selectivity estimation function for the operator. Note that this is a function name, not an operator name. `RESTRICT` clauses only make sense for binary operators that return `boolean`. The idea behind a restriction selectivity estimator is to guess what fraction of the rows in a table will satisfy a `WHERE`-clause condition of the form:
 
-:   ```
+```
 column OP constant
 ```
 
-:   for the current operator and a particular constant value. This assists the optimizer by giving it some idea of how many rows will be eliminated by `WHERE` clauses that have this form.
+for the current operator and a particular constant value. This assists the optimizer by giving it some idea of how many rows will be eliminated by `WHERE` clauses that have this form.
 
-:   You can usually just use one of the following system standard estimator functions for many of your own operators:
+You can usually just use one of the following system standard estimator functions for many of your own operators:
 
     `eqsel` for =
 
