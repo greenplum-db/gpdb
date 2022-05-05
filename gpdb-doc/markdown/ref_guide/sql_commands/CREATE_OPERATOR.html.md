@@ -19,12 +19,12 @@ CREATE OPERATOR <name> (
 
 `CREATE OPERATOR` defines a new operator. The user who defines an operator becomes its owner.
 
-The operator name is a sequence of up to `NAMEDATALEN`-1 \(63 by default\) characters from the following list: `+ - * / < > = ~ ! @ # % ^ & | ` ?`
+The operator name is a sequence of up to `NAMEDATALEN`-1 \(63 by default\) characters from the following list: <code>+ - * / < > = ~ ! @ # % ^ & | ` ?</code>
 
 There are a few restrictions on your choice of name:
 
 -   `--` and `/*` cannot appear anywhere in an operator name, since they will be taken as the start of a comment.
--   A multicharacter operator name cannot end in `+` or `-`, unless the name also contains at least one of these characters: `~ ! @ # % ^ & | ` ?`
+-   A multicharacter operator name cannot end in `+` or `-`, unless the name also contains at least one of these characters: <code>~ ! @ # % ^ & | ` ?</code>
 
 For example, `@-` is an allowed operator name, but `*-` is not. This restriction allows Greenplum Database to parse SQL-compliant commands without requiring spaces between tokens.
 
