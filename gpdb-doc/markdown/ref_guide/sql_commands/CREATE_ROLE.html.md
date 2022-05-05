@@ -126,13 +126,13 @@ DENY deny\_point
 DENY BETWEEN deny\_point AND deny\_point
 :   The `DENY` and `DENY BETWEEN` keywords set time-based constraints that are enforced at login. `DENY` sets a day or a day and time to deny access. `DENY BETWEEN` sets an interval during which access is denied. Both use the parameter deny\_point that has the following format:
 
-:   ```
+```
 DAY day [ TIME 'time' ]
 ```
 
-:   The two parts of the `deny_point` parameter use the following formats:
+The two parts of the `deny_point` parameter use the following formats:
 
-:   For `day`:
+For `day`:
 
     ```
     {'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
@@ -145,13 +145,13 @@ DAY day [ TIME 'time' ]
     { 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}
     ```
 
-:   The `DENY BETWEEN` clause uses two deny\_point parameters:
+The `DENY BETWEEN` clause uses two deny\_point parameters:
 
     ```
     DENY BETWEEN <deny_point> AND <deny_point>
     ```
 
-:   For more information and examples about time-based constraints, see "Managing Roles and Privileges" in the *Greenplum Database Administrator Guide*.
+For more information and examples about time-based constraints, see "Managing Roles and Privileges" in the *Greenplum Database Administrator Guide*.
 
 ## <a id="section5"></a>Notes 
 
