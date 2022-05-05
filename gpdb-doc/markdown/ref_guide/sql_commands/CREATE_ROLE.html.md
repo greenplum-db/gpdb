@@ -134,22 +134,22 @@ The two parts of the `deny_point` parameter use the following formats:
 
 For `day`:
 
-    ```
-    {'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
-    'Saturday' | 0-6 }
-    ```
+```
+{'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
+'Saturday' | 0-6 }
+```
 
-    For `time`:
+For `time`:
 
-    ```
-    { 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}
-    ```
+```
+{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}
+```
 
 The `DENY BETWEEN` clause uses two deny\_point parameters:
 
-    ```
-    DENY BETWEEN <deny_point> AND <deny_point>
-    ```
+```
+DENY BETWEEN <deny_point> AND <deny_point>
+```
 
 For more information and examples about time-based constraints, see "Managing Roles and Privileges" in the *Greenplum Database Administrator Guide*.
 
