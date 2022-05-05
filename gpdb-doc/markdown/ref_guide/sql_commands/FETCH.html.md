@@ -139,7 +139,7 @@ SQL standard allows cursors only in embedded SQL and in modules. Greenplum Datab
 
 The variant of `FETCH` described here returns the data as if it were a `SELECT` result rather than placing it in host variables. Other than this point, `FETCH` is fully upward-compatible with the SQL standard.
 
-The `FETCH` forms involving `FORWARD`, as well as the forms `FETCH` count and `FETCH``ALL`, in which `FORWARD` is implicit, are Greenplum Database extensions. `BACKWARD` is not supported.
+The `FETCH` forms involving `FORWARD`, as well as the forms `FETCH` count and `FETCH ALL`, in which `FORWARD` is implicit, are Greenplum Database extensions. `BACKWARD` is not supported.
 
 The SQL standard allows only `FROM` preceding the cursor name; the option to use `IN`, or to leave them out altogether, is an extension.
 
