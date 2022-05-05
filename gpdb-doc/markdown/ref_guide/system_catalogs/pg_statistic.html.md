@@ -27,5 +27,5 @@ Statistical information about a table's contents should be considered sensitive 
 |`stanumbers*N*`|float4\[\]| |Numerical statistics of the appropriate kind for the `N`th slot, or NULL if the slot kind does not involve numerical values.|
 |`stavalues*N*`|anyarray| |Column data values of the appropriate kind for the `N`th slot, or NULL if the slot kind does not store any data values. Each array's element values are actually of the specific column's data type, so there is no way to define these columns' type more specifically than `anyarray`.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

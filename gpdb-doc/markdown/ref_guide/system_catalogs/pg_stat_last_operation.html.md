@@ -35,5 +35,5 @@ testdb=# SELECT * FROM pg_stat_last_operation WHERE objid='trial'::regclass::oid
 
 Notice that the `pg_stat_last_operation` table entry for the view `REPLACE` operation specifies the `ALTER` action \(`staactionname`\) and the `SET` subtype \(`stasubtype`\).
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

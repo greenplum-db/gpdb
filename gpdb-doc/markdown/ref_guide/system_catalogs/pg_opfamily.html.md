@@ -14,5 +14,5 @@ The majority of the information defining an operator family is not in its `pg_op
 |`opfnamespace`|oid|pg\_namespace.oid|Namespace of this operator family|
 |`opfowner`|oid|pg\_authid.oid|Owner of the operator family|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

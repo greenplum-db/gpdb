@@ -79,5 +79,5 @@ There is no `CLUSTER` statement in the SQL standard.
 
 [CREATE TABLE AS](CREATE_TABLE_AS.html), [CREATE INDEX](CREATE_INDEX.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

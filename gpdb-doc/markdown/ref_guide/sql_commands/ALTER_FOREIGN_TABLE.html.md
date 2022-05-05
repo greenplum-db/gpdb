@@ -159,5 +159,5 @@ You can use `ALTER FOREIGN TABLE ... DROP COLUMN` to drop the only column of a f
 
 [ALTER TABLE](ALTER_TABLE.html), [CREATE FOREIGN TABLE](CREATE_FOREIGN_TABLE.html), [DROP FOREIGN TABLE](DROP_FOREIGN_TABLE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

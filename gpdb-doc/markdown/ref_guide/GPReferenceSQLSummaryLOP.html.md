@@ -2622,5 +2622,5 @@ VALUES ( <expression> [, ...] ) [, ...]
 
 See [VALUES](sql_commands/VALUES.html) for more information.
 
-**Parent topic: **[SQL Commands](sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](sql_commands/sql_ref.html)
 

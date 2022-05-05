@@ -28,5 +28,5 @@ Because user identities are system-wide, `pg_authid` is shared across all databa
 |`rolcreatewextgpfd`|boolean| |Privilege to create write external tables with the `gpfdist` or `gpfdists` protocol|
 |`rolresgroup`|oid| |Object ID of the associated resource group ID in *pg\_resgroup*|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

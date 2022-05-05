@@ -91,5 +91,5 @@ ALTER EXTERNAL TABLE ext_leads ALTER COLUMN acct_code TYPE integer
 
 [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html), [DROP EXTERNAL TABLE](DROP_EXTERNAL_TABLE.html), [ALTER TABLE](ALTER_TABLE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

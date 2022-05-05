@@ -48,5 +48,5 @@ The `REASSIGN OWNED` command is a Greenplum Database extension.
 
 [DROP OWNED](DROP_OWNED.html), [DROP ROLE](DROP_ROLE.html), [ALTER DATABASE](ALTER_DATABASE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

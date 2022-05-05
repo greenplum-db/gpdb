@@ -77,5 +77,5 @@ The `ALTER DATABASE` statement is a Greenplum Database extension.
 
 [CREATE DATABASE](CREATE_DATABASE.html), [DROP DATABASE](DROP_DATABASE.html), [SET](SET.html), [CREATE TABLESPACE](CREATE_TABLESPACE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

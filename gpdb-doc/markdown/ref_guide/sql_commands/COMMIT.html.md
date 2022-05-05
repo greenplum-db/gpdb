@@ -42,5 +42,5 @@ The SQL standard only specifies the two forms `COMMIT` and `COMMIT WORK`. Otherw
 
 [BEGIN](BEGIN.html), [END](END.html), [START TRANSACTION](START_TRANSACTION.html), [ROLLBACK](ROLLBACK.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

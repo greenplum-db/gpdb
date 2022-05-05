@@ -44,5 +44,5 @@ DROP SCHEMA mystuff CASCADE;
 
 [CREATE SCHEMA](CREATE_SCHEMA.html), [ALTER SCHEMA](ALTER_SCHEMA.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

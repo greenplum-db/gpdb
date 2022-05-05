@@ -12,5 +12,5 @@ The `pg_partition_columns` system view is used to show the partition key columns
 |`partitionlevel`|smallint| |The level of this subpartition in the hierarchy.|
 |`position_in_partition_key`|integer| |For list partitions you can have a composite \(multi-column\) partition key. This shows the position of the column in a composite key.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

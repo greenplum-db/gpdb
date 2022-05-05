@@ -11,5 +11,5 @@ The `pg_auth_members` system catalog table shows the membership relations betwee
 |`grantor`|oid|pg\_authid.oid|ID of the role that granted this membership|
 |`admin_option`|boolean| |True if role member may grant membership to others|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

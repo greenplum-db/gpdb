@@ -33,5 +33,5 @@ The `gp_stat_replication` view contains replication statistics of the `walsender
 |`sync_state`|text| |`walsender`synchronization state. The value is `sync`.|
 |`sync_error`|text| |`walsender` synchronization error. `none` if no error.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

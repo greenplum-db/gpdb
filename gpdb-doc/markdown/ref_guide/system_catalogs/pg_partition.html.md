@@ -14,5 +14,5 @@ The `pg_partition` system catalog table is used to track partitioned tables and 
 |`paratts`|smallint\(\)| |An array of the attribute numbers \(as in `pg_attribute.attnum`\) of the attributes that participate in defining this level.|
 |`parclass`|oidvector|pg\_opclass.oid|The operator class identifier\(s\) of the partition columns.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

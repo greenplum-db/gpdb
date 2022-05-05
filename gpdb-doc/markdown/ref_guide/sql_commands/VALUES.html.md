@@ -107,5 +107,5 @@ SELECT * FROM machines WHERE ip_address IN
 
 [INSERT](INSERT.html), [SELECT](SELECT.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

@@ -307,5 +307,5 @@ The ability to create a composite type with zero attributes is a Greenplum Datab
 
 [ALTER TYPE](ALTER_TYPE.html), [CREATE DOMAIN](CREATE_DOMAIN.html), [CREATE FUNCTION](CREATE_FUNCTION.html), [DROP TYPE](DROP_TYPE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

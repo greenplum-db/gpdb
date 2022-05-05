@@ -66,5 +66,5 @@ ALTER SERVER foo VERSION '9.1' OPTIONS (SET host 'baz');
 
 [CREATE SERVER](CREATE_SERVER.html), [DROP SERVER](DROP_SERVER.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

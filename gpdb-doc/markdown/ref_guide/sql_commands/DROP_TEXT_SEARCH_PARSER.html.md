@@ -48,5 +48,5 @@ There is no `DROP TEXT SEARCH PARSER` statement in the SQL standard.
 
 [ALTER TEXT SEARCH PARSER](ALTER_TEXT_SEARCH_PARSER.html), [CREATE TEXT SEARCH PARSER](CREATE_TEXT_SEARCH_PARSER.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

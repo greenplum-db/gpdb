@@ -54,5 +54,5 @@ There is no `ALTER COLLATION` statement in the SQL standard.
 
 [CREATE COLLATION](CREATE_COLLATION.html), [DROP COLLATION](DROP_COLLATION.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

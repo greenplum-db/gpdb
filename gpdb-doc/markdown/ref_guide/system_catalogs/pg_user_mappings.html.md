@@ -19,5 +19,5 @@ To protect password information stored as a user mapping option, the `umoptions`
 -   The current user is the server owner and the mapping is for `PUBLIC`.
 -   The current user is a superuser.
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

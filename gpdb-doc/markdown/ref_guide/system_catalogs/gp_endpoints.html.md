@@ -28,5 +28,5 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |
 |endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -46,5 +46,5 @@ The maximum length of the query text string stored in the column `query` can be 
 
 |
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

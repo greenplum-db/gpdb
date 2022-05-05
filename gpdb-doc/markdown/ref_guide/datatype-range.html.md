@@ -6,7 +6,7 @@ Range types are data types representing a range of values of some element type \
 
 Range types are useful because they represent many element values in a single range value, and because concepts such as overlapping ranges can be expressed clearly. The use of time and date ranges for scheduling purposes is the clearest example; but price ranges, measurement ranges from an instrument, and so forth can also be useful.
 
-**Parent topic: **[Data Types](data_types.html)
+**Parent topic:**[Data Types](data_types.html)
 
 ## <a id="rangetypes-builtin"></a>Built-in Range Types 
 

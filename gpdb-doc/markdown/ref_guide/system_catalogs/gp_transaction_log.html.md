@@ -11,5 +11,5 @@ The `gp_transaction_log` view contains status information about transactions loc
 |`transaction`|xid| |The local transaction ID.|
 |`status`|text| |The status of the local transaction \(Committed or Aborted\).|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

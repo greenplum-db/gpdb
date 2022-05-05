@@ -20,5 +20,5 @@ The view `pg_stat_operations` shows details about the last operation performed o
 |`subtype`|text| |The type of object operated on or the subclass of operation performed.|
 |`statime`|timestamptz| |The timestamp of the operation. This is the same timestamp that is written to the Greenplum Database server log files in case you need to look up more detailed information about the operation in the logs.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

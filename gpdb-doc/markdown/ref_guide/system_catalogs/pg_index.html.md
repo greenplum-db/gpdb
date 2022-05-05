@@ -26,5 +26,5 @@ The `pg_index` system catalog table contains part of the information about index
 |`indexprs`|text| |Expression trees \(in `nodeToString()` representation\) for index attributes that are not simple column references. This is a list with one element for each zero entry in indkey. NULL if all index attributes are simple references.|
 |`indpred`|text| |Expression tree \(in `nodeToString()` representation\) for partial index predicate. NULL if not a partial index.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

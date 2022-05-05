@@ -10,5 +10,5 @@ The `pg_inherits` system catalog table records information about table inheritan
 |`inhparent`|oid|pg\_class.oid|The OID of the parent table.|
 |`inhseqno`|int4| |If there is more than one direct parent for a child table \(multiple inheritance\), this number tells the order in which the inherited columns are to be arranged. The count starts at 1.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -20,5 +20,5 @@ The `pg_stat_partition_operations` view shows details about the last operation p
 |`parentschemaname`|name| |The name of the schema where the parent table resides.|
 |`parent_relid`|oid| |The OID of the parent table one level up from this partition.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -13,5 +13,5 @@ The view is read only.
 |`installed_version`|text|Currently installed version of the extension, or `NULL` if not installed.|
 |`comment`|text|Comment string from the extension control file.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

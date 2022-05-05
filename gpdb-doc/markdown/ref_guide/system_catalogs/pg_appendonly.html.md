@@ -32,5 +32,5 @@ The `pg_appendonly` table contains information about the storage options and oth
 
 **Note:** 1QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

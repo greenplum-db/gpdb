@@ -442,5 +442,5 @@ For parameter defaults, the SQL standard specifies only the syntax with the `DEF
 
 [ALTER FUNCTION](ALTER_FUNCTION.html), [DROP FUNCTION](DROP_FUNCTION.html), [LOAD](LOAD.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

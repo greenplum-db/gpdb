@@ -94,5 +94,5 @@ INSERT INTO a_view(id) VALUES(2);  -- ts will receive the current time
 
 [CREATE VIEW](CREATE_VIEW.html#cj20941), [DROP VIEW](DROP_VIEW.html#dn20941) in the *Greenplum Database Utility Guide*
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

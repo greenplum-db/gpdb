@@ -10,5 +10,5 @@ The `gp_fastsequence` table contains information about append-optimized and colu
 |`objmod`|bigint| |Object modifier.|
 |`last_sequence`|bigint| |The last sequence number used by the object.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

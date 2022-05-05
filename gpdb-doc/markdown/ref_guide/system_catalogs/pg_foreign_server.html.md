@@ -14,5 +14,5 @@ The system catalog table `pg_foreign_server` stores foreign server definitions. 
 |`srvacl`|aclitem\[\]| |Access privileges; see [GRANT](../sql_commands/GRANT.html) and [REVOKE](../sql_commands/REVOKE.html) for details.|
 |`srvoptions`|text\[\]| |Foreign server-specific options, as "keyword=value" strings.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

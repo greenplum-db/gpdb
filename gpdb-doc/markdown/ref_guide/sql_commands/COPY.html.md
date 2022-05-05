@@ -484,5 +484,5 @@ Note that in this syntax, `BINARY` and `CSV` are treated as independent keywords
 
 [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

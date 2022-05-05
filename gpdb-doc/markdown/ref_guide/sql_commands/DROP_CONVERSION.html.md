@@ -42,5 +42,5 @@ There is no `DROP CONVERSION` statement in the SQL standard. The standard has `C
 
 [ALTER CONVERSION](ALTER_CONVERSION.html), [CREATE CONVERSION](CREATE_CONVERSION.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

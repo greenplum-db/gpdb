@@ -16,5 +16,5 @@ This table is populated only on the master. This table is defined in the `pg_glo
 |`resdefaultsetting`|text| |Default setting for the resource type, when applicable.|
 |`resdisabledsetting`|text| |The value that disables this resource type \(when allowed\).|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

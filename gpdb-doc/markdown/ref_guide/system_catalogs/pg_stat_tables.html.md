@@ -33,5 +33,5 @@ The `pg_stat_user_tables` and `pg_stat_sys_table`s views contain the same inform
 
 **Note:** 1 In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

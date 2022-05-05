@@ -60,5 +60,5 @@ See also the compatibility section of [SET TRANSACTION](SET_TRANSACTION.html).
 
 [BEGIN](BEGIN.html),
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

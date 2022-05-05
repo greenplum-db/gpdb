@@ -10,5 +10,5 @@ The `pg_shdescription` system catalog table stores optional descriptions \(comme
 |`classoid`|oid|pg\_class.oid|The OID of the system catalog this object appears in|
 |`description`|text| |Arbitrary text that serves as the description of this object.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

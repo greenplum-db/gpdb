@@ -17,5 +17,5 @@ This reference describes the Greenplum Database system catalog tables and views.
 -   **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)**  
 
 
-**Parent topic: **[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
 

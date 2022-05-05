@@ -305,5 +305,5 @@ The output of the `iso_8601` style matches the `format with designators` describ
 |`postgres_verbose`|@ 1 year 2 mons|@ 3 days 4 hours 5 mins 6 secs|@ 1 year 2 mons -3 days 4 hours 5 mins 6 secs ago|
 |`iso_8601`|P1Y2M|P3DT4H5M6S|P-1Y-2M3DT-4H-5M-6S|
 
-**Parent topic: **[Data Types](data_types.html)
+**Parent topic:**[Data Types](data_types.html)
 

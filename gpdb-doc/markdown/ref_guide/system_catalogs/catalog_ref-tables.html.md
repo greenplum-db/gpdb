@@ -65,5 +65,5 @@ title: System Tables
 -   [pg\_type](pg_type.html)
 -   [pg\_user\_mapping](pg_user_mapping.html)
 
-**Parent topic: **[System Catalogs](../system_catalogs/catalog_ref.html)
+**Parent topic:**[System Catalogs](../system_catalogs/catalog_ref.html)
 

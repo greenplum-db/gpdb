@@ -12,5 +12,5 @@ The `foreign_tables` view contains all foreign tables defined in the current dat
 |`foreign_server_catalog`|sql\_identifier| |Name of the database in which the foreign server is defined \(always the current database\).|
 |`foreign_server_name`|sql\_identifier| |Name of the foreign server.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

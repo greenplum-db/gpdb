@@ -39,7 +39,7 @@ These are the categories for views in the `gp_toolkit` schema.
 -   **[Checking for Uneven Data Distribution](gp_toolkit.html)**  
 
 
-**Parent topic: **[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
 
 ## <a id="topic2"></a>Checking for Tables that Need Routine Maintenance 
 
@@ -52,7 +52,7 @@ The `VACUUM` or `VACUUM FULL` command reclaims disk space occupied by deleted or
 
 The `ANALYZE` command collects column-level statistics needed by the query optimizer. Greenplum Database uses a cost-based query optimizer that relies on database statistics. Accurate statistics allow the query optimizer to better estimate selectivity and the number of rows retrieved by a query operation in order to choose the most efficient query plan.
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic3"></a>gp\_bloat\_diag 
 
@@ -90,7 +90,7 @@ The `gp_locks_*` family of views can help diagnose queries and sessions that are
 -   [gp\_locks\_on\_relation](#topic6)
 -   [gp\_locks\_on\_resqueue](#topic7)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic6"></a>gp\_locks\_on\_relation 
 
@@ -138,7 +138,7 @@ The following functions let you access the metadata for append-optimized and col
 
 For most of the functions, the input argument is `regclass`, either the table `name` or the `oid` of a table.
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic_ylp_gxw_yq"></a>\_\_gp\_aovisimap\_compaction\_info\(oid\) 
 
@@ -293,7 +293,7 @@ Each component of a Greenplum Database system \(master, standby master, primary 
 -   [gp\_log\_master\_concise](#topic19)
 -   [gp\_log\_system](#topic20)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic17"></a>gp\_log\_command\_timings 
 
@@ -404,7 +404,7 @@ Each component of a Greenplum Database system \(master, standby master, primary 
 -   [gp\_param\_setting\('parameter\_name'\)](#topic22)
 -   [gp\_param\_settings\_seg\_value\_diffs](#topic23)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic22"></a>gp\_param\_setting\('parameter\_name'\) 
 
@@ -436,7 +436,7 @@ Server configuration parameters that are classified as *local* parameters \(mean
 
 The [gp\_pgdatabase\_invalid](#topic25) view can be used to check for down segments.
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic25"></a>gp\_pgdatabase\_invalid 
 
@@ -463,7 +463,7 @@ You can use the `gp_resgroup_config` view to check the configuration of each res
 -   [gp\_resgroup\_status\_per\_host](#perhost)
 -   [gp\_resgroup\_status\_per\_segment](#perseg)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic27x"></a>gp\_resgroup\_config 
 
@@ -586,7 +586,7 @@ The purpose of resource queues is to limit the number of active queries in the s
 -   [gp\_resq\_role](#topic30)
 -   [gp\_resqueue\_status](#topic31)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic27"></a>gp\_resq\_activity 
 
@@ -661,7 +661,7 @@ The *gp\_workfile\_\** views show information about all the queries that are cur
 -   [gp\_workfile\_usage\_per\_query](#topic34)
 -   [gp\_workfile\_usage\_per\_segment](#topic35)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic33"></a>gp\_workfile\_entries 
 
@@ -714,7 +714,7 @@ It is frequently convenient to group users \(roles\) together to ease management
 
 The [gp\_roles\_assigned](#topic37) view can be used to see all of the roles in the system, and their assigned members \(if the role is also a group role\).
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic37"></a>gp\_roles\_assigned 
 
@@ -751,7 +751,7 @@ FROM gp_size_of_table_disk as sotd, pg_class
 WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;
 ```
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic39"></a>gp\_size\_of\_all\_table\_indexes 
 
@@ -879,7 +879,7 @@ All tables in Greenplum Database are distributed, meaning their data is divided 
 -   [gp\_skew\_coefficients](#topic50)
 -   [gp\_skew\_idle\_fractions](#topic51)
 
-**Parent topic: **[The gp\_toolkit Administrative Schema](gp_toolkit.html)
+**Parent topic:**[The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic50"></a>gp\_skew\_coefficients 
 

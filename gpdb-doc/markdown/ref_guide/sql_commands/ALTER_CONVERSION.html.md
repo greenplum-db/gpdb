@@ -58,5 +58,5 @@ There is no `ALTER CONVERSION` statement in the SQL standard.
 
 [CREATE CONVERSION](CREATE_CONVERSION.html), [DROP CONVERSION](DROP_CONVERSION.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

@@ -87,5 +87,5 @@ Note, however, that the SQL/MED functionality as a whole is not yet conforming.
 
 [ALTER FOREIGN DATA WRAPPER](ALTER_FOREIGN_DATA_WRAPPER.html), [DROP FOREIGN DATA WRAPPER](DROP_FOREIGN_DATA_WRAPPER.html), [CREATE SERVER](CREATE_SERVER.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

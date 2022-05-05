@@ -14,5 +14,5 @@ The `pg_compression` system catalog table describes the compression methods avai
 |`compvalidator`|regproc|not null|plain|Name of the compression validator|
 |`compowner`|oid|not null|plain|oid from pg\_authid|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -54,5 +54,5 @@ A `DROP FUNCTION` statement is defined in the SQL standard, but it is not compat
 
 [CREATE FUNCTION](CREATE_FUNCTION.html), [ALTER FUNCTION](ALTER_FUNCTION.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

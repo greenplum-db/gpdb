@@ -140,5 +140,5 @@ This command conforms to the SQL standard, except that the `USING` and `RETURNIN
 
 [DECLARE](DECLARE.html), [TRUNCATE](TRUNCATE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

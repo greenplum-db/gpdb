@@ -24,5 +24,5 @@ The view `pg_roles` provides access to information about database roles. This is
 |`rolcreatewextgpfd`|bool| |Role may create writable external tables that use the gpfdist protocol.|
 |`rolresgroup`|oid|pg\_resgroup.oid|Object ID of the resource group to which this role is assigned.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

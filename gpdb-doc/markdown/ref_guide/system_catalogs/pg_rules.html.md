@@ -13,5 +13,5 @@ The `pg_rules` view excludes the `ON SELECT` rules of views and materialized vie
 |`rulename`|name|pg\_rewrite.rulename|Name of rule|
 |`definition`|text||Rule definition \(a reconstructed creation command\)|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -14,5 +14,5 @@ The `pg_rewrite` system catalog table stores rewrite rules for tables and views.
 |ev\_qual|pg\_node\_tree||Expression tree \(in the form of a `nodeToString()` representation\) for the rule's qualifying condition|
 |ev\_action|pg\_node\_tree||Query tree \(in the form of a `nodeToString()` representation\) for the rule's action|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

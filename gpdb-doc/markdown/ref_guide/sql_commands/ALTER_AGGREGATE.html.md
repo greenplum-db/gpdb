@@ -83,5 +83,5 @@ There is no `ALTER AGGREGATE` statement in the SQL standard.
 
 [CREATE AGGREGATE](CREATE_AGGREGATE.html), [DROP AGGREGATE](DROP_AGGREGATE.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

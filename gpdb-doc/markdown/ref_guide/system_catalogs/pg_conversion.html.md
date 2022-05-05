@@ -14,5 +14,5 @@ The `pg_conversion` system catalog table describes the available encoding conver
 |`conproc`|regproc|pg\_proc.oid|Conversion procedure.|
 |`condefault`|boolean| |True if this is the default conversion.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -45,5 +45,5 @@ ALTER USER MAPPING FOR bob SERVER foo OPTIONS (SET password 'public');
 
 [CREATE USER MAPPING](CREATE_USER_MAPPING.html), [DROP USER MAPPING](DROP_USER_MAPPING.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

@@ -110,5 +110,5 @@ SERVER film_server;
 
 [ALTER FOREIGN TABLE](ALTER_FOREIGN_TABLE.html), [DROP FOREIGN TABLE](DROP_FOREIGN_TABLE.html), [CREATE TABLE](CREATE_TABLE.html), [CREATE SERVER](CREATE_SERVER.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

@@ -42,5 +42,5 @@ DROP USER MAPPING IF EXISTS FOR bob SERVER foo;
 
 [CREATE USER MAPPING](CREATE_USER_MAPPING.html), [ALTER USER MAPPING](ALTER_USER_MAPPING.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

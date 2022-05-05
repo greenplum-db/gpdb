@@ -43,5 +43,5 @@ CREATE USER MAPPING FOR bob SERVER foo OPTIONS (user 'bob', password 'secret');
 
 [ALTER USER MAPPING](ALTER_USER_MAPPING.html), [DROP USER MAPPING](DROP_USER_MAPPING.html), [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [CREATE SERVER](CREATE_SERVER.html)
 
-**Parent topic: **[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

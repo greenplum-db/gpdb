@@ -19,5 +19,5 @@ The `gp_toolkit.gp_resqueue_status` view allows administrators to see status and
 |`rsqwaiters`|integer|gp\_toolkit.gp\_resqueue\_ rsqwaiter|The number of statements currently waiting in the resource queue.|
 |`rsqholders`|integer|gp\_toolkit.gp\_resqueue\_ rsqholders|The number of statements currently running on the system from this resource queue.|
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

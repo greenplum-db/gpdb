@@ -10,5 +10,5 @@ The `pg_partition_encoding` system catalog table describes the available column 
 |`parencattnum`|snallint|not null|plain| |
 |`parencattoptions`|text \[ \]| |extended| |
 
-**Parent topic: **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
