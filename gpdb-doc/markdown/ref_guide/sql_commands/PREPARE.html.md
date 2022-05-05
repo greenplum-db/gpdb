@@ -39,7 +39,7 @@ By default \(with the default value, `auto`, for the server configuration parame
 
 This heuristic can be overridden, forcing the server to use either generic or custom plans, by setting `plan_cache_mode` to `force_generic_plan` or `force_custom_plan` respectively. This setting is primarily useful if the generic plan's cost estimate is badly off for some reason, allowing it to be chosen even though its actual cost is much more than that of a custom plan.
 
-To examine the query plan Greenplum Database is using for a prepared statement, use [EXPLAIN](EXPLAIN.html), for example
+To examine the query plan Greenplum Database is using for a prepared statement, use [EXPLAIN](EXPLAIN.html), for example:
 
 ```
 EXPLAIN EXECUTE <name>(<parameter_values>);
