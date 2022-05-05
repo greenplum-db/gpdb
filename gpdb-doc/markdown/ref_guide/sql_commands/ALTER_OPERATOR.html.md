@@ -48,7 +48,7 @@ ALTER OPERATOR @@ (text, text) OWNER TO joe;
 
 ## <a id="section6"></a>Compatibility 
 
-There is no `ALTER``OPERATOR` statement in the SQL standard.
+There is no `ALTER OPERATOR` statement in the SQL standard.
 
 ## <a id="section7"></a>See Also 
 
