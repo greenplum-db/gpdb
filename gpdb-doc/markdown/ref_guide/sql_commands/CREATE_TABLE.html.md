@@ -98,7 +98,7 @@ and table\_constraint is:
 
 and *like\_option* is:
 
-```
+``` pre
 {INCLUDING|EXCLUDING} {DEFAULTS|CONSTRAINTS|INDEXES|STORAGE|COMMENTS|ALL}
 ```
 
