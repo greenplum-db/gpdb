@@ -37,7 +37,7 @@ The `REASSIGN OWNED` command does not affect any privileges granted to the old\_
 Reassign any database objects owned by the role named `sally` and `bob` to `admin`;
 
 ```
-REASSIGN OWNED BY sally, bob TO admin;
+REASSIGN OWNED BY sally, bob TO admin:
 ```
 
 ## <a id="section7"></a>Compatibility 
