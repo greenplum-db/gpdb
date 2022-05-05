@@ -177,7 +177,6 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 ```
 
 :   For writable external tables, specifies the URI location of the `gpfdist` process or S3 protocol that will collect data output from the Greenplum segments and write it to one or more named files. For `gpfdist` the `path` is relative to the directory from which `gpfdist` is serving files \(the directory specified when you started the `gpfdist` program\). If multiple `gpfdist` locations are listed, the segments sending data will be evenly divided across the available output locations. For example:
-
 ```
 'gpfdist://outputhost:8081/data1.out',
 'gpfdist://outputhost:8081/data2.out'
@@ -190,7 +189,7 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 ON MASTER
 :   Restricts all table-related operations to the Greenplum master segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON MASTER`.
 
-    **Note:** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum master segment.
+:   **Note:** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum master segment.
 
 EXECUTE 'command' \[ON ...\]
 :   Allowed for readable external web tables or writable external tables only. For readable external web tables, specifies the OS command to be run by the segment instances. The command can be a single OS command or a script. The `ON` clause is used to specify which segment instances will run the given command.
