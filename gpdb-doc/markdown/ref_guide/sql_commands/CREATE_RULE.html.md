@@ -25,9 +25,7 @@ You can create the illusion of an updatable view by defining `ON INSERT`, `ON UP
 
 There is a catch if you try to use conditional rules for view updates: there must be an unconditional `INSTEAD` rule for each action you wish to allow on the view. If the rule is conditional, or is not `INSTEAD`, then the system will still reject attempts to perform the update action, because it thinks it might end up trying to perform the action on the dummy table of the view in some cases. If you want to handle all the useful cases in conditional rules, add an unconditional `DO INSTEAD NOTHING` rule to ensure that the system understands it will never be called on to update the dummy table. Then make the conditional rules non-`INSTEAD`; in the cases where they are applied, they add to the default `INSTEAD NOTHING` action. \(This method does not currently work to support `RETURNING` queries, however.\)
 
-**Note:**
-
-A view that is simple enough to be automatically updatable \(see [CREATE VIEW](CREATE_VIEW.html)\) does not require a user-created rule in order to be updatable. While you can create an explicit rule anyway, the automatic update transformation will generally outperform an explicit rule.
+**Note:** A view that is simple enough to be automatically updatable \(see [CREATE VIEW](CREATE_VIEW.html)\) does not require a user-created rule in order to be updatable. While you can create an explicit rule anyway, the automatic update transformation will generally outperform an explicit rule.
 
 ## <a id="section4"></a>Parameters 
 
