@@ -68,17 +68,15 @@ query
 
     -   Cannot reference a view or external table.
     -   References only one table.
-
-        The table must be updatable. For example, the following are not updatable: table functions, set-returning functions, append-only tables, columnar tables.
+        <br/><br/>The table must be updatable. For example, the following are not updatable: table functions, set-returning functions, append-only tables, columnar tables.
 
     -   Cannot contain any of the following:
-
         -   A grouping clause
         -   A set operation such as `UNION ALL` or `UNION DISTINCT`
         -   A sorting clause
         -   A windowing clause
         -   A join or a self-join
-        Specifying the `FOR UPDATE` clause in the `SELECT` command prevents other sessions from changing the rows between the time they are fetched and the time they are updated. Without the `FOR UPDATE` clause, a subsequent use of the `UPDATE` or `DELETE` command with the `WHERE CURRENT OF` clause has no effect if the row was changed since the cursor was created.
+        <br/><br/>Specifying the `FOR UPDATE` clause in the `SELECT` command prevents other sessions from changing the rows between the time they are fetched and the time they are updated. Without the `FOR UPDATE` clause, a subsequent use of the `UPDATE` or `DELETE` command with the `WHERE CURRENT OF` clause has no effect if the row was changed since the cursor was created.
 
         **Note:** Specifying the `FOR UPDATE` clause in the `SELECT` command locks the entire table, not just the selected rows.
 
