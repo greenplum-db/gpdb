@@ -28,5 +28,5 @@ The `pg_attribute` table stores information about table columns. There will be e
 |`attoptions`|text\[\]| |Attribute-level options, as "keyword=value" strings.|
 |`attfdwoptions`|text\[\]| |Attribute-level foreign data wrapper options, as "keyword=value" strings.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

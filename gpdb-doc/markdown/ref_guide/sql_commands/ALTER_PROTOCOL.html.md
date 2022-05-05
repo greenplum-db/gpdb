@@ -53,5 +53,5 @@ There is no `ALTER PROTOCOL` statement in the SQL standard.
 
 [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html), [CREATE PROTOCOL](CREATE_PROTOCOL.html), [DROP PROTOCOL](DROP_PROTOCOL.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

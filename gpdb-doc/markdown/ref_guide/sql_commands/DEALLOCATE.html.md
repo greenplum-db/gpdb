@@ -40,5 +40,5 @@ The SQL standard includes a `DEALLOCATE` statement, but it is only for use in em
 
 [EXECUTE](EXECUTE.html), [PREPARE](PREPARE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

@@ -6,7 +6,7 @@ Greenplum Database provides two data types that are designed to support full tex
 
 The `tsvector` and `tsquery` types cannot be part of the distribution key of a Greenplum Database table.
 
-**Parent topic:**[Data Types](data_types.html)
+**Parent topic:** [Data Types](data_types.html)
 
 ## <a id="topic_mzv_44c_qfb"></a>tsvector 
 

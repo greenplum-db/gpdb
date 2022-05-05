@@ -131,5 +131,5 @@ The SQL standard specifies some additional capabilities for the `CREATE VIEW` st
 
 [SELECT](SELECT.html), [DROP VIEW](DROP_VIEW.html), [CREATE MATERIALIZED VIEW](CREATE_MATERIALIZED_VIEW.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

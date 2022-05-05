@@ -20,5 +20,5 @@ The `pg_partition_rule` system catalog table is used to track partitioned tables
 |`parlistvalues`|text| |For list partitioned tables, the list of values assigned to this partition.|
 |`parreloptions`|text| |An array describing the storage characteristics of the particular partition.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

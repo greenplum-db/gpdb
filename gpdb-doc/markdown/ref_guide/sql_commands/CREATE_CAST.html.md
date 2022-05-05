@@ -127,5 +127,5 @@ The `CREATE CAST` command conforms to the SQL standard, except that SQL does not
 
 [CREATE FUNCTION](CREATE_FUNCTION.html), [CREATE TYPE](CREATE_TYPE.html), [DROP CAST](DROP_CAST.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

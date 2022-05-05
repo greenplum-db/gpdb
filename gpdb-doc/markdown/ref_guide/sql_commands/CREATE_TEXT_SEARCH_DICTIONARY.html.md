@@ -59,5 +59,5 @@ There is no `CREATE TEXT SEARCH DICTIONARY` statement in the SQL standard.
 
 [ALTER TEXT SEARCH DICTIONARY](ALTER_TEXT_SEARCH_DICTIONARY.html), [DROP TEXT SEARCH DICTIONARY](DROP_TEXT_SEARCH_DICTIONARY.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

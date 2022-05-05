@@ -14,5 +14,5 @@ You can view the server configuration settings for your Greenplum Database clust
 |`setrole`|oid|pg\_authid.oid|The role to which the setting is applicable, or zero if the setting is not role-specific.|
 |`setconfig`|text\[\]| |Per-database- and per-role-specific defaults for user-settable server configuration parameters.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

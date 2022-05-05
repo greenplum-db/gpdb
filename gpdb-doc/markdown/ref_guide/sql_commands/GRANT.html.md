@@ -252,5 +252,5 @@ Privileges on databases, tablespaces, schemas, and languages are Greenplum Datab
 
 [REVOKE](REVOKE.html), [CREATE ROLE](CREATE_ROLE.html), [ALTER ROLE](ALTER_ROLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

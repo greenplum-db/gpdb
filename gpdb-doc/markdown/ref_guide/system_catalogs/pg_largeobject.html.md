@@ -14,5 +14,5 @@ Each row of `pg_largeobject` holds data for one page of a large object, beginnin
 |`pageno`|int4| |Page number of this page within its large object \(counting from zero\).|
 |`data`|bytea| |Actual data stored in the large object. This will never be more than `LOBLKSIZE` bytes and may be less.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

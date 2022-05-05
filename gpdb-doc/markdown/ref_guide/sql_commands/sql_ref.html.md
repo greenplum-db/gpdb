@@ -478,5 +478,5 @@ The following SQL commands are available in Greenplum Database:
 -   **[VALUES](../sql_commands/VALUES.html)**  
 
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 

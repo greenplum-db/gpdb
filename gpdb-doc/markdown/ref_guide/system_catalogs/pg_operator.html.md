@@ -22,5 +22,5 @@ The `pg_operator` system catalog table stores information about operators, both 
 |`oprrest`|regproc|pg\_proc.oid|Restriction selectivity estimation function for this operator|
 |`oprjoin`|regproc|pg\_proc.oid|Join selectivity estimation function for this operator|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

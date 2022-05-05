@@ -85,5 +85,5 @@ There is no `DO` statement in the SQL standard.
 
 [CREATE LANGUAGE](CREATE_LANGUAGE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

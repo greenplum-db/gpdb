@@ -49,5 +49,5 @@ The `DROP OWNED` command is a Greenplum Database extension.
 
 [REASSIGN OWNED](REASSIGN_OWNED.html), [DROP ROLE](DROP_ROLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

@@ -17,5 +17,5 @@ There are not currently any commands that manipulate procedural language templat
 |`tmpllibrary`|text| |Path of shared library that implements language|
 |`tmplacl`|aclitem\[\]| |Access privileges for template \(not yet implemented\).|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

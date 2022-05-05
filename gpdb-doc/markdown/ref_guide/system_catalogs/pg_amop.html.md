@@ -18,5 +18,5 @@ An entry's `amopmethod` must match the `opfmethod` of its containing operator fa
 |`amopmethod`|oid|pg\_am.oid|Index access method for the operator family|
 |`amopsortfamily`|oid|pg\_opfamily.oid|If an ordering operator, the B-tree operator family that this entry sorts according to; zero if a search operator|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

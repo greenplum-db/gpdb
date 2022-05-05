@@ -12,7 +12,7 @@ Greenplum Database supports built-in functions and operators including analytic 
 -   [Text Search Functions and Operators](#topic_vpj_ss1_lfb)
 -   [Range Functions and Operators](#functions-range)
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
 ## <a id="topic27"></a>Greenplum Database Function Types 
 

@@ -585,5 +585,5 @@ The forms `ADD` \(without `USING INDEX`\), `DROP`, `SET DEFAULT`, and `SET DATA 
 
 [CREATE TABLE](CREATE_TABLE.html), [DROP TABLE](DROP_TABLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

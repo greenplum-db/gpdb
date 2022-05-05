@@ -96,5 +96,5 @@ CREATE LANGUAGE plsample
 
 [ALTER LANGUAGE](ALTER_LANGUAGE.html), [CREATE EXTENSION](CREATE_EXTENSION.html), [CREATE FUNCTION](CREATE_FUNCTION.html), [DROP EXTENSION](DROP_EXTENSION.html), [DROP LANGUAGE](DROP_LANGUAGE.html), [GRANT](GRANT.html) [DO](DO.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

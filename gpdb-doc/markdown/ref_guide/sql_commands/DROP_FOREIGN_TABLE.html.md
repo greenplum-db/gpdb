@@ -44,5 +44,5 @@ DROP FOREIGN TABLE films, distributors;
 
 [ALTER FOREIGN TABLE](ALTER_FOREIGN_TABLE.html), [CREATE FOREIGN TABLE](CREATE_FOREIGN_TABLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

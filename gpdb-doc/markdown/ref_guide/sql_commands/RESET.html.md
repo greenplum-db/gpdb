@@ -42,5 +42,5 @@ RESET statement_mem;
 
 [SET](SET.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

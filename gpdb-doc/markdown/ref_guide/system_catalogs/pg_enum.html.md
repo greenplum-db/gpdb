@@ -10,5 +10,5 @@ The `pg_enum` table contains entries matching enum types to their associated val
 |`enumsortorder`|float4| |The sort position of this enum value within its enum type|
 |`enumlabel`|name| |The textual label for this enum value|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

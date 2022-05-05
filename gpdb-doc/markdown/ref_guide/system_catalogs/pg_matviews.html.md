@@ -14,5 +14,5 @@ The view `pg_matviews` provides access to useful information about each material
 |`ispopulated`|boolean||True if the materialized view is currently populated|
 |`definition`|text||Materialized view definition \(a reconstructed `SELECT` command\)|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

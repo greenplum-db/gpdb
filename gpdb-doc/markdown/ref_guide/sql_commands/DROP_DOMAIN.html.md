@@ -44,5 +44,5 @@ This command conforms to the SQL standard, except for the `IF EXISTS` option, wh
 
 [ALTER DOMAIN](ALTER_DOMAIN.html), [CREATE DOMAIN](CREATE_DOMAIN.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

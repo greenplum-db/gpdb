@@ -76,5 +76,5 @@ NEW.rank, NEW.year, NEW.gender, NEW.count);
 
 [ALTER RULE](ALTER_RULE.html)[DROP RULE](DROP_RULE.html), [CREATE TABLE](CREATE_TABLE.html), [CREATE VIEW](CREATE_VIEW.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

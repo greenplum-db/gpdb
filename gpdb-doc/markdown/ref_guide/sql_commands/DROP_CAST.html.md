@@ -45,5 +45,5 @@ There `DROP CAST` command conforms to the SQL standard.
 
 [CREATE CAST](CREATE_CAST.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

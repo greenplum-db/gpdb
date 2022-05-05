@@ -76,5 +76,5 @@ The SQL:2008 standard includes a `TRUNCATE` command with the syntax `TRUNCATE TA
 
 [DELETE](DELETE.html), [DROP TABLE](DROP_TABLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

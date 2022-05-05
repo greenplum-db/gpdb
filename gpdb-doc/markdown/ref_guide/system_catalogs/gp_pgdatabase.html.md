@@ -16,5 +16,5 @@ For the master, the value is -1.
 |`valid`|boolean|gp\_segment\_configuration.mode|Whether or not this instance is up and the mode is either *s*\(synchronized\) or *n* \(not in sync\).|
 |`definedprimary`|boolean|gp\_segment\_ configuration.preferred\_role|Whether or not this instance was defined as the primary \(as opposed to the mirror\) at the time the system was initialized.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

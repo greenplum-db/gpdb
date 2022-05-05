@@ -14,5 +14,5 @@ The `foreign_servers` view contains all foreign servers defined in the current d
 |`foreign_server_version`|character\_data| |Foreign server version information, if specified upon creation.|
 |`authorization_identifier`|sql\_identifier| |Name of the owner of the foreign server.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

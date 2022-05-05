@@ -20,5 +20,5 @@ The `pg_database` system catalog table stores information about the available da
 |`dattablespace`|oid|pg\_tablespace.oid|The default tablespace for the database. Within this database, all tables for which *pg\_class.reltablespace* is zero will be stored in this tablespace. All non-shared system catalogs will also be there.|
 |`datacl`|aclitem\[\]| |Database access privileges as given by `GRANT` and `REVOKE`.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

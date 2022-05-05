@@ -26,5 +26,5 @@ When a `pg_cast` entry has different source and target types and a function that
 
 |
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

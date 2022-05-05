@@ -130,5 +130,5 @@ The SQL standard makes no provisions for parallel retrieve cursors.
 
 [CLOSE](CLOSE.html), [DELETE](DELETE.html), [FETCH](FETCH.html), [MOVE](MOVE.html), [RETRIEVE](RETRIEVE.html), [SELECT](SELECT.html), [UPDATE](UPDATE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

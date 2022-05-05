@@ -120,5 +120,5 @@ The `ALTER RESOURCE QUEUE` statement is a Greenplum Database extension. This com
 
 [CREATE RESOURCE QUEUE](CREATE_RESOURCE_QUEUE.html), [DROP RESOURCE QUEUE](DROP_RESOURCE_QUEUE.html), [CREATE ROLE](CREATE_ROLE.html), [ALTER ROLE](ALTER_ROLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

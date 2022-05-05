@@ -12,5 +12,5 @@ The `gp_distributed_xacts` view contains information about Greenplum Database di
 |`gp_session_id`|int| |The ID number of the Greenplum Database session associated with this transaction.|
 |`xmin_distributed _snapshot`|xid| |The minimum distributed transaction number found among all open transactions when this transaction was started. It is used for MVCC distributed snapshot purposes.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

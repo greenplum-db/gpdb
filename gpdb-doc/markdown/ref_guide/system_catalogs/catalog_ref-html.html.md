@@ -215,5 +215,5 @@ System catalog table and view definitions in alphabetical order.
 -   **[user\_mappings](../system_catalogs/user_mappings.html)**  
 
 
-**Parent topic:**[System Catalogs](../system_catalogs/catalog_ref.html)
+**Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
 

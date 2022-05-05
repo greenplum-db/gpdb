@@ -14,5 +14,5 @@ This table is populated only on the master. This table is defined in the `pg_glo
 |`restypid`|smallint|`pg_resourcetype. restypid`|The resource type, derived from the *[pg\_resqueuecapability](pg_resourcetype.html)* system table.|
 |`resetting`|opaque type| |The specific value set for the capability referenced in this record. Depending on the actual resource type, this value may have different data types.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -34,5 +34,5 @@ There is no `ALTER LANGUAGE` statement in the SQL standard.
 
 [CREATE LANGUAGE](CREATE_LANGUAGE.html), [DROP LANGUAGE](DROP_LANGUAGE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

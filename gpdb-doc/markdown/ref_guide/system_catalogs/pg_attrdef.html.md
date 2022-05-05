@@ -11,5 +11,5 @@ The `pg_attrdef` table stores column default values. The main information about 
 |`adbin`|text| |The internal representation of the column default value|
 |`adsrc`|text| |A human-readable representation of the default value. This field is historical, and is best not used.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

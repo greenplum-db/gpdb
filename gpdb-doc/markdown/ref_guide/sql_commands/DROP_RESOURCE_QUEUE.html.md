@@ -61,5 +61,5 @@ The `DROP RESOURCE QUEUE` statement is a Greenplum Database extension.
 
 [ALTER RESOURCE QUEUE](ALTER_RESOURCE_QUEUE.html), [CREATE RESOURCE QUEUE](CREATE_RESOURCE_QUEUE.html), [ALTER ROLE](ALTER_ROLE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

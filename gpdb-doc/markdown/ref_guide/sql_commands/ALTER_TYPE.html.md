@@ -149,5 +149,5 @@ The variants to add and drop attributes are part of the SQL standard; the other 
 
 [CREATE TYPE](CREATE_TYPE.html), [DROP TYPE](DROP_TYPE.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

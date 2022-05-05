@@ -55,5 +55,5 @@ The `ALTER USER` statement is a Greenplum Database extension. The SQL standard l
 
 [ALTER ROLE](ALTER_ROLE.html), [CREATE USER](CREATE_USER.html), [DROP USER](DROP_USER.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

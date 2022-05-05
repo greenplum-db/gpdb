@@ -11,5 +11,5 @@ The `pg_namespace` system catalog table stores namespaces. A namespace is the st
 |`nspowner`|oid|pg\_authid.oid|Owner of the namespace|
 |`nspacl`|aclitem\[\]| |Access privileges as given by `GRANT` and `REVOKE`|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -47,5 +47,5 @@ ALTER TRIGGER emp_stamp ON emp RENAME TO emp_track_chgs;
 
 [ALTER TABLE](ALTER_TABLE.html), [CREATE TRIGGER](CREATE_TRIGGER.html), [DROP TRIGGER](DROP_TRIGGER.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

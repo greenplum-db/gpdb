@@ -81,5 +81,5 @@ Incidentally, the `BEGIN` key word is used for a different purpose in embedded S
 
 [COMMIT](COMMIT.html), [ROLLBACK](ROLLBACK.html), [START TRANSACTION](START_TRANSACTION.html), [SAVEPOINT](SAVEPOINT.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

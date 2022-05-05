@@ -13,5 +13,5 @@ The `pg_resqueue_attributes` view allows administrators to see the attributes se
 |`resetting`|text| |The current value of a resource queue attribute.|
 |`restypid`|integer| |System assigned resource type id.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

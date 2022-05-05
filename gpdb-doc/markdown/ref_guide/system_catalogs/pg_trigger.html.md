@@ -30,5 +30,5 @@ The `pg_trigger` system catalog table stores triggers on tables.
 |`tgargs`|bytea| |Argument strings to pass to trigger, each NULL-terminated.|
 |`tgqual`|pg\_node\_tree| |Expression tree \(in `nodeToString()` representation\) for the trigger's `WHEN` condition, or null if none.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

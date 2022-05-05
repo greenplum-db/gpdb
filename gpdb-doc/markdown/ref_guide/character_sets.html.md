@@ -46,7 +46,7 @@ The character set support in Greenplum Database allows you to store text in a va
 |WIN1257|Windows CP1257|Baltic|Yes|1| |
 |WIN1258|Windows CP1258|Vietnamese|Yes|1|ABC, TCVN, TCVN5712, VSCII|
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
 ## <a id="topic2"></a>Setting the Character Set 
 

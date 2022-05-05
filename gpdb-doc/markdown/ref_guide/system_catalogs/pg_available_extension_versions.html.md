@@ -17,5 +17,5 @@ The view is read only.
 |`requires`|name\[\]|Names of prerequisite extensions, or `NULL` if none|
 |`comment`|text|Comment string from the extension control file.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

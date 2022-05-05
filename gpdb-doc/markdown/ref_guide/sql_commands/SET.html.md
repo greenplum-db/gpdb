@@ -96,5 +96,5 @@ SET TIME ZONE 'Europe/Rome';
 
 [RESET](RESET.html), [SHOW](SHOW.html)
 
-**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 
