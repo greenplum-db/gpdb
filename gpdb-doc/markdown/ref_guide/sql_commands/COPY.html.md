@@ -167,9 +167,7 @@ ON SEGMENT
 
     <SEGID\>
     :   The string literal representing the content ID number of the segment instance to be copied when copying `ON SEGMENT`. `<SEGID>` is a required part of the file name when `ON SEGMENT` is specified. The angle brackets are part of the string literal used to specify the file name.
-
     :   With `COPY TO`, the string literal is replaced by the content ID of the segment instance when the `COPY` command is run.
-
     :   With `COPY FROM`, specify the segment instance content ID in the name of the file and place that file on the segment instance host. There must be a file for each primary segment instance on each host. When the `COPY FROM` command is run, the data is copied from the file to the segment instance.
 
 :   When the `PROGRAM command` clause is specified, the `<SEGID>` string literal is required in the command, the `<SEG_DATA_DIR>` string literal is optional. See [Examples](#section11).
