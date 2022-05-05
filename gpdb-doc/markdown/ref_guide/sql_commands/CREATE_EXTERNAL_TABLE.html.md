@@ -185,7 +185,7 @@ For writable external tables, specifies the URI location of the `gpfdist` proces
 
 With two `gpfdist` locations listed as in the above example, half of the segments would send their output data to the `data1.out` file and the other half to the `data2.out` file.
 
-With the option `#transform=trans\_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
+With the option `#transform=trans_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
 
 ON MASTER
 :   Restricts all table-related operations to the Greenplum master segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON MASTER`.
@@ -283,7 +283,7 @@ The limit for the number of initial rejected rows can be changed with the Greenp
 
 DISTRIBUTED BY \(\{column \[opclass\]\}, \[ ... \] \)
 DISTRIBUTED RANDOMLY
-:   Used to declare the Greenplum Database distribution policy for a writable external table. By default, writable external tables are distributed randomly. If the source table you are exporting data from has a hash distribution policy, defining the same distribution key column\(s\) and operator class\(es\), `oplcass`, for the writable external table will improve unload performance by eliminating the need to move rows over the interconnect. When you issue an unload command such as `INSERT INTO wex\_table SELECT * FROM source\_table`, the rows that are unloaded can be sent directly from the segments to the output location if the two tables have the same hash distribution policy.
+:   Used to declare the Greenplum Database distribution policy for a writable external table. By default, writable external tables are distributed randomly. If the source table you are exporting data from has a hash distribution policy, defining the same distribution key column\(s\) and operator class\(es\), `oplcass`, for the writable external table will improve unload performance by eliminating the need to move rows over the interconnect. When you issue an unload command such as `INSERT INTO wex_table SELECT * FROM source_table`, the rows that are unloaded can be sent directly from the segments to the output location if the two tables have the same hash distribution policy.
 
 ## <a id="section5"></a>Examples 
 
@@ -368,7 +368,7 @@ When you specify the `LOG ERRORS` clause, Greenplum Database captures errors tha
 You can view and manage the captured error log data. The functions to manage log data depend on whether the data is persistent \(the `PERSISTENTLY` keyword is used with the `LOG ERRORS` clause\).
 
 -   Functions that manage non-persistent error log data from external tables that were defined without the `PERSISTENTLY` keyword.
-    -   The built-in SQL function `gp_read_error_log('table\_name')` displays error log information for an external table. This example displays the error log data from the external table `ext_expenses`.
+    -   The built-in SQL function `gp_read_error_log('table_name')` displays error log information for an external table. This example displays the error log data from the external table `ext_expenses`.
 
         ```
         SELECT * from gp_read_error_log('ext_expenses');
@@ -376,7 +376,7 @@ You can view and manage the captured error log data. The functions to manage log
 
         The function returns no data if you created the external table with the `LOG ERRORS PERSISTENTLY` clause, or if the external table does not exist.
 
-    -   The built-in SQL function `gp_truncate_error_log('table\_name')` deletes the error log data for table\_name. This example deletes the error log data captured from the external table `ext_expenses`:
+    -   The built-in SQL function `gp_truncate_error_log('table_name')` deletes the error log data for table\_name. This example deletes the error log data captured from the external table `ext_expenses`:
 
         ```
         SELECT gp_truncate_error_log('ext_expenses'); 
@@ -387,11 +387,11 @@ You can view and manage the captured error log data. The functions to manage log
         The function returns `FALSE` if the table does not exist.
 
 -   Functions that manage persistent error log data from external tables that were defined with the `PERSISTENTLY` keyword.
-    -   The SQL function `gp_read_persistent_error_log('table\_name')` displays persistent log data for an external table.
+    -   The SQL function `gp_read_persistent_error_log('table_name')` displays persistent log data for an external table.
 
         The function returns no data if you created the external table without the `PERSISTENTLY` keyword. The function returns persistent log data for an external table even after the table has been dropped.
 
-    -   The SQL function `gp_truncate_persistent_error_log('table\_name')` truncates persistent log data for a table.
+    -   The SQL function `gp_truncate_persistent_error_log('table_name')` truncates persistent log data for a table.
 
         For persistent log data, you must manually delete the data. Dropping the external table does not delete persistent log data.
 
