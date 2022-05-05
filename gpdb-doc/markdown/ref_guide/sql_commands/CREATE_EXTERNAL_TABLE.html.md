@@ -169,7 +169,7 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 
 :   For readable external tables, specifies the URI of the external data source\(s\) to be used to populate the external table or web table. Regular readable external tables allow the `gpfdist` or `file` protocols. External web tables allow the `http` protocol. If `port` is omitted, port `8080` is assumed for `http` and `gpfdist` protocols. If using the `gpfdist` protocol, the `path` is relative to the directory from which `gpfdist` is serving files \(the directory specified when you started the `gpfdist` program\). Also, `gpfdist` can use wildcards or other C-style pattern matching \(for example, a whitespace character is `[[:space:]]`\) to denote multiple files in a directory. For example:
 
-:   ```
+```
 'gpfdist://filehost:8081/*'
 'gpfdist://masterhost/my_load_file'
 'file://seghost1/dbfast1/external/myfile.txt'
@@ -178,7 +178,7 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 
 :   For writable external tables, specifies the URI location of the `gpfdist` process or S3 protocol that will collect data output from the Greenplum segments and write it to one or more named files. For `gpfdist` the `path` is relative to the directory from which `gpfdist` is serving files \(the directory specified when you started the `gpfdist` program\). If multiple `gpfdist` locations are listed, the segments sending data will be evenly divided across the available output locations. For example:
 
-:   ```
+```
 'gpfdist://outputhost:8081/data1.out',
 'gpfdist://outputhost:8081/data2.out'
 ```
