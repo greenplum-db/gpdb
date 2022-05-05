@@ -7467,7 +7467,7 @@ static void
 ATPrepAddColumn(List **wqueue, Relation rel, bool recurse, bool recursing,
 				AlterTableCmd *cmd, LOCKMODE lockmode)
 {
-	/* 
+	/*
 	 * If there's an encoding clause, this better be an append only
 	 * column oriented table.
 	 */
@@ -7823,14 +7823,14 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("ENCODING clause not supported on non column orientated table")));
 
-	/* 
+	/*
 	 * For AO/CO tables, always store an encoding clause. If no encoding
 	 * clause was provided, store the default encoding clause.
 	 */
 	if (RelationIsAoCols(rel))
 	{
 		ColumnReferenceStorageDirective *c;
-		
+
 		c = makeNode(ColumnReferenceStorageDirective);
 		c->column = colDef->colname;
 
@@ -7840,7 +7840,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		{
 			/* Use the type specific storage directive, if one exists */
 			c->encoding = TypeNameGetStorageDirective(colDef->typeName);
-			
+
 			if (!c->encoding)
 				c->encoding = default_column_encoding_clause(rel);
 		}
@@ -14636,6 +14636,19 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 		into->options = storage_opts;
 		into->tableSpaceName = get_tablespace_name(tblspc);
 		into->distributedBy = (Node *)dist_clause;
+		if (RelationIsAoRows(rel))
+		{
+			/*
+			 * In order to avoid being affected by the GUC of gp_default_storage_options,
+			 * we should re-build storage options from original table.
+			 *
+			 * The reason is that when we use the default parameters to create a table,
+			 * the configuration will not be written to pg_class.reloptions, and then if
+			 * gp_default_storage_options is modified, the newly created table will be
+			 * inconsistent with the original table.
+			 */
+			into->options = build_ao_rel_storage_opts(into->options, rel);
+		}
 		s->intoClause = into;
 
 		q_list = pg_analyze_and_rewrite((Node *) s, synthetic_sql, NULL, 0);
@@ -14811,7 +14824,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro, List
 		{
 			if (useExistingColumnAttributes)
 			{
-				/* 
+				/*
 				 * Need to remove table level compression settings for the
 				 * AOCO case since they're set at the column level.
 				 */
@@ -17924,7 +17937,7 @@ rel_get_column_encodings(Relation rel)
 					makeNode(ColumnReferenceStorageDirective);
 				d->column = pstrdup(NameStr(rel->rd_att->attrs[attno]->attname));
 				d->encoding = colencs[attno];
-		
+
 				out = lappend(out, d);
 			}
 		}
