@@ -166,10 +166,10 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <tbody class="tbody">
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 ">
-                  <code class="ph codeph">json_array_length(json)</code>
-                  <p class="p">
-                    <code class="ph codeph">jsonb_array_length(jsonb)</code>
-                  </p>
+<code class="ph codeph">json_array_length(json)</code>
+<p class="p">
+<code class="ph codeph">jsonb_array_length(jsonb)</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">int</code>
 </td>
@@ -177,23 +177,23 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <code class="ph codeph">5</code>
+<code class="ph codeph">5</code>
 </td>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_each(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_each(jsonb)</code>
-                  </p>
+<p class="p"><code class="ph codeph">jsonb_each(jsonb)</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof key text, value json</code>
-                  <p class="p"><code class="ph codeph">setof key text, value jsonb</code>
-                  </p>
+<p class="p"><code class="ph codeph">setof key text, value jsonb</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost JSON object into a set of key/value pairs.</td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_each('{"a":"foo", "b":"bar"}')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> key | value
+<pre class="pre"> key | value
 -----+-------
  a   | "foo"
  b   | "bar"
@@ -202,8 +202,8 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_each_text(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_each_text(jsonb)</code>
-                  </p>
+<p class="p"><code class="ph codeph">jsonb_each_text(jsonb)</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof key text, value text</code>
 </td>
@@ -212,7 +212,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_each_text('{"a":"foo", "b":"bar"}')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> key | value
+<pre class="pre"> key | value
 -----+-------
  a   | foo
  b   | bar
@@ -222,31 +222,30 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_extract_path(from_json json, VARIADIC path_elems
                     text[])</code>
-                  <p class="p"><code class="ph codeph">jsonb_extract_path(from_json jsonb, VARIADIC path_elems
+<p class="p"><code class="ph codeph">jsonb_extract_path(from_json jsonb, VARIADIC path_elems
                       text[])</code>
-                  </p>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 ">
-                  <p class="p"><code class="ph codeph">json</code>
-                  </p>
-
-                  <p class="p"><code class="ph codeph">jsonb</code>
-                  </p>
+<p class="p"><code class="ph codeph">json</code>
+</p>
+<p class="p"><code class="ph codeph">jsonb</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> (equivalent
                   to <code class="ph codeph">#&gt;</code> operator).</td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <code class="ph codeph">{"f5":99,"f6":"foo"}</code>
+<code class="ph codeph">{"f5":99,"f6":"foo"}</code>
 </td>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_extract_path_text(from_json json, VARIADIC path_elems
                     text[])</code>
-                  <p class="p"><code class="ph codeph">jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems
+<p class="p"><code class="ph codeph">jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems
                       text[])</code>
-                  </p>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">text</code>
 </td>
@@ -256,13 +255,13 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     'f6')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <code class="ph codeph">foo</code>
+<code class="ph codeph">foo</code>
 </td>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_object_keys(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_object_keys(jsonb)</code>
-                  </p>
+<p class="p"><code class="ph codeph">jsonb_object_keys(jsonb)</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof text</code>
 </td>
@@ -270,7 +269,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> json_object_keys
+<pre class="pre"> json_object_keys
 ------------------
  f1
  f2
@@ -281,7 +280,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_populate_record(base anyelement, from_json
                       json)</code><p class="p"><code class="ph codeph">jsonb_populate_record(base anyelement, from_json
                       jsonb)</code>
-                  </p>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">anyelement</code>
 </td>
@@ -291,7 +290,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     '{"a":1,"b":2}')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> a | b
+<pre class="pre"> a | b
 ---+---
  1 | 2
 </pre>
@@ -299,8 +298,8 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_populate_recordset(base anyelement, from_json json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_populate_recordset(base anyelement, from_json jsonb)</code>
-                  </p>
+<p class="p"><code class="ph codeph">jsonb_populate_recordset(base anyelement, from_json jsonb)</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof anyelement</code>
 </td>
@@ -310,7 +309,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     '[{"a":1,"b":2},{"a":3,"b":4}]')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> a | b
+<pre class="pre"> a | b
 ---+---
  1 | 2
  3 | 4
@@ -319,20 +318,19 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_array_elements(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_array_elements(jsonb</code>)</p>
+<p class="p"><code class="ph codeph">jsonb_array_elements(jsonb</code>)</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 ">
-                  <p class="p"><code class="ph codeph">setof json</code>
-                  </p>
-
-                  <p class="p"><code class="ph codeph">setof jsonb</code>
-                  </p>
+<p class="p"><code class="ph codeph">setof json</code>
+</p>
+<p class="p"><code class="ph codeph">setof jsonb</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands a JSON array to a set of JSON values.</td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_array_elements('[1,true, [2,false]]')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre">   value
+<pre class="pre">   value
 -----------
  1
  true
@@ -342,8 +340,8 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_array_elements_text(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_array_elements_text(jsonb)</code>
-                  </p>
+<p class="p"><code class="ph codeph">jsonb_array_elements_text(jsonb)</code>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof text</code>
 </td>
@@ -351,7 +349,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_array_elements_text('["foo", "bar"]')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre">   value
+<pre class="pre">   value
 -----------
  foo
  bar
@@ -360,23 +358,23 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_typeof(json)</code><p class="p"><code class="ph codeph">jsonb_typeof(jsonb)</code>
-                  </p>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">text</code>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the type of the outermost JSON value as a text string. Possible types
                   are <code class="ph codeph">object</code>, <code class="ph codeph">array</code>, <code class="ph codeph">string</code>,
-                    <code class="ph codeph">number</code>, <code class="ph codeph">boolean</code>, and <code class="ph codeph">null</code>.
+<code class="ph codeph">number</code>, <code class="ph codeph">boolean</code>, and <code class="ph codeph">null</code>.
                   See <a class="xref" href="#topic_z5d_snw_2z__json_proc_2">Note 2</a></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_typeof('-123.4')</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <code class="ph codeph">number</code>
+<code class="ph codeph">number</code>
 </td>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_to_record(json)</code><p class="p"><code class="ph codeph">jsonb_to_record(jsonb)</code>
-                  </p>
+</p>
 </td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">record</code>
 </td>
@@ -388,7 +386,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     int, b text, d text)</code>
 </td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> a |    b    | d
+<pre class="pre"> a |    b    | d
 ---+---------+---
  1 | [1,2,3] |
 </pre>
@@ -396,8 +394,8 @@ Many of these processing functions and operators convert Unicode escapes in JSON
 </tr>
 <tr class="row">
 <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_to_recordset(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_to_recordset(jsonb)</code>
-                  </p>
+<p class="p"><code class="ph codeph">jsonb_to_recordset(jsonb)</code>
+</p>
 </td>
 <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof record</code>
 </td>
@@ -410,7 +408,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     text);</code>
 </td>
 <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e2045 ">
-                  <pre class="pre"> a |  b
+<pre class="pre"> a |  b
 ---+-----
  1 | foo
  2 |
@@ -452,52 +450,131 @@ The following built-in advanced analytic functions are Greenplum extensions of t
 
 **Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [MADlib Extension for Analytics](../analytics/madlib.html#topic1).
 
-|Function|Return Type|Full Syntax|Description|
-|--------|-----------|-----------|-----------|
-|`MEDIAN (*expr*)`|`timestamp, timestamptz, interval, float`|`MEDIAN (*expression*)` *Example:*
-
- ```
-SELECT department_id, MEDIAN(salary) 
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 10. </span>Advanced Aggregate Functions</span></caption><colgroup><col style="width:20.845288240441164%" /><col style="width:12.005779052967869%" /><col style="width:41.10249679506745%" /><col style="width:26.046435911523513%" /></colgroup><thead class="thead" style="text-align:left;">
+<tr class="row">
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3144">Function</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3147">Return Type</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3150">Full Syntax</th>
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e3153">Description</th>
+</tr>
+</thead>
+<tbody class="tbody">
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">MEDIAN (<em class="ph i">expr</em>)</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+<code class="ph codeph">timestamp, timestamptz, interval, float</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">MEDIAN (<em class="ph i">expression</em>)</code>
+<p class="p">
+<em class="ph i">Example:</em>
+</p>
+<pre class="pre codeblock"><code>SELECT department_id, MEDIAN(salary) 
 FROM employees 
-GROUP BY department_id; 
-```
-
-|Can take a two-dimensional array as input. Treats such arrays as matrices.|
-|`PERCENTILE_CONT (*expr*) WITHIN GROUP (ORDER BY *expr* [DESC/ASC])`|`timestamp, timestamptz, interval, float`|`PERCENTILE_CONT(*percentage*) WITHIN GROUP (ORDER BY *expression*)` *Example:*
-
- ```
-SELECT department_id,
+GROUP BY department_id; </code></pre>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Can take a two-dimensional array as input. Treats such arrays as
+                matrices.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">PERCENTILE_CONT (<em class="ph i">expr</em>) WITHIN GROUP (ORDER BY <em class="ph i">expr</em>
+                  [DESC/ASC])</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+<code class="ph codeph">timestamp, timestamptz, interval, float</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">PERCENTILE_CONT(<em class="ph i">percentage</em>) WITHIN GROUP (ORDER BY
+<em class="ph i">expression</em>)</code>
+<p class="p">
+<em class="ph i">Example:</em>
+</p>
+<pre class="pre codeblock"><code>SELECT department_id,
 PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
 "Median_cont"; 
-FROM employees GROUP BY department_id;
-```
-
-|Performs an inverse distribution function that assumes a continuous distribution model. It takes a percentile value and a sort specification and returns the same datatype as the numeric datatype of the argument. This returned value is a computed result after performing linear interpolation. Null are ignored in this calculation.|
-|`PERCENTILE_DISC (*expr*) WITHIN GROUP (ORDER BY *expr* [DESC/ASC])`|`timestamp, timestamptz, interval, float`|`PERCENTILE_DISC(*percentage*) WITHIN GROUP (ORDER BY *expression*)` *Example:*
-
- ```
-SELECT department_id, 
+FROM employees GROUP BY department_id;</code></pre>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Performs an inverse distribution function that assumes a
+                continuous distribution model. It takes a percentile value and a sort specification
+                and returns the same datatype as the numeric datatype of the argument. This returned
+                value is a computed result after performing linear interpolation. Null are ignored
+                in this calculation.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 "><code class="ph codeph">PERCENTILE_DISC (<em class="ph i">expr</em>) WITHIN GROUP (ORDER BY
+<em class="ph i">expr</em> [DESC/ASC])</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+<code class="ph codeph">timestamp, timestamptz, interval, float</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">PERCENTILE_DISC(<em class="ph i">percentage</em>) WITHIN GROUP (ORDER BY
+<em class="ph i">expression</em>)</code>
+<p class="p">
+<em class="ph i">Example:</em>
+</p>
+<pre class="pre codeblock"><code>SELECT department_id, 
 PERCENTILE_DISC (0.5) WITHIN GROUP (ORDER BY salary DESC)
 "Median_desc"; 
-FROM employees GROUP BY department_id;
-```
-
-|Performs an inverse distribution function that assumes a discrete distribution model. It takes a percentile value and a sort specification. This returned value is an element from the set. Null are ignored in this calculation.|
-|`sum(array[])`|`smallint[]int[], bigint[], float[]`|`sum(array[[1,2],[3,4]])` *Example:*
-
- ```
-CREATE TABLE mymatrix (myvalue int[]);
+FROM employees GROUP BY department_id;</code></pre>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Performs an inverse distribution function that assumes a
+                discrete distribution model. It takes a percentile value and a sort specification.
+                This returned value is an element from the set. Null are ignored in this
+                calculation.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">sum(array[])</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+<code class="ph codeph">smallint[]int[], bigint[], float[]</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">sum(array[[1,2],[3,4]])</code>
+<p class="p">
+<em class="ph i">Example:</em>
+</p>
+<pre class="pre codeblock"><code>CREATE TABLE mymatrix (myvalue int[]);
 INSERT INTO mymatrix VALUES (array[[1,2],[3,4]]);
 INSERT INTO mymatrix VALUES (array[[0,1],[1,0]]);
 SELECT sum(myvalue) FROM mymatrix;
  sum 
 ---------------
- {{1,3},{4,4}}
-```
-
-|Performs matrix summation. Can take as input a two-dimensional array that is treated as a matrix.|
-|`pivot_sum (label[], label, expr)`|`int[], bigint[], float[]`|`pivot_sum( array['A1','A2'], attr, value)`|A pivot aggregation using sum to resolve duplicate entries.|
-|`unnest (array[])`|set of `anyelement`|`unnest( array['one', 'row', 'per', 'item'])`|Transforms a one dimensional array into rows. Returns a set of `anyelement`, a polymorphic [pseudotype in PostgreSQL](https://www.postgresql.org/docs/9.4/datatype-pseudo.html).|
+ {{1,3},{4,4}}</code></pre>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Performs matrix summation. Can take as input a two-dimensional
+                array that is treated as a matrix.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">pivot_sum (label[], label, expr)</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+<code class="ph codeph">int[], bigint[], float[]</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">pivot_sum( array['A1','A2'], attr, value)</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">A pivot aggregation using sum to resolve duplicate
+                entries.</td>
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">unnest (array[])</code>
+</td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3147 ">set of <code class="ph codeph">anyelement</code></td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</code>
+</td>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e3153 ">Transforms a one dimensional array into rows. Returns a set of
+<code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html" target="_blank"><span class="ph">pseudotype in PostgreSQL</span></a>.</td>
+</tr>
+</tbody>
+</table>
+</div>
 
 ## <a id="topic_vpj_ss1_lfb"></a>Text Search Functions and Operators 
 
@@ -589,14 +666,14 @@ The following table shows the functions available for use with range types.
 
 |Function|Return Type|Description|Example|Result|
 |--------|-----------|-----------|-------|------|
-|``lower`(`anyrange`)`|range's element type|lower bound of range|`lower(numrange(1.1,2.2))`|`1.1`|
-|``upper`(`anyrange`)`|range's element type|upper bound of range|`upper(numrange(1.1,2.2))`|`2.2`|
-|``isempty`(`anyrange`)`|`boolean`|is the range empty?|`isempty(numrange(1.1,2.2))`|`false`|
-|``lower_inc`(`anyrange`)`|`boolean`|is the lower bound inclusive?|`lower_inc(numrange(1.1,2.2))`|`true`|
-|``upper_inc`(`anyrange`)`|`boolean`|is the upper bound inclusive?|`upper_inc(numrange(1.1,2.2))`|`false`|
-|``lower_inf`(`anyrange`)`|`boolean`|is the lower bound infinite?|`lower_inf('(,)'::daterange)`|`true`|
-|``upper_inf`(`anyrange`)`|`boolean`|is the upper bound infinite?|`upper_inf('(,)'::daterange)`|`true`|
-|``range_merge`(`anyrange`, `anyrange`)`|`anyrange`|the smallest range which includes both of the given ranges|`range_merge('[1,2)'::int4range, '[3,4)'::int4range)`|`[1,4)`|
+|`lower(anyrange)`|range's element type|lower bound of range|`lower(numrange(1.1,2.2))`|`1.1`|
+|`upper(anyrange)`|range's element type|upper bound of range|`upper(numrange(1.1,2.2))`|`2.2`|
+|`isempty(anyrange)`|`boolean`|is the range empty?|`isempty(numrange(1.1,2.2))`|`false`|
+|`lower_inc(anyrange)`|`boolean`|is the lower bound inclusive?|`lower_inc(numrange(1.1,2.2))`|`true`|
+|`upper_inc(anyrange)`|`boolean`|is the upper bound inclusive?|`upper_inc(numrange(1.1,2.2))`|`false`|
+|`lower_inf(anyrange)`|`boolean`|is the lower bound infinite?|`lower_inf('(,)'::daterange)`|`true`|
+|`upper_inf(anyrange)`|`boolean`|is the upper bound infinite?|`upper_inf('(,)'::daterange)`|`true`|
+|`range_merge(anyrange, anyrange)`|`anyrange`|the smallest range which includes both of the given ranges|`range_merge('[1,2)'::int4range, '[3,4)'::int4range)`|`[1,4)`|
 
 The `lower` and `upper` functions return null if the range is empty or the requested bound is infinite. The `lower_inc`, `upper_inc`, `lower_inf`, and `upper_inf` functions all return false for an empty range.
 
