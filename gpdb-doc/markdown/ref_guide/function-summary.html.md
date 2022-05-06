@@ -51,144 +51,26 @@ The following table lists the categories of built-in functions and operators sup
 |--------------------------|------------------|----------------|------------|
 |[Logical Operators](https://www.postgresql.org/docs/9.4/functions-logical.html)| | | |
 |[Comparison Operators](https://www.postgresql.org/docs/9.4/functions-comparison.html)| | | |
-|[Mathematical Functions and Operators](https://www.postgresql.org/docs/9.4/functions-math.html)|randomsetseed
-
-| | |
-|[String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-string.html)|*All built-in conversion functions*|convertpg\_client\_encoding
-
-| |
+|[Mathematical Functions and Operators](https://www.postgresql.org/docs/9.4/functions-math.html)|random<br/><br/>setseed| | |
+|[String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-string.html)|*All built-in conversion functions*|convert<br/><br/>pg\_client\_encoding| |
 |[Binary String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-binarystring.html)| | | |
 |[Bit String Functions and Operators](https://www.postgresql.org/docs/9.4/functions-bitstring.html)| | | |
 |[Pattern Matching](https://www.postgresql.org/docs/9.4/functions-matching.html)| | | |
-|[Data Type Formatting Functions](https://www.postgresql.org/docs/9.4/functions-formatting.html)| |to\_charto\_timestamp
-
-| |
-|[Date/Time Functions and Operators](https://www.postgresql.org/docs/9.4/functions-datetime.html)|timeofday|agecurrent\_date
-
-current\_time
-
-current\_timestamp
-
-localtime
-
-localtimestamp
-
-now
-
-| |
+|[Data Type Formatting Functions](https://www.postgresql.org/docs/9.4/functions-formatting.html)| |to\_char<br/><br/>to\_timestamp| |
+|[Date/Time Functions and Operators](https://www.postgresql.org/docs/9.4/functions-datetime.html)|timeofday|age<br/><br/>current\_date<br/><br/>current\_time<br/><br/>current\_timestamp<br/><br/>localtime<br/><br/>localtimestamp<br/><br/>now| |
 |[Enum Support Functions](https://www.postgresql.org/docs/9.4/functions-enum.html)| | | |
 |[Geometric Functions and Operators](https://www.postgresql.org/docs/9.4/functions-geometry.html)| | | |
 |[Network Address Functions and Operators](https://www.postgresql.org/docs/9.4/functions-net.html)| | | |
-|[Sequence Manipulation Functions](https://www.postgresql.org/docs/9.4/functions-sequence.html)|nextval\(\)setval\(\)
-
-| | |
+|[Sequence Manipulation Functions](https://www.postgresql.org/docs/9.4/functions-sequence.html)|nextval\(\)<br/><br/>setval\(\)| | |
 |[Conditional Expressions](https://www.postgresql.org/docs/9.4/functions-conditional.html)| | | |
 |[Array Functions and Operators](https://www.postgresql.org/docs/9.4/functions-array.html)| |*All array functions*| |
 |[Aggregate Functions](https://www.postgresql.org/docs/9.4/functions-aggregate.html)| | | |
 |[Subquery Expressions](https://www.postgresql.org/docs/9.4/functions-subquery.html)| | | |
 |[Row and Array Comparisons](https://www.postgresql.org/docs/9.4/functions-comparisons.html)| | | |
 |[Set Returning Functions](https://www.postgresql.org/docs/9.4/functions-srf.html)|generate\_series| | |
-|[System Information Functions](https://www.postgresql.org/docs/9.4/functions-info.html)| |*All session information functions* *All access privilege inquiry functions*
-
-*All schema visibility inquiry functions*
-
-*All system catalog information functions*
-
-*All comment information functions*
-
-*All transaction ids and snapshots*
-
-| |
-|[System Administration Functions](https://www.postgresql.org/docs/9.4/functions-admin.html)|set\_configpg\_cancel\_backend
-
-pg\_reload\_conf
-
-pg\_rotate\_logfile
-
-pg\_start\_backup
-
-pg\_stop\_backup
-
-pg\_size\_pretty
-
-pg\_ls\_dir
-
-pg\_read\_file
-
-pg\_stat\_file
-
-|current\_setting*All database object size functions*
-
-|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
-|[XML Functions](https://www.postgresql.org/docs/9.4/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)
-
- cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\_and\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\_and\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\_and\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\_and\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- xmlagg\(xml\)
-
- xmlconcat\(xml\[, ...\]\)
-
- xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)
-
- xmlexists\(text, xml\)
-
- xmlforest\(content \[AS name\] \[, ...\]\)
-
- xml\_is\_well\_formed\(text\)
-
- xml\_is\_well\_formed\_document\(text\)
-
- xml\_is\_well\_formed\_content\(text\)
-
- xmlparse \( \{ DOCUMENT \| CONTENT \} value\)
-
- xpath\(text, xml\)
-
- xpath\(text, xml, text\[\]\)
-
- xpath\_exists\(text, xml\)
-
- xpath\_exists\(text, xml, text\[\]\)
-
- xmlpi\(name target \[, content\]\)
-
- xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)
-
- xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)
-
- xml\(text\)
-
- text\(xml\)
-
- xmlcomment\(xml\)
-
- xmlconcat2\(xml, xml\)
-
-| |
+|[System Information Functions](https://www.postgresql.org/docs/9.4/functions-info.html)| |*All session information functions*<br/><br/>*All access privilege inquiry functions*<br/><br/>*All schema visibility inquiry functions*<br/><br/>*All system catalog information functions*<br/><br/>*All comment information functions*<br/><br/>*All transaction ids and snapshots*| |
+|[System Administration Functions](https://www.postgresql.org/docs/9.4/functions-admin.html)|set\_config<br/><br/>pg\_cancel\_backend<br/><br/>pg\_reload\_conf<br/><br/>pg\_rotate\_logfile<br/><br/>pg\_start\_backup<br/><br/>pg\_stop\_backup<br/><br/>pg\_size\_pretty<br/><br/>pg\_ls\_dir<br/><br/>pg\_read\_file<br/><br/>pg\_stat\_file<br/><br/>|current\_setting<br/><br/>*All database object size functions*|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
+|[XML Functions](https://www.postgresql.org/docs/9.4/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)<br/><br/> cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\_and\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\_and\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/> schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xml\_and\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\_and\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>xmlagg\(xml\)<br/><br/>xmlconcat\(xml\[, ...\]\)<br/><br/>xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)<br/><br/>xmlexists\(text, xml\)<br/><br/>xmlforest\(content \[AS name\] \[, ...\]\)<br/><br/>xml\_is\_well\_formed\(text\)<br/><br/>xml\_is\_well\_formed\_document\(text\)<br/><br/>xml\_is\_well\_formed\_content\(text\)<br/><br/>xmlparse \( \{ DOCUMENT \| CONTENT \} value\)<br/><br/>xpath\(text, xml\)<br/><br/>xpath\(text, xml, text\[\]\)<br/><br/>xpath\_exists\(text, xml\)<br/><br/>xpath\_exists\(text, xml, text\[\]\)<br/><br/>xmlpi\(name target \[, content\]\)<br/><br/>xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)<br/><br/>xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)<br/><br/>xml\(text\)<br/><br/>text\(xml\)<br/><br/>xmlcomment\(xml\)<br/><br/>xmlconcat2\(xml, xml\)<br/><br/>| |
 
 ## <a id="topic_gn4_x3w_mq"></a>JSON Functions and Operators 
 
@@ -246,23 +128,11 @@ This table describes the functions that create `json` data type values. \(Curren
 |Function|Description|Example|Example Result|
 |--------|-----------|-------|--------------|
 |`to_json(anyelement)`|Returns the value as a JSON object. Arrays and composites are processed recursively and are converted to arrays and objects. If the input contains a cast from the type to `json`, the cast function is used to perform the conversion; otherwise, a JSON scalar value is produced. For any scalar type other than a number, a Boolean, or a null value, the text representation will be used, properly quoted and escaped so that it is a valid JSON string.|`to_json('Fred said "Hi."'::text)`|`"Fred said \"Hi.\""`|
-|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A multidimensional array becomes a JSON array of arrays. Line feeds will be added between dimension-1 elements if `pretty_bool` is true.
-
-|`array_to_json('{{1,5},{99,100}}'::int[])`|`[[1,5],[99,100]]`|
-|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds will be added between level-1 elements if `pretty_bool` is true.
-
-|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
+|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A multidimensional array becomes a JSON array of arrays. Line feeds will be added between dimension-1 elements if `pretty_bool` is true.|`array_to_json('{{1,5},{99,100}}'::int[])`|`[[1,5],[99,100]]`|
+|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds will be added between level-1 elements if `pretty_bool` is true.|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
 |`json_build_array(VARIADIC "any"`\)|Builds a possibly-heterogeneously-typed JSON array out of a `VARIADIC` argument list.|`json_build_array(1,2,'3',4,5)`|`[1, 2, "3", 4, 5]`|
 |`json_build_object(VARIADIC "any")`|Builds a JSON object out of a `VARIADIC` argument list. The argument list is taken in order and converted to a set of key/value pairs.|`json_build_object('foo',1,'bar',2)`|`{"foo": 1, "bar": 2}`|
-|`json_object(text[])`|Builds a JSON object out of a text array. The array must be either a one or a two dimensional array.The one dimensional array must have an even number of elements. The elements are taken as key/value pairs.
-
-For a two dimensional array, each inner array must have exactly two elements, which are taken as a key/value pair.
-
-|`json_object('{a, 1, b, "def", c, 3.5}')`
-
- `json_object('{{a, 1},{b, "def"},{c, 3.5}}')`
-
-|`{"a": "1", "b": "def", "c": "3.5"}`|
+|`json_object(text[])`|Builds a JSON object out of a text array. The array must be either a one or a two dimensional array.<br/><br/>The one dimensional array must have an even number of elements. The elements are taken as key/value pairs.<br/><br/>For a two dimensional array, each inner array must have exactly two elements, which are taken as a key/value pair.|`json_object('{a, 1, b, "def", c, 3.5}')`<br/><br/>`json_object('{{a, 1},{b, "def"},{c, 3.5}}')`|`{"a": "1", "b": "def", "c": "3.5"}`|
 |`json_object(keys text[], values text[])`|Builds a JSON object out of a text array. This form of `json_object` takes keys and values pairwise from two separate arrays. In all other respects it is identical to the one-argument form.|`json_object('{a, b}', '{1,2}')`|`{"a": "1", "b": "2"}`|
 
 **Note:** `array_to_json` and `row_to_json` have the same behavior as `to_json` except for offering a pretty-printing option. The behavior described for `to_json` likewise applies to each individual value converted by the other JSON creation functions.
@@ -282,134 +152,274 @@ This table shows the functions aggregate records to an array of JSON objects and
 
 This table shows the functions that are available for processing `json` and `jsonb` values.
 
-Many of these processing functions and operators convert Unicode escapes in JSON strings to the appropriate single character. This is a not an issue if the input data type is `jsonb`, because the conversion was already done. However, for `json` data type input, this might result in an error being thrown. See [About JSON Data](../admin_guide/query/topics/json-data.html#topic_upc_tcs_fz)in the *Greenplum Database Administrator Guide*.
+Many of these processing functions and operators convert Unicode escapes in JSON strings to the appropriate single character. This is a not an issue if the input data type is `jsonb`, because the conversion was already done. However, for `json` data type input, this might result in an error being thrown. See [About JSON Data](../admin_guide/query/topics/json-data.html#topic_upc_tcs_fz).
 
-|Function|Return Type|Description|Example|Example Result|
-|--------|-----------|-----------|-------|--------------|
-|`json_array_length(json)` `jsonb_array_length(jsonb)`
-
-|`int`|Returns the number of elements in the outermost JSON array.|`json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')`|`5`|
-|`json_each(json)` `jsonb_each(jsonb)`
-
-|`setof key text, value json` `setof key text, value jsonb`
-
-|Expands the outermost JSON object into a set of key/value pairs.|`select * from json_each('{"a":"foo", "b":"bar"}')`|```
- key | value
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_z5d_snw_2z__table_wfc_y3w_mb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 8. </span>JSON Processing Functions</span></caption><colgroup><col style="width:20.224719101123597%" /><col style="width:18.726591760299627%" /><col style="width:18.913857677902623%" /><col style="width:23.220973782771537%" /><col style="width:18.913857677902623%" /></colgroup><thead class="thead" style="text-align:left;">
+<tr class="row">
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2033">Function</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2036">Return Type</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2039">Description</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2042">Example</th>
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e2045">Example Result</th>
+</tr>
+</thead>
+<tbody class="tbody">
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 ">
+                  <code class="ph codeph">json_array_length(json)</code>
+                  <p class="p">
+                    <code class="ph codeph">jsonb_array_length(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">int</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the number of elements in the outermost JSON array.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">5</code>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_each(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_each(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof key text, value json</code>
+                  <p class="p"><code class="ph codeph">setof key text, value jsonb</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost JSON object into a set of key/value pairs.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_each('{"a":"foo", "b":"bar"}')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> key | value
 -----+-------
  a   | "foo"
  b   | "bar"
-
-```
-
-|
-|`json_each_text(json)` `jsonb_each_text(jsonb)`
-
-|`setof key text, value text`|Expands the outermost JSON object into a set of key/value pairs. The returned values will be of type `text`.|`select * from json_each_text('{"a":"foo", "b":"bar"}')`|```
- key | value
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_each_text(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_each_text(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof key text, value text</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost JSON object into a set of key/value pairs. The returned
+                  values will be of type <code class="ph codeph">text</code>.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_each_text('{"a":"foo", "b":"bar"}')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> key | value
 -----+-------
  a   | foo
  b   | bar
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_extract_path(from_json json, VARIADIC path_elems
+                    text[])</code>
+                  <p class="p"><code class="ph codeph">jsonb_extract_path(from_json jsonb, VARIADIC path_elems
+                      text[])</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 ">
+                  <p class="p"><code class="ph codeph">json</code>
+                  </p>
 
-```
-
-|
-|`json_extract_path(from_json json, VARIADIC path_elems text[])` `jsonb_extract_path(from_json jsonb, VARIADIC path_elems text[])`
-
-|`json`
-
- `jsonb`
-
-|Returns the JSON value pointed to by `path_elems` \(equivalent to `#>` operator\).|`json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')`|`{"f5":99,"f6":"foo"}`|
-|`json_extract_path_text(from_json json, VARIADIC path_elems text[])` `jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems text[])`
-
-|`text`|Returns the JSON value pointed to by `path_elems` as text. Equivalent to `#>>` operator.|`json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4', 'f6')`|`foo`|
-|`json_object_keys(json)` `jsonb_object_keys(jsonb)`
-
-|`setof text`|Returns set of keys in the outermost JSON object.|`json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')`|```
- json_object_keys
+                  <p class="p"><code class="ph codeph">jsonb</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> (equivalent
+                  to <code class="ph codeph">#&gt;</code> operator).</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">{"f5":99,"f6":"foo"}</code>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_extract_path_text(from_json json, VARIADIC path_elems
+                    text[])</code>
+                  <p class="p"><code class="ph codeph">jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems
+                      text[])</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">text</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> as text.
+                  Equivalent to <code class="ph codeph">#&gt;&gt;</code> operator.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
+                    'f6')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">foo</code>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_object_keys(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_object_keys(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof text</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns set of keys in the outermost JSON object.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> json_object_keys
 ------------------
  f1
  f2
-
-```
-
-|
-|`json_populate_record(base anyelement, from_json json)``jsonb_populate_record(base anyelement, from_json jsonb)`
-
-|`anyelement`|Expands the object in `from_json` to a row whose columns match the record type defined by base. See [Note 1](#json_proc_1).|`select * from json_populate_record(null::myrowtype, '{"a":1,"b":2}')`|```
- a | b
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_populate_record(base anyelement, from_json
+                      json)</code><p class="p"><code class="ph codeph">jsonb_populate_record(base anyelement, from_json
+                      jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">anyelement</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the object in <code class="ph codeph">from_json</code> to a row whose columns match
+                  the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_populate_record(null::myrowtype,
+                    '{"a":1,"b":2}')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a | b
 ---+---
  1 | 2
-
-```
-
-|
-|`json_populate_recordset(base anyelement, from_json json)` `jsonb_populate_recordset(base anyelement, from_json jsonb)`
-
-|`setof anyelement`|Expands the outermost array of objects in `from_json` to a set of rows whose columns match the record type defined by base. See [Note 1](#json_proc_1).|`select * from json_populate_recordset(null::myrowtype, '[{"a":1,"b":2},{"a":3,"b":4}]')`|```
- a | b
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_populate_recordset(base anyelement, from_json json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_populate_recordset(base anyelement, from_json jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof anyelement</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost array of objects in <code class="ph codeph">from_json</code> to a set
+                  of rows whose columns match the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_populate_recordset(null::myrowtype,
+                    '[{"a":1,"b":2},{"a":3,"b":4}]')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a | b
 ---+---
  1 | 2
  3 | 4
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_array_elements(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_array_elements(jsonb</code>)</p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 ">
+                  <p class="p"><code class="ph codeph">setof json</code>
+                  </p>
 
-```
-
-|
-|`json_array_elements(json)` `jsonb_array_elements(jsonb`\)
-
-|`setof json`
-
- `setof jsonb`
-
-|Expands a JSON array to a set of JSON values.|`select * from json_array_elements('[1,true, [2,false]]')`|```
-   value
+                  <p class="p"><code class="ph codeph">setof jsonb</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands a JSON array to a set of JSON values.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_array_elements('[1,true, [2,false]]')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre">   value
 -----------
  1
  true
  [2,false]
-
-```
-
-|
-|`json_array_elements_text(json)` `jsonb_array_elements_text(jsonb)`
-
-|`setof text`|Expands a JSON array to a set of `text` values.|`select * from json_array_elements_text('["foo", "bar"]')`|```
-   value
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_array_elements_text(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_array_elements_text(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof text</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands a JSON array to a set of <code class="ph codeph">text</code> values.</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_array_elements_text('["foo", "bar"]')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre">   value
 -----------
  foo
  bar
-
-```
-
-|
-|`json_typeof(json)``jsonb_typeof(jsonb)`
-
-|`text`|Returns the type of the outermost JSON value as a text string. Possible types are `object`, `array`, `string`, `number`, `boolean`, and `null`. See [Note 2](#json_proc_2)|`json_typeof('-123.4')`|`number`|
-|`json_to_record(json)``jsonb_to_record(jsonb)`
-
-|`record`|Builds an arbitrary record from a JSON object. See [Note 1](#json_proc_1). As with all functions returning record, the caller must explicitly define the structure of the record with an `AS` clause.
-
-|`select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a int, b text, d text)`|```
- a |    b    | d
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_typeof(json)</code><p class="p"><code class="ph codeph">jsonb_typeof(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">text</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the type of the outermost JSON value as a text string. Possible types
+                  are <code class="ph codeph">object</code>, <code class="ph codeph">array</code>, <code class="ph codeph">string</code>,
+                    <code class="ph codeph">number</code>, <code class="ph codeph">boolean</code>, and <code class="ph codeph">null</code>.
+                  See <a class="xref" href="#topic_z5d_snw_2z__json_proc_2">Note 2</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_typeof('-123.4')</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">number</code>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_to_record(json)</code><p class="p"><code class="ph codeph">jsonb_to_record(jsonb)</code>
+                  </p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">record</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Builds an arbitrary record from a JSON object. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
+                    functions returning record, the caller must explicitly define the structure of
+                    the record with an <code class="ph codeph">AS</code> clause.</p>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a
+                    int, b text, d text)</code>
+</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a |    b    | d
 ---+---------+---
  1 | [1,2,3] |
-
-```
-
-|
-|`json_to_recordset(json)` `jsonb_to_recordset(jsonb)`
-
-|`setof record`|Builds an arbitrary set of records from a JSON array of objects See [Note 1](#json_proc_1). As with all functions returning record, the caller must explicitly define the structure of the record with an `AS` clause.
-
-|`select * from json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b text);`|```
- a |  b
+</pre>
+</td>
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_to_recordset(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_to_recordset(jsonb)</code>
+                  </p>
+</td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof record</code>
+</td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2039 ">Builds an arbitrary set of records from a JSON array of objects See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
+                    functions returning record, the caller must explicitly define the structure of
+                    the record with an <code class="ph codeph">AS</code> clause.</p>
+</td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from
+                    json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
+                    text);</code>
+</td>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a |  b
 ---+-----
  1 | foo
  2 |
-
-```
-
-|
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 
 **Note:**
 
