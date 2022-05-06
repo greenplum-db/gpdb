@@ -60,5 +60,5 @@ Each data type has an external representation determined by its input and output
 
 **Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
-1 For variable length data types, if the data is greater than or equal to 127 bytes, the storage overhead is 4 bytes instead of 1.
+<a id="if139219"></a><sup>1</sup> For variable length data types, if the data is greater than or equal to 127 bytes, the storage overhead is 4 bytes instead of 1.
 
