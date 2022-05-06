@@ -62,8 +62,22 @@ JOBS_THAT_ARE_GATES = [
     'gate_cli_start',
     'gate_ud_start',
     'gate_advanced_analytics_start',
-    'gate_release_candidate_start'
+    'gate_release_candidate_start',
+    'gate_cli_start_mirrorless',
+    'ubuntu18_gate_cli_mirrorless',
+    'rhel8_gate_cli_mirrorless'
 ]
+
+CLI_MIRRORLESS_JOBS = ['gppkg_mirrorless', 'gppkg_ubuntu18_mirrorless', 'gppkg_rhel8_mirrorless', 'analyzedb_mirrorless', 
+                       'analyzedb_ubuntu18_mirrorless', 'analyzedb_rhel8_mirrorless', 'gpinitsystem_mirrorless', 
+                       'gpinitsystem_ubuntu18_mirrorless', 'gpinitsystem_rhel8_mirrorless', 'replication_slots_mirrorless', 
+                       'replication_slots_ubuntu18_mirrorless', 'replication_slots_rhel8_mirrorless', 'gp_bash_functions.sh_mirrorless', 
+                       'gp_bash_functions.sh_ubuntu18_mirrorless', 'gp_bash_functions.sh_rhel8_mirrorless', 'gpcheckcat_mirrorless', 
+                       'gpcheckcat_ubuntu18_mirrorless', 'gpcheckcat_rhel8_mirrorless', 'gpcheckperf_mirrorless', 
+                       'gpcheckperf_ubuntu18_mirrorless', 'gpcheckperf_rhel8_mirrorless', 'gpconfig_mirrorless', 
+                       'gpconfig_ubuntu18_mirrorless', 'gpconfig_rhel8_mirrorless', 'gpssh-exkeys_mirrorless', 'gpssh-exkeys_ubuntu18_mirrorless', 
+                       'gpssh-exkeys_rhel8_mirrorless', 'gpstart_mirrorless', 'gpstart_ubuntu18_mirrorless', 'gpstart_rhel8_mirrorless', 
+                       'gpstop_mirrorless', 'gpstop_ubuntu18_mirrorless', 'gpstop_rhel8_mirrorless']
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
@@ -75,7 +89,7 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'MADlib_Test_planner_centos7',
         'MADlib_Test_orca_centos7',
         'Publish Server Builds',
-    ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
+    ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES + CLI_MIRRORLESS_JOBS
 )
 
 
@@ -339,6 +353,7 @@ def main():
             'ResourceGroups',
             'Interconnect',
             'CLI',
+            'CLI-MIRRORLESS',
             'UD',
             'AA',
             'Extensions'
@@ -424,6 +439,7 @@ def main():
             'ResourceGroups',
             'Interconnect',
             'CLI',
+            'CLI-MIRRORLESS',
             'UD',
             'Extensions'
         ]

@@ -1,6 +1,7 @@
 @gpstate
 Feature: gpstate tests
 
+    @cli_mirrorless
     Scenario: gpstate -b logs cluster for a cluster where the mirrors failed over to primary
         Given a standard local demo cluster is running
         And the database is running
@@ -64,6 +65,7 @@ Feature: gpstate tests
             | Primary Active, Mirror Failed | Not In Sync | \S+     | .*/dbfast3/demoDataDir2 | [0-9]+ | \S+    | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ |
          And gpstate should print "3 primary segment\(s\) are not synchronized" to stdout
 
+    @cli_mirrorless
     Scenario: gpstate -c logs cluster info for a cluster with no mirrors
         Given the cluster is generated with "3" primaries only
         When the user runs "gpstate -c"
@@ -74,6 +76,7 @@ Feature: gpstate tests
             | \S+     | .*/dbfast2/demoDataDir1 | [0-9]+ |
             | \S+     | .*/dbfast3/demoDataDir2 | [0-9]+ |
 
+    @cli_mirrorless
     Scenario: gpstate -b logs cluster for a cluster without standbys
         Given the cluster is generated with "3" primaries only
         And the user runs "gpstate -b"
@@ -439,6 +442,7 @@ Feature: gpstate tests
 		  | \S+  | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ | unable to retrieve version                                                        |
 		And gpstate should print "Unable to retrieve version data from all segments" to stdout
 
+    @cli_mirrorless
     Scenario: gpstate -x logs gpexpand status
         Given the cluster is generated with "3" primaries only
          When the user runs "gpstate -x"
@@ -574,12 +578,14 @@ Feature: gpstate tests
          Then gpstate output looks like
              | Cluster Expansion State = No Expansion Detected |
 
+    @cli_mirrorless
     Scenario: gpstate -e -v logs no errors when the user sets PGDATABASE
         Given a standard local demo cluster is running
         And the user runs command "export PGDATABASE=postgres && $GPHOME/bin/gpstate -e -v"
         Then command should print "pg_isready -q -h .* -p .* -d postgres" to stdout
         And command should print "All segments are running normally" to stdout
 
+    @cli_mirrorless
     Scenario: gpstate -e -v logs no fatal message in pg_log files on primary segments
         Given a standard local demo cluster is running
         And the user records the current timestamp in log_timestamp table
@@ -593,6 +599,7 @@ Feature: gpstate tests
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
     @concourse_cluster
+    @cli_mirrorless
     Scenario: gpstate -e -v logs no errors when the user unsets PGDATABASE
         Given the database is running
         And all the segments are running

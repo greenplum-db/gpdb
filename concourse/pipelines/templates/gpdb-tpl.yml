@@ -3,28 +3,35 @@
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
                       {'name': 'gppkg',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': true,
+                       'test_mirrorless': true},
                       {'name': 'analyzedb',
-                       'use_concourse_cluster': false},
+                       'use_concourse_cluster': false,
+                       'test_mirrorless': true},
                       {'name': 'gpreload',
                        'use_concourse_cluster': false},
                       {'name': 'gpinitsystem',
-                       'use_concourse_cluster': false},
+                       'use_concourse_cluster': false,
+                       'test_mirrorless': true},
                       {'name': 'gpstate',
                        'use_concourse_cluster': true},
                       {'name': 'replication_slots',
-                       'use_concourse_cluster': false},
+                       'use_concourse_cluster': false,
+                       'test_mirrorless': true},
                       {'name': 'gpactivatestandby',
                        'use_concourse_cluster': true,
                        'set_max_connections': true},
                       {'name': 'gpinitstandby',
                        'use_concourse_cluster': true},
                       {'name': 'gp_bash_functions.sh',
-                       'use_concourse_cluster': false},
+                       'use_concourse_cluster': false,
+                       'test_mirrorless': true},
                       {'name': 'gpcheckcat',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': true,
+                        'test_mirrorless': true},
                       { 'name': 'gpcheckperf',
-                        'use_concourse_cluster': true },
+                        'use_concourse_cluster': true,
+                        'test_mirrorless': true},
                       {'name': 'gprecoverseg',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 3'},
@@ -39,14 +46,18 @@
                        'additional_ccp_vars': 'number_of_nodes: 4'},
                       {'name': 'gpconfig',
                        'use_concourse_cluster': true,
-                       'env': 'LC_CTYPE: en_US.utf8'},
+                       'env': 'LC_CTYPE: en_US.utf8',
+                       'test_mirrorless': true},
                       {'name': 'gpssh-exkeys',
                        'use_concourse_cluster': true,
-                       'additional_ccp_vars': 'number_of_nodes: 4'},
+                       'additional_ccp_vars': 'number_of_nodes: 4',
+                       'test_mirrorless': true},
                       {'name': 'gpstart',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': true,
+                       'test_mirrorless': true},
                       {'name': 'gpstop',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': true,
+                       'test_mirrorless': true},
                     ] %}
 
 ## ======================================================================
@@ -210,10 +221,16 @@ groups:
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
   - test_gpdb_clients_ubuntu18.04
+  {% if "CLI-MIRRORLESS" in test_sections %}
+  - ubuntu18_gate_cli_mirrorless
+  {% endif %}
 {% endif %}
 {% if "rhel8" in os_types %}
   - compile_gpdb_rhel8
   - test_gpdb_clients_rhel8
+  {% if "CLI-MIRRORLESS" in test_sections %}
+  - rhel8_gate_cli_mirrorless
+  {%  endif %}
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -270,14 +287,26 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
+  {% if "CLI-MIRRORLESS" in test_sections %}
+  - gate_cli_start_mirrorless
+  {% endif %}
   - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
+  {% if test.test_mirrorless and "CLI-MIRRORLESS" in test_sections %}
+  - [[ test.name ]]_mirrorless
+  {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - [[ test.name ]]_ubuntu18
+  {% if test.test_mirrorless and "CLI-MIRRORLESS" in test_sections %}
+  - [[ test.name ]]_ubuntu18_mirrorless
+  {% endif %}
 {% endif %}
 {% if "rhel8" in os_types %}
   - [[ test.name ]]_rhel8
+  {% if test.test_mirrorless and "CLI-MIRRORLESS" in test_sections %}
+  - [[ test.name ]]_rhel8_mirrorless
+  {% endif %}
 {% endif %}
 {% endfor %}
   - check_centos
@@ -301,6 +330,30 @@ groups:
 {% endif %}
 {%endif %}
 
+## ======================================================================
+{% if "CLI-MIRRORLESS" in test_sections %}
+- name: CLI_MIRRORLESS
+  jobs:
+  - gate_cli_start_mirrorless
+  {% if "rhel8" in os_types %}
+  - rhel8_gate_cli_mirrorless
+  {% endif %}
+  {% if "ubuntu18.04" in os_types %}
+  - ubuntu18_gate_cli_mirrorless
+  {% endif %}
+  {%for test in CLI_BEHAVE_TESTS %}
+  {% if test.test_mirrorless %}
+  - [[test.name]]_mirrorless
+    {% if "rhel8" in os_types %}
+  - [[ test.name ]]_rhel8_mirrorless
+    {% endif %}
+    {% if "ubuntu18.04" in os_types %}
+  - [[ test.name ]]_ubuntu18_mirrorless
+    {% endif %}
+  {% endif %}
+  {% endfor %}
+{% endif %}
+## ======================================================================
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm or directed_release %}
 ## ======================================================================
@@ -945,6 +998,17 @@ jobs:
       - put: bin_gpdb_clients_rhel8
         params:
           file: gpdb_artifacts/bin_gpdb_clients.tar.gz
+{% if "CLI-MIRRORLESS" in test_sections %}
+- name: rhel8_gate_cli_mirrorless
+  plan:
+    - in_parallel:
+        steps:
+          - get: bin_gpdb
+            resource: bin_gpdb_rhel8
+            passed: [compile_gpdb_rhel8]
+            trigger: true
+{% endif %}
+
 
 - name: test_gpdb_clients_rhel8
   plan:
@@ -1010,6 +1074,17 @@ jobs:
     - task: run_tests
       image: gpdb7-ubuntu18.04-test
       file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
+
+{% if "CLI-MIRRORLESS" in test_sections %}
+- name: ubuntu18_gate_cli_mirrorless
+  plan:
+    - in_parallel:
+        steps:
+          - get: bin_gpdb
+            resource: bin_gpdb_ubuntu18.04
+            passed: [compile_gpdb_ubuntu18.04]
+            trigger: true
+{% endif %}
 
 {% endif %}
 {% if "win" in os_types %}
@@ -1636,6 +1711,20 @@ jobs:
         passed:
         - compile_gpdb_centos7
 
+{% if "CLI-MIRRORLESS" in test_sections %}
+- name: gate_cli_start_mirrorless
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed:
+        - compile_gpdb_centos7
+        trigger: true
+      - get: bin_gpdb_centos7
+        passed:
+        - compile_gpdb_centos7
+{% endif %}
+
 - name: check_centos
   plan:
   - in_parallel:
@@ -1668,8 +1757,14 @@ jobs:
       caches:
         - path: pip-cache-dir
 
+{% for i in range(2) %}
 {% for test in CLI_BEHAVE_TESTS %}
+ {% if i == 0 or (test.test_mirrorless and "CLI-MIRRORLESS" in test_sections) %}
+  {% if i == 0 %}
 - name: [[ test.name ]]
+  {% elif test.test_mirrorless %}
+- name: [[ test.name ]]_mirrorless
+  {% endif %}
   plan:
     - in_parallel:
         steps:
@@ -1677,7 +1772,11 @@ jobs:
           params:
             submodules:
               - gpMgmt/bin/pythonSrc/ext
+          {% if i == 0 %}
           passed: [gate_cli_start]
+          {% elif i == 1 and test.test_mirrorless %}
+          passed: [gate_cli_start_mirrorless]
+          {% endif %}
         - get: gpdb7-centos7-test
     - in_parallel:
         steps:
@@ -1685,7 +1784,11 @@ jobs:
         - do:
           - get: gpdb_binary
             resource: bin_gpdb_centos7
+            {% if i == 0 %}
             passed: [gate_cli_start]
+            {% elif i == 1 and test.test_mirrorless %}
+            passed: [gate_cli_start_mirrorless]
+            {% endif %}
             trigger: [[ test_trigger ]]
           - get: ccp_src
           - get: ccp-image
@@ -1699,6 +1802,9 @@ jobs:
                 <<: *ccp_default_vars
                 instance_type: n1-standard-2
                 PLATFORM: centos7-gpdb7
+                {% if i == 1 and test.test_mirrorless %}
+                WITH_MIRRORS: false
+                {% endif %}
                 [[ test.additional_ccp_vars ]]
           - task: gen_cluster
             file: ccp_src/ci/tasks/gen_cluster.yml
@@ -1732,8 +1838,20 @@ jobs:
               {% if test.sudo_access_on_hosts %}
               SUDO_ACCESS_ON_HOSTS: 1
               {% endif %}
+              {% if i == 0 %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               TEST_NAME: [[ test.name ]]
+              {% elif test.test_mirrorless %}
+              WITH_MIRRORS: false
+              POSTGRES_CONF_ADDONS:
+                - wal_level=minimal
+                - max_wal_senders=0
+                - gp_dispatch_keepalives_idle=30
+                - gp_dispatch_keepalives_interval=10
+                - gp_dispatch_keepalives_count=4
+              BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster --tags=cli_mirrorless
+              TEST_NAME: [[ test.name ]]_mirrorless
+              {% endif %}
               [[ test.env ]]
             on_success:
               <<: *ccp_destroy
@@ -1759,14 +1877,31 @@ jobs:
         - do:
           - get: bin_gpdb
             resource: bin_gpdb_centos7
+            {% if i == 0 %}
             passed: [gate_cli_start]
+            {% elif test.test_mirrorless %}
+            passed: [gate_cli_start]
+            {% endif %}
             trigger: [[ test_trigger ]]
           - task: [[ test.name ]]_demo_cluster_tests
             file: gpdb_src/concourse/tasks/behave_gpdb.yml
             image: gpdb7-centos7-test
             params:
+              {% if i == 0 %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
               TEST_NAME: [[ test.name ]]
+              {% elif test.test_mirrorless %}
+              WITH_MIRRORS: false
+              BLDWRAP_POSTGRES_CONF_ADDONS:
+                  - wal_level=minimal
+                  - max_wal_senders=0
+                  - gp_dispatch_keepalives_idle=30
+                  - gp_dispatch_keepalives_interval=10
+                  - gp_dispatch_keepalives_count=4
+
+              BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster --tags=cli_mirrorless
+              TEST_NAME: [[ test.name ]]_mirrorless
+              {% endif %}
               [[ test.env ]]
             output_mapping:
               coverage: demo-coverage
@@ -1786,7 +1921,11 @@ jobs:
                 - path: pip-cache-dir
 
 {% if "ubuntu18.04" in os_types %}
+  {% if i == 0 %}
 - name: [[ test.name ]]_ubuntu18
+  {% elif test.test_mirrorless %}
+- name: [[ test.name ]]_ubuntu18_mirrorless
+  {% endif %}
   plan:
     - in_parallel:
         steps:
@@ -1796,6 +1935,12 @@ jobs:
               - gpMgmt/bin/pythonSrc/ext
           passed: [compile_gpdb_ubuntu18.04]
         - get: gpdb7-ubuntu18.04-test
+          {% if i == 1 and test.test_mirrorless %}
+        - get: ubuntu18_gate_cli_mirrorless
+          resource: bin_gpdb_ubuntu18.04
+          passed: [ubuntu18_gate_cli_mirrorless]
+          {% endif %}
+
     - in_parallel:
         steps:
         {% if test.use_concourse_cluster %}
@@ -1813,6 +1958,9 @@ jobs:
               <<: *ccp_default_params
               vars:
                 <<: *ccp_default_vars
+                {% if i == 1 and test.test_mirrorless %}
+                WITH_MIRRORS: false
+                {% endif %}
                 instance_type: n1-standard-2
                 PLATFORM: ubuntu18.04-gpdb7
                 [[ test.additional_ccp_vars ]]
@@ -1850,7 +1998,17 @@ jobs:
               SUDO_ACCESS_ON_HOSTS: 1
               SUDO_MDW_USERNAME: ubuntu
               {% endif %}
+              {% if i == 0 %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+              {% elif test.test_mirrorless %}
+              POSTGRES_CONF_ADDONS:
+                - wal_level=minimal
+                - max_wal_senders=0
+                - gp_dispatch_keepalives_idle=30
+                - gp_dispatch_keepalives_interval=10
+                - gp_dispatch_keepalives_count=4
+              BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster --tags=cli_mirrorless
+              {% endif %}
               {% if test.set_max_connections %}
               COORDINATOR_MAX_CONNECT: 100
               SEGMENT_MAX_CONNECT: 300
@@ -1872,11 +2030,26 @@ jobs:
             input_mapping:
               bin_gpdb: bin_gpdb_ubuntu18.04
             params:
+              {% if i == 0 %}
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
+              {% elif test.test_mirrorless %}
+              WITH_MIRRORS: false
+              BLDWRAP_POSTGRES_CONF_ADDONS:
+                - wal_level=minimal
+                - max_wal_senders=0
+                - gp_dispatch_keepalives_idle=30
+                - gp_dispatch_keepalives_interval=10
+                - gp_dispatch_keepalives_count=4
+              BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster --tags=cli_mirrorless
+              {% endif %}
               [[ test.env ]]
 {% endif %}
 {% if "rhel8" in os_types %}
+  {% if i == 0 %}
 - name: [[ test.name ]]_rhel8
+  {% elif test.test_mirrorless %}
+- name: [[ test.name ]]_rhel8_mirrorless
+  {% endif %}
   plan:
   - in_parallel:
       steps:
@@ -1885,6 +2058,11 @@ jobs:
           submodules:
             - gpMgmt/bin/pythonSrc/ext
         passed: [compile_gpdb_rhel8]
+      {% if i == 1 and test.test_mirrorless %}
+      - get: rhel8_gate_cli_mirrorless
+        resource: bin_gpdb_rhel8
+        passed: [rhel8_gate_cli_mirrorless]
+      {% endif %}
       - get: gpdb7-rhel8-test
   - in_parallel:
       steps:
@@ -1903,6 +2081,9 @@ jobs:
             <<: *ccp_default_params
             vars:
               <<: *ccp_default_vars
+              {% if i == 1 and test.test_mirrorless %}
+              WITH_MIRRORS: false
+              {% endif %}
               instance_type: n1-standard-2
               PLATFORM: rhel8-gpdb7
               [[ test.additional_ccp_vars ]]
@@ -1940,7 +2121,17 @@ jobs:
             SUDO_ACCESS_ON_HOSTS: 1
             SUDO_MDW_USERNAME: rhel
             {% endif %}
+            {% if i == 0 %}
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+            {% elif test.test_mirrorless %}
+            POSTGRES_CONF_ADDONS:
+              - wal_level=minimal
+              - max_wal_senders=0
+              - gp_dispatch_keepalives_idle=30
+              - gp_dispatch_keepalives_interval=10
+              - gp_dispatch_keepalives_count=4
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster --tags=cli_mirrorless
+            {% endif %}
             [[ test.env ]]
           on_success:
             <<: *ccp_destroy
@@ -1958,10 +2149,23 @@ jobs:
           input_mapping:
             bin_gpdb: bin_gpdb_rhel8
           params:
+            {% if i == 0 %}
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
+            {% elif test.test_mirrorless %}
+            WITH_MIRRORS: false
+            BLDWRAP_POSTGRES_CONF_ADDONS:
+                - wal_level=minimal
+                - max_wal_senders=0
+                - gp_dispatch_keepalives_idle=30
+                - gp_dispatch_keepalives_interval=10
+                - gp_dispatch_keepalives_count=4
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster --tags=cli_mirrorless
+            {% endif %}
             [[ test.env ]]
 
 {% endif %}
+{% endif %}
+{% endfor %}
 {% endfor %}
 
 - name: cli_cross_subnet

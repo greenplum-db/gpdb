@@ -2,6 +2,7 @@
 @gppkg
 Feature: gppkg tests
 
+    @cli_mirrorless
     Scenario: gppkg environment does not have any gppkg
         Given the database is running
         And database "gptest" exists

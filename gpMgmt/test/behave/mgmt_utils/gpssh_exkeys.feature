@@ -2,6 +2,7 @@
 Feature: gpssh-exkeys behave tests
 
     @concourse_cluster
+    @cli_mirrorless
     Scenario: fail sensibly if 1-N is not in place
         Given the gpssh-exkeys coordinator host is set to "mdw"
           And the gpssh-exkeys segment host is set to "sdw1,sdw2,sdw3"
@@ -12,6 +13,7 @@ Feature: gpssh-exkeys behave tests
           And gpssh-exkeys writes "[ERROR]: Expected passwordless ssh to host sdw" to stderr
 
     @concourse_cluster
+    @cli_mirrorless
     Scenario: N-to-N exchange works
         Given the gpssh-exkeys coordinator host is set to "mdw"
           And the gpssh-exkeys segment host is set to "sdw1,sdw2,sdw3"
@@ -30,6 +32,7 @@ Feature: gpssh-exkeys behave tests
           And there is no duplication in the "authorized_keys" files
 
     @concourse_cluster
+    @cli_mirrorless
     Scenario: additional hosts may be added after initial run
         Given the gpssh-exkeys coordinator host is set to "mdw"
           And the gpssh-exkeys segment host is set to "sdw1,sdw2,sdw3"
@@ -49,6 +52,7 @@ Feature: gpssh-exkeys behave tests
           And there is no duplication in the "authorized_keys" files
 
     @concourse_cluster
+    @cli_mirrorless
     Scenario: hostfiles are accepted as well
         Given the gpssh-exkeys coordinator host is set to "mdw"
           And the gpssh-exkeys segment host is set to "sdw1,sdw2,sdw3"
@@ -62,6 +66,7 @@ Feature: gpssh-exkeys behave tests
 
     @skip
     @concourse_cluster
+    @cli_mirrorless
     Scenario: IPv6 addresses are accepted
         Given the gpssh-exkeys coordinator host is set to "mdw"
           And the gpssh-exkeys segment host is set to "sdw1,sdw2,sdw3"

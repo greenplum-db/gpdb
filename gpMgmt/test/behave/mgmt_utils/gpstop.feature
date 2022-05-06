@@ -3,6 +3,7 @@ Feature: gpstop behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: gpstop succeeds
         Given the database is running
          When the user runs "gpstop -a"
@@ -10,6 +11,7 @@ Feature: gpstop behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: when there are user connections gpstop waits to shutdown until user switches to fast mode
         Given the database is running
           And the user asynchronously runs "psql postgres" and the process is saved
@@ -19,6 +21,7 @@ Feature: gpstop behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: when there are user connections gpstop waits to shutdown until user connections are disconnected
         Given the database is running
           And the user asynchronously runs "psql postgres" and the process is saved

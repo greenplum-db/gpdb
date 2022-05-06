@@ -1,6 +1,7 @@
 @analyzedb
 Feature: Incrementally analyze the database
 
+    @cli_mirrorless
     Scenario: Invalid arguments entered
         When the user runs "analyzedb -w"
         Then analyzedb should print "error: no such option" error message
@@ -11,6 +12,7 @@ Feature: Incrementally analyze the database
     #      When the user runs "analyzedb -d incr_analyze -d incr_analyze_2"
     #      Then analyzedb should print "error: duplicate options" error message
 
+    @cli_mirrorless
     Scenario: Missing required options
         When the user runs "analyzedb"
         Then analyzedb should print "option -d required" to stdout
@@ -19,6 +21,7 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -l -d incr_analyze -x x"
         Then analyzedb should print "option -i or -x can only be used together with -t" to stdout
 
+    @cli_mirrorless
     Scenario: Missing parameters
         When the user runs "analyzedb -d"
         Then analyzedb should print "error: -d option requires 1 argument" error message
@@ -31,14 +34,17 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -d incr_analyze -t public.t1_ao -x"
         Then analyzedb should print "error: -x option requires 1 argument" error message
 
+    @cli_mirrorless
     Scenario: Additional ignored arguments
         When the user runs "analyzedb -l -d incr_analyze xyz"
         Then analyzedb should print "\[WARNING]:-Please note that some of the arguments \(\['xyz']\) aren't valid and will be ignored" to stdout
 
+    @cli_mirrorless
     Scenario: Mutually exclusive arguments
         When the user runs "analyzedb -l -d incr_analyze -t public.t1_ao -i x -x y"
         Then analyzedb should print "options -i and -x are mutually exclusive" to stdout
 
+    @cli_mirrorless
     Scenario: Table name not qualified with schema name
         When the user runs "analyzedb -a -d incr_analyze -t t1_ao"
         Then analyzedb should print "No schema name supplied for table" to stdout
@@ -48,6 +54,7 @@ Feature: Incrementally analyze the database
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
         Then analyzedb should print "No schema name supplied for table" to stdout
 
+    @cli_mirrorless
     Scenario: Input is a view rather than a table
         Given a view "v1" exists on table "t1_ao" in schema "public"
         When the user runs "analyzedb -l -d incr_analyze -t public.v1"
@@ -56,6 +63,7 @@ Feature: Incrementally analyze the database
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
         Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
 
+    @cli_mirrorless
     Scenario: Database object does not exist, command line
         When the user runs "analyzedb -l -d ghost_db"
         Then analyzedb should print "database "ghost_db" does not exist" to stdout
@@ -68,6 +76,7 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -l -d incr_analyze -t public.t1_ao -x r"
         Then analyzedb should print "Invalid input columns for table public.t1_ao" to stdout
 
+    @cli_mirrorless
     Scenario: Database object does not exist, config file
         When the user runs command "printf 'public.t1_ao' > config_file"
         And the user runs "analyzedb -l -d ghost_db -f config_file"
@@ -82,6 +91,7 @@ Feature: Incrementally analyze the database
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
         Then analyzedb should print "Invalid input columns for table public.t1_ao" to stdout
 
+    @cli_mirrorless
     Scenario: Missing or empty config file
         When the user runs "analyzedb -l -d incr_analyze -f ghost_config"
         Then analyzedb should print "No such file or directory: 'ghost_config'" to stdout
@@ -89,6 +99,7 @@ Feature: Incrementally analyze the database
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
         Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
 
+    @cli_mirrorless
     Scenario: Duplicate/inconsistent lines in config file
         When the user runs command "printf 'public.t1_ao\npublic.t1_ao' > config_file"
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
@@ -100,6 +111,7 @@ Feature: Incrementally analyze the database
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
         Then analyzedb should print "analyzedb error: Duplicate table name" to stdout
 
+    @cli_mirrorless
     Scenario: Show help
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -?"
@@ -112,6 +124,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "Analyze a database" to stdout
         And analyzedb should print "Options" to stdout
 
+    @cli_mirrorless
     Scenario: Valid inputs
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -l -d incr_analyze"
@@ -138,6 +151,7 @@ Feature: Incrementally analyze the database
         And the user runs "analyzedb -l -d incr_analyze -f config_file"
         Then output should contain both "-public.t1_ao" and "-public.t3_ao\(b\)"
 
+    @cli_mirrorless
     Scenario: Mixed case inputs
         Given no state files exist for database "incr_analyze"
         And schema ""MySchema"" exists in "incr_analyze"
@@ -154,6 +168,7 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -l -d incr_analyze -s public"
         Then analyzedb should print "-public.\"T2_heap_UPPERCASE\"" to stdout
 
+    @cli_mirrorless
     Scenario: Table and schema name with a space
         Given no state files exist for database "incr_analyze"
         And schema ""my schema"" exists in "incr_analyze"
@@ -164,6 +179,7 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -l -d incr_analyze -t '"my schema"."my ao"'"
         Then analyzedb should print "-"my schema"."my ao" to stdout
 
+    @cli_mirrorless
     Scenario: Clean all state files
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -177,6 +193,7 @@ Feature: Incrementally analyze the database
         And "public.t1_ao" should not appear in the latest state files
         And there should be 0 state directories for database "incr_analyze"
 
+    @cli_mirrorless
     Scenario: Clean latest state files
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -192,6 +209,7 @@ Feature: Incrementally analyze the database
         And "public.t3_ao" should not appear in the latest state files
         And there should be 1 state directory for database "incr_analyze"
 
+    @cli_mirrorless
     Scenario: Preserve state files less than 8 days old
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -210,6 +228,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should return a return code of 0
         And there should be 5 state directories for database "incr_analyze"
 
+    @cli_mirrorless
     Scenario: Automatically clean older state files and leave the current and 3 most recent
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -235,6 +254,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should return a return code of 0
         And there should be 4 state directories for database "incr_analyze"
 
+    @cli_mirrorless
     Scenario: Incremental analyze, no dirty tables
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -242,6 +262,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Incremental analyze, dirty table
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -251,6 +272,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, dml, no entry in state file, whole table requested
         Given table "public.t1_ao" does not appear in the latest state files
         And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
@@ -258,6 +280,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, ddl, no entry in state file, whole table requested
         Given no state files exist for database "incr_analyze"
         And some ddl is performed on table "t1_ao" in schema "public"
@@ -265,6 +288,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, dml, ddl, no entry in state file, whole table requested
         Given no state files exist for database "incr_analyze"
         And some ddl is performed on table "t1_ao" in schema "public"
@@ -273,6 +297,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, dml, no entry in state file, some columns requested
         Given no state files exist for database "incr_analyze"
         And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
@@ -281,6 +306,7 @@ Feature: Incrementally analyze the database
         And "public.t1_ao" should appear in the latest state files
         And columns "x" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, ddl, no entry in state file, some columns requested
         Given no state files exist for database "incr_analyze"
         And some ddl is performed on table "t1_ao" in schema "public"
@@ -289,6 +315,7 @@ Feature: Incrementally analyze the database
         And "public.t1_ao" should appear in the latest state files
         And columns "x,y" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, dml, ddl, no entry in state file, some columns requested
         Given no state files exist for database "incr_analyze"
         And some ddl is performed on table "t1_ao" in schema "public"
@@ -298,6 +325,7 @@ Feature: Incrementally analyze the database
         And "public.t1_ao" should appear in the latest state files
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for all columns, no change, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -306,6 +334,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for all columns, dml, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -315,6 +344,7 @@ Feature: Incrementally analyze the database
         Then output should contain either "-public.t1_ao\(y,x\)" or "-public.t1_ao\(x,y\)"
         And columns "x,y" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for all columns, ddl, whole table requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -323,6 +353,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for all columns, ddl, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -332,6 +363,7 @@ Feature: Incrementally analyze the database
         Then output should contain either "-public.t1_ao\(z,x\)" or "-public.t1_ao\(x,z\)"
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for all columns, ddl, dml, whole table requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -341,6 +373,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for all columns, ddl, dml, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"
@@ -351,6 +384,7 @@ Feature: Incrementally analyze the database
         Then output should contain either "-public.t1_ao\(z,x\)" or "-public.t1_ao\(x,z\)"
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, no change, whole table requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -358,6 +392,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao\(z\)" to stdout
         And columns "x,y,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, no change, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -365,6 +400,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao\(z\)" to stdout
         And columns "x,y,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, dml, whole table requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -373,6 +409,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, dml, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -381,6 +418,7 @@ Feature: Incrementally analyze the database
         Then output should contain either "-public.t1_ao\(z,x\)" or "-public.t1_ao\(x,z\)"
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, ddl, whole table requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -389,6 +427,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, ddl, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -397,6 +436,7 @@ Feature: Incrementally analyze the database
         Then output should contain either "-public.t1_ao\(z,x\)" or "-public.t1_ao\(x,z\)"
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, ddl, dml, whole table requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -406,6 +446,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "-public.t1_ao" to stdout
         And "public.t1_ao" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Single table, entry exists for some columns, ddl, dml, some columns requested
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao -i x,y"
@@ -418,6 +459,7 @@ Feature: Incrementally analyze the database
 
     ### (no entry, no entry)
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, no entry), (no change, no change), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         When the user runs command "printf 'public.t1_ao\npublic.t3_ao -i b,c' > config_file"
@@ -428,6 +470,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "b,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, no entry), (no change, no change), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         When the user runs command "printf 'public.t1_ao\npublic.t3_ao\n' > config_file"
@@ -438,6 +481,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, no entry), (no change, no change), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         When the user runs command "printf 'public.t1_ao -i x,z\npublic.t3_ao -i b,c' > config_file"
@@ -448,6 +492,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "b,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, no entry), (no change, DML), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And some data is inserted into table "t3_ao" in schema "public" with column type list "int,text,real"
@@ -459,6 +504,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "b,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, no entry), (no change, DDL), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And some ddl is performed on table "t3_ao" in schema "public"
@@ -470,6 +516,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, no entry), (DML, DDL), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And some data is inserted into table "t1_ao" in schema "public" with column type list "int,text,real"
@@ -484,6 +531,7 @@ Feature: Incrementally analyze the database
 
     ### (no entry, some cols)
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, no change), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -495,6 +543,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "b,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, no change), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -506,6 +555,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,b,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, no change), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i a,b,c"
@@ -517,6 +567,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,b,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, DML), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -529,6 +580,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, DML), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -541,6 +593,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, DML), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -553,6 +606,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, DML&DDL), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -566,6 +620,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, DML&DDL), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -579,6 +634,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (no change, DML&DDL), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -592,6 +648,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (DML, DDL), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -605,6 +662,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (DML, DDL), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -619,6 +677,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, some cols), (DML, DDL), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao -i c"
@@ -634,6 +693,7 @@ Feature: Incrementally analyze the database
 
     ### (no entry, whole table)
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (no change, no change), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -646,6 +706,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (no change, no change), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -658,6 +719,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (no change, no change), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -670,6 +732,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (no change, DML), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -682,6 +745,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (no change, DML), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -694,6 +758,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (no change, DML), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -706,6 +771,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (DML&DDL, no change), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -720,6 +786,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (DML&DDL, no change), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -734,6 +801,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (DML&DDL, no change), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -748,6 +816,7 @@ Feature: Incrementally analyze the database
         And columns "x,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (DML, DDL), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -762,6 +831,7 @@ Feature: Incrementally analyze the database
         And columns "a,c" of table "public.t3_ao" should appear in the latest column state file
         And column "b" of table "public.t3_ao" should not appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (DML, DDL), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -775,6 +845,7 @@ Feature: Incrementally analyze the database
         And columns "-1" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (no entry, whole table), (DML, DDL), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t3_ao"
@@ -792,6 +863,7 @@ Feature: Incrementally analyze the database
     ### (some cols, whole table)
 
 
+    @cli_mirrorless
     Scenario: Multiple tables, (some cols, whole table), (no change, no change), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs command "printf 'public.t1_ao -i x,z\npublic.t3_ao' > config_file"
@@ -805,6 +877,7 @@ Feature: Incrementally analyze the database
         And columns "x,y,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (some cols, whole table), (no change, no change), (whole table, whole table)
         Given no state files exist for database "incr_analyze"
         And the user runs command "printf 'public.t1_ao -i x,z\npublic.t3_ao' > config_file"
@@ -818,6 +891,7 @@ Feature: Incrementally analyze the database
         And columns "x,y,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (some cols, whole table), (no change, no change), (some cols, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs command "printf 'public.t1_ao -i x,z\npublic.t3_ao' > config_file"
@@ -831,6 +905,7 @@ Feature: Incrementally analyze the database
         And columns "x,y,z" of table "public.t1_ao" should appear in the latest column state file
         And columns "-1" of table "public.t3_ao" should appear in the latest column state file
 
+    @cli_mirrorless
     Scenario: Multiple tables, (some cols, whole table), (no change, DML), (whole table, some cols)
         Given no state files exist for database "incr_analyze"
         And the user runs command "printf 'public.t1_ao -i x,z\npublic.t3_ao' > config_file"
@@ -1319,6 +1394,7 @@ Feature: Incrementally analyze the database
 
     # no entry in state files for partition tables
 
+    @cli_mirrorless
     Scenario: Partition tables, (no entry, no change, root)
         Given no state files exist for database "incr_analyze"
         When the user runs "analyzedb -a -d incr_analyze -t public.sales"
@@ -1329,6 +1405,7 @@ Feature: Incrementally analyze the database
         And "public.sales_1_prt_4" should appear in the latest state files
         And "public.sales_1_prt_default_dates" should appear in the latest state files
 
+    @cli_mirrorless
     Scenario: Partition tables, (no entry, no change, some parts)
         Given no state files exist for database "incr_analyze"
         And the user runs command "printf 'public.sales_1_prt_2 \npublic.sales_1_prt_3' > config_file"
@@ -1751,6 +1828,7 @@ Feature: Incrementally analyze the database
           |  -0.75         |
         And the user runs "psql -d incr_analyze -c 'drop table foo'"
 
+    @cli_mirrorless
     Scenario: analyzedb correctly identifies dirty tables after a rename
         Given no state files exist for database "incr_analyze"
         And the user runs "psql -d incr_analyze -c 'create table foo (a int, b int) with (appendonly=true)'"

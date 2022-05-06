@@ -45,6 +45,7 @@ Feature: gpstart behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: non-super user 'foouser' can connect to psql database
         Given the database is running
           And the user runs psql with "-c 'create user foouser login;'" against database "postgres"
@@ -56,6 +57,7 @@ Feature: gpstart behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario Outline: "gpstart" accepts <test_scenarios> when utility mode is set to <utility_mode>
         Given the database is not running
           And the user runs "gpstart -a"
@@ -82,6 +84,7 @@ Feature: gpstart behave tests
     # Expected result of below test cases might change based on above issues fix
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario Outline: "gpstart -m" accepts <test_scenarios> when utility mode is set to <utility_mode>
         Given the database is not running
           And the user runs "gpstart -ma"
@@ -102,6 +105,7 @@ Feature: gpstart behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario Outline: "gpstart -m -R" <database> <test_scenarios> when utility mode is set to <utility_mode>
         Given the database is not running
           And the user runs "gpstart -mRa"
@@ -123,6 +127,7 @@ Feature: gpstart behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario Outline: "gpstart -R" <database> <test_scenarios> when utility mode is set to <utility_mode>
         Given the database is not running
           And the user runs "gpstart -Ra"
@@ -144,6 +149,7 @@ Feature: gpstart behave tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: Removal of non-super user role succeeds
         Given the database is not running
           And the user runs "gpstart -a"

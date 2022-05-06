@@ -2,6 +2,7 @@
 Feature: Tests for gpcheckperf
 
   @concourse_cluster
+  @cli_mirrorless
   Scenario: gpcheckperf runs disk and memory tests
     Given the database is running
     When  the user runs "gpcheckperf -h mdw -h sdw1 -d /data/gpdata/ -r ds"
@@ -9,6 +10,7 @@ Feature: Tests for gpcheckperf
     And   gpcheckperf should print "disk write tot bytes" to stdout
 
   @concourse_cluster
+  @cli_mirrorless
   Scenario: gpcheckperf runs runs sequential network test
     Given the database is running
     When  the user runs "gpcheckperf -h mdw -h sdw1 -d /data/gpdata/ -r n"

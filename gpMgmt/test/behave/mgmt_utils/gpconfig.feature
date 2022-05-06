@@ -11,6 +11,7 @@ Feature: gpconfig integration tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario Outline: running gpconfig test case: <test_case>, for guc type: <type>
       Given the user runs "gpstop -u"
         And gpstop should return a return code of 0
@@ -87,6 +88,7 @@ Feature: gpconfig integration tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario Outline: write directly to postgresql.conf file: <type>
       Given the user runs "gpstop -u"
         And gpstop should return a return code of 0
@@ -125,6 +127,7 @@ Feature: gpconfig integration tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: write a newline using gpconfig
       Given the user runs "gpstop -u"
         And gpstop should return a return code of 0
@@ -218,6 +221,7 @@ Feature: gpconfig integration tests
 
     @concourse_cluster
     @demo_cluster
+    @cli_mirrorless
     Scenario: gpconfig check for GUC's with same prefix
       Given the user runs "gpstop -u"
         And gpstop should return a return code of 0
@@ -241,6 +245,7 @@ Feature: gpconfig integration tests
         And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
 
     @demo_cluster
+    @cli_mirrorless
     Scenario: gpconfig checks liveness of correct number of hosts
       Given the database is running
        When the user runs "gpconfig --debug -c optimizer -v on"

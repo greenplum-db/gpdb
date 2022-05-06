@@ -1,6 +1,7 @@
 @gpssh
 Feature: gpssh behave tests
 
+    @cli_mirrorless
     Scenario: gpssh -d and -t options
         When the user runs "gpssh -v -h localhost hostname"
         Then gpssh should return a return code of 0
@@ -15,6 +16,7 @@ Feature: gpssh behave tests
         Then gpssh should return a return code of 1
         And gpssh should print "prompt_validation_timeout cannot be negative or zero" to stdout
 
+    @cli_mirrorless
     Scenario: gpssh exceptions
         When the user runs "gpssh -h xfoobarx hostname"
         Then gpssh should return a return code of 0
@@ -24,6 +26,7 @@ Feature: gpssh behave tests
         And gpssh should print "unable to login to localhost" to stdout
         And gpssh should print "could not synchronize with original prompt" to stdout
 
+    @cli_mirrorless
     Scenario: gpssh succeeds when network has latency
         When the user runs command "sudo tc qdisc add dev lo root netem delay 4000ms"
         Then sudo should return a return code of 0

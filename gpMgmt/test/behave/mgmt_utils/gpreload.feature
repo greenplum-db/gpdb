@@ -1,6 +1,7 @@
 @gpreload
 Feature: gpreload behave tests
 
+    @cli_mirrorless
     Scenario: Handle case where a table (public.t1) and view (gpreload_schema.t1) have the same name
         Given schema "gpreload_schema" exists in "gpreload_db"
         And there is a regular "heap" table "t1" with column name list "a,b" and column type list "int,int" in schema "public"

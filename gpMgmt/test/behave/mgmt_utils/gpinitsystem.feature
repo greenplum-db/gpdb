@@ -1,6 +1,7 @@
 @gpinitsystem
 Feature: gpinitsystem tests
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a cluster with data_checksums on
         Given the database is initialized with checksum "on"
         When the user runs "gpconfig -s data_checksums"
@@ -9,6 +10,7 @@ Feature: gpinitsystem tests
         And gpconfig should print "Coordinator value: on" to stdout
         And gpconfig should print "Segment     value: on" to stdout
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a cluster with data_checksums off
         Given the database is initialized with checksum "off"
         When the user runs "gpconfig -s data_checksums"
@@ -17,6 +19,7 @@ Feature: gpinitsystem tests
         And gpconfig should print "Coordinator value: off" to stdout
         And gpconfig should print "Segment     value: off" to stdout
 
+    @cli_mirrorless
     Scenario: gpinitsystem exits with status 1 when the user enters nothing for the confirmation
         Given create demo cluster config
          When the user runs command "echo '' | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile" eok
@@ -24,6 +27,7 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 2
 
+    @cli_mirrorless
     Scenario: gpinitsystem exits with status 1 when the user enters no for the confirmation
         Given create demo cluster config
          When the user runs command "echo no | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile" eok
@@ -31,6 +35,7 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 2
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a cluster when the user confirms the dialog
         Given create demo cluster config
          When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile"
@@ -38,6 +43,7 @@ Feature: gpinitsystem tests
         Given the user runs "gpstate"
          Then gpstate should return a return code of 0
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a backout file when gpinitsystem process terminated
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted
@@ -52,6 +58,7 @@ Feature: gpinitsystem tests
         And gpinitsystem should return a return code of 0
         And gpintsystem logs should not contain lines about running backout script
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a backout file when gpcreateseg process terminated
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted
@@ -65,6 +72,7 @@ Feature: gpinitsystem tests
         And gpinitsystem should return a return code of 0
         And gpintsystem logs should not contain lines about running backout script
 
+    @cli_mirrorless
     Scenario: gpinitsystem does not create or need backout file when user terminated very early
         Given create demo cluster config
         And all files in gpAdminLogs directory are deleted
@@ -76,6 +84,7 @@ Feature: gpinitsystem tests
         And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
 
+    @cli_mirrorless
     Scenario: gpinitsystem fails with exit code 1 when the functions file is not found
        Given create demo cluster config
            # force a load error when trying to source gp_bash_functions.sh
@@ -84,12 +93,14 @@ Feature: gpinitsystem tests
         When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
 
+    @cli_mirrorless
     Scenario: gpinitsystem continues running when gpinitstandby fails
        Given create demo cluster config
            # force gpinitstandby to fail by specifying a directory that does not exist (gpinitsystem continues successfully)
         When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -s localhost -S not-a-real-directory -P 21100 -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 0
 
+    @cli_mirrorless
     Scenario: after a failed run of gpinitsystem, a re-run should return exit status 0
        Given create demo cluster config
            # force a failure by passing no args
@@ -98,6 +109,7 @@ Feature: gpinitsystem tests
         When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
 
+    @cli_mirrorless
     Scenario: after gpinitsystem logs a warning, a re-run should return exit status 0
       Given create demo cluster config
           # log a warning
@@ -108,6 +120,7 @@ Feature: gpinitsystem tests
        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
        Then gpinitsystem should return a return code of 0
 
+    @cli_mirrorless
     Scenario: gpinitsystem should warn but not fail when standby cannot be instantiated
         Given the database is running
         And all the segments are running
@@ -122,6 +135,7 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Cluster setup finished, but Standby Coordinator failed to initialize. Review contents of log files for errors." to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
+    @cli_mirrorless
     Scenario: gpinitsystem generates an output configuration file and then starts cluster with data_checksums on
         Given the cluster config is generated with data_checksums "on"
         When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
@@ -136,6 +150,7 @@ Feature: gpinitsystem tests
         And gpconfig should print "Coordinator value: on" to stdout
         And gpconfig should print "Segment     value: on" to stdout
 
+    @cli_mirrorless
     Scenario: gpinitsystem generates an output configuration file and then starts cluster with data_checksums off
         Given the cluster config is generated with data_checksums "off"
         When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
@@ -163,6 +178,7 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a cluster in default timezone
         Given the database is not running
         And "TZ" environment variable is not set
@@ -174,6 +190,7 @@ Feature: gpinitsystem tests
         And the startup timezone is saved
         And the startup timezone matches the system timezone
 
+    @cli_mirrorless
     Scenario: gpinitsystem creates a cluster using TZ
         Given the database is not running
         And the environment variable "TZ" is set to "US/Hawaii"
@@ -184,6 +201,7 @@ Feature: gpinitsystem tests
         And the startup timezone is saved
         And the startup timezone matches "HST"
 
+    @cli_mirrorless
     Scenario: gpinitsystem should print FQDN in pg_hba.conf when HBA_HOSTNAMES=1
         Given the cluster config is generated with HBA_HOSTNAMES "1"
         When generate cluster config file "/tmp/output_config_file"
@@ -192,6 +210,7 @@ Feature: gpinitsystem tests
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
 
+    @cli_mirrorless
     Scenario: gpinitsystem should print CIDR in pg_hba.conf when HBA_HOSTNAMES=0
         Given the cluster config is generated with HBA_HOSTNAMES "0"
         When generate cluster config file "/tmp/output_config_file"
@@ -200,6 +219,7 @@ Feature: gpinitsystem tests
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains CIDR only for trusted host
 
+    @cli_mirrorless
     Scenario: gpinitsystem should print FQDN in pg_hba.conf for standby when HBA_HOSTNAMES=1
         Given the database is running
         And all the segments are running
@@ -214,6 +234,7 @@ Feature: gpinitsystem tests
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/newstandby/pg_hba.conf" contains FQDN only for trusted host
 
+    @cli_mirrorless
     Scenario: gpinitsystem on a DCA system is able to set the DCA specific GUCs
 	Given create demo cluster config
         And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
@@ -225,6 +246,7 @@ Feature: gpinitsystem tests
         # the log file must have the entry indicating that DCA specific configuration has been set
         And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
 
+    @cli_mirrorless
     Scenario: gpinitsystem uses the system locale if no locale is specified
         Given the database is not running
         And "LC_COLLATE" environment variable is not set
@@ -235,6 +257,7 @@ Feature: gpinitsystem tests
         Then the database locales are saved
         And the database locales "lc_collate,lc_ctype,lc_messages,lc_monetary,lc_numeric,lc_time" match the system locale
 
+    @cli_mirrorless
     Scenario: gpinitsystem uses a single locale if one is specified
         Given the database is not running
         And the system locale is saved
@@ -243,6 +266,7 @@ Feature: gpinitsystem tests
         Then the database locales are saved
         And the database locales "lc_collate,lc_ctype,lc_messages,lc_monetary,lc_numeric,lc_time" match the locale "C"
 
+    @cli_mirrorless
     Scenario: gpinitsystem uses multiple locales if multiple are specified
         Given the database is not running
         And the environment variable "LC_COLLATE" is set to "C"
@@ -256,6 +280,7 @@ Feature: gpinitsystem tests
         And the database locales "lc_messages,lc_monetary,lc_numeric,lc_time" match the system locale
 
     @backup_restore_bashrc
+    @cli_mirrorless
     Scenario: gpinitsystem succeeds if there is banner on host
         Given the database is not running
         When the user sets banner on host
@@ -263,12 +288,14 @@ Feature: gpinitsystem tests
         And gpinitsystem should return a return code of 0
 
     @backup_restore_bashrc
+    @cli_mirrorless
     Scenario: gpinitsystem succeeds if there is multi-line banner on host
         Given the database is not running
         When the user sets multi-line banner on host
         And a demo cluster is created using gpinitsystem args " "
         And gpinitsystem should return a return code of 0
 
+    @cli_mirrorless
     Scenario: gpinitsystem should create consistent port entry on segments postgresql.conf file
         Given the database is not running
         When a demo cluster is created using gpinitsystem args " "
