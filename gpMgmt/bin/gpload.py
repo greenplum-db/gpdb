@@ -2608,37 +2608,17 @@ class gpload:
             self.cleanupSql.append('drop external table if exists %s'%self.extSchemaTable)
 
     #
-    # get distribution key for staging table, default is the DK for target table
-    # if it is not setted, we use the match columns for DK
-    #
-    def get_distribution_key(self):
-        
-        sql = '''select * from pg_get_table_distributedby('%s.%s'::regclass::oid)'''% (self.schema, self.table)
-        try:
-            dk_text = self.db.query(sql.encode('utf-8')).getresult()
-        except Exception as e:
-            self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
-
-        if dk_text[0][0] == 'DISTRIBUTED RANDOMLY':
-            # target table doesn't have dk, we use match column
-            dk = self.getconfig('gpload:output:match_columns', list)
-            dk_text = " DISTRIBUTED BY (%s)" % ', '.join(dk)
-            return dk_text
-        else:
-            # use dk of target table
-            # result from db is a text, we need to make it unicode
-            return dk_text[0][0].decode("utf-8")
-
-
-
-    #
     # Create a new staging table or find a reusable staging table to use for this operation
     # (only valid for update/merge operations).
     #
     def create_staging_table(self):
 
         # make sure we set the correct distribution policy
-        distcols = self.get_distribution_key()
+        distcols = self.get_table_dist_key()
+        if distcols == '':
+            # distributed randomly or replicated, we will use match column for dk
+            dk = self.getconfig('gpload:output:match_columns', list)
+            distcols = ', '.join(dk)
 
         sql = "SELECT * FROM pg_class WHERE relname LIKE 'temp_gpload_reusable_%%';"
         resultList = self.db.query(sql.encode('utf-8')).getresult()
@@ -2691,7 +2671,7 @@ class gpload:
         sql = 'CREATE %sTABLE %s ' % (is_temp_table, self.staging_table_name)
         cols = map(lambda a:'"%s" %s' % (a[0], a[1]), target_columns)
         sql += "(%s)" % ','.join(cols)
-        sql += distcols
+        sql += " DISTRIBUTED BY (" + distcols + ")"
         self.log(self.LOG, sql)
 
         if not self.options.D:
@@ -2857,6 +2837,7 @@ class gpload:
         tblname = "%s.%s" % (self.schema, self.table)
         return tblname
 
+    # return the string of distribution key of the table, return "" if DISTRIBUTED RANDOMLY
     def get_table_dist_key(self):
         # NOTE: this query should be re-written better. the problem is that it is
         # not possible to perform a cast on a table name with spaces...
@@ -2867,41 +2848,50 @@ class gpload:
                 "a.attnum = any (p.attrnums) and " + \
                 "c.relnamespace = n.oid and " + \
                 "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
+            try:
+                resultList = self.db.query(sql.encode('utf-8')).getresult()
+            except Exception as e:
+                self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
+            attrs = ""
+            if len(resultList)>0:
+                attrs = '"'+ '","'.join([str(i[0]) for i in resultList]) +'"'
+            return attrs.decode("utf-8")
+
         else:
-            sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
-                "where a.attrelid = c.oid and " + \
-                "a.attrelid = p.localoid and " + \
-                "a.attnum = any (p.distkey) and " + \
-                "c.relnamespace = n.oid and " + \
-                "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
+            sql = '''select * from pg_get_table_distributedby('%s.%s'::regclass::oid)'''% (self.schema, self.table)
+            try:
+                dk_text = self.db.query(sql.encode('utf-8')).getresult()
+            except Exception as e:
+                self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, unicode(e)))
 
-        resultList = self.db.query(sql.encode('utf-8')).getresult()
-        attrs = []
-        count = 0
-        while count < len(resultList):
-            attrs.append((resultList[count])[0])
-            count = count + 1
+            if dk_text[0][0] == 'DISTRIBUTED RANDOMLY' or dk_text[0][0] == 'DISTRIBUTED REPLICATED':
+                # target table doesn't have dk, we use match column
+                return ""
+            else:
+                # use dk of target table
+                # result from db is a text, we need to make it unicode
+                return dk_text[0][0].decode("utf-8")
 
-        return attrs
 
     def table_supports_update(self):
         """Columns being updated cannot appear in the distribution key."""
-        distKeyList = self.get_table_dist_key()
-        distkey = set()
-        for dk in distKeyList:
-            distkey.add(quote_ident(dk))
-
+        distkey = self.get_table_dist_key()
         self.distkey = distkey
-        if len(distkey) != 0:
+
+        if distkey != "" and distkey != "DISTRIBUTED RANDOMLY" and distkey != "DISTRIBUTED REPLICATED":
+            distkeyset = set()
+            distkey_list = distkey.split(',')
+            for dk in distkey_list:
+                distkeyset.add(dk[1:-1]) # remove the double quotations of columns
             # not randomly distributed - check that UPDATE_COLUMNS isn't part of the distribution key
             updateColumnList = self.getconfig('gpload:output:update_columns',
                                               list,
                                               returnOriginal=True)
             update_columns = convertListToDelimited(updateColumnList)
             update_columns = set(update_columns)
-            a = distkey.intersection(update_columns)
+            a = distkeyset.intersection(update_columns)
             if len(a):
-                self.control_file_error('update_columns cannot reference column(s) in distribution key (%s)' % ', '.join(list(distkey)))
+                self.control_file_error('update_columns cannot reference column(s) in distribution key (%s)' % ', '.distkey)
 
     def do_method_update(self):
         """Load the data in and update an existing table based upon it"""
