@@ -2581,6 +2581,7 @@ keep_going:						/* We will come back to here until there is
 #endif
 						int			usekeepalives = useKeepalives(conn);
 						int			err = 0;
+						int			reuse = 1;
 
 						if (usekeepalives < 0)
 						{
@@ -2615,6 +2616,19 @@ keep_going:						/* We will come back to here until there is
 #endif							/* WIN32 */
 						else if (!setTCPUserTimeout(conn))
 							err = 1;
+
+						/*
+						 * Set SO_REUSEADDR option to reuse the TCP port
+						 */
+						if (setsockopt(conn->sock,
+									   SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1)
+						{
+							appendPQExpBuffer(&conn->errorMessage,
+											  libpq_gettext("setsockopt(%s) failed: %s\n"),
+											  "SO_REUSEADDR",
+											  SOCK_STRERROR(SOCK_ERRNO, sebuf, sizeof(sebuf)));
+							err = 1;
+						}
 
 						if (err)
 						{
