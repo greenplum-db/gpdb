@@ -1,6 +1,4 @@
----
-title: Encrypting Data and Database Connections 
----
+# Encrypting Data and Database Connections 
 
 Describes how to encrypt data at rest in the database or in transit over the network, to protect from eavesdroppers or man-in-the-middle attacks.
 

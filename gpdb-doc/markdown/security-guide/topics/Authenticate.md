@@ -1,6 +1,4 @@
----
-title: Configuring Client Authentication 
----
+# Configuring Client Authentication 
 
 Describes the available methods for authenticating Greenplum Database clients.
 

@@ -1,6 +1,4 @@
----
-title: Greenplum Database Ports and Protocols 
----
+# Greenplum Database Ports and Protocols 
 
 Lists network ports and protocols used within the Greenplum cluster.
 

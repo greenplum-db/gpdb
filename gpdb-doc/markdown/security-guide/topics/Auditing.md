@@ -1,6 +1,4 @@
----
-title: Auditing 
----
+# Auditing 
 
 Describes Greenplum Database events that are logged and should be monitored to detect security threats.
 

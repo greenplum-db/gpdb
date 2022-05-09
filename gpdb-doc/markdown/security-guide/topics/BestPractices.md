@@ -1,6 +1,4 @@
----
-title: Security Best Practices 
----
+# Security Best Practices 
 
 Describes basic security best practices that you should follow to ensure the highest level of system security. 
 

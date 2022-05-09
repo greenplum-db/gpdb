@@ -1,6 +1,4 @@
----
-title: Securing the Database 
----
+# Securing the Database 
 
 Introduces Greenplum Database security topics.
 

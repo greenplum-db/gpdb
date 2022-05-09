@@ -1,6 +1,4 @@
----
-title: Greenplum Database Security Configuration Guide 
----
+# Greenplum Database Security Configuration Guide 
 
 This guide describes how to secure a Greenplum Database system. The guide assumes knowledge of Linux/UNIX system administration and database management systems. Familiarity with structured query language \(SQL\) is helpful.
 
