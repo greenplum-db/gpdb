@@ -459,7 +459,7 @@ Automatic statistics collection is triggered if data is inserted directly in a l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|noneon\_change, on\_no\_stats, |on\_no\_ stats|master, session, reload|
+|none, on\_change, on\_no\_stats, |on\_no\_ stats|master, session, reload|
 
 ## <a id="gp_autostats_mode_in_functions"></a>gp\_autostats\_mode\_in\_functions 
 
@@ -479,7 +479,7 @@ The `on_change` option triggers statistics collection only when the number of ro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|noneon\_change, on\_no\_stats, |none|master, session, reload|
+|none, on\_change, on\_no\_stats, |none|master, session, reload|
 
 ## <a id="gp_autostats_on_change_threshold"></a>gp\_autostats\_on\_change\_threshold 
 
@@ -875,13 +875,7 @@ Controls the amount of detail the fault detection process \(`ftsprobe`\) writes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFFTERSE
-
-VERBOSE
-
-DEBUG
-
-|TERSE|master, system, restart|
+|OFF, TERSE, VERBOSE, DEBUG|TERSE|master, system, restart|
 
 ## <a id="gp_log_interconnect"></a>gp\_log\_interconnect 
 
@@ -899,7 +893,7 @@ Controls the amount of information that is written to the log file about query w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFFTERSE, VERBOSE, DEBUG|OFF|master, session, restart|
+|OFF, TERSE, VERBOSE, DEBUG|OFF|master, session, restart|
 
 ## <a id="gp_hashjoin_tuples_per_bucket"></a>gp\_hashjoin\_tuples\_per\_bucket 
 
@@ -967,9 +961,7 @@ Loss based flow control is based on capacity based flow control, and also tunes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|CAPACITYLOSS
-
-|LOSS|master, session, reload|
+|CAPACITY, LOSS|LOSS|master, session, reload|
 
 ## <a id="gp_interconnect_proxy_addresses"></a>gp\_interconnect\_proxy\_addresses 
 
@@ -1046,11 +1038,7 @@ The `PROXY` value specifies using the TCP protocol, and when running queries, us
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|UDPIFCTCP
-
-PROXY
-
-|UDPIFC|local, system, restart|
+|UDPIFC, TCP, PROXY|UDPIFC|local, system, restart|
 
 ## <a id="gp_log_format"></a>gp\_log\_format 
 
@@ -1058,9 +1046,7 @@ Specifies the format of the server log files. If using *gp\_toolkit* administrat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|csvtext
-
-|csv|local, system, restart|
+|csv, text|csv|local, system, restart|
 
 ## <a id="gp_max_local_distributed_cache"></a>gp\_max\_local\_distributed\_cache 
 
@@ -1546,7 +1532,7 @@ The value *iso\_8601* will produce output matching the time interval *format wit
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|postgrespostgres\_verbose, sql\_standard, iso\_8601|postgres|master, session, reload|
+|postgres, postgres\_verbose, sql\_standard, iso\_8601|postgres|master, session, reload|
 
 ## <a id="join_collapse_limit"></a>join\_collapse\_limit 
 
@@ -1788,7 +1774,7 @@ Controls which SQL statements are logged. DDL logs all data definition commands 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|NONEDDL, MOD, ALL|ALL|master, session, reload, superuser|
+|NONE, DDL, MOD, ALL|ALL|master, session, reload, superuser|
 
 ## <a id="log_statement_stats"></a>log\_statement\_stats 
 
