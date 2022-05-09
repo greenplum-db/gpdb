@@ -1,0 +1,28 @@
+2022-05-09 14:03:58|INFO|gpload session started 2022-05-09 14:03:58
+2022-05-09 14:03:58|INFO|setting schema 'public' for table 'testdk1'
+2022-05-09 14:03:58|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2022-05-09 14:03:58|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a89a5a7b672f314300cc94a9e2a75036
+2022-05-09 14:03:58|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d1046680_cf5d_11ec_9d4e_0050569ea4ff
+2022-05-09 14:03:58|INFO|running time: 0.07 seconds
+2022-05-09 14:03:58|INFO|rows Inserted          = 3
+2022-05-09 14:03:58|INFO|rows Updated           = 0
+2022-05-09 14:03:58|INFO|data formatting errors = 0
+2022-05-09 14:03:58|INFO|gpload succeeded
+2022-05-09 14:03:58|INFO|gpload session started 2022-05-09 14:03:58
+2022-05-09 14:03:58|INFO|setting schema 'public' for table 'testdk1'
+2022-05-09 14:03:58|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2022-05-09 14:03:58|INFO|reusing staging table staging_gpload_reusable_a89a5a7b672f314300cc94a9e2a75036
+2022-05-09 14:03:58|INFO|reusing external table ext_gpload_reusable_d1046680_cf5d_11ec_9d4e_0050569ea4ff
+2022-05-09 14:03:58|INFO|running time: 0.06 seconds
+2022-05-09 14:03:58|INFO|rows Inserted          = 0
+2022-05-09 14:03:58|INFO|rows Updated           = 3
+2022-05-09 14:03:58|INFO|data formatting errors = 0
+2022-05-09 14:03:58|INFO|gpload succeeded
+Table "public.staging_gpload_reusable_a89a5a7b672f314300cc94a9e2a75036"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ c1     | integer | 
+ C#2    | text    | 
+ C#3    | text    | 
+Distributed by: ("C#2")
+
