@@ -619,7 +619,7 @@ gpconfig -s 'gp_default_storage_options'
 
 |Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`2 or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` or `COLUMN`|`appendoptimized`=`FALSE` `blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`<br/><br/>|master, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` or `COLUMN`|`appendoptimized`=`FALSE` `blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`<br/><br/>|master, session, reload|
 
 **Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
 
