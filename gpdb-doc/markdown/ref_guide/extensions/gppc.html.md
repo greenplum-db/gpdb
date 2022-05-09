@@ -238,37 +238,11 @@ The GPPC API supports the variable length text, varchar, blank padded, and byte 
 
 |Function Name|Description|
 |-------------|-----------|
-|GppcText GppcAllocText\( size\_t len \)GppcVarChar GppcAllocVarChar\( size\_t len \)
-
-GppcBpChar GppcAllocBpChar\( size\_t len \)
-
-GppcBytea GppcAllocBytea\( size\_t len \)
-
-|Allocate len bytes of memory for the varying length type.|
-|size\_t GppcGetTextLength\( GppcText s \)size\_t GppcGetVarCharLength\( GppcVarChar s \)
-
-size\_t GppcGetBpCharLength\( GppcBpChar s \)
-
-size\_t GppcGetByteaLength\( GppcBytea b \)
-
-|Return the number of bytes in the memory chunk.|
-|char \*GppcGetTextPointer\( GppcText s \)char \*GppcGetVarCharPointer\( GppcVarChar s \)
-
-char \*GppcGetBpCharPointer\( GppcBpChar s \)
-
-char \*GppcGetByteaPointer\( GppcBytea b \)
-
-|Return a string pointer to the head of the memory chunk. The string is not null-terminated.|
-|char \*GppcTextGetCString\( GppcText s \)char \*GppcVarCharGetCString\( GppcVarChar s \)
-
-char \*GppcBpCharGetCString\( GppcBpChar s \)
-
-|Return a string pointer to the head of the memory chunk. The string is null-terminated.|
-|GppcText \*GppcCStringGetText\( const char \*s \)GppcVarChar \*GppcCStringGetVarChar\( const char \*s \)
-
-GppcBpChar \*GppcCStringGetBpChar\( const char \*s \)
-
-|Build a varying-length type from a character string.|
+|GppcText GppcAllocText\( size\_t len \)<br/><br/>GppcVarChar GppcAllocVarChar\( size\_t len \)<br/><br/>GppcBpChar GppcAllocBpChar\( size\_t len \)<br/><br/><br/><br/>GppcBytea GppcAllocBytea\( size\_t len \)|Allocate len bytes of memory for the varying length type.|
+|size\_t GppcGetTextLength\( GppcText s \)<br/><br/>size\_t GppcGetVarCharLength\( GppcVarChar s \)<br/><br/>size\_t GppcGetBpCharLength\( GppcBpChar s \)<br/><br/>size\_t GppcGetByteaLength\( GppcBytea b \)|Return the number of bytes in the memory chunk.|
+|char \*GppcGetTextPointer\( GppcText s \)<br/><br/>char \*GppcGetVarCharPointer\( GppcVarChar s \)<br/><br/>char \*GppcGetBpCharPointer\( GppcBpChar s \)<br/><br/>char \*GppcGetByteaPointer\( GppcBytea b \)|Return a string pointer to the head of the memory chunk. The string is not null-terminated.|
+|char \*GppcTextGetCString\( GppcText s \)<br/><br/>char \*GppcVarCharGetCString\( GppcVarChar s \)<br/><br/>char \*GppcBpCharGetCString\( GppcBpChar s \)|Return a string pointer to the head of the memory chunk. The string is null-terminated.|
+|GppcText \*GppcCStringGetText\( const char \*s \)<br/><br/>GppcVarChar \*GppcCStringGetVarChar\( const char \*s \)<br/><br/>GppcBpChar \*GppcCStringGetBpChar\( const char \*s \)|Build a varying-length type from a character string.|
 
 Memory returned by the `GppcGet<VLEN_ARGTYPE>Pointer()` functions may point to actual database content. Do not modify the memory content. The GPPC API provides functions to allocate memory for these types should you require it. After you allocate memory, you can use system functions such as `memcpy()` to set the data.
 
