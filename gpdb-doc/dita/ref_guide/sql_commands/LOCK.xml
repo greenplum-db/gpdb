@@ -166,8 +166,9 @@
                     <pt>MASTER ONLY</pt>
                     <pd>Specifies that when a <codeph>LOCK TABLE</codeph> command is issued,
                         Greenplum Database will lock tables on the master only, rather than on the
-                        master and all of the segments. This boosts performance and is particularly
-                        useful for metadata-only operations.</pd>
+                        master and all of the segments. This is particularly useful for
+                        metadata-only operations. <note>This option is only supported in
+                                <codeph>ACCESS SHARE MODE</codeph>.</note></pd>
                 </plentry>
             </parml>
         </section>
