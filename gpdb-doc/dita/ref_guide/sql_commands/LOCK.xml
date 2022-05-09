@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Locks a table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN <varname>lockmode</varname> MODE] [NOWAIT]</codeblock>
+            <codeblock id="sql_command_synopsis">LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN <varname>lockmode</varname> MODE] [NOWAIT] [MASTER ONLY]</codeblock>
             <p>where <varname>lockmode</varname> is one of:</p>
             <codeblock>    ACCESS SHARE | ROW SHARE | ROW EXCLUSIVE | SHARE UPDATE EXCLUSIVE 
   | SHARE | SHARE ROW EXCLUSIVE | EXCLUSIVE | ACCESS EXCLUSIVE</codeblock>
@@ -161,6 +161,13 @@
                         conflicting locks to be released: if the specified lock(s) cannot be
                         acquired immediately without waiting, the transaction is cancelled.
                     </pd>
+                </plentry>
+                <plentry>
+                    <pt>MASTER ONLY</pt>
+                    <pd>Specifies that when a <codeph>LOCK TABLE</codeph> command is issued,
+                        Greenplum Database will lock tables on the master only, rather than on the
+                        master and all of the segments. This boosts performance and is particularly
+                        useful for metadata-only operations.</pd>
                 </plentry>
             </parml>
         </section>
