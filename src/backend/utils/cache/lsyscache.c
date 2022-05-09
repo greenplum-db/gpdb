@@ -1946,6 +1946,29 @@ get_rel_tablespace(Oid relid)
 
 
 /*
+ * get_rel_persistence
+ *
+ *		Returns the relpersistence associated with a given relation.
+ */
+char
+get_rel_persistence(Oid relid)
+{
+	HeapTuple	tp;
+	Form_pg_class reltup;
+	char		result;
+
+	tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for relation %u", relid);
+	reltup = (Form_pg_class) GETSTRUCT(tp);
+	result = reltup->relpersistence;
+	ReleaseSysCache(tp);
+
+	return result;
+}
+
+
+/*
  * get_func_nargs
  *		Given procedure id, return the number of arguments.
  */
