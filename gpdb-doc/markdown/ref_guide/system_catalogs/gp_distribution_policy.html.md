@@ -7,10 +7,7 @@ The `gp_distribution_policy` table contains information about Greenplum Database
 |column|type|references|description|
 |------|----|----------|-----------|
 |`localoid`|oid|pg\_class.oid|The table object identifier \(OID\).|
-|`policytype`|char| |The table distribution policy:-   `p` - Partitioned policy. Table data is distributed among segment instances.
--   `r` - Replicated policy. Table data is replicated on each segment instance.
-
-|
+|`policytype`|char| |The table distribution policy:<br/><br/>`p` - Partitioned policy. Table data is distributed among segment instances.<br/><br/>`r` - Replicated policy. Table data is replicated on each segment instance.|
 |`numsegments`|integer| |The number of segment instances on which the table data is distributed.|
 |`distkey`|int2vector|pg\_attribute.attnum|The column number\(s\) of the distribution column\(s\).|
 |`distclass`|oidvector|pg\_opclass.oid|The operator class identifier\(s\) of the distribution column\(s\).|
