@@ -10,12 +10,5 @@ This reference describes the Greenplum Database system catalog tables and views.
 -   [System Views](catalog_ref-views.html)
 -   [System Catalogs Definitions](catalog_ref-html.html)
 
--   **[System Tables](../system_catalogs/catalog_ref-tables.html)**  
-
--   **[System Views](../system_catalogs/catalog_ref-views.html)**  
-
--   **[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)**  
-
-
 **Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
