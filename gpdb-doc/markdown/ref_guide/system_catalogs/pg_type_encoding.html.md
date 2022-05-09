@@ -1,5 +1,5 @@
 ---
-title: pg\_type\_encoding 
+title: pg_type_encoding 
 ---
 
 The `pg_type_encoding` system catalog table contains the column storage type information.

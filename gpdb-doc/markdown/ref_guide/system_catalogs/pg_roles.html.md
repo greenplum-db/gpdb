@@ -1,5 +1,5 @@
 ---
-title: pg\_roles 
+title: pg_roles 
 ---
 
 The view `pg_roles` provides access to information about database roles. This is simply a publicly readable view of [pg\_authid](pg_authid.html) that blanks out the password field. This view explicitly exposes the OID column of the underlying table, since that is needed to do joins to other catalogs.

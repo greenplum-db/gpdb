@@ -1,5 +1,5 @@
 ---
-title: gp\_id 
+title: gp_id 
 ---
 
 The `gp_id` system catalog table identifies the Greenplum Database system name and number of segments for the system. It also has `local` values for the particular database instance \(segment or master\) on which the table resides. This table is defined in the `pg_global` tablespace, meaning it is globally shared across all databases in the system.

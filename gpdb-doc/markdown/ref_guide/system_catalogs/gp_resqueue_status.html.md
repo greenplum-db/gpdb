@@ -1,5 +1,5 @@
 ---
-title: gp\_resqueue\_status 
+title: gp_resqueue_status 
 ---
 
 The `gp_toolkit.gp_resqueue_status` view allows administrators to see status and activity for a resource queue. It shows how many queries are waiting to run and how many queries are currently active in the system from a particular resource queue.

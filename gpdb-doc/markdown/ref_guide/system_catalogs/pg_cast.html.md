@@ -1,5 +1,5 @@
 ---
-title: pg\_cast 
+title: pg_cast 
 ---
 
 The `pg_cast` table stores data type conversion paths, both built-in paths and those defined with `CREATE CAST`.

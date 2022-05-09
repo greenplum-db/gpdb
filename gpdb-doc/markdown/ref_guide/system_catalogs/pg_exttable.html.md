@@ -1,5 +1,5 @@
 ---
-title: pg\_exttable 
+title: pg_exttable 
 ---
 
 The `pg_exttable` system catalog table is used to track external tables and web tables created by the `CREATE EXTERNAL TABLE` command.

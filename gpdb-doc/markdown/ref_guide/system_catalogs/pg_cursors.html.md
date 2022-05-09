@@ -1,5 +1,5 @@
 ---
-title: pg\_cursors 
+title: pg_cursors 
 ---
 
 The `pg_cursors` view lists the currently available cursors. Cursors can be defined in one of the following ways:

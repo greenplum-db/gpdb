@@ -1,5 +1,5 @@
 ---
-title: pg\_depend 
+title: pg_depend 
 ---
 
 The `pg_depend` system catalog table records the dependency relationships between database objects. This information allows `DROP` commands to find which other objects must be dropped by `DROP CASCADE` or prevent dropping in the `DROP RESTRICT` case. See also [pg\_shdepend](pg_shdepend.html), which performs a similar function for dependencies involving objects that are shared across a Greenplum system.

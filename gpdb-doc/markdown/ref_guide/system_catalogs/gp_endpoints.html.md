@@ -1,5 +1,5 @@
 ---
-title: gp\_endpoints 
+title: gp_endpoints 
 ---
 
 The `gp_endpoints` view lists the endpoints created for all active parallel retrieve cursors declared by the current session user in the current database. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints created for all parallel retrieve cursors declared by all users in the current database.

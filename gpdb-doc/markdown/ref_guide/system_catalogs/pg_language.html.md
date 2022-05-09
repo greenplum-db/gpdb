@@ -1,5 +1,5 @@
 ---
-title: pg\_language 
+title: pg_language 
 ---
 
 The `pg_language` system catalog table registers languages in which you can write functions or stored procedures. It is populated by `CREATE LANGUAGE`.

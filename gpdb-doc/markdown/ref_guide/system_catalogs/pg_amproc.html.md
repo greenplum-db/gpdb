@@ -1,5 +1,5 @@
 ---
-title: pg\_amproc 
+title: pg_amproc 
 ---
 
 The `pg_amproc` table stores information about support procedures associated with index access method operator classes. There is one row for each support procedure belonging to an operator class.

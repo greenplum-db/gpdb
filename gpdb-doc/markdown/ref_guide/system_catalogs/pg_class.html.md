@@ -1,5 +1,5 @@
 ---
-title: pg\_class 
+title: pg_class 
 ---
 
 The system catalog table `pg_class` catalogs tables and most everything else that has columns or is otherwise similar to a table \(also known as *relations*\). This includes indexes \(see also [pg\_index](pg_index.html)\), sequences, views, composite types, and TOAST tables. Not all columns are meaningful for all relation types.

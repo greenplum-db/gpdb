@@ -1,5 +1,5 @@
 ---
-title: pg\_resqueue 
+title: pg_resqueue 
 ---
 
 **Note:** The `pg_resqueue` system catalog table is valid only when resource queue-based resource management is active.

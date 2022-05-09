@@ -1,5 +1,5 @@
 ---
-title: gpexpand.expansion\_progress 
+title: gpexpand.expansion_progress 
 ---
 
 The `gpexpand.expansion_progress`view contains information about the status of a system expansion operation. The view provides calculations of the estimated rate of table redistribution and estimated time to completion.

@@ -1,5 +1,5 @@
 ---
-title: gp\_segment\_configuration 
+title: gp_segment_configuration 
 ---
 
 The `gp_segment_configuration` table contains information about mirroring and segment instance configuration.

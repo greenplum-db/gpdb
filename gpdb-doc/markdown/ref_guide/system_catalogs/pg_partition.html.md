@@ -1,5 +1,5 @@
 ---
-title: pg\_partition 
+title: pg_partition 
 ---
 
 The `pg_partition` system catalog table is used to track partitioned tables and their inheritance level relationships. Each row of `pg_partition` represents either the level of a partitioned table in the partition hierarchy, or a subpartition template description. The value of the attribute `paristemplate` determines what a particular row represents.

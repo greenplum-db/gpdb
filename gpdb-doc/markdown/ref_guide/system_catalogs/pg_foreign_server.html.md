@@ -1,5 +1,5 @@
 ---
-title: pg\_foreign\_server 
+title: pg_foreign_server 
 ---
 
 The system catalog table `pg_foreign_server` stores foreign server definitions. A foreign server describes a source of external data, such as a remote server. You access a foreign server via a foreign-data wrapper.

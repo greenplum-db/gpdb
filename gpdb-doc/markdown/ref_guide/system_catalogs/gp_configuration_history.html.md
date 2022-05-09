@@ -1,5 +1,5 @@
 ---
-title: gp\_configuration\_history 
+title: gp_configuration_history 
 ---
 
 The `gp_configuration_history` table contains information about system changes related to fault detection and recovery operations. The `fts_probe` process logs data to this table, as do certain related management utilities such as `gprecoverseg` and `gpinitsystem`. For example, when you add a new segment and mirror segment to the system, records for these events are logged to `gp_configuration_history`.

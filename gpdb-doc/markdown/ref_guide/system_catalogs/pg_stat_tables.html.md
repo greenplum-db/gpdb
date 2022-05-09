@@ -1,5 +1,5 @@
 ---
-title: pg\_stat\_all\_tables 
+title: pg_stat_all_tables 
 ---
 
 The `pg_stat_all_tables` view shows one row for each table in the current database \(including TOAST tables\) to display statistics about accesses to that specific table.

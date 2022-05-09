@@ -1,5 +1,5 @@
 ---
-title: pg\_foreign\_data\_wrapper 
+title: pg_foreign_data_wrapper 
 ---
 
 The system catalog table `pg_foreign_data_wrapper` stores foreign-data wrapper definitions. A foreign-data wrapper is a mechanism by which you access external data residing on foreign servers.

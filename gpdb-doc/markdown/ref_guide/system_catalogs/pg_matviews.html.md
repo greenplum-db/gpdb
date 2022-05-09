@@ -1,5 +1,5 @@
 ---
-title: pg\_matviews 
+title: pg_matviews 
 ---
 
 The view `pg_matviews` provides access to useful information about each materialized view in the database.

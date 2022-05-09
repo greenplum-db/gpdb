@@ -1,5 +1,5 @@
 ---
-title: pg\_stat\_all\_indexes 
+title: pg_stat_all_indexes 
 ---
 
 The `pg_stat_all_indexes` view shows one row for each index in the current database that displays statistics about accesses to that specific index.

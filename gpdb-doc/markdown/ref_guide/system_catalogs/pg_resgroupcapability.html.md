@@ -1,5 +1,5 @@
 ---
-title: pg\_resgroupcapability 
+title: pg_resgroupcapability 
 ---
 
 **Note:** The `pg_resgroupcapability` system catalog table is valid only when resource group-based resource management is active.

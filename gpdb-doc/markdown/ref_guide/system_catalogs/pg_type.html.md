@@ -1,5 +1,5 @@
 ---
-title: pg\_type 
+title: pg_type 
 ---
 
 The `pg_type` system catalog table stores information about data types. Base types \(scalar types\) are created with `CREATE TYPE`, and domains with `CREATE DOMAIN`. A composite type is automatically created for each table in the database, to represent the row structure of the table. It is also possible to create composite types with `CREATE TYPE AS`.

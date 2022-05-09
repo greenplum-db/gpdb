@@ -1,5 +1,5 @@
 ---
-title: pg\_attrdef 
+title: pg_attrdef 
 ---
 
 The `pg_attrdef` table stores column default values. The main information about columns is stored in [pg\_attribute](pg_attribute.html). Only columns that explicitly specify a default value \(when the table is created or the column is added\) will have an entry here.

@@ -1,5 +1,5 @@
 ---
-title: pg\_partition\_columns 
+title: pg_partition_columns 
 ---
 
 The `pg_partition_columns` system view is used to show the partition key columns of a partitioned table.

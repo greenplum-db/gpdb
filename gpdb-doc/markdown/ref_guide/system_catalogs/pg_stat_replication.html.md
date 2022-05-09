@@ -1,5 +1,5 @@
 ---
-title: pg\_stat\_replication 
+title: pg_stat_replication 
 ---
 
 The `pg_stat_replication` view contains metadata of the `walsender` process that is used for Greenplum Database master mirroring.

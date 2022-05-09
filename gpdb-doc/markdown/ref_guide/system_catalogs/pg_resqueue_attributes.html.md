@@ -1,5 +1,5 @@
 ---
-title: pg\_resqueue\_attributes 
+title: pg_resqueue_attributes 
 ---
 
 **Note:** The `pg_resqueue_attributes` view is valid only when resource queue-based resource management is active.

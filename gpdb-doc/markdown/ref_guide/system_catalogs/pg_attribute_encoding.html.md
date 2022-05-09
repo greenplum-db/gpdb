@@ -1,5 +1,5 @@
 ---
-title: pg\_attribute\_encoding 
+title: pg_attribute_encoding 
 ---
 
 The `pg_attribute_encoding` system catalog table contains column storage information.

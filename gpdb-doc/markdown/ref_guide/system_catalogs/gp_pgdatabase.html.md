@@ -1,5 +1,5 @@
 ---
-title: gp\_pgdatabase 
+title: gp_pgdatabase 
 ---
 
 The `gp_pgdatabase` view shows status information about the Greenplum segment instances and whether they are acting as the mirror or the primary. This view is used internally by the Greenplum fault detection and recovery utilities to determine failed segments.

@@ -1,5 +1,5 @@
 ---
-title: gp\_resgroup\_status 
+title: gp_resgroup_status 
 ---
 
 The `gp_toolkit.gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.

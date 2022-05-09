@@ -1,5 +1,5 @@
 ---
-title: pg\_trigger 
+title: pg_trigger 
 ---
 
 The `pg_trigger` system catalog table stores triggers on tables.

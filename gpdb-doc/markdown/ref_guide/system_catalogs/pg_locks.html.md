@@ -1,5 +1,5 @@
 ---
-title: pg\_locks 
+title: pg_locks 
 ---
 
 The `pg_locks` view provides access to information about the locks held by open transactions within Greenplum Database.

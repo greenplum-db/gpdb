@@ -1,5 +1,5 @@
 ---
-title: pg\_database 
+title: pg_database 
 ---
 
 The `pg_database` system catalog table stores information about the available databases. Databases are created with the `CREATE DATABASE` SQL command. Unlike most system catalogs, `pg_database` is shared across all databases in the system. There is only one copy of `pg_database` per system, not one per database.

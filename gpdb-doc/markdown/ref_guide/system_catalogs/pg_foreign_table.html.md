@@ -1,5 +1,5 @@
 ---
-title: pg\_foreign\_table 
+title: pg_foreign_table 
 ---
 
 The system catalog table `pg_foreign_table` contains auxiliary information about foreign tables. A foreign table is primarily represented by a `pg_class` entry, just like a regular table. Its `pg_foreign_table` entry contains the information that is pertinent only to foreign tables and not any other kind of relation.

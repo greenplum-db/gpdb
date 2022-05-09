@@ -1,5 +1,5 @@
 ---
-title: pg\_stat\_activity 
+title: pg_stat_activity 
 ---
 
 The view `pg_stat_activity` shows one row per server process with details about the associated user session and query. The columns that report data on the current query are available unless the parameter `stats_command_string` has been turned off. Furthermore, these columns are only visible if the user examining the view is a superuser or the same as the user owning the process being reported on.

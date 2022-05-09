@@ -1,5 +1,5 @@
 ---
-title: pg\_stat\_operations 
+title: pg_stat_operations 
 ---
 
 The view `pg_stat_operations` shows details about the last operation performed on a database object \(such as a table, index, view or database\) or a global object \(such as a role\).

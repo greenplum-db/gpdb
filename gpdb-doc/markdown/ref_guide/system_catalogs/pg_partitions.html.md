@@ -1,5 +1,5 @@
 ---
-title: pg\_partitions 
+title: pg_partitions 
 ---
 
 The `pg_partitions` system view is used to show the structure of a partitioned table.

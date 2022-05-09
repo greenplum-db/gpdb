@@ -1,5 +1,5 @@
 ---
-title: gp\_resgroup\_status\_per\_segment 
+title: gp_resgroup_status_per_segment 
 ---
 
 The `gp_toolkit.gp_resgroup_status_per_segment` view allows administrators to see current memory and CPU usage and allocation for each resource group on a per-host and per-segment basis.

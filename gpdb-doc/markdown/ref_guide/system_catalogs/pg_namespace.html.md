@@ -1,5 +1,5 @@
 ---
-title: pg\_namespace 
+title: pg_namespace 
 ---
 
 The `pg_namespace` system catalog table stores namespaces. A namespace is the structure underlying SQL schemas: each namespace can have a separate collection of relations, types, etc. without name conflicts.

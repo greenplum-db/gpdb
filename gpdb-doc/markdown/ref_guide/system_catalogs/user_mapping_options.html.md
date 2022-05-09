@@ -1,5 +1,5 @@
 ---
-title: user\_mapping\_options 
+title: user_mapping_options 
 ---
 
 The `user_mapping_options` view contains all of the options defined for user mappings in the current database. Greenplum Database displays only those user mappings to which the current user has access \(by way of being the owner or having some privilege\).

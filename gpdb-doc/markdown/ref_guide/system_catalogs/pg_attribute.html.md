@@ -1,5 +1,5 @@
 ---
-title: pg\_attribute 
+title: pg_attribute 
 ---
 
 The `pg_attribute` table stores information about table columns. There will be exactly one `pg_attribute` row for every column in every table in the database. \(There will also be attribute entries for indexes, and all objects that have `pg_class` entries.\) The term attribute is equivalent to column.

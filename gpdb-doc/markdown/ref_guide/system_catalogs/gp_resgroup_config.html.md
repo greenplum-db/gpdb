@@ -1,5 +1,5 @@
 ---
-title: gp\_resgroup\_config 
+title: gp_resgroup_config 
 ---
 
 The `gp_toolkit.gp_resgroup_config` view allows administrators to see the current CPU, memory, and concurrency limits for a resource group.

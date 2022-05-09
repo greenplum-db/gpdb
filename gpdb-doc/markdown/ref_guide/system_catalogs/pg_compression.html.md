@@ -1,5 +1,5 @@
 ---
-title: pg\_compression 
+title: pg_compression 
 ---
 
 The `pg_compression` system catalog table describes the compression methods available.

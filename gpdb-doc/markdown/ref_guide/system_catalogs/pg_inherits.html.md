@@ -1,5 +1,5 @@
 ---
-title: pg\_inherits 
+title: pg_inherits 
 ---
 
 The `pg_inherits` system catalog table records information about table inheritance hierarchies. There is one entry for each direct child table in the database. \(Indirect inheritance can be determined by following chains of entries.\) In Greenplum Database, inheritance relationships are created by both the `INHERITS` clause \(standalone inheritance\) and the `PARTITION BY` clause \(partitioned child table inheritance\) of `CREATE TABLE`.

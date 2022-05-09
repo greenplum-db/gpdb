@@ -1,5 +1,5 @@
 ---
-title: gp\_stat\_replication 
+title: gp_stat_replication 
 ---
 
 The `gp_stat_replication` view contains replication statistics of the `walsender` process that is used for Greenplum Database Write-Ahead Logging \(WAL\) replication when master or segment mirroring is enabled.

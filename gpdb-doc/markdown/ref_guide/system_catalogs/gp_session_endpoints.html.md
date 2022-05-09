@@ -1,5 +1,5 @@
 ---
-title: gp\_session\_endpoints 
+title: gp_session_endpoints 
 ---
 
 The `gp_session_endpoints` view lists the endpoints created for all active parallel retrieve cursors declared by the current session user in the current session.

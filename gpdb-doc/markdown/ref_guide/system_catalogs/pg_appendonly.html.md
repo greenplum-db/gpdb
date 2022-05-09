@@ -1,5 +1,5 @@
 ---
-title: pg\_appendonly 
+title: pg_appendonly 
 ---
 
 The `pg_appendonly` table contains information about the storage options and other characteristics of append-optimized tables.

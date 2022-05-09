@@ -1,5 +1,5 @@
 ---
-title: pg\_proc 
+title: pg_proc 
 ---
 
 The `pg_proc` system catalog table stores information about functions \(or procedures\), both built-in functions and those defined by `CREATE FUNCTION`. The table contains data for aggregate and window functions as well as plain functions. If `proisagg` is true, there should be a matching row in `pg_aggregate`.

@@ -1,5 +1,5 @@
 ---
-title: gpexpand.status\_detail 
+title: gpexpand.status_detail 
 ---
 
 The `gpexpand.status_detail` table contains information about the status of tables involved in a system expansion operation. You can query this table to determine the status of tables being expanded, or to view the start and end time for completed tables.

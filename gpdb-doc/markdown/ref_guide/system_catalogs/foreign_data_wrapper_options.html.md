@@ -1,5 +1,5 @@
 ---
-title: foreign\_data\_wrapper\_options 
+title: foreign_data_wrapper_options 
 ---
 
 The `foreign_data_wrapper_options` view contains all of the otpions defined for foreign-data wrappers in the current database. Greenplum Database displays only those foreign-data wrappers to which the current user has access \(by way of being the owner or having some privilege\).

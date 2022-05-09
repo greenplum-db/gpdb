@@ -1,5 +1,5 @@
 ---
-title: pg\_db\_role\_setting 
+title: pg_db_role_setting 
 ---
 
 The `pg_db_role_setting` system catalog table records the default values of server configuration settings for each role and database combination.

@@ -1,5 +1,5 @@
 ---
-title: pg\_available\_extensions 
+title: pg_available_extensions 
 ---
 
 The `pg_available_extensions` view lists the extensions that are available for installation. The [*pg\_extension*](pg_extension.html) system catalog table shows the extensions currently installed.

@@ -1,5 +1,5 @@
 ---
-title: foreign\_table\_options 
+title: foreign_table_options 
 ---
 
 The `foreign_table_options` view contains all of the options defined for foreign tables in the current database. Greenplum Database displays only those foreign tables to which the current user has access \(by way of being the owner or having some privilege\).

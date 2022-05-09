@@ -1,5 +1,5 @@
 ---
-title: pg\_constraint 
+title: pg_constraint 
 ---
 
 The `pg_constraint` system catalog table stores check, primary key, unique, and foreign key constraints on tables. Column constraints are not treated specially. Every column constraint is equivalent to some table constraint. Not-null constraints are represented in the [pg\_attribute](pg_attribute.html) catalog table. Check constraints on domains are stored here, too.

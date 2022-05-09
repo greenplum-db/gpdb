@@ -1,5 +1,5 @@
 ---
-title: foreign\_servers 
+title: foreign_servers 
 ---
 
 The `foreign_servers` view contains all foreign servers defined in the current database. Greenplum Database displays only those foreign servers to which the current user has access \(by way of being the owner or having some privilege\).

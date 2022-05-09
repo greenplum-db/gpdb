@@ -1,5 +1,5 @@
 ---
-title: gp\_segment\_endpoints 
+title: gp_segment_endpoints 
 ---
 
 The `gp_segment_endpoints` view lists the endpoints created in the QE for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.

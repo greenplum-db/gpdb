@@ -1,5 +1,5 @@
 ---
-title: pg\_partition\_encoding 
+title: pg_partition_encoding 
 ---
 
 The `pg_partition_encoding` system catalog table describes the available column compression options for a partition template.
