@@ -5,7 +5,7 @@ Locks a table.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN <lockmode> MODE] [NOWAIT]
+LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN <lockmode> MODE] [NOWAIT] [MASTER ONLY]
 ```
 
 where lockmode is one of:
@@ -48,6 +48,10 @@ lockmode
 
 NOWAIT
 :   Specifies that `LOCK TABLE` should not wait for any conflicting locks to be released: if the specified lock\(s\) cannot be acquired immediately without waiting, the transaction is cancelled.
+
+MASTER ONLY
+:   Specifies that when a `LOCK TABLE` command is issued, Greenplum Database will lock tables on the master only, rather than on the master and all of the segments. This is particularly useful for metadata-only operations. 
+    <br/><br/>**Note:** This option is only supported in `ACCESS SHARE MODE`.
 
 ## <a id="section5"></a>Notes 
 
